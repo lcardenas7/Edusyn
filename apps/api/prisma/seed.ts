@@ -238,9 +238,10 @@ async function main() {
   // Admin
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@villasanpablo.edu.co' },
-    update: {},
+    update: { username: 'admin' },
     create: {
       email: 'admin@villasanpablo.edu.co',
+      username: 'admin',
       passwordHash: hashedPassword,
       firstName: 'Administrador',
       lastName: 'Sistema',
@@ -259,9 +260,10 @@ async function main() {
   // Coordinador
   const coordinatorUser = await prisma.user.upsert({
     where: { email: 'coordinador@villasanpablo.edu.co' },
-    update: {},
+    update: { username: 'mcoordinadora' },
     create: {
       email: 'coordinador@villasanpablo.edu.co',
+      username: 'mcoordinadora',
       passwordHash: hashedPassword,
       firstName: 'María',
       lastName: 'Coordinadora',
@@ -280,9 +282,10 @@ async function main() {
   // Docente de ejemplo
   const teacherUser = await prisma.user.upsert({
     where: { email: 'docente@villasanpablo.edu.co' },
-    update: {},
+    update: { username: 'cdocente' },
     create: {
       email: 'docente@villasanpablo.edu.co',
+      username: 'cdocente',
       passwordHash: hashedPassword,
       firstName: 'Carlos',
       lastName: 'Docente',
@@ -298,7 +301,7 @@ async function main() {
     create: { userId: teacherUser.id, roleId: createdRoles['DOCENTE'].id },
   });
 
-  console.log(`   ✅ 3 usuarios creados\n`);
+  console.log(`   ✅ 3 usuarios creados (con usernames: admin, mcoordinadora, cdocente)\n`);
 
   // ============================================
   // 11. CREAR ESCALA DE VALORACIÓN

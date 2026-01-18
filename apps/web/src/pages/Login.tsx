@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { GraduationCap, Mail, Lock, AlertCircle } from 'lucide-react'
+import { GraduationCap, User, Lock, AlertCircle } from 'lucide-react'
 
 export default function Login() {
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -17,7 +17,7 @@ export default function Login() {
     setIsLoading(true)
 
     try {
-      await login(email, password)
+      await login(identifier, password)
       navigate('/dashboard')
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al iniciar sesión')
@@ -48,16 +48,16 @@ export default function Login() {
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Correo electrónico
+                Usuario o correo electrónico
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="text"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                  placeholder="correo@ejemplo.com"
+                  placeholder="usuario o correo@ejemplo.com"
                   required
                 />
               </div>

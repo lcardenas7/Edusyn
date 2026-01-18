@@ -1,6 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, GraduationCap, FileText, AlertTriangle, Phone, Mail, MapPin, Users, CheckCircle2, XCircle, FileSpreadsheet } from 'lucide-react'
 import { generateTemplate, parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
+import { studentsApi } from '../lib/api'
+import { useInstitution } from '../contexts/InstitutionContext'
 
 type StudentStatus = 'ACTIVE' | 'INACTIVE' | 'TRANSFERRED' | 'GRADUATED' | 'WITHDRAWN'
 type ViewMode = 'list' | 'detail'
@@ -46,13 +48,6 @@ interface ObserverEntry {
   author: string
 }
 
-const mockStudents: Student[] = [
-  { id: '1', firstName: 'Juan Carlos', lastName: 'Perez Garcia', documentType: 'TI', documentNumber: '1001234567', birthDate: '2010-05-15', gender: 'M', address: 'Calle 10 # 15-20', phone: '3001234567', email: 'juan.perez@email.com', group: '9°A', status: 'ACTIVE', enrollmentDate: '2020-01-20', parentName: 'Maria Garcia Lopez', parentPhone: '3009876543', parentEmail: 'maria.garcia@email.com', bloodType: 'O+', eps: 'Sura', observations: '' },
-  { id: '2', firstName: 'Maria Fernanda', lastName: 'Lopez Rodriguez', documentType: 'TI', documentNumber: '1001234568', birthDate: '2010-08-22', gender: 'F', address: 'Carrera 5 # 20-30', phone: '3002345678', email: 'maria.lopez@email.com', group: '9°A', status: 'ACTIVE', enrollmentDate: '2020-01-20', parentName: 'Carlos Lopez Martinez', parentPhone: '3008765432', parentEmail: 'carlos.lopez@email.com', bloodType: 'A+', eps: 'Nueva EPS', observations: '' },
-  { id: '3', firstName: 'Carlos Andres', lastName: 'Martinez Silva', documentType: 'TI', documentNumber: '1001234569', birthDate: '2010-03-10', gender: 'M', address: 'Avenida 3 # 8-15', phone: '3003456789', email: 'carlos.martinez@email.com', group: '9°B', status: 'ACTIVE', enrollmentDate: '2021-01-18', parentName: 'Ana Silva Gomez', parentPhone: '3007654321', parentEmail: 'ana.silva@email.com', bloodType: 'B+', eps: 'Sanitas', observations: 'Estudiante destacado en matematicas' },
-  { id: '4', firstName: 'Ana Sofia', lastName: 'Gonzalez Torres', documentType: 'TI', documentNumber: '1001234570', birthDate: '2009-11-28', gender: 'F', address: 'Calle 15 # 10-25', phone: '3004567890', email: 'ana.gonzalez@email.com', group: '10°A', status: 'ACTIVE', enrollmentDate: '2019-01-21', parentName: 'Pedro Gonzalez Ruiz', parentPhone: '3006543210', parentEmail: 'pedro.gonzalez@email.com', bloodType: 'AB+', eps: 'Compensar', observations: '' },
-  { id: '5', firstName: 'Pedro Luis', lastName: 'Ramirez Diaz', documentType: 'TI', documentNumber: '1001234571', birthDate: '2010-07-05', gender: 'M', address: 'Carrera 8 # 12-18', phone: '3005678901', email: 'pedro.ramirez@email.com', group: '9°A', status: 'INACTIVE', enrollmentDate: '2020-01-20', parentName: 'Luis Ramirez Perez', parentPhone: '3005432109', parentEmail: 'luis.ramirez@email.com', bloodType: 'O-', eps: 'Famisanar', observations: 'Retiro temporal por cambio de ciudad' },
-]
 
 const mockHistory: AcademicHistory[] = [
   { year: 2024, grade: '8°', average: 4.2, status: 'APPROVED', rank: 5, totalStudents: 35 },
@@ -76,7 +71,10 @@ const statusLabels: Record<StudentStatus, { label: string, color: string }> = {
 }
 
 export default function Students() {
-  const [students, setStudents] = useState<Student[]>(mockStudents)
+  const { institution } = useInstitution()
+  const [students, setStudents] = useState<Student[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filterGroup, setFilterGroup] = useState('ALL')
   const [filterStatus, setFilterStatus] = useState<StudentStatus | 'ALL'>('ALL')
@@ -95,6 +93,63 @@ export default function Students() {
     address: '', phone: '', email: '', group: '9°A', status: 'ACTIVE', enrollmentDate: new Date().toISOString().split('T')[0],
     parentName: '', parentPhone: '', parentEmail: '', bloodType: '', eps: '', observations: ''
   })
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const response = await studentsApi.getAll({ institutionId: institution.id })
+        const apiStudents: Student[] = (response.data || []).map((s: any) => ({
+          id: s.id,
+          firstName: s.firstName || '',
+          lastName: s.lastName || '',
+          documentType: s.documentType || 'TI',
+          documentNumber: s.documentNumber || '',
+          birthDate: s.birthDate || '',
+          gender: s.gender || '',
+          address: s.address || '',
+          phone: s.phone || '',
+          email: s.email || '',
+          group: s.enrollments?.[0]?.group?.name || '',
+          status: s.enrollments?.[0]?.status || 'ACTIVE',
+          enrollmentDate: s.enrollments?.[0]?.enrollmentDate || '',
+          parentName: '',
+          parentPhone: '',
+          parentEmail: '',
+          bloodType: '',
+          eps: '',
+          observations: ''
+        }))
+        setStudents(apiStudents)
+      } catch (err: any) {
+        console.error('Error loading students:', err)
+        setError('Error al cargar estudiantes')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchStudents()
+  }, [institution.id])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto" />
+          <p className="mt-4 text-red-600">{error}</p>
+        </div>
+      </div>
+    )
+  }
 
   const filteredStudents = students.filter(s => {
     const matchesSearch = `${s.firstName} ${s.lastName} ${s.documentNumber}`.toLowerCase().includes(search.toLowerCase())

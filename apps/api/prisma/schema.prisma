@@ -46,11 +46,13 @@ enum AcademicTermType {
 model User {
   id             String     @id @default(cuid())
   email          String     @unique
+  username       String?    @unique
   passwordHash   String
   firstName      String
   lastName       String
   documentType   DocumentType?
   documentNumber String?
+  phone          String?
   isActive       Boolean    @default(true)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt

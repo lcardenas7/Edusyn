@@ -15,7 +15,6 @@ import AcademicLoad from './pages/AcademicLoad'
 import Reports from './pages/Reports'
 import Observer from './pages/Observer'
 import ReportCards from './pages/ReportCards'
-import Settings from './pages/Settings'
 import Communications from './pages/Communications'
 import Layout from './components/Layout'
 
@@ -63,7 +62,6 @@ function App() {
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/observer" element={<Observer />} />
                   <Route path="/report-cards" element={<ReportCards />} />
-                  <Route path="/settings" element={<Settings />} />
                   <Route path="/communications" element={<Communications />} />
                 </Routes>
               </Layout>

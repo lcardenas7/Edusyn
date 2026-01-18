@@ -9,7 +9,6 @@ import {
   Calendar, 
   FileText, 
   Bell, 
-  Settings,
   LogOut,
   GraduationCap,
   BarChart3,
@@ -36,7 +35,6 @@ const navigation = [
   { name: 'Estadísticas', href: '/statistics', icon: BarChart3 },
   { name: 'Comunicaciones', href: '/communications', icon: Bell },
   { name: 'Áreas', href: '/admin/areas', icon: Layers },
-  { name: 'Configuración', href: '/settings', icon: Settings },
 ]
 
 export default function Layout({ children }: { children: ReactNode }) {
