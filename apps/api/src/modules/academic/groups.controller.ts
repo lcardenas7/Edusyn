@@ -18,7 +18,7 @@ export class GroupsController {
   }
 
   @Get()
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async list(
     @Query('campusId') campusId?: string,
     @Query('shiftId') shiftId?: string,

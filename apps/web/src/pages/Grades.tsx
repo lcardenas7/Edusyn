@@ -1,21 +1,15 @@
-import { useState, useCallback } from 'react'
-import { BookOpen, ChevronDown, Save, Plus, Trash2, X, Settings } from 'lucide-react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
+import { BookOpen, ChevronDown, Save, Plus, Trash2, X, Settings, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useInstitution } from '../contexts/InstitutionContext'
+import { teacherAssignmentsApi } from '../lib/api'
 
-const mockSubjects = [
-  { id: '1', name: 'Matemáticas', teacher: 'Prof. García' },
-  { id: '2', name: 'Español', teacher: 'Prof. López' },
-  { id: '3', name: 'Ciencias Naturales', teacher: 'Prof. Martínez' },
-]
-
-const mockStudents = [
-  { id: '1', name: 'Juan Pérez' },
-  { id: '2', name: 'María López' },
-  { id: '3', name: 'Carlos Martínez' },
-  { id: '4', name: 'Ana González' },
-  { id: '5', name: 'Pedro Ramírez' },
-]
+interface TeacherAssignment {
+  id: string
+  subject: { id: string; name: string; area?: { name: string } }
+  group: { id: string; name: string; grade?: { name: string } }
+  academicYear: { id: string; year: number }
+}
 
 const activityTypes = [
   'Examen escrito',
@@ -51,9 +45,19 @@ interface AttitudinalConfig {
 export default function Grades() {
   const { user } = useAuth()
   const { gradingConfig, setGradingConfig, periods, selectedPeriod, setSelectedPeriod } = useInstitution()
-  const isAdmin = user?.roles?.some((r: any) => r.role?.name === 'ADMIN' || r === 'ADMIN')
   
-  const [selectedSubject, setSelectedSubject] = useState(mockSubjects[0])
+  const userRoles = useMemo(() => {
+    if (!user?.roles) return []
+    return user.roles.map((r: any) => typeof r === 'string' ? r : r.role?.name || r.name).filter(Boolean)
+  }, [user?.roles])
+  
+  const isAdmin = userRoles.includes('ADMIN_INSTITUTIONAL') || userRoles.includes('SUPERADMIN') || userRoles.includes('COORDINADOR')
+  const isTeacher = userRoles.includes('DOCENTE')
+  
+  const [assignments, setAssignments] = useState<TeacherAssignment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedAssignment, setSelectedAssignment] = useState<TeacherAssignment | null>(null)
   const [showAddActivity, setShowAddActivity] = useState(false)
   const [showConfig, setShowConfig] = useState(false)
   const [addToComponent, setAddToComponent] = useState<'COGNITIVO' | 'PROCEDIMENTAL' | null>(null)
@@ -84,6 +88,42 @@ export default function Grades() {
     })
   }
 
+  // Cargar asignaciones del docente
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const params: any = {}
+        // Si es docente, filtrar por su ID
+        if (isTeacher && user?.id) {
+          params.teacherId = user.id
+        }
+        const response = await teacherAssignmentsApi.getAll(params)
+        const data = response.data || []
+        setAssignments(data)
+        if (data.length > 0) {
+          setSelectedAssignment(data[0])
+        }
+      } catch (err: any) {
+        console.error('Error loading assignments:', err)
+        setError('Error al cargar asignaciones')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAssignments()
+  }, [user?.id, isTeacher])
+
+  // Mock students por ahora (se conectará a API después)
+  const mockStudents = selectedAssignment ? [
+    { id: '1', name: 'Juan Pérez' },
+    { id: '2', name: 'María López' },
+    { id: '3', name: 'Carlos Martínez' },
+    { id: '4', name: 'Ana González' },
+    { id: '5', name: 'Pedro Ramírez' },
+  ] : []
+
   const [cognitivoActivities, setCognitivoActivities] = useState<Activity[]>([
     { id: 'cog1', name: 'Nota 1', type: 'Examen escrito' },
     { id: 'cog2', name: 'Nota 2', type: 'Taller' },
@@ -98,15 +138,27 @@ export default function Grades() {
 
   const [grades, setGrades] = useState<Record<string, Record<string, number>>>(() => {
     const initial: Record<string, Record<string, number>> = {}
-    mockStudents.forEach(student => {
-      initial[student.id] = {
-        cog1: 4.0, cog2: 4.5, cog3: 4.2,
-        proc1: 4.5, proc2: 4.0, proc3: 4.5,
-        personal: 4.5, social: 4.0, autoevaluacion: 4.5, coevaluacion: 4.0,
-      }
-    })
     return initial
   })
+
+  // Inicializar notas cuando cambian los estudiantes
+  useEffect(() => {
+    if (mockStudents.length > 0) {
+      setGrades(prev => {
+        const updated = { ...prev }
+        mockStudents.forEach(student => {
+          if (!updated[student.id]) {
+            updated[student.id] = {
+              cog1: 0, cog2: 0, cog3: 0,
+              proc1: 0, proc2: 0, proc3: 0,
+              personal: 0, social: 0, autoevaluacion: 0, coevaluacion: 0,
+            }
+          }
+        })
+        return updated
+      })
+    }
+  }, [selectedAssignment])
 
   const [newActivity, setNewActivity] = useState({ name: '', type: activityTypes[0] })
 
@@ -282,15 +334,38 @@ export default function Grades() {
         </div>
       </div>
 
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      ) : error ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto" />
+            <p className="mt-4 text-red-600">{error}</p>
+          </div>
+        </div>
+      ) : assignments.length === 0 ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <BookOpen className="w-12 h-12 text-slate-300 mx-auto" />
+            <p className="mt-4 text-slate-500">No tienes asignaturas asignadas</p>
+            <p className="text-sm text-slate-400">Contacta al coordinador para asignar tu carga académica</p>
+          </div>
+        </div>
+      ) : (
+      <>
       <div className="flex gap-4 mb-6 flex-wrap">
         <div className="relative">
           <select
-            value={selectedSubject.id}
-            onChange={(e) => setSelectedSubject(mockSubjects.find(s => s.id === e.target.value) || mockSubjects[0])}
+            value={selectedAssignment?.id || ''}
+            onChange={(e) => setSelectedAssignment(assignments.find(a => a.id === e.target.value) || null)}
             className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           >
-            {mockSubjects.map((subject) => (
-              <option key={subject.id} value={subject.id}>{subject.name}</option>
+            {assignments.map((assignment) => (
+              <option key={assignment.id} value={assignment.id}>
+                {assignment.subject.name} - {assignment.group.grade?.name} {assignment.group.name}
+              </option>
             ))}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -305,15 +380,6 @@ export default function Grades() {
             {periods.map((period) => (
               <option key={period.id} value={period.id}>{period.name}</option>
             ))}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-        </div>
-
-        <div className="relative">
-          <select className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-            <option>8°A</option>
-            <option>8°B</option>
-            <option>9°A</option>
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
         </div>
@@ -351,8 +417,8 @@ export default function Grades() {
           <div className="flex items-center gap-3">
             <BookOpen className="w-5 h-5 text-blue-600" />
             <div>
-              <h2 className="font-semibold text-slate-900">{selectedSubject.name}</h2>
-              <p className="text-sm text-slate-500">{selectedSubject.teacher} • {periods.find(p => p.id === selectedPeriod)?.name || 'Período'} • 8°A</p>
+              <h2 className="font-semibold text-slate-900">{selectedAssignment?.subject.name}</h2>
+              <p className="text-sm text-slate-500">{selectedAssignment?.group.grade?.name} {selectedAssignment?.group.name} • {periods.find(p => p.id === selectedPeriod)?.name || 'Período'}</p>
             </div>
           </div>
         </div>
@@ -910,6 +976,8 @@ export default function Grades() {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   )

@@ -1,14 +1,13 @@
-import { useState } from 'react'
-import { Calendar, Check, X, Clock, FileText, ChevronDown } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Calendar, Check, X, Clock, FileText, ChevronDown, AlertTriangle } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { teacherAssignmentsApi } from '../lib/api'
 
-const mockStudents = [
-  { id: '1', name: 'Juan Pérez', status: 'PRESENT' },
-  { id: '2', name: 'María López', status: 'PRESENT' },
-  { id: '3', name: 'Carlos Martínez', status: 'ABSENT' },
-  { id: '4', name: 'Ana González', status: 'PRESENT' },
-  { id: '5', name: 'Pedro Ramírez', status: 'LATE' },
-  { id: '6', name: 'Laura Sánchez', status: 'EXCUSED' },
-]
+interface TeacherAssignment {
+  id: string
+  subject: { id: string; name: string }
+  group: { id: string; name: string; grade?: { name: string } }
+}
 
 const statusConfig = {
   PRESENT: { label: 'Presente', icon: Check, color: 'bg-green-100 text-green-600 border-green-200' },
@@ -18,8 +17,75 @@ const statusConfig = {
 }
 
 export default function Attendance() {
+  const { user } = useAuth()
+  
+  const userRoles = useMemo(() => {
+    if (!user?.roles) return []
+    return user.roles.map((r: any) => typeof r === 'string' ? r : r.role?.name || r.name).filter(Boolean)
+  }, [user?.roles])
+  
+  const isTeacher = userRoles.includes('DOCENTE')
+  const isAdmin = userRoles.includes('ADMIN_INSTITUTIONAL') || userRoles.includes('SUPERADMIN') || userRoles.includes('COORDINADOR')
+  
+  const [assignments, setAssignments] = useState<TeacherAssignment[]>([])
+  const [selectedAssignment, setSelectedAssignment] = useState<TeacherAssignment | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  
+  // Mock students - se conectará a API después
+  const mockStudents = selectedAssignment ? [
+    { id: '1', name: 'Juan Pérez', status: 'PRESENT' },
+    { id: '2', name: 'María López', status: 'PRESENT' },
+    { id: '3', name: 'Carlos Martínez', status: 'ABSENT' },
+    { id: '4', name: 'Ana González', status: 'PRESENT' },
+    { id: '5', name: 'Pedro Ramírez', status: 'LATE' },
+  ] : []
+  
   const [students, setStudents] = useState(mockStudents)
+  
+  // Cargar asignaciones - docente solo ve las suyas, admin/coord ve todas
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const params: any = {}
+        // Docente solo ve sus asignaciones, admin/coord ve todas
+        if (isTeacher && !isAdmin && user?.id) {
+          params.teacherId = user.id
+        }
+        const response = await teacherAssignmentsApi.getAll(params)
+        const data = response.data || []
+        setAssignments(data)
+        if (data.length > 0) {
+          setSelectedAssignment(data[0])
+        }
+      } catch (err: any) {
+        console.error('Error loading assignments:', err)
+        setError('Error al cargar asignaciones')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAssignments()
+  }, [user?.id, isTeacher, isAdmin])
+  
+  // Actualizar estudiantes cuando cambia la asignación
+  useEffect(() => {
+    if (selectedAssignment) {
+      setStudents([
+        { id: '1', name: 'Juan Pérez', status: 'PRESENT' },
+        { id: '2', name: 'María López', status: 'PRESENT' },
+        { id: '3', name: 'Carlos Martínez', status: 'ABSENT' },
+        { id: '4', name: 'Ana González', status: 'PRESENT' },
+        { id: '5', name: 'Pedro Ramírez', status: 'LATE' },
+      ])
+    } else {
+      setStudents([])
+    }
+  }, [selectedAssignment])
 
   const updateStatus = (studentId: string, status: string) => {
     setStudents(students.map(s => s.id === studentId ? { ...s, status } : s))
@@ -45,6 +111,27 @@ export default function Attendance() {
         </button>
       </div>
 
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      ) : error ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto" />
+            <p className="mt-4 text-red-600">{error}</p>
+          </div>
+        </div>
+      ) : assignments.length === 0 ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Calendar className="w-12 h-12 text-slate-300 mx-auto" />
+            <p className="mt-4 text-slate-500">No tienes asignaturas asignadas</p>
+            <p className="text-sm text-slate-400">Contacta al coordinador para asignar tu carga académica</p>
+          </div>
+        </div>
+      ) : (
+      <>
       <div className="flex gap-4 mb-6">
         <input
           type="date"
@@ -54,10 +141,16 @@ export default function Attendance() {
         />
 
         <div className="relative">
-          <select className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-            <option>Matemáticas - 8°A</option>
-            <option>Español - 8°A</option>
-            <option>Ciencias - 8°B</option>
+          <select 
+            value={selectedAssignment?.id || ''}
+            onChange={(e) => setSelectedAssignment(assignments.find(a => a.id === e.target.value) || null)}
+            className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          >
+            {assignments.map((assignment) => (
+              <option key={assignment.id} value={assignment.id}>
+                {assignment.subject.name} - {assignment.group.grade?.name} {assignment.group.name}
+              </option>
+            ))}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
         </div>
@@ -155,6 +248,8 @@ export default function Attendance() {
           })}
         </div>
       </div>
+      </>
+      )}
     </div>
   )
 }

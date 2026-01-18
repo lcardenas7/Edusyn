@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   ClipboardList,
   Search,
@@ -21,8 +21,10 @@ import {
   Settings,
   Shield,
   CheckSquare,
-  Clock
+  Clock,
 } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { teacherAssignmentsApi } from '../lib/api'
 
 // Tipos de rol del sistema
 type UserRole = 'TEACHER' | 'COORDINATOR' | 'RECTOR' | 'ADMIN'
@@ -132,125 +134,7 @@ const categoryConfig: Record<ObservationCategory, { label: string; color: string
   OTHER: { label: 'Otro', color: 'bg-slate-100 text-slate-700' },
 }
 
-// Mock: Usuario actual (cambiar para probar diferentes roles)
-const mockCurrentUser = {
-  id: 'u1',
-  name: 'Prof. María García',
-  role: 'COORDINATOR' as UserRole, // Cambiar a: 'TEACHER', 'COORDINATOR', 'RECTOR', 'ADMIN'
-  assignedGroups: ['9°A', '9°B'] // Grupos asignados (solo aplica para TEACHER)
-}
 
-// Mock data
-const mockObservations: Observation[] = [
-  {
-    id: '1',
-    studentId: 's1',
-    studentName: 'ACOSTA GUTIERREZ ALEXANDER DAVID',
-    group: '9°A',
-    date: '2025-01-15',
-    type: 'POSITIVE',
-    category: 'ACADEMIC',
-    description: 'Excelente participación en clase de matemáticas. Demostró dominio del tema y ayudó a sus compañeros.',
-    actionTaken: 'Felicitación pública en clase',
-    parentNotified: false,
-    requiresFollowUp: false,
-    author: 'Prof. María García',
-    authorId: 'u1',
-    createdAt: '2025-01-15T10:30:00',
-    status: 'CLOSED'
-  },
-  {
-    id: '2',
-    studentId: 's2',
-    studentName: 'ALVAREZ LARIOS DANYER JESIT',
-    group: '9°A',
-    date: '2025-01-14',
-    type: 'NEGATIVE',
-    category: 'BEHAVIORAL',
-    description: 'Interrumpió la clase en múltiples ocasiones. No atendió los llamados de atención.',
-    actionTaken: 'Llamado de atención verbal. Se citará al acudiente.',
-    parentNotified: true,
-    parentNotifiedAt: '2025-01-14T15:00:00',
-    requiresFollowUp: true,
-    followUpDate: '2025-01-21',
-    author: 'Prof. Carlos Mendoza',
-    authorId: 'u2',
-    createdAt: '2025-01-14T14:20:00',
-    status: 'IN_PROGRESS'
-  },
-  {
-    id: '3',
-    studentId: 's3',
-    studentName: 'AMARIS CASTRO KAROLAY',
-    group: '9°A',
-    date: '2025-01-13',
-    type: 'COMMITMENT',
-    category: 'ACADEMIC',
-    description: 'Se firma compromiso académico por bajo rendimiento en el área de inglés.',
-    actionTaken: 'Firma de compromiso con acudiente. Plan de mejoramiento.',
-    parentNotified: true,
-    parentNotifiedAt: '2025-01-13T16:30:00',
-    requiresFollowUp: true,
-    followUpDate: '2025-02-13',
-    followUpNotes: 'Revisar avance en un mes',
-    author: 'Coord. Ana Pérez',
-    authorId: 'u3',
-    createdAt: '2025-01-13T16:00:00',
-    status: 'IN_PROGRESS'
-  },
-  {
-    id: '4',
-    studentId: 's4',
-    studentName: 'ARRIETA CARVAJALINO JHON BREINER',
-    group: '9°A',
-    date: '2025-01-12',
-    type: 'NEUTRAL',
-    category: 'ATTENDANCE',
-    description: 'Llegó tarde a primera hora. Presentó excusa médica.',
-    parentNotified: false,
-    requiresFollowUp: false,
-    author: 'Prof. Luis Rodríguez',
-    authorId: 'u4',
-    createdAt: '2025-01-12T07:30:00',
-    status: 'CLOSED'
-  },
-  {
-    id: '5',
-    studentId: 's5',
-    studentName: 'BARRIOS PADILLA LEINNER DAVID',
-    group: '9°A',
-    date: '2025-01-10',
-    type: 'NEGATIVE',
-    category: 'UNIFORM',
-    description: 'No portaba el uniforme completo. Faltaba la corbata institucional.',
-    actionTaken: 'Anotación en el observador. Se le prestó corbata.',
-    parentNotified: false,
-    requiresFollowUp: false,
-    author: 'Coord. Ana Pérez',
-    authorId: 'u3',
-    createdAt: '2025-01-10T07:15:00',
-    status: 'OPEN'
-  },
-  {
-    id: '6',
-    studentId: 's8',
-    studentName: 'GONZALEZ MARTINEZ PEDRO LUIS',
-    group: '10°A',
-    date: '2025-01-16',
-    type: 'NEGATIVE',
-    category: 'BEHAVIORAL',
-    description: 'Agresión verbal a un compañero durante el descanso.',
-    actionTaken: 'Citación a acudiente. Proceso disciplinario iniciado.',
-    parentNotified: true,
-    parentNotifiedAt: '2025-01-16T11:00:00',
-    requiresFollowUp: true,
-    followUpDate: '2025-01-23',
-    author: 'Coord. Ana Pérez',
-    authorId: 'u3',
-    createdAt: '2025-01-16T10:30:00',
-    status: 'OPEN'
-  },
-]
 
 // Estudiantes por grupo (para filtrar según rol)
 const mockStudents = [
@@ -269,7 +153,52 @@ const mockStudents = [
 const allGroups = ['9°A', '9°B', '10°A', '10°B', '11°A']
 
 export default function Observer() {
-  const [observations, setObservations] = useState<Observation[]>(mockObservations)
+  const { user } = useAuth()
+  
+  // Determinar rol del usuario
+  const userRoles = useMemo(() => {
+    if (!user?.roles) return []
+    return user.roles.map((r: any) => typeof r === 'string' ? r : r.role?.name || r.name).filter(Boolean)
+  }, [user?.roles])
+  
+  const isTeacher = userRoles.includes('DOCENTE')
+  const isCoordinator = userRoles.includes('COORDINADOR')
+  const isAdmin = userRoles.includes('ADMIN_INSTITUTIONAL') || userRoles.includes('SUPERADMIN')
+  
+  // Mapear rol del sistema
+  const currentUserRole: UserRole = isAdmin ? 'ADMIN' : isCoordinator ? 'COORDINATOR' : 'TEACHER'
+  const permissions = rolePermissions[currentUserRole]
+  
+  // Estado para grupos asignados del docente
+  const [assignedGroups, setAssignedGroups] = useState<string[]>([])
+  const [, setLoadingAssignments] = useState(true)
+  
+  // Cargar asignaciones del docente
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      if (!isTeacher || !user?.id) {
+        setLoadingAssignments(false)
+        return
+      }
+      
+      try {
+        const response = await teacherAssignmentsApi.getAll({ teacherId: user.id })
+        const data = response.data || []
+        // Extraer grupos únicos de las asignaciones
+        const groups = [...new Set(data.map((a: any) => 
+          `${a.group?.grade?.name || ''} ${a.group?.name || ''}`.trim()
+        ))].filter(Boolean)
+        setAssignedGroups(groups as string[])
+      } catch (err) {
+        console.error('Error loading assignments:', err)
+      } finally {
+        setLoadingAssignments(false)
+      }
+    }
+    fetchAssignments()
+  }, [user?.id, isTeacher])
+
+  const [observations, setObservations] = useState<Observation[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState<ObservationType | 'ALL'>('ALL')
   const [filterCategory, setFilterCategory] = useState<ObservationCategory | 'ALL'>('ALL')
@@ -283,19 +212,23 @@ export default function Observer() {
   const [selectedObservation, setSelectedObservation] = useState<Observation | null>(null)
   const [isEditing, setIsEditing] = useState(false)
 
-  // Permisos del usuario actual
-  const currentUser = mockCurrentUser
-  const permissions = rolePermissions[currentUser.role]
+  // Usuario actual para observaciones
+  const currentUser = {
+    id: user?.id || 'u1',
+    name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Usuario',
+    role: currentUserRole,
+    assignedGroups: assignedGroups
+  }
 
   // Estudiantes visibles según rol
   const visibleStudents = permissions.canViewAll 
     ? mockStudents 
-    : mockStudents.filter(s => currentUser.assignedGroups.includes(s.group))
+    : mockStudents.filter(s => currentUser.assignedGroups.some(g => s.group.includes(g.split(' ')[0]) || g.includes(s.group)))
 
   // Grupos visibles según rol
   const visibleGroups = permissions.canViewAll 
     ? allGroups 
-    : currentUser.assignedGroups
+    : assignedGroups.length > 0 ? assignedGroups : allGroups
 
   // Form state
   const [formData, setFormData] = useState({
@@ -336,8 +269,8 @@ export default function Observer() {
 
   // Filtrar observaciones según permisos y filtros
   const filteredObservations = observations.filter(obs => {
-    // Filtro por rol: Docente solo ve sus grupos
-    if (!permissions.canViewAll && !currentUser.assignedGroups.includes(obs.group)) {
+    // Filtro por rol: Docente solo ve sus propias observaciones
+    if (!permissions.canViewAll && obs.authorId !== currentUser.id) {
       return false
     }
     
@@ -519,7 +452,6 @@ export default function Observer() {
             <h1 className="text-2xl font-bold text-slate-900">Observador del Estudiante</h1>
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
               currentUser.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' :
-              currentUser.role === 'RECTOR' ? 'bg-blue-100 text-blue-700' :
               currentUser.role === 'COORDINATOR' ? 'bg-green-100 text-green-700' :
               'bg-slate-100 text-slate-700'
             }`}>

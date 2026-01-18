@@ -18,7 +18,7 @@ export class SubjectsController {
   }
 
   @Get()
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async list(@Query('areaId') areaId?: string) {
     return this.subjectsService.list({ areaId });
   }

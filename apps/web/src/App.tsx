@@ -16,6 +16,9 @@ import Reports from './pages/Reports'
 import Observer from './pages/Observer'
 import ReportCards from './pages/ReportCards'
 import Communications from './pages/Communications'
+import ContentManager from './pages/ContentManager'
+import PeriodFinalGrades from './pages/PeriodFinalGrades'
+import Recoveries from './pages/Recoveries'
 import Layout from './components/Layout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -63,6 +66,9 @@ function App() {
                   <Route path="/observer" element={<Observer />} />
                   <Route path="/report-cards" element={<ReportCards />} />
                   <Route path="/communications" element={<Communications />} />
+                  <Route path="/content-manager" element={<ContentManager />} />
+                  <Route path="/period-final-grades" element={<PeriodFinalGrades />} />
+                  <Route path="/recoveries" element={<Recoveries />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

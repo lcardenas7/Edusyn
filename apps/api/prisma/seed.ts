@@ -304,7 +304,57 @@ async function main() {
   console.log(`   ✅ 3 usuarios creados (con usernames: admin, mcoordinadora, cdocente)\n`);
 
   // ============================================
-  // 11. CREAR ESCALA DE VALORACIÓN
+  // 11. CREAR ASIGNACIONES DEL DOCENTE
+  // ============================================
+  console.log('📚 Creando asignaciones del docente...');
+
+  // Obtener algunas asignaturas y grupos para asignar al docente
+  const matematicas = await prisma.subject.findFirst({ where: { name: 'Matemáticas' } });
+  const fisica = await prisma.subject.findFirst({ where: { name: 'Física' } });
+  const grupo6A = await prisma.group.findFirst({ where: { name: 'A', grade: { name: 'Sexto' } } });
+  const grupo6B = await prisma.group.findFirst({ where: { name: 'B', grade: { name: 'Sexto' } } });
+  const grupo7A = await prisma.group.findFirst({ where: { name: 'A', grade: { name: 'Séptimo' } } });
+
+  if (matematicas && grupo6A && academicYear) {
+    await prisma.teacherAssignment.create({
+      data: {
+        teacherId: teacherUser.id,
+        subjectId: matematicas.id,
+        groupId: grupo6A.id,
+        academicYearId: academicYear.id,
+        weeklyHours: 5,
+      },
+    });
+  }
+
+  if (matematicas && grupo6B && academicYear) {
+    await prisma.teacherAssignment.create({
+      data: {
+        teacherId: teacherUser.id,
+        subjectId: matematicas.id,
+        groupId: grupo6B.id,
+        academicYearId: academicYear.id,
+        weeklyHours: 5,
+      },
+    });
+  }
+
+  if (fisica && grupo7A && academicYear) {
+    await prisma.teacherAssignment.create({
+      data: {
+        teacherId: teacherUser.id,
+        subjectId: fisica.id,
+        groupId: grupo7A.id,
+        academicYearId: academicYear.id,
+        weeklyHours: 4,
+      },
+    });
+  }
+
+  console.log(`   ✅ Asignaciones creadas para el docente Carlos\n`);
+
+  // ============================================
+  // 12. CREAR ESCALA DE VALORACIÓN
   // ============================================
   console.log('📊 Creando escala de valoración...');
   

@@ -7,6 +7,26 @@ import { CreateAcademicTermDto } from './dto/create-academic-term.dto';
 export class AcademicTermsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async listYears(institutionId?: string) {
+    const years = await this.prisma.academicYear.findMany({
+      where: institutionId ? { institutionId } : undefined,
+      orderBy: { year: 'desc' },
+    });
+    console.log('Academic years found:', years.length, 'for institutionId:', institutionId);
+    return years;
+  }
+
+  async createYear(data: { institutionId: string; year: number; startDate?: Date; endDate?: Date }) {
+    return this.prisma.academicYear.create({
+      data: {
+        institutionId: data.institutionId,
+        year: data.year,
+        startDate: data.startDate,
+        endDate: data.endDate,
+      },
+    });
+  }
+
   async create(dto: CreateAcademicTermDto) {
     return this.prisma.academicTerm.create({
       data: {

@@ -53,6 +53,7 @@ model User {
   documentType   DocumentType?
   documentNumber String?
   phone          String?
+  birthDate      DateTime?
   isActive       Boolean    @default(true)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
@@ -61,6 +62,19 @@ model User {
   teacherAssignments TeacherAssignment[]
   studentObservations StudentObservation[]
   messages           Message[]
+  announcements      Announcement[] @relation("AnnouncementAuthor")
+  galleryImages      GalleryImage[] @relation("GalleryUploader")
+  events             Event[]        @relation("EventAuthor")
+  periodFinalGrades  PeriodFinalGrade[] @relation("PeriodGradeEnteredBy")
+  
+  // Recuperaciones
+  periodRecoveriesAssigned  PeriodRecovery[]    @relation("RecoveryAssignedBy")
+  periodRecoveriesEvaluated PeriodRecovery[]    @relation("RecoveryEvaluatedBy")
+  finalRecoveriesTeacher    FinalRecoveryPlan[] @relation("FinalRecoveryTeacher")
+  finalRecoveriesSupervisor FinalRecoveryPlan[] @relation("FinalRecoverySupervisor")
+  finalRecoveriesApprover   FinalRecoveryPlan[] @relation("FinalRecoveryApprover")
+  academicActsCreated       AcademicAct[]       @relation("ActCreatedBy")
+  academicActsApproved      AcademicAct[]       @relation("ActApprovedBy")
 }
 
 model Role {
@@ -98,6 +112,11 @@ model Institution {
   evaluationComponents EvaluationComponent[]
   students      Student[]
   messages      Message[]
+  announcements Announcement[]
+  galleryImages GalleryImage[]
+  events        Event[]
+  recoveryConfigs RecoveryConfig[]
+  academicActs    AcademicAct[]
 }
 
 model Campus {
@@ -175,6 +194,7 @@ model Area {
 
   institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   subjects    Subject[]
+  finalRecoveryPlans FinalRecoveryPlan[]
 
   @@unique([institutionId, name])
 }
@@ -198,6 +218,8 @@ model Subject {
 
   area              Area                @relation(fields: [areaId], references: [id], onDelete: Cascade)
   teacherAssignments TeacherAssignment[]
+  periodFinalGrades PeriodFinalGrade[]
+  periodRecoveries  PeriodRecovery[]
 
   @@unique([areaId, name])
 }
@@ -216,6 +238,9 @@ model AcademicYear {
   terms             AcademicTerm[]
   teacherAssignments TeacherAssignment[]
   studentEnrollments StudentEnrollment[]
+  recoveryConfigs    RecoveryConfig[]
+  finalRecoveryPlans FinalRecoveryPlan[] @relation("FinalRecoveryYear")
+  academicActs       AcademicAct[]
 
   @@unique([institutionId, year])
 }
@@ -252,6 +277,8 @@ model AcademicTerm {
   evaluativeActivities EvaluativeActivity[]
   preventiveCutConfig PreventiveCutConfig?
   preventiveAlerts PreventiveAlert[]
+  periodFinalGrades PeriodFinalGrade[]
+  periodRecoveries  PeriodRecovery[] @relation("PeriodRecoveryTerm")
 
   @@unique([academicYearId, order])
 }
@@ -400,9 +427,13 @@ model StudentEnrollment {
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
   group        Group @relation(fields: [groupId], references: [id], onDelete: Restrict)
   grades       StudentGrade[]
+  periodFinalGrades PeriodFinalGrade[]
   preventiveAlerts PreventiveAlert[]
   attendanceRecords AttendanceRecord[]
   observations StudentObservation[]
+  periodRecoveries   PeriodRecovery[]
+  finalRecoveryPlans FinalRecoveryPlan[]
+  academicActs       AcademicAct[]
 
   @@unique([studentId, academicYearId])
 }
@@ -428,6 +459,25 @@ model StudentGrade {
   evaluativeActivity EvaluativeActivity @relation(fields: [evaluativeActivityId], references: [id], onDelete: Cascade)
 
   @@unique([studentEnrollmentId, evaluativeActivityId])
+}
+
+model PeriodFinalGrade {
+  id                  String   @id @default(cuid())
+  studentEnrollmentId String
+  academicTermId      String
+  subjectId           String
+  finalScore          Decimal  @db.Decimal(3, 1)
+  observations        String?
+  enteredById         String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+  academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
+  subject           Subject           @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  enteredBy         User              @relation("PeriodGradeEnteredBy", fields: [enteredById], references: [id])
+
+  @@unique([studentEnrollmentId, academicTermId, subjectId])
 }
 
  enum PreventiveAlertStatus {
@@ -603,4 +653,292 @@ model MessageRecipient {
 
   @@index([messageId])
   @@index([recipientId])
+}
+
+// ============================================
+// DASHBOARD - Noticias, Galería, Eventos
+// ============================================
+
+model Announcement {
+  id            String    @id @default(cuid())
+  institutionId String
+  title         String
+  content       String
+  imageUrl      String?
+  priority      Int       @default(0)
+  isActive      Boolean   @default(true)
+  publishedAt   DateTime  @default(now())
+  expiresAt     DateTime?
+  authorId      String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  author      User        @relation("AnnouncementAuthor", fields: [authorId], references: [id])
+
+  @@index([institutionId])
+  @@index([isActive])
+  @@index([publishedAt])
+}
+
+model GalleryImage {
+  id            String   @id @default(cuid())
+  institutionId String
+  title         String
+  description   String?
+  imageUrl      String
+  category      String?
+  isActive      Boolean  @default(true)
+  order         Int      @default(0)
+  uploadedById  String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  uploadedBy  User        @relation("GalleryUploader", fields: [uploadedById], references: [id])
+
+  @@index([institutionId])
+  @@index([isActive])
+  @@index([category])
+}
+
+model Event {
+  id            String    @id @default(cuid())
+  institutionId String
+  title         String
+  description   String?
+  eventDate     DateTime
+  endDate       DateTime?
+  location      String?
+  eventType     String    @default("GENERAL")
+  isActive      Boolean   @default(true)
+  authorId      String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  author      User        @relation("EventAuthor", fields: [authorId], references: [id])
+
+  @@index([institutionId])
+  @@index([eventDate])
+  @@index([isActive])
+}
+
+// ============================================
+// MÓDULO DE RECUPERACIONES ACADÉMICAS
+// Decreto 1290 - SIEE Colombia
+// ============================================
+
+enum RecoveryType {
+  PERIOD      // Recuperación por período
+  FINAL       // Recuperación final (plan de apoyo)
+}
+
+enum RecoveryStatus {
+  PENDING           // Pendiente de iniciar
+  IN_PROGRESS       // En proceso
+  COMPLETED         // Completada
+  APPROVED          // Aprobada
+  NOT_APPROVED      // No aprobada
+  CANCELLED         // Cancelada
+}
+
+enum RecoveryImpactType {
+  ADJUST_TO_MINIMUM     // Ajustar hasta la nota mínima aprobatoria
+  AVERAGE_WITH_ORIGINAL // Promediar con nota original
+  REPLACE_IF_HIGHER     // Reemplazar solo si es mayor
+  QUALITATIVE_ONLY      // Solo registro cualitativo (no afecta nota)
+}
+
+enum AcademicActType {
+  ACADEMIC_COUNCIL      // Acta de consejo académico
+  PROMOTION             // Acta de promoción
+  RECOVERY_APPROVAL     // Acta de aprobación de recuperación
+  FINAL_DECISION        // Acta de decisión final
+}
+
+// Configuración institucional de recuperaciones
+model RecoveryConfig {
+  id                    String   @id @default(cuid())
+  institutionId         String
+  academicYearId        String
+  
+  // Configuración general
+  minPassingScore       Decimal  @db.Decimal(3, 1) @default(3.0)
+  
+  // Recuperación por período
+  periodRecoveryEnabled Boolean  @default(true)
+  periodMaxScore        Decimal  @db.Decimal(3, 1) @default(3.0)
+  periodImpactType      RecoveryImpactType @default(ADJUST_TO_MINIMUM)
+  
+  // Recuperación final
+  finalRecoveryEnabled  Boolean  @default(true)
+  finalMaxScore         Decimal  @db.Decimal(3, 1) @default(3.0)
+  finalImpactType       RecoveryImpactType @default(ADJUST_TO_MINIMUM)
+  maxAreasRecoverable   Int      @default(2)
+  
+  // Fechas de ventanas de recuperación
+  periodRecoveryStartDate DateTime?
+  periodRecoveryEndDate   DateTime?
+  finalRecoveryStartDate  DateTime?
+  finalRecoveryEndDate    DateTime?
+  
+  // Actas requeridas
+  requiresAcademicCouncilAct Boolean @default(true)
+  requiresPromotionAct       Boolean @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  institution  Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionId, academicYearId])
+}
+
+// Recuperación por período
+model PeriodRecovery {
+  id                    String   @id @default(cuid())
+  studentEnrollmentId   String
+  academicTermId        String
+  subjectId             String
+  
+  // Nota original que generó la recuperación
+  originalScore         Decimal  @db.Decimal(3, 1)
+  
+  // Información de la recuperación
+  status                RecoveryStatus @default(PENDING)
+  activityDescription   String?  @db.Text
+  scheduledDate         DateTime?
+  completedDate         DateTime?
+  
+  // Dimensión reforzada
+  reinforcedDimension   String?  @default("COGNITIVA")
+  
+  // Resultado
+  recoveryScore         Decimal? @db.Decimal(3, 1)
+  finalScore            Decimal? @db.Decimal(3, 1)
+  impactType            RecoveryImpactType?
+  
+  // Evidencias y observaciones
+  evidences             String?  @db.Text
+  observations          String?  @db.Text
+  
+  // Responsables
+  assignedById          String
+  evaluatedById         String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+  academicTerm      AcademicTerm      @relation("PeriodRecoveryTerm", fields: [academicTermId], references: [id], onDelete: Cascade)
+  subject           Subject           @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  assignedBy        User              @relation("RecoveryAssignedBy", fields: [assignedById], references: [id])
+  evaluatedBy       User?             @relation("RecoveryEvaluatedBy", fields: [evaluatedById], references: [id])
+
+  @@index([studentEnrollmentId])
+  @@index([academicTermId])
+  @@index([status])
+}
+
+// Plan de apoyo final (recuperación final por área)
+model FinalRecoveryPlan {
+  id                    String   @id @default(cuid())
+  studentEnrollmentId   String
+  academicYearId        String
+  areaId                String
+  
+  // Nota final del área que generó el plan
+  originalAreaScore     Decimal  @db.Decimal(3, 1)
+  
+  // Estado del plan
+  status                RecoveryStatus @default(PENDING)
+  
+  // Plan de actividades
+  activities            String?  @db.Text
+  objectives            String?  @db.Text
+  resources             String?  @db.Text
+  
+  // Fechas
+  startDate             DateTime?
+  endDate               DateTime?
+  completedDate         DateTime?
+  
+  // Resultado
+  recoveryScore         Decimal? @db.Decimal(3, 1)
+  finalAreaScore        Decimal? @db.Decimal(3, 1)
+  impactType            RecoveryImpactType?
+  
+  // Evidencias y observaciones
+  evidences             String?  @db.Text
+  observations          String?  @db.Text
+  
+  // Responsables
+  responsibleTeacherId  String
+  supervisorId          String?
+  
+  // Decisión final
+  finalDecision         String?
+  approvedById          String?
+  approvalDate          DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  studentEnrollment  StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+  academicYear       AcademicYear      @relation("FinalRecoveryYear", fields: [academicYearId], references: [id], onDelete: Cascade)
+  area               Area              @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  responsibleTeacher User              @relation("FinalRecoveryTeacher", fields: [responsibleTeacherId], references: [id])
+  supervisor         User?             @relation("FinalRecoverySupervisor", fields: [supervisorId], references: [id])
+  approvedBy         User?             @relation("FinalRecoveryApprover", fields: [approvedById], references: [id])
+  academicActs       AcademicAct[]
+
+  @@index([studentEnrollmentId])
+  @@index([academicYearId])
+  @@index([status])
+}
+
+// Actas académicas
+model AcademicAct {
+  id                    String   @id @default(cuid())
+  institutionId         String
+  academicYearId        String
+  
+  // Tipo y número de acta
+  actType               AcademicActType
+  actNumber             String
+  actDate               DateTime
+  
+  // Contenido
+  title                 String
+  content               String   @db.Text
+  decisions             String?  @db.Text
+  attendees             String?  @db.Text
+  
+  // Relaciones opcionales
+  studentEnrollmentId   String?
+  finalRecoveryPlanId   String?
+  
+  // Firmas y aprobación
+  createdById           String
+  approvedById          String?
+  approvalDate          DateTime?
+  
+  // Documento generado
+  documentUrl           String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  institution       Institution        @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  academicYear      AcademicYear       @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  studentEnrollment StudentEnrollment? @relation(fields: [studentEnrollmentId], references: [id])
+  finalRecoveryPlan FinalRecoveryPlan? @relation(fields: [finalRecoveryPlanId], references: [id])
+  createdBy         User               @relation("ActCreatedBy", fields: [createdById], references: [id])
+  approvedBy        User?              @relation("ActApprovedBy", fields: [approvedById], references: [id])
+
+  @@index([institutionId])
+  @@index([academicYearId])
+  @@index([actType])
 }

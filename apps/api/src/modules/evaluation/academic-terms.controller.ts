@@ -21,6 +21,18 @@ import { CreateAcademicTermDto } from './dto/create-academic-term.dto';
 export class AcademicTermsController {
   constructor(private readonly academicTermsService: AcademicTermsService) {}
 
+  @Get('years')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async listYears(@Query('institutionId') institutionId?: string) {
+    return this.academicTermsService.listYears(institutionId);
+  }
+
+  @Post('years')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async createYear(@Body() data: { institutionId: string; year: number; startDate?: Date; endDate?: Date }) {
+    return this.academicTermsService.createYear(data);
+  }
+
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async create(@Body() dto: CreateAcademicTermDto) {

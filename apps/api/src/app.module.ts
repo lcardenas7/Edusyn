@@ -12,6 +12,8 @@ import { ObserverModule } from './modules/observer/observer.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { CommunicationsModule } from './modules/communications/communications.module';
 import { MenReportsModule } from './modules/men-reports/men-reports.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { RecoveryModule } from './modules/recovery/recovery.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { MenReportsModule } from './modules/men-reports/men-reports.module';
     ReportsModule,
     CommunicationsModule,
     MenReportsModule,
+    DashboardModule,
+    RecoveryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

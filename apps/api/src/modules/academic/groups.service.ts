@@ -26,7 +26,12 @@ export class GroupsService {
         shiftId: params.shiftId,
         gradeId: params.gradeId,
       },
-      orderBy: { createdAt: 'desc' },
+      include: {
+        grade: true,
+        shift: true,
+        campus: true,
+      },
+      orderBy: { name: 'asc' },
     });
   }
 }

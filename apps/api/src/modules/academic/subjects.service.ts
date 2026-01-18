@@ -22,7 +22,10 @@ export class SubjectsService {
       where: {
         areaId: params.areaId,
       },
-      orderBy: { createdAt: 'desc' },
+      include: {
+        area: true,
+      },
+      orderBy: { name: 'asc' },
     });
   }
 }

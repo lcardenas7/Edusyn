@@ -17,7 +17,9 @@ import {
   Layers,
   UserCog,
   Briefcase,
-  PieChart
+  PieChart,
+  RefreshCw,
+  Megaphone
 } from 'lucide-react'
 
 type Role = 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE'
@@ -35,8 +37,8 @@ const navigation: NavItem[] = [
   { name: 'Docentes', href: '/teachers', icon: UserCog, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
   { name: 'Carga Académica', href: '/academic-load', icon: Briefcase, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
   { name: 'Estudiantes', href: '/students', icon: Users, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
-  { name: 'Mis Grupos', href: '/grades', icon: BookOpen, roles: ['DOCENTE'] },
-  { name: 'Calificaciones', href: '/grades', icon: BookOpen, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
+  { name: 'Calificaciones', href: '/grades', icon: BookOpen, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'] },
+  { name: 'Nota Final Período', href: '/period-final-grades', icon: FileText, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
   { name: 'Asistencia', href: '/attendance', icon: Calendar, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'] },
   { name: 'Observador', href: '/observer', icon: ClipboardList, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'] },
   { name: 'Alertas', href: '/alerts', icon: AlertTriangle, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'] },
@@ -44,6 +46,8 @@ const navigation: NavItem[] = [
   { name: 'Boletines', href: '/report-cards', icon: FileText, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
   { name: 'Estadísticas', href: '/statistics', icon: BarChart3, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
   { name: 'Comunicaciones', href: '/communications', icon: Bell, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'] },
+  { name: 'Contenidos', href: '/content-manager', icon: Megaphone, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
+  { name: 'Recuperaciones', href: '/recoveries', icon: RefreshCw, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'] },
   { name: 'Áreas', href: '/admin/areas', icon: Layers, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL'] },
 ]
 

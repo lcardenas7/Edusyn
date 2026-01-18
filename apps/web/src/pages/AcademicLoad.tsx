@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   Plus, 
   Edit2, 
@@ -8,8 +8,11 @@ import {
   BookOpen,
   Filter,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  AlertTriangle
 } from 'lucide-react'
+import { teachersApi, groupsApi, subjectsApi, teacherAssignmentsApi, academicYearsApi } from '../lib/api'
+import { useInstitution } from '../contexts/InstitutionContext'
 
 interface Teacher {
   id: string
@@ -48,115 +51,101 @@ interface AcademicLoad {
   status: 'ACTIVE' | 'INACTIVE'
 }
 
-const mockTeachers: Teacher[] = [
-  { id: '1', name: 'ARLETH PATRICIA AHUMADA AGUAS', documentNumber: '22522997' },
-  { id: '2', name: 'SANDRA MILENA AICARDI MALDONADO', documentNumber: '22591695' },
-  { id: '3', name: 'JAIDIVIS ISABEL ALEMAN MENDOZA', documentNumber: '55240024' },
-  { id: '4', name: 'MARISOL ALVAREZ VERA', documentNumber: '32606058' },
-  { id: '5', name: 'HERMINIA JUDITH ARCÓN CASSIANI', documentNumber: '22657585' },
-]
-
-const mockSubjects: Subject[] = [
-  { id: '1', name: 'Matemáticas', areaId: '1', areaName: 'Matemáticas' },
-  { id: '2', name: 'Lengua Castellana', areaId: '2', areaName: 'Humanidades' },
-  { id: '3', name: 'Inglés', areaId: '2', areaName: 'Humanidades' },
-  { id: '4', name: 'Biología', areaId: '3', areaName: 'Ciencias Naturales' },
-  { id: '5', name: 'Química', areaId: '3', areaName: 'Ciencias Naturales' },
-  { id: '6', name: 'Física', areaId: '3', areaName: 'Ciencias Naturales' },
-  { id: '7', name: 'Historia', areaId: '4', areaName: 'Ciencias Sociales' },
-  { id: '8', name: 'Geografía', areaId: '4', areaName: 'Ciencias Sociales' },
-  { id: '9', name: 'Educación Física', areaId: '5', areaName: 'Educación Física' },
-  { id: '10', name: 'Artística', areaId: '6', areaName: 'Educación Artística' },
-]
-
-const mockGroups: Group[] = [
-  { id: '1', name: '6°A', grade: '6°', shift: 'Mañana' },
-  { id: '2', name: '6°B', grade: '6°', shift: 'Mañana' },
-  { id: '3', name: '7°A', grade: '7°', shift: 'Mañana' },
-  { id: '4', name: '7°B', grade: '7°', shift: 'Mañana' },
-  { id: '5', name: '8°A', grade: '8°', shift: 'Mañana' },
-  { id: '6', name: '8°B', grade: '8°', shift: 'Mañana' },
-  { id: '7', name: '9°A', grade: '9°', shift: 'Tarde' },
-  { id: '8', name: '9°B', grade: '9°', shift: 'Tarde' },
-  { id: '9', name: '10°A', grade: '10°', shift: 'Tarde' },
-  { id: '10', name: '11°A', grade: '11°', shift: 'Tarde' },
-]
-
-const mockAcademicLoads: AcademicLoad[] = [
-  {
-    id: '1',
-    teacherId: '1',
-    teacherName: 'ARLETH PATRICIA AHUMADA AGUAS',
-    academicYearId: '2026',
-    groupId: '1',
-    groupName: '6°A',
-    grade: '6°',
-    areaId: '1',
-    areaName: 'Matemáticas',
-    subjectId: '1',
-    subjectName: 'Matemáticas',
-    role: 'TITULAR',
-    weeklyHours: 5,
-    status: 'ACTIVE',
-  },
-  {
-    id: '2',
-    teacherId: '1',
-    teacherName: 'ARLETH PATRICIA AHUMADA AGUAS',
-    academicYearId: '2026',
-    groupId: '2',
-    groupName: '6°B',
-    grade: '6°',
-    areaId: '1',
-    areaName: 'Matemáticas',
-    subjectId: '1',
-    subjectName: 'Matemáticas',
-    role: 'TITULAR',
-    weeklyHours: 5,
-    status: 'ACTIVE',
-  },
-  {
-    id: '3',
-    teacherId: '2',
-    teacherName: 'SANDRA MILENA AICARDI MALDONADO',
-    academicYearId: '2026',
-    groupId: '1',
-    groupName: '6°A',
-    grade: '6°',
-    areaId: '2',
-    areaName: 'Humanidades',
-    subjectId: '2',
-    subjectName: 'Lengua Castellana',
-    role: 'TITULAR',
-    weeklyHours: 4,
-    status: 'ACTIVE',
-  },
-  {
-    id: '4',
-    teacherId: '3',
-    teacherName: 'JAIDIVIS ISABEL ALEMAN MENDOZA',
-    academicYearId: '2026',
-    groupId: '5',
-    groupName: '8°A',
-    grade: '8°',
-    areaId: '3',
-    areaName: 'Ciencias Naturales',
-    subjectId: '4',
-    subjectName: 'Biología',
-    role: 'TITULAR',
-    weeklyHours: 3,
-    status: 'ACTIVE',
-  },
-]
 
 export default function AcademicLoad() {
-  const [loads, setLoads] = useState<AcademicLoad[]>(mockAcademicLoads)
+  const { institution } = useInstitution()
+  
+  // Data from API
+  const [teachers, setTeachers] = useState<Teacher[]>([])
+  const [subjects, setSubjects] = useState<Subject[]>([])
+  const [groups, setGroups] = useState<Group[]>([])
+  const [loads, setLoads] = useState<AcademicLoad[]>([])
+  const [academicYearId, setAcademicYearId] = useState<string>('')
+  
+  // UI State
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [editingLoad, setEditingLoad] = useState<AcademicLoad | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<AcademicLoad | null>(null)
   const [filterTeacher, setFilterTeacher] = useState<string>('')
   const [filterGroup, setFilterGroup] = useState<string>('')
   const [filterArea, setFilterArea] = useState<string>('')
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        // Cargar año académico actual (sin filtrar por institución)
+        const yearsRes = await academicYearsApi.getAll()
+        const years = yearsRes.data || []
+        const currentYear = years[0] // Tomar el más reciente (ordenado por año desc)
+        if (currentYear) {
+          setAcademicYearId(currentYear.id)
+        }
+
+        // Cargar docentes
+        const teachersRes = await teachersApi.getAll()
+        const teachersData = (teachersRes.data || []).map((t: any) => ({
+          id: t.id,
+          name: `${t.firstName} ${t.lastName}`.toUpperCase(),
+          documentNumber: t.documentNumber || '',
+        }))
+        setTeachers(teachersData)
+
+        // Cargar grupos
+        const groupsRes = await groupsApi.getAll()
+        const groupsData = (groupsRes.data || []).map((g: any) => ({
+          id: g.id,
+          name: g.name,
+          grade: g.grade?.name || '',
+          shift: g.shift?.name || '',
+        }))
+        setGroups(groupsData)
+
+        // Cargar asignaturas
+        const subjectsRes = await subjectsApi.getAll()
+        const subjectsData = (subjectsRes.data || []).map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          areaId: s.area?.id || s.areaId || '',
+          areaName: s.area?.name || '',
+        }))
+        setSubjects(subjectsData)
+
+        // Cargar asignaciones existentes
+        if (currentYear) {
+          const assignmentsRes = await teacherAssignmentsApi.getAll({ academicYearId: currentYear.id })
+          const assignmentsData = (assignmentsRes.data || []).map((a: any) => ({
+            id: a.id,
+            teacherId: a.teacherId,
+            teacherName: `${a.teacher?.firstName || ''} ${a.teacher?.lastName || ''}`.toUpperCase(),
+            academicYearId: a.academicYearId,
+            groupId: a.groupId,
+            groupName: a.group?.name || '',
+            grade: a.group?.grade?.name || '',
+            areaId: a.subject?.area?.id || '',
+            areaName: a.subject?.area?.name || '',
+            subjectId: a.subjectId,
+            subjectName: a.subject?.name || '',
+            role: 'TITULAR' as const,
+            weeklyHours: a.weeklyHours || 0,
+            status: 'ACTIVE' as const,
+          }))
+          setLoads(assignmentsData)
+        }
+      } catch (err: any) {
+        console.error('Error loading data:', err)
+        setError('Error al cargar datos')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [institution.id])
 
   const [form, setForm] = useState({
     teacherId: '',
@@ -188,9 +177,9 @@ export default function AcademicLoad() {
     return acc
   }, {} as Record<string, { teacher: string; loads: AcademicLoad[]; totalHours: number }>)
 
-  const selectedSubject = mockSubjects.find(s => s.id === form.subjectId)
-  const selectedGroup = mockGroups.find(g => g.id === form.groupId)
-  const selectedTeacher = mockTeachers.find(t => t.id === form.teacherId)
+  const selectedSubject = subjects.find(s => s.id === form.subjectId)
+  const selectedGroup = groups.find(g => g.id === form.groupId)
+  const selectedTeacher = teachers.find(t => t.id === form.teacherId)
 
   const validateForm = (): string[] => {
     const errors: string[] = []
@@ -251,56 +240,81 @@ export default function AcademicLoad() {
     setShowModal(true)
   }
 
-  const saveLoad = () => {
+  const saveLoad = async () => {
     const errors = validateForm()
     if (errors.length > 0) {
       setValidationErrors(errors)
       return
     }
 
-    const subject = mockSubjects.find(s => s.id === form.subjectId)!
-    const group = mockGroups.find(g => g.id === form.groupId)!
-    const teacher = mockTeachers.find(t => t.id === form.teacherId)!
+    const subject = subjects.find(s => s.id === form.subjectId)!
+    const group = groups.find(g => g.id === form.groupId)!
+    const teacher = teachers.find(t => t.id === form.teacherId)!
 
-    if (editingLoad) {
-      setLoads(loads.map(l => 
-        l.id === editingLoad.id 
-          ? {
-              ...l,
-              teacherId: form.teacherId,
-              teacherName: teacher.name,
-              groupId: form.groupId,
-              groupName: group.name,
-              grade: group.grade,
-              areaId: subject.areaId,
-              areaName: subject.areaName,
-              subjectId: form.subjectId,
-              subjectName: subject.name,
-              role: form.role,
-              weeklyHours: form.weeklyHours,
-            }
-          : l
-      ))
-    } else {
-      const newLoad: AcademicLoad = {
-        id: `load-${Date.now()}`,
-        teacherId: form.teacherId,
-        teacherName: teacher.name,
-        academicYearId: '2026',
-        groupId: form.groupId,
-        groupName: group.name,
-        grade: group.grade,
-        areaId: subject.areaId,
-        areaName: subject.areaName,
-        subjectId: form.subjectId,
-        subjectName: subject.name,
-        role: form.role,
-        weeklyHours: form.weeklyHours,
-        status: 'ACTIVE',
+    setSaving(true)
+    try {
+      if (editingLoad) {
+        // Por ahora solo actualizar localmente (API de update no implementada)
+        setLoads(loads.map(l => 
+          l.id === editingLoad.id 
+            ? {
+                ...l,
+                teacherId: form.teacherId,
+                teacherName: teacher.name,
+                groupId: form.groupId,
+                groupName: group.name,
+                grade: group.grade,
+                areaId: subject.areaId,
+                areaName: subject.areaName,
+                subjectId: form.subjectId,
+                subjectName: subject.name,
+                role: form.role,
+                weeklyHours: form.weeklyHours,
+              }
+            : l
+        ))
+      } else {
+        // Validar que tenemos año académico
+        if (!academicYearId) {
+          setValidationErrors(['No hay año académico configurado. Contacte al administrador.'])
+          setSaving(false)
+          return
+        }
+        
+        // Crear nueva asignación via API
+        const response = await teacherAssignmentsApi.create({
+          academicYearId,
+          groupId: form.groupId,
+          subjectId: form.subjectId,
+          teacherId: form.teacherId,
+          weeklyHours: form.weeklyHours,
+        })
+        
+        const newLoad: AcademicLoad = {
+          id: response.data.id,
+          teacherId: form.teacherId,
+          teacherName: teacher.name,
+          academicYearId,
+          groupId: form.groupId,
+          groupName: group.name,
+          grade: group.grade,
+          areaId: subject.areaId,
+          areaName: subject.areaName,
+          subjectId: form.subjectId,
+          subjectName: subject.name,
+          role: form.role,
+          weeklyHours: form.weeklyHours,
+          status: 'ACTIVE',
+        }
+        setLoads([...loads, newLoad])
       }
-      setLoads([...loads, newLoad])
+      setShowModal(false)
+    } catch (err: any) {
+      console.error('Error saving assignment:', err)
+      setValidationErrors([err.response?.data?.message || 'Error al guardar la asignación'])
+    } finally {
+      setSaving(false)
     }
-    setShowModal(false)
   }
 
   const deleteLoad = () => {
@@ -309,8 +323,27 @@ export default function AcademicLoad() {
     setDeleteConfirm(null)
   }
 
-  const uniqueAreas = [...new Set(mockSubjects.map(s => ({ id: s.areaId, name: s.areaName })))]
+  const uniqueAreas = [...new Set(subjects.map(s => ({ id: s.areaId, name: s.areaName })))]
     .filter((v, i, a) => a.findIndex(t => t.id === v.id) === i)
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto" />
+          <p className="mt-4 text-red-600">{error}</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -321,7 +354,8 @@ export default function AcademicLoad() {
         </div>
         <button
           onClick={() => openModal()}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          disabled={saving}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
         >
           <Plus className="w-4 h-4" />
           Nueva Asignación
@@ -357,7 +391,7 @@ export default function AcademicLoad() {
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             >
               <option value="">Todos los docentes</option>
-              {mockTeachers.map(t => (
+              {teachers.map(t => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
@@ -370,7 +404,7 @@ export default function AcademicLoad() {
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             >
               <option value="">Todos los grupos</option>
-              {mockGroups.map(g => (
+              {groups.map(g => (
                 <option key={g.id} value={g.id}>{g.name} - {g.shift}</option>
               ))}
             </select>
@@ -531,7 +565,7 @@ export default function AcademicLoad() {
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 >
                   <option value="">Seleccione un docente</option>
-                  {mockTeachers.map(t => (
+                  {teachers.map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
                 </select>
@@ -547,7 +581,7 @@ export default function AcademicLoad() {
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 >
                   <option value="">Seleccione un grupo</option>
-                  {mockGroups.map(g => (
+                  {groups.map(g => (
                     <option key={g.id} value={g.id}>{g.name} - {g.grade} ({g.shift})</option>
                   ))}
                 </select>
@@ -563,7 +597,7 @@ export default function AcademicLoad() {
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 >
                   <option value="">Seleccione una asignatura</option>
-                  {mockSubjects.map(s => (
+                  {subjects.map(s => (
                     <option key={s.id} value={s.id}>{s.name} ({s.areaName})</option>
                   ))}
                 </select>

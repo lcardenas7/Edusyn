@@ -14,6 +14,8 @@ import { PreventiveCutsController } from './preventive-cuts.controller';
 import { PreventiveCutsService } from './preventive-cuts.service';
 import { StudentGradesController } from './student-grades.controller';
 import { StudentGradesService } from './student-grades.service';
+import { PeriodFinalGradesController } from './period-final-grades.controller';
+import { PeriodFinalGradesService } from './period-final-grades.service';
 
 @Module({
   controllers: [
@@ -24,6 +26,7 @@ import { StudentGradesService } from './student-grades.service';
     EvaluationPlansController,
     StudentGradesController,
     PreventiveCutsController,
+    PeriodFinalGradesController,
   ],
   providers: [
     PerformanceScaleService,
@@ -33,7 +36,8 @@ import { StudentGradesService } from './student-grades.service';
     EvaluationPlansService,
     StudentGradesService,
     PreventiveCutsService,
+    PeriodFinalGradesService,
   ],
-  exports: [StudentGradesService],
+  exports: [StudentGradesService, PeriodFinalGradesService],
 })
 export class EvaluationModule {}

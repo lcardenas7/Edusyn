@@ -206,3 +206,102 @@ export const gradesApi = {
   getByStudent: (enrollmentId: string) => api.get(`/student-grades/by-student`, { params: { studentEnrollmentId: enrollmentId } }),
   upsert: (data: { studentEnrollmentId: string; evaluativeActivityId: string; score: number }) => api.post('/student-grades', data),
 }
+
+// Dashboard APIs
+export const dashboardApi = {
+  getData: (institutionId?: string) => api.get('/dashboard', { params: { institutionId } }),
+}
+
+export const announcementsApi = {
+  getAll: (institutionId?: string, onlyActive = true) => api.get('/announcements', { params: { institutionId, onlyActive } }),
+  create: (data: { institutionId: string; title: string; content: string; imageUrl?: string; priority?: number; expiresAt?: string }) => api.post('/announcements', data),
+  update: (id: string, data: any) => api.patch(`/announcements/${id}`, data),
+  delete: (id: string) => api.delete(`/announcements/${id}`),
+}
+
+export const galleryApi = {
+  getAll: (institutionId?: string, category?: string, onlyActive = true) => api.get('/gallery', { params: { institutionId, category, onlyActive } }),
+  create: (data: { institutionId: string; title: string; description?: string; imageUrl: string; category?: string }) => api.post('/gallery', data),
+  update: (id: string, data: any) => api.patch(`/gallery/${id}`, data),
+  delete: (id: string) => api.delete(`/gallery/${id}`),
+}
+
+export const eventsApi = {
+  getAll: (institutionId?: string, onlyActive = true, upcoming = false) => api.get('/events', { params: { institutionId, onlyActive, upcoming } }),
+  getBirthdays: (institutionId?: string) => api.get('/events/birthdays', { params: { institutionId } }),
+  create: (data: { institutionId: string; title: string; description?: string; eventDate: string; endDate?: string; location?: string; eventType?: string }) => api.post('/events', data),
+  update: (id: string, data: any) => api.patch(`/events/${id}`, data),
+  delete: (id: string) => api.delete(`/events/${id}`),
+}
+
+// Period Final Grades API (solo admin/coordinador)
+export const periodFinalGradesApi = {
+  upsert: (data: { studentEnrollmentId: string; academicTermId: string; subjectId: string; finalScore: number; observations?: string }) => 
+    api.post('/period-final-grades', data),
+  bulkUpsert: (grades: Array<{ studentEnrollmentId: string; academicTermId: string; subjectId: string; finalScore: number; observations?: string }>) => 
+    api.post('/period-final-grades/bulk', { grades }),
+  getByGroup: (groupId: string, academicTermId: string) => 
+    api.get('/period-final-grades/by-group', { params: { groupId, academicTermId } }),
+  getByStudent: (studentEnrollmentId: string, academicTermId?: string) => 
+    api.get('/period-final-grades/by-student', { params: { studentEnrollmentId, academicTermId } }),
+  delete: (id: string) => api.delete(`/period-final-grades/${id}`),
+}
+
+// ============================================
+// MÓDULO DE RECUPERACIONES ACADÉMICAS
+// ============================================
+
+// Configuración de recuperaciones
+export const recoveryConfigApi = {
+  get: (institutionId: string, academicYearId: string) => 
+    api.get('/recovery-config', { params: { institutionId, academicYearId } }),
+  upsert: (data: any) => api.post('/recovery-config', data),
+}
+
+// Recuperación por período
+export const periodRecoveryApi = {
+  detect: (academicTermId: string, institutionId: string) => 
+    api.get('/period-recovery/detect', { params: { academicTermId, institutionId } }),
+  create: (data: any) => api.post('/period-recovery', data),
+  getByTerm: (academicTermId: string, status?: string) => 
+    api.get('/period-recovery/by-term', { params: { academicTermId, status } }),
+  getByStudent: (studentEnrollmentId: string) => 
+    api.get(`/period-recovery/by-student/${studentEnrollmentId}`),
+  updateActivity: (id: string, data: any) => 
+    api.patch(`/period-recovery/${id}/activity`, data),
+  registerResult: (id: string, data: any, institutionId: string) => 
+    api.patch(`/period-recovery/${id}/result`, data, { params: { institutionId } }),
+  getStats: (academicTermId: string) => 
+    api.get('/period-recovery/stats', { params: { academicTermId } }),
+}
+
+// Recuperación final (Plan de apoyo)
+export const finalRecoveryApi = {
+  detect: (academicYearId: string, institutionId: string) => 
+    api.get('/final-recovery/detect', { params: { academicYearId, institutionId } }),
+  create: (data: any) => api.post('/final-recovery', data),
+  getByYear: (academicYearId: string, status?: string) => 
+    api.get('/final-recovery/by-year', { params: { academicYearId, status } }),
+  getByStudent: (studentEnrollmentId: string) => 
+    api.get(`/final-recovery/by-student/${studentEnrollmentId}`),
+  updatePlan: (id: string, data: any) => 
+    api.patch(`/final-recovery/${id}/plan`, data),
+  registerResult: (id: string, data: any, institutionId: string) => 
+    api.patch(`/final-recovery/${id}/result`, data, { params: { institutionId } }),
+  approve: (id: string, data: any, institutionId: string) => 
+    api.patch(`/final-recovery/${id}/approve`, data, { params: { institutionId } }),
+  getStats: (academicYearId: string) => 
+    api.get('/final-recovery/stats', { params: { academicYearId } }),
+}
+
+// Actas académicas
+export const academicActsApi = {
+  create: (data: any) => api.post('/academic-acts', data),
+  getAll: (institutionId: string, academicYearId?: string, actType?: string) => 
+    api.get('/academic-acts', { params: { institutionId, academicYearId, actType } }),
+  getByStudent: (studentEnrollmentId: string) => 
+    api.get(`/academic-acts/by-student/${studentEnrollmentId}`),
+  approve: (id: string) => api.patch(`/academic-acts/${id}/approve`),
+  generatePromotionAct: (data: any) => api.post('/academic-acts/promotion', data),
+  generateAcademicCouncilAct: (data: any) => api.post('/academic-acts/academic-council', data),
+}

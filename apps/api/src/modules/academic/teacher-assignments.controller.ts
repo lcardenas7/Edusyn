@@ -18,7 +18,7 @@ export class TeacherAssignmentsController {
   }
 
   @Get()
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async list(
     @Query('academicYearId') academicYearId?: string,
     @Query('groupId') groupId?: string,
