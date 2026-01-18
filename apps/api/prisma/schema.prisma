@@ -1,0 +1,604 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SchoolShift {
+  MORNING
+  AFTERNOON
+  SINGLE
+  NIGHT
+}
+
+enum GradeStage {
+  PREESCOLAR
+  BASICA_PRIMARIA
+  BASICA_SECUNDARIA
+  MEDIA
+}
+
+enum DocumentType {
+  TI
+  CC
+  CE
+  PASAPORTE
+  RC
+  NIP
+  NUIP
+}
+
+enum PerformanceLevel {
+  SUPERIOR
+  ALTO
+  BASICO
+  BAJO
+}
+
+enum AcademicTermType {
+  PERIOD
+  SEMESTER_EXAM
+}
+
+model User {
+  id             String     @id @default(cuid())
+  email          String     @unique
+  passwordHash   String
+  firstName      String
+  lastName       String
+  documentType   DocumentType?
+  documentNumber String?
+  isActive       Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  roles              UserRole[]
+  teacherAssignments TeacherAssignment[]
+  studentObservations StudentObservation[]
+  messages           Message[]
+}
+
+model Role {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  users UserRole[]
+}
+
+model UserRole {
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model Institution {
+  id        String   @id @default(cuid())
+  name      String
+  daneCode  String?  @unique
+  nit       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campuses      Campus[]
+  areas         Area[]
+  academicYears AcademicYear[]
+  performanceScale PerformanceScale[]
+  evaluationComponents EvaluationComponent[]
+  students      Student[]
+  messages      Message[]
+}
+
+model Campus {
+  id            String   @id @default(cuid())
+  institutionId String
+  name          String
+  address       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  shifts      Shift[]
+  groups      Group[]
+
+  @@unique([institutionId, name])
+}
+
+model Shift {
+  id        String      @id @default(cuid())
+  campusId  String
+  type      SchoolShift
+  name      String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  campus Campus @relation(fields: [campusId], references: [id], onDelete: Cascade)
+  groups Group[]
+
+  @@unique([campusId, type])
+}
+
+model Grade {
+  id        String     @id @default(cuid())
+  stage     GradeStage
+  number    Int?
+  name      String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  groups Group[]
+
+  @@unique([stage, name])
+}
+
+model Group {
+  id        String   @id @default(cuid())
+  campusId  String
+  shiftId   String
+  gradeId   String
+  code      String?
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campus Campus @relation(fields: [campusId], references: [id], onDelete: Restrict)
+  shift  Shift  @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+  grade  Grade  @relation(fields: [gradeId], references: [id], onDelete: Restrict)
+
+  teacherAssignments TeacherAssignment[]
+  studentEnrollments StudentEnrollment[]
+
+  @@unique([campusId, shiftId, gradeId, name])
+}
+
+model Area {
+  id            String   @id @default(cuid())
+  institutionId String
+  name          String
+  isMandatory   Boolean  @default(false)
+  calculationType AreaCalculationType @default(AVERAGE)
+  customFormula String?
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  subjects    Subject[]
+
+  @@unique([institutionId, name])
+}
+
+enum AreaCalculationType {
+  SINGLE_SUBJECT
+  AVERAGE
+  WEIGHTED_AVERAGE
+  CUSTOM_FORMULA
+}
+
+model Subject {
+  id          String   @id @default(cuid())
+  areaId      String
+  name        String
+  weeklyHours Int      @default(0)
+  weight      Float    @default(1.0)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  area              Area                @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  teacherAssignments TeacherAssignment[]
+
+  @@unique([areaId, name])
+}
+
+model AcademicYear {
+  id            String   @id @default(cuid())
+  institutionId String
+  year          Int
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution       Institution        @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  periods           Period[]
+  terms             AcademicTerm[]
+  teacherAssignments TeacherAssignment[]
+  studentEnrollments StudentEnrollment[]
+
+  @@unique([institutionId, year])
+}
+
+model Period {
+  id             String   @id @default(cuid())
+  academicYearId String
+  name           String
+  order          Int
+  startDate      DateTime?
+  endDate        DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+
+  @@unique([academicYearId, order])
+}
+
+model AcademicTerm {
+  id             String           @id @default(cuid())
+  academicYearId String
+  type           AcademicTermType
+  name           String
+  order          Int
+  weightPercentage Int
+  startDate      DateTime?
+  endDate        DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  evaluationPlans EvaluationPlan[]
+  evaluativeActivities EvaluativeActivity[]
+  preventiveCutConfig PreventiveCutConfig?
+  preventiveAlerts PreventiveAlert[]
+
+  @@unique([academicYearId, order])
+}
+
+model TeacherAssignment {
+  id            String   @id @default(cuid())
+  academicYearId String
+  groupId       String
+  subjectId     String
+  teacherId     String
+  weeklyHours   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  group        Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher      User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  evaluativeActivities EvaluativeActivity[]
+  evaluationPlans EvaluationPlan[]
+  preventiveAlerts PreventiveAlert[]
+  attendanceRecords AttendanceRecord[]
+
+  @@unique([academicYearId, groupId, subjectId, teacherId])
+}
+
+model PerformanceScale {
+  id            String           @id @default(cuid())
+  institutionId String
+  level         PerformanceLevel
+  minScore      Decimal
+  maxScore      Decimal
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionId, level])
+}
+
+model EvaluativeActivity {
+  id                 String   @id @default(cuid())
+  teacherAssignmentId String
+  academicTermId     String
+  evaluationPlanId   String
+  componentId        String
+  name               String
+  dueDate            DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  teacherAssignment TeacherAssignment @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
+  academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
+  evaluationPlan     EvaluationPlan   @relation(fields: [evaluationPlanId], references: [id], onDelete: Cascade)
+  component          EvaluationComponent @relation(fields: [componentId], references: [id], onDelete: Restrict)
+  studentGrades      StudentGrade[]
+
+  @@index([teacherAssignmentId])
+  @@index([academicTermId])
+  @@index([evaluationPlanId])
+  @@index([componentId])
+}
+
+model EvaluationPlan {
+  id                 String   @id @default(cuid())
+  teacherAssignmentId String
+  academicTermId     String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  teacherAssignment TeacherAssignment @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
+  academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
+
+  components EvaluationPlanComponentWeight[]
+  activities EvaluativeActivity[]
+
+  @@unique([teacherAssignmentId, academicTermId])
+}
+
+model EvaluationComponent {
+  id              String   @id @default(cuid())
+  institutionId   String
+  parentId        String?
+  code            String
+  name            String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  parent      EvaluationComponent? @relation("EvalComponentHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children    EvaluationComponent[] @relation("EvalComponentHierarchy")
+
+  planWeights EvaluationPlanComponentWeight[]
+  activities  EvaluativeActivity[]
+
+  @@unique([institutionId, code])
+}
+
+model EvaluationPlanComponentWeight {
+  id               String   @id @default(cuid())
+  evaluationPlanId String
+  componentId      String
+  percentage       Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  evaluationPlan EvaluationPlan @relation(fields: [evaluationPlanId], references: [id], onDelete: Cascade)
+  component      EvaluationComponent @relation(fields: [componentId], references: [id], onDelete: Restrict)
+
+  @@unique([evaluationPlanId, componentId])
+}
+
+model Student {
+  id            String   @id @default(cuid())
+  institutionId String
+  documentType  String
+  documentNumber String
+  firstName     String
+  lastName      String
+  birthDate     DateTime?
+  gender        String?
+  email         String?
+  phone         String?
+  address       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  enrollments StudentEnrollment[]
+
+  @@unique([institutionId, documentNumber])
+}
+
+model StudentEnrollment {
+  id            String   @id @default(cuid())
+  studentId     String
+  academicYearId String
+  groupId       String
+  status        EnrollmentStatus @default(ACTIVE)
+  enrollmentDate DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  student      Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  group        Group @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  grades       StudentGrade[]
+  preventiveAlerts PreventiveAlert[]
+  attendanceRecords AttendanceRecord[]
+  observations StudentObservation[]
+
+  @@unique([studentId, academicYearId])
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  INACTIVE
+  TRANSFERRED
+  GRADUATED
+  WITHDRAWN
+}
+
+model StudentGrade {
+  id                  String   @id @default(cuid())
+  studentEnrollmentId String
+  evaluativeActivityId String
+  score               Decimal  @db.Decimal(3, 1)
+  observations        String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+  evaluativeActivity EvaluativeActivity @relation(fields: [evaluativeActivityId], references: [id], onDelete: Cascade)
+
+  @@unique([studentEnrollmentId, evaluativeActivityId])
+}
+
+ enum PreventiveAlertStatus {
+   OPEN
+   IN_RECOVERY
+   RESOLVED
+ }
+
+ model PreventiveCutConfig {
+   id           String   @id @default(cuid())
+   academicTermId String
+   cutoffDate   DateTime
+   riskThresholdScore Decimal @db.Decimal(3, 1)
+   createdAt    DateTime @default(now())
+   updatedAt    DateTime @updatedAt
+
+   academicTerm AcademicTerm @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
+
+   @@unique([academicTermId])
+ }
+
+ model PreventiveAlert {
+   id                  String   @id @default(cuid())
+   teacherAssignmentId String
+   studentEnrollmentId String
+   academicTermId      String
+   cutoffDate          DateTime
+   computedGrade       Decimal? @db.Decimal(3, 1)
+   performanceLevel    PerformanceLevel?
+   status              PreventiveAlertStatus @default(OPEN)
+   recoveryPlan        String?
+   meetingAt           DateTime?
+   notes               String?
+   createdAt           DateTime @default(now())
+   updatedAt           DateTime @updatedAt
+
+   teacherAssignment  TeacherAssignment  @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
+   studentEnrollment  StudentEnrollment  @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+   academicTerm       AcademicTerm       @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
+
+   @@unique([teacherAssignmentId, studentEnrollmentId, academicTermId])
+   @@index([teacherAssignmentId])
+   @@index([studentEnrollmentId])
+   @@index([academicTermId])
+ }
+
+// ==================== ATTENDANCE ====================
+
+enum AttendanceStatus {
+  PRESENT       // Presente
+  ABSENT        // Ausente
+  LATE          // Tardanza
+  EXCUSED       // Excusa justificada
+}
+
+model AttendanceRecord {
+  id                  String   @id @default(cuid())
+  teacherAssignmentId String
+  studentEnrollmentId String
+  date                DateTime @db.Date
+  status              AttendanceStatus
+  observations        String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  teacherAssignment TeacherAssignment @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherAssignmentId, studentEnrollmentId, date])
+  @@index([teacherAssignmentId])
+  @@index([studentEnrollmentId])
+  @@index([date])
+}
+
+// ==================== STUDENT OBSERVER ====================
+
+enum ObservationType {
+  POSITIVE      // Logro, reconocimiento
+  NEGATIVE      // Falta, llamado de atención
+  NEUTRAL       // Observación informativa
+  COMMITMENT    // Compromiso firmado
+}
+
+enum ObservationCategory {
+  ACADEMIC      // Académico
+  BEHAVIORAL    // Comportamental
+  ATTENDANCE    // Asistencia
+  UNIFORM       // Uniforme/presentación
+  OTHER         // Otro
+}
+
+model StudentObservation {
+  id                  String   @id @default(cuid())
+  studentEnrollmentId String
+  authorId            String
+  date                DateTime @db.Date
+  type                ObservationType
+  category            ObservationCategory
+  description         String
+  actionTaken         String?
+  parentNotified      Boolean  @default(false)
+  parentNotifiedAt    DateTime?
+  requiresFollowUp    Boolean  @default(false)
+  followUpDate        DateTime?
+  followUpNotes       String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+  author            User              @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([studentEnrollmentId])
+  @@index([authorId])
+  @@index([date])
+  @@index([type])
+}
+
+// ==================== COMMUNICATIONS ====================
+
+enum MessageType {
+  ANNOUNCEMENT    // Anuncio general
+  CIRCULAR        // Circular institucional
+  NOTIFICATION    // Notificación individual
+  REMINDER        // Recordatorio
+}
+
+enum MessageStatus {
+  DRAFT
+  SENT
+  SCHEDULED
+}
+
+model Message {
+  id            String        @id @default(cuid())
+  institutionId String
+  authorId      String
+  type          MessageType
+  subject       String
+  content       String
+  status        MessageStatus @default(DRAFT)
+  scheduledAt   DateTime?
+  sentAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  institution Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  author      User           @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  recipients  MessageRecipient[]
+
+  @@index([institutionId])
+  @@index([authorId])
+  @@index([status])
+}
+
+enum RecipientType {
+  USER
+  GROUP
+  GRADE
+  ALL_STUDENTS
+  ALL_TEACHERS
+  ALL_PARENTS
+}
+
+model MessageRecipient {
+  id            String        @id @default(cuid())
+  messageId     String
+  recipientType RecipientType
+  recipientId   String?
+  readAt        DateTime?
+  createdAt     DateTime      @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([recipientId])
+}

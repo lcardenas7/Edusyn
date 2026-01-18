@@ -1,0 +1,8 @@
+export const ROLE_NAMES = [
+  'SUPERADMIN',
+  'ADMIN_INSTITUTIONAL',
+  'DOCENTE',
+  'ESTUDIANTE',
+  'ACUDIENTE',
+  'COORDINADOR',
+] as const;

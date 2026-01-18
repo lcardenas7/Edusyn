@@ -1,0 +1,742 @@
+import { useState, useRef } from 'react'
+import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, GraduationCap, FileText, AlertTriangle, Phone, Mail, MapPin, Users, CheckCircle2, XCircle, FileSpreadsheet } from 'lucide-react'
+import { generateTemplate, parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
+
+type StudentStatus = 'ACTIVE' | 'INACTIVE' | 'TRANSFERRED' | 'GRADUATED' | 'WITHDRAWN'
+type ViewMode = 'list' | 'detail'
+
+interface Student {
+  id: string
+  firstName: string
+  lastName: string
+  documentType: string
+  documentNumber: string
+  birthDate: string
+  gender: string
+  address: string
+  phone: string
+  email: string
+  group: string
+  status: StudentStatus
+  enrollmentDate: string
+  parentName: string
+  parentPhone: string
+  parentEmail: string
+  bloodType: string
+  eps: string
+  observations: string
+  photo?: string
+}
+
+interface AcademicHistory {
+  year: number
+  grade: string
+  average: number
+  status: 'APPROVED' | 'FAILED' | 'IN_PROGRESS'
+  rank: number
+  totalStudents: number
+}
+
+interface ObserverEntry {
+  id: string
+  date: string
+  type: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL'
+  category: string
+  description: string
+  author: string
+}
+
+const mockStudents: Student[] = [
+  { id: '1', firstName: 'Juan Carlos', lastName: 'Perez Garcia', documentType: 'TI', documentNumber: '1001234567', birthDate: '2010-05-15', gender: 'M', address: 'Calle 10 # 15-20', phone: '3001234567', email: 'juan.perez@email.com', group: '9°A', status: 'ACTIVE', enrollmentDate: '2020-01-20', parentName: 'Maria Garcia Lopez', parentPhone: '3009876543', parentEmail: 'maria.garcia@email.com', bloodType: 'O+', eps: 'Sura', observations: '' },
+  { id: '2', firstName: 'Maria Fernanda', lastName: 'Lopez Rodriguez', documentType: 'TI', documentNumber: '1001234568', birthDate: '2010-08-22', gender: 'F', address: 'Carrera 5 # 20-30', phone: '3002345678', email: 'maria.lopez@email.com', group: '9°A', status: 'ACTIVE', enrollmentDate: '2020-01-20', parentName: 'Carlos Lopez Martinez', parentPhone: '3008765432', parentEmail: 'carlos.lopez@email.com', bloodType: 'A+', eps: 'Nueva EPS', observations: '' },
+  { id: '3', firstName: 'Carlos Andres', lastName: 'Martinez Silva', documentType: 'TI', documentNumber: '1001234569', birthDate: '2010-03-10', gender: 'M', address: 'Avenida 3 # 8-15', phone: '3003456789', email: 'carlos.martinez@email.com', group: '9°B', status: 'ACTIVE', enrollmentDate: '2021-01-18', parentName: 'Ana Silva Gomez', parentPhone: '3007654321', parentEmail: 'ana.silva@email.com', bloodType: 'B+', eps: 'Sanitas', observations: 'Estudiante destacado en matematicas' },
+  { id: '4', firstName: 'Ana Sofia', lastName: 'Gonzalez Torres', documentType: 'TI', documentNumber: '1001234570', birthDate: '2009-11-28', gender: 'F', address: 'Calle 15 # 10-25', phone: '3004567890', email: 'ana.gonzalez@email.com', group: '10°A', status: 'ACTIVE', enrollmentDate: '2019-01-21', parentName: 'Pedro Gonzalez Ruiz', parentPhone: '3006543210', parentEmail: 'pedro.gonzalez@email.com', bloodType: 'AB+', eps: 'Compensar', observations: '' },
+  { id: '5', firstName: 'Pedro Luis', lastName: 'Ramirez Diaz', documentType: 'TI', documentNumber: '1001234571', birthDate: '2010-07-05', gender: 'M', address: 'Carrera 8 # 12-18', phone: '3005678901', email: 'pedro.ramirez@email.com', group: '9°A', status: 'INACTIVE', enrollmentDate: '2020-01-20', parentName: 'Luis Ramirez Perez', parentPhone: '3005432109', parentEmail: 'luis.ramirez@email.com', bloodType: 'O-', eps: 'Famisanar', observations: 'Retiro temporal por cambio de ciudad' },
+]
+
+const mockHistory: AcademicHistory[] = [
+  { year: 2024, grade: '8°', average: 4.2, status: 'APPROVED', rank: 5, totalStudents: 35 },
+  { year: 2023, grade: '7°', average: 4.0, status: 'APPROVED', rank: 8, totalStudents: 36 },
+  { year: 2022, grade: '6°', average: 3.8, status: 'APPROVED', rank: 12, totalStudents: 34 },
+]
+
+const mockObserver: ObserverEntry[] = [
+  { id: '1', date: '2025-01-15', type: 'POSITIVE', category: 'Academico', description: 'Excelente participacion en clase de matematicas', author: 'Prof. Carlos Perez' },
+  { id: '2', date: '2025-01-10', type: 'NEUTRAL', category: 'Asistencia', description: 'Llego tarde a primera hora', author: 'Coordinacion' },
+  { id: '3', date: '2024-11-20', type: 'POSITIVE', category: 'Comportamiento', description: 'Ayudo a companeros con dificultades', author: 'Prof. Maria Lopez' },
+]
+
+const groups = ['9°A', '9°B', '10°A', '10°B', '11°A', '11°B']
+const statusLabels: Record<StudentStatus, { label: string, color: string }> = {
+  ACTIVE: { label: 'Activo', color: 'bg-green-100 text-green-700' },
+  INACTIVE: { label: 'Inactivo', color: 'bg-slate-100 text-slate-600' },
+  TRANSFERRED: { label: 'Trasladado', color: 'bg-amber-100 text-amber-700' },
+  GRADUATED: { label: 'Graduado', color: 'bg-blue-100 text-blue-700' },
+  WITHDRAWN: { label: 'Retirado', color: 'bg-red-100 text-red-700' },
+}
+
+export default function Students() {
+  const [students, setStudents] = useState<Student[]>(mockStudents)
+  const [search, setSearch] = useState('')
+  const [filterGroup, setFilterGroup] = useState('ALL')
+  const [filterStatus, setFilterStatus] = useState<StudentStatus | 'ALL'>('ALL')
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
+  const [showModal, setShowModal] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null)
+  const [detailTab, setDetailTab] = useState<'info' | 'academic' | 'observer'>('info')
+  const [importResult, setImportResult] = useState<ImportResult | null>(null)
+  const [importing, setImporting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [formData, setFormData] = useState<Partial<Student>>({
+    firstName: '', lastName: '', documentType: 'TI', documentNumber: '', birthDate: '', gender: 'M',
+    address: '', phone: '', email: '', group: '9°A', status: 'ACTIVE', enrollmentDate: new Date().toISOString().split('T')[0],
+    parentName: '', parentPhone: '', parentEmail: '', bloodType: '', eps: '', observations: ''
+  })
+
+  const filteredStudents = students.filter(s => {
+    const matchesSearch = `${s.firstName} ${s.lastName} ${s.documentNumber}`.toLowerCase().includes(search.toLowerCase())
+    const matchesGroup = filterGroup === 'ALL' || s.group === filterGroup
+    const matchesStatus = filterStatus === 'ALL' || s.status === filterStatus
+    return matchesSearch && matchesGroup && matchesStatus
+  })
+
+  const stats = {
+    total: students.length,
+    active: students.filter(s => s.status === 'ACTIVE').length,
+    inactive: students.filter(s => s.status !== 'ACTIVE').length,
+    byGroup: groups.map(g => ({ group: g, count: students.filter(s => s.group === g && s.status === 'ACTIVE').length }))
+  }
+
+  const handleOpenNew = () => {
+    setEditingStudent(null)
+    setFormData({
+      firstName: '', lastName: '', documentType: 'TI', documentNumber: '', birthDate: '', gender: 'M',
+      address: '', phone: '', email: '', group: '9°A', status: 'ACTIVE', enrollmentDate: new Date().toISOString().split('T')[0],
+      parentName: '', parentPhone: '', parentEmail: '', bloodType: '', eps: '', observations: ''
+    })
+    setShowModal(true)
+  }
+
+  const handleEdit = (student: Student) => {
+    setEditingStudent(student)
+    setFormData(student)
+    setShowModal(true)
+  }
+
+  const handleSave = () => {
+    if (editingStudent) {
+      setStudents(students.map(s => s.id === editingStudent.id ? { ...s, ...formData } as Student : s))
+    } else {
+      const newStudent: Student = { ...formData, id: Date.now().toString() } as Student
+      setStudents([...students, newStudent])
+    }
+    setShowModal(false)
+  }
+
+  const handleDelete = (id: string) => {
+    if (confirm('Esta seguro de eliminar este estudiante?')) {
+      setStudents(students.filter(s => s.id !== id))
+    }
+  }
+
+  const handleViewDetail = (student: Student) => {
+    setSelectedStudent(student)
+    setDetailTab('info')
+    setViewMode('detail')
+  }
+
+  const calculateAge = (birthDate: string) => {
+    const today = new Date()
+    const birth = new Date(birthDate)
+    let age = today.getFullYear() - birth.getFullYear()
+    const m = today.getMonth() - birth.getMonth()
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+    return age
+  }
+
+  const handleDownloadTemplate = () => {
+    generateTemplate('students')
+  }
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    setImporting(true)
+    setImportResult(null)
+    
+    try {
+      const result = await parseExcelFile(file, 'students')
+      setImportResult(result)
+    } catch (error) {
+      setImportResult({
+        success: false,
+        data: [],
+        errors: [{ row: 0, field: '', message: 'Error al procesar el archivo' }],
+        totalRows: 0,
+        validRows: 0
+      })
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const handleConfirmImport = () => {
+    if (!importResult || importResult.data.length === 0) return
+    
+    const newStudents: Student[] = importResult.data.map((row, index) => ({
+      id: `imported-${Date.now()}-${index}`,
+      firstName: row.firstName || '',
+      lastName: `${row.lastName || ''} ${row.secondLastName || ''}`.trim(),
+      documentType: row.documentType || 'TI',
+      documentNumber: row.documentNumber || '',
+      birthDate: row.birthDate || '',
+      gender: row.gender || 'M',
+      address: row.address || '',
+      phone: row.phone || '',
+      email: row.email || '',
+      group: row.group || '9°A',
+      status: 'ACTIVE' as StudentStatus,
+      enrollmentDate: new Date().toISOString().split('T')[0],
+      parentName: row.parentName || '',
+      parentPhone: row.parentPhone || '',
+      parentEmail: row.parentEmail || '',
+      bloodType: row.bloodType || '',
+      eps: row.eps || '',
+      observations: ''
+    }))
+    
+    setStudents([...students, ...newStudents])
+    setShowImportModal(false)
+    setImportResult(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleExport = () => {
+    const columns = [
+      { header: 'Documento', key: 'documentNumber' },
+      { header: 'Tipo Doc', key: 'documentType' },
+      { header: 'Nombres', key: 'firstName' },
+      { header: 'Apellidos', key: 'lastName' },
+      { header: 'Grupo', key: 'group' },
+      { header: 'Estado', key: 'status' },
+      { header: 'Telefono', key: 'phone' },
+      { header: 'Email', key: 'email' },
+      { header: 'Acudiente', key: 'parentName' },
+      { header: 'Tel Acudiente', key: 'parentPhone' },
+    ]
+    exportToExcel(students, columns, 'Listado_Estudiantes.xlsx')
+  }
+
+  const closeImportModal = () => {
+    setShowImportModal(false)
+    setImportResult(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  return (
+    <div>
+      {viewMode === 'list' ? (
+        <>
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">Estudiantes</h1>
+              <p className="text-slate-500 mt-1">Gestion de estudiantes matriculados</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm">
+                <Upload className="w-4 h-4" />
+                Importar
+              </button>
+              <button onClick={handleExport} className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm">
+                <Download className="w-4 h-4" />
+                Exportar
+              </button>
+              <button onClick={handleOpenNew} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <Plus className="w-4 h-4" />
+                Nuevo Estudiante
+              </button>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Users className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
+                  <p className="text-xs text-slate-500">Total Estudiantes</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <User className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+                  <p className="text-xs text-slate-500">Activos</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                  <User className="w-5 h-5 text-slate-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-600">{stats.inactive}</p>
+                  <p className="text-xs text-slate-500">Inactivos</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <p className="text-xs text-slate-500 mb-2">Por Grupo</p>
+              <div className="flex flex-wrap gap-1">
+                {stats.byGroup.slice(0, 4).map(g => (
+                  <span key={g.group} className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs">{g.group}: {g.count}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Filters & Table */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+            <div className="p-4 border-b border-slate-200">
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input type="text" placeholder="Buscar por nombre o documento..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                </div>
+                <select value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)} className="px-3 py-2 border border-slate-300 rounded-lg">
+                  <option value="ALL">Todos los grupos</option>
+                  {groups.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)} className="px-3 py-2 border border-slate-300 rounded-lg">
+                  <option value="ALL">Todos los estados</option>
+                  <option value="ACTIVE">Activos</option>
+                  <option value="INACTIVE">Inactivos</option>
+                  <option value="TRANSFERRED">Trasladados</option>
+                  <option value="GRADUATED">Graduados</option>
+                  <option value="WITHDRAWN">Retirados</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase">Estudiante</th>
+                    <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase">Documento</th>
+                    <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase">Grupo</th>
+                    <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase">Acudiente</th>
+                    <th className="text-center px-6 py-3 text-xs font-medium text-slate-500 uppercase">Estado</th>
+                    <th className="text-center px-6 py-3 text-xs font-medium text-slate-500 uppercase">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredStudents.map((student) => (
+                    <tr key={student.id} className="hover:bg-slate-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-medium text-slate-600">{student.firstName[0]}{student.lastName[0]}</span>
+                          </div>
+                          <div>
+                            <p className="font-medium text-slate-900">{student.firstName} {student.lastName}</p>
+                            <p className="text-xs text-slate-500">{calculateAge(student.birthDate)} anos - {student.gender === 'M' ? 'Masculino' : 'Femenino'}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-slate-900">{student.documentNumber}</p>
+                        <p className="text-xs text-slate-500">{student.documentType}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium">{student.group}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-slate-900">{student.parentName}</p>
+                        <p className="text-xs text-slate-500">{student.parentPhone}</p>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${statusLabels[student.status].color}`}>{statusLabels[student.status].label}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-center gap-1">
+                          <button onClick={() => handleViewDetail(student)} className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-blue-600" title="Ver ficha"><Eye className="w-4 h-4" /></button>
+                          <button onClick={() => handleEdit(student)} className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-amber-600" title="Editar"><Edit2 className="w-4 h-4" /></button>
+                          <button onClick={() => handleDelete(student.id)} className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-red-600" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+              <p className="text-sm text-slate-500">Mostrando {filteredStudents.length} de {students.length} estudiantes</p>
+            </div>
+          </div>
+        </>
+      ) : selectedStudent && (
+        /* Ficha del Estudiante */
+        <div>
+          <button onClick={() => setViewMode('list')} className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4">
+            <X className="w-4 h-4" /> Volver al listado
+          </button>
+
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            {/* Header de la ficha */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
+              <div className="flex items-center gap-6">
+                <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center">
+                  <span className="text-3xl font-bold">{selectedStudent.firstName[0]}{selectedStudent.lastName[0]}</span>
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold">{selectedStudent.firstName} {selectedStudent.lastName}</h2>
+                  <p className="text-blue-100">{selectedStudent.documentType}: {selectedStudent.documentNumber}</p>
+                  <div className="flex items-center gap-4 mt-2">
+                    <span className="px-3 py-1 bg-white/20 rounded-full text-sm">{selectedStudent.group}</span>
+                    <span className={`px-3 py-1 rounded-full text-sm ${selectedStudent.status === 'ACTIVE' ? 'bg-green-500' : 'bg-slate-500'}`}>{statusLabels[selectedStudent.status].label}</span>
+                  </div>
+                </div>
+                <button onClick={() => handleEdit(selectedStudent)} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg flex items-center gap-2">
+                  <Edit2 className="w-4 h-4" /> Editar
+                </button>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="border-b border-slate-200">
+              <div className="flex">
+                <button onClick={() => setDetailTab('info')} className={`px-6 py-3 font-medium text-sm border-b-2 ${detailTab === 'info' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                  <User className="w-4 h-4 inline mr-2" />Informacion Personal
+                </button>
+                <button onClick={() => setDetailTab('academic')} className={`px-6 py-3 font-medium text-sm border-b-2 ${detailTab === 'academic' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                  <GraduationCap className="w-4 h-4 inline mr-2" />Historial Academico
+                </button>
+                <button onClick={() => setDetailTab('observer')} className={`px-6 py-3 font-medium text-sm border-b-2 ${detailTab === 'observer' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                  <FileText className="w-4 h-4 inline mr-2" />Observador
+                </button>
+              </div>
+            </div>
+
+            {/* Tab Content */}
+            <div className="p-6">
+              {detailTab === 'info' && (
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-slate-900 border-b pb-2">Datos Personales</h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div><span className="text-slate-500">Fecha Nacimiento:</span><p className="font-medium">{new Date(selectedStudent.birthDate).toLocaleDateString('es-CO')}</p></div>
+                      <div><span className="text-slate-500">Edad:</span><p className="font-medium">{calculateAge(selectedStudent.birthDate)} anos</p></div>
+                      <div><span className="text-slate-500">Genero:</span><p className="font-medium">{selectedStudent.gender === 'M' ? 'Masculino' : 'Femenino'}</p></div>
+                      <div><span className="text-slate-500">Tipo Sangre:</span><p className="font-medium">{selectedStudent.bloodType || 'No registrado'}</p></div>
+                      <div><span className="text-slate-500">EPS:</span><p className="font-medium">{selectedStudent.eps || 'No registrada'}</p></div>
+                      <div><span className="text-slate-500">Fecha Matricula:</span><p className="font-medium">{new Date(selectedStudent.enrollmentDate).toLocaleDateString('es-CO')}</p></div>
+                    </div>
+                    <h3 className="font-semibold text-slate-900 border-b pb-2 mt-6">Contacto</h3>
+                    <div className="space-y-2 text-sm">
+                      <p className="flex items-center gap-2"><MapPin className="w-4 h-4 text-slate-400" />{selectedStudent.address}</p>
+                      <p className="flex items-center gap-2"><Phone className="w-4 h-4 text-slate-400" />{selectedStudent.phone}</p>
+                      <p className="flex items-center gap-2"><Mail className="w-4 h-4 text-slate-400" />{selectedStudent.email}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-slate-900 border-b pb-2">Acudiente / Padre de Familia</h3>
+                    <div className="bg-slate-50 rounded-lg p-4">
+                      <p className="font-medium text-slate-900">{selectedStudent.parentName}</p>
+                      <p className="text-sm text-slate-600 flex items-center gap-2 mt-1"><Phone className="w-4 h-4" />{selectedStudent.parentPhone}</p>
+                      <p className="text-sm text-slate-600 flex items-center gap-2"><Mail className="w-4 h-4" />{selectedStudent.parentEmail}</p>
+                    </div>
+                    {selectedStudent.observations && (
+                      <>
+                        <h3 className="font-semibold text-slate-900 border-b pb-2 mt-6">Observaciones Generales</h3>
+                        <p className="text-sm text-slate-600 bg-amber-50 border border-amber-200 rounded-lg p-3">{selectedStudent.observations}</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {detailTab === 'academic' && (
+                <div>
+                  <h3 className="font-semibold text-slate-900 mb-4">Historial Academico</h3>
+                  <table className="w-full">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Ano</th>
+                        <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Grado</th>
+                        <th className="text-center px-4 py-3 text-sm font-medium text-slate-600">Promedio</th>
+                        <th className="text-center px-4 py-3 text-sm font-medium text-slate-600">Puesto</th>
+                        <th className="text-center px-4 py-3 text-sm font-medium text-slate-600">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {mockHistory.map((h, i) => (
+                        <tr key={i} className="hover:bg-slate-50">
+                          <td className="px-4 py-3 font-medium">{h.year}</td>
+                          <td className="px-4 py-3">{h.grade}</td>
+                          <td className="px-4 py-3 text-center"><span className={`font-bold ${h.average >= 4 ? 'text-green-600' : h.average >= 3 ? 'text-amber-600' : 'text-red-600'}`}>{h.average.toFixed(1)}</span></td>
+                          <td className="px-4 py-3 text-center">{h.rank}/{h.totalStudents}</td>
+                          <td className="px-4 py-3 text-center"><span className={`px-2 py-1 rounded text-xs font-medium ${h.status === 'APPROVED' ? 'bg-green-100 text-green-700' : h.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>{h.status === 'APPROVED' ? 'Aprobado' : h.status === 'IN_PROGRESS' ? 'En Curso' : 'Reprobado'}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {detailTab === 'observer' && (
+                <div>
+                  <h3 className="font-semibold text-slate-900 mb-4">Observador del Estudiante</h3>
+                  <div className="space-y-3">
+                    {mockObserver.map((o) => (
+                      <div key={o.id} className={`p-4 rounded-lg border-l-4 ${o.type === 'POSITIVE' ? 'bg-green-50 border-green-500' : o.type === 'NEGATIVE' ? 'bg-red-50 border-red-500' : 'bg-slate-50 border-slate-400'}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${o.type === 'POSITIVE' ? 'bg-green-100 text-green-700' : o.type === 'NEGATIVE' ? 'bg-red-100 text-red-700' : 'bg-slate-200 text-slate-700'}`}>{o.category}</span>
+                          <span className="text-xs text-slate-500">{new Date(o.date).toLocaleDateString('es-CO')}</span>
+                        </div>
+                        <p className="text-sm text-slate-700">{o.description}</p>
+                        <p className="text-xs text-slate-500 mt-2">Registrado por: {o.author}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Crear/Editar */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">{editingStudent ? 'Editar Estudiante' : 'Nuevo Estudiante'}</h3>
+              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Nombres *</label>
+                  <input type="text" value={formData.firstName || ''} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Apellidos *</label>
+                  <input type="text" value={formData.lastName || ''} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Tipo Documento</label>
+                  <select value={formData.documentType || 'TI'} onChange={(e) => setFormData({ ...formData, documentType: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
+                    <option value="TI">Tarjeta de Identidad</option>
+                    <option value="CC">Cedula de Ciudadania</option>
+                    <option value="RC">Registro Civil</option>
+                    <option value="CE">Cedula de Extranjeria</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Numero Documento *</label>
+                  <input type="text" value={formData.documentNumber || ''} onChange={(e) => setFormData({ ...formData, documentNumber: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Nacimiento *</label>
+                  <input type="date" value={formData.birthDate || ''} onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Genero</label>
+                  <select value={formData.gender || 'M'} onChange={(e) => setFormData({ ...formData, gender: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
+                    <option value="M">Masculino</option>
+                    <option value="F">Femenino</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Grupo *</label>
+                  <select value={formData.group || '9°A'} onChange={(e) => setFormData({ ...formData, group: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
+                    {groups.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+                  <select value={formData.status || 'ACTIVE'} onChange={(e) => setFormData({ ...formData, status: e.target.value as StudentStatus })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
+                    <option value="ACTIVE">Activo</option>
+                    <option value="INACTIVE">Inactivo</option>
+                    <option value="TRANSFERRED">Trasladado</option>
+                    <option value="WITHDRAWN">Retirado</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Direccion</label>
+                  <input type="text" value={formData.address || ''} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Telefono</label>
+                  <input type="text" value={formData.phone || ''} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Correo</label>
+                  <input type="email" value={formData.email || ''} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                </div>
+                <div className="col-span-2 border-t pt-4 mt-2">
+                  <h4 className="font-medium text-slate-900 mb-3">Datos del Acudiente</h4>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Nombre Acudiente *</label>
+                  <input type="text" value={formData.parentName || ''} onChange={(e) => setFormData({ ...formData, parentName: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Telefono Acudiente *</label>
+                  <input type="text" value={formData.parentPhone || ''} onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Correo Acudiente</label>
+                  <input type="email" value={formData.parentEmail || ''} onChange={(e) => setFormData({ ...formData, parentEmail: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">EPS</label>
+                  <input type="text" value={formData.eps || ''} onChange={(e) => setFormData({ ...formData, eps: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Sangre</label>
+                  <select value={formData.bloodType || ''} onChange={(e) => setFormData({ ...formData, bloodType: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
+                    <option value="">Seleccionar</option>
+                    <option value="O+">O+</option><option value="O-">O-</option>
+                    <option value="A+">A+</option><option value="A-">A-</option>
+                    <option value="B+">B+</option><option value="B-">B-</option>
+                    <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Observaciones</label>
+                  <textarea value={formData.observations || ''} onChange={(e) => setFormData({ ...formData, observations: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" rows={2} />
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
+              <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Importar */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold flex items-center gap-2"><FileSpreadsheet className="w-5 h-5 text-green-600" />Importar Estudiantes</h3>
+              <button onClick={closeImportModal} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+              {!importResult ? (
+                <>
+                  <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors">
+                    <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept=".xlsx,.xls,.csv" className="hidden" id="file-upload" />
+                    {importing ? (
+                      <>
+                        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-slate-600">Procesando archivo...</p>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                        <p className="text-slate-600 mb-2">Arrastra un archivo Excel aqui o</p>
+                        <label htmlFor="file-upload" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer inline-block">Seleccionar Archivo</label>
+                        <p className="text-xs text-slate-500 mt-4">Formatos aceptados: .xlsx, .xls, .csv</p>
+                      </>
+                    )}
+                  </div>
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm text-amber-800 flex items-center gap-2"><AlertTriangle className="w-4 h-4" />Descarga la plantilla para asegurar el formato correcto</p>
+                    <button onClick={handleDownloadTemplate} className="mt-2 text-sm text-blue-600 hover:underline flex items-center gap-1"><Download className="w-4 h-4" />Descargar plantilla de estudiantes</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Resultado de la importación */}
+                  <div className={`p-4 rounded-lg mb-4 ${importResult.success ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}`}>
+                    <div className="flex items-center gap-3">
+                      {importResult.success ? <CheckCircle2 className="w-8 h-8 text-green-600" /> : <AlertTriangle className="w-8 h-8 text-amber-600" />}
+                      <div>
+                        <p className="font-semibold text-slate-900">{importResult.success ? 'Archivo procesado correctamente' : 'Archivo procesado con errores'}</p>
+                        <p className="text-sm text-slate-600">Total filas: {importResult.totalRows} | Validas: {importResult.validRows} | Errores: {importResult.errors.length}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {importResult.errors.length > 0 && (
+                    <div className="mb-4">
+                      <p className="font-medium text-slate-900 mb-2">Errores encontrados:</p>
+                      <div className="max-h-40 overflow-y-auto bg-red-50 rounded-lg p-3 space-y-1">
+                        {importResult.errors.slice(0, 20).map((err, i) => (
+                          <p key={i} className="text-sm text-red-700 flex items-start gap-2">
+                            <XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                            <span>Fila {err.row}: {err.message}</span>
+                          </p>
+                        ))}
+                        {importResult.errors.length > 20 && <p className="text-sm text-red-600 font-medium">... y {importResult.errors.length - 20} errores mas</p>}
+                      </div>
+                    </div>
+                  )}
+
+                  {importResult.validRows > 0 && (
+                    <div className="bg-slate-50 rounded-lg p-4">
+                      <p className="font-medium text-slate-900 mb-2">Vista previa ({importResult.validRows} registros validos):</p>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-slate-100">
+                            <tr>
+                              <th className="px-2 py-1 text-left">Documento</th>
+                              <th className="px-2 py-1 text-left">Nombre</th>
+                              <th className="px-2 py-1 text-left">Grupo</th>
+                              <th className="px-2 py-1 text-left">Acudiente</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {importResult.data.slice(0, 5).map((row, i) => (
+                              <tr key={i} className="border-t border-slate-200">
+                                <td className="px-2 py-1">{row.documentNumber}</td>
+                                <td className="px-2 py-1">{row.firstName} {row.lastName}</td>
+                                <td className="px-2 py-1">{row.group}</td>
+                                <td className="px-2 py-1">{row.parentName}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {importResult.data.length > 5 && <p className="text-xs text-slate-500 mt-2">... y {importResult.data.length - 5} registros mas</p>}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+              <button onClick={closeImportModal} className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
+              {importResult ? (
+                <>
+                  <button onClick={() => { setImportResult(null); if (fileInputRef.current) fileInputRef.current.value = '' }} className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50">Seleccionar otro archivo</button>
+                  <button onClick={handleConfirmImport} disabled={importResult.validRows === 0} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Importar {importResult.validRows} estudiantes
+                  </button>
+                </>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
