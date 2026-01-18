@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { ReactNode, useMemo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { 
@@ -20,26 +20,47 @@ import {
   PieChart
 } from 'lucide-react'
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Institución', href: '/institution', icon: Building2 },
-  { name: 'Docentes', href: '/teachers', icon: UserCog },
-  { name: 'Carga Académica', href: '/academic-load', icon: Briefcase },
-  { name: 'Estudiantes', href: '/students', icon: Users },
-  { name: 'Calificaciones', href: '/grades', icon: BookOpen },
-  { name: 'Asistencia', href: '/attendance', icon: Calendar },
-  { name: 'Observador', href: '/observer', icon: ClipboardList },
-  { name: 'Alertas', href: '/alerts', icon: AlertTriangle },
-  { name: 'Reportes', href: '/reports', icon: PieChart },
-  { name: 'Boletines', href: '/report-cards', icon: FileText },
-  { name: 'Estadísticas', href: '/statistics', icon: BarChart3 },
-  { name: 'Comunicaciones', href: '/communications', icon: Bell },
-  { name: 'Áreas', href: '/admin/areas', icon: Layers },
+type Role = 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE'
+
+interface NavItem {
+  name: string
+  href: string
+  icon: any
+  roles: Role[]
+}
+
+const navigation: NavItem[] = [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'] },
+  { name: 'Institución', href: '/institution', icon: Building2, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL'] },
+  { name: 'Docentes', href: '/teachers', icon: UserCog, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
+  { name: 'Carga Académica', href: '/academic-load', icon: Briefcase, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
+  { name: 'Estudiantes', href: '/students', icon: Users, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
+  { name: 'Mis Grupos', href: '/grades', icon: BookOpen, roles: ['DOCENTE'] },
+  { name: 'Calificaciones', href: '/grades', icon: BookOpen, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
+  { name: 'Asistencia', href: '/attendance', icon: Calendar, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'] },
+  { name: 'Observador', href: '/observer', icon: ClipboardList, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'] },
+  { name: 'Alertas', href: '/alerts', icon: AlertTriangle, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'] },
+  { name: 'Reportes', href: '/reports', icon: PieChart, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
+  { name: 'Boletines', href: '/report-cards', icon: FileText, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
+  { name: 'Estadísticas', href: '/statistics', icon: BarChart3, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
+  { name: 'Comunicaciones', href: '/communications', icon: Bell, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'] },
+  { name: 'Áreas', href: '/admin/areas', icon: Layers, roles: ['SUPERADMIN', 'ADMIN_INSTITUTIONAL'] },
 ]
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
   const location = useLocation()
+
+  const userRoles = useMemo(() => {
+    if (!user?.roles) return []
+    return user.roles.map((r: any) => typeof r === 'string' ? r : r.role?.name || r.name).filter(Boolean)
+  }, [user?.roles])
+
+  const filteredNavigation = useMemo(() => {
+    return navigation.filter(item => 
+      item.roles.some(role => userRoles.includes(role))
+    )
+  }, [userRoles])
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -55,8 +76,8 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        <nav className="px-3 py-4 space-y-1">
-          {navigation.map((item) => {
+        <nav className="px-3 py-4 space-y-1 overflow-y-auto max-h-[calc(100vh-200px)]">
+          {filteredNavigation.map((item) => {
             const isActive = location.pathname === item.href
             return (
               <Link
