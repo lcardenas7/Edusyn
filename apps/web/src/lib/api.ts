@@ -137,6 +137,37 @@ export const studentGradesApi = {
     api.get('/student-grades/performance-level', { params: { institutionId, score } }),
 }
 
+// Partial Grades (notas parciales por actividad)
+export const partialGradesApi = {
+  upsert: (data: {
+    studentEnrollmentId: string;
+    teacherAssignmentId: string;
+    academicTermId: string;
+    componentType: string;
+    activityIndex: number;
+    activityName: string;
+    activityType?: string;
+    score: number;
+    observations?: string;
+  }) => api.post('/partial-grades', data),
+  bulkUpsert: (grades: Array<{
+    studentEnrollmentId: string;
+    teacherAssignmentId: string;
+    academicTermId: string;
+    componentType: string;
+    activityIndex: number;
+    activityName: string;
+    activityType?: string;
+    score: number;
+    observations?: string;
+  }>) => api.post('/partial-grades/bulk', { grades }),
+  getByAssignment: (teacherAssignmentId: string, academicTermId: string) =>
+    api.get('/partial-grades/by-assignment', { params: { teacherAssignmentId, academicTermId } }),
+  getByStudent: (studentEnrollmentId: string, academicTermId?: string) =>
+    api.get('/partial-grades/by-student', { params: { studentEnrollmentId, academicTermId } }),
+  delete: (id: string) => api.delete(`/partial-grades/${id}`),
+}
+
 // Performance Scale
 export const performanceScaleApi = {
   getAll: (institutionId?: string) => api.get('/performance-scale', { params: { institutionId } }),
@@ -151,6 +182,15 @@ export const attendanceApi = {
     api.get(`/attendance/by-assignment/${assignmentId}`, { params: { date } }),
   getByStudent: (studentEnrollmentId: string, params?: { startDate?: string; endDate?: string }) =>
     api.get(`/attendance/by-student/${studentEnrollmentId}`, { params }),
+  getReportByGroup: (groupId: string, academicYearId: string, params?: { startDate?: string; endDate?: string; subjectId?: string }) =>
+    api.get(`/attendance/report-by-group/${groupId}`, { params: { academicYearId, ...params } }),
+  getDetailedReport: (params: { academicYearId: string; groupId?: string; date?: string; startDate?: string; endDate?: string; subjectId?: string; teacherId?: string; studentEnrollmentId?: string; status?: string }) =>
+    api.get('/attendance/detailed-report', { params }),
+  getTeacherComplianceReport: (params: { academicYearId: string; teacherId?: string; groupId?: string; subjectId?: string; startDate?: string; endDate?: string }) =>
+    api.get('/attendance/report/teacher-compliance', { params }),
+  getConsolidatedReport: (params: { academicYearId: string; startDate?: string; endDate?: string; subjectId?: string }) =>
+    api.get('/attendance/report/consolidated', { params }),
+  deleteAll: () => api.delete('/attendance/all'),
 }
 
 // Observer (Observador del estudiante)
@@ -304,4 +344,122 @@ export const academicActsApi = {
   approve: (id: string) => api.patch(`/academic-acts/${id}/approve`),
   generatePromotionAct: (data: any) => api.post('/academic-acts/promotion', data),
   generateAcademicCouncilAct: (data: any) => api.post('/academic-acts/academic-council', data),
+}
+
+// ==================== PERFORMANCE (DESEMPEÑOS) ====================
+
+export const performanceConfigApi = {
+  get: (institutionId: string) => 
+    api.get('/performance-config', { params: { institutionId } }),
+  upsert: (data: {
+    institutionId: string;
+    isEnabled?: boolean;
+    showByDimension?: boolean;
+    allowManualEdit?: boolean;
+  }) => api.post('/performance-config', data),
+  getComplements: (institutionId: string) => 
+    api.get('/performance-config/complements', { params: { institutionId } }),
+  upsertComplement: (data: {
+    institutionId: string;
+    level: 'SUPERIOR' | 'ALTO' | 'BASICO' | 'BAJO';
+    complement: string;
+    isActive?: boolean;
+    displayMode?: 'CONCATENATE' | 'SEPARATE_LINE';
+  }) => api.post('/performance-config/complements', data),
+  bulkUpsertComplements: (data: {
+    institutionId: string;
+    complements: Array<{
+      level: 'SUPERIOR' | 'ALTO' | 'BASICO' | 'BAJO';
+      complement: string;
+      isActive?: boolean;
+      displayMode?: 'CONCATENATE' | 'SEPARATE_LINE';
+    }>;
+  }) => api.post('/performance-config/complements/bulk', data),
+  createDefaultComplements: (institutionId: string) => 
+    api.post('/performance-config/complements/defaults', { institutionId }),
+}
+
+export const subjectPerformanceApi = {
+  getByTeacherAssignment: (teacherAssignmentId: string, academicTermId: string) => 
+    api.get('/subject-performance', { params: { teacherAssignmentId, academicTermId } }),
+  getByGroup: (groupId: string, academicTermId: string) => 
+    api.get('/subject-performance/by-group', { params: { groupId, academicTermId } }),
+  upsert: (data: {
+    teacherAssignmentId: string;
+    academicTermId: string;
+    dimension: 'COGNITIVO' | 'PROCEDIMENTAL' | 'ACTITUDINAL';
+    baseDescription: string;
+  }) => api.post('/subject-performance', data),
+  bulkUpsert: (data: {
+    teacherAssignmentId: string;
+    academicTermId: string;
+    performances: Array<{
+      dimension: 'COGNITIVO' | 'PROCEDIMENTAL' | 'ACTITUDINAL';
+      baseDescription: string;
+    }>;
+  }) => api.post('/subject-performance/bulk', data),
+  delete: (id: string) => api.delete(`/subject-performance/${id}`),
+}
+
+export const performanceGeneratorApi = {
+  generateStudentPerformances: (
+    studentEnrollmentId: string,
+    academicTermId: string,
+    institutionId: string,
+  ) => api.get('/performance-generator/student', { 
+    params: { studentEnrollmentId, academicTermId, institutionId } 
+  }),
+  getReport: (institutionId: string, academicTermId: string, groupId?: string) => 
+    api.get('/performance-generator/report', { params: { institutionId, academicTermId, groupId } }),
+  getScale: (institutionId: string) => 
+    api.get('/performance-generator/scale', { params: { institutionId } }),
+}
+
+// ==================== GRADING PERIOD CONFIG ====================
+
+export const gradingPeriodConfigApi = {
+  getByAcademicYear: (academicYearId: string) => 
+    api.get('/grading-period-config', { params: { academicYearId } }),
+  getStatus: (academicYearId: string) => 
+    api.get('/grading-period-config/status', { params: { academicYearId } }),
+  checkPeriod: (academicTermId: string) => 
+    api.get(`/grading-period-config/check/${academicTermId}`),
+  updateConfig: (academicTermId: string, data: {
+    isOpen: boolean;
+    openDate?: string | null;
+    closeDate?: string | null;
+    allowLateEntry?: boolean;
+    lateEntryDays?: number;
+  }) => api.post(`/grading-period-config/${academicTermId}`, data),
+}
+
+export const recoveryPeriodConfigApi = {
+  getByAcademicYear: (academicYearId: string) => 
+    api.get('/recovery-period-config', { params: { academicYearId } }),
+  getStatus: (academicYearId: string) => 
+    api.get('/recovery-period-config/status', { params: { academicYearId } }),
+  checkPeriod: (academicTermId: string) => 
+    api.get(`/recovery-period-config/check/${academicTermId}`),
+  updateConfig: (academicTermId: string, data: {
+    isOpen: boolean;
+    openDate?: string | null;
+    closeDate?: string | null;
+    allowLateEntry?: boolean;
+    lateEntryDays?: number;
+  }) => api.post(`/recovery-period-config/${academicTermId}`, data),
+}
+
+// ==================== STATISTICS ====================
+
+export const statisticsApi = {
+  getFull: (institutionId: string, academicYearId?: string, academicTermId?: string) => 
+    api.get('/statistics', { params: { institutionId, academicYearId, academicTermId } }),
+  getGeneral: (institutionId: string, academicYearId?: string) => 
+    api.get('/statistics/general', { params: { institutionId, academicYearId } }),
+  getPerformanceDistribution: (institutionId: string, academicYearId?: string, academicTermId?: string) => 
+    api.get('/statistics/performance-distribution', { params: { institutionId, academicYearId, academicTermId } }),
+  getSubjects: (institutionId: string, academicYearId?: string, academicTermId?: string) => 
+    api.get('/statistics/subjects', { params: { institutionId, academicYearId, academicTermId } }),
+  getGroups: (institutionId: string, academicYearId?: string, academicTermId?: string) => 
+    api.get('/statistics/groups', { params: { institutionId, academicYearId, academicTermId } }),
 }

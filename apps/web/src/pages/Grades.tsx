@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { BookOpen, ChevronDown, Save, Plus, Trash2, X, Settings, AlertTriangle } from 'lucide-react'
+import { BookOpen, ChevronDown, Save, Plus, Trash2, X, Settings, AlertTriangle, Lock } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useInstitution } from '../contexts/InstitutionContext'
-import { teacherAssignmentsApi } from '../lib/api'
+import { teacherAssignmentsApi, studentsApi, gradingPeriodConfigApi, periodFinalGradesApi, partialGradesApi } from '../lib/api'
 
 interface TeacherAssignment {
   id: string
@@ -57,13 +57,79 @@ export default function Grades() {
   const [assignments, setAssignments] = useState<TeacherAssignment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>('')
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('')
   const [selectedAssignment, setSelectedAssignment] = useState<TeacherAssignment | null>(null)
+  
+  // Obtener listas únicas de asignaturas y grupos
+  const uniqueSubjects = useMemo(() => {
+    const subjects = new Map<string, { id: string; name: string }>()
+    assignments.forEach(a => {
+      if (!subjects.has(a.subject.id)) {
+        subjects.set(a.subject.id, { id: a.subject.id, name: a.subject.name })
+      }
+    })
+    return Array.from(subjects.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [assignments])
+
+  const uniqueGroups = useMemo(() => {
+    const groups = new Map<string, { id: string; name: string; gradeName: string }>()
+    assignments.forEach(a => {
+      if (!groups.has(a.group.id)) {
+        groups.set(a.group.id, { 
+          id: a.group.id, 
+          name: a.group.name, 
+          gradeName: a.group.grade?.name || '' 
+        })
+      }
+    })
+    return Array.from(groups.values()).sort((a, b) => 
+      `${a.gradeName} ${a.name}`.localeCompare(`${b.gradeName} ${b.name}`)
+    )
+  }, [assignments])
+
+  // Filtrar grupos disponibles según la asignatura seleccionada
+  const filteredGroups = useMemo(() => {
+    if (!selectedSubjectId) return uniqueGroups
+    const groupIds = new Set(
+      assignments.filter(a => a.subject.id === selectedSubjectId).map(a => a.group.id)
+    )
+    return uniqueGroups.filter(g => groupIds.has(g.id))
+  }, [assignments, selectedSubjectId, uniqueGroups])
+
+  // Actualizar asignación seleccionada cuando cambian los filtros
+  useEffect(() => {
+    if (selectedSubjectId && selectedGroupId) {
+      const assignment = assignments.find(
+        a => a.subject.id === selectedSubjectId && a.group.id === selectedGroupId
+      )
+      setSelectedAssignment(assignment || null)
+    } else {
+      setSelectedAssignment(null)
+    }
+  }, [selectedSubjectId, selectedGroupId, assignments])
   const [showAddActivity, setShowAddActivity] = useState(false)
   const [showConfig, setShowConfig] = useState(false)
   const [addToComponent, setAddToComponent] = useState<'COGNITIVO' | 'PROCEDIMENTAL' | null>(null)
   const [viewMode, setViewMode] = useState<'detailed' | 'summary'>('detailed')
   const [deleteConfirm, setDeleteConfirm] = useState<{ component: 'COGNITIVO' | 'PROCEDIMENTAL'; activityId: string; activityName: string } | null>(null)
   
+  // Estado de períodos habilitados para calificaciones
+  const [periodsStatus, setPeriodsStatus] = useState<Array<{
+    id: string;
+    name: string;
+    order: number;
+    status: 'open' | 'closed' | 'upcoming' | 'not_configured';
+    canEnterGrades: boolean;
+    openDate?: string;
+    closeDate?: string;
+  }>>([])
+  const [currentPeriodOpen, setCurrentPeriodOpen] = useState(true)
+  const [periodClosedMessage, setPeriodClosedMessage] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [academicTermId, setAcademicTermId] = useState<string | null>(null)
+
   const componentWeights = {
     COGNITIVO: gradingConfig.cognitivo,
     PROCEDIMENTAL: gradingConfig.procedimental,
@@ -102,8 +168,10 @@ export default function Grades() {
         const response = await teacherAssignmentsApi.getAll(params)
         const data = response.data || []
         setAssignments(data)
+        // Inicializar filtros con la primera asignación
         if (data.length > 0) {
-          setSelectedAssignment(data[0])
+          setSelectedSubjectId(data[0].subject.id)
+          setSelectedGroupId(data[0].group.id)
         }
       } catch (err: any) {
         console.error('Error loading assignments:', err)
@@ -115,14 +183,109 @@ export default function Grades() {
     fetchAssignments()
   }, [user?.id, isTeacher])
 
-  // Mock students por ahora (se conectará a API después)
-  const mockStudents = selectedAssignment ? [
-    { id: '1', name: 'Juan Pérez' },
-    { id: '2', name: 'María López' },
-    { id: '3', name: 'Carlos Martínez' },
-    { id: '4', name: 'Ana González' },
-    { id: '5', name: 'Pedro Ramírez' },
-  ] : []
+  // Cargar estado de períodos cuando cambia el año académico
+  useEffect(() => {
+    const fetchPeriodsStatus = async () => {
+      if (!selectedAssignment?.academicYear?.id) return
+      try {
+        const response = await gradingPeriodConfigApi.getStatus(selectedAssignment.academicYear.id)
+        setPeriodsStatus(response.data || [])
+      } catch (err) {
+        console.error('Error loading periods status:', err)
+        // Si falla, asumir que todos los períodos están abiertos (comportamiento por defecto)
+        setPeriodsStatus([])
+      }
+    }
+    fetchPeriodsStatus()
+  }, [selectedAssignment?.academicYear?.id])
+
+  // Verificar si el período seleccionado está abierto y obtener el academicTermId
+  useEffect(() => {
+    if (periodsStatus.length === 0) {
+      // Si no hay configuración, permitir calificaciones (comportamiento por defecto)
+      setCurrentPeriodOpen(true)
+      setPeriodClosedMessage('')
+      setAcademicTermId(null)
+      return
+    }
+    
+    // El selectedPeriod del contexto es '1', '2', etc. Necesitamos buscar por order
+    const periodOrder = parseInt(selectedPeriod)
+    const currentPeriodStatus = periodsStatus.find(p => p.order === periodOrder)
+    
+    if (currentPeriodStatus) {
+      // Guardar el academicTermId real para usar al guardar
+      setAcademicTermId(currentPeriodStatus.id)
+      
+      setCurrentPeriodOpen(currentPeriodStatus.canEnterGrades)
+      if (!currentPeriodStatus.canEnterGrades) {
+        if (currentPeriodStatus.status === 'upcoming') {
+          setPeriodClosedMessage(`Este período abre el ${new Date(currentPeriodStatus.openDate || '').toLocaleDateString('es-CO')}`)
+        } else if (currentPeriodStatus.status === 'closed') {
+          setPeriodClosedMessage(`Este período cerró el ${new Date(currentPeriodStatus.closeDate || '').toLocaleDateString('es-CO')}`)
+        } else {
+          setPeriodClosedMessage('Este período no está habilitado para calificaciones')
+        }
+      } else {
+        setPeriodClosedMessage('')
+      }
+    } else {
+      setCurrentPeriodOpen(true)
+      setPeriodClosedMessage('')
+      setAcademicTermId(null)
+    }
+  }, [selectedPeriod, periodsStatus])
+
+  // Estudiantes del grupo seleccionado
+  const [students, setStudents] = useState<Array<{ id: string; name: string; enrollmentId: string }>>([])
+  const [loadingStudents, setLoadingStudents] = useState(false)
+
+  // Cargar estudiantes cuando cambia la asignación
+  useEffect(() => {
+    const fetchStudents = async () => {
+      if (!selectedAssignment?.group?.id || !selectedAssignment?.academicYear?.id) {
+        setStudents([])
+        return
+      }
+      setLoadingStudents(true)
+      try {
+        const response = await studentsApi.getAll({
+          groupId: selectedAssignment.group.id,
+          academicYearId: selectedAssignment.academicYear.id,
+        })
+        const data = response.data || []
+        // El backend devuelve StudentEnrollment cuando se filtra por groupId
+        // Cada item tiene: { id (enrollmentId), student: { id, firstName, lastName }, ... }
+        const mappedStudents = data.map((item: any) => {
+          // Si viene como enrollment (tiene student anidado)
+          if (item.student) {
+            return {
+              id: item.student.id,
+              name: `${item.student.firstName} ${item.student.lastName}`,
+              enrollmentId: item.id,
+            }
+          }
+          // Si viene como student directo (tiene enrollments)
+          const enrollment = item.enrollments?.find((e: any) => 
+            e.groupId === selectedAssignment.group.id && 
+            e.academicYearId === selectedAssignment.academicYear.id
+          )
+          return {
+            id: item.id,
+            name: `${item.firstName} ${item.lastName}`,
+            enrollmentId: enrollment?.id || item.id,
+          }
+        })
+        setStudents(mappedStudents)
+      } catch (err) {
+        console.error('Error loading students:', err)
+        setStudents([])
+      } finally {
+        setLoadingStudents(false)
+      }
+    }
+    fetchStudents()
+  }, [selectedAssignment?.group?.id, selectedAssignment?.academicYear?.id])
 
   const [cognitivoActivities, setCognitivoActivities] = useState<Activity[]>([
     { id: 'cog1', name: 'Nota 1', type: 'Examen escrito' },
@@ -136,29 +299,79 @@ export default function Grades() {
     { id: 'proc3', name: 'Nota 3', type: 'Trabajo en clase' },
   ])
 
-  const [grades, setGrades] = useState<Record<string, Record<string, number>>>(() => {
-    const initial: Record<string, Record<string, number>> = {}
-    return initial
-  })
+  const [grades, setGrades] = useState<Record<string, Record<string, number>>>({})
 
-  // Inicializar notas cuando cambian los estudiantes
+  // Cargar notas parciales guardadas del backend cuando cambia la asignatura
   useEffect(() => {
-    if (mockStudents.length > 0) {
-      setGrades(prev => {
-        const updated = { ...prev }
-        mockStudents.forEach(student => {
-          if (!updated[student.id]) {
-            updated[student.id] = {
-              cog1: 0, cog2: 0, cog3: 0,
-              proc1: 0, proc2: 0, proc3: 0,
-              personal: 0, social: 0, autoevaluacion: 0, coevaluacion: 0,
+    const loadSavedGrades = async () => {
+      if (!selectedAssignment?.id || !academicTermId || students.length === 0) {
+        // Inicializar con ceros
+        const initGrades: Record<string, Record<string, number>> = {}
+        students.forEach(student => {
+          initGrades[student.id] = {
+            cog1: 0, cog2: 0, cog3: 0,
+            proc1: 0, proc2: 0, proc3: 0,
+            personal: 0, social: 0, autoevaluacion: 0, coevaluacion: 0,
+          }
+        })
+        setGrades(initGrades)
+        return
+      }
+      
+      try {
+        const response = await partialGradesApi.getByAssignment(selectedAssignment.id, academicTermId)
+        const savedGrades = response.data || []
+        
+        // Inicializar todas las notas en 0
+        const initGrades: Record<string, Record<string, number>> = {}
+        students.forEach(student => {
+          initGrades[student.id] = {
+            cog1: 0, cog2: 0, cog3: 0,
+            proc1: 0, proc2: 0, proc3: 0,
+            personal: 0, social: 0, autoevaluacion: 0, coevaluacion: 0,
+          }
+        })
+        
+        // Mapear las notas guardadas a los estudiantes
+        savedGrades.forEach((grade: any) => {
+          const student = students.find(s => s.enrollmentId === grade.studentEnrollmentId)
+          if (student && initGrades[student.id]) {
+            // Construir el ID de la actividad (ej: cog1, proc2, personal)
+            let activityKey = ''
+            if (grade.componentType === 'COGNITIVO') {
+              activityKey = `cog${grade.activityIndex}`
+            } else if (grade.componentType === 'PROCEDIMENTAL') {
+              activityKey = `proc${grade.activityIndex}`
+            } else if (grade.componentType === 'ACTITUDINAL') {
+              // Mapear índices actitudinales
+              const attKeys = ['personal', 'social', 'autoevaluacion', 'coevaluacion']
+              activityKey = attKeys[grade.activityIndex - 1] || ''
+            }
+            
+            if (activityKey && initGrades[student.id]) {
+              initGrades[student.id][activityKey] = Number(grade.score)
             }
           }
         })
-        return updated
-      })
+        
+        setGrades(initGrades)
+      } catch (err) {
+        console.error('Error loading saved grades:', err)
+        // Inicializar con ceros en caso de error
+        const initGrades: Record<string, Record<string, number>> = {}
+        students.forEach(student => {
+          initGrades[student.id] = {
+            cog1: 0, cog2: 0, cog3: 0,
+            proc1: 0, proc2: 0, proc3: 0,
+            personal: 0, social: 0, autoevaluacion: 0, coevaluacion: 0,
+          }
+        })
+        setGrades(initGrades)
+      }
     }
-  }, [selectedAssignment])
+    
+    loadSavedGrades()
+  }, [selectedAssignment?.id, academicTermId, students])
 
   const [newActivity, setNewActivity] = useState({ name: '', type: activityTypes[0] })
 
@@ -206,9 +419,15 @@ export default function Grades() {
   }
 
   const updateGrade = (studentId: string, activityId: string, value: number) => {
+    // Limitar el valor entre 1 y 5
+    let clampedValue = value
+    if (value > 5) clampedValue = 5
+    else if (value < 1 && value !== 0) clampedValue = 1
+    else if (value < 0) clampedValue = 0
+    
     setGrades(prev => ({
       ...prev,
-      [studentId]: { ...prev[studentId], [activityId]: value }
+      [studentId]: { ...prev[studentId], [activityId]: clampedValue }
     }))
   }
 
@@ -243,9 +462,134 @@ export default function Grades() {
     'personal', 'social', 'autoevaluacion', 'coevaluacion'
   ]
 
+  // Función para guardar las calificaciones parciales en el backend
+  const saveGrades = async () => {
+    if (!selectedAssignment?.id || !academicTermId) {
+      setSaveMessage({ type: 'error', text: 'No se puede guardar: falta información del período o asignatura' })
+      setTimeout(() => setSaveMessage(null), 3000)
+      return
+    }
+
+    setSaving(true)
+    setSaveMessage(null)
+
+    try {
+      // Preparar las notas parciales para cada estudiante y actividad
+      const partialGradesToSave: Array<{
+        studentEnrollmentId: string;
+        teacherAssignmentId: string;
+        academicTermId: string;
+        componentType: string;
+        activityIndex: number;
+        activityName: string;
+        activityType?: string;
+        score: number;
+      }> = []
+
+      students.forEach(student => {
+        const studentGrades = grades[student.id] || {}
+        
+        // Guardar notas cognitivas
+        cognitivoActivities.forEach((activity, idx) => {
+          const score = studentGrades[activity.id] || 0
+          if (score > 0) {
+            partialGradesToSave.push({
+              studentEnrollmentId: student.enrollmentId,
+              teacherAssignmentId: selectedAssignment.id,
+              academicTermId: academicTermId!,
+              componentType: 'COGNITIVO',
+              activityIndex: idx + 1,
+              activityName: activity.name,
+              activityType: activity.type,
+              score,
+            })
+          }
+        })
+        
+        // Guardar notas procedimentales
+        procedimentalActivities.forEach((activity, idx) => {
+          const score = studentGrades[activity.id] || 0
+          if (score > 0) {
+            partialGradesToSave.push({
+              studentEnrollmentId: student.enrollmentId,
+              teacherAssignmentId: selectedAssignment.id,
+              academicTermId: academicTermId!,
+              componentType: 'PROCEDIMENTAL',
+              activityIndex: idx + 1,
+              activityName: activity.name,
+              activityType: activity.type,
+              score,
+            })
+          }
+        })
+        
+        // Guardar notas actitudinales
+        const attitudinalKeys = [
+          { key: 'personal', name: 'Personal' },
+          { key: 'social', name: 'Social' },
+          { key: 'autoevaluacion', name: 'Autoevaluación' },
+          { key: 'coevaluacion', name: 'Coevaluación' },
+        ]
+        attitudinalKeys.forEach((att, idx) => {
+          const score = studentGrades[att.key] || 0
+          if (score > 0) {
+            partialGradesToSave.push({
+              studentEnrollmentId: student.enrollmentId,
+              teacherAssignmentId: selectedAssignment.id,
+              academicTermId: academicTermId!,
+              componentType: 'ACTITUDINAL',
+              activityIndex: idx + 1,
+              activityName: att.name,
+              score,
+            })
+          }
+        })
+      })
+
+      if (partialGradesToSave.length === 0) {
+        setSaveMessage({ type: 'error', text: 'No hay calificaciones para guardar' })
+        setTimeout(() => setSaveMessage(null), 3000)
+        setSaving(false)
+        return
+      }
+
+      // Guardar notas parciales
+      await partialGradesApi.bulkUpsert(partialGradesToSave)
+      
+      // También guardar las notas finales del período para los estudiantes que tienen notas
+      const finalGradesToSave = students
+        .filter(student => {
+          const studentGrades = grades[student.id] || {}
+          return Object.values(studentGrades).some(v => v > 0)
+        })
+        .map(student => {
+          const finalScore = calculateFinalGrade(student.id)
+          return {
+            studentEnrollmentId: student.enrollmentId,
+            academicTermId: academicTermId!,
+            subjectId: selectedAssignment.subject.id,
+            finalScore: Math.round(finalScore * 10) / 10,
+          }
+        })
+      
+      if (finalGradesToSave.length > 0) {
+        await periodFinalGradesApi.bulkUpsert(finalGradesToSave)
+      }
+      
+      setSaveMessage({ type: 'success', text: `Se guardaron ${partialGradesToSave.length} notas correctamente` })
+      setTimeout(() => setSaveMessage(null), 3000)
+    } catch (err: any) {
+      console.error('Error saving grades:', err)
+      setSaveMessage({ type: 'error', text: err.response?.data?.message || 'Error al guardar las calificaciones' })
+      setTimeout(() => setSaveMessage(null), 5000)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   // Navegación con teclado entre inputs de notas
   const handleKeyNavigation = useCallback((e: React.KeyboardEvent<HTMLInputElement>, studentId: string, activityId: string) => {
-    const studentIndex = mockStudents.findIndex(s => s.id === studentId)
+    const studentIndex = students.findIndex(s => s.id === studentId)
     const activityIndex = allActivityColumns.indexOf(activityId)
     
     let targetStudentId: string | null = null
@@ -254,15 +598,15 @@ export default function Grades() {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault()
-        if (studentIndex < mockStudents.length - 1) {
-          targetStudentId = mockStudents[studentIndex + 1].id
+        if (studentIndex < students.length - 1) {
+          targetStudentId = students[studentIndex + 1].id
           targetActivityId = activityId
         }
         break
       case 'ArrowUp':
         e.preventDefault()
         if (studentIndex > 0) {
-          targetStudentId = mockStudents[studentIndex - 1].id
+          targetStudentId = students[studentIndex - 1].id
           targetActivityId = activityId
         }
         break
@@ -285,17 +629,40 @@ export default function Grades() {
         }
         break
       case 'Enter':
-      case 'Tab':
         if (!e.shiftKey) {
           e.preventDefault()
-          // Mover al siguiente estudiante en la misma actividad
-          if (studentIndex < mockStudents.length - 1) {
-            targetStudentId = mockStudents[studentIndex + 1].id
+          // Enter mueve hacia abajo (siguiente estudiante)
+          if (studentIndex < students.length - 1) {
+            targetStudentId = students[studentIndex + 1].id
             targetActivityId = activityId
           } else if (activityIndex < allActivityColumns.length - 1) {
             // Si es el último estudiante, ir a la siguiente actividad del primer estudiante
-            targetStudentId = mockStudents[0].id
+            targetStudentId = students[0].id
             targetActivityId = allActivityColumns[activityIndex + 1]
+          }
+        }
+        break
+      case 'Tab':
+        e.preventDefault()
+        if (!e.shiftKey) {
+          // Tab mueve hacia la derecha (siguiente columna)
+          if (activityIndex < allActivityColumns.length - 1) {
+            targetStudentId = studentId
+            targetActivityId = allActivityColumns[activityIndex + 1]
+          } else if (studentIndex < students.length - 1) {
+            // Si es la última columna, ir a la primera columna del siguiente estudiante
+            targetStudentId = students[studentIndex + 1].id
+            targetActivityId = allActivityColumns[0]
+          }
+        } else {
+          // Shift+Tab mueve hacia la izquierda (columna anterior)
+          if (activityIndex > 0) {
+            targetStudentId = studentId
+            targetActivityId = allActivityColumns[activityIndex - 1]
+          } else if (studentIndex > 0) {
+            // Si es la primera columna, ir a la última columna del estudiante anterior
+            targetStudentId = students[studentIndex - 1].id
+            targetActivityId = allActivityColumns[allActivityColumns.length - 1]
           }
         }
         break
@@ -312,27 +679,38 @@ export default function Grades() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Calificaciones</h1>
-          <p className="text-slate-500 mt-1">Registro de notas por componente evaluativo</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Calificaciones</h1>
+          <p className="text-sm sm:text-base text-slate-500 mt-1">Registro de notas por componente evaluativo</p>
         </div>
         <div className="flex gap-2">
           {isAdmin && (
             <button 
               onClick={() => setShowConfig(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm sm:text-base"
             >
               <Settings className="w-4 h-4" />
-              Configurar
+              <span className="hidden sm:inline">Configurar</span>
             </button>
           )}
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          <button 
+            onClick={saveGrades}
+            disabled={saving || !currentPeriodOpen}
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+          >
             <Save className="w-4 h-4" />
-            Guardar
+            {saving ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
       </div>
+
+      {/* Mensaje de guardado */}
+      {saveMessage && (
+        <div className={`mb-4 p-4 rounded-lg ${saveMessage.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+          {saveMessage.text}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
@@ -358,13 +736,40 @@ export default function Grades() {
       <div className="flex gap-4 mb-6 flex-wrap">
         <div className="relative">
           <select
-            value={selectedAssignment?.id || ''}
-            onChange={(e) => setSelectedAssignment(assignments.find(a => a.id === e.target.value) || null)}
+            value={selectedSubjectId}
+            onChange={(e) => {
+              setSelectedSubjectId(e.target.value)
+              // Si el grupo actual no está disponible para la nueva asignatura, seleccionar el primero disponible
+              const newGroupIds = new Set(
+                assignments.filter(a => a.subject.id === e.target.value).map(a => a.group.id)
+              )
+              if (!newGroupIds.has(selectedGroupId)) {
+                const firstGroup = assignments.find(a => a.subject.id === e.target.value)?.group.id
+                if (firstGroup) setSelectedGroupId(firstGroup)
+              }
+            }}
             className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           >
-            {assignments.map((assignment) => (
-              <option key={assignment.id} value={assignment.id}>
-                {assignment.subject.name} - {assignment.group.grade?.name} {assignment.group.name}
+            <option value="">Seleccionar asignatura</option>
+            {uniqueSubjects.map((subject) => (
+              <option key={subject.id} value={subject.id}>
+                {subject.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        </div>
+
+        <div className="relative">
+          <select
+            value={selectedGroupId}
+            onChange={(e) => setSelectedGroupId(e.target.value)}
+            className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          >
+            <option value="">Seleccionar curso</option>
+            {filteredGroups.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.gradeName} {group.name}
               </option>
             ))}
           </select>
@@ -422,6 +827,17 @@ export default function Grades() {
             </div>
           </div>
         </div>
+
+        {/* Banner de período cerrado */}
+        {!currentPeriodOpen && (
+          <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3">
+            <Lock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+            <div>
+              <p className="font-medium text-amber-800">Período cerrado para calificaciones</p>
+              <p className="text-sm text-amber-600">{periodClosedMessage}</p>
+            </div>
+          </div>
+        )}
 
         {viewMode === 'detailed' ? (
           <div className="overflow-x-auto">
@@ -541,7 +957,22 @@ export default function Grades() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {mockStudents.map((student) => {
+                {loadingStudents ? (
+                  <tr>
+                    <td colSpan={100} className="px-6 py-8 text-center text-slate-500">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                        Cargando estudiantes...
+                      </div>
+                    </td>
+                  </tr>
+                ) : students.length === 0 ? (
+                  <tr>
+                    <td colSpan={100} className="px-6 py-8 text-center text-slate-500">
+                      No hay estudiantes matriculados en este grupo
+                    </td>
+                  </tr>
+                ) : students.map((student) => {
                   const cogAvg = calculateAvg(student.id, cognitivoActivities.map(a => a.id))
                   const procAvg = calculateAvg(student.id, procedimentalActivities.map(a => a.id))
                   const attAvg = (
@@ -571,7 +1002,8 @@ export default function Grades() {
                             onChange={(e) => updateGrade(student.id, activity.id, parseFloat(e.target.value) || 0)}
                             onKeyDown={(e) => handleKeyNavigation(e, student.id, activity.id)}
                             onFocus={(e) => e.target.select()}
-                            className="w-11 px-1 py-1 text-center text-xs border border-slate-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                            disabled={!currentPeriodOpen}
+                            className={`w-11 px-1 py-1 text-center text-xs border rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none ${!currentPeriodOpen ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' : 'border-slate-200'}`}
                           />
                         </td>
                       ))}
@@ -592,7 +1024,8 @@ export default function Grades() {
                             onChange={(e) => updateGrade(student.id, activity.id, parseFloat(e.target.value) || 0)}
                             onKeyDown={(e) => handleKeyNavigation(e, student.id, activity.id)}
                             onFocus={(e) => e.target.select()}
-                            className="w-11 px-1 py-1 text-center text-xs border border-slate-200 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none"
+                            disabled={!currentPeriodOpen}
+                            className={`w-11 px-1 py-1 text-center text-xs border rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none ${!currentPeriodOpen ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' : 'border-slate-200'}`}
                           />
                         </td>
                       ))}
@@ -612,7 +1045,8 @@ export default function Grades() {
                           onChange={(e) => updateGrade(student.id, 'personal', parseFloat(e.target.value) || 0)}
                           onKeyDown={(e) => handleKeyNavigation(e, student.id, 'personal')}
                           onFocus={(e) => e.target.select()}
-                          className="w-11 px-1 py-1 text-center text-xs border border-amber-200 rounded focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                          disabled={!currentPeriodOpen}
+                          className={`w-11 px-1 py-1 text-center text-xs border rounded focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none ${!currentPeriodOpen ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' : 'border-amber-200'}`}
                         />
                       </td>
                       <td className="px-1 py-1 text-center bg-amber-50/30">
@@ -626,7 +1060,8 @@ export default function Grades() {
                           onChange={(e) => updateGrade(student.id, 'social', parseFloat(e.target.value) || 0)}
                           onKeyDown={(e) => handleKeyNavigation(e, student.id, 'social')}
                           onFocus={(e) => e.target.select()}
-                          className="w-11 px-1 py-1 text-center text-xs border border-amber-200 rounded focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                          disabled={!currentPeriodOpen}
+                          className={`w-11 px-1 py-1 text-center text-xs border rounded focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none ${!currentPeriodOpen ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' : 'border-amber-200'}`}
                         />
                       </td>
                       <td className="px-1 py-1 text-center bg-amber-50/30">
@@ -640,7 +1075,8 @@ export default function Grades() {
                           onChange={(e) => updateGrade(student.id, 'autoevaluacion', parseFloat(e.target.value) || 0)}
                           onKeyDown={(e) => handleKeyNavigation(e, student.id, 'autoevaluacion')}
                           onFocus={(e) => e.target.select()}
-                          className="w-11 px-1 py-1 text-center text-xs border border-amber-200 rounded focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                          disabled={!currentPeriodOpen}
+                          className={`w-11 px-1 py-1 text-center text-xs border rounded focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none ${!currentPeriodOpen ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' : 'border-amber-200'}`}
                         />
                       </td>
                       <td className="px-1 py-1 text-center bg-amber-50/30">
@@ -654,7 +1090,8 @@ export default function Grades() {
                           onChange={(e) => updateGrade(student.id, 'coevaluacion', parseFloat(e.target.value) || 0)}
                           onKeyDown={(e) => handleKeyNavigation(e, student.id, 'coevaluacion')}
                           onFocus={(e) => e.target.select()}
-                          className="w-11 px-1 py-1 text-center text-xs border border-amber-200 rounded focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                          disabled={!currentPeriodOpen}
+                          className={`w-11 px-1 py-1 text-center text-xs border rounded focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none ${!currentPeriodOpen ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' : 'border-amber-200'}`}
                         />
                       </td>
                       <td className="px-1 py-1 text-center font-semibold text-amber-700 bg-amber-50/50">
@@ -691,7 +1128,22 @@ export default function Grades() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {mockStudents.map((student) => {
+                {loadingStudents ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                        Cargando estudiantes...
+                      </div>
+                    </td>
+                  </tr>
+                ) : students.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                      No hay estudiantes matriculados en este grupo
+                    </td>
+                  </tr>
+                ) : students.map((student) => {
                   const cogAvg = calculateAvg(student.id, cognitivoActivities.map(a => a.id))
                   const procAvg = calculateAvg(student.id, procedimentalActivities.map(a => a.id))
                   const attAvg = (

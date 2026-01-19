@@ -72,7 +72,8 @@ export class AuthService {
       throw new UnauthorizedException('Usuario no encontrado');
     }
 
-    const roles = user.roles.map((r) => r.role.name);
+    // Obtener institución del usuario a través de sus asignaciones o buscar la primera disponible
+    const institution = await this.usersService.findUserInstitution(userId);
 
     return {
       id: user.id,
@@ -80,6 +81,7 @@ export class AuthService {
       firstName: user.firstName,
       lastName: user.lastName,
       roles: user.roles,
+      institution,
     };
   }
 }

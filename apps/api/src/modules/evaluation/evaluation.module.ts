@@ -16,6 +16,8 @@ import { StudentGradesController } from './student-grades.controller';
 import { StudentGradesService } from './student-grades.service';
 import { PeriodFinalGradesController } from './period-final-grades.controller';
 import { PeriodFinalGradesService } from './period-final-grades.service';
+import { PartialGradesController } from './partial-grades.controller';
+import { PartialGradesService } from './partial-grades.service';
 
 @Module({
   controllers: [
@@ -27,6 +29,7 @@ import { PeriodFinalGradesService } from './period-final-grades.service';
     StudentGradesController,
     PreventiveCutsController,
     PeriodFinalGradesController,
+    PartialGradesController,
   ],
   providers: [
     PerformanceScaleService,
@@ -37,7 +40,8 @@ import { PeriodFinalGradesService } from './period-final-grades.service';
     StudentGradesService,
     PreventiveCutsService,
     PeriodFinalGradesService,
+    PartialGradesService,
   ],
-  exports: [StudentGradesService, PeriodFinalGradesService],
+  exports: [StudentGradesService, PeriodFinalGradesService, PartialGradesService],
 })
 export class EvaluationModule {}

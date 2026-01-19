@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, GraduationCap, FileText, AlertTriangle, Phone, Mail, MapPin, Users, CheckCircle2, XCircle, FileSpreadsheet } from 'lucide-react'
 import { generateTemplate, parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
 import { studentsApi } from '../lib/api'
-import { useInstitution } from '../contexts/InstitutionContext'
+import { useAuth } from '../contexts/AuthContext'
 
 type StudentStatus = 'ACTIVE' | 'INACTIVE' | 'TRANSFERRED' | 'GRADUATED' | 'WITHDRAWN'
 type ViewMode = 'list' | 'detail'
@@ -61,7 +61,7 @@ const mockObserver: ObserverEntry[] = [
   { id: '3', date: '2024-11-20', type: 'POSITIVE', category: 'Comportamiento', description: 'Ayudo a companeros con dificultades', author: 'Prof. Maria Lopez' },
 ]
 
-const groups = ['9°A', '9°B', '10°A', '10°B', '11°A', '11°B']
+// Los grupos se obtienen dinámicamente de los estudiantes cargados
 const statusLabels: Record<StudentStatus, { label: string, color: string }> = {
   ACTIVE: { label: 'Activo', color: 'bg-green-100 text-green-700' },
   INACTIVE: { label: 'Inactivo', color: 'bg-slate-100 text-slate-600' },
@@ -71,13 +71,19 @@ const statusLabels: Record<StudentStatus, { label: string, color: string }> = {
 }
 
 export default function Students() {
-  const { institution } = useInstitution()
+  const { institution } = useAuth()
   const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filterGroup, setFilterGroup] = useState('ALL')
   const [filterStatus, setFilterStatus] = useState<StudentStatus | 'ALL'>('ALL')
+  
+  // Obtener grupos únicos de los estudiantes cargados (debe estar antes de early returns)
+  const groups = useMemo(() => {
+    const uniqueGroups = new Set(students.map(s => s.group).filter(Boolean))
+    return Array.from(uniqueGroups).sort((a, b) => a.localeCompare(b))
+  }, [students])
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
   const [showModal, setShowModal] = useState(false)
@@ -96,6 +102,10 @@ export default function Students() {
 
   useEffect(() => {
     const fetchStudents = async () => {
+      if (!institution?.id) {
+        setLoading(false)
+        return
+      }
       setLoading(true)
       setError(null)
       try {
@@ -111,7 +121,7 @@ export default function Students() {
           address: s.address || '',
           phone: s.phone || '',
           email: s.email || '',
-          group: s.enrollments?.[0]?.group?.name || '',
+          group: s.enrollments?.[0]?.group ? `${s.enrollments[0].group.grade?.name || ''} ${s.enrollments[0].group.name}`.trim() : '',
           status: s.enrollments?.[0]?.status || 'ACTIVE',
           enrollmentDate: s.enrollments?.[0]?.enrollmentDate || '',
           parentName: '',
@@ -130,7 +140,7 @@ export default function Students() {
       }
     }
     fetchStudents()
-  }, [institution.id])
+  }, [institution?.id])
 
   if (loading) {
     return (
@@ -162,7 +172,7 @@ export default function Students() {
     total: students.length,
     active: students.filter(s => s.status === 'ACTIVE').length,
     inactive: students.filter(s => s.status !== 'ACTIVE').length,
-    byGroup: groups.map(g => ({ group: g, count: students.filter(s => s.group === g && s.status === 'ACTIVE').length }))
+    byGroup: groups.map((g: string) => ({ group: g, count: students.filter(s => s.group === g && s.status === 'ACTIVE').length }))
   }
 
   const handleOpenNew = () => {

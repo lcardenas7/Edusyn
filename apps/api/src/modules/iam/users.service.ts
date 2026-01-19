@@ -55,6 +55,29 @@ export class UsersService {
     return username;
   }
 
+  async findUserInstitution(userId: string) {
+    // Buscar institución a través de asignaciones del docente
+    const assignment = await this.prisma.teacherAssignment.findFirst({
+      where: { teacherId: userId },
+      include: {
+        group: {
+          include: {
+            campus: {
+              include: { institution: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (assignment?.group?.campus?.institution) {
+      return assignment.group.campus.institution;
+    }
+
+    // Si no tiene asignaciones, buscar la primera institución disponible
+    return this.prisma.institution.findFirst();
+  }
+
   async createUser(params: {
     email: string;
     password: string;

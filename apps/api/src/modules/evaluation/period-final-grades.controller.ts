@@ -10,7 +10,7 @@ export class PeriodFinalGradesController {
   constructor(private readonly periodFinalGradesService: PeriodFinalGradesService) {}
 
   @Post()
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async upsert(@Body() data: any, @Req() req: any) {
     return this.periodFinalGradesService.upsert({
       ...data,
@@ -19,13 +19,13 @@ export class PeriodFinalGradesController {
   }
 
   @Post('bulk')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async bulkUpsert(@Body() data: { grades: any[] }, @Req() req: any) {
     return this.periodFinalGradesService.bulkUpsert(data.grades, req.user.id);
   }
 
   @Get('by-group')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async findByGroup(
     @Query('groupId') groupId: string,
     @Query('academicTermId') academicTermId: string,

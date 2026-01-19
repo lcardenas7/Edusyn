@@ -14,6 +14,7 @@ import { CommunicationsModule } from './modules/communications/communications.mo
 import { MenReportsModule } from './modules/men-reports/men-reports.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { RecoveryModule } from './modules/recovery/recovery.module';
+import { PerformanceModule } from './modules/performance/performance.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { RecoveryModule } from './modules/recovery/recovery.module';
     MenReportsModule,
     DashboardModule,
     RecoveryModule,
+    PerformanceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

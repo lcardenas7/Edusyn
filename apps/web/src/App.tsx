@@ -19,6 +19,7 @@ import Communications from './pages/Communications'
 import ContentManager from './pages/ContentManager'
 import PeriodFinalGrades from './pages/PeriodFinalGrades'
 import Recoveries from './pages/Recoveries'
+import Performances from './pages/Performances'
 import Layout from './components/Layout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -69,6 +70,7 @@ function App() {
                   <Route path="/content-manager" element={<ContentManager />} />
                   <Route path="/period-final-grades" element={<PeriodFinalGrades />} />
                   <Route path="/recoveries" element={<Recoveries />} />
+                  <Route path="/performances" element={<Performances />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

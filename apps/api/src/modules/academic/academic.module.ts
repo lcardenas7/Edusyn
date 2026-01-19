@@ -20,6 +20,10 @@ import { StudentsController } from './students.controller';
 import { StudentsService } from './students.service';
 import { TeachersController } from './teachers.controller';
 import { TeachersService } from './teachers.service';
+import { GradingPeriodConfigController } from './grading-period-config.controller';
+import { GradingPeriodConfigService } from './grading-period-config.service';
+import { RecoveryPeriodConfigController } from './recovery-period-config.controller';
+import { RecoveryPeriodConfigService } from './recovery-period-config.service';
 
 @Module({
   controllers: [
@@ -33,6 +37,8 @@ import { TeachersService } from './teachers.service';
     TeacherAssignmentsController,
     StudentsController,
     TeachersController,
+    GradingPeriodConfigController,
+    RecoveryPeriodConfigController,
   ],
   providers: [
     InstitutionsService,
@@ -45,6 +51,9 @@ import { TeachersService } from './teachers.service';
     TeacherAssignmentsService,
     StudentsService,
     TeachersService,
+    GradingPeriodConfigService,
+    RecoveryPeriodConfigService,
   ],
+  exports: [GradingPeriodConfigService, RecoveryPeriodConfigService],
 })
 export class AcademicModule {}

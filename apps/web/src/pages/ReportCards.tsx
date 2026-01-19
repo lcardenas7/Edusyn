@@ -43,6 +43,10 @@ interface SubjectGrade {
   period3?: number
   period4?: number
   final?: number
+  recovery1?: number // Nota de recuperación período 1
+  recovery2?: number // Nota de recuperación período 2
+  recovery3?: number // Nota de recuperación período 3
+  recovery4?: number // Nota de recuperación período 4
   performance: 'SUPERIOR' | 'ALTO' | 'BASICO' | 'BAJO'
   absences: number
   achievement: string // Logro del período
@@ -349,6 +353,7 @@ export default function ReportCards() {
       // Asignaturas del área
       subjects.forEach(sg => {
         const grade = selectedPeriod === 1 ? sg.period1 : selectedPeriod === 2 ? sg.period2 : selectedPeriod === 3 ? sg.period3 : selectedPeriod === 4 ? sg.period4 : sg.final
+        const recoveryGrade = selectedPeriod === 1 ? sg.recovery1 : selectedPeriod === 2 ? sg.recovery2 : selectedPeriod === 3 ? sg.recovery3 : selectedPeriod === 4 ? sg.recovery4 : undefined
         const perfLabel = performanceConfig[sg.performance].label
         
         // Logro completo con recomendación si existe
@@ -357,10 +362,16 @@ export default function ReportCards() {
           achievementText += `\n* ${sg.recommendation}`
         }
         
+        // Mostrar nota con recuperación si existe
+        let gradeDisplay = grade?.toFixed(1) || '-'
+        if (recoveryGrade !== undefined && recoveryGrade > 0) {
+          gradeDisplay = `${grade?.toFixed(1) || '-'}\nRec: ${recoveryGrade.toFixed(1)}`
+        }
+        
         tableData.push([
           { content: sg.subject.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u'), styles: { fontStyle: 'bold', fontSize: 8 } },
           { content: achievementText, styles: { fontSize: 7 } },
-          { content: grade?.toFixed(1) || '-', styles: { halign: 'center', fontStyle: 'bold', fontSize: 10 } },
+          { content: gradeDisplay, styles: { halign: 'center', fontStyle: 'bold', fontSize: recoveryGrade ? 8 : 10 } },
           { content: perfLabel, styles: { halign: 'center', fontSize: 7 } },
           { content: sg.absences.toString(), styles: { halign: 'center', fontSize: 8 } }
         ])

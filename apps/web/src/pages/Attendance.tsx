@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Calendar, Check, X, Clock, FileText, ChevronDown, AlertTriangle } from 'lucide-react'
+import { Calendar, Check, X, Clock, FileText, ChevronDown, AlertTriangle, Save } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { teacherAssignmentsApi } from '../lib/api'
+import { teacherAssignmentsApi, studentsApi, attendanceApi } from '../lib/api'
 
 interface TeacherAssignment {
   id: string
   subject: { id: string; name: string }
   group: { id: string; name: string; grade?: { name: string } }
+  academicYear: { id: string; year: number }
 }
 
 const statusConfig = {
@@ -32,18 +33,59 @@ export default function Attendance() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
+  // Filtros separados de asignatura y grupo
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>('')
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('')
+  
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const today = new Date().toISOString().split('T')[0]
   
-  // Mock students - se conectará a API después
-  const mockStudents = selectedAssignment ? [
-    { id: '1', name: 'Juan Pérez', status: 'PRESENT' },
-    { id: '2', name: 'María López', status: 'PRESENT' },
-    { id: '3', name: 'Carlos Martínez', status: 'ABSENT' },
-    { id: '4', name: 'Ana González', status: 'PRESENT' },
-    { id: '5', name: 'Pedro Ramírez', status: 'LATE' },
-  ] : []
+  // Docente solo puede modificar asistencia del día actual
+  // Coordinador/Admin puede modificar cualquier día
+  const canEdit = isAdmin || date === today
   
-  const [students, setStudents] = useState(mockStudents)
+  const [students, setStudents] = useState<Array<{ id: string; name: string; enrollmentId: string; status: string }>>([])
+  const [loadingStudents, setLoadingStudents] = useState(false)
+
+  // Obtener asignaturas únicas
+  const uniqueSubjects = useMemo(() => {
+    const subjects = new Map<string, { id: string; name: string }>()
+    assignments.forEach(a => {
+      if (!subjects.has(a.subject.id)) {
+        subjects.set(a.subject.id, a.subject)
+      }
+    })
+    return Array.from(subjects.values())
+  }, [assignments])
+
+  // Obtener grupos únicos para la asignatura seleccionada
+  const uniqueGroups = useMemo(() => {
+    const groups = new Map<string, { id: string; name: string; gradeName?: string }>()
+    assignments
+      .filter(a => a.subject.id === selectedSubjectId)
+      .forEach(a => {
+        if (!groups.has(a.group.id)) {
+          groups.set(a.group.id, {
+            id: a.group.id,
+            name: a.group.name,
+            gradeName: a.group.grade?.name
+          })
+        }
+      })
+    return Array.from(groups.values())
+  }, [assignments, selectedSubjectId])
+
+  // Actualizar selectedAssignment cuando cambian los filtros
+  useEffect(() => {
+    if (selectedSubjectId && selectedGroupId) {
+      const assignment = assignments.find(
+        a => a.subject.id === selectedSubjectId && a.group.id === selectedGroupId
+      )
+      setSelectedAssignment(assignment || null)
+    } else {
+      setSelectedAssignment(null)
+    }
+  }, [selectedSubjectId, selectedGroupId, assignments])
   
   // Cargar asignaciones - docente solo ve las suyas, admin/coord ve todas
   useEffect(() => {
@@ -59,8 +101,10 @@ export default function Attendance() {
         const response = await teacherAssignmentsApi.getAll(params)
         const data = response.data || []
         setAssignments(data)
+        // Inicializar filtros con la primera asignación
         if (data.length > 0) {
-          setSelectedAssignment(data[0])
+          setSelectedSubjectId(data[0].subject.id)
+          setSelectedGroupId(data[0].group.id)
         }
       } catch (err: any) {
         console.error('Error loading assignments:', err)
@@ -72,24 +116,118 @@ export default function Attendance() {
     fetchAssignments()
   }, [user?.id, isTeacher, isAdmin])
   
-  // Actualizar estudiantes cuando cambia la asignación
+  // Cargar estudiantes cuando cambia la asignación
   useEffect(() => {
-    if (selectedAssignment) {
-      setStudents([
-        { id: '1', name: 'Juan Pérez', status: 'PRESENT' },
-        { id: '2', name: 'María López', status: 'PRESENT' },
-        { id: '3', name: 'Carlos Martínez', status: 'ABSENT' },
-        { id: '4', name: 'Ana González', status: 'PRESENT' },
-        { id: '5', name: 'Pedro Ramírez', status: 'LATE' },
-      ])
-    } else {
-      setStudents([])
+    const fetchStudents = async () => {
+      if (!selectedAssignment?.group?.id || !selectedAssignment?.academicYear?.id) {
+        setStudents([])
+        return
+      }
+      setLoadingStudents(true)
+      try {
+        const response = await studentsApi.getAll({
+          groupId: selectedAssignment.group.id,
+          academicYearId: selectedAssignment.academicYear.id,
+        })
+        const data = response.data || []
+        // El backend devuelve StudentEnrollment cuando se filtra por groupId
+        const mappedStudents = data.map((item: any) => {
+          // Si viene como enrollment (tiene student anidado)
+          if (item.student) {
+            return {
+              id: item.student.id,
+              name: `${item.student.firstName} ${item.student.lastName}`,
+              enrollmentId: item.id,
+              status: 'PRESENT',
+            }
+          }
+          // Si viene como student directo
+          const enrollment = item.enrollments?.find((e: any) => 
+            e.groupId === selectedAssignment.group.id && 
+            e.academicYearId === selectedAssignment.academicYear.id
+          )
+          return {
+            id: item.id,
+            name: `${item.firstName} ${item.lastName}`,
+            enrollmentId: enrollment?.id || item.id,
+            status: 'PRESENT',
+          }
+        })
+        setStudents(mappedStudents)
+      } catch (err) {
+        console.error('Error loading students:', err)
+        setStudents([])
+      } finally {
+        setLoadingStudents(false)
+      }
     }
-  }, [selectedAssignment])
+    fetchStudents()
+  }, [selectedAssignment?.group?.id, selectedAssignment?.academicYear?.id])
+
+  const [saving, setSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const updateStatus = (studentId: string, status: string) => {
     setStudents(students.map(s => s.id === studentId ? { ...s, status } : s))
   }
+
+  const saveAttendance = async () => {
+    if (!selectedAssignment?.id) {
+      setSaveMessage({ type: 'error', text: 'Selecciona una asignatura y grupo primero' })
+      setTimeout(() => setSaveMessage(null), 3000)
+      return
+    }
+
+    setSaving(true)
+    setSaveMessage(null)
+
+    try {
+      const records = students.map(s => ({
+        studentEnrollmentId: s.enrollmentId,
+        status: s.status,
+      }))
+
+      await attendanceApi.record({
+        teacherAssignmentId: selectedAssignment.id,
+        date: date,
+        records,
+      })
+
+      setSaveMessage({ type: 'success', text: 'Asistencia guardada correctamente' })
+      setTimeout(() => setSaveMessage(null), 3000)
+    } catch (err: any) {
+      console.error('Error saving attendance:', err)
+      setSaveMessage({ type: 'error', text: err.response?.data?.message || 'Error al guardar la asistencia' })
+      setTimeout(() => setSaveMessage(null), 5000)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Cargar asistencia guardada cuando cambia la fecha o asignación
+  useEffect(() => {
+    const loadSavedAttendance = async () => {
+      if (!selectedAssignment?.id || !date) return
+      
+      try {
+        const response = await attendanceApi.getByAssignment(selectedAssignment.id, date)
+        const savedRecords = response.data || []
+        
+        if (savedRecords.length > 0) {
+          // Actualizar el estado de los estudiantes con los registros guardados
+          setStudents(prev => prev.map(student => {
+            const savedRecord = savedRecords.find((r: any) => r.studentEnrollmentId === student.enrollmentId)
+            return savedRecord ? { ...student, status: savedRecord.status } : student
+          }))
+        }
+      } catch (err) {
+        // Si no hay registros guardados, no es un error
+        console.log('No saved attendance found for this date')
+      }
+    }
+    
+    loadSavedAttendance()
+  }, [selectedAssignment?.id, date, students.length])
 
   const summary = {
     present: students.filter(s => s.status === 'PRESENT').length,
@@ -100,16 +238,35 @@ export default function Attendance() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Asistencia</h1>
-          <p className="text-slate-500 mt-1">Control de asistencia diaria</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Asistencia</h1>
+          <p className="text-sm sm:text-base text-slate-500 mt-1">Control de asistencia diaria</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-          <Check className="w-4 h-4" />
-          Guardar Asistencia
+        <button 
+          onClick={saveAttendance}
+          disabled={saving || !selectedAssignment || !canEdit}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Save className="w-4 h-4" />
+          {saving ? 'Guardando...' : 'Guardar Asistencia'}
         </button>
       </div>
+
+      {/* Mensaje de advertencia para docentes */}
+      {!canEdit && !isAdmin && (
+        <div className="mb-4 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5" />
+          <span>Solo puedes modificar la asistencia del día actual. Para modificar días anteriores, contacta al coordinador.</span>
+        </div>
+      )}
+
+      {/* Mensaje de guardado */}
+      {saveMessage && (
+        <div className={`mb-4 p-4 rounded-lg ${saveMessage.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+          {saveMessage.text}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
@@ -132,7 +289,7 @@ export default function Attendance() {
         </div>
       ) : (
       <>
-      <div className="flex gap-4 mb-6">
+      <div className="flex gap-4 mb-6 flex-wrap">
         <input
           type="date"
           value={date}
@@ -140,15 +297,39 @@ export default function Attendance() {
           className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
         />
 
+        {/* Selector de Asignatura */}
         <div className="relative">
           <select 
-            value={selectedAssignment?.id || ''}
-            onChange={(e) => setSelectedAssignment(assignments.find(a => a.id === e.target.value) || null)}
-            className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            value={selectedSubjectId}
+            onChange={(e) => {
+              setSelectedSubjectId(e.target.value)
+              // Seleccionar el primer grupo disponible para esta asignatura
+              const firstGroup = assignments.find(a => a.subject.id === e.target.value)
+              if (firstGroup) {
+                setSelectedGroupId(firstGroup.group.id)
+              }
+            }}
+            className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none min-w-[200px]"
           >
-            {assignments.map((assignment) => (
-              <option key={assignment.id} value={assignment.id}>
-                {assignment.subject.name} - {assignment.group.grade?.name} {assignment.group.name}
+            {uniqueSubjects.map((subject) => (
+              <option key={subject.id} value={subject.id}>
+                {subject.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        </div>
+
+        {/* Selector de Grupo */}
+        <div className="relative">
+          <select 
+            value={selectedGroupId}
+            onChange={(e) => setSelectedGroupId(e.target.value)}
+            className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none min-w-[120px]"
+          >
+            {uniqueGroups.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.gradeName} {group.name}
               </option>
             ))}
           </select>
@@ -212,7 +393,18 @@ export default function Attendance() {
         </div>
 
         <div className="divide-y divide-slate-100">
-          {students.map((student) => {
+          {loadingStudents ? (
+            <div className="px-6 py-8 text-center text-slate-500">
+              <div className="flex items-center justify-center gap-2">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                Cargando estudiantes...
+              </div>
+            </div>
+          ) : students.length === 0 ? (
+            <div className="px-6 py-8 text-center text-slate-500">
+              No hay estudiantes matriculados en este grupo
+            </div>
+          ) : students.map((student) => {
             const statusCfg = statusConfig[student.status as keyof typeof statusConfig]
             void statusCfg
             
@@ -231,13 +423,14 @@ export default function Attendance() {
                   {Object.entries(statusConfig).map(([status, cfg]) => (
                     <button
                       key={status}
-                      onClick={() => updateStatus(student.id, status)}
+                      onClick={() => canEdit && updateStatus(student.id, status)}
+                      disabled={!canEdit}
                       className={`p-2 rounded-lg border transition-colors ${
                         student.status === status
                           ? cfg.color
                           : 'border-slate-200 text-slate-400 hover:border-slate-300'
-                      }`}
-                      title={cfg.label}
+                      } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      title={canEdit ? cfg.label : 'No puedes modificar la asistencia de este día'}
                     >
                       <cfg.icon className="w-4 h-4" />
                     </button>
