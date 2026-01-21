@@ -130,28 +130,51 @@ export default function Grades() {
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [academicTermId, setAcademicTermId] = useState<string | null>(null)
 
+  // Obtener pesos de componentes desde la nueva estructura de procesos
+  const getProcessWeight = (code: string) => {
+    const process = gradingConfig.evaluationProcesses.find(p => p.code === code)
+    return process?.weightPercentage || 0
+  }
+
   const componentWeights = {
-    COGNITIVO: gradingConfig.cognitivo,
-    PROCEDIMENTAL: gradingConfig.procedimental,
-    ACTITUDINAL: gradingConfig.actitudinal,
+    COGNITIVO: getProcessWeight('COGNITIVO'),
+    PROCEDIMENTAL: getProcessWeight('PROCEDIMENTAL'),
+    ACTITUDINAL: getProcessWeight('ACTITUDINAL'),
   }
 
   const setComponentWeights = (weights: { COGNITIVO: number; PROCEDIMENTAL: number; ACTITUDINAL: number }) => {
-    setGradingConfig({
-      ...gradingConfig,
-      cognitivo: weights.COGNITIVO,
-      procedimental: weights.PROCEDIMENTAL,
-      actitudinal: weights.ACTITUDINAL,
+    const updated = gradingConfig.evaluationProcesses.map(p => {
+      if (p.code === 'COGNITIVO') return { ...p, weightPercentage: weights.COGNITIVO }
+      if (p.code === 'PROCEDIMENTAL') return { ...p, weightPercentage: weights.PROCEDIMENTAL }
+      if (p.code === 'ACTITUDINAL') return { ...p, weightPercentage: weights.ACTITUDINAL }
+      return p
     })
+    setGradingConfig({ ...gradingConfig, evaluationProcesses: updated })
   }
   
-  const attitudinalConfig = gradingConfig.attitudinalBreakdown
+  // Obtener configuración actitudinal desde subprocesos del proceso ACTITUDINAL
+  const actitudinalProcess = gradingConfig.evaluationProcesses.find(p => p.code === 'ACTITUDINAL')
+  const attitudinalConfig: AttitudinalConfig = {
+    personal: actitudinalProcess?.subprocesses.find(s => s.name.toLowerCase().includes('personal'))?.weightPercentage || 0,
+    social: actitudinalProcess?.subprocesses.find(s => s.name.toLowerCase().includes('social'))?.weightPercentage || 0,
+    autoevaluacion: actitudinalProcess?.subprocesses.find(s => s.name.toLowerCase().includes('autoevaluación'))?.weightPercentage || 0,
+    coevaluacion: actitudinalProcess?.subprocesses.find(s => s.name.toLowerCase().includes('coevaluación'))?.weightPercentage || 0,
+  }
 
   const setAttitudinalConfig = (config: AttitudinalConfig) => {
-    setGradingConfig({
-      ...gradingConfig,
-      attitudinalBreakdown: config,
+    if (!actitudinalProcess) return
+    const updatedSubs = actitudinalProcess.subprocesses.map(s => {
+      const name = s.name.toLowerCase()
+      if (name.includes('personal')) return { ...s, weightPercentage: config.personal }
+      if (name.includes('social')) return { ...s, weightPercentage: config.social }
+      if (name.includes('autoevaluación')) return { ...s, weightPercentage: config.autoevaluacion }
+      if (name.includes('coevaluación')) return { ...s, weightPercentage: config.coevaluacion }
+      return s
     })
+    const updated = gradingConfig.evaluationProcesses.map(p =>
+      p.code === 'ACTITUDINAL' ? { ...p, subprocesses: updatedSubs } : p
+    )
+    setGradingConfig({ ...gradingConfig, evaluationProcesses: updated })
   }
 
   // Cargar asignaciones del docente
@@ -287,19 +310,66 @@ export default function Grades() {
     fetchStudents()
   }, [selectedAssignment?.group?.id, selectedAssignment?.academicYear?.id])
 
-  const [cognitivoActivities, setCognitivoActivities] = useState<Activity[]>([
-    { id: 'cog1', name: 'Nota 1', type: 'Examen escrito' },
-    { id: 'cog2', name: 'Nota 2', type: 'Taller' },
-    { id: 'cog3', name: 'Nota 3', type: 'Quiz' },
-  ])
+  // Obtener configuración de procesos
+  const cognitivoProcess = gradingConfig.evaluationProcesses.find(p => p.code === 'COGNITIVO')
+  const procedimentalProcess = gradingConfig.evaluationProcesses.find(p => p.code === 'PROCEDIMENTAL')
+  
+  // Número de notas desde la configuración
+  const cognitivoCount = cognitivoProcess?.subprocesses?.[0]?.numberOfGrades || 3
+  const procedimentalCount = procedimentalProcess?.subprocesses?.[0]?.numberOfGrades || 3
+  
+  // Permitir agregar notas
+  const allowAddCognitivo = cognitivoProcess?.allowTeacherAddGrades ?? true
+  const allowAddProcedimental = procedimentalProcess?.allowTeacherAddGrades ?? true
 
-  const [procedimentalActivities, setProcedimentalActivities] = useState<Activity[]>([
-    { id: 'proc1', name: 'Nota 1', type: 'Actividad práctica' },
-    { id: 'proc2', name: 'Nota 2', type: 'Proyecto' },
-    { id: 'proc3', name: 'Nota 3', type: 'Trabajo en clase' },
-  ])
+  // Debug: mostrar en consola la configuración actual
+  useEffect(() => {
+    console.log('📊 Configuración de calificaciones:', {
+      cognitivoCount,
+      procedimentalCount,
+      allowAddCognitivo,
+      allowAddProcedimental,
+      periodsCount: periods.length,
+      periods: periods.map(p => p.name),
+    })
+  }, [cognitivoCount, procedimentalCount, allowAddCognitivo, allowAddProcedimental, periods])
+
+  // Generar actividades dinámicamente
+  const generateActivities = useCallback((prefix: string, count: number, defaultTypes: string[]): Activity[] => {
+    return Array.from({ length: count }, (_, i) => ({
+      id: `${prefix}${i + 1}`,
+      name: `Nota ${i + 1}`,
+      type: defaultTypes[i % defaultTypes.length] || 'Actividad',
+    }))
+  }, [])
+
+  const [cognitivoActivities, setCognitivoActivities] = useState<Activity[]>([])
+  const [procedimentalActivities, setProcedimentalActivities] = useState<Activity[]>([])
+
+  // Actualizar actividades cuando cambia la configuración
+  useEffect(() => {
+    setCognitivoActivities(generateActivities('cog', cognitivoCount, ['Examen escrito', 'Taller', 'Quiz', 'Proyecto', 'Evaluación']))
+  }, [cognitivoCount, generateActivities])
+
+  useEffect(() => {
+    setProcedimentalActivities(generateActivities('proc', procedimentalCount, ['Actividad práctica', 'Proyecto', 'Trabajo en clase', 'Taller', 'Exposición']))
+  }, [procedimentalCount, generateActivities])
 
   const [grades, setGrades] = useState<Record<string, Record<string, number>>>({})
+
+  // Función para crear objeto de notas vacío basado en la configuración
+  const createEmptyGrades = (): Record<string, number> => {
+    const gradeObj: Record<string, number> = {
+      personal: 0, social: 0, autoevaluacion: 0, coevaluacion: 0,
+    }
+    for (let i = 1; i <= cognitivoCount; i++) {
+      gradeObj[`cog${i}`] = 0
+    }
+    for (let i = 1; i <= procedimentalCount; i++) {
+      gradeObj[`proc${i}`] = 0
+    }
+    return gradeObj
+  }
 
   // Cargar notas parciales guardadas del backend cuando cambia la asignatura
   useEffect(() => {
@@ -308,11 +378,7 @@ export default function Grades() {
         // Inicializar con ceros
         const initGrades: Record<string, Record<string, number>> = {}
         students.forEach(student => {
-          initGrades[student.id] = {
-            cog1: 0, cog2: 0, cog3: 0,
-            proc1: 0, proc2: 0, proc3: 0,
-            personal: 0, social: 0, autoevaluacion: 0, coevaluacion: 0,
-          }
+          initGrades[student.id] = createEmptyGrades()
         })
         setGrades(initGrades)
         return
@@ -325,11 +391,7 @@ export default function Grades() {
         // Inicializar todas las notas en 0
         const initGrades: Record<string, Record<string, number>> = {}
         students.forEach(student => {
-          initGrades[student.id] = {
-            cog1: 0, cog2: 0, cog3: 0,
-            proc1: 0, proc2: 0, proc3: 0,
-            personal: 0, social: 0, autoevaluacion: 0, coevaluacion: 0,
-          }
+          initGrades[student.id] = createEmptyGrades()
         })
         
         // Mapear las notas guardadas a los estudiantes
@@ -891,15 +953,17 @@ export default function Grades() {
                       </div>
                     </th>
                   ))}
-                  <th className="text-center px-1 py-1 min-w-[30px] border-b border-slate-200">
-                    <button 
-                      onClick={() => { setAddToComponent('COGNITIVO'); setShowAddActivity(true); }}
-                      className="p-1 rounded hover:bg-blue-100 text-blue-600"
-                      title="Agregar actividad"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </button>
-                  </th>
+                  {allowAddCognitivo && (
+                    <th className="text-center px-1 py-1 min-w-[30px] border-b border-slate-200">
+                      <button 
+                        onClick={() => { setAddToComponent('COGNITIVO'); setShowAddActivity(true); }}
+                        className="p-1 rounded hover:bg-blue-100 text-blue-600"
+                        title="Agregar actividad"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </th>
+                  )}
                   <th className="text-center px-1 py-1 text-[10px] font-medium uppercase bg-blue-100 text-blue-700 min-w-[40px] border-b border-slate-200">
                     Prom
                   </th>
@@ -922,15 +986,17 @@ export default function Grades() {
                       </div>
                     </th>
                   ))}
-                  <th className="text-center px-1 py-1 min-w-[30px] border-b border-slate-200">
-                    <button 
-                      onClick={() => { setAddToComponent('PROCEDIMENTAL'); setShowAddActivity(true); }}
-                      className="p-1 rounded hover:bg-green-100 text-green-600"
-                      title="Agregar actividad"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </button>
-                  </th>
+                  {allowAddProcedimental && (
+                    <th className="text-center px-1 py-1 min-w-[30px] border-b border-slate-200">
+                      <button 
+                        onClick={() => { setAddToComponent('PROCEDIMENTAL'); setShowAddActivity(true); }}
+                        className="p-1 rounded hover:bg-green-100 text-green-600"
+                        title="Agregar actividad"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </th>
+                  )}
                   <th className="text-center px-1 py-1 text-[10px] font-medium uppercase bg-green-100 text-green-700 min-w-[40px] border-b border-slate-200">
                     Prom
                   </th>

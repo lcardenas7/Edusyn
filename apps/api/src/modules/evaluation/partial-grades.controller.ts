@@ -39,6 +39,12 @@ export class PartialGradesController {
     return this.partialGradesService.getByStudent(studentEnrollmentId, academicTermId);
   }
 
+  @Get('count')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async count() {
+    return this.partialGradesService.count();
+  }
+
   @Delete(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async delete(@Param('id') id: string) {

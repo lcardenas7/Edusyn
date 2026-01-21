@@ -58,6 +58,11 @@ export class PartialGradesService {
     return results;
   }
 
+  async count() {
+    const count = await this.prisma.partialGrade.count();
+    return { count };
+  }
+
   async getByAssignment(teacherAssignmentId: string, academicTermId: string) {
     return this.prisma.partialGrade.findMany({
       where: {

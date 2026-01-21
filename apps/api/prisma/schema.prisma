@@ -43,6 +43,52 @@ enum AcademicTermType {
   SEMESTER_EXAM
 }
 
+// Estado de la institución
+enum InstitutionStatus {
+  ACTIVE
+  SUSPENDED
+  TRIAL
+  INACTIVE
+}
+
+// Configuración de cálculo de áreas
+enum AreaCalculationType {
+  INFORMATIVE      // Solo informativa, no afecta promoción
+  AVERAGE          // Promedio simple de asignaturas
+  WEIGHTED         // Promedio ponderado por porcentajes
+  DOMINANT         // La asignatura dominante define el área
+}
+
+// Regla de aprobación de áreas
+enum AreaApprovalRule {
+  AREA_AVERAGE           // Por promedio del área
+  ALL_SUBJECTS_PASS      // Todas las asignaturas aprobadas
+  DOMINANT_SUBJECT_PASS  // Solo importa la asignatura dominante
+}
+
+// Regla de recuperación de áreas
+enum AreaRecoveryRule {
+  INDIVIDUAL_SUBJECT  // Se recuperan asignaturas individuales
+  FULL_AREA           // Se recupera el área completa
+  CONDITIONAL         // Según reglas específicas
+}
+
+// Módulos disponibles en el sistema
+enum SystemModule {
+  ACADEMIC           // Gestión académica (notas, áreas, asignaturas)
+  ATTENDANCE         // Control de asistencia
+  EVALUATION         // Actividades evaluativas
+  RECOVERY           // Recuperaciones
+  REPORTS            // Reportes y boletines
+  COMMUNICATIONS     // Mensajes, anuncios, galería
+  OBSERVER           // Observador del estudiante
+  PERFORMANCE        // Desempeño y estadísticas
+  MEN_REPORTS        // Reportes para el MEN
+  DASHBOARD          // Dashboard y analytics
+  USERS              // Gestión de usuarios
+  CONFIG             // Configuración institucional
+}
+
 model User {
   id             String     @id @default(cuid())
   email          String     @unique
@@ -55,10 +101,12 @@ model User {
   phone          String?
   birthDate      DateTime?
   isActive       Boolean    @default(true)
+  isSuperAdmin   Boolean    @default(false)  // SuperAdmin del sistema
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
   roles              UserRole[]
+  institutionUsers   InstitutionUser[]  // Relación con instituciones
   teacherAssignments TeacherAssignment[]
   studentObservations StudentObservation[]
   messages           Message[]
@@ -76,6 +124,16 @@ model User {
   academicActsCreated       AcademicAct[]       @relation("ActCreatedBy")
   academicActsApproved      AcademicAct[]       @relation("ActApprovedBy")
   performanceManualEdits    PerformanceManualEdit[] @relation("PerformanceEditedBy")
+  
+  // Instituciones creadas por SuperAdmin
+  institutionsCreated       Institution[]       @relation("InstitutionCreatedBy")
+  
+  // Sistema de permisos granulares
+  extraPermissions          UserExtraPermission[] @relation("UserExtraPermissions")
+  permissionsGranted        UserExtraPermission[] @relation("GrantedPermissions")
+  permissionsRevoked        UserExtraPermission[] @relation("RevokedPermissions")
+  auditLogsAsTarget         PermissionAuditLog[]  @relation("AuditTarget")
+  auditLogsAsPerformer      PermissionAuditLog[]  @relation("AuditPerformer")
 }
 
 model Role {
@@ -99,13 +157,46 @@ model UserRole {
 }
 
 model Institution {
-  id        String   @id @default(cuid())
-  name      String
-  daneCode  String?  @unique
-  nit       String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String            @id @default(cuid())
+  name        String
+  daneCode    String?           @unique
+  nit         String?
+  slug        String            @unique  // URL amigable para login (ej: "colegio-san-jose")
+  logo        String?                    // URL del logo
+  address     String?                    // Dirección de la institución
+  phone       String?                    // Teléfono de contacto
+  email       String?                    // Email institucional
+  website     String?                    // Sitio web
+  status      InstitutionStatus @default(TRIAL)
+  trialEndsAt DateTime?                  // Fecha fin del período de prueba
+  createdById String?                    // SuperAdmin que creó la institución
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CONFIGURACIÓN INSTITUCIONAL (persistida en BD)
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  // Configuración Global de Áreas
+  areaCalculationType     AreaCalculationType  @default(WEIGHTED)
+  areaApprovalRule        AreaApprovalRule     @default(AREA_AVERAGE)
+  areaRecoveryRule        AreaRecoveryRule     @default(INDIVIDUAL_SUBJECT)
+  areaFailIfAnyFails      Boolean              @default(false)  // Pierde área si cualquier asignatura pierde
+  
+  // Configuración del Sistema de Calificación (JSON para flexibilidad)
+  gradingConfig           Json?                // Procesos evaluativos, subprocesos, ponderaciones
+  
+  // Niveles Académicos y sus escalas (JSON)
+  academicLevelsConfig    Json?                // Niveles, escalas cualitativas/numéricas
+  
+  // Períodos Académicos (JSON)
+  periodsConfig           Json?                // Períodos con fechas y ponderaciones
+
+  // Relaciones
+  createdBy   User?             @relation("InstitutionCreatedBy", fields: [createdById], references: [id])
+  modules     InstitutionModule[]  // Módulos habilitados
+  users       InstitutionUser[]    // Usuarios de esta institución
+  
   campuses      Campus[]
   areas         Area[]
   academicYears AcademicYear[]
@@ -120,6 +211,37 @@ model Institution {
   academicActs    AcademicAct[]
   performanceLevelComplements PerformanceLevelComplement[]
   performanceConfig           PerformanceConfig?
+  permissionAuditLogs         PermissionAuditLog[]
+}
+
+// Módulos habilitados por institución
+model InstitutionModule {
+  id            String       @id @default(cuid())
+  institutionId String
+  module        SystemModule
+  isActive      Boolean      @default(true)
+  activatedAt   DateTime     @default(now())
+  expiresAt     DateTime?    // Fecha de expiración del módulo (si aplica)
+  features      String[]     // Funcionalidades específicas habilitadas dentro del módulo
+  
+  institution   Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  
+  @@unique([institutionId, module])
+}
+
+// Relación Usuario-Institución (un usuario puede pertenecer a varias instituciones)
+model InstitutionUser {
+  id            String   @id @default(cuid())
+  userId        String
+  institutionId String
+  isAdmin       Boolean  @default(false)  // Es admin/rector de esta institución
+  isActive      Boolean  @default(true)
+  joinedAt      DateTime @default(now())
+  
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, institutionId])
 }
 
 model Campus {
@@ -200,13 +322,6 @@ model Area {
   finalRecoveryPlans FinalRecoveryPlan[]
 
   @@unique([institutionId, name])
-}
-
-enum AreaCalculationType {
-  SINGLE_SUBJECT
-  AVERAGE
-  WEIGHTED_AVERAGE
-  CUSTOM_FORMULA
 }
 
 model Subject {
@@ -1089,4 +1204,116 @@ model PerformanceManualEdit {
 
   @@index([studentEnrollmentId])
   @@index([academicTermId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SISTEMA DE PERMISOS GRANULARES
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Catálogo maestro de permisos (definido por el sistema)
+model Permission {
+  id          String   @id @default(cuid())
+  code        String   @unique  // Ej: "CONFIG_GRADING_EDIT_SCALE"
+  module      String   // Ej: "CONFIG_INSTITUTIONAL"
+  function    String   // Ej: "GRADING_SYSTEM"
+  subFunction String   // Ej: "EDIT_SCALE"
+  name        String   // Ej: "Cambiar escala de notas"
+  description String?
+  createdAt   DateTime @default(now())
+  
+  rolePermissions RoleBasePermission[]
+  userPermissions UserExtraPermission[]
+  auditLogs       PermissionAuditLog[]
+}
+
+// Permisos base por rol (FIJOS - definidos por el sistema, no editables por Admin)
+model RoleBasePermission {
+  id           String     @id @default(cuid())
+  role         String     // "ADMIN_INSTITUTIONAL", "RECTOR", "COORDINADOR", "DOCENTE"
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  
+  @@unique([role, permissionId])
+  @@index([role])
+}
+
+// Permisos extra por usuario (temporales o permanentes)
+model UserExtraPermission {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation("UserExtraPermissions", fields: [userId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  // Quién otorgó el permiso
+  grantedById  String
+  grantedBy    User        @relation("GrantedPermissions", fields: [grantedById], references: [id])
+  grantedAt    DateTime    @default(now())
+  
+  // Vigencia (null = permanente)
+  validFrom    DateTime    @default(now())
+  validTo      DateTime?   // null = sin expiración
+  
+  // Metadata
+  reason       String      // Obligatorio para auditoría
+  isActive     Boolean     @default(true)
+  revokedAt    DateTime?
+  revokedById  String?
+  revokedBy    User?       @relation("RevokedPermissions", fields: [revokedById], references: [id])
+  revokeReason String?
+  
+  @@unique([userId, permissionId])
+  @@index([userId])
+  @@index([validTo])
+}
+
+// Tipos de acciones de auditoría
+enum PermissionAuditAction {
+  GRANT           // Otorgar permiso extra
+  REVOKE          // Revocar permiso extra
+  EXPIRE          // Expiración automática
+  ROLE_ASSIGN     // Asignar rol a usuario
+  ROLE_REMOVE     // Quitar rol a usuario
+  RULE_CHANGE     // Cambio de reglas académicas
+  PERIOD_OPEN     // Apertura de período
+  PERIOD_CLOSE    // Cierre de período
+  WINDOW_OPEN     // Apertura de ventana
+  WINDOW_CLOSE    // Cierre de ventana
+}
+
+// Auditoría de permisos (OBLIGATORIA)
+model PermissionAuditLog {
+  id            String                @id @default(cuid())
+  institutionId String
+  institution   Institution           @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  
+  // Acción realizada
+  action        PermissionAuditAction
+  
+  // Usuario afectado
+  targetUserId  String
+  targetUser    User                  @relation("AuditTarget", fields: [targetUserId], references: [id])
+  
+  // Permiso afectado (opcional, para cambios de rol es null)
+  permissionId  String?
+  permission    Permission?           @relation(fields: [permissionId], references: [id])
+  
+  // Para cambios de rol
+  oldRole       String?
+  newRole       String?
+  
+  // Quién realizó la acción
+  performedById String
+  performedBy   User                  @relation("AuditPerformer", fields: [performedById], references: [id])
+  performedAt   DateTime              @default(now())
+  
+  // Detalles
+  reason        String?
+  metadata      Json?                 // Datos adicionales (fechas, configuraciones, etc.)
+  ipAddress     String?
+  
+  @@index([institutionId, performedAt])
+  @@index([targetUserId])
+  @@index([action])
 }

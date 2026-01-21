@@ -56,6 +56,22 @@ export class UsersService {
   }
 
   async findUserInstitution(userId: string) {
+    // Buscar institución a través de InstitutionUser primero
+    const institutionUser = await this.prisma.institutionUser.findFirst({
+      where: { userId },
+      include: {
+        institution: {
+          include: {
+            modules: true, // Incluir módulos habilitados
+          }
+        }
+      }
+    });
+
+    if (institutionUser?.institution) {
+      return institutionUser.institution;
+    }
+
     // Buscar institución a través de asignaciones del docente
     const assignment = await this.prisma.teacherAssignment.findFirst({
       where: { teacherId: userId },
@@ -63,7 +79,13 @@ export class UsersService {
         group: {
           include: {
             campus: {
-              include: { institution: true }
+              include: { 
+                institution: {
+                  include: {
+                    modules: true, // Incluir módulos habilitados
+                  }
+                }
+              }
             }
           }
         }
@@ -74,8 +96,12 @@ export class UsersService {
       return assignment.group.campus.institution;
     }
 
-    // Si no tiene asignaciones, buscar la primera institución disponible
-    return this.prisma.institution.findFirst();
+    // Si no tiene asignaciones, buscar la primera institución disponible con módulos
+    return this.prisma.institution.findFirst({
+      include: {
+        modules: true,
+      }
+    });
   }
 
   async createUser(params: {

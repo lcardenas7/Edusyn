@@ -1,5 +1,6 @@
 import { PrismaClient, SchoolShift, GradeStage, AcademicTermType, PerformanceLevel } from '@prisma/client';
 import * as bcryptjs from 'bcryptjs';
+import { seedPermissions } from './seeds/permissions.seed';
 
 const prisma = new PrismaClient();
 
@@ -33,11 +34,46 @@ async function main() {
     update: {},
     create: {
       name: 'Institución Educativa Villa San Pablo',
+      slug: 'ie-villa-san-pablo',
       daneCode: '108001001234',
       nit: '900123456-7',
+      status: 'ACTIVE',
     },
   });
   console.log(`   ✅ Institución: ${institution.name}\n`);
+
+  // ============================================
+  // 2.5 HABILITAR MÓDULOS DE LA INSTITUCIÓN
+  // ============================================
+  console.log('📦 Habilitando módulos...');
+  
+  const modulesToEnable = [
+    { module: 'DASHBOARD', features: ['DASHBOARD_STATS', 'DASHBOARD_ALERTS'] },
+    { module: 'ACADEMIC', features: ['ACADEMIC_GRADES', 'ACADEMIC_AREAS', 'ACADEMIC_LOAD'] },
+    { module: 'ATTENDANCE', features: ['ATTENDANCE_DAILY', 'ATTENDANCE_REPORTS'] },
+    { module: 'EVALUATION', features: ['EVALUATION_ACTIVITIES', 'EVALUATION_RUBRICS'] },
+    { module: 'RECOVERY', features: ['RECOVERY_PERIOD', 'RECOVERY_FINAL'] },
+    { module: 'REPORTS', features: ['RPT_ADMIN', 'RPT_ACAD', 'RPT_BULLETINS', 'RPT_EXPORT'] },
+    { module: 'COMMUNICATIONS', features: ['COMM_MESSAGES', 'COMM_ANNOUNCEMENTS'] },
+    { module: 'OBSERVER', features: ['OBSERVER_CREATE', 'OBSERVER_VIEW'] },
+    { module: 'PERFORMANCE', features: ['PERF_VIEW', 'PERF_EDIT'] },
+    { module: 'USERS', features: ['USERS_MANAGE', 'USERS_IMPORT'] },
+    { module: 'CONFIG', features: ['CONFIG_GENERAL', 'CONFIG_ACADEMIC'] },
+  ];
+
+  for (const mod of modulesToEnable) {
+    await prisma.institutionModule.upsert({
+      where: { institutionId_module: { institutionId: institution.id, module: mod.module as any } },
+      update: { isActive: true, features: mod.features },
+      create: {
+        institutionId: institution.id,
+        module: mod.module as any,
+        isActive: true,
+        features: mod.features,
+      },
+    });
+  }
+  console.log(`   ✅ ${modulesToEnable.length} módulos habilitados\n`);
 
   // ============================================
   // 3. CREAR SEDE PRINCIPAL
@@ -234,6 +270,31 @@ async function main() {
   console.log('👤 Creando usuarios...');
   
   const hashedPassword = await bcryptjs.hash('Demo2026!', 10);
+  const superAdminPassword = await bcryptjs.hash('Super2026!', 10);
+
+  // SuperAdmin del sistema (sin institución)
+  const superAdminUser = await prisma.user.upsert({
+    where: { email: 'superadmin@edusyn.co' },
+    update: { username: 'superadmin', isSuperAdmin: true },
+    create: {
+      email: 'superadmin@edusyn.co',
+      username: 'superadmin',
+      passwordHash: superAdminPassword,
+      firstName: 'Super',
+      lastName: 'Administrador',
+      documentType: 'CC',
+      documentNumber: '0000000001',
+      isActive: true,
+      isSuperAdmin: true,
+    },
+  });
+
+  await prisma.userRole.upsert({
+    where: { userId_roleId: { userId: superAdminUser.id, roleId: createdRoles['SUPERADMIN'].id } },
+    update: {},
+    create: { userId: superAdminUser.id, roleId: createdRoles['SUPERADMIN'].id },
+  });
+  console.log('   ✅ SuperAdmin creado: superadmin / Super2026!');
 
   // Admin
   const adminUser = await prisma.user.upsert({
@@ -301,7 +362,26 @@ async function main() {
     create: { userId: teacherUser.id, roleId: createdRoles['DOCENTE'].id },
   });
 
-  console.log(`   ✅ 3 usuarios creados (con usernames: admin, mcoordinadora, cdocente)\n`);
+  // Asociar usuarios a la institución (InstitutionUser)
+  await prisma.institutionUser.upsert({
+    where: { userId_institutionId: { userId: adminUser.id, institutionId: institution.id } },
+    update: { isAdmin: true },
+    create: { userId: adminUser.id, institutionId: institution.id, isAdmin: true },
+  });
+
+  await prisma.institutionUser.upsert({
+    where: { userId_institutionId: { userId: coordinatorUser.id, institutionId: institution.id } },
+    update: {},
+    create: { userId: coordinatorUser.id, institutionId: institution.id, isAdmin: false },
+  });
+
+  await prisma.institutionUser.upsert({
+    where: { userId_institutionId: { userId: teacherUser.id, institutionId: institution.id } },
+    update: {},
+    create: { userId: teacherUser.id, institutionId: institution.id, isAdmin: false },
+  });
+
+  console.log(`   ✅ 3 usuarios creados y asociados a la institución\n`);
 
   // ============================================
   // 11. CREAR ASIGNACIONES DEL DOCENTE
@@ -378,6 +458,11 @@ async function main() {
     });
   }
   console.log(`   ✅ ${performanceLevels.length} niveles de desempeño creados\n`);
+
+  // ============================================
+  // 12. CREAR PERMISOS DEL SISTEMA
+  // ============================================
+  await seedPermissions();
 
   // ============================================
   // RESUMEN FINAL

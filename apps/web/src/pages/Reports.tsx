@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { 
   FileText,
   Users,
@@ -29,6 +29,7 @@ import {
   ChevronLeft
 } from 'lucide-react'
 import { academicYearsApi, academicTermsApi, teacherAssignmentsApi, groupsApi, periodFinalGradesApi, attendanceApi, subjectsApi, studentsApi } from '../lib/api'
+import { useAuth } from '../contexts/AuthContext'
 
 type ReportCategory = 'admin' | 'academic' | 'evaluation' | 'attendance' | 'official' | 'alerts' | 'config'
 
@@ -38,88 +39,127 @@ interface ReportItem {
   description: string
   icon: any
   available: boolean
+  feature?: string  // Feature requerida para mostrar este reporte
 }
 
-const reportCategories = [
-  { id: 'admin' as ReportCategory, name: 'Administración / Rectoría', icon: Briefcase, color: 'blue' },
-  { id: 'academic' as ReportCategory, name: 'Académico (Coordinación)', icon: BookOpen, color: 'green' },
-  { id: 'evaluation' as ReportCategory, name: 'Evaluación (SIEE)', icon: ClipboardList, color: 'purple' },
-  { id: 'attendance' as ReportCategory, name: 'Asistencia', icon: Calendar, color: 'amber' },
-  { id: 'official' as ReportCategory, name: 'Oficiales', icon: FileText, color: 'indigo' },
-  { id: 'alerts' as ReportCategory, name: 'Alertas', icon: Bell, color: 'red' },
-  { id: 'config' as ReportCategory, name: 'Configuración / Control', icon: Settings, color: 'slate' },
+interface CategoryItem {
+  id: ReportCategory
+  name: string
+  icon: any
+  color: string
+  feature?: string  // Feature requerida para mostrar esta categoría
+}
+
+// Mapeo de categorías a features de REPORTS:
+// Cada categoría tiene su propia feature para control granular
+const reportCategories: CategoryItem[] = [
+  { id: 'admin', name: 'Administración / Rectoría', icon: Briefcase, color: 'blue', feature: 'RPT_ADMIN' },
+  { id: 'academic', name: 'Académico (Coordinación)', icon: BookOpen, color: 'green', feature: 'RPT_ACAD' },
+  { id: 'evaluation', name: 'Evaluación (SIEE)', icon: ClipboardList, color: 'purple', feature: 'RPT_EVAL' },
+  { id: 'attendance', name: 'Asistencia', icon: Calendar, color: 'amber', feature: 'RPT_ATT' },
+  { id: 'official', name: 'Boletines', icon: FileText, color: 'indigo', feature: 'RPT_BULLETIN' },
+  { id: 'alerts', name: 'Alertas y Estadísticas', icon: Bell, color: 'red', feature: 'RPT_STAT' },
+  { id: 'config', name: 'Configuración / Control', icon: Settings, color: 'slate', feature: 'RPT_CONFIG' },
 ]
 
 const reportsByCategory: Record<ReportCategory, ReportItem[]> = {
   admin: [
-    { id: 'load-teacher', name: 'Carga académica por docente', description: 'Asignaturas y grupos asignados a cada docente', icon: Users, available: true },
-    { id: 'load-group', name: 'Carga académica por grupo', description: 'Docentes y asignaturas por cada grupo', icon: GraduationCap, available: true },
-    { id: 'load-area', name: 'Carga académica por área', description: 'Distribución de carga por áreas académicas', icon: Layers, available: true },
-    { id: 'coverage-no-teacher', name: 'Asignaturas sin docente', description: 'Asignaturas que no tienen docente asignado', icon: UserX, available: true },
-    { id: 'coverage-incomplete', name: 'Grupos sin asignación completa', description: 'Grupos con asignaturas pendientes de asignar', icon: AlertTriangle, available: true },
-    { id: 'teachers-active', name: 'Docentes activos', description: 'Listado de docentes activos en la institución', icon: UserCheck, available: true },
-    { id: 'teachers-no-load', name: 'Docentes sin carga', description: 'Docentes sin asignación académica', icon: UserX, available: true },
-    { id: 'teachers-hours', name: 'Horas asignadas vs contratadas', description: 'Comparativo de horas por docente', icon: Clock, available: true },
+    { id: 'load-teacher', name: 'Carga académica por docente', description: 'Asignaturas y grupos asignados a cada docente', icon: Users, available: true, feature: 'RPT_ADMIN_LOAD_TEACHER' },
+    { id: 'load-group', name: 'Carga académica por grupo', description: 'Docentes y asignaturas por cada grupo', icon: GraduationCap, available: true, feature: 'RPT_ADMIN_LOAD_GROUP' },
+    { id: 'load-area', name: 'Carga académica por área', description: 'Distribución de carga por áreas académicas', icon: Layers, available: true, feature: 'RPT_ADMIN_LOAD_AREA' },
+    { id: 'coverage-no-teacher', name: 'Asignaturas sin docente', description: 'Asignaturas que no tienen docente asignado', icon: UserX, available: true, feature: 'RPT_ADMIN_NO_TEACHER' },
+    { id: 'coverage-incomplete', name: 'Grupos sin asignación completa', description: 'Grupos con asignaturas pendientes de asignar', icon: AlertTriangle, available: true, feature: 'RPT_ADMIN_INCOMPLETE' },
+    { id: 'teachers-active', name: 'Docentes activos', description: 'Listado de docentes activos en la institución', icon: UserCheck, available: true, feature: 'RPT_ADMIN_TEACHERS_ACTIVE' },
+    { id: 'teachers-no-load', name: 'Docentes sin carga', description: 'Docentes sin asignación académica', icon: UserX, available: true, feature: 'RPT_ADMIN_TEACHERS_NO_LOAD' },
+    { id: 'teachers-hours', name: 'Horas asignadas vs contratadas', description: 'Comparativo de horas por docente', icon: Clock, available: true, feature: 'RPT_ADMIN_TEACHERS_HOURS' },
   ],
   academic: [
-    { id: 'avg-group', name: 'Promedios por grupo', description: 'Rendimiento académico promedio de cada grupo', icon: BarChart3, available: true },
-    { id: 'avg-area', name: 'Promedios por área', description: 'Rendimiento académico promedio por área', icon: Layers, available: true },
-    { id: 'avg-institution', name: 'Promedios institucionales', description: 'Indicadores generales de la institución', icon: TrendingUp, available: true },
-    { id: 'approved-areas', name: 'Áreas aprobadas', description: 'Estudiantes que aprobaron cada área', icon: CheckCircle, available: true },
-    { id: 'failed-areas', name: 'Áreas reprobadas', description: 'Estudiantes que reprobaron cada área', icon: XCircle, available: true },
-    { id: 'promotion-rate', name: 'Porcentaje de promoción', description: 'Tasa de promoción por grupo y grado', icon: TrendingUp, available: true },
-    { id: 'period-comparison', name: 'Comparativo por períodos', description: 'Evolución del rendimiento entre períodos', icon: Activity, available: true },
-    { id: 'student-history', name: 'Historial por estudiante', description: 'Trayectoria académica individual', icon: History, available: true },
-    { id: 'cons-subjects', name: 'Asignaturas - Consolidado Acumulado', description: 'Tabla con el acumulado de los estudiantes en cada una de las asignaturas', icon: BookOpen, available: true },
-    { id: 'cons-areas', name: 'Áreas - Consolidado Acumulado', description: 'Acumula los consolidados de las Áreas durante los períodos solicitados', icon: Layers, available: true },
-    { id: 'cons-dimensions', name: 'Dimensiones - Consolidado Acumulado', description: 'Tabla con el acumulado de los estudiantes en cada una de las asignaturas por dimensión', icon: PieChart, available: true },
-    { id: 'min-grade', name: 'Nota Mínima', description: 'Calcula la nota mínima que necesita el estudiante en cada asignatura para no reprobar', icon: AlertTriangle, available: true },
-    { id: 'cons-dba', name: 'DBA - Cons. Acumulado Por Período', description: 'Tabla con el acumulado de los estudiantes en cada una de las asignaturas por DBA', icon: FileText, available: true },
-    { id: 'cons-pecab', name: 'Pecab - Cons. Acumulado Por Período', description: 'Tabla con el acumulado de los estudiantes en cada una de las asignaturas por PECAB', icon: ClipboardList, available: true },
-    { id: 'report-period-avg', name: 'Reporte Acumulado por Período', description: 'Refleja un promedio de notas de convivencia por períodos', icon: Calendar, available: true },
+    { id: 'avg-group', name: 'Promedios por grupo', description: 'Rendimiento académico promedio de cada grupo', icon: BarChart3, available: true, feature: 'RPT_ACAD_AVG_GROUP' },
+    { id: 'avg-area', name: 'Promedios por área', description: 'Rendimiento académico promedio por área', icon: Layers, available: true, feature: 'RPT_ACAD_AVG_AREA' },
+    { id: 'avg-institution', name: 'Promedios institucionales', description: 'Indicadores generales de la institución', icon: TrendingUp, available: true, feature: 'RPT_ACAD_AVG_INST' },
+    { id: 'approved-areas', name: 'Áreas aprobadas', description: 'Estudiantes que aprobaron cada área', icon: CheckCircle, available: true, feature: 'RPT_ACAD_APPROVED' },
+    { id: 'failed-areas', name: 'Áreas reprobadas', description: 'Estudiantes que reprobaron cada área', icon: XCircle, available: true, feature: 'RPT_ACAD_FAILED' },
+    { id: 'promotion-rate', name: 'Porcentaje de promoción', description: 'Tasa de promoción por grupo y grado', icon: TrendingUp, available: true, feature: 'RPT_ACAD_PROMOTION' },
+    { id: 'period-comparison', name: 'Comparativo por períodos', description: 'Evolución del rendimiento entre períodos', icon: Activity, available: true, feature: 'RPT_ACAD_PERIODS' },
+    { id: 'student-history', name: 'Historial por estudiante', description: 'Trayectoria académica individual', icon: History, available: true, feature: 'RPT_ACAD_HISTORY' },
+    { id: 'cons-subjects', name: 'Asignaturas - Consolidado Acumulado', description: 'Tabla con el acumulado de los estudiantes en cada una de las asignaturas', icon: BookOpen, available: true, feature: 'RPT_ACAD_CONS_SUBJ' },
+    { id: 'cons-areas', name: 'Áreas - Consolidado Acumulado', description: 'Acumula los consolidados de las Áreas durante los períodos solicitados', icon: Layers, available: true, feature: 'RPT_ACAD_CONS_AREAS' },
+    { id: 'cons-dimensions', name: 'Dimensiones - Consolidado Acumulado', description: 'Tabla con el acumulado de los estudiantes en cada una de las asignaturas por dimensión', icon: PieChart, available: true, feature: 'RPT_ACAD_CONS_DIM' },
+    { id: 'min-grade', name: 'Nota Mínima', description: 'Calcula la nota mínima que necesita el estudiante en cada asignatura para no reprobar', icon: AlertTriangle, available: true, feature: 'RPT_ACAD_MIN_GRADE' },
+    { id: 'cons-dba', name: 'DBA - Cons. Acumulado Por Período', description: 'Tabla con el acumulado de los estudiantes en cada una de las asignaturas por DBA', icon: FileText, available: true, feature: 'RPT_ACAD_DBA' },
+    { id: 'cons-pecab', name: 'Pecab - Cons. Acumulado Por Período', description: 'Tabla con el acumulado de los estudiantes en cada una de las asignaturas por PECAB', icon: ClipboardList, available: true, feature: 'RPT_ACAD_PECAB' },
+    { id: 'report-period-avg', name: 'Reporte Acumulado por Período', description: 'Refleja un promedio de notas de convivencia por períodos', icon: Calendar, available: true, feature: 'RPT_ACAD_PERIOD_AVG' },
   ],
   evaluation: [
-    { id: 'siee-compliance', name: 'Cumplimiento del SIEE', description: 'Porcentajes por dimensión evaluativa', icon: PieChart, available: true },
-    { id: 'activities-created', name: 'Actividades evaluativas creadas', description: 'Cantidad de actividades por docente/asignatura', icon: ClipboardList, available: true },
-    { id: 'activity-types', name: 'Tipos de actividades', description: 'Distribución por tipo de evaluación', icon: PieChart, available: true },
-    { id: 'dimension-weight', name: 'Peso por dimensión', description: 'Distribución de pesos evaluativos', icon: BarChart3, available: true },
-    { id: 'pending-grades', name: 'Docentes con notas incompletas', description: 'Docentes que no han completado calificaciones', icon: AlertTriangle, available: true },
-    { id: 'open-periods', name: 'Períodos abiertos', description: 'Estado de cierre de períodos académicos', icon: Calendar, available: true },
+    { id: 'siee-compliance', name: 'Cumplimiento del SIEE', description: 'Porcentajes por dimensión evaluativa', icon: PieChart, available: true, feature: 'RPT_EVAL_SIEE' },
+    { id: 'activities-created', name: 'Actividades evaluativas creadas', description: 'Cantidad de actividades por docente/asignatura', icon: ClipboardList, available: true, feature: 'RPT_EVAL_ACTIVITIES' },
+    { id: 'activity-types', name: 'Tipos de actividades', description: 'Distribución por tipo de evaluación', icon: PieChart, available: true, feature: 'RPT_EVAL_TYPES' },
+    { id: 'dimension-weight', name: 'Peso por dimensión', description: 'Distribución de pesos evaluativos', icon: BarChart3, available: true, feature: 'RPT_EVAL_WEIGHTS' },
+    { id: 'pending-grades', name: 'Docentes con notas incompletas', description: 'Docentes que no han completado calificaciones', icon: AlertTriangle, available: true, feature: 'RPT_EVAL_PENDING' },
+    { id: 'open-periods', name: 'Períodos abiertos', description: 'Estado de cierre de períodos académicos', icon: Calendar, available: true, feature: 'RPT_EVAL_PERIODS' },
   ],
   attendance: [
-    { id: 'att-group', name: 'Asistencia por grupo', description: 'Estado general de asistencia de un grupo o curso', icon: GraduationCap, available: true },
-    { id: 'att-student', name: 'Asistencia por estudiante', description: 'Seguimiento individual de asistencia (casos especiales)', icon: Users, available: true },
-    { id: 'att-subject', name: 'Asistencia por asignatura', description: 'Analizar comportamiento por materia', icon: ClipboardList, available: true },
-    { id: 'att-teacher', name: 'Asistencia por docente', description: 'Control institucional del registro de clases', icon: UserCheck, available: true },
-    { id: 'att-critical', name: 'Inasistencias críticas', description: 'Detectar estudiantes en riesgo por inasistencia', icon: AlertTriangle, available: true },
-    { id: 'att-consolidated', name: 'Consolidado institucional', description: 'Datos macro para informes oficiales', icon: BarChart3, available: true },
+    { id: 'att-group', name: 'Asistencia por grupo', description: 'Estado general de asistencia de un grupo o curso', icon: GraduationCap, available: true, feature: 'RPT_ATT_GROUP' },
+    { id: 'att-student', name: 'Asistencia por estudiante', description: 'Seguimiento individual de asistencia (casos especiales)', icon: Users, available: true, feature: 'RPT_ATT_STUDENT' },
+    { id: 'att-subject', name: 'Asistencia por asignatura', description: 'Analizar comportamiento por materia', icon: ClipboardList, available: true, feature: 'RPT_ATT_SUBJECT' },
+    { id: 'att-teacher', name: 'Asistencia por docente', description: 'Control institucional del registro de clases', icon: UserCheck, available: true, feature: 'RPT_ATT_TEACHER' },
+    { id: 'att-critical', name: 'Inasistencias críticas', description: 'Detectar estudiantes en riesgo por inasistencia', icon: AlertTriangle, available: true, feature: 'RPT_ATT_CRITICAL' },
+    { id: 'att-consolidated', name: 'Consolidado institucional', description: 'Datos macro para informes oficiales', icon: BarChart3, available: true, feature: 'RPT_ATT_CONSOLIDATED' },
   ],
   official: [
-    { id: 'report-partial', name: 'Boletines parciales', description: 'Boletines de período', icon: FileText, available: true },
-    { id: 'report-final', name: 'Boletines finales', description: 'Boletines de fin de año', icon: FileCheck, available: true },
-    { id: 'promoted', name: 'Estudiantes promovidos', description: 'Listado de estudiantes promovidos', icon: CheckCircle, available: true },
-    { id: 'not-promoted', name: 'Estudiantes no promovidos', description: 'Listado de estudiantes reprobados', icon: XCircle, available: true },
-    { id: 'recovery', name: 'Estudiantes en recuperación', description: 'Estudiantes con actividades de recuperación', icon: Clock, available: true },
+    { id: 'report-partial', name: 'Boletines parciales', description: 'Boletines de período', icon: FileText, available: true, feature: 'RPT_BULLETIN_PARTIAL' },
+    { id: 'report-final', name: 'Boletines finales', description: 'Boletines de fin de año', icon: FileCheck, available: true, feature: 'RPT_BULLETIN_FINAL' },
+    { id: 'promoted', name: 'Estudiantes promovidos', description: 'Listado de estudiantes promovidos', icon: CheckCircle, available: true, feature: 'RPT_BULLETIN_PROMOTED' },
+    { id: 'not-promoted', name: 'Estudiantes no promovidos', description: 'Listado de estudiantes reprobados', icon: XCircle, available: true, feature: 'RPT_BULLETIN_NOT_PROMOTED' },
+    { id: 'recovery', name: 'Estudiantes en recuperación', description: 'Estudiantes con actividades de recuperación', icon: Clock, available: true, feature: 'RPT_BULLETIN_RECOVERY' },
   ],
   alerts: [
-    { id: 'alert-low-performance', name: 'Bajo rendimiento', description: 'Estudiantes con promedio bajo', icon: TrendingDown, available: true },
-    { id: 'alert-fail-risk', name: 'Riesgo de reprobación', description: 'Estudiantes en riesgo de perder el año', icon: AlertTriangle, available: true },
-    { id: 'alert-attendance', name: 'Inasistencia reiterada', description: 'Estudiantes con patrón de inasistencia', icon: UserX, available: true },
+    { id: 'alert-low-performance', name: 'Bajo rendimiento', description: 'Estudiantes con promedio bajo', icon: TrendingDown, available: true, feature: 'RPT_STAT_LOW_PERF' },
+    { id: 'alert-fail-risk', name: 'Riesgo de reprobación', description: 'Estudiantes en riesgo de perder el año', icon: AlertTriangle, available: true, feature: 'RPT_STAT_FAIL_RISK' },
+    { id: 'alert-attendance', name: 'Inasistencia reiterada', description: 'Estudiantes con patrón de inasistencia', icon: UserX, available: true, feature: 'RPT_STAT_ATTENDANCE' },
   ],
   config: [
-    { id: 'config-areas', name: 'Áreas configuradas', description: 'Listado de áreas académicas', icon: Layers, available: true },
-    { id: 'config-subjects', name: 'Asignaturas configuradas', description: 'Listado de asignaturas por área', icon: BookOpen, available: true },
-    { id: 'config-periods', name: 'Períodos académicos', description: 'Configuración de períodos', icon: Calendar, available: true },
-    { id: 'config-siee', name: 'Porcentajes SIEE', description: 'Configuración del sistema de evaluación', icon: Settings, available: true },
-    { id: 'audit-changes', name: 'Cambios administrativos', description: 'Historial de modificaciones', icon: History, available: true },
-    { id: 'audit-adjustments', name: 'Historial de ajustes', description: 'Ajustes de notas y correcciones', icon: ClipboardList, available: true },
+    { id: 'config-areas', name: 'Áreas configuradas', description: 'Listado de áreas académicas', icon: Layers, available: true, feature: 'RPT_CONFIG_AREAS' },
+    { id: 'config-subjects', name: 'Asignaturas configuradas', description: 'Listado de asignaturas por área', icon: BookOpen, available: true, feature: 'RPT_CONFIG_SUBJECTS' },
+    { id: 'config-periods', name: 'Períodos académicos', description: 'Configuración de períodos', icon: Calendar, available: true, feature: 'RPT_CONFIG_PERIODS' },
+    { id: 'config-siee', name: 'Porcentajes SIEE', description: 'Configuración del sistema de evaluación', icon: Settings, available: true, feature: 'RPT_CONFIG_SIEE' },
+    { id: 'audit-changes', name: 'Cambios administrativos', description: 'Historial de modificaciones', icon: History, available: true, feature: 'RPT_CONFIG_AUDIT' },
+    { id: 'audit-adjustments', name: 'Historial de ajustes', description: 'Ajustes de notas y correcciones', icon: ClipboardList, available: true, feature: 'RPT_CONFIG_ADJUSTMENTS' },
   ],
 }
 
 export default function Reports() {
-  const [selectedCategory, setSelectedCategory] = useState<ReportCategory>('academic')
+  const { hasFeature } = useAuth()
+  const [selectedCategory, setSelectedCategory] = useState<ReportCategory | null>(null)
   const [selectedReport, setSelectedReport] = useState<string | null>(null)
   const [showReport, setShowReport] = useState(false)
+
+  // Filtrar reportes individuales según features habilitadas
+  const getFilteredReports = (categoryId: ReportCategory) => {
+    const reports = reportsByCategory[categoryId] || []
+    // Si la categoría está habilitada, mostrar los reportes que tengan su feature habilitada
+    return reports.filter(report => !report.feature || hasFeature(report.feature))
+  }
+
+  // Filtrar categorías: mostrar si la categoría está habilitada Y tiene al menos un reporte habilitado
+  const filteredCategories = useMemo(() => {
+    return reportCategories.filter(cat => {
+      // Verificar si la categoría principal está habilitada
+      const categoryEnabled = !cat.feature || hasFeature(cat.feature)
+      if (!categoryEnabled) return false
+      
+      // Verificar si tiene al menos un reporte habilitado
+      const filteredReports = getFilteredReports(cat.id)
+      return filteredReports.length > 0
+    })
+  }, [hasFeature])
+
+  // Seleccionar primera categoría disponible al cargar
+  useEffect(() => {
+    if (filteredCategories.length > 0 && !selectedCategory) {
+      setSelectedCategory(filteredCategories[0].id)
+    }
+  }, [filteredCategories, selectedCategory])
   
   // Datos reales
   const [academicYears, setAcademicYears] = useState<any[]>([])
@@ -313,9 +353,9 @@ export default function Reports() {
     loadStats()
   }, [filterYear, filterPeriod])
 
-  const currentCategory = reportCategories.find(c => c.id === selectedCategory)
-  const currentReports = reportsByCategory[selectedCategory]
-  const currentReportData = currentReports.find(r => r.id === selectedReport)
+  const currentCategory = selectedCategory ? reportCategories.find(c => c.id === selectedCategory) : null
+  const currentReports = selectedCategory ? getFilteredReports(selectedCategory) : []
+  const currentReportData = currentReports.find((r: ReportItem) => r.id === selectedReport)
 
   const getCategoryColor = (color: string) => {
     const colors: Record<string, string> = {
@@ -567,6 +607,19 @@ export default function Reports() {
             }
           }
           
+          // Mapear campos del backend a los esperados por el frontend
+          rawData = rawData.map((item: any) => ({
+            name: item.studentName || item.name,
+            group: item.groupName || item.group,
+            totalClasses: item.totalClasses || 0,
+            attended: item.present || item.attended || 0,
+            absent: item.absent || 0,
+            late: item.late || 0,
+            excused: item.excused || 0,
+            pct: item.attendanceRate || item.pct || 0,
+            status: item.status || 'Normal',
+          }))
+          
           // Aplicar filtro de estado (Normal/Alerta/Riesgo)
           if (filterStatus !== 'all') {
             rawData = rawData.filter((item: any) => item.status === filterStatus)
@@ -594,7 +647,18 @@ export default function Reports() {
           }
           
           const response = await attendanceApi.getDetailedReport(params)
-          setAttendanceDetailData(response.data || [])
+          // Mapear campos del backend a los esperados por el frontend
+          const mappedData = (response.data || []).map((item: any, idx: number) => ({
+            nro: idx + 1,
+            date: item.date ? new Date(item.date).toLocaleDateString('es-CO') : '',
+            student: item.studentName || item.student || '',
+            group: item.groupName || item.group || '',
+            subject: item.subjectName || item.subject || '',
+            teacher: item.teacherName || item.teacher || '',
+            status: item.status || '',
+            observations: item.observations || '',
+          }))
+          setAttendanceDetailData(mappedData)
         } catch (err) {
           console.error('Error loading student attendance report:', err)
           setAttendanceDetailData([])
@@ -631,6 +695,19 @@ export default function Reports() {
             }
           }
           
+          // Mapear campos del backend a los esperados por el frontend
+          rawData = rawData.map((item: any) => ({
+            name: item.studentName || item.name,
+            group: item.groupName || item.group,
+            totalClasses: item.totalClasses || 0,
+            attended: item.present || item.attended || 0,
+            absent: item.absent || 0,
+            late: item.late || 0,
+            excused: item.excused || 0,
+            pct: item.attendanceRate || item.pct || 0,
+            status: item.status || 'Normal',
+          }))
+          
           // Aplicar filtro de estado (Normal/Alerta/Riesgo)
           if (filterStatus !== 'all') {
             rawData = rawData.filter((item: any) => item.status === filterStatus)
@@ -657,7 +734,16 @@ export default function Reports() {
           }
           
           const response = await attendanceApi.getTeacherComplianceReport(params)
-          setTeacherComplianceData(response.data || [])
+          // Mapear campos del backend a los esperados por el frontend
+          const mappedData = (response.data || []).map((item: any, idx: number) => ({
+            nro: idx + 1,
+            teacher: item.teacherName || item.teacher || '',
+            classesScheduled: item.classesScheduled || 0,
+            classesRegistered: item.classesRegistered || 0,
+            classesNotRegistered: item.classesNotRegistered || 0,
+            complianceRate: item.complianceRate || 0,
+          }))
+          setTeacherComplianceData(mappedData)
         } catch (err) {
           console.error('Error loading teacher compliance report:', err)
           setTeacherComplianceData([])
@@ -694,6 +780,19 @@ export default function Reports() {
             }
           }
           
+          // Mapear campos del backend a los esperados por el frontend
+          rawData = rawData.map((item: any) => ({
+            name: item.studentName || item.name,
+            group: item.groupName || item.group,
+            totalClasses: item.totalClasses || 0,
+            attended: item.present || item.attended || 0,
+            absent: item.absent || 0,
+            late: item.late || 0,
+            excused: item.excused || 0,
+            pct: item.attendanceRate || item.pct || 0,
+            status: item.status || 'Normal',
+          }))
+          
           // Filtrar por porcentaje mínimo configurable
           const minPct = parseInt(filterMinPercent) || 80
           rawData = rawData.filter((item: any) => item.pct < minPct)
@@ -725,9 +824,31 @@ export default function Reports() {
           }
           
           const response = await attendanceApi.getConsolidatedReport(params)
+          
+          // Mapear campos del backend a los esperados por el frontend
+          const mappedByGrade = (response.data?.byGrade || []).map((item: any, idx: number) => ({
+            nro: idx + 1,
+            grade: item.name || item.grade || '',
+            totalStudents: item.totalStudents || '-',
+            totalClasses: item.total || item.totalClasses || 0,
+            totalAttended: item.present || item.totalAttended || 0,
+            totalAbsent: item.absent || item.totalAbsent || 0,
+            pct: item.attendanceRate || item.pct || 0,
+          }))
+          
+          const mappedBySubject = (response.data?.bySubject || []).map((item: any, idx: number) => ({
+            nro: idx + 1,
+            subject: item.name || item.subject || '',
+            totalRecords: item.total || item.totalRecords || 0,
+            totalClasses: item.total || item.totalClasses || 0,
+            totalAttended: item.present || item.totalAttended || 0,
+            totalAbsent: item.absent || item.totalAbsent || 0,
+            pct: item.attendanceRate || item.pct || 0,
+          }))
+          
           setConsolidatedData({ 
-            byGrade: response.data?.byGrade || [], 
-            bySubject: response.data?.bySubject || [], 
+            byGrade: mappedByGrade, 
+            bySubject: mappedBySubject, 
             byPeriod: [] 
           })
         } catch (err) {
@@ -806,10 +927,10 @@ export default function Reports() {
 
 
   // Determinar la categoría del reporte seleccionado
-  const getReportCategory = (reportId: string | null): ReportCategory => {
+  const getReportCategory = (reportId: string | null): ReportCategory | null => {
     if (!reportId) return selectedCategory
     for (const [category, reports] of Object.entries(reportsByCategory)) {
-      if (reports.some(r => r.id === reportId)) {
+      if (reports.some((r: ReportItem) => r.id === reportId)) {
         return category as ReportCategory
       }
     }
@@ -2076,7 +2197,7 @@ export default function Reports() {
               <h3 className="font-medium text-slate-700">Categorías de Reportes</h3>
             </div>
             <nav className="p-2">
-              {reportCategories.map((category) => (
+              {filteredCategories.map((category) => (
                 <button
                   key={category.id}
                   onClick={() => { setSelectedCategory(category.id); setSelectedReport(null); setShowReport(false); }}
@@ -2089,7 +2210,7 @@ export default function Reports() {
                   <category.icon className="w-4 h-4" />
                   <span className="flex-1 text-left">{category.name}</span>
                   <span className="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">
-                    {reportsByCategory[category.id].length}
+                    {getFilteredReports(category.id).length}
                   </span>
                 </button>
               ))}
@@ -2109,7 +2230,7 @@ export default function Reports() {
             </div>
 
             <div className="divide-y divide-slate-100">
-              {currentReports.map((report) => (
+              {currentReports.map((report: ReportItem) => (
                 <div
                   key={report.id}
                   className="px-6 py-4 hover:bg-slate-50 cursor-pointer transition-colors"

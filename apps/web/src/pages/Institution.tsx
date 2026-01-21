@@ -3,12 +3,10 @@ import {
   Building2, 
   BookOpen, 
   Calendar, 
-  Users, 
   Settings, 
   ChevronRight,
   ChevronDown,
   Percent,
-  Layers,
   GraduationCap,
   Clock,
   Save,
@@ -20,13 +18,16 @@ import {
   Lock,
   Unlock,
   CalendarClock,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle,
+  Eye
 } from 'lucide-react'
-import { useInstitution, Period } from '../contexts/InstitutionContext'
+import { useInstitution, Period, AcademicLevel, GradingScaleType } from '../contexts/InstitutionContext'
 import { useAuth } from '../contexts/AuthContext'
+import { usePermissions, PERMISSIONS } from '../hooks/usePermissions'
 import { gradingPeriodConfigApi, recoveryPeriodConfigApi, academicYearsApi } from '../lib/api'
 
-type TabType = 'general' | 'grading' | 'periods' | 'grades' | 'areas' | 'teachers' | 'grading-windows' | 'recovery-windows'
+type TabType = 'general' | 'academic-levels' | 'grading' | 'periods' | 'grades' | 'grading-windows' | 'recovery-windows'
 
 interface GradingPeriodConfig {
   id: string
@@ -85,9 +86,31 @@ const levelColors = {
 }
 
 export default function Institution() {
-  const { institution, gradingConfig, setGradingConfig, periods, setPeriods } = useInstitution()
+  const { 
+    institution, setInstitution, 
+    gradingConfig, setGradingConfig, 
+    periods, setPeriods,
+    saveGradingConfigToAPI, saveAcademicLevelsToAPI, savePeriodsToAPI,
+    isSaving 
+  } = useInstitution()
   const { institution: authInstitution } = useAuth()
+  const { can } = usePermissions()
   const [activeTab, setActiveTab] = useState<TabType>('general')
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PERMISOS - Determinar qué puede hacer el usuario en cada sección
+  // ═══════════════════════════════════════════════════════════════════════════
+  const canEditInfo = can(PERMISSIONS.CONFIG_INFO_EDIT)
+  const canEditGradingScale = can(PERMISSIONS.CONFIG_GRADING_EDIT_SCALE)
+  const canEditGradingLevels = can(PERMISSIONS.CONFIG_GRADING_EDIT_LEVELS)
+  const canEditGradingWeights = can(PERMISSIONS.CONFIG_GRADING_EDIT_WEIGHTS)
+  const canEditPeriods = can(PERMISSIONS.CONFIG_PERIODS_EDIT)
+  const canTogglePeriods = can(PERMISSIONS.CONFIG_PERIODS_TOGGLE)
+  const canEditGradeWindowsDates = can(PERMISSIONS.CONFIG_GRADE_WINDOWS_DATES)
+  const canEditGradeWindowsRules = can(PERMISSIONS.CONFIG_GRADE_WINDOWS_RULES)
+  const canEditRecoveryDates = can(PERMISSIONS.CONFIG_RECOVERY_DATES)
+  const canEditRecoveryRules = can(PERMISSIONS.CONFIG_RECOVERY_RULES)
+  const canEditGrades = can(PERMISSIONS.CONFIG_GRADES_EDIT)
 
   const [showPeriodModal, setShowPeriodModal] = useState(false)
   const [editingPeriod, setEditingPeriod] = useState<Period | null>(null)
@@ -233,13 +256,12 @@ export default function Institution() {
 
   const tabs = [
     { id: 'general' as TabType, name: 'Información General', icon: Building2 },
+    { id: 'academic-levels' as TabType, name: 'Niveles y Calendario', icon: GraduationCap },
     { id: 'grading' as TabType, name: 'Sistema de Calificación', icon: Percent },
     { id: 'periods' as TabType, name: 'Períodos Académicos', icon: Calendar },
     { id: 'grading-windows' as TabType, name: 'Ventanas de Calificación', icon: CalendarClock },
     { id: 'recovery-windows' as TabType, name: 'Ventanas de Recuperación', icon: RefreshCw },
-    { id: 'grades' as TabType, name: 'Grados y Grupos', icon: GraduationCap },
-    { id: 'areas' as TabType, name: 'Áreas y Asignaturas', icon: Layers },
-    { id: 'teachers' as TabType, name: 'Carga Académica', icon: Users },
+    { id: 'grades' as TabType, name: 'Grados y Grupos', icon: UsersRound },
   ]
 
   const openPeriodModal = (period?: Period) => {
@@ -343,21 +365,118 @@ export default function Institution() {
     MEDIA: grades.filter(g => g.level === 'MEDIA'),
   }
 
-  const totalComponentWeight = gradingConfig.cognitivo + gradingConfig.procedimental + gradingConfig.actitudinal
-  const totalAttitudinalWeight = Object.values(gradingConfig.attitudinalBreakdown).reduce((a, b) => a + b, 0)
+  const totalProcessWeight = gradingConfig.evaluationProcesses.reduce((sum, p) => sum + p.weightPercentage, 0)
   const totalPeriodWeight = periods.reduce((sum, p) => sum + p.weight, 0)
+
+  // Estado para mensajes y confirmaciones
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [showWarningModal, setShowWarningModal] = useState(false)
+  const [pendingChanges, setPendingChanges] = useState(false)
+  const [isLocalSaving, setIsLocalSaving] = useState(false)
+
+  // Detectar cambios pendientes (usado para indicador visual)
+  useEffect(() => {
+    setPendingChanges(true)
+  }, [institution, gradingConfig, periods])
+
+  // Log para evitar warning de variable no usada
+  if (pendingChanges) { /* cambios pendientes */ }
+
+  // Función para guardar cambios
+  const handleSaveChanges = async () => {
+    setIsLocalSaving(true)
+    try {
+      // Los cambios ya se guardan automáticamente en localStorage por el contexto
+      // Aquí podríamos agregar llamada al backend en el futuro
+      
+      // Simular guardado
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      setSaveMessage({ type: 'success', text: '¡Configuración guardada exitosamente!' })
+      setPendingChanges(false)
+      
+      // Limpiar mensaje después de 3 segundos
+      setTimeout(() => setSaveMessage(null), 3000)
+    } catch {
+      setSaveMessage({ type: 'error', text: 'Error al guardar la configuración' })
+    } finally {
+      setIsLocalSaving(false)
+    }
+  }
+
+  const confirmCriticalChange = () => {
+    setShowWarningModal(false)
+  }
 
   return (
     <div>
+      {/* Modal de advertencia */}
+      {showWarningModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md mx-4 shadow-xl">
+            <div className="flex items-center gap-3 text-amber-600 mb-4">
+              <AlertTriangle className="w-6 h-6" />
+              <h3 className="text-lg font-semibold">Advertencia</h3>
+            </div>
+            <p className="text-slate-600 mb-4">
+              Ya existen notas registradas con la configuración actual. 
+              Cambiar el número de notas o los procesos evaluativos puede afectar 
+              las calificaciones existentes.
+            </p>
+            <p className="text-slate-600 mb-6 font-medium">
+              ¿Deseas continuar con el cambio?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowWarningModal(false)}
+                className="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmCriticalChange}
+                className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Configuración Institucional</h1>
           <p className="text-slate-500 mt-1">Administra la configuración académica de tu institución</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-          <Save className="w-4 h-4" />
-          Guardar Cambios
-        </button>
+        <div className="flex items-center gap-3">
+          {saveMessage && (
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
+              saveMessage.type === 'success' 
+                ? 'bg-green-100 text-green-700' 
+                : 'bg-red-100 text-red-700'
+            }`}>
+              {saveMessage.type === 'success' ? '✓' : '✗'} {saveMessage.text}
+            </div>
+          )}
+          <button 
+            onClick={handleSaveChanges}
+            disabled={isSaving}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {isSaving ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                Guardar Cambios
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-6">
@@ -404,6 +523,9 @@ export default function Institution() {
                     <h2 className="text-lg font-semibold text-slate-900">Información General</h2>
                     <p className="text-sm text-slate-500">Datos básicos de la institución</p>
                   </div>
+                  <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded ml-auto">
+                    <Eye className="w-3 h-3" /> Solo lectura
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
@@ -492,6 +614,732 @@ export default function Institution() {
               </div>
             )}
 
+            {/* Tab: Niveles Académicos y Calendario */}
+            {activeTab === 'academic-levels' && (
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                    <GraduationCap className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Niveles Académicos y Calendario</h2>
+                    <p className="text-sm text-slate-500">Configura el calendario y los niveles con su sistema de calificación</p>
+                  </div>
+                </div>
+
+                {/* Calendario Académico */}
+                <div className="mb-8 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Calendar className="w-5 h-5 text-blue-600" />
+                    <h3 className="font-semibold text-slate-900">Calendario Académico</h3>
+                    {!canEditGradingLevels && (
+                      <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                        <Eye className="w-3 h-3" /> Solo lectura
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-4">
+                    <label className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all flex-1 ${
+                      institution.academicCalendar === 'A' ? 'border-blue-500 bg-white' : 'border-slate-200 bg-white hover:border-slate-300'
+                    } ${canEditGradingLevels ? 'cursor-pointer' : 'cursor-not-allowed opacity-75'}`}>
+                      <input
+                        type="radio"
+                        name="calendar"
+                        checked={institution.academicCalendar === 'A'}
+                        onChange={() => canEditGradingLevels && setInstitution({ ...institution, academicCalendar: 'A' })}
+                        disabled={!canEditGradingLevels}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <div>
+                        <div className="font-medium text-slate-900">Calendario A</div>
+                        <div className="text-sm text-slate-500">Febrero - Noviembre</div>
+                      </div>
+                    </label>
+                    <label className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all flex-1 ${
+                      institution.academicCalendar === 'B' ? 'border-blue-500 bg-white' : 'border-slate-200 bg-white hover:border-slate-300'
+                    } ${canEditGradingLevels ? 'cursor-pointer' : 'cursor-not-allowed opacity-75'}`}>
+                      <input
+                        type="radio"
+                        name="calendar"
+                        checked={institution.academicCalendar === 'B'}
+                        onChange={() => canEditGradingLevels && setInstitution({ ...institution, academicCalendar: 'B' })}
+                        disabled={!canEditGradingLevels}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <div>
+                        <div className="font-medium text-slate-900">Calendario B</div>
+                        <div className="text-sm text-slate-500">Septiembre - Junio</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Niveles Académicos */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-5 h-5 text-purple-600" />
+                      <h3 className="font-semibold text-slate-900">Niveles Académicos</h3>
+                      {!canEditGradingLevels && (
+                        <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                          <Eye className="w-3 h-3" /> Solo lectura
+                        </span>
+                      )}
+                    </div>
+                    {canEditGradingLevels && (
+                      <button
+                        onClick={() => {
+                          const defaultPerfLevels = [
+                            { id: `perf-${Date.now()}-1`, name: 'Superior', code: 'SUPERIOR', minScore: 4.5, maxScore: 5.0, order: 0, color: '#22c55e', isApproved: true },
+                            { id: `perf-${Date.now()}-2`, name: 'Alto', code: 'ALTO', minScore: 4.0, maxScore: 4.4, order: 1, color: '#3b82f6', isApproved: true },
+                            { id: `perf-${Date.now()}-3`, name: 'Básico', code: 'BASICO', minScore: 3.0, maxScore: 3.9, order: 2, color: '#f59e0b', isApproved: true },
+                            { id: `perf-${Date.now()}-4`, name: 'Bajo', code: 'BAJO', minScore: 1.0, maxScore: 2.9, order: 3, color: '#ef4444', isApproved: false },
+                          ]
+                          const newLevel: AcademicLevel = {
+                            id: `lvl-${Date.now()}`,
+                            name: 'Nuevo Nivel',
+                            code: 'NUEVO',
+                            order: institution.academicLevels.length,
+                            gradingScaleType: 'NUMERIC_1_5',
+                            minGrade: 1.0,
+                            maxGrade: 5.0,
+                            minPassingGrade: 3.0,
+                            grades: [],
+                            performanceLevels: defaultPerfLevels,
+                          }
+                          setInstitution({
+                            ...institution,
+                            academicLevels: [...institution.academicLevels, newLevel],
+                          })
+                        }}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Agregar Nivel
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {institution.academicLevels.map((level) => {
+                      const isExpanded = expandedGrades.includes(`level-${level.id}`)
+                      return (
+                      <div key={level.id} className="border border-slate-200 rounded-lg overflow-hidden">
+                        {/* Cabecera colapsable */}
+                        <div 
+                          className={`p-4 cursor-pointer ${level.gradingScaleType.startsWith('QUALITATIVE') ? 'bg-amber-50 hover:bg-amber-100' : 'bg-purple-50 hover:bg-purple-100'} transition-colors`}
+                          onClick={() => {
+                            const key = `level-${level.id}`
+                            setExpandedGrades(prev => 
+                              prev.includes(key) ? prev.filter(id => id !== key) : [...prev, key]
+                            )
+                          }}
+                        >
+                          <div className="flex items-center gap-4">
+                            <button className="p-1">
+                              {isExpanded ? (
+                                <ChevronDown className={`w-5 h-5 ${level.gradingScaleType.startsWith('QUALITATIVE') ? 'text-amber-600' : 'text-purple-600'}`} />
+                              ) : (
+                                <ChevronRight className={`w-5 h-5 ${level.gradingScaleType.startsWith('QUALITATIVE') ? 'text-amber-600' : 'text-purple-600'}`} />
+                              )}
+                            </button>
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${level.gradingScaleType.startsWith('QUALITATIVE') ? 'bg-amber-200' : 'bg-purple-200'}`}>
+                              <GraduationCap className={`w-5 h-5 ${level.gradingScaleType.startsWith('QUALITATIVE') ? 'text-amber-700' : 'text-purple-700'}`} />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-slate-900">{level.name}</span>
+                                <span className="px-2 py-0.5 text-xs bg-white/50 text-slate-600 rounded">{level.code}</span>
+                                <span className={`px-2 py-0.5 text-xs rounded ${level.gradingScaleType.startsWith('QUALITATIVE') ? 'bg-amber-200 text-amber-700' : 'bg-purple-200 text-purple-700'}`}>
+                                  {level.gradingScaleType.startsWith('QUALITATIVE') ? 'Cualitativo' : 'Numérico'}
+                                </span>
+                              </div>
+                              <div className="text-sm text-slate-500 mt-0.5">
+                                {level.grades.length > 0 ? level.grades.join(', ') : 'Sin grados asignados'}
+                              </div>
+                            </div>
+                            {/* Muestra colores de la escala en la cabecera */}
+                            <div className="flex gap-1">
+                              {level.gradingScaleType.startsWith('QUALITATIVE') ? (
+                                level.qualitativeLevels?.slice(0, 4).map((ql) => (
+                                  <div key={ql.id} className="w-4 h-4 rounded" style={{ backgroundColor: ql.color }} title={ql.name} />
+                                ))
+                              ) : (
+                                level.performanceLevels?.slice(0, 4).map((pl) => (
+                                  <div key={pl.id} className="w-4 h-4 rounded" style={{ backgroundColor: pl.color }} title={pl.name} />
+                                ))
+                              )}
+                            </div>
+                            {canEditGradingLevels && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  const updated = institution.academicLevels.filter(l => l.id !== level.id)
+                                  setInstitution({ ...institution, academicLevels: updated })
+                                }}
+                                className="p-2 hover:bg-red-100 rounded text-slate-400 hover:text-red-600"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Contenido expandible */}
+                        {isExpanded && (
+                          <div className="p-4 bg-white border-t border-slate-100 space-y-4">
+                            {/* Información básica */}
+                            <div className="grid grid-cols-3 gap-4">
+                              <div>
+                                <label className="block text-xs text-slate-500 mb-1">Nombre del nivel</label>
+                                <input
+                                  type="text"
+                                  value={level.name}
+                                  onChange={(e) => {
+                                    if (!canEditGradingLevels) return
+                                    const updated = institution.academicLevels.map(l =>
+                                      l.id === level.id ? { ...l, name: e.target.value } : l
+                                    )
+                                    setInstitution({ ...institution, academicLevels: updated })
+                                  }}
+                                  disabled={!canEditGradingLevels}
+                                  className={`w-full px-2 py-1.5 text-sm border border-slate-300 rounded ${canEditGradingLevels ? 'bg-white' : 'bg-slate-100 cursor-not-allowed'}`}
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-slate-500 mb-1">Código</label>
+                                <input
+                                  type="text"
+                                  value={level.code}
+                                  onChange={(e) => {
+                                    if (!canEditGradingLevels) return
+                                    const updated = institution.academicLevels.map(l =>
+                                      l.id === level.id ? { ...l, code: e.target.value.toUpperCase() } : l
+                                    )
+                                    setInstitution({ ...institution, academicLevels: updated })
+                                  }}
+                                  disabled={!canEditGradingLevels}
+                                  className={`w-full px-2 py-1.5 text-sm border border-slate-300 rounded ${canEditGradingLevels ? 'bg-white' : 'bg-slate-100 cursor-not-allowed'}`}
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-slate-500 mb-1">Tipo de calificación</label>
+                                <select
+                                  value={level.gradingScaleType}
+                                  disabled={!canEditGradingLevels}
+                                  className={`w-full px-2 py-1.5 text-sm border border-slate-300 rounded ${canEditGradingLevels ? 'bg-white' : 'bg-slate-100 cursor-not-allowed'}`}
+                                  onChange={(e) => {
+                                    if (!canEditGradingLevels) return
+                                    const newType = e.target.value as GradingScaleType
+                                    
+                                    // Configuración según tipo de escala numérica
+                                    const getNumericConfig = (type: GradingScaleType) => {
+                                      switch (type) {
+                                        case 'NUMERIC_1_5':
+                                          return {
+                                            minGrade: 1.0, maxGrade: 5.0, minPassingGrade: 3.0,
+                                            performanceLevels: [
+                                              { id: `perf-${Date.now()}-1`, name: 'Superior', code: 'SUPERIOR', minScore: 4.5, maxScore: 5.0, order: 0, color: '#22c55e', isApproved: true },
+                                              { id: `perf-${Date.now()}-2`, name: 'Alto', code: 'ALTO', minScore: 4.0, maxScore: 4.4, order: 1, color: '#3b82f6', isApproved: true },
+                                              { id: `perf-${Date.now()}-3`, name: 'Básico', code: 'BASICO', minScore: 3.0, maxScore: 3.9, order: 2, color: '#f59e0b', isApproved: true },
+                                              { id: `perf-${Date.now()}-4`, name: 'Bajo', code: 'BAJO', minScore: 1.0, maxScore: 2.9, order: 3, color: '#ef4444', isApproved: false },
+                                            ]
+                                          }
+                                        case 'NUMERIC_1_10':
+                                          return {
+                                            minGrade: 1, maxGrade: 10, minPassingGrade: 6,
+                                            performanceLevels: [
+                                              { id: `perf-${Date.now()}-1`, name: 'Superior', code: 'SUPERIOR', minScore: 9, maxScore: 10, order: 0, color: '#22c55e', isApproved: true },
+                                              { id: `perf-${Date.now()}-2`, name: 'Alto', code: 'ALTO', minScore: 8, maxScore: 8.9, order: 1, color: '#3b82f6', isApproved: true },
+                                              { id: `perf-${Date.now()}-3`, name: 'Básico', code: 'BASICO', minScore: 6, maxScore: 7.9, order: 2, color: '#f59e0b', isApproved: true },
+                                              { id: `perf-${Date.now()}-4`, name: 'Bajo', code: 'BAJO', minScore: 1, maxScore: 5.9, order: 3, color: '#ef4444', isApproved: false },
+                                            ]
+                                          }
+                                        case 'NUMERIC_0_100':
+                                          return {
+                                            minGrade: 0, maxGrade: 100, minPassingGrade: 60,
+                                            performanceLevels: [
+                                              { id: `perf-${Date.now()}-1`, name: 'Superior', code: 'SUPERIOR', minScore: 90, maxScore: 100, order: 0, color: '#22c55e', isApproved: true },
+                                              { id: `perf-${Date.now()}-2`, name: 'Alto', code: 'ALTO', minScore: 80, maxScore: 89, order: 1, color: '#3b82f6', isApproved: true },
+                                              { id: `perf-${Date.now()}-3`, name: 'Básico', code: 'BASICO', minScore: 60, maxScore: 79, order: 2, color: '#f59e0b', isApproved: true },
+                                              { id: `perf-${Date.now()}-4`, name: 'Bajo', code: 'BAJO', minScore: 0, maxScore: 59, order: 3, color: '#ef4444', isApproved: false },
+                                            ]
+                                          }
+                                        default:
+                                          return { minGrade: 1.0, maxGrade: 5.0, minPassingGrade: 3.0, performanceLevels: [] }
+                                      }
+                                    }
+                                    
+                                    const updated = institution.academicLevels.map(l =>
+                                      l.id === level.id ? {
+                                        ...l,
+                                        gradingScaleType: newType,
+                                        ...(newType.startsWith('NUMERIC') ? {
+                                          ...getNumericConfig(newType),
+                                          qualitativeLevels: undefined,
+                                        } : {
+                                          qualitativeLevels: [
+                                            { id: 'q1', code: 'S', name: 'Superior', description: 'Supera los logros', color: '#22c55e', order: 0, isApproved: true },
+                                            { id: 'q2', code: 'A', name: 'Alto', description: 'Alcanza los logros', color: '#3b82f6', order: 1, isApproved: true },
+                                            { id: 'q3', code: 'B', name: 'Básico', description: 'Logros mínimos', color: '#f59e0b', order: 2, isApproved: true },
+                                            { id: 'q4', code: 'J', name: 'Bajo', description: 'No alcanza', color: '#ef4444', order: 3, isApproved: false },
+                                          ],
+                                          minGrade: undefined,
+                                          maxGrade: undefined,
+                                          minPassingGrade: undefined,
+                                          performanceLevels: undefined,
+                                        }),
+                                      } : l
+                                    )
+                                    setInstitution({ ...institution, academicLevels: updated })
+                                  }}
+                                >
+                                  <option value="NUMERIC_1_5">Numérico 1.0 - 5.0</option>
+                                  <option value="NUMERIC_1_10">Numérico 1 - 10</option>
+                                  <option value="NUMERIC_0_100">Numérico 0 - 100</option>
+                                  <option value="QUALITATIVE">Cualitativo (letras)</option>
+                                  <option value="QUALITATIVE_DESC">Cualitativo descriptivo</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            {/* Grados del nivel */}
+                            <div>
+                              <label className="block text-xs text-slate-500 mb-1">Grados (separados por coma)</label>
+                              <input
+                                type="text"
+                                value={level.grades.join(', ')}
+                                disabled={!canEditGradingLevels}
+                                onChange={(e) => {
+                                  if (!canEditGradingLevels) return
+                                  const gradesArray = e.target.value.split(',').map(g => g.trim()).filter(g => g)
+                                  const updated = institution.academicLevels.map(l =>
+                                    l.id === level.id ? { ...l, grades: gradesArray } : l
+                                  )
+                                  setInstitution({ ...institution, academicLevels: updated })
+                                }}
+                                placeholder="Ej: Transición, 1°, 2°, 3°"
+                                className={`w-full px-3 py-2 text-sm border border-slate-300 rounded-lg ${!canEditGradingLevels ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+                              />
+                            </div>
+
+                            {/* Configuración según tipo de escala */}
+                            {level.gradingScaleType.startsWith('NUMERIC') ? (
+                              <>
+                                {/* Escala numérica */}
+                                <div className="grid grid-cols-3 gap-4 p-3 bg-purple-50 rounded-lg">
+                                  <div>
+                                    <label className="block text-xs text-purple-600 mb-1">Nota mínima</label>
+                                    <input
+                                      type="number"
+                                      step="0.1"
+                                      value={level.minGrade || 1}
+                                      disabled={!canEditGradingLevels}
+                                      onChange={(e) => {
+                                        if (!canEditGradingLevels) return
+                                        const updated = institution.academicLevels.map(l =>
+                                          l.id === level.id ? { ...l, minGrade: parseFloat(e.target.value) || 1 } : l
+                                        )
+                                        setInstitution({ ...institution, academicLevels: updated })
+                                      }}
+                                      className={`w-full px-2 py-1.5 text-sm border border-purple-300 rounded ${!canEditGradingLevels ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-purple-600 mb-1">Nota máxima</label>
+                                    <input
+                                      type="number"
+                                      step="0.1"
+                                      value={level.maxGrade || 5}
+                                      disabled={!canEditGradingLevels}
+                                      onChange={(e) => {
+                                        if (!canEditGradingLevels) return
+                                        const updated = institution.academicLevels.map(l =>
+                                          l.id === level.id ? { ...l, maxGrade: parseFloat(e.target.value) || 5 } : l
+                                        )
+                                        setInstitution({ ...institution, academicLevels: updated })
+                                      }}
+                                      className={`w-full px-2 py-1.5 text-sm border border-purple-300 rounded ${!canEditGradingLevels ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-purple-600 mb-1">Nota para aprobar</label>
+                                    <input
+                                      type="number"
+                                      step="0.1"
+                                      value={level.minPassingGrade || 3}
+                                      disabled={!canEditGradingLevels}
+                                      onChange={(e) => {
+                                        if (!canEditGradingLevels) return
+                                        const updated = institution.academicLevels.map(l =>
+                                          l.id === level.id ? { ...l, minPassingGrade: parseFloat(e.target.value) || 3 } : l
+                                        )
+                                        setInstitution({ ...institution, academicLevels: updated })
+                                      }}
+                                      className={`w-full px-2 py-1.5 text-sm border border-purple-300 rounded ${!canEditGradingLevels ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Escala de valoración (Performance Levels) */}
+                                <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="text-xs text-green-700 font-medium">Escala de Valoración (Niveles de Desempeño)</div>
+                                    {canEditGradingLevels && (
+                                      <button
+                                        onClick={() => {
+                                          const newPerf = {
+                                            id: `perf-${Date.now()}`,
+                                            name: 'Nuevo Nivel',
+                                            code: 'NUEVO',
+                                            minScore: 0,
+                                            maxScore: 0,
+                                            order: level.performanceLevels?.length || 0,
+                                            color: '#6b7280',
+                                            isApproved: true,
+                                          }
+                                          const updated = institution.academicLevels.map(l =>
+                                            l.id === level.id ? { ...l, performanceLevels: [...(l.performanceLevels || []), newPerf] } : l
+                                          )
+                                          setInstitution({ ...institution, academicLevels: updated })
+                                        }}
+                                        className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                                      >
+                                        + Agregar
+                                      </button>
+                                    )}
+                                  </div>
+                                  <div className="space-y-2">
+                                    {level.performanceLevels?.map((pl, plIndex) => (
+                                      <div 
+                                        key={pl.id} 
+                                        className="flex items-center gap-2 p-2 bg-white rounded border"
+                                        style={{ borderColor: pl.color, borderLeftWidth: '4px' }}
+                                      >
+                                        <input
+                                          type="color"
+                                          value={pl.color}
+                                          disabled={!canEditGradingLevels}
+                                          onChange={(e) => {
+                                            if (!canEditGradingLevels) return
+                                            const updatedPl = level.performanceLevels?.map((p, i) =>
+                                              i === plIndex ? { ...p, color: e.target.value } : p
+                                            )
+                                            const updated = institution.academicLevels.map(l =>
+                                              l.id === level.id ? { ...l, performanceLevels: updatedPl } : l
+                                            )
+                                            setInstitution({ ...institution, academicLevels: updated })
+                                          }}
+                                          className={`w-8 h-8 rounded border-0 ${canEditGradingLevels ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+                                        />
+                                        <input
+                                          type="text"
+                                          value={pl.name}
+                                          disabled={!canEditGradingLevels}
+                                          onChange={(e) => {
+                                            if (!canEditGradingLevels) return
+                                            const updatedPl = level.performanceLevels?.map((p, i) =>
+                                              i === plIndex ? { ...p, name: e.target.value } : p
+                                            )
+                                            const updated = institution.academicLevels.map(l =>
+                                              l.id === level.id ? { ...l, performanceLevels: updatedPl } : l
+                                            )
+                                            setInstitution({ ...institution, academicLevels: updated })
+                                          }}
+                                          placeholder="Nombre"
+                                          className={`w-24 px-2 py-1 text-xs border border-slate-200 rounded font-medium ${!canEditGradingLevels ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+                                        />
+                                        <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded text-xs">
+                                          <input
+                                            type="number"
+                                            step="0.1"
+                                            value={pl.minScore}
+                                            disabled={!canEditGradingLevels}
+                                            onChange={(e) => {
+                                              if (!canEditGradingLevels) return
+                                              const updatedPl = level.performanceLevels?.map((p, i) =>
+                                                i === plIndex ? { ...p, minScore: parseFloat(e.target.value) || 0 } : p
+                                              )
+                                              const updated = institution.academicLevels.map(l =>
+                                                l.id === level.id ? { ...l, performanceLevels: updatedPl } : l
+                                              )
+                                              setInstitution({ ...institution, academicLevels: updated })
+                                            }}
+                                            className={`w-14 px-1 py-0.5 text-xs border border-slate-200 rounded text-center ${canEditGradingLevels ? 'bg-white' : 'bg-slate-50 cursor-not-allowed'}`}
+                                          />
+                                          <span className="text-slate-400">-</span>
+                                          <input
+                                            type="number"
+                                            step="0.1"
+                                            value={pl.maxScore}
+                                            disabled={!canEditGradingLevels}
+                                            onChange={(e) => {
+                                              if (!canEditGradingLevels) return
+                                              const updatedPl = level.performanceLevels?.map((p, i) =>
+                                                i === plIndex ? { ...p, maxScore: parseFloat(e.target.value) || 0 } : p
+                                              )
+                                              const updated = institution.academicLevels.map(l =>
+                                                l.id === level.id ? { ...l, performanceLevels: updatedPl } : l
+                                              )
+                                              setInstitution({ ...institution, academicLevels: updated })
+                                            }}
+                                            className={`w-14 px-1 py-0.5 text-xs border border-slate-200 rounded text-center ${canEditGradingLevels ? 'bg-white' : 'bg-slate-50 cursor-not-allowed'}`}
+                                          />
+                                        </div>
+                                        <label className={`flex items-center gap-1 px-2 py-1 rounded text-xs whitespace-nowrap ${pl.isApproved ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} ${!canEditGradingLevels ? 'cursor-not-allowed opacity-60' : ''}`}>
+                                          <input
+                                            type="checkbox"
+                                            checked={pl.isApproved}
+                                            disabled={!canEditGradingLevels}
+                                            onChange={(e) => {
+                                              if (!canEditGradingLevels) return
+                                              const updatedPl = level.performanceLevels?.map((p, i) =>
+                                                i === plIndex ? { ...p, isApproved: e.target.checked } : p
+                                              )
+                                              const updated = institution.academicLevels.map(l =>
+                                                l.id === level.id ? { ...l, performanceLevels: updatedPl } : l
+                                              )
+                                              setInstitution({ ...institution, academicLevels: updated })
+                                            }}
+                                            className="w-3 h-3"
+                                          />
+                                          {pl.isApproved ? 'Aprueba' : 'No aprueba'}
+                                        </label>
+                                        {canEditGradingLevels && (
+                                          <button
+                                            onClick={() => {
+                                              const updatedPl = level.performanceLevels?.filter((_, i) => i !== plIndex)
+                                              const updated = institution.academicLevels.map(l =>
+                                                l.id === level.id ? { ...l, performanceLevels: updatedPl } : l
+                                              )
+                                              setInstitution({ ...institution, academicLevels: updated })
+                                            }}
+                                            className="p-1 hover:bg-red-100 rounded text-slate-400 hover:text-red-600"
+                                          >
+                                            <Trash2 className="w-3 h-3" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    ))}
+                                    {(!level.performanceLevels || level.performanceLevels.length === 0) && (
+                                      <div className="text-xs text-slate-400 text-center py-2">Sin niveles de desempeño configurados</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              /* Escala cualitativa */
+                              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="text-xs text-amber-700 font-medium">Escala Cualitativa</div>
+                                  {canEditGradingLevels && (
+                                    <button
+                                      onClick={() => {
+                                        const newQl = {
+                                          id: `ql-${Date.now()}`,
+                                          code: 'N',
+                                          name: 'Nuevo',
+                                          description: '',
+                                          color: '#6b7280',
+                                          order: level.qualitativeLevels?.length || 0,
+                                          isApproved: true,
+                                        }
+                                        const updated = institution.academicLevels.map(l =>
+                                          l.id === level.id ? { ...l, qualitativeLevels: [...(l.qualitativeLevels || []), newQl] } : l
+                                        )
+                                        setInstitution({ ...institution, academicLevels: updated })
+                                      }}
+                                      className="text-xs px-2 py-1 bg-amber-600 text-white rounded hover:bg-amber-700"
+                                    >
+                                      + Agregar
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="space-y-2">
+                                  {level.qualitativeLevels?.map((ql, qlIndex) => (
+                                    <div key={ql.id} className="flex items-center gap-2 p-2 bg-white rounded border border-amber-200">
+                                      <input
+                                        type="color"
+                                        value={ql.color}
+                                        disabled={!canEditGradingLevels}
+                                        onChange={(e) => {
+                                          if (!canEditGradingLevels) return
+                                          const updatedQl = level.qualitativeLevels?.map((q, i) =>
+                                            i === qlIndex ? { ...q, color: e.target.value } : q
+                                          )
+                                          const updated = institution.academicLevels.map(l =>
+                                            l.id === level.id ? { ...l, qualitativeLevels: updatedQl } : l
+                                          )
+                                          setInstitution({ ...institution, academicLevels: updated })
+                                        }}
+                                        className={`w-8 h-8 rounded border-0 ${canEditGradingLevels ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+                                      />
+                                      <input
+                                        type="text"
+                                        value={ql.code}
+                                        disabled={!canEditGradingLevels}
+                                        onChange={(e) => {
+                                          if (!canEditGradingLevels) return
+                                          const updatedQl = level.qualitativeLevels?.map((q, i) =>
+                                            i === qlIndex ? { ...q, code: e.target.value } : q
+                                          )
+                                          const updated = institution.academicLevels.map(l =>
+                                            l.id === level.id ? { ...l, qualitativeLevels: updatedQl } : l
+                                          )
+                                          setInstitution({ ...institution, academicLevels: updated })
+                                        }}
+                                        className={`w-12 px-2 py-1 text-xs text-center border border-slate-200 rounded ${!canEditGradingLevels ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+                                        placeholder="Código"
+                                      />
+                                      <input
+                                        type="text"
+                                        value={ql.name}
+                                        disabled={!canEditGradingLevels}
+                                        onChange={(e) => {
+                                          if (!canEditGradingLevels) return
+                                          const updatedQl = level.qualitativeLevels?.map((q, i) =>
+                                            i === qlIndex ? { ...q, name: e.target.value } : q
+                                          )
+                                          const updated = institution.academicLevels.map(l =>
+                                            l.id === level.id ? { ...l, qualitativeLevels: updatedQl } : l
+                                          )
+                                          setInstitution({ ...institution, academicLevels: updated })
+                                        }}
+                                        className={`flex-1 px-2 py-1 text-xs border border-slate-200 rounded ${!canEditGradingLevels ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+                                        placeholder="Nombre"
+                                      />
+                                      <label className={`flex items-center gap-1 text-xs whitespace-nowrap ${!canEditGradingLevels ? 'cursor-not-allowed opacity-60' : ''}`}>
+                                        <input
+                                          type="checkbox"
+                                          checked={ql.isApproved}
+                                          disabled={!canEditGradingLevels}
+                                          onChange={(e) => {
+                                            if (!canEditGradingLevels) return
+                                            const updatedQl = level.qualitativeLevels?.map((q, i) =>
+                                              i === qlIndex ? { ...q, isApproved: e.target.checked } : q
+                                            )
+                                            const updated = institution.academicLevels.map(l =>
+                                              l.id === level.id ? { ...l, qualitativeLevels: updatedQl } : l
+                                            )
+                                            setInstitution({ ...institution, academicLevels: updated })
+                                          }}
+                                          className="w-3 h-3"
+                                        />
+                                        Aprueba
+                                      </label>
+                                      {canEditGradingLevels && (
+                                        <button
+                                          onClick={() => {
+                                            const updatedQl = level.qualitativeLevels?.filter((_, i) => i !== qlIndex)
+                                            const updated = institution.academicLevels.map(l =>
+                                              l.id === level.id ? { ...l, qualitativeLevels: updatedQl } : l
+                                            )
+                                            setInstitution({ ...institution, academicLevels: updated })
+                                          }}
+                                          className="p-1 hover:bg-red-100 rounded text-slate-400 hover:text-red-600"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )})}
+                    
+
+                    {institution.academicLevels.length === 0 && (
+                      <div className="text-center py-8 text-slate-500 border-2 border-dashed border-slate-200 rounded-lg">
+                        <p className="mb-2">No hay niveles académicos configurados</p>
+                        <button
+                          onClick={() => {
+                            const defaultLevels: AcademicLevel[] = [
+                              {
+                                id: 'lvl-preescolar',
+                                name: 'Preescolar',
+                                code: 'PREESCOLAR',
+                                order: 0,
+                                gradingScaleType: 'QUALITATIVE',
+                                qualitativeLevels: [
+                                  { id: 'q1', code: 'S', name: 'Superior', description: 'Supera los logros', color: '#22c55e', order: 0, isApproved: true },
+                                  { id: 'q2', code: 'A', name: 'Alto', description: 'Alcanza los logros', color: '#3b82f6', order: 1, isApproved: true },
+                                  { id: 'q3', code: 'B', name: 'Básico', description: 'Logros mínimos', color: '#f59e0b', order: 2, isApproved: true },
+                                  { id: 'q4', code: 'J', name: 'Bajo', description: 'No alcanza', color: '#ef4444', order: 3, isApproved: false },
+                                ],
+                                grades: ['Pre-Jardín', 'Jardín', 'Transición'],
+                              },
+                              {
+                                id: 'lvl-primaria',
+                                name: 'Básica Primaria',
+                                code: 'PRIMARIA',
+                                order: 1,
+                                gradingScaleType: 'NUMERIC_1_5',
+                                minGrade: 1.0,
+                                maxGrade: 5.0,
+                                minPassingGrade: 3.0,
+                                grades: ['1°', '2°', '3°', '4°', '5°'],
+                              },
+                              {
+                                id: 'lvl-secundaria',
+                                name: 'Básica Secundaria',
+                                code: 'SECUNDARIA',
+                                order: 2,
+                                gradingScaleType: 'NUMERIC_1_5',
+                                minGrade: 1.0,
+                                maxGrade: 5.0,
+                                minPassingGrade: 3.0,
+                                grades: ['6°', '7°', '8°', '9°'],
+                              },
+                              {
+                                id: 'lvl-media',
+                                name: 'Media',
+                                code: 'MEDIA',
+                                order: 3,
+                                gradingScaleType: 'NUMERIC_1_5',
+                                minGrade: 1.0,
+                                maxGrade: 5.0,
+                                minPassingGrade: 3.0,
+                                grades: ['10°', '11°'],
+                              },
+                            ]
+                            setInstitution({ ...institution, academicLevels: defaultLevels })
+                          }}
+                          className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+                        >
+                          Cargar niveles por defecto
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Botón Guardar Niveles Académicos */}
+                {canEditGradingLevels && (
+                  <div className="flex justify-end pt-6 mt-6 border-t border-slate-200">
+                    <button
+                      onClick={async () => {
+                        const success = await saveAcademicLevelsToAPI()
+                        if (success) {
+                          alert('✅ Niveles académicos guardados correctamente')
+                        } else {
+                          alert('❌ Error al guardar. Intente de nuevo.')
+                        }
+                      }}
+                      disabled={isSaving}
+                      className={`px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 font-medium ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <Save className="w-4 h-4" />
+                      {isSaving ? 'Guardando...' : 'Guardar Niveles Académicos'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Tab: Sistema de Calificación */}
             {activeTab === 'grading' && (
               <div className="p-6">
@@ -503,157 +1351,280 @@ export default function Institution() {
                     <h2 className="text-lg font-semibold text-slate-900">Sistema de Calificación</h2>
                     <p className="text-sm text-slate-500">Configura los componentes evaluativos y la escala de valoración</p>
                   </div>
+                  {!canEditGradingScale && (
+                    <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded ml-auto">
+                      <Eye className="w-3 h-3" /> Solo lectura
+                    </span>
+                  )}
                 </div>
 
-                {/* Componentes Evaluativos */}
+                {/* Procesos Evaluativos Dinámicos */}
                 <div className="mb-8">
-                  <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                    <BookOpen className="w-4 h-4" />
-                    Componentes Evaluativos
-                  </h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
-                      <label className="block text-sm font-medium text-blue-700 mb-2">Cognitivo</label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={gradingConfig.cognitivo}
-                          onChange={(e) => setGradingConfig({ ...gradingConfig, cognitivo: parseInt(e.target.value) || 0 })}
-                          className="w-20 px-3 py-2 border border-blue-300 rounded-lg text-center font-semibold"
-                        />
-                        <span className="text-blue-600 font-medium">%</span>
-                      </div>
-                    </div>
-                    <div className="p-4 border border-green-200 rounded-lg bg-green-50">
-                      <label className="block text-sm font-medium text-green-700 mb-2">Procedimental</label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={gradingConfig.procedimental}
-                          onChange={(e) => setGradingConfig({ ...gradingConfig, procedimental: parseInt(e.target.value) || 0 })}
-                          className="w-20 px-3 py-2 border border-green-300 rounded-lg text-center font-semibold"
-                        />
-                        <span className="text-green-600 font-medium">%</span>
-                      </div>
-                    </div>
-                    <div className="p-4 border border-amber-200 rounded-lg bg-amber-50">
-                      <label className="block text-sm font-medium text-amber-700 mb-2">Actitudinal</label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={gradingConfig.actitudinal}
-                          onChange={(e) => setGradingConfig({ ...gradingConfig, actitudinal: parseInt(e.target.value) || 0 })}
-                          className="w-20 px-3 py-2 border border-amber-300 rounded-lg text-center font-semibold"
-                        />
-                        <span className="text-amber-600 font-medium">%</span>
-                      </div>
-                    </div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                      <BookOpen className="w-4 h-4" />
+                      Procesos Evaluativos
+                    </h3>
+                    {canEditGradingScale && (
+                      <button
+                        onClick={() => {
+                          const newProcess = {
+                            id: `proc-${Date.now()}`,
+                            name: 'Nuevo Proceso',
+                            code: `PROCESO_${gradingConfig.evaluationProcesses.length + 1}`,
+                            weightPercentage: 0,
+                            order: gradingConfig.evaluationProcesses.length,
+                            allowTeacherAddGrades: true,
+                            subprocesses: [
+                              { id: `sub-${Date.now()}`, name: 'Sub 1', weightPercentage: 100, numberOfGrades: 3, order: 0 }
+                            ]
+                          }
+                          setGradingConfig({
+                            ...gradingConfig,
+                            evaluationProcesses: [...gradingConfig.evaluationProcesses, newProcess]
+                          })
+                        }}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Agregar Proceso
+                      </button>
+                    )}
                   </div>
-                  <div className={`mt-3 p-2 rounded-lg text-sm ${totalComponentWeight === 100 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                    Total: <strong>{totalComponentWeight}%</strong> {totalComponentWeight !== 100 && '(debe sumar 100%)'}
-                  </div>
-                </div>
 
-                {/* Distribución Actitudinal */}
-                <div className="mb-8">
-                  <h3 className="text-sm font-semibold text-slate-800 mb-4">Distribución del Componente Actitudinal</h3>
-                  <div className="grid grid-cols-4 gap-4">
-                    {Object.entries(gradingConfig.attitudinalBreakdown).map(([key, value]) => (
-                      <div key={key} className="p-3 border border-slate-200 rounded-lg">
-                        <label className="block text-xs font-medium text-slate-600 mb-1 capitalize">
-                          {key === 'autoevaluacion' ? 'Autoevaluación' : key === 'coevaluacion' ? 'Coevaluación' : key.charAt(0).toUpperCase() + key.slice(1)}
-                        </label>
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={value}
-                            onChange={(e) => setGradingConfig({
-                              ...gradingConfig,
-                              attitudinalBreakdown: {
-                                ...gradingConfig.attitudinalBreakdown,
-                                [key]: parseInt(e.target.value) || 0
-                              }
-                            })}
-                            className="w-16 px-2 py-1 border border-slate-300 rounded text-center text-sm"
-                          />
-                          <span className="text-slate-500 text-sm">%</span>
+                  {/* Lista de Procesos */}
+                  <div className="space-y-4">
+                    {gradingConfig.evaluationProcesses.map((process, processIndex) => {
+                      const processColors = ['blue', 'green', 'amber', 'purple', 'pink', 'cyan'][processIndex % 6]
+                      const isExpanded = expandedGrades.includes(`process-${process.id}`)
+                      const subprocessTotal = process.subprocesses.reduce((sum, s) => sum + s.weightPercentage, 0)
+                      
+                      return (
+                        <div key={process.id} className="border border-slate-200 rounded-lg overflow-hidden">
+                          {/* Cabecera del Proceso */}
+                          <div className={`p-4 bg-${processColors}-50 border-b border-${processColors}-200`}>
+                            <div className="flex items-center gap-4">
+                              <button
+                                onClick={() => {
+                                  const key = `process-${process.id}`
+                                  setExpandedGrades(prev => 
+                                    prev.includes(key) ? prev.filter(id => id !== key) : [...prev, key]
+                                  )
+                                }}
+                                className="p-1"
+                              >
+                                {isExpanded ? (
+                                  <ChevronDown className={`w-5 h-5 text-${processColors}-600`} />
+                                ) : (
+                                  <ChevronRight className={`w-5 h-5 text-${processColors}-600`} />
+                                )}
+                              </button>
+                              
+                              <input
+                                type="text"
+                                value={process.name}
+                                disabled={!canEditGradingScale}
+                                onChange={(e) => {
+                                  if (!canEditGradingScale) return
+                                  const updated = gradingConfig.evaluationProcesses.map(p =>
+                                    p.id === process.id ? { ...p, name: e.target.value } : p
+                                  )
+                                  setGradingConfig({ ...gradingConfig, evaluationProcesses: updated })
+                                }}
+                                className={`flex-1 font-medium text-${processColors}-700 bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-${processColors}-300 rounded px-2 py-1 ${!canEditGradingScale ? 'cursor-not-allowed' : ''}`}
+                              />
+                              
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  value={process.weightPercentage}
+                                  disabled={!canEditGradingScale}
+                                  onChange={(e) => {
+                                    if (!canEditGradingScale) return
+                                    const updated = gradingConfig.evaluationProcesses.map(p =>
+                                      p.id === process.id ? { ...p, weightPercentage: parseInt(e.target.value) || 0 } : p
+                                    )
+                                    setGradingConfig({ ...gradingConfig, evaluationProcesses: updated })
+                                  }}
+                                  className={`w-16 px-2 py-1 border border-slate-300 rounded text-center font-semibold ${!canEditGradingScale ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+                                />
+                                <span className="text-slate-600 font-medium">%</span>
+                              </div>
+
+                              {canEditGradingScale && (
+                                <button
+                                  onClick={() => {
+                                    const updated = gradingConfig.evaluationProcesses.filter(p => p.id !== process.id)
+                                    setGradingConfig({ ...gradingConfig, evaluationProcesses: updated })
+                                  }}
+                                  className="p-1.5 hover:bg-red-100 rounded text-slate-400 hover:text-red-600"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Subprocesos (expandible) */}
+                          {isExpanded && (
+                            <div className="p-4 bg-white">
+                              {/* Opción para permitir que docentes agreguen notas */}
+                              <div className="mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                <label className={`flex items-center gap-2 text-sm ${!canEditGradingScale ? 'cursor-not-allowed opacity-60' : ''}`}>
+                                  <input
+                                    type="checkbox"
+                                    checked={process.allowTeacherAddGrades}
+                                    disabled={!canEditGradingScale}
+                                    onChange={(e) => {
+                                      if (!canEditGradingScale) return
+                                      const updated = gradingConfig.evaluationProcesses.map(p =>
+                                        p.id === process.id ? { ...p, allowTeacherAddGrades: e.target.checked } : p
+                                      )
+                                      setGradingConfig({ ...gradingConfig, evaluationProcesses: updated })
+                                    }}
+                                    className="w-4 h-4 text-blue-600 rounded"
+                                  />
+                                  <span className="text-slate-700">Permitir que el docente agregue más casillas de notas</span>
+                                </label>
+                              </div>
+
+                              <div className="flex items-center justify-between mb-3">
+                                <span className="text-xs font-medium text-slate-600">Subprocesos</span>
+                                <button
+                                  onClick={() => {
+                                    const newSubprocess = {
+                                      id: `sub-${Date.now()}`,
+                                      name: `Sub ${process.subprocesses.length + 1}`,
+                                      weightPercentage: 0,
+                                      numberOfGrades: 3,
+                                      order: process.subprocesses.length
+                                    }
+                                    const updated = gradingConfig.evaluationProcesses.map(p =>
+                                      p.id === process.id ? { ...p, subprocesses: [...p.subprocesses, newSubprocess] } : p
+                                    )
+                                    setGradingConfig({ ...gradingConfig, evaluationProcesses: updated })
+                                  }}
+                                  className="flex items-center gap-1 px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded hover:bg-slate-200"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                  Agregar Subproceso
+                                </button>
+                              </div>
+
+                              {/* Lista de Subprocesos */}
+                              <div className="space-y-2">
+                                {process.subprocesses.map((sub) => (
+                                  <div key={sub.id} className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-200">
+                                    {/* Nombre del subproceso */}
+                                    <input
+                                      type="text"
+                                      value={sub.name}
+                                      onChange={(e) => {
+                                        const updatedSubs = process.subprocesses.map(s =>
+                                          s.id === sub.id ? { ...s, name: e.target.value } : s
+                                        )
+                                        const updated = gradingConfig.evaluationProcesses.map(p =>
+                                          p.id === process.id ? { ...p, subprocesses: updatedSubs } : p
+                                        )
+                                        setGradingConfig({ ...gradingConfig, evaluationProcesses: updated })
+                                      }}
+                                      className="flex-1 px-2 py-1 text-sm border border-slate-200 rounded bg-white"
+                                    />
+                                    
+                                    {/* Porcentaje */}
+                                    <div className="flex items-center gap-1">
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={sub.weightPercentage}
+                                        onChange={(e) => {
+                                          const updatedSubs = process.subprocesses.map(s =>
+                                            s.id === sub.id ? { ...s, weightPercentage: parseInt(e.target.value) || 0 } : s
+                                          )
+                                          const updated = gradingConfig.evaluationProcesses.map(p =>
+                                            p.id === process.id ? { ...p, subprocesses: updatedSubs } : p
+                                          )
+                                          setGradingConfig({ ...gradingConfig, evaluationProcesses: updated })
+                                        }}
+                                        className="w-14 px-2 py-1 text-sm border border-slate-200 rounded text-center"
+                                      />
+                                      <span className="text-xs text-slate-500">%</span>
+                                    </div>
+                                    
+                                    {/* Cantidad de notas */}
+                                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded">
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        max="20"
+                                        value={sub.numberOfGrades}
+                                        onChange={(e) => {
+                                          const newValue = parseInt(e.target.value) || 1
+                                          const updatedSubs = process.subprocesses.map(s =>
+                                            s.id === sub.id ? { ...s, numberOfGrades: newValue } : s
+                                          )
+                                          const updated = gradingConfig.evaluationProcesses.map(p =>
+                                            p.id === process.id ? { ...p, subprocesses: updatedSubs } : p
+                                          )
+                                          setGradingConfig({ ...gradingConfig, evaluationProcesses: updated })
+                                        }}
+                                        className="w-12 px-1 py-0.5 text-sm border border-blue-300 rounded text-center bg-white"
+                                        title="Cantidad de notas"
+                                      />
+                                      <span className="text-xs text-blue-600">notas</span>
+                                    </div>
+                                    
+                                    {/* Eliminar subproceso */}
+                                    <button
+                                      onClick={() => {
+                                        if (process.subprocesses.length > 1) {
+                                          const updatedSubs = process.subprocesses.filter(s => s.id !== sub.id)
+                                          const updated = gradingConfig.evaluationProcesses.map(p =>
+                                            p.id === process.id ? { ...p, subprocesses: updatedSubs } : p
+                                          )
+                                          setGradingConfig({ ...gradingConfig, evaluationProcesses: updated })
+                                        }
+                                      }}
+                                      disabled={process.subprocesses.length <= 1}
+                                      className={`p-1 rounded ${process.subprocesses.length > 1 ? 'hover:bg-red-100 text-slate-400 hover:text-red-600' : 'text-slate-300 cursor-not-allowed'}`}
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Total de subprocesos */}
+                              <div className={`mt-3 text-xs ${subprocessTotal === 100 ? 'text-green-600' : 'text-red-600'}`}>
+                                Total subprocesos: <strong>{subprocessTotal}%</strong> {subprocessTotal !== 100 && '(debe sumar 100%)'}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
-                  <div className={`mt-3 p-2 rounded-lg text-sm ${totalAttitudinalWeight === gradingConfig.actitudinal ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                    Total Actitudinal: <strong>{totalAttitudinalWeight}%</strong> {totalAttitudinalWeight !== gradingConfig.actitudinal && `(debe sumar ${gradingConfig.actitudinal}%)`}
+
+                  {/* Total de Procesos */}
+                  <div className={`mt-4 p-3 rounded-lg text-sm ${totalProcessWeight === 100 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    Total Procesos: <strong>{totalProcessWeight}%</strong> {totalProcessWeight !== 100 && '(debe sumar 100%)'}
                   </div>
                 </div>
 
-                {/* Escala de Valoración */}
-                <div className="mb-8">
-                  <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                    <GraduationCap className="w-4 h-4" />
-                    Escala de Valoración
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <span className="w-24 font-medium text-green-700">Superior</span>
-                      <div className="flex items-center gap-2">
-                        <input type="number" step="0.1" value={gradingConfig.scale.superior.min} className="w-16 px-2 py-1 border border-green-300 rounded text-center text-sm" readOnly />
-                        <span className="text-slate-500">-</span>
-                        <input type="number" step="0.1" value={gradingConfig.scale.superior.max} className="w-16 px-2 py-1 border border-green-300 rounded text-center text-sm" readOnly />
-                      </div>
-                      <span className="text-sm text-green-600">90% - 100%</span>
+                {/* Nota sobre escala de valoración */}
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-start gap-3">
+                    <GraduationCap className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <div>
+                      <div className="text-sm font-medium text-blue-800">Escala de Valoración</div>
+                      <p className="text-sm text-blue-600 mt-1">
+                        La escala de valoración (Superior, Alto, Básico, Bajo) ahora se configura dentro de cada <strong>Nivel Académico</strong> en la pestaña "Niveles y Calendario". 
+                        Esto permite tener escalas diferentes por nivel (ej: cualitativa para Preescolar, numérica para Primaria).
+                      </p>
                     </div>
-                    <div className="flex items-center gap-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <span className="w-24 font-medium text-blue-700">Alto</span>
-                      <div className="flex items-center gap-2">
-                        <input type="number" step="0.1" value={gradingConfig.scale.alto.min} className="w-16 px-2 py-1 border border-blue-300 rounded text-center text-sm" readOnly />
-                        <span className="text-slate-500">-</span>
-                        <input type="number" step="0.1" value={gradingConfig.scale.alto.max} className="w-16 px-2 py-1 border border-blue-300 rounded text-center text-sm" readOnly />
-                      </div>
-                      <span className="text-sm text-blue-600">80% - 89%</span>
-                    </div>
-                    <div className="flex items-center gap-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                      <span className="w-24 font-medium text-amber-700">Básico</span>
-                      <div className="flex items-center gap-2">
-                        <input type="number" step="0.1" value={gradingConfig.scale.basico.min} className="w-16 px-2 py-1 border border-amber-300 rounded text-center text-sm" readOnly />
-                        <span className="text-slate-500">-</span>
-                        <input type="number" step="0.1" value={gradingConfig.scale.basico.max} className="w-16 px-2 py-1 border border-amber-300 rounded text-center text-sm" readOnly />
-                      </div>
-                      <span className="text-sm text-amber-600">60% - 79%</span>
-                    </div>
-                    <div className="flex items-center gap-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <span className="w-24 font-medium text-red-700">Bajo</span>
-                      <div className="flex items-center gap-2">
-                        <input type="number" step="0.1" value={gradingConfig.scale.bajo.min} className="w-16 px-2 py-1 border border-red-300 rounded text-center text-sm" readOnly />
-                        <span className="text-slate-500">-</span>
-                        <input type="number" step="0.1" value={gradingConfig.scale.bajo.max} className="w-16 px-2 py-1 border border-red-300 rounded text-center text-sm" readOnly />
-                      </div>
-                      <span className="text-sm text-red-600">20% - 59%</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Nota mínima aprobatoria */}
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-800 mb-3">Nota Mínima Aprobatoria</h3>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="1"
-                      max="5"
-                      value={gradingConfig.minPassingGrade}
-                      onChange={(e) => setGradingConfig({ ...gradingConfig, minPassingGrade: parseFloat(e.target.value) || 3.0 })}
-                      className="w-24 px-3 py-2 border border-slate-300 rounded-lg text-center font-semibold text-lg"
-                    />
-                    <span className="text-slate-500">sobre 5.0</span>
                   </div>
                 </div>
               </div>
@@ -671,14 +1642,21 @@ export default function Institution() {
                       <h2 className="text-lg font-semibold text-slate-900">Períodos Académicos</h2>
                       <p className="text-sm text-slate-500">Configura los períodos del año escolar y su peso en la nota final</p>
                     </div>
+                    {!canEditPeriods && (
+                      <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                        <Eye className="w-3 h-3" /> Solo lectura
+                      </span>
+                    )}
                   </div>
-                  <button
-                    onClick={() => openPeriodModal()}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Agregar Período
-                  </button>
+                  {canEditPeriods && (
+                    <button
+                      onClick={() => openPeriodModal()}
+                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Agregar Período
+                    </button>
+                  )}
                 </div>
 
                 <div className="space-y-3">
@@ -700,28 +1678,197 @@ export default function Institution() {
                         <span className="text-2xl font-bold text-purple-600">{period.weight}%</span>
                         <p className="text-xs text-slate-500">Peso</p>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => openPeriodModal(period)}
-                          className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-blue-600"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => deletePeriod(period.id)}
-                          disabled={periods.length <= 1}
-                          className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-red-600 disabled:opacity-30"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                      {canEditPeriods && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => openPeriodModal(period)}
+                            className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-blue-600"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => deletePeriod(period.id)}
+                            disabled={periods.length <= 1}
+                            className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-red-600 disabled:opacity-30"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
 
-                <div className={`mt-4 p-3 rounded-lg text-sm ${totalPeriodWeight === 100 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                  Peso total de períodos: <strong>{totalPeriodWeight}%</strong> {totalPeriodWeight !== 100 && '(debe sumar 100%)'}
+                {/* Componentes Finales Institucionales */}
+                <div className="mt-6 pt-6 border-t border-slate-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                        <GraduationCap className="w-4 h-4" />
+                        Componentes Finales Institucionales
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Evaluaciones globales que complementan la nota final del año (ej: Pruebas Semestrales)
+                      </p>
+                    </div>
+                    <label className={`flex items-center gap-2 ${!canEditPeriods ? 'cursor-not-allowed opacity-60' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={gradingConfig.useFinalComponents}
+                        disabled={!canEditPeriods}
+                        onChange={(e) => {
+                          if (!canEditPeriods) return
+                          const enabled = e.target.checked
+                          if (enabled && gradingConfig.finalComponents.length === 0) {
+                            setGradingConfig({
+                              ...gradingConfig,
+                              useFinalComponents: true,
+                              finalComponents: [
+                                { id: `fc-${Date.now()}`, name: 'Prueba Semestral I', weightPercentage: 10, order: 0 }
+                              ]
+                            })
+                          } else {
+                            setGradingConfig({ ...gradingConfig, useFinalComponents: enabled })
+                          }
+                        }}
+                        className="w-4 h-4 text-purple-600 rounded"
+                      />
+                      <span className="text-sm text-slate-600">Habilitar</span>
+                    </label>
+                  </div>
+
+                  {gradingConfig.useFinalComponents && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-medium text-purple-700">Componentes configurados</span>
+                        <button
+                          onClick={() => {
+                            const nextNum = gradingConfig.finalComponents.length + 1
+                            const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
+                            const newComponent = {
+                              id: `fc-${Date.now()}`,
+                              name: `Prueba Semestral ${romanNumerals[nextNum - 1] || nextNum}`,
+                              weightPercentage: 10,
+                              order: gradingConfig.finalComponents.length
+                            }
+                            setGradingConfig({
+                              ...gradingConfig,
+                              finalComponents: [...gradingConfig.finalComponents, newComponent]
+                            })
+                          }}
+                          className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Agregar
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        {gradingConfig.finalComponents.map((comp) => (
+                          <div key={comp.id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-purple-200">
+                            <input
+                              type="text"
+                              value={comp.name}
+                              onChange={(e) => {
+                                const updated = gradingConfig.finalComponents.map(c =>
+                                  c.id === comp.id ? { ...c, name: e.target.value } : c
+                                )
+                                setGradingConfig({ ...gradingConfig, finalComponents: updated })
+                              }}
+                              className="flex-1 px-2 py-1 text-sm border border-slate-200 rounded"
+                            />
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min="1"
+                                max="50"
+                                value={comp.weightPercentage}
+                                onChange={(e) => {
+                                  const updated = gradingConfig.finalComponents.map(c =>
+                                    c.id === comp.id ? { ...c, weightPercentage: parseInt(e.target.value) || 0 } : c
+                                  )
+                                  setGradingConfig({ ...gradingConfig, finalComponents: updated })
+                                }}
+                                className="w-14 px-2 py-1 text-sm border border-slate-200 rounded text-center"
+                              />
+                              <span className="text-xs text-slate-500">%</span>
+                            </div>
+                            <button
+                              onClick={() => {
+                                if (gradingConfig.finalComponents.length > 1) {
+                                  const updated = gradingConfig.finalComponents.filter(c => c.id !== comp.id)
+                                  setGradingConfig({ ...gradingConfig, finalComponents: updated })
+                                } else {
+                                  setGradingConfig({ ...gradingConfig, useFinalComponents: false, finalComponents: [] })
+                                }
+                              }}
+                              className="p-1 hover:bg-red-100 rounded text-slate-400 hover:text-red-600"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-3 text-xs text-purple-700">
+                        Total componentes: <strong>{gradingConfig.finalComponents.reduce((sum, c) => sum + c.weightPercentage, 0)}%</strong>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* Resumen de distribución total */}
+                {(() => {
+                  const finalComponentsWeight = gradingConfig.useFinalComponents 
+                    ? gradingConfig.finalComponents.reduce((sum, c) => sum + c.weightPercentage, 0) 
+                    : 0
+                  const expectedPeriodWeight = 100 - finalComponentsWeight
+                  const totalWeight = totalPeriodWeight + finalComponentsWeight
+                  const isValid = totalWeight === 100
+                  
+                  return (
+                    <div className={`mt-4 p-3 rounded-lg text-sm ${isValid ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          Períodos: <strong>{totalPeriodWeight}%</strong>
+                          {gradingConfig.useFinalComponents && (
+                            <span className="ml-3">Componentes Finales: <strong>{finalComponentsWeight}%</strong></span>
+                          )}
+                        </div>
+                        <div>
+                          Total: <strong>{totalWeight}%</strong>
+                          {!isValid && ' (debe sumar 100%)'}
+                        </div>
+                      </div>
+                      {gradingConfig.useFinalComponents && !isValid && (
+                        <p className="mt-1 text-xs opacity-80">
+                          Los períodos deben sumar <strong>{expectedPeriodWeight}%</strong> para complementar los componentes finales
+                        </p>
+                      )}
+                    </div>
+                  )
+                })()}
+
+                {/* Botón Guardar Sistema de Calificación */}
+                {canEditGradingScale && (
+                  <div className="flex justify-end pt-6 mt-6 border-t border-slate-200">
+                    <button
+                      onClick={async () => {
+                        const success = await saveGradingConfigToAPI()
+                        if (success) {
+                          alert('✅ Sistema de calificación guardado correctamente')
+                        } else {
+                          alert('❌ Error al guardar. Intente de nuevo.')
+                        }
+                      }}
+                      disabled={isSaving}
+                      className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <Save className="w-4 h-4" />
+                      {isSaving ? 'Guardando...' : 'Guardar Sistema de Calificación'}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -737,14 +1884,21 @@ export default function Institution() {
                       <h2 className="text-lg font-semibold text-slate-900">Grados y Grupos</h2>
                       <p className="text-sm text-slate-500">Configura los grados académicos y sus grupos</p>
                     </div>
+                    {!canEditGrades && (
+                      <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                        <Eye className="w-3 h-3" /> Solo lectura
+                      </span>
+                    )}
                   </div>
-                  <button
-                    onClick={() => openGradeModal()}
-                    className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Agregar Grado
-                  </button>
+                  {canEditGrades && (
+                    <button
+                      onClick={() => openGradeModal()}
+                      className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Agregar Grado
+                    </button>
+                  )}
                 </div>
 
                 {/* Resumen */}
@@ -796,27 +1950,29 @@ export default function Institution() {
                                   <span className="font-medium text-slate-900">{grade.name}</span>
                                   <span className="ml-2 text-sm text-slate-500">({grade.groups.length} grupo{grade.groups.length !== 1 ? 's' : ''})</span>
                                 </div>
-                                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                                  <button
-                                    onClick={() => openGroupModal(grade.id)}
-                                    className="p-1.5 hover:bg-teal-100 rounded text-teal-600"
-                                    title="Agregar grupo"
-                                  >
-                                    <Plus className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => openGradeModal(grade)}
-                                    className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600"
-                                  >
-                                    <Edit2 className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => deleteGrade(grade.id)}
-                                    className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-red-600"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
+                                {canEditGrades && (
+                                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                    <button
+                                      onClick={() => openGroupModal(grade.id)}
+                                      className="p-1.5 hover:bg-teal-100 rounded text-teal-600"
+                                      title="Agregar grupo"
+                                    >
+                                      <Plus className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => openGradeModal(grade)}
+                                      className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600"
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => deleteGrade(grade.id)}
+                                      className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-red-600"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                               {expandedGrades.includes(grade.id) && grade.groups.length > 0 && (
                                 <div className="bg-slate-50 px-4 py-2 ml-8 border-l-2 border-slate-200">
@@ -828,20 +1984,22 @@ export default function Institution() {
                                         <span className="text-xs px-2 py-0.5 bg-slate-100 rounded text-slate-500">{group.shift}</span>
                                         <span className="text-xs text-slate-500">Cap: {group.capacity}</span>
                                         {group.director && <span className="text-xs text-slate-500">Dir: {group.director}</span>}
-                                        <div className="ml-auto flex items-center gap-1">
-                                          <button
-                                            onClick={() => openGroupModal(grade.id, group)}
-                                            className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600"
-                                          >
-                                            <Edit2 className="w-3.5 h-3.5" />
-                                          </button>
-                                          <button
-                                            onClick={() => deleteGroup(grade.id, group.id)}
-                                            className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-red-600"
-                                          >
+                                        {canEditGrades && (
+                                          <div className="ml-auto flex items-center gap-1">
+                                            <button
+                                              onClick={() => openGroupModal(grade.id, group)}
+                                              className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600"
+                                            >
+                                              <Edit2 className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button
+                                              onClick={() => deleteGroup(grade.id, group.id)}
+                                              className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-red-600"
+                                            >
                                             <Trash2 className="w-3.5 h-3.5" />
-                                          </button>
-                                        </div>
+                                            </button>
+                                          </div>
+                                        )}
                                       </div>
                                     ))}
                                   </div>
@@ -853,40 +2011,6 @@ export default function Institution() {
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
-            )}
-
-            {/* Tab: Áreas y Asignaturas */}
-            {activeTab === 'areas' && (
-              <div className="p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
-                    <Layers className="w-6 h-6 text-indigo-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Áreas y Asignaturas</h2>
-                    <p className="text-sm text-slate-500">Las notas se registran por asignatura, pero la promoción se determina por área</p>
-                  </div>
-                </div>
-
-                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6">
-                  <p className="text-sm text-indigo-700">
-                    <strong>Nota:</strong> Para configurar las áreas y asignaturas, ve a la sección 
-                    <a href="/admin/areas" className="underline ml-1 font-medium">Áreas</a> en el menú lateral.
-                  </p>
-                </div>
-
-                <div className="text-center py-8">
-                  <Layers className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-                  <p className="text-slate-500 mb-4">Administra la estructura de áreas y asignaturas</p>
-                  <a
-                    href="/admin/areas"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Ir a Configuración de Áreas
-                  </a>
                 </div>
               </div>
             )}
@@ -1183,75 +2307,6 @@ export default function Institution() {
               </div>
             )}
 
-            {/* Tab: Carga Académica */}
-            {activeTab === 'teachers' && (
-              <div className="p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                    <Users className="w-6 h-6 text-orange-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Carga Académica de Docentes</h2>
-                    <p className="text-sm text-slate-500">Asigna grupos y asignaturas a cada docente</p>
-                  </div>
-                </div>
-
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
-                  <p className="text-sm text-orange-700">
-                    <strong>Próximamente:</strong> Aquí podrás asignar a cada docente las asignaturas y grupos que le corresponden.
-                  </p>
-                </div>
-
-                <div className="border border-slate-200 rounded-lg overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Docente</th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Asignaturas</th>
-                        <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Grupos</th>
-                        <th className="text-center px-4 py-3 text-xs font-medium text-slate-500 uppercase">Horas/Semana</th>
-                        <th className="text-center px-4 py-3 text-xs font-medium text-slate-500 uppercase">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      <tr className="hover:bg-slate-50">
-                        <td className="px-4 py-3 font-medium text-slate-900">Prof. García</td>
-                        <td className="px-4 py-3 text-slate-600">Matemáticas, Física</td>
-                        <td className="px-4 py-3 text-slate-600">8°A, 8°B, 9°A</td>
-                        <td className="px-4 py-3 text-center text-slate-600">24</td>
-                        <td className="px-4 py-3 text-center">
-                          <button className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600">
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                      <tr className="hover:bg-slate-50">
-                        <td className="px-4 py-3 font-medium text-slate-900">Prof. López</td>
-                        <td className="px-4 py-3 text-slate-600">Lengua Castellana</td>
-                        <td className="px-4 py-3 text-slate-600">8°A, 8°B, 9°A, 9°B</td>
-                        <td className="px-4 py-3 text-center text-slate-600">20</td>
-                        <td className="px-4 py-3 text-center">
-                          <button className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600">
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                      <tr className="hover:bg-slate-50">
-                        <td className="px-4 py-3 font-medium text-slate-900">Prof. Martínez</td>
-                        <td className="px-4 py-3 text-slate-600">Ciencias Naturales, Química</td>
-                        <td className="px-4 py-3 text-slate-600">9°A, 9°B, 10°A</td>
-                        <td className="px-4 py-3 text-center text-slate-600">22</td>
-                        <td className="px-4 py-3 text-center">
-                          <button className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600">
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>

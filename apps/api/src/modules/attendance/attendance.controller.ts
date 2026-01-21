@@ -51,6 +51,22 @@ export class AttendanceController {
     return this.attendanceService.getStudentSummary(studentEnrollmentId, academicTermId);
   }
 
+  @Get('report/consolidated')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
+  getConsolidatedReport(
+    @Query('academicYearId') academicYearId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('subjectId') subjectId?: string,
+  ) {
+    return this.attendanceService.getConsolidatedReport({
+      academicYearId,
+      startDate,
+      endDate,
+      subjectId,
+    });
+  }
+
   @Get('report/teacher-compliance')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   getTeacherComplianceReport(
@@ -82,23 +98,26 @@ export class AttendanceController {
   }
 
   @Get('report-by-group/:groupId')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  getAttendanceReportByGroup(
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
+  getReportByGroup(
     @Param('groupId') groupId: string,
     @Query('academicYearId') academicYearId: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('subjectId') subjectId?: string,
   ) {
-    return this.attendanceService.getAttendanceReportByGroup(groupId, academicYearId, startDate, endDate, subjectId);
+    return this.attendanceService.getReportByGroup(groupId, academicYearId, {
+      startDate,
+      endDate,
+      subjectId,
+    });
   }
 
   @Get('detailed-report')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   getDetailedReport(
     @Query('academicYearId') academicYearId: string,
     @Query('groupId') groupId?: string,
-    @Query('date') date?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('subjectId') subjectId?: string,
@@ -106,38 +125,15 @@ export class AttendanceController {
     @Query('studentEnrollmentId') studentEnrollmentId?: string,
     @Query('status') status?: string,
   ) {
-    return this.attendanceService.getDetailedAttendanceReport({
+    return this.attendanceService.getDetailedReport({
       academicYearId,
       groupId,
-      date,
       startDate,
       endDate,
       subjectId,
       teacherId,
       studentEnrollmentId,
       status,
-    });
-  }
-
-  @Delete('all')
-  @Roles('SUPERADMIN')
-  deleteAllRecords() {
-    return this.attendanceService.deleteAllRecords();
-  }
-
-  @Get('report/consolidated')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
-  getConsolidatedReport(
-    @Query('academicYearId') academicYearId: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('subjectId') subjectId?: string,
-  ) {
-    return this.attendanceService.getConsolidatedReport({
-      academicYearId,
-      startDate,
-      endDate,
-      subjectId,
     });
   }
 }

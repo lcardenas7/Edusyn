@@ -11,8 +11,10 @@ export class InstitutionsService {
     return this.prisma.institution.create({
       data: {
         name: dto.name,
+        slug: dto.slug,
         daneCode: dto.daneCode,
         nit: dto.nit,
+        status: 'TRIAL',
       },
     });
   }

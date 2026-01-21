@@ -1,8 +1,12 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreateInstitutionDto {
   @IsString()
   name: string;
+
+  @IsString()
+  @MinLength(3)
+  slug: string;
 
   @IsOptional()
   @IsString()

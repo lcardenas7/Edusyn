@@ -463,3 +463,82 @@ export const statisticsApi = {
   getGroups: (institutionId: string, academicYearId?: string, academicTermId?: string) => 
     api.get('/statistics/groups', { params: { institutionId, academicYearId, academicTermId } }),
 }
+
+// ==================== SIEE CONFIG (Multitenant) ====================
+
+export const sieeConfigApi = {
+  // Full config
+  getFullConfig: (institutionId: string) => api.get(`/siee-config/full/${institutionId}`),
+  initializeDefaultConfig: (institutionId: string) => api.post(`/siee-config/initialize/${institutionId}`),
+  
+  // Grading Scale
+  getGradingScale: (institutionId: string) => api.get(`/siee-config/grading-scale/${institutionId}`),
+  updateGradingScale: (institutionId: string, data: { minScore: number; maxScore: number; passingScore: number; decimalsAllowed: number }) => 
+    api.put(`/siee-config/grading-scale/${institutionId}`, data),
+  
+  // Performance Levels
+  getPerformanceLevels: (institutionId: string) => api.get(`/siee-config/performance-levels/${institutionId}`),
+  createPerformanceLevel: (institutionId: string, data: { name: string; code: string; minScore: number; maxScore: number; order: number; color?: string; description?: string }) => 
+    api.post(`/siee-config/performance-levels/${institutionId}`, data),
+  updatePerformanceLevel: (id: string, data: { name?: string; code?: string; minScore?: number; maxScore?: number; order?: number; color?: string; description?: string }) => 
+    api.put(`/siee-config/performance-levels/${id}`, data),
+  deletePerformanceLevel: (id: string) => api.delete(`/siee-config/performance-levels/${id}`),
+  
+  // Evaluation Processes
+  getProcesses: (institutionId: string) => api.get(`/siee-config/processes/${institutionId}`),
+  createProcess: (institutionId: string, data: { name: string; code: string; weightPercentage: number; order: number; processType: string; allowsSubprocesses: boolean; visibleInReport: boolean }) => 
+    api.post(`/siee-config/processes/${institutionId}`, data),
+  updateProcess: (id: string, data: { name?: string; code?: string; weightPercentage?: number; order?: number; processType?: string; allowsSubprocesses?: boolean; visibleInReport?: boolean; isActive?: boolean }) => 
+    api.put(`/siee-config/processes/${id}`, data),
+  deleteProcess: (id: string) => api.delete(`/siee-config/processes/${id}`),
+  
+  // Evaluation Subprocesses
+  getSubprocesses: (processId: string) => api.get(`/siee-config/subprocesses/${processId}`),
+  createSubprocess: (processId: string, data: { name: string; code: string; weightPercentage: number; order: number; numberOfInstruments: number; calculationMethod: string }) => 
+    api.post(`/siee-config/subprocesses/${processId}`, data),
+  updateSubprocess: (id: string, data: { name?: string; code?: string; weightPercentage?: number; order?: number; numberOfInstruments?: number; calculationMethod?: string; isActive?: boolean }) => 
+    api.put(`/siee-config/subprocesses/${id}`, data),
+  deleteSubprocess: (id: string) => api.delete(`/siee-config/subprocesses/${id}`),
+  
+  // Academic Year Config
+  getAcademicYearConfig: (academicYearId: string) => api.get(`/siee-config/academic-year/${academicYearId}`),
+  updateAcademicYearConfig: (academicYearId: string, data: { calendarType?: string; numberOfPeriods?: number; useSemesterExams?: boolean; semesterExamWeight?: number; periodsWeight?: number }) => 
+    api.put(`/siee-config/academic-year/${academicYearId}`, data),
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SUPERADMIN API - Gestión de la plataforma SaaS
+// ═══════════════════════════════════════════════════════════════════════════
+export const superadminApi = {
+  // Estadísticas globales del sistema
+  getStats: () => api.get('/superadmin/stats'),
+  
+  // Instituciones
+  getAllInstitutions: () => api.get('/superadmin/institutions'),
+  getInstitutionById: (id: string) => api.get(`/superadmin/institutions/${id}`),
+  createInstitution: (data: {
+    name: string;
+    slug: string;
+    daneCode?: string;
+    nit?: string;
+    adminFirstName: string;
+    adminLastName: string;
+    adminEmail: string;
+    modules?: string[];
+  }) => api.post('/superadmin/institutions', data),
+  updateInstitution: (id: string, data: {
+    name?: string;
+    slug?: string;
+    daneCode?: string;
+    nit?: string;
+    status?: string;
+  }) => api.put(`/superadmin/institutions/${id}`, data),
+  
+  // Módulos y Features
+  updateInstitutionModules: (id: string, modules: string[], features?: string[]) => 
+    api.patch(`/superadmin/institutions/${id}/modules`, { modules, features }),
+  
+  // Estado
+  activateInstitution: (id: string) => api.patch(`/superadmin/institutions/${id}/activate`),
+  suspendInstitution: (id: string) => api.patch(`/superadmin/institutions/${id}/suspend`),
+}

@@ -15,6 +15,9 @@ import { MenReportsModule } from './modules/men-reports/men-reports.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { RecoveryModule } from './modules/recovery/recovery.module';
 import { PerformanceModule } from './modules/performance/performance.module';
+import { SuperadminModule } from './modules/superadmin/superadmin.module';
+import { PermissionsModule } from './modules/permissions/permissions.module';
+import { InstitutionConfigModule } from './modules/institution-config/institution-config.module';
 
 @Module({
   imports: [
@@ -34,6 +37,9 @@ import { PerformanceModule } from './modules/performance/performance.module';
     DashboardModule,
     RecoveryModule,
     PerformanceModule,
+    SuperadminModule,
+    PermissionsModule,
+    InstitutionConfigModule,
   ],
   controllers: [AppController],
   providers: [AppService],

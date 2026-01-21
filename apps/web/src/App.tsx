@@ -20,6 +20,9 @@ import ContentManager from './pages/ContentManager'
 import PeriodFinalGrades from './pages/PeriodFinalGrades'
 import Recoveries from './pages/Recoveries'
 import Performances from './pages/Performances'
+import InstitutionLogin from './pages/InstitutionLogin'
+import SuperAdminDashboard from './pages/SuperAdminDashboard'
+import PermissionsAdmin from './pages/PermissionsAdmin'
 import Layout from './components/Layout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -45,7 +48,32 @@ function App() {
     <AuthProvider>
       <InstitutionProvider>
       <Routes>
-        <Route path="/login" element={<Login />} />
+        {/* Login por institución (multi-tenant) */}
+        <Route path="/login" element={<InstitutionLogin />} />
+        <Route path="/login/:slug" element={<InstitutionLogin />} />
+        <Route path="/auth/login" element={<Login />} />
+        
+        {/* SuperAdmin con Layout */}
+        <Route
+          path="/superadmin/*"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<SuperAdminDashboard />} />
+                  <Route path="/institutions" element={<SuperAdminDashboard />} />
+                  <Route path="/institutions/new" element={<SuperAdminDashboard />} />
+                  <Route path="/configs" element={<SuperAdminDashboard />} />
+                  <Route path="/audit-logs" element={<SuperAdminDashboard />} />
+                  <Route path="/user-activity" element={<SuperAdminDashboard />} />
+                  <Route path="/recalculate" element={<SuperAdminDashboard />} />
+                  <Route path="/clone-config" element={<SuperAdminDashboard />} />
+                </Routes>
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/superadmin/login" element={<Login />} />
         <Route
           path="/*"
           element={
@@ -71,6 +99,7 @@ function App() {
                   <Route path="/period-final-grades" element={<PeriodFinalGrades />} />
                   <Route path="/recoveries" element={<Recoveries />} />
                   <Route path="/performances" element={<Performances />} />
+                  <Route path="/admin/permissions" element={<PermissionsAdmin />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

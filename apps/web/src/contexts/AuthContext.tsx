@@ -1,11 +1,18 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { authApi } from '../lib/api'
 
+interface InstitutionModule {
+  module: string
+  features: string[]
+  isActive: boolean
+}
+
 interface Institution {
   id: string
   name: string
   daneCode?: string
   nit?: string
+  modules?: InstitutionModule[]
 }
 
 interface User {
@@ -24,6 +31,10 @@ interface AuthContextType {
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => void
+  enabledModules: string[]
+  enabledFeatures: string[]
+  hasModule: (moduleId: string) => boolean
+  hasFeature: (featureId: string) => boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -66,8 +77,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setInstitution(null)
   }
 
+  // Calcular módulos y features habilitados
+  const enabledModules = institution?.modules
+    ?.filter(m => m.isActive)
+    ?.map(m => m.module) || []
+
+  const enabledFeatures = institution?.modules
+    ?.filter(m => m.isActive)
+    ?.flatMap(m => m.features || []) || []
+
+  const hasModule = (moduleId: string) => {
+    // SuperAdmin tiene acceso a todo
+    if (user?.roles?.some(r => r.role.name === 'SUPERADMIN')) return true
+    return enabledModules.includes(moduleId)
+  }
+
+  const hasFeature = (featureId: string) => {
+    // SuperAdmin tiene acceso a todo
+    if (user?.roles?.some(r => r.role.name === 'SUPERADMIN')) return true
+    return enabledFeatures.includes(featureId)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, institution, isAuthenticated: !!user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      institution, 
+      isAuthenticated: !!user, 
+      isLoading, 
+      login, 
+      logout,
+      enabledModules,
+      enabledFeatures,
+      hasModule,
+      hasFeature,
+    }}>
       {children}
     </AuthContext.Provider>
   )
