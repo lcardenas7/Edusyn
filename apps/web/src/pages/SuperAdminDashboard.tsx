@@ -102,6 +102,30 @@ const AVAILABLE_MODULES: ModuleConfig[] = [
     ]
   },
   { 
+    id: 'CONFIG', 
+    name: 'Configuración Institucional', 
+    description: 'Configuración general de la institución',
+    required: true,  // Obligatorio - configuración base
+    features: [
+      { id: 'CONFIG_INSTITUTION', name: 'Datos Institución', description: 'Información básica' },
+      { id: 'CONFIG_ACADEMIC_YEAR', name: 'Año Académico', description: 'Configurar año y períodos' },
+      { id: 'CONFIG_SIEE', name: 'Sistema Evaluación', description: 'Configurar SIEE' },
+      { id: 'CONFIG_PERFORMANCE_SCALE', name: 'Escala Valorativa', description: 'Niveles de desempeño' },
+    ]
+  },
+  { 
+    id: 'USERS', 
+    name: 'Gestión de Usuarios', 
+    description: 'Docentes, estudiantes, permisos',
+    required: true,  // Obligatorio - gestión de personas
+    features: [
+      { id: 'USERS_TEACHERS', name: 'Docentes', description: 'Gestionar docentes' },
+      { id: 'USERS_STUDENTS', name: 'Estudiantes', description: 'Gestionar estudiantes' },
+      { id: 'USERS_PERMISSIONS', name: 'Permisos', description: 'Configurar permisos' },
+      { id: 'USERS_IMPORT', name: 'Importar', description: 'Importar usuarios masivamente' },
+    ]
+  },
+  { 
     id: 'ACADEMIC', 
     name: 'Gestión Académica', 
     description: 'Notas, áreas, asignaturas',
