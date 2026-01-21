@@ -13,6 +13,12 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Building2, Mail, Lock, ArrowRight, AlertCircle, CheckCircle, Search, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
+// Detectar URL de API según entorno
+const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('railway.app')
+const API_BASE = isProduction 
+  ? 'https://api-production-e5d7.up.railway.app/api'
+  : '/api'
+
 interface InstitutionInfo {
   id: string
   name: string
@@ -62,7 +68,7 @@ export default function InstitutionLogin() {
     setError('')
     
     try {
-      const response = await fetch(`/api/auth/institution/${slugToCheck}`)
+      const response = await fetch(`${API_BASE}/auth/institution/${slugToCheck}`)
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -99,7 +105,7 @@ export default function InstitutionLogin() {
 
     setSearchingInstitutions(true)
     try {
-      const response = await fetch(`/api/auth/institutions/search?q=${encodeURIComponent(query)}`)
+      const response = await fetch(`${API_BASE}/auth/institutions/search?q=${encodeURIComponent(query)}`)
       if (response.ok) {
         const data = await response.json()
         setSuggestions(data)

@@ -53,6 +53,11 @@ export class CreateInstitutionDto {
 
   @IsOptional()
   @IsString()
+  @MinLength(3)
+  adminUsername?: string;
+
+  @IsOptional()
+  @IsString()
   @MinLength(8)
   adminPassword?: string;
 

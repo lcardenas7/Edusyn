@@ -901,13 +901,14 @@ function CreateInstitutionModal({
     adminFirstName: '',
     adminLastName: '',
     adminEmail: '',
+    adminUsername: '',
     adminPassword: '',
     sendEmailNotification: false,
     modules: ['ACADEMIC', 'DASHBOARD'] as string[],
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showCredentialsModal, setShowCredentialsModal] = useState(false)
-  const [createdCredentials, setCreatedCredentials] = useState<{email: string, password: string, name: string} | null>(null)
+  const [createdCredentials, setCreatedCredentials] = useState<{email: string, username: string, password: string, name: string} | null>(null)
   
   // Generar contraseña temporal automática
   const generateTempPassword = () => {
@@ -933,6 +934,7 @@ function CreateInstitutionModal({
         adminFirstName: formData.adminFirstName,
         adminLastName: formData.adminLastName,
         adminEmail: formData.adminEmail,
+        adminUsername: formData.adminUsername,
         adminPassword: formData.adminPassword,
         modules: formData.modules,
       })
@@ -957,6 +959,7 @@ function CreateInstitutionModal({
       if (!formData.sendEmailNotification) {
         setCreatedCredentials({
           email: formData.adminEmail,
+          username: formData.adminUsername,
           password: response.data?.admin?.tempPassword || formData.adminPassword,
           name: `${formData.adminFirstName} ${formData.adminLastName}`,
         })
@@ -1057,7 +1060,7 @@ function CreateInstitutionModal({
                   required
                 />
               </div>
-              <div className="col-span-2">
+              <div>
                 <label className="block text-sm text-slate-600 mb-1">Correo electrónico *</label>
                 <input
                   type="email"
@@ -1067,6 +1070,20 @@ function CreateInstitutionModal({
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
                 />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-600 mb-1">Usuario *</label>
+                <input
+                  type="text"
+                  value={formData.adminUsername}
+                  onChange={(e) => setFormData({ ...formData, adminUsername: e.target.value.toLowerCase().replace(/\s+/g, '') })}
+                  placeholder="rector.garcia"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                <p className="text-xs text-slate-400 mt-1">
+                  Para iniciar sesión (sin espacios)
+                </p>
               </div>
               <div className="col-span-2">
                 <label className="block text-sm text-slate-600 mb-1">Contraseña temporal *</label>
@@ -1194,9 +1211,15 @@ function CreateInstitutionModal({
                   <label className="text-xs text-slate-500 uppercase tracking-wider">Admin</label>
                   <p className="text-sm font-medium text-slate-900">{createdCredentials.name}</p>
                 </div>
-                <div>
-                  <label className="text-xs text-slate-500 uppercase tracking-wider">Email</label>
-                  <p className="text-sm font-medium text-slate-900 font-mono">{createdCredentials.email}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase tracking-wider">Email</label>
+                    <p className="text-sm font-medium text-slate-900 font-mono">{createdCredentials.email}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase tracking-wider">Usuario</label>
+                    <p className="text-sm font-medium text-slate-900 font-mono">{createdCredentials.username}</p>
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs text-slate-500 uppercase tracking-wider">Contraseña</label>

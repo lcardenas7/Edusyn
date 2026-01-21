@@ -529,6 +529,7 @@ export const superadminApi = {
     adminFirstName: string;
     adminLastName: string;
     adminEmail: string;
+    adminUsername?: string;
     adminPassword?: string;
     modules?: string[];
   }) => api.post('/superadmin/institutions', data),

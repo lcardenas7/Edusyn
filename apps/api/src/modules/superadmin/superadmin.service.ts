@@ -165,6 +165,7 @@ export class SuperadminService {
       const adminUser = await tx.user.create({
         data: {
           email: dto.adminEmail,
+          username: dto.adminUsername || dto.adminEmail.split('@')[0],
           firstName: dto.adminFirstName,
           lastName: dto.adminLastName,
           phone: dto.adminPhone,
