@@ -80,6 +80,13 @@ export class PermissionsService {
       }
     }
 
+    // 4.1 Admin Institucional tiene acceso total dentro de su institución
+    // (esto evita bloqueos si el seed de roleBasePermission no se ejecutó)
+    const userRolesQuick = user.roles.map(r => r.role.name);
+    if (userRolesQuick.includes('ADMIN_INSTITUTIONAL')) {
+      return { hasPermission: true, source: 'ROLE' };
+    }
+
     // 5. Verificar permisos base del rol (herencia de todos los roles)
     const userRoles = user.roles.map(r => r.role.name);
     

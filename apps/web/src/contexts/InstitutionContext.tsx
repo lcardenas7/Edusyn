@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+import api from '../lib/api'
 
 // Subproceso evaluativo (ej: Sub 1, Sub 2) - contiene instrumentos/notas
 interface EvaluationSubprocess {
@@ -360,12 +359,10 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
 
     setIsLoading(true)
     try {
-      const response = await fetch(`${API_URL}/institution-config`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      })
+      const response = await api.get('/institution-config')
 
-      if (response.ok) {
-        const data = await response.json()
+      if (response.status >= 200 && response.status < 300) {
+        const data = response.data
         
         // Actualizar configuración de áreas
         if (data.areaConfig) {
@@ -419,22 +416,15 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
 
     setIsSaving(true)
     try {
-      const response = await fetch(`${API_URL}/institution-config/areas`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          calculationType: areaConfig.calculationType,
-          approvalRule: areaConfig.approvalRule === 'ALL_SUBJECTS' ? 'ALL_SUBJECTS_PASS' :
-                       areaConfig.approvalRule === 'DOMINANT_SUBJECT' ? 'DOMINANT_SUBJECT_PASS' :
-                       'AREA_AVERAGE',
-          recoveryRule: areaConfig.recoveryRule,
-          failIfAnySubjectFails: areaConfig.failIfAnySubjectFails,
-        }),
+      await api.put('/institution-config/areas', {
+        calculationType: areaConfig.calculationType,
+        approvalRule: areaConfig.approvalRule === 'ALL_SUBJECTS' ? 'ALL_SUBJECTS_PASS' :
+                     areaConfig.approvalRule === 'DOMINANT_SUBJECT' ? 'DOMINANT_SUBJECT_PASS' :
+                     'AREA_AVERAGE',
+        recoveryRule: areaConfig.recoveryRule,
+        failIfAnySubjectFails: areaConfig.failIfAnySubjectFails,
       })
-      return response.ok
+      return true
     } catch (error) {
       console.error('Error saving area config:', error)
       return false
@@ -450,15 +440,8 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
 
     setIsSaving(true)
     try {
-      const response = await fetch(`${API_URL}/institution-config/grading`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(gradingConfig),
-      })
-      return response.ok
+      await api.put('/institution-config/grading', gradingConfig)
+      return true
     } catch (error) {
       console.error('Error saving grading config:', error)
       return false
@@ -474,15 +457,8 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
 
     setIsSaving(true)
     try {
-      const response = await fetch(`${API_URL}/institution-config/academic-levels`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(institution.academicLevels),
-      })
-      return response.ok
+      await api.put('/institution-config/academic-levels', institution.academicLevels)
+      return true
     } catch (error) {
       console.error('Error saving academic levels:', error)
       return false
@@ -498,15 +474,8 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
 
     setIsSaving(true)
     try {
-      const response = await fetch(`${API_URL}/institution-config/periods`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(periods),
-      })
-      return response.ok
+      await api.put('/institution-config/periods', periods)
+      return true
     } catch (error) {
       console.error('Error saving periods:', error)
       return false

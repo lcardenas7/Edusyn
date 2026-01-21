@@ -71,9 +71,17 @@ export function usePermissions() {
    * Usa cache local para evitar llamadas al servidor
    */
   const can = useCallback((permissionCode: string): boolean => {
+    const roleNames = (user?.roles || [])
+      .map((r: any) => r?.role?.name || r?.name)
+      .filter(Boolean)
+
     // SuperAdmin tiene acceso total (verificar por rol)
-    const isSuperAdmin = user?.roles?.some(r => r.role?.name === 'SUPERADMIN')
+    const isSuperAdmin = roleNames.includes('SUPERADMIN') || roleNames.includes('SUPER_ADMIN')
     if (isSuperAdmin) return true
+
+    // Admin Institucional tiene acceso total dentro de su institución
+    const isInstitutionAdmin = roleNames.includes('ADMIN_INSTITUTIONAL')
+    if (isInstitutionAdmin) return true
     
     // Verificar en permisos cargados
     if (!permissions) return false

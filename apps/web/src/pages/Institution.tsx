@@ -100,7 +100,7 @@ export default function Institution() {
   // ═══════════════════════════════════════════════════════════════════════════
   // PERMISOS - Determinar qué puede hacer el usuario en cada sección
   // ═══════════════════════════════════════════════════════════════════════════
-  const _canEditInfo = can(PERMISSIONS.CONFIG_INFO_EDIT)
+  const canEditInfo = can(PERMISSIONS.CONFIG_INFO_EDIT)
   const canEditGradingScale = can(PERMISSIONS.CONFIG_GRADING_EDIT_SCALE)
   const canEditGradingLevels = can(PERMISSIONS.CONFIG_GRADING_EDIT_LEVELS)
   const _canEditGradingWeights = can(PERMISSIONS.CONFIG_GRADING_EDIT_WEIGHTS)
@@ -534,8 +534,10 @@ export default function Institution() {
                     <input
                       type="text"
                       value={institution.name}
+                      onChange={(e) => canEditInfo && setInstitution({ ...institution, name: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      readOnly
+                      readOnly={!canEditInfo}
+                      disabled={!canEditInfo}
                     />
                   </div>
                   <div>
@@ -543,8 +545,10 @@ export default function Institution() {
                     <input
                       type="text"
                       value={institution.nit}
+                      onChange={(e) => canEditInfo && setInstitution({ ...institution, nit: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      readOnly
+                      readOnly={!canEditInfo}
+                      disabled={!canEditInfo}
                     />
                   </div>
                   <div>
@@ -552,8 +556,10 @@ export default function Institution() {
                     <input
                       type="text"
                       value={institution.dane}
+                      onChange={(e) => canEditInfo && setInstitution({ ...institution, dane: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      readOnly
+                      readOnly={!canEditInfo}
+                      disabled={!canEditInfo}
                     />
                   </div>
                   <div>
@@ -561,8 +567,10 @@ export default function Institution() {
                     <input
                       type="text"
                       value={institution.rector}
+                      onChange={(e) => canEditInfo && setInstitution({ ...institution, rector: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      readOnly
+                      readOnly={!canEditInfo}
+                      disabled={!canEditInfo}
                     />
                   </div>
                   <div>
@@ -570,8 +578,10 @@ export default function Institution() {
                     <input
                       type="text"
                       value={institution.address}
+                      onChange={(e) => canEditInfo && setInstitution({ ...institution, address: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      readOnly
+                      readOnly={!canEditInfo}
+                      disabled={!canEditInfo}
                     />
                   </div>
                   <div>
@@ -579,8 +589,10 @@ export default function Institution() {
                     <input
                       type="text"
                       value={institution.city}
+                      onChange={(e) => canEditInfo && setInstitution({ ...institution, city: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      readOnly
+                      readOnly={!canEditInfo}
+                      disabled={!canEditInfo}
                     />
                   </div>
                   <div>
@@ -588,8 +600,10 @@ export default function Institution() {
                     <input
                       type="text"
                       value={institution.phone}
+                      onChange={(e) => canEditInfo && setInstitution({ ...institution, phone: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      readOnly
+                      readOnly={!canEditInfo}
+                      disabled={!canEditInfo}
                     />
                   </div>
                   <div>
@@ -597,8 +611,10 @@ export default function Institution() {
                     <input
                       type="email"
                       value={institution.email}
+                      onChange={(e) => canEditInfo && setInstitution({ ...institution, email: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      readOnly
+                      readOnly={!canEditInfo}
+                      disabled={!canEditInfo}
                     />
                   </div>
                   <div>
@@ -606,8 +622,10 @@ export default function Institution() {
                     <input
                       type="number"
                       value={institution.academicYear}
+                      onChange={(e) => canEditInfo && setInstitution({ ...institution, academicYear: parseInt(e.target.value) || institution.academicYear })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      readOnly
+                      readOnly={!canEditInfo}
+                      disabled={!canEditInfo}
                     />
                   </div>
                 </div>
