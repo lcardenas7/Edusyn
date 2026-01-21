@@ -1,10 +1,12 @@
 import axios from 'axios'
 
-// En producción usar la variable de entorno, en desarrollo usar el proxy
-// Build timestamp: 2026-01-21T18:10:00Z - Force rebuild for VITE_API_URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
+// Detectar si estamos en producción por el hostname
+const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('railway.app')
+const API_BASE_URL = isProduction 
+  ? 'https://api-production-e5d7.up.railway.app/api'
+  : (import.meta.env.VITE_API_URL || '/api')
 
-console.log('[API] Base URL:', API_BASE_URL)
+console.log('[API] Base URL:', API_BASE_URL, '| Production:', isProduction)
 
 const api = axios.create({
   baseURL: API_BASE_URL,
