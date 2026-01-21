@@ -6,10 +6,20 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // 🔐 CORS
+  const corsOrigins = (process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',')
+    : [
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'https://web-production-8237c.up.railway.app',
+        'https://edusyn.up.railway.app',
+      ]
+  )
+    .map((o) => o.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin: [
-      'https://web-production-8237c.up.railway.app',
-    ],
+    origin: corsOrigins,
     credentials: true,
   });
 
