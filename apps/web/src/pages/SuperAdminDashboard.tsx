@@ -37,7 +37,8 @@ import {
   AlertTriangle,
   RefreshCw,
   ChevronDown,
-  Edit
+  Edit,
+  Trash2
 } from 'lucide-react'
 import { superadminApi } from '../lib/api'
 
@@ -343,6 +344,7 @@ export default function SuperAdminDashboard() {
   const [selectedInstitution, setSelectedInstitution] = useState<Institution | null>(null)
   const [showModulesModal, setShowModulesModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -643,69 +645,62 @@ export default function SuperAdminDashboard() {
                         <span className="text-sm text-slate-900">{inst.studentsCount.toLocaleString()}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-right">
-                      <div className="relative">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center justify-end gap-1">
                         <button
-                          onClick={() => setActiveMenu(activeMenu === inst.id ? null : inst.id)}
-                          className="p-2 hover:bg-slate-100 rounded-lg"
+                          onClick={() => setSelectedInstitution(inst)}
+                          className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-blue-600 transition-colors"
+                          title="Ver detalles"
                         >
-                          <MoreVertical className="w-4 h-4 text-slate-500" />
+                          <Eye className="w-4 h-4" />
                         </button>
-                        
-                        {activeMenu === inst.id && (
-                          <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-50">
-                            <button
-                              onClick={() => {
-                                setSelectedInstitution(inst)
-                                setActiveMenu(null)
-                              }}
-                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                            >
-                              <Eye className="w-4 h-4" />
-                              Ver detalles
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedInstitution(inst)
-                                setShowEditModal(true)
-                                setActiveMenu(null)
-                              }}
-                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                            >
-                              <Edit className="w-4 h-4" />
-                              Editar institución
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedInstitution(inst)
-                                setShowModulesModal(true)
-                                setActiveMenu(null)
-                              }}
-                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                            >
-                              <Settings className="w-4 h-4" />
-                              Módulos y funcionalidades
-                            </button>
-                            <hr className="my-1" />
-                            {inst.status === 'ACTIVE' || inst.status === 'TRIAL' ? (
-                              <button
-                                onClick={() => toggleInstitutionStatus(inst.id, 'SUSPENDED')}
-                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                              >
-                                <Power className="w-4 h-4" />
-                                Suspender
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => toggleInstitutionStatus(inst.id, 'ACTIVE')}
-                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-green-600 hover:bg-green-50"
-                              >
-                                <Power className="w-4 h-4" />
-                                Activar
-                              </button>
-                            )}
-                          </div>
+                        <button
+                          onClick={() => {
+                            setSelectedInstitution(inst)
+                            setShowEditModal(true)
+                          }}
+                          className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-amber-600 transition-colors"
+                          title="Editar institución"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedInstitution(inst)
+                            setShowModulesModal(true)
+                          }}
+                          className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-purple-600 transition-colors"
+                          title="Módulos y funcionalidades"
+                        >
+                          <Settings className="w-4 h-4" />
+                        </button>
+                        {inst.status === 'ACTIVE' || inst.status === 'TRIAL' ? (
+                          <button
+                            onClick={() => toggleInstitutionStatus(inst.id, 'SUSPENDED')}
+                            className="p-2 hover:bg-red-50 rounded-lg text-slate-500 hover:text-red-600 transition-colors"
+                            title="Suspender institución"
+                          >
+                            <Power className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => toggleInstitutionStatus(inst.id, 'ACTIVE')}
+                            className="p-2 hover:bg-green-50 rounded-lg text-slate-500 hover:text-green-600 transition-colors"
+                            title="Activar institución"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </button>
                         )}
+                        <button
+                          onClick={() => {
+                            setSelectedInstitution(inst)
+                            setShowDeleteModal(true)
+                          }}
+                          className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors"
+                          title="Eliminar institución"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -765,6 +760,128 @@ export default function SuperAdminDashboard() {
           }}
         />
       )}
+
+      {/* Modal: Confirmar Eliminación */}
+      {showDeleteModal && selectedInstitution && (
+        <DeleteInstitutionModal
+          institution={selectedInstitution}
+          onClose={() => {
+            setShowDeleteModal(false)
+            setSelectedInstitution(null)
+          }}
+          onDeleted={() => {
+            setInstitutions(prev => prev.filter(inst => inst.id !== selectedInstitution.id))
+            setShowDeleteModal(false)
+            setSelectedInstitution(null)
+            loadData() // Recargar estadísticas
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+// Modal: Confirmar Eliminación de Institución
+function DeleteInstitutionModal({
+  institution,
+  onClose,
+  onDeleted,
+}: {
+  institution: Institution
+  onClose: () => void
+  onDeleted: () => void
+}) {
+  const [confirmationText, setConfirmationText] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const canDelete = confirmationText === institution.name
+
+  const handleDelete = async () => {
+    if (!canDelete) return
+    
+    setLoading(true)
+    setError('')
+    
+    try {
+      await superadminApi.deleteInstitution(institution.id, confirmationText)
+      onDeleted()
+    } catch (err: any) {
+      console.error('Error deleting institution:', err)
+      setError(err.response?.data?.message || 'Error al eliminar la institución')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md">
+        <div className="p-6 border-b border-slate-200">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+              <AlertTriangle className="w-6 h-6 text-red-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900">Eliminar Institución</h2>
+              <p className="text-sm text-slate-500">Esta acción no se puede deshacer</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-sm text-red-800">
+              <strong>⚠️ Advertencia:</strong> Al eliminar esta institución se borrarán permanentemente:
+            </p>
+            <ul className="text-sm text-red-700 mt-2 space-y-1 list-disc list-inside">
+              <li>Todos los usuarios de la institución</li>
+              <li>Todos los estudiantes y sus datos académicos</li>
+              <li>Todas las calificaciones y asistencias</li>
+              <li>Toda la configuración institucional</li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="text-sm text-slate-700 mb-2">
+              Para confirmar, escribe el nombre exacto de la institución:
+            </p>
+            <p className="text-sm font-mono bg-slate-100 px-3 py-2 rounded-lg mb-3 text-slate-900">
+              {institution.name}
+            </p>
+            <input
+              type="text"
+              value={confirmationText}
+              onChange={(e) => setConfirmationText(e.target.value)}
+              placeholder="Escribe el nombre de la institución"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            />
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+        </div>
+
+        <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={!canDelete || loading}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {loading ? 'Eliminando...' : 'Eliminar permanentemente'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -784,8 +901,23 @@ function CreateInstitutionModal({
     adminFirstName: '',
     adminLastName: '',
     adminEmail: '',
+    adminPassword: '',
+    sendEmailNotification: false,
     modules: ['ACADEMIC', 'DASHBOARD'] as string[],
   })
+  const [showPassword, setShowPassword] = useState(false)
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false)
+  const [createdCredentials, setCreatedCredentials] = useState<{email: string, password: string, name: string} | null>(null)
+  
+  // Generar contraseña temporal automática
+  const generateTempPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
+    let password = ''
+    for (let i = 0; i < 10; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    setFormData(prev => ({ ...prev, adminPassword: password }))
+  }
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -801,23 +933,34 @@ function CreateInstitutionModal({
         adminFirstName: formData.adminFirstName,
         adminLastName: formData.adminLastName,
         adminEmail: formData.adminEmail,
+        adminPassword: formData.adminPassword,
         modules: formData.modules,
       })
 
       const newInst: Institution = {
-        id: response.data?.id || `inst-${Date.now()}`,
+        id: response.data?.institution?.id || response.data?.id || `inst-${Date.now()}`,
         name: formData.name,
         slug: formData.slug,
         daneCode: formData.daneCode || undefined,
         status: 'TRIAL',
         trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         modules: formData.modules,
-        features: [], // Se configuran después
+        features: [],
         adminEmail: formData.adminEmail,
         adminName: `${formData.adminFirstName} ${formData.adminLastName}`,
         studentsCount: 0,
         campusesCount: 0,
         createdAt: new Date().toISOString(),
+      }
+
+      // Si no se envía por correo, mostrar las credenciales
+      if (!formData.sendEmailNotification) {
+        setCreatedCredentials({
+          email: formData.adminEmail,
+          password: response.data?.admin?.tempPassword || formData.adminPassword,
+          name: `${formData.adminFirstName} ${formData.adminLastName}`,
+        })
+        setShowCredentialsModal(true)
       }
 
       onCreated(newInst)
@@ -924,9 +1067,63 @@ function CreateInstitutionModal({
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
                 />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm text-slate-600 mb-1">Contraseña temporal *</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.adminPassword}
+                      onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
+                      placeholder="Contraseña temporal"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 pr-10"
+                      required
+                      minLength={8}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword ? <XCircle className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={generateTempPassword}
+                    className="px-3 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 text-sm whitespace-nowrap"
+                  >
+                    Generar
+                  </button>
+                </div>
                 <p className="text-xs text-slate-400 mt-1">
-                  Se enviará una contraseña temporal a este correo
+                  ⚠️ El admin deberá cambiar esta contraseña en su primer inicio de sesión
                 </p>
+              </div>
+              
+              {/* Opción de enviar por correo */}
+              <div className="col-span-2">
+                <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.sendEmailNotification}
+                    onChange={(e) => setFormData({ ...formData, sendEmailNotification: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 rounded"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">Enviar credenciales por correo</div>
+                    <div className="text-xs text-slate-500">
+                      Se enviará un correo al admin con sus credenciales de acceso
+                    </div>
+                  </div>
+                </label>
+                {!formData.sendEmailNotification && (
+                  <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    Las credenciales se mostrarán solo una vez al crear la institución. Anótalas.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -977,6 +1174,66 @@ function CreateInstitutionModal({
             </button>
           </div>
         </form>
+
+        {/* Modal: Credenciales creadas */}
+        {showCredentialsModal && createdCredentials && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-2xl w-full max-w-md p-6">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-slate-900">¡Institución creada!</h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  Guarda estas credenciales, no se mostrarán de nuevo
+                </p>
+              </div>
+
+              <div className="bg-slate-50 rounded-xl p-4 space-y-3">
+                <div>
+                  <label className="text-xs text-slate-500 uppercase tracking-wider">Admin</label>
+                  <p className="text-sm font-medium text-slate-900">{createdCredentials.name}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 uppercase tracking-wider">Email</label>
+                  <p className="text-sm font-medium text-slate-900 font-mono">{createdCredentials.email}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 uppercase tracking-wider">Contraseña</label>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-slate-900 font-mono bg-amber-100 px-2 py-1 rounded">
+                      {createdCredentials.password}
+                    </p>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(createdCredentials.password)
+                        alert('Contraseña copiada al portapapeles')
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Copiar
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-amber-600 mt-4 text-center">
+                ⚠️ El admin deberá cambiar esta contraseña en su primer inicio de sesión
+              </p>
+
+              <button
+                onClick={() => {
+                  setShowCredentialsModal(false)
+                  setCreatedCredentials(null)
+                  onClose()
+                }}
+                className="w-full mt-6 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Entendido, cerrar
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

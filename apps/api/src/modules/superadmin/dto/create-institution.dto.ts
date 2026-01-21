@@ -53,6 +53,11 @@ export class CreateInstitutionDto {
 
   @IsOptional()
   @IsString()
+  @MinLength(8)
+  adminPassword?: string;
+
+  @IsOptional()
+  @IsString()
   adminPhone?: string;
 }
 

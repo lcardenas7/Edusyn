@@ -529,6 +529,7 @@ export const superadminApi = {
     adminFirstName: string;
     adminLastName: string;
     adminEmail: string;
+    adminPassword?: string;
     modules?: string[];
   }) => api.post('/superadmin/institutions', data),
   updateInstitution: (id: string, data: {
@@ -546,4 +547,8 @@ export const superadminApi = {
   // Estado
   activateInstitution: (id: string) => api.patch(`/superadmin/institutions/${id}/activate`),
   suspendInstitution: (id: string) => api.patch(`/superadmin/institutions/${id}/suspend`),
+  
+  // Eliminar institución (requiere confirmación)
+  deleteInstitution: (id: string, confirmationName: string) => 
+    api.delete(`/superadmin/institutions/${id}`, { data: { confirmationName } }),
 }

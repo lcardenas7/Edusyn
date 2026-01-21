@@ -119,8 +119,8 @@ export class SuperadminService {
       throw new ConflictException(`El email "${dto.adminEmail}" ya está registrado`);
     }
 
-    // Generar contraseña temporal
-    const tempPassword = this.generateTempPassword();
+    // Usar contraseña proporcionada o generar una temporal
+    const tempPassword = dto.adminPassword || this.generateTempPassword();
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
     // Crear institución, admin y módulos en una transacción
@@ -313,6 +313,68 @@ export class SuperadminService {
       password += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return password;
+  }
+
+  /**
+   * Elimina una institución (requiere confirmación con el nombre exacto)
+   */
+  async deleteInstitution(superAdminId: string, institutionId: string, confirmationName: string) {
+    await this.verifySuperAdmin(superAdminId);
+
+    const institution = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+    });
+
+    if (!institution) {
+      throw new NotFoundException('Institución no encontrada');
+    }
+
+    // Verificar que el nombre de confirmación coincida
+    if (confirmationName !== institution.name) {
+      throw new ForbiddenException('El nombre de confirmación no coincide con el nombre de la institución');
+    }
+
+    // Eliminar en cascada usando transacción
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Eliminar registros relacionados con estudiantes
+      await tx.attendanceRecord.deleteMany({ where: { studentEnrollment: { student: { institutionId } } } });
+      await tx.partialGrade.deleteMany({ where: { studentEnrollment: { student: { institutionId } } } });
+      await tx.periodFinalGrade.deleteMany({ where: { studentEnrollment: { student: { institutionId } } } });
+      await tx.studentEnrollment.deleteMany({ where: { student: { institutionId } } });
+      await tx.student.deleteMany({ where: { institutionId } });
+
+      // 2. Eliminar configuración académica
+      await tx.teacherAssignment.deleteMany({ where: { academicYear: { institutionId } } });
+      await tx.academicTerm.deleteMany({ where: { academicYear: { institutionId } } });
+      await tx.academicYear.deleteMany({ where: { institutionId } });
+      await tx.subject.deleteMany({ where: { area: { institutionId } } });
+      await tx.area.deleteMany({ where: { institutionId } });
+
+      // 3. Eliminar estructura organizacional
+      await tx.group.deleteMany({ where: { campus: { institutionId } } });
+      await tx.shift.deleteMany({ where: { campus: { institutionId } } });
+      await tx.campus.deleteMany({ where: { institutionId } });
+
+      // 4. Eliminar usuarios de la institución
+      const institutionUsers = await tx.institutionUser.findMany({
+        where: { institutionId },
+        select: { userId: true },
+      });
+      const userIds = institutionUsers.map(iu => iu.userId);
+      
+      await tx.institutionUser.deleteMany({ where: { institutionId } });
+      await tx.userRole.deleteMany({ where: { userId: { in: userIds } } });
+      await tx.user.deleteMany({ where: { id: { in: userIds }, isSuperAdmin: false } });
+
+      // 5. Eliminar módulos y configuración
+      await tx.institutionModule.deleteMany({ where: { institutionId } });
+      await tx.performanceScale.deleteMany({ where: { institutionId } });
+
+      // 6. Finalmente eliminar la institución
+      await tx.institution.delete({ where: { id: institutionId } });
+    });
+
+    return { message: 'Institución eliminada correctamente', institutionId };
   }
 
   /**

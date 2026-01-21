@@ -4,6 +4,7 @@ import {
   Post,
   Put,
   Patch,
+  Delete,
   Body,
   Param,
   UseGuards,
@@ -88,5 +89,17 @@ export class SuperadminController {
   @Patch('institutions/:id/suspend')
   suspendInstitution(@Request() req, @Param('id') id: string) {
     return this.superadminService.updateInstitutionStatus(req.user.id, id, 'SUSPENDED');
+  }
+
+  /**
+   * Elimina una institución (requiere confirmación con el nombre)
+   */
+  @Delete('institutions/:id')
+  deleteInstitution(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() body: { confirmationName: string },
+  ) {
+    return this.superadminService.deleteInstitution(req.user.id, id, body.confirmationName);
   }
 }
