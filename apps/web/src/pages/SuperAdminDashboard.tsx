@@ -1570,8 +1570,8 @@ function ModulesModal({
                       type="checkbox"
                       checked={isModuleEnabled}
                       onChange={() => toggleModule(module.id)}
-                      disabled={isRequired}
-                      className={`w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 ${isRequired ? 'cursor-not-allowed opacity-60' : ''}`}
+                      disabled={isRequired && isModuleEnabled}
+                      className={`w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 ${isRequired && isModuleEnabled ? 'cursor-not-allowed opacity-60' : ''}`}
                     />
                     <div className="flex-1 cursor-pointer" onClick={() => setExpandedModule(isExpanded ? null : module.id)}>
                       <div className="flex items-center justify-between">
