@@ -171,6 +171,7 @@ export class SuperadminService {
           phone: dto.adminPhone,
           passwordHash,
           isActive: true,
+          mustChangePassword: true, // Forzar cambio de contraseña en primer login
         },
       });
 

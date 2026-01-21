@@ -71,6 +71,18 @@ export class AuthController {
    * Verifica si una institución existe por su slug
    * Endpoint público (no requiere autenticación)
    */
+  /**
+   * Cambiar contraseña (requiere autenticación)
+   */
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  async changePassword(
+    @Request() req,
+    @Body() body: { currentPassword: string; newPassword: string },
+  ) {
+    return this.authService.changePassword(req.user.id, body.currentPassword, body.newPassword);
+  }
+
   @Get('institution/:slug')
   async getInstitutionBySlug(@Param('slug') slug: string) {
     const institution = await this.prisma.institution.findUnique({

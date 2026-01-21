@@ -904,7 +904,7 @@ function CreateInstitutionModal({
     adminUsername: '',
     adminPassword: '',
     sendEmailNotification: false,
-    modules: ['ACADEMIC', 'DASHBOARD'] as string[],
+    modules: ['DASHBOARD', 'ACADEMIC', 'CONFIG', 'USERS', 'ATTENDANCE', 'EVALUATION', 'RECOVERY', 'REPORTS', 'COMMUNICATIONS', 'OBSERVER', 'PERFORMANCE'] as string[],
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showCredentialsModal, setShowCredentialsModal] = useState(false)

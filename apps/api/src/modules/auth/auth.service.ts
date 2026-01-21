@@ -56,6 +56,7 @@ export class AuthService {
 
     return {
       access_token: accessToken,
+      mustChangePassword: user.mustChangePassword || false,
       user: {
         id: user.id,
         email: user.email,
@@ -82,6 +83,28 @@ export class AuthService {
       lastName: user.lastName,
       roles: user.roles,
       institution,
+      mustChangePassword: (user as any).mustChangePassword || false,
     };
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    // Verificar contraseña actual
+    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isValid) {
+      throw new UnauthorizedException('Contraseña actual incorrecta');
+    }
+
+    // Hashear nueva contraseña
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+    // Actualizar contraseña y quitar flag de mustChangePassword
+    await this.usersService.updatePassword(userId, newPasswordHash);
+
+    return { message: 'Contraseña actualizada correctamente' };
   }
 }

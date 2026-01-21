@@ -102,6 +102,7 @@ model User {
   birthDate      DateTime?
   isActive       Boolean    @default(true)
   isSuperAdmin   Boolean    @default(false)  // SuperAdmin del sistema
+  mustChangePassword Boolean @default(false) // Forzar cambio de contraseña en primer login
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
