@@ -56,7 +56,7 @@ export class AuthService {
 
     return {
       access_token: accessToken,
-      mustChangePassword: user.mustChangePassword || false,
+      mustChangePassword: (user as any).mustChangePassword || false,
       user: {
         id: user.id,
         email: user.email,
