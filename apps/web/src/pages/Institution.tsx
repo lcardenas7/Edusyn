@@ -90,7 +90,7 @@ export default function Institution() {
     institution, setInstitution, 
     gradingConfig, setGradingConfig, 
     periods, setPeriods,
-    saveGradingConfigToAPI, saveAcademicLevelsToAPI, savePeriodsToAPI,
+    saveGradingConfigToAPI, saveAcademicLevelsToAPI, savePeriodsToAPI: _savePeriodsToAPI,
     isSaving 
   } = useInstitution()
   const { institution: authInstitution } = useAuth()
@@ -100,16 +100,16 @@ export default function Institution() {
   // ═══════════════════════════════════════════════════════════════════════════
   // PERMISOS - Determinar qué puede hacer el usuario en cada sección
   // ═══════════════════════════════════════════════════════════════════════════
-  const canEditInfo = can(PERMISSIONS.CONFIG_INFO_EDIT)
+  const _canEditInfo = can(PERMISSIONS.CONFIG_INFO_EDIT)
   const canEditGradingScale = can(PERMISSIONS.CONFIG_GRADING_EDIT_SCALE)
   const canEditGradingLevels = can(PERMISSIONS.CONFIG_GRADING_EDIT_LEVELS)
-  const canEditGradingWeights = can(PERMISSIONS.CONFIG_GRADING_EDIT_WEIGHTS)
+  const _canEditGradingWeights = can(PERMISSIONS.CONFIG_GRADING_EDIT_WEIGHTS)
   const canEditPeriods = can(PERMISSIONS.CONFIG_PERIODS_EDIT)
-  const canTogglePeriods = can(PERMISSIONS.CONFIG_PERIODS_TOGGLE)
-  const canEditGradeWindowsDates = can(PERMISSIONS.CONFIG_GRADE_WINDOWS_DATES)
-  const canEditGradeWindowsRules = can(PERMISSIONS.CONFIG_GRADE_WINDOWS_RULES)
-  const canEditRecoveryDates = can(PERMISSIONS.CONFIG_RECOVERY_DATES)
-  const canEditRecoveryRules = can(PERMISSIONS.CONFIG_RECOVERY_RULES)
+  const _canTogglePeriods = can(PERMISSIONS.CONFIG_PERIODS_TOGGLE)
+  const _canEditGradeWindowsDates = can(PERMISSIONS.CONFIG_GRADE_WINDOWS_DATES)
+  const _canEditGradeWindowsRules = can(PERMISSIONS.CONFIG_GRADE_WINDOWS_RULES)
+  const _canEditRecoveryDates = can(PERMISSIONS.CONFIG_RECOVERY_DATES)
+  const _canEditRecoveryRules = can(PERMISSIONS.CONFIG_RECOVERY_RULES)
   const canEditGrades = can(PERMISSIONS.CONFIG_GRADES_EDIT)
 
   const [showPeriodModal, setShowPeriodModal] = useState(false)

@@ -86,7 +86,7 @@ export default function UserPermissionsModal({
   const [extraPermissions, setExtraPermissions] = useState<ExtraPermission[]>([])
   const [catalog, setCatalog] = useState<PermissionCatalog>({})
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set())
-  const [expandedFunctions, setExpandedFunctions] = useState<Set<string>>(new Set())
+  const [_expandedFunctions, _setExpandedFunctions] = useState<Set<string>>(new Set())
   const [showAddModal, setShowAddModal] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   
