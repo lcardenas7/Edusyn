@@ -1,11 +1,7 @@
 import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import { AreaCalculationType } from '@prisma/client'
 
-export enum AreaCalculationType {
-  SINGLE_SUBJECT = 'SINGLE_SUBJECT',
-  AVERAGE = 'AVERAGE',
-  WEIGHTED_AVERAGE = 'WEIGHTED_AVERAGE',
-  CUSTOM_FORMULA = 'CUSTOM_FORMULA',
-}
+export { AreaCalculationType }
 
 export class CreateAreaDto {
   @IsString()
