@@ -88,13 +88,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const hasModule = (moduleId: string) => {
     // SuperAdmin tiene acceso a todo
-    if (user?.roles?.some(r => r.role.name === 'SUPERADMIN')) return true
+    if (user?.roles?.some(r => r.role.name === 'SUPER_ADMIN' || r.role.name === 'SUPERADMIN')) return true
     return enabledModules.includes(moduleId)
   }
 
   const hasFeature = (featureId: string) => {
     // SuperAdmin tiene acceso a todo
-    if (user?.roles?.some(r => r.role.name === 'SUPERADMIN')) return true
+    if (user?.roles?.some(r => r.role.name === 'SUPER_ADMIN' || r.role.name === 'SUPERADMIN')) return true
     return enabledFeatures.includes(featureId)
   }
 

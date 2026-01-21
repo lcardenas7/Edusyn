@@ -31,7 +31,7 @@ import {
   Plus
 } from 'lucide-react'
 
-type Role = 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE'
+type Role = 'SUPER_ADMIN' | 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE'
 
 interface NavItem {
   name: string
@@ -47,17 +47,17 @@ interface NavItem {
 // El SuperAdmin es el arquitecto del sistema, NO el rector
 // ═══════════════════════════════════════════════════════════════════════════
 const superAdminNavigation: NavItem[] = [
-  { name: 'Panel SuperAdmin', href: '/superadmin', icon: LayoutDashboard, roles: ['SUPERADMIN'] },
+  { name: 'Panel SuperAdmin', href: '/superadmin', icon: LayoutDashboard, roles: ['SUPER_ADMIN', 'SUPERADMIN'] },
   
   // Gestión de Instituciones
   { 
     name: 'Instituciones', 
     icon: Building2, 
-    roles: ['SUPERADMIN'],
+    roles: ['SUPER_ADMIN', 'SUPERADMIN'],
     children: [
-      { name: 'Todas las Instituciones', href: '/superadmin/institutions', icon: Building2, roles: ['SUPERADMIN'] },
-      { name: 'Crear Institución', href: '/superadmin/institutions/new', icon: Plus, roles: ['SUPERADMIN'] },
-      { name: 'Configuraciones', href: '/superadmin/configs', icon: Settings, roles: ['SUPERADMIN'] },
+      { name: 'Todas las Instituciones', href: '/superadmin/institutions', icon: Building2, roles: ['SUPER_ADMIN', 'SUPERADMIN'] },
+      { name: 'Crear Institución', href: '/superadmin/institutions/new', icon: Plus, roles: ['SUPER_ADMIN', 'SUPERADMIN'] },
+      { name: 'Configuraciones', href: '/superadmin/configs', icon: Settings, roles: ['SUPER_ADMIN', 'SUPERADMIN'] },
     ]
   },
   
@@ -65,10 +65,10 @@ const superAdminNavigation: NavItem[] = [
   { 
     name: 'Auditoría', 
     icon: ClipboardList, 
-    roles: ['SUPERADMIN'],
+    roles: ['SUPER_ADMIN', 'SUPERADMIN'],
     children: [
-      { name: 'Logs del Sistema', href: '/superadmin/audit-logs', icon: FileText, roles: ['SUPERADMIN'] },
-      { name: 'Actividad Usuarios', href: '/superadmin/user-activity', icon: Users, roles: ['SUPERADMIN'] },
+      { name: 'Logs del Sistema', href: '/superadmin/audit-logs', icon: FileText, roles: ['SUPER_ADMIN', 'SUPERADMIN'] },
+      { name: 'Actividad Usuarios', href: '/superadmin/user-activity', icon: Users, roles: ['SUPER_ADMIN', 'SUPERADMIN'] },
     ]
   },
   
@@ -76,10 +76,10 @@ const superAdminNavigation: NavItem[] = [
   { 
     name: 'Herramientas', 
     icon: Settings, 
-    roles: ['SUPERADMIN'],
+    roles: ['SUPER_ADMIN', 'SUPERADMIN'],
     children: [
-      { name: 'Recalcular Académico', href: '/superadmin/recalculate', icon: RefreshCw, roles: ['SUPERADMIN'] },
-      { name: 'Clonar Configuración', href: '/superadmin/clone-config', icon: Layers, roles: ['SUPERADMIN'] },
+      { name: 'Recalcular Académico', href: '/superadmin/recalculate', icon: RefreshCw, roles: ['SUPER_ADMIN', 'SUPERADMIN'] },
+      { name: 'Clonar Configuración', href: '/superadmin/clone-config', icon: Layers, roles: ['SUPER_ADMIN', 'SUPERADMIN'] },
     ]
   },
 ]
@@ -182,7 +182,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   }, [user?.roles])
 
   // Determinar si es SuperAdmin
-  const isSuperAdmin = useMemo(() => userRoles.includes('SUPERADMIN'), [userRoles])
+  const isSuperAdmin = useMemo(() => userRoles.includes('SUPER_ADMIN') || userRoles.includes('SUPERADMIN'), [userRoles])
 
   // Seleccionar menú según rol: SuperAdmin tiene su propio menú
   const navigation = useMemo(() => {
