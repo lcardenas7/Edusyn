@@ -12,8 +12,16 @@ export class EventsController {
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async create(@Body() data: any, @Req() req: any) {
+    const institutionId = req.user.institutionId || data.institutionId;
+    console.log('[EventsController] Creating event:', { 
+      userInstitutionId: req.user.institutionId, 
+      bodyInstitutionId: data.institutionId,
+      finalInstitutionId: institutionId 
+    });
+    
     return this.eventsService.create({
       ...data,
+      institutionId,
       authorId: req.user.id,
     });
   }
