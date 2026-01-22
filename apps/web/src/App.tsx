@@ -23,6 +23,7 @@ import Performances from './pages/Performances'
 import InstitutionLogin from './pages/InstitutionLogin'
 import SuperAdminDashboard from './pages/SuperAdminDashboard'
 import PermissionsAdmin from './pages/PermissionsAdmin'
+import StaffManagement from './pages/StaffManagement'
 import Layout from './components/Layout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -100,6 +101,7 @@ function App() {
                   <Route path="/recoveries" element={<Recoveries />} />
                   <Route path="/performances" element={<Performances />} />
                   <Route path="/admin/permissions" element={<PermissionsAdmin />} />
+                  <Route path="/staff" element={<StaffManagement />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

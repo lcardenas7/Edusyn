@@ -513,6 +513,56 @@ export const sieeConfigApi = {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// BULK UPLOAD API - Carga masiva de usuarios
+// ═══════════════════════════════════════════════════════════════════════════
+export const bulkUploadApi = {
+  // Descargar plantillas
+  downloadTeacherTemplate: () => api.get('/iam/bulk/template/teachers', { responseType: 'blob' }),
+  downloadStudentTemplate: () => api.get('/iam/bulk/template/students', { responseType: 'blob' }),
+  downloadStaffTemplate: () => api.get('/iam/bulk/template/staff', { responseType: 'blob' }),
+  
+  // Subir archivos
+  uploadTeachers: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/iam/bulk/upload/teachers', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+  uploadStudents: (file: File, academicYearId?: string) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/iam/bulk/upload/students', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      params: academicYearId ? { academicYearId } : undefined
+    })
+  },
+  uploadStaff: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/iam/bulk/upload/staff', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+}
+
+// Staff/Other Users API
+export const staffApi = {
+  getAll: () => api.get('/iam/users'),
+  create: (data: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    documentType?: string;
+    documentNumber?: string;
+    phone?: string;
+  }) => api.post('/iam/staff', data),
+  update: (id: string, data: any) => api.put(`/iam/staff/${id}`, data),
+  delete: (id: string) => api.delete(`/iam/staff/${id}`),
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // SUPERADMIN API - Gestión de la plataforma SaaS
 // ═══════════════════════════════════════════════════════════════════════════
 export const superadminApi = {

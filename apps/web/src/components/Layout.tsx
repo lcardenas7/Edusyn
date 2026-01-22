@@ -113,6 +113,7 @@ const institutionalNavigation: NavItem[] = [
     children: [
       { name: 'Docentes', href: '/teachers', icon: UserCog, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'USERS' },
       { name: 'Estudiantes', href: '/students', icon: Users, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'USERS' },
+      { name: 'Otros Usuarios', href: '/staff', icon: UserCheck, roles: ['ADMIN_INSTITUTIONAL'], module: 'USERS' },
       { name: 'Carga Académica', href: '/academic-load', icon: Briefcase, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
       { name: 'Permisos', href: '/admin/permissions', icon: UserCheck, roles: ['ADMIN_INSTITUTIONAL'], module: 'USERS' },
     ]

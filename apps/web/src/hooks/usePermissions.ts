@@ -71,8 +71,17 @@ export function usePermissions() {
    * Usa cache local para evitar llamadas al servidor
    */
   const can = useCallback((permissionCode: string): boolean => {
+    // Extraer nombres de roles - soporta múltiples estructuras:
+    // 1. { role: { name: 'X' } } - desde getProfile/me
+    // 2. 'X' - string directo
+    // 3. { name: 'X' } - objeto simple
     const roleNames = (user?.roles || [])
-      .map((r: any) => r?.role?.name || r?.name)
+      .map((r: any) => {
+        if (typeof r === 'string') return r
+        if (r?.role?.name) return r.role.name
+        if (r?.name) return r.name
+        return null
+      })
       .filter(Boolean)
 
     // SuperAdmin tiene acceso total (verificar por rol)
