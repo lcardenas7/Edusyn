@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, ChevronLeft, Check, AlertCircle, Calendar, Users, Settings, Play, Square } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Check, AlertCircle, Calendar, Users, Settings, Play, Square, Trash2, Plus } from 'lucide-react'
 import { academicYearLifecycleApi, academicTermsApi, enrollmentsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -59,6 +59,13 @@ const AcademicYearWizard: React.FC = () => {
     { id: '2', name: 'Segundo Período', type: 'ACADEMIC', order: 2, weightPercentage: 25 },
     { id: '3', name: 'Tercer Período', type: 'ACADEMIC', order: 3, weightPercentage: 25 },
     { id: '4', name: 'Cuarto Período', type: 'ACADEMIC', order: 4, weightPercentage: 25 }
+  ])
+  
+  // Componentes Finales Institucionales (Pruebas Semestrales, etc.)
+  const [useFinalComponents, setUseFinalComponents] = useState(false)
+  const [finalComponents, setFinalComponents] = useState<Array<{ id: string; name: string; weightPercentage: number }>>([
+    { id: 'fc-1', name: 'Examen Semestral 1', weightPercentage: 10 },
+    { id: 'fc-2', name: 'Examen Semestral 2', weightPercentage: 10 }
   ])
   
   // Años existentes
@@ -124,12 +131,20 @@ const AcademicYearWizard: React.FC = () => {
         break
 
       case 1: // Períodos académicos
-        const totalWeight = terms.reduce((sum, term) => sum + term.weightPercentage, 0)
-        if (totalWeight !== 100) {
-          errors.terms = [`El peso total debe ser 100%. Actual: ${totalWeight}%`]
-        }
-        if (terms.some(t => !t.name.trim())) {
+        const termsWeight = terms.reduce((sum, term) => sum + term.weightPercentage, 0)
+        const finalWeight = useFinalComponents ? finalComponents.reduce((sum, fc) => sum + fc.weightPercentage, 0) : 0
+        const totalWeight = termsWeight + finalWeight
+        
+        if (terms.length < 1) {
+          errors.terms = ['Debe haber al menos 1 período académico']
+        } else if (terms.some(t => !t.name.trim())) {
           errors.terms = ['Todos los períodos deben tener nombre']
+        } else if (terms.some(t => t.weightPercentage <= 0)) {
+          errors.terms = ['Ningún período puede tener peso 0% o menor']
+        } else if (useFinalComponents && finalComponents.some(fc => fc.weightPercentage <= 0)) {
+          errors.terms = ['Ningún componente final puede tener peso 0% o menor']
+        } else if (totalWeight !== 100) {
+          errors.terms = [`El peso total debe ser 100%. Actual: ${totalWeight}% (Períodos: ${termsWeight}%${useFinalComponents ? `, Componentes Finales: ${finalWeight}%` : ''})`]
         }
         break
 
@@ -391,10 +406,21 @@ const AcademicYearWizard: React.FC = () => {
                             setTerms(newTerms)
                           }}
                           className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                          min="0"
+                          min="1"
                           max="100"
                         />
                       </div>
+                      {terms.length > 1 && (
+                        <div className="flex items-end">
+                          <button
+                            onClick={() => setTerms(terms.filter((_, i) => i !== index))}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Eliminar período"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -402,7 +428,11 @@ const AcademicYearWizard: React.FC = () => {
 
               <div className="flex justify-between items-center mt-4">
                 <div className="text-sm text-slate-600">
-                  Peso total: <span className={`font-semibold ${terms.reduce((sum, t) => sum + t.weightPercentage, 0) === 100 ? 'text-green-600' : 'text-red-600'}`}>
+                  Peso períodos: <span className={`font-semibold ${
+                    (terms.reduce((sum, t) => sum + t.weightPercentage, 0) + 
+                    (useFinalComponents ? finalComponents.reduce((sum, fc) => sum + fc.weightPercentage, 0) : 0)) === 100 
+                    ? 'text-green-600' : 'text-red-600'
+                  }`}>
                     {terms.reduce((sum, t) => sum + t.weightPercentage, 0)}%
                   </span>
                 </div>
@@ -412,20 +442,129 @@ const AcademicYearWizard: React.FC = () => {
                     name: `Período ${terms.length + 1}`, 
                     type: 'ACADEMIC', 
                     order: terms.length + 1, 
-                    weightPercentage: 0 
+                    weightPercentage: 20 
                   }])}
-                  className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
                 >
+                  <Plus className="w-4 h-4" />
                   Agregar Período
                 </button>
               </div>
+            </div>
 
-              {validationErrors.terms && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-red-700 text-sm">{validationErrors.terms[0]}</p>
+            {/* Componentes Finales Institucionales */}
+            <div className="border-t border-slate-200 pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Componentes Finales Institucionales</h3>
+                  <p className="text-sm text-slate-500 mt-1">Evaluaciones globales que complementan la nota final del año (ej: Pruebas Semestrales)</p>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={useFinalComponents}
+                    onChange={(e) => setUseFinalComponents(e.target.checked)}
+                    className="w-5 h-5 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                  />
+                  <span className="text-sm font-medium text-slate-700">Habilitar</span>
+                </label>
+              </div>
+
+              {useFinalComponents && (
+                <div className="space-y-4">
+                  {finalComponents.map((fc, index) => (
+                    <div key={fc.id} className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-amber-700 mb-1">Nombre</label>
+                          <input
+                            type="text"
+                            value={fc.name}
+                            onChange={(e) => {
+                              const newFC = [...finalComponents]
+                              newFC[index].name = e.target.value
+                              setFinalComponents(newFC)
+                            }}
+                            className="w-full px-3 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <label className="block text-sm font-medium text-amber-700 mb-1">Peso (%)</label>
+                            <input
+                              type="number"
+                              value={fc.weightPercentage}
+                              onChange={(e) => {
+                                const newFC = [...finalComponents]
+                                newFC[index].weightPercentage = parseInt(e.target.value) || 0
+                                setFinalComponents(newFC)
+                              }}
+                              className="w-full px-3 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                              min="1"
+                              max="100"
+                            />
+                          </div>
+                          {finalComponents.length > 1 && (
+                            <div className="flex items-end">
+                              <button
+                                onClick={() => setFinalComponents(finalComponents.filter((_, i) => i !== index))}
+                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Eliminar componente"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-amber-700">
+                      Peso componentes finales: <span className="font-semibold">{finalComponents.reduce((sum, fc) => sum + fc.weightPercentage, 0)}%</span>
+                    </div>
+                    <button
+                      onClick={() => setFinalComponents([...finalComponents, { 
+                        id: `fc-${Date.now()}`, 
+                        name: `Componente ${finalComponents.length + 1}`, 
+                        weightPercentage: 5 
+                      }])}
+                      className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Agregar Componente
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
+
+            {/* Resumen de peso total */}
+            <div className="bg-slate-100 rounded-lg p-4">
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-slate-700">Peso Total:</span>
+                <span className={`text-lg font-bold ${
+                  (terms.reduce((sum, t) => sum + t.weightPercentage, 0) + 
+                  (useFinalComponents ? finalComponents.reduce((sum, fc) => sum + fc.weightPercentage, 0) : 0)) === 100 
+                  ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {terms.reduce((sum, t) => sum + t.weightPercentage, 0) + 
+                   (useFinalComponents ? finalComponents.reduce((sum, fc) => sum + fc.weightPercentage, 0) : 0)}%
+                </span>
+              </div>
+              {useFinalComponents && (
+                <div className="text-xs text-slate-500 mt-1">
+                  (Períodos: {terms.reduce((sum, t) => sum + t.weightPercentage, 0)}% + Componentes Finales: {finalComponents.reduce((sum, fc) => sum + fc.weightPercentage, 0)}%)
+                </div>
+              )}
+            </div>
+
+            {validationErrors.terms && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-red-700 text-sm">{validationErrors.terms[0]}</p>
+              </div>
+            )}
           </div>
         )
 
@@ -474,11 +613,47 @@ const AcademicYearWizard: React.FC = () => {
                   </div>
                   <div className="mt-2 pt-2 border-t">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Total:</span>
-                      <span className={`text-sm font-bold ${terms.reduce((sum, t) => sum + t.weightPercentage, 0) === 100 ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className="text-sm font-medium">Subtotal Períodos:</span>
+                      <span className="text-sm font-bold text-slate-700">
                         {terms.reduce((sum, t) => sum + t.weightPercentage, 0)}%
                       </span>
                     </div>
+                  </div>
+                </div>
+
+                {useFinalComponents && (
+                  <div>
+                    <h4 className="font-medium text-amber-700 mb-2">Componentes Finales Institucionales</h4>
+                    <div className="space-y-2">
+                      {finalComponents.map(fc => (
+                        <div key={fc.id} className="flex justify-between items-center p-2 bg-amber-50 rounded border border-amber-200">
+                          <span className="text-sm">{fc.name}</span>
+                          <span className="text-sm font-medium text-amber-700">{fc.weightPercentage}%</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-amber-200">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-amber-700">Subtotal Componentes:</span>
+                        <span className="text-sm font-bold text-amber-700">
+                          {finalComponents.reduce((sum, fc) => sum + fc.weightPercentage, 0)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-slate-200 rounded p-3">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Peso Total:</span>
+                    <span className={`text-lg font-bold ${
+                      (terms.reduce((sum, t) => sum + t.weightPercentage, 0) + 
+                      (useFinalComponents ? finalComponents.reduce((sum, fc) => sum + fc.weightPercentage, 0) : 0)) === 100 
+                      ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {terms.reduce((sum, t) => sum + t.weightPercentage, 0) + 
+                       (useFinalComponents ? finalComponents.reduce((sum, fc) => sum + fc.weightPercentage, 0) : 0)}%
+                    </span>
                   </div>
                 </div>
               </div>
