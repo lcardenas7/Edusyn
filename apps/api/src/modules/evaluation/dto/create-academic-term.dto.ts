@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export enum AcademicTermType {
   PERIOD = 'PERIOD',
@@ -6,7 +6,7 @@ export enum AcademicTermType {
 }
 
 export class CreateAcademicTermDto {
-  @IsUUID()
+  @IsString()
   academicYearId: string;
 
   @IsString()
