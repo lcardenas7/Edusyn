@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, BookOpen, Settings, Star, Lock, Save } from 'lucide-react'
-import { useInstitution, AreaCalculationType, AreaApprovalRule, AreaRecoveryRule } from '../contexts/InstitutionContext'
+import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, BookOpen, Settings, Star, Lock, Save, AlertTriangle } from 'lucide-react'
+import { useInstitution, AreaType, AreaCalculationMethod, AreaApprovalCriteria, AreaRecoveryType } from '../contexts/InstitutionContext'
 import { useAuth } from '../contexts/AuthContext'
 
 interface Subject {
@@ -20,23 +20,37 @@ interface Area {
   subjects: Subject[]
 }
 
-const calculationTypeLabels: Record<AreaCalculationType, string> = {
-  INFORMATIVE: 'Solo informativa',
-  AVERAGE: 'Promedio simple',
-  WEIGHTED: 'Promedio ponderado',
-  DOMINANT: 'Asignatura dominante',
+// Labels para los nuevos tipos
+const areaTypeLabels: Record<AreaType, { label: string; desc: string; color: string }> = {
+  EVALUABLE: { label: 'Evaluable', desc: 'Afecta promoción, se calcula nota', color: 'green' },
+  INFORMATIVE: { label: 'Informativa', desc: 'No afecta promoción', color: 'blue' },
+  FORMATIVE: { label: 'Formativa', desc: 'Solo observaciones cualitativas', color: 'purple' },
 }
 
-const approvalRuleLabels: Record<AreaApprovalRule, string> = {
-  AREA_AVERAGE: 'Promedio área',
-  ALL_SUBJECTS: 'Todas aprobadas',
-  DOMINANT_SUBJECT: 'Dominante aprobada',
+const calculationMethodLabels: Record<AreaCalculationMethod, { label: string; desc: string }> = {
+  AVERAGE: { label: 'Promedio simple', desc: 'Todas las asignaturas pesan igual' },
+  WEIGHTED: { label: 'Ponderado', desc: 'Cada asignatura tiene un % del área' },
+  DOMINANT: { label: 'Asignatura dominante', desc: 'Solo cuenta la asignatura principal' },
 }
 
-const recoveryRuleLabels: Record<AreaRecoveryRule, string> = {
-  INDIVIDUAL_SUBJECT: 'Individual',
-  FULL_AREA: 'Área completa',
-  CONDITIONAL: 'Condicional',
+const approvalCriteriaLabels: Record<AreaApprovalCriteria, { label: string; desc: string }> = {
+  AREA_AVERAGE: { label: 'Por nota final del área', desc: 'Promedio del área ≥ nota mínima' },
+  ALL_SUBJECTS: { label: 'Todas las asignaturas aprobadas', desc: 'Cada asignatura ≥ nota mínima' },
+  DOMINANT_SUBJECT: { label: 'Asignatura dominante aprobada', desc: 'Solo importa la principal' },
+}
+
+const recoveryTypeLabels: Record<AreaRecoveryType, { label: string; desc: string }> = {
+  BY_SUBJECT: { label: 'Por asignatura', desc: 'Recupera solo las asignaturas perdidas' },
+  FULL_AREA: { label: 'Área completa', desc: 'Evalúa todo el contenido del área' },
+  CONDITIONAL: { label: 'Condicional', desc: 'Según comité de evaluación' },
+  NONE: { label: 'No aplica', desc: 'No permite recuperación' },
+}
+
+// Helper para obtener resumen de configuración
+const getConfigSummary = (areaType: AreaType, calcMethod: AreaCalculationMethod, approvalCriteria: AreaApprovalCriteria, recoveryType: AreaRecoveryType) => {
+  if (areaType === 'INFORMATIVE') return 'Informativa • No afecta promoción'
+  if (areaType === 'FORMATIVE') return 'Formativa • Solo observaciones'
+  return `${calculationMethodLabels[calcMethod].label} • ${approvalCriteriaLabels[approvalCriteria].label} • Recup: ${recoveryTypeLabels[recoveryType].label}`
 }
 
 const mockAreas: Area[] = [
@@ -272,154 +286,168 @@ export default function AreasAdmin() {
           </div>
         </div>
 
-        {isConfigExpanded && <div className="p-6 space-y-6">
-          {/* Tipo de Cálculo */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-3">Tipo de cálculo del área</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <button
-                type="button"
-                disabled={!canEditGlobalConfig}
-                onClick={() => canEditGlobalConfig && setAreaConfig({ ...areaConfig, calculationType: 'INFORMATIVE' })}
-                className={`p-3 rounded-lg border-2 text-left transition-all ${!canEditGlobalConfig ? 'opacity-60 cursor-not-allowed' : ''} ${
-                  areaConfig.calculationType === 'INFORMATIVE'
-                    ? 'border-slate-500 bg-slate-50'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className={`text-sm font-medium ${areaConfig.calculationType === 'INFORMATIVE' ? 'text-slate-700' : 'text-slate-600'}`}>
-                  Solo informativa
-                </div>
-                <div className="text-xs text-slate-500">No afecta promoción</div>
-              </button>
-              
-              <button
-                type="button"
-                disabled={!canEditGlobalConfig}
-                onClick={() => canEditGlobalConfig && setAreaConfig({ ...areaConfig, calculationType: 'AVERAGE' })}
-                className={`p-3 rounded-lg border-2 text-left transition-all ${!canEditGlobalConfig ? 'opacity-60 cursor-not-allowed' : ''} ${
-                  areaConfig.calculationType === 'AVERAGE'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className={`text-sm font-medium ${areaConfig.calculationType === 'AVERAGE' ? 'text-blue-700' : 'text-slate-600'}`}>
-                  Promedio simple
-                </div>
-                <div className="text-xs text-slate-500">Todas pesan igual</div>
-              </button>
-              
-              <button
-                type="button"
-                disabled={!canEditGlobalConfig}
-                onClick={() => canEditGlobalConfig && setAreaConfig({ ...areaConfig, calculationType: 'WEIGHTED' })}
-                className={`p-3 rounded-lg border-2 text-left transition-all ${!canEditGlobalConfig ? 'opacity-60 cursor-not-allowed' : ''} ${
-                  areaConfig.calculationType === 'WEIGHTED'
-                    ? 'border-purple-500 bg-purple-50'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className={`text-sm font-medium ${areaConfig.calculationType === 'WEIGHTED' ? 'text-purple-700' : 'text-slate-600'}`}>
-                  Ponderado
-                </div>
-                <div className="text-xs text-slate-500">Cada asignatura tiene %</div>
-              </button>
-              
-              <button
-                type="button"
-                disabled={!canEditGlobalConfig}
-                onClick={() => canEditGlobalConfig && setAreaConfig({ ...areaConfig, calculationType: 'DOMINANT' })}
-                className={`p-3 rounded-lg border-2 text-left transition-all ${!canEditGlobalConfig ? 'opacity-60 cursor-not-allowed' : ''} ${
-                  areaConfig.calculationType === 'DOMINANT'
-                    ? 'border-amber-500 bg-amber-50'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className={`text-sm font-medium ${areaConfig.calculationType === 'DOMINANT' ? 'text-amber-700' : 'text-slate-600'}`}>
-                  Dominante
-                </div>
-                <div className="text-xs text-slate-500">Aprueba si la principal aprueba</div>
-              </button>
+        {isConfigExpanded && <div className="p-6 space-y-8">
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          {/* CAPA 1: TIPO DE ÁREA */}
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">🧩</span>
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">1. Tipo de Área</label>
+                <p className="text-xs text-slate-500">Define el impacto académico</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {(['EVALUABLE', 'INFORMATIVE', 'FORMATIVE'] as AreaType[]).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  disabled={!canEditGlobalConfig}
+                  onClick={() => canEditGlobalConfig && setAreaConfig({ ...areaConfig, areaType: type })}
+                  className={`p-3 rounded-lg border-2 text-left transition-all ${!canEditGlobalConfig ? 'opacity-60 cursor-not-allowed' : ''} ${
+                    areaConfig.areaType === type
+                      ? `border-${areaTypeLabels[type].color}-500 bg-${areaTypeLabels[type].color}-50`
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <div className={`text-sm font-medium ${areaConfig.areaType === type ? `text-${areaTypeLabels[type].color}-700` : 'text-slate-600'}`}>
+                    {areaTypeLabels[type].label}
+                  </div>
+                  <div className="text-xs text-slate-500">{areaTypeLabels[type].desc}</div>
+                </button>
+              ))}
             </div>
           </div>
 
-          {areaConfig.calculationType !== 'INFORMATIVE' && (
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Regla de Aprobación */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">¿Cuándo se aprueba el área?</label>
-                <div className="space-y-2">
-                  {[
-                    { value: 'AREA_AVERAGE', label: 'Por promedio del área', desc: 'Promedio ≥ nota mínima' },
-                    { value: 'ALL_SUBJECTS', label: 'Todas las asignaturas aprobadas', desc: 'Cada una ≥ nota mínima' },
-                    { value: 'DOMINANT_SUBJECT', label: 'Asignatura dominante aprobada', desc: 'Solo importa la principal' },
-                  ].map((option) => (
-                    <label key={option.value} className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${!canEditGlobalConfig ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${
-                      areaConfig.approvalRule === option.value ? 'border-green-500 bg-green-50' : 'border-slate-200 hover:border-slate-300'
-                    }`}>
-                      <input
-                        type="radio"
-                        name="globalApprovalRule"
-                        disabled={!canEditGlobalConfig}
-                        checked={areaConfig.approvalRule === option.value}
-                        onChange={() => canEditGlobalConfig && setAreaConfig({ ...areaConfig, approvalRule: option.value as AreaApprovalRule })}
-                        className="mt-0.5"
-                      />
-                      <div>
-                        <div className="text-sm font-medium text-slate-700">{option.label}</div>
-                        <div className="text-xs text-slate-500">{option.desc}</div>
-                      </div>
-                    </label>
-                  ))}
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          {/* CAPA 2: MÉTODO DE CÁLCULO (solo si EVALUABLE) */}
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          {areaConfig.areaType === 'EVALUABLE' && (
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">📐</span>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-800">2. Cálculo del Área</label>
+                  <p className="text-xs text-slate-500">Cómo se obtiene la nota final</p>
                 </div>
               </div>
-
-              {/* Regla de Recuperación */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">¿Cómo se recupera el área?</label>
-                <div className="space-y-2">
-                  {[
-                    { value: 'INDIVIDUAL_SUBJECT', label: 'Asignaturas individuales', desc: 'Solo las perdidas' },
-                    { value: 'FULL_AREA', label: 'Área completa', desc: 'Toda el área' },
-                    { value: 'CONDITIONAL', label: 'Condicional', desc: 'Según reglas específicas' },
-                  ].map((option) => (
-                    <label key={option.value} className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${!canEditGlobalConfig ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${
-                      areaConfig.recoveryRule === option.value ? 'border-orange-500 bg-orange-50' : 'border-slate-200 hover:border-slate-300'
-                    }`}>
-                      <input
-                        type="radio"
-                        name="globalRecoveryRule"
-                        disabled={!canEditGlobalConfig}
-                        checked={areaConfig.recoveryRule === option.value}
-                        onChange={() => canEditGlobalConfig && setAreaConfig({ ...areaConfig, recoveryRule: option.value as AreaRecoveryRule })}
-                        className="mt-0.5"
-                      />
-                      <div>
-                        <div className="text-sm font-medium text-slate-700">{option.label}</div>
-                        <div className="text-xs text-slate-500">{option.desc}</div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {(['AVERAGE', 'WEIGHTED', 'DOMINANT'] as AreaCalculationMethod[]).map((method) => (
+                  <button
+                    key={method}
+                    type="button"
+                    disabled={!canEditGlobalConfig}
+                    onClick={() => canEditGlobalConfig && setAreaConfig({ ...areaConfig, calculationMethod: method })}
+                    className={`p-3 rounded-lg border-2 text-left transition-all bg-white ${!canEditGlobalConfig ? 'opacity-60 cursor-not-allowed' : ''} ${
+                      areaConfig.calculationMethod === method
+                        ? 'border-blue-500 bg-blue-100'
+                        : 'border-slate-200 hover:border-blue-300'
+                    }`}
+                  >
+                    <div className={`text-sm font-medium ${areaConfig.calculationMethod === method ? 'text-blue-700' : 'text-slate-600'}`}>
+                      {calculationMethodLabels[method].label}
+                    </div>
+                    <div className="text-xs text-slate-500">{calculationMethodLabels[method].desc}</div>
+                  </button>
+                ))}
               </div>
             </div>
           )}
 
-          {areaConfig.calculationType !== 'INFORMATIVE' && (
-            <div className={`p-3 bg-slate-50 rounded-lg border border-slate-200 ${!canEditGlobalConfig ? 'opacity-60' : ''}`}>
-              <label className={`flex items-center gap-3 ${canEditGlobalConfig ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
-                <input
-                  type="checkbox"
-                  disabled={!canEditGlobalConfig}
-                  checked={areaConfig.failIfAnySubjectFails}
-                  onChange={(e) => canEditGlobalConfig && setAreaConfig({ ...areaConfig, failIfAnySubjectFails: e.target.checked })}
-                  className="w-4 h-4 text-red-600 rounded border-slate-300 focus:ring-red-500"
-                />
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          {/* CAPA 3: CRITERIO DE APROBACIÓN (solo si EVALUABLE) */}
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          {areaConfig.areaType === 'EVALUABLE' && (
+            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">✅</span>
                 <div>
-                  <div className="text-sm font-medium text-slate-700">Pierde el área si cualquier asignatura está perdida</div>
-                  <div className="text-xs text-slate-500">Aunque el promedio sea suficiente</div>
+                  <label className="block text-sm font-semibold text-slate-800">3. Aprobación del Área</label>
+                  <p className="text-xs text-slate-500">Condición para aprobar</p>
                 </div>
-              </label>
+              </div>
+              <div className="space-y-2">
+                {(['AREA_AVERAGE', 'ALL_SUBJECTS', 'DOMINANT_SUBJECT'] as AreaApprovalCriteria[]).map((criteria) => (
+                  <label key={criteria} className={`flex items-start gap-3 p-3 rounded-lg border transition-all bg-white ${!canEditGlobalConfig ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${
+                    areaConfig.approvalCriteria === criteria ? 'border-green-500 bg-green-100' : 'border-slate-200 hover:border-green-300'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="approvalCriteria"
+                      disabled={!canEditGlobalConfig}
+                      checked={areaConfig.approvalCriteria === criteria}
+                      onChange={() => canEditGlobalConfig && setAreaConfig({ ...areaConfig, approvalCriteria: criteria })}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <div className="text-sm font-medium text-slate-700">{approvalCriteriaLabels[criteria].label}</div>
+                      <div className="text-xs text-slate-500">{approvalCriteriaLabels[criteria].desc}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              
+              {/* Opción adicional */}
+              <div className={`mt-3 p-3 bg-white rounded-lg border border-slate-200 ${!canEditGlobalConfig ? 'opacity-60' : ''}`}>
+                <label className={`flex items-center gap-3 ${canEditGlobalConfig ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
+                  <input
+                    type="checkbox"
+                    disabled={!canEditGlobalConfig}
+                    checked={areaConfig.failIfAnySubjectFails}
+                    onChange={(e) => canEditGlobalConfig && setAreaConfig({ ...areaConfig, failIfAnySubjectFails: e.target.checked })}
+                    className="w-4 h-4 text-red-600 rounded border-slate-300 focus:ring-red-500"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-slate-700">Pierde el área si cualquier asignatura está perdida</div>
+                    <div className="text-xs text-slate-500">Aunque el promedio sea suficiente</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          {/* CAPA 4: TIPO DE RECUPERACIÓN */}
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">♻️</span>
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">4. Recuperación</label>
+                <p className="text-xs text-slate-500">Qué ocurre si se pierde</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {(['BY_SUBJECT', 'FULL_AREA', 'CONDITIONAL', 'NONE'] as AreaRecoveryType[]).map((type) => (
+                <label key={type} className={`flex items-start gap-3 p-3 rounded-lg border transition-all bg-white ${!canEditGlobalConfig ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${
+                  areaConfig.recoveryType === type ? 'border-orange-500 bg-orange-100' : 'border-slate-200 hover:border-orange-300'
+                }`}>
+                  <input
+                    type="radio"
+                    name="recoveryType"
+                    disabled={!canEditGlobalConfig}
+                    checked={areaConfig.recoveryType === type}
+                    onChange={() => canEditGlobalConfig && setAreaConfig({ ...areaConfig, recoveryType: type })}
+                    className="mt-0.5"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-slate-700">{recoveryTypeLabels[type].label}</div>
+                    <div className="text-xs text-slate-500">{recoveryTypeLabels[type].desc}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Validaciones y alertas */}
+          {areaConfig.calculationMethod === 'DOMINANT' && areaConfig.areaType === 'EVALUABLE' && (
+            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-800">Asignatura dominante requerida</p>
+                <p className="text-xs text-amber-600">Asegúrate de marcar una asignatura como "dominante" en cada área.</p>
+              </div>
             </div>
           )}
 
@@ -454,7 +482,7 @@ export default function AreasAdmin() {
             <div>
               <h2 className="font-semibold text-slate-900">Áreas Académicas</h2>
               <p className="text-sm text-slate-500">
-                {calculationTypeLabels[areaConfig.calculationType]} • {approvalRuleLabels[areaConfig.approvalRule]} • Recup: {recoveryRuleLabels[areaConfig.recoveryRule]}
+                {getConfigSummary(areaConfig.areaType, areaConfig.calculationMethod, areaConfig.approvalCriteria, areaConfig.recoveryType)}
               </p>
             </div>
           </div>
@@ -531,7 +559,7 @@ export default function AreasAdmin() {
                             </div>
                             <div className="text-xs text-slate-500">
                               {subject.weeklyHours}h/semana
-                              {(areaConfig.calculationType === 'WEIGHTED' || areaConfig.calculationType === 'DOMINANT') && (
+                              {(areaConfig.calculationMethod === 'WEIGHTED' || areaConfig.calculationMethod === 'DOMINANT') && (
                                 <span className="ml-2">• {subject.weightPercentage}%</span>
                               )}
                             </div>

@@ -312,16 +312,23 @@ export class AcademicRulesEngine {
   ): number {
     if (subjects.length === 0) return 0
 
+    // Si el área es INFORMATIVA o FORMATIVA, solo calcular promedio simple
+    if (this.areaConfig.areaType === 'INFORMATIVE' || this.areaConfig.areaType === 'FORMATIVE') {
+      return this.roundGrade(
+        subjects.reduce((acc, s) => acc + s.grade, 0) / subjects.length
+      )
+    }
+
     // Si hay asignatura dominante configurada
-    if (dominantSubjectId && this.areaConfig.calculationType === 'DOMINANT') {
+    if (dominantSubjectId && this.areaConfig.calculationMethod === 'DOMINANT') {
       const dominant = subjects.find(s => s.subjectId === dominantSubjectId)
       if (dominant) {
         return dominant.grade
       }
     }
 
-    // Cálculo según tipo configurado
-    switch (this.areaConfig.calculationType) {
+    // Cálculo según método configurado (solo para áreas EVALUABLE)
+    switch (this.areaConfig.calculationMethod) {
       case 'AVERAGE':
         return this.roundGrade(
           subjects.reduce((acc, s) => acc + s.grade, 0) / subjects.length
@@ -335,12 +342,6 @@ export class AcademicRulesEngine {
       
       case 'DOMINANT':
         // Si no hay dominante específico, usar promedio simple
-        return this.roundGrade(
-          subjects.reduce((acc, s) => acc + s.grade, 0) / subjects.length
-        )
-      
-      case 'INFORMATIVE':
-        // Solo informativa, retornar promedio pero no afecta
         return this.roundGrade(
           subjects.reduce((acc, s) => acc + s.grade, 0) / subjects.length
         )
@@ -394,8 +395,13 @@ export class AcademicRulesEngine {
       if (anyFailed) return false
     }
 
-    // Según regla de aprobación
-    switch (this.areaConfig.approvalRule) {
+    // Si el área no es EVALUABLE, siempre aprueba (no afecta promoción)
+    if (this.areaConfig.areaType !== 'EVALUABLE') {
+      return true
+    }
+
+    // Según criterio de aprobación
+    switch (this.areaConfig.approvalCriteria) {
       case 'AREA_AVERAGE':
         return this.isGradeApproved(areaAverage, academicLevelId)
       
@@ -494,9 +500,9 @@ export class AcademicRulesEngine {
       return { allowed: false, reason: 'La asignatura ya está aprobada' }
     }
 
-    // Verificar regla de recuperación del área
-    switch (this.areaConfig.recoveryRule) {
-      case 'INDIVIDUAL_SUBJECT':
+    // Verificar tipo de recuperación del área
+    switch (this.areaConfig.recoveryType) {
+      case 'BY_SUBJECT':
         return { allowed: true }
       
       case 'FULL_AREA':
@@ -506,7 +512,10 @@ export class AcademicRulesEngine {
         }
       
       case 'CONDITIONAL':
-        return { allowed: true, reason: 'Sujeto a condiciones' }
+        return { allowed: true, reason: 'Sujeto a condiciones del comité' }
+      
+      case 'NONE':
+        return { allowed: false, reason: 'Esta área no permite recuperación' }
       
       default:
         return { allowed: true }

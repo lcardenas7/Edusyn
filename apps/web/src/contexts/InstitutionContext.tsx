@@ -41,33 +41,56 @@ interface FinalComponent {
   order: number
 }
 
-// Tipos de cálculo del área
-type AreaCalculationType = 
-  | 'INFORMATIVE'      // Solo informativa, no se calcula
-  | 'AVERAGE'          // Promedio simple
-  | 'WEIGHTED'         // Promedio ponderado
-  | 'DOMINANT'         // Asignatura dominante
+// ═══════════════════════════════════════════════════════════════════════════
+// CONFIGURACIÓN DE ÁREAS - NUEVA ESTRUCTURA (4 CAPAS)
+// ═══════════════════════════════════════════════════════════════════════════
 
-// Reglas de aprobación del área
-type AreaApprovalRule = 
-  | 'AREA_AVERAGE'           // Aprueba si el promedio del área >= mínima
-  | 'ALL_SUBJECTS'           // Aprueba si TODAS las asignaturas >= mínima
-  | 'DOMINANT_SUBJECT'       // Aprueba si la asignatura dominante >= mínima
+// CAPA 1: Tipo de Área (impacto académico)
+type AreaType = 
+  | 'EVALUABLE'      // Afecta promoción, se calcula nota numérica
+  | 'INFORMATIVE'    // No afecta promoción, solo informativa (ej: Orientación)
+  | 'FORMATIVE'      // Cualitativa, solo observaciones (ej: Comportamiento)
 
-// Reglas de recuperación
-type AreaRecoveryRule = 
-  | 'INDIVIDUAL_SUBJECT'     // Recupera cada asignatura perdida individualmente
-  | 'FULL_AREA'              // Recupera el área completa
-  | 'CONDITIONAL'            // Recupera según condiciones
+// CAPA 2: Método de cálculo (solo si es EVALUABLE)
+type AreaCalculationMethod = 
+  | 'AVERAGE'        // Promedio simple de asignaturas
+  | 'WEIGHTED'       // Ponderado por % de cada asignatura
+  | 'DOMINANT'       // Solo cuenta la asignatura principal
+
+// CAPA 3: Criterio de aprobación (solo si es EVALUABLE)
+type AreaApprovalCriteria = 
+  | 'AREA_AVERAGE'       // Nota final del área ≥ mínima
+  | 'ALL_SUBJECTS'       // Todas las asignaturas ≥ mínima
+  | 'DOMINANT_SUBJECT'   // Solo la dominante ≥ mínima
+
+// CAPA 4: Tipo de recuperación
+type AreaRecoveryType = 
+  | 'BY_SUBJECT'     // Recupera solo las asignaturas perdidas
+  | 'FULL_AREA'      // Evalúa toda el área completa
+  | 'CONDITIONAL'    // Según comité/acta de evaluación
+  | 'NONE'           // No recuperable
 
 // Configuración GLOBAL de Áreas (aplica a todas las áreas de la institución)
-// Nota: La nota mínima se toma de gradingConfig.minPassingGrade
 interface AreaConfig {
-  calculationType: AreaCalculationType
-  approvalRule: AreaApprovalRule
-  recoveryRule: AreaRecoveryRule
+  // CAPA 1: Tipo de área
+  areaType: AreaType
+  // CAPA 2: Método de cálculo (solo si EVALUABLE)
+  calculationMethod: AreaCalculationMethod
+  // CAPA 3: Criterio de aprobación (solo si EVALUABLE)
+  approvalCriteria: AreaApprovalCriteria
+  // CAPA 4: Tipo de recuperación
+  recoveryType: AreaRecoveryType
+  // Opción adicional: pierde área si cualquier asignatura falla (solo si EVALUABLE)
   failIfAnySubjectFails: boolean
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TIPOS LEGACY (para compatibilidad con código existente)
+// ═══════════════════════════════════════════════════════════════════════════
+// TODO: Migrar gradualmente y eliminar estos tipos
+type AreaCalculationType = AreaCalculationMethod | 'INFORMATIVE'
+type AreaApprovalRule = AreaApprovalCriteria
+type AreaRecoveryRule = 'INDIVIDUAL_SUBJECT' | 'FULL_AREA' | 'CONDITIONAL'
 
 // Calendario Académico
 type AcademicCalendar = 'A' | 'B'
@@ -308,9 +331,10 @@ const defaultPeriods: Period[] = [
 ]
 
 const defaultAreaConfig: AreaConfig = {
-  calculationType: 'WEIGHTED',
-  approvalRule: 'AREA_AVERAGE',
-  recoveryRule: 'INDIVIDUAL_SUBJECT',
+  areaType: 'EVALUABLE',
+  calculationMethod: 'WEIGHTED',
+  approvalCriteria: 'AREA_AVERAGE',
+  recoveryType: 'BY_SUBJECT',
   failIfAnySubjectFails: false,
 }
 
@@ -370,15 +394,37 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
       if (response.status >= 200 && response.status < 300) {
         const data = response.data
         
-        // Actualizar configuración de áreas
+        // Actualizar configuración de áreas (mapear desde formato legacy del backend)
         if (data.areaConfig) {
+          // Determinar areaType basado en calculationType legacy
+          const legacyCalcType = data.areaConfig.calculationType
+          const areaType: AreaType = legacyCalcType === 'INFORMATIVE' ? 'INFORMATIVE' : 'EVALUABLE'
+          const calculationMethod: AreaCalculationMethod = 
+            legacyCalcType === 'INFORMATIVE' ? 'AVERAGE' : 
+            (legacyCalcType as AreaCalculationMethod) || 'WEIGHTED'
+          
+          // Mapear approvalRule legacy
+          const legacyApproval = data.areaConfig.approvalRule
+          const approvalCriteria: AreaApprovalCriteria = 
+            legacyApproval === 'ALL_SUBJECTS_PASS' || legacyApproval === 'ALL_SUBJECTS' ? 'ALL_SUBJECTS' : 
+            legacyApproval === 'DOMINANT_SUBJECT_PASS' || legacyApproval === 'DOMINANT_SUBJECT' ? 'DOMINANT_SUBJECT' :
+            'AREA_AVERAGE'
+          
+          // Mapear recoveryRule legacy
+          const legacyRecovery = data.areaConfig.recoveryRule
+          const recoveryType: AreaRecoveryType = 
+            legacyRecovery === 'INDIVIDUAL_SUBJECT' ? 'BY_SUBJECT' :
+            legacyRecovery === 'FULL_AREA' ? 'FULL_AREA' :
+            legacyRecovery === 'CONDITIONAL' ? 'CONDITIONAL' :
+            legacyRecovery === 'BY_SUBJECT' ? 'BY_SUBJECT' :
+            'BY_SUBJECT'
+          
           const mappedAreaConfig: AreaConfig = {
-            calculationType: data.areaConfig.calculationType as AreaCalculationType,
-            approvalRule: data.areaConfig.approvalRule === 'ALL_SUBJECTS_PASS' ? 'ALL_SUBJECTS' : 
-                         data.areaConfig.approvalRule === 'DOMINANT_SUBJECT_PASS' ? 'DOMINANT_SUBJECT' :
-                         'AREA_AVERAGE',
-            recoveryRule: data.areaConfig.recoveryRule as AreaRecoveryRule,
-            failIfAnySubjectFails: data.areaConfig.failIfAnySubjectFails,
+            areaType,
+            calculationMethod,
+            approvalCriteria,
+            recoveryType,
+            failIfAnySubjectFails: data.areaConfig.failIfAnySubjectFails ?? false,
           }
           setAreaConfigState(mappedAreaConfig)
           saveToStorage('edusyn_areaConfig', mappedAreaConfig)
@@ -432,19 +478,22 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Guardar configuración de áreas en API
+  // Guardar configuración de áreas en API (convertir a formato legacy del backend)
   const saveAreaConfigToAPI = useCallback(async (): Promise<boolean> => {
     const token = getAuthToken()
     if (!token) return false
 
     setIsSaving(true)
     try {
+      // Convertir nuevo formato a legacy para el backend
+      const legacyCalcType = areaConfig.areaType === 'INFORMATIVE' ? 'INFORMATIVE' : areaConfig.calculationMethod
+      const legacyApproval = areaConfig.approvalCriteria
+      const legacyRecovery = areaConfig.recoveryType === 'BY_SUBJECT' ? 'INDIVIDUAL_SUBJECT' : areaConfig.recoveryType
+      
       await api.put('/institution-config/areas', {
-        calculationType: areaConfig.calculationType,
-        approvalRule: areaConfig.approvalRule === 'ALL_SUBJECTS' ? 'ALL_SUBJECTS_PASS' :
-                     areaConfig.approvalRule === 'DOMINANT_SUBJECT' ? 'DOMINANT_SUBJECT_PASS' :
-                     'AREA_AVERAGE',
-        recoveryRule: areaConfig.recoveryRule,
+        calculationType: legacyCalcType,
+        approvalRule: legacyApproval,
+        recoveryRule: legacyRecovery,
         failIfAnySubjectFails: areaConfig.failIfAnySubjectFails,
       })
       return true
@@ -615,6 +664,12 @@ export type {
   PerformanceLevel, 
   FinalComponent,
   AreaConfig,
+  // Nuevos tipos (4 capas)
+  AreaType,
+  AreaCalculationMethod,
+  AreaApprovalCriteria,
+  AreaRecoveryType,
+  // Tipos legacy (para compatibilidad)
   AreaCalculationType,
   AreaApprovalRule,
   AreaRecoveryRule,
