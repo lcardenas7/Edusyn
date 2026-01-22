@@ -3,6 +3,14 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RecoveryStatus, RecoveryImpactType } from '@prisma/client';
 import { RecoveryConfigService } from './recovery-config.service';
 
+// Tipos para la configuración de áreas
+interface AreaConfig {
+  calculationType: string;
+  approvalRule: string;
+  recoveryRule: string;
+  failIfAnySubjectFails: boolean;
+}
+
 @Injectable()
 export class PeriodRecoveryService {
   constructor(
@@ -10,6 +18,17 @@ export class PeriodRecoveryService {
     private readonly configService: RecoveryConfigService,
   ) {}
 
+  /**
+   * Detecta estudiantes que necesitan recuperación según la configuración del área
+   * 
+   * CRITERIOS DE APROBACIÓN:
+   * - AREA_AVERAGE: Si el promedio del área aprueba, NO necesita recuperar asignaturas individuales
+   * - ALL_SUBJECTS: Cada asignatura reprobada DEBE recuperarse
+   * - DOMINANT_SUBJECT: Solo importa si la asignatura dominante aprueba
+   * 
+   * CHECKBOX "Pierde el área si cualquier asignatura está perdida":
+   * - Si está marcado, aunque el promedio pase, SÍ debe recuperar
+   */
   async detectStudentsNeedingRecovery(
     academicTermId: string,
     institutionId: string,
@@ -28,12 +47,13 @@ export class PeriodRecoveryService {
 
     const minScore = Number(config.minPassingScore);
 
-    // Buscar notas finales de período por debajo del mínimo
-    const lowGrades = await this.prisma.periodFinalGrade.findMany({
-      where: {
-        academicTermId,
-        finalScore: { lt: minScore },
-      },
+    // Cargar configuración de áreas de la institución
+    const areaConfig = await this.getAreaConfig(institutionId);
+
+    // Buscar TODAS las notas finales de período (no solo las bajas)
+    // para poder calcular promedios de área
+    const allGrades = await this.prisma.periodFinalGrade.findMany({
+      where: { academicTermId },
       include: {
         studentEnrollment: {
           include: {
@@ -45,16 +65,211 @@ export class PeriodRecoveryService {
       },
     });
 
-    return lowGrades.map((grade) => ({
-      studentEnrollmentId: grade.studentEnrollmentId,
-      studentName: `${grade.studentEnrollment.student.firstName} ${grade.studentEnrollment.student.lastName}`,
-      group: `${grade.studentEnrollment.group.grade?.name} ${grade.studentEnrollment.group.name}`,
-      subjectId: grade.subjectId,
-      subjectName: grade.subject.name,
-      areaName: grade.subject.area.name,
-      originalScore: Number(grade.finalScore),
-      needsRecovery: true,
-    }));
+    // Agrupar por estudiante y área para calcular promedios
+    const studentAreaGrades = new Map<string, Map<string, {
+      grades: { subjectId: string; subjectName: string; score: number; weight: number; isDominant: boolean }[];
+      areaId: string;
+      areaName: string;
+    }>>();
+
+    for (const grade of allGrades) {
+      const studentKey = grade.studentEnrollmentId;
+      const areaId = grade.subject.areaId;
+      
+      if (!studentAreaGrades.has(studentKey)) {
+        studentAreaGrades.set(studentKey, new Map());
+      }
+      
+      const studentAreas = studentAreaGrades.get(studentKey)!;
+      if (!studentAreas.has(areaId)) {
+        studentAreas.set(areaId, {
+          grades: [],
+          areaId,
+          areaName: grade.subject.area.name,
+        });
+      }
+      
+      studentAreas.get(areaId)!.grades.push({
+        subjectId: grade.subjectId,
+        subjectName: grade.subject.name,
+        score: Number(grade.finalScore),
+        weight: Number(grade.subject.weight),
+        isDominant: grade.subject.isDominant,
+      });
+    }
+
+    // Determinar quién necesita recuperación según configuración del área
+    const studentsNeedingRecovery: any[] = [];
+
+    for (const [studentEnrollmentId, areas] of studentAreaGrades) {
+      const studentGrade = allGrades.find(g => g.studentEnrollmentId === studentEnrollmentId);
+      if (!studentGrade) continue;
+
+      for (const [areaId, areaData] of areas) {
+        // Calcular promedio del área
+        const areaAverage = this.calculateAreaAverage(areaData.grades, areaConfig.calculationType);
+        const areaApproved = areaAverage >= minScore;
+
+        // Verificar cada asignatura
+        for (const subjectGrade of areaData.grades) {
+          const subjectApproved = subjectGrade.score >= minScore;
+          
+          if (subjectApproved) continue; // Si aprobó, no necesita recuperación
+
+          // Determinar si REQUIERE recuperación según configuración
+          const recoveryResult = this.requiresRecovery(
+            subjectGrade.score,
+            subjectGrade.isDominant,
+            areaAverage,
+            areaData.grades.map(g => ({
+              grade: g.score,
+              approved: g.score >= minScore,
+              isDominant: g.isDominant,
+            })),
+            minScore,
+            areaConfig
+          );
+
+          if (recoveryResult.required) {
+            studentsNeedingRecovery.push({
+              studentEnrollmentId,
+              studentName: `${studentGrade.studentEnrollment.student.firstName} ${studentGrade.studentEnrollment.student.lastName}`,
+              group: `${studentGrade.studentEnrollment.group.grade?.name} ${studentGrade.studentEnrollment.group.name}`,
+              subjectId: subjectGrade.subjectId,
+              subjectName: subjectGrade.subjectName,
+              areaId,
+              areaName: areaData.areaName,
+              originalScore: subjectGrade.score,
+              areaAverage,
+              areaApproved,
+              needsRecovery: true,
+              reason: recoveryResult.reason,
+              recoveryType: recoveryResult.recoveryType,
+            });
+          }
+        }
+      }
+    }
+
+    return studentsNeedingRecovery;
+  }
+
+  /**
+   * Obtiene la configuración de áreas de la institución
+   */
+  private async getAreaConfig(institutionId: string): Promise<AreaConfig> {
+    const institution = await this.prisma.$queryRaw<any[]>`
+      SELECT "areaCalculationType", "areaApprovalRule", "areaRecoveryRule", "areaFailIfAnyFails"
+      FROM "Institution"
+      WHERE id = ${institutionId}
+    `;
+
+    if (institution.length === 0) {
+      // Valores por defecto
+      return {
+        calculationType: 'WEIGHTED',
+        approvalRule: 'AREA_AVERAGE',
+        recoveryRule: 'INDIVIDUAL_SUBJECT',
+        failIfAnySubjectFails: false,
+      };
+    }
+
+    return {
+      calculationType: institution[0].areaCalculationType || 'WEIGHTED',
+      approvalRule: institution[0].areaApprovalRule || 'AREA_AVERAGE',
+      recoveryRule: institution[0].areaRecoveryRule || 'INDIVIDUAL_SUBJECT',
+      failIfAnySubjectFails: institution[0].areaFailIfAnyFails || false,
+    };
+  }
+
+  /**
+   * Calcula el promedio del área según el tipo de cálculo configurado
+   */
+  private calculateAreaAverage(
+    grades: { score: number; weight: number; isDominant: boolean }[],
+    calculationType: string
+  ): number {
+    if (grades.length === 0) return 0;
+
+    switch (calculationType) {
+      case 'AVERAGE':
+        return grades.reduce((sum, g) => sum + g.score, 0) / grades.length;
+      
+      case 'WEIGHTED': {
+        const totalWeight = grades.reduce((sum, g) => sum + g.weight, 0);
+        if (totalWeight === 0) return grades.reduce((sum, g) => sum + g.score, 0) / grades.length;
+        return grades.reduce((sum, g) => sum + (g.score * g.weight), 0) / totalWeight;
+      }
+      
+      case 'DOMINANT': {
+        const dominant = grades.find(g => g.isDominant);
+        return dominant ? dominant.score : grades.reduce((sum, g) => sum + g.score, 0) / grades.length;
+      }
+      
+      default:
+        return grades.reduce((sum, g) => sum + g.score, 0) / grades.length;
+    }
+  }
+
+  /**
+   * Determina si una asignatura REQUIERE recuperación según la configuración del área
+   */
+  private requiresRecovery(
+    subjectGrade: number,
+    subjectIsDominant: boolean,
+    areaAverage: number,
+    allSubjects: { grade: number; approved: boolean; isDominant: boolean }[],
+    minScore: number,
+    areaConfig: AreaConfig
+  ): { required: boolean; reason: string; recoveryType: string } {
+    const subjectApproved = subjectGrade >= minScore;
+    
+    if (subjectApproved) {
+      return { required: false, reason: 'La asignatura ya está aprobada', recoveryType: 'NONE' };
+    }
+
+    if (areaConfig.recoveryRule === 'NONE') {
+      return { required: false, reason: 'Esta área no permite recuperación', recoveryType: 'NONE' };
+    }
+
+    const recoveryType = areaConfig.recoveryRule;
+
+    // CASO ESPECIAL: "Pierde el área si cualquier asignatura está perdida"
+    if (areaConfig.failIfAnySubjectFails) {
+      return { 
+        required: true, 
+        reason: 'Configuración: pierde el área si cualquier asignatura está perdida',
+        recoveryType
+      };
+    }
+
+    // Verificar según criterio de aprobación del área
+    switch (areaConfig.approvalRule) {
+      case 'AREA_AVERAGE': {
+        const areaApproved = areaAverage >= minScore;
+        if (areaApproved) {
+          return { required: false, reason: 'El área aprueba por promedio, no requiere recuperación', recoveryType: 'NONE' };
+        }
+        return { required: true, reason: 'El promedio del área no alcanza la nota mínima', recoveryType };
+      }
+      
+      case 'ALL_SUBJECTS':
+        return { required: true, reason: 'Todas las asignaturas deben estar aprobadas', recoveryType };
+      
+      case 'DOMINANT_SUBJECT': {
+        if (subjectIsDominant) {
+          return { required: true, reason: 'La asignatura dominante debe aprobar', recoveryType };
+        }
+        const dominantSubject = allSubjects.find(s => s.isDominant);
+        if (dominantSubject && dominantSubject.approved) {
+          return { required: false, reason: 'La asignatura dominante ya aprueba, esta no afecta', recoveryType: 'NONE' };
+        }
+        return { required: false, reason: 'Solo importa la asignatura dominante', recoveryType: 'NONE' };
+      }
+      
+      default:
+        return { required: true, reason: 'Asignatura reprobada', recoveryType };
+    }
   }
 
   async create(data: {

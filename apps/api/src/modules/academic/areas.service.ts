@@ -68,20 +68,41 @@ export class AreasService {
     });
   }
 
-  async addSubjectToArea(areaId: string, subjectData: { name: string; weeklyHours?: number; weight?: number; order?: number }) {
+  async addSubjectToArea(areaId: string, subjectData: { name: string; weeklyHours?: number; weight?: number; isDominant?: boolean; order?: number }) {
     await this.findById(areaId);
+    
+    // Si se marca como dominante, quitar dominante de las demás asignaturas del área
+    if (subjectData.isDominant) {
+      await this.prisma.subject.updateMany({
+        where: { areaId },
+        data: { isDominant: false },
+      });
+    }
+    
     return this.prisma.subject.create({
       data: {
         areaId,
         name: subjectData.name,
         weeklyHours: subjectData.weeklyHours ?? 0,
         weight: subjectData.weight ?? 1.0,
+        isDominant: subjectData.isDominant ?? false,
         order: subjectData.order ?? 0,
       },
     });
   }
 
-  async updateSubject(subjectId: string, data: { name?: string; weeklyHours?: number; weight?: number; order?: number }) {
+  async updateSubject(subjectId: string, data: { name?: string; weeklyHours?: number; weight?: number; isDominant?: boolean; order?: number }) {
+    // Si se marca como dominante, quitar dominante de las demás asignaturas del área
+    if (data.isDominant) {
+      const subject = await this.prisma.subject.findUnique({ where: { id: subjectId } });
+      if (subject) {
+        await this.prisma.subject.updateMany({
+          where: { areaId: subject.areaId, id: { not: subjectId } },
+          data: { isDominant: false },
+        });
+      }
+    }
+    
     return this.prisma.subject.update({
       where: { id: subjectId },
       data,

@@ -79,11 +79,11 @@ export const groupsApi = {
 export const areasApi = {
   getAll: (institutionId?: string) => api.get('/areas', { params: { institutionId } }),
   getById: (id: string) => api.get(`/areas/${id}`),
-  create: (data: { institutionId: string; name: string; isMandatory?: boolean }) => api.post('/areas', data),
+  create: (data: { institutionId: string; name: string; isMandatory?: boolean; order?: number }) => api.post('/areas', data),
   update: (id: string, data: { name?: string; isMandatory?: boolean; order?: number }) => api.put(`/areas/${id}`, data),
   delete: (id: string) => api.delete(`/areas/${id}`),
-  addSubject: (areaId: string, data: { name: string; weeklyHours?: number; weight?: number }) => api.post(`/areas/${areaId}/subjects`, data),
-  updateSubject: (subjectId: string, data: { name?: string; weeklyHours?: number; weight?: number }) => api.put(`/areas/subjects/${subjectId}`, data),
+  addSubject: (areaId: string, data: { name: string; weeklyHours?: number; weight?: number; isDominant?: boolean; order?: number }) => api.post(`/areas/${areaId}/subjects`, data),
+  updateSubject: (subjectId: string, data: { name?: string; weeklyHours?: number; weight?: number; isDominant?: boolean; order?: number }) => api.put(`/areas/subjects/${subjectId}`, data),
   deleteSubject: (subjectId: string) => api.delete(`/areas/subjects/${subjectId}`),
 }
 

@@ -147,6 +147,7 @@ enum AreaRecoveryRule {
   INDIVIDUAL_SUBJECT  // Se recuperan asignaturas individuales
   FULL_AREA           // Se recupera el área completa
   CONDITIONAL         // Según reglas específicas
+  NONE                // No permite recuperación
 }
 
 // Módulos disponibles en el sistema
@@ -413,6 +414,7 @@ model Subject {
   name        String
   weeklyHours Int      @default(0)
   weight      Float    @default(1.0)
+  isDominant  Boolean  @default(false)  // Si es la asignatura dominante del área
   order       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

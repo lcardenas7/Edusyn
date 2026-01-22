@@ -488,7 +488,100 @@ export class AcademicRulesEngine {
   }
 
   /**
-   * Verifica si una asignatura puede entrar en recuperación
+   * Verifica si una asignatura REQUIERE recuperación según la configuración del área
+   * 
+   * CRITERIOS DE APROBACIÓN:
+   * - AREA_AVERAGE: Aprueba si promedio del área ≥ nota mínima
+   * - ALL_SUBJECTS: Aprueba si TODAS las asignaturas ≥ nota mínima
+   * - DOMINANT_SUBJECT: Aprueba si la asignatura dominante ≥ nota mínima
+   * 
+   * CHECKBOX "Pierde el área si cualquier asignatura está perdida":
+   * - Si está marcado, aunque el promedio pase, si hay una asignatura perdida SÍ debe recuperar
+   * 
+   * TIPOS DE RECUPERACIÓN:
+   * - BY_SUBJECT: Recupera solo las asignaturas perdidas
+   * - FULL_AREA: Debe recuperar toda el área completa
+   * - CONDITIONAL: Según comité de evaluación
+   * - NONE: No permite recuperación
+   */
+  requiresRecovery(
+    subjectGrade: number,
+    subjectIsDominant: boolean,
+    areaAverage: number,
+    allSubjects: { grade: number; approved: boolean; isDominant: boolean }[],
+    academicLevelId: string
+  ): { required: boolean; reason: string; recoveryType: string } {
+    const subjectApproved = this.isGradeApproved(subjectGrade, academicLevelId)
+    
+    // Si la asignatura ya está aprobada, no requiere recuperación
+    if (subjectApproved) {
+      return { required: false, reason: 'La asignatura ya está aprobada', recoveryType: 'NONE' }
+    }
+
+    // Si el área no es EVALUABLE, no afecta promoción
+    if (this.areaConfig.areaType !== 'EVALUABLE') {
+      return { required: false, reason: 'El área no afecta promoción', recoveryType: 'NONE' }
+    }
+
+    // Si no permite recuperación
+    if (this.areaConfig.recoveryType === 'NONE') {
+      return { required: false, reason: 'Esta área no permite recuperación', recoveryType: 'NONE' }
+    }
+
+    const recoveryType = this.areaConfig.recoveryType
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CASO ESPECIAL: "Pierde el área si cualquier asignatura está perdida"
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Si está marcado, SIEMPRE debe recuperar la asignatura perdida, sin importar el promedio
+    if (this.areaConfig.failIfAnySubjectFails) {
+      return { 
+        required: true, 
+        reason: 'Configuración: pierde el área si cualquier asignatura está perdida',
+        recoveryType
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // VERIFICAR SEGÚN CRITERIO DE APROBACIÓN DEL ÁREA
+    // ═══════════════════════════════════════════════════════════════════════════
+    switch (this.areaConfig.approvalCriteria) {
+      case 'AREA_AVERAGE': {
+        // Si el promedio del área aprueba, NO se requiere recuperación
+        const areaApproved = this.isGradeApproved(areaAverage, academicLevelId)
+        if (areaApproved) {
+          return { required: false, reason: 'El área aprueba por promedio, no requiere recuperación', recoveryType: 'NONE' }
+        }
+        // Si el área no aprueba, sí requiere recuperación
+        return { required: true, reason: 'El promedio del área no alcanza la nota mínima', recoveryType }
+      }
+      
+      case 'ALL_SUBJECTS':
+        // TODAS las asignaturas deben aprobar, así que sí requiere recuperación
+        return { required: true, reason: 'Todas las asignaturas deben estar aprobadas', recoveryType }
+      
+      case 'DOMINANT_SUBJECT': {
+        // Solo importa si la asignatura dominante aprueba
+        if (subjectIsDominant) {
+          return { required: true, reason: 'La asignatura dominante debe aprobar', recoveryType }
+        }
+        // Si no es dominante, verificar si la dominante ya aprueba
+        const dominantSubject = allSubjects.find(s => s.isDominant)
+        if (dominantSubject && dominantSubject.approved) {
+          return { required: false, reason: 'La asignatura dominante ya aprueba, esta no afecta', recoveryType: 'NONE' }
+        }
+        // Si la dominante no aprueba, esta asignatura no importa
+        return { required: false, reason: 'Solo importa la asignatura dominante', recoveryType: 'NONE' }
+      }
+      
+      default:
+        return { required: true, reason: 'Asignatura reprobada', recoveryType }
+    }
+  }
+
+  /**
+   * Verifica si una asignatura puede entrar en recuperación (reglas de flujo)
+   * Nota: Use requiresRecovery() para determinar si DEBE recuperar
    */
   canRecoverSubject(
     subjectGrade: number,

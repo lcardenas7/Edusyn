@@ -62,6 +62,10 @@ export class AddSubjectToAreaDto {
   weight?: number;
 
   @IsOptional()
+  @IsBoolean()
+  isDominant?: boolean;
+
+  @IsOptional()
   @IsNumber()
   order?: number;
 }
@@ -78,6 +82,10 @@ export class UpdateSubjectDto {
   @IsOptional()
   @IsNumber()
   weight?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isDominant?: boolean;
 
   @IsOptional()
   @IsNumber()

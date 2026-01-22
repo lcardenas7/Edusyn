@@ -1,7 +1,8 @@
-import { useState } from 'react'
-import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, BookOpen, Settings, Star, Lock, Save, AlertTriangle } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, BookOpen, Settings, Star, Lock, Save, AlertTriangle, Loader2 } from 'lucide-react'
 import { useInstitution, AreaType, AreaCalculationMethod, AreaApprovalCriteria, AreaRecoveryType } from '../contexts/InstitutionContext'
 import { useAuth } from '../contexts/AuthContext'
+import { areasApi } from '../lib/api'
 
 interface Subject {
   id: string
@@ -53,53 +54,25 @@ const getConfigSummary = (areaType: AreaType, calcMethod: AreaCalculationMethod,
   return `${calculationMethodLabels[calcMethod].label} • ${approvalCriteriaLabels[approvalCriteria].label} • Recup: ${recoveryTypeLabels[recoveryType].label}`
 }
 
-const mockAreas: Area[] = [
-  {
-    id: '1',
-    name: 'Matemáticas',
-    isMandatory: true,
-    order: 1,
-    subjects: [
-      { id: 's1', name: 'Matemáticas', weeklyHours: 5, weightPercentage: 70, isDominant: true, order: 1 },
-      { id: 's1b', name: 'Estadística', weeklyHours: 2, weightPercentage: 30, isDominant: false, order: 2 },
-    ],
-  },
-  {
-    id: '2',
-    name: 'Humanidades',
-    isMandatory: true,
-    order: 2,
-    subjects: [
-      { id: 's2', name: 'Lengua Castellana', weeklyHours: 4, weightPercentage: 50, isDominant: false, order: 1 },
-      { id: 's3', name: 'Inglés', weeklyHours: 3, weightPercentage: 50, isDominant: false, order: 2 },
-    ],
-  },
-  {
-    id: '3',
-    name: 'Ciencias Naturales',
-    isMandatory: true,
-    order: 3,
-    subjects: [
-      { id: 's4', name: 'Biología', weeklyHours: 3, weightPercentage: 50, isDominant: true, order: 1 },
-      { id: 's5', name: 'Química', weeklyHours: 3, weightPercentage: 30, isDominant: false, order: 2 },
-      { id: 's6', name: 'Física', weeklyHours: 2, weightPercentage: 20, isDominant: false, order: 3 },
-    ],
-  },
-  {
-    id: '4',
-    name: 'Educación Artística',
-    isMandatory: false,
-    order: 4,
-    subjects: [
-      { id: 's7', name: 'Artes Plásticas', weeklyHours: 2, weightPercentage: 50, isDominant: false, order: 1 },
-      { id: 's8', name: 'Música', weeklyHours: 2, weightPercentage: 50, isDominant: false, order: 2 },
-    ],
-  },
-]
+// Helper para mapear datos del backend al formato del frontend
+const mapBackendAreaToFrontend = (backendArea: any): Area => ({
+  id: backendArea.id,
+  name: backendArea.name,
+  isMandatory: backendArea.isMandatory,
+  order: backendArea.order,
+  subjects: (backendArea.subjects || []).map((s: any) => ({
+    id: s.id,
+    name: s.name,
+    weeklyHours: s.weeklyHours,
+    weightPercentage: Math.round(s.weight * 100), // Backend usa 0-1, frontend usa 0-100
+    isDominant: s.isDominant,
+    order: s.order,
+  })),
+})
 
 export default function AreasAdmin() {
   const { areaConfig, setAreaConfig, saveAreaConfigToAPI, isSaving } = useInstitution()
-  const { user } = useAuth()
+  const { user, institution } = useAuth()
   
   // Solo admin y rector pueden editar la configuración global
   const canEditGlobalConfig = user?.roles?.some(r => {
@@ -107,9 +80,11 @@ export default function AreasAdmin() {
     return roleName.includes('admin') || roleName.includes('rector')
   }) ?? true
   
-  const [areas, setAreas] = useState<Area[]>(mockAreas)
-  const [expandedAreas, setExpandedAreas] = useState<Set<string>>(new Set(['1', '2', '3']))
-  const [isConfigExpanded, setIsConfigExpanded] = useState(true)  // Estado para colapsar configuración global
+  const [areas, setAreas] = useState<Area[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [expandedAreas, setExpandedAreas] = useState<Set<string>>(new Set())
+  const [isConfigExpanded, setIsConfigExpanded] = useState(true)
   const [showAreaModal, setShowAreaModal] = useState(false)
   const [showSubjectModal, setShowSubjectModal] = useState(false)
   const [editingArea, setEditingArea] = useState<Area | null>(null)
@@ -127,6 +102,27 @@ export default function AreasAdmin() {
     weightPercentage: 0,
     isDominant: false,
   })
+
+  // Cargar áreas desde el backend
+  const loadAreas = useCallback(async () => {
+    if (!institution?.id) return
+    setLoading(true)
+    try {
+      const response = await areasApi.getAll(institution.id)
+      const mappedAreas = (response.data || []).map(mapBackendAreaToFrontend)
+      setAreas(mappedAreas)
+      // Expandir las primeras 3 áreas por defecto
+      setExpandedAreas(new Set(mappedAreas.slice(0, 3).map((a: Area) => a.id)))
+    } catch (error) {
+      console.error('Error loading areas:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [institution?.id])
+
+  useEffect(() => {
+    loadAreas()
+  }, [loadAreas])
 
   const toggleExpand = (areaId: string) => {
     const newExpanded = new Set(expandedAreas)
@@ -176,72 +172,86 @@ export default function AreasAdmin() {
     setShowSubjectModal(true)
   }
 
-  const saveArea = () => {
-    if (!areaForm.name.trim()) return
+  const saveArea = async () => {
+    if (!areaForm.name.trim() || !institution?.id) return
+    setSaving(true)
 
-    if (editingArea) {
-      setAreas(areas.map(a => 
-        a.id === editingArea.id 
-          ? { ...a, name: areaForm.name, isMandatory: areaForm.isMandatory }
-          : a
-      ))
-    } else {
-      const newArea: Area = {
-        id: `area-${Date.now()}`,
-        name: areaForm.name,
-        isMandatory: areaForm.isMandatory,
-        order: areas.length + 1,
-        subjects: [],
+    try {
+      if (editingArea) {
+        await areasApi.update(editingArea.id, {
+          name: areaForm.name,
+          isMandatory: areaForm.isMandatory,
+        })
+      } else {
+        await areasApi.create({
+          institutionId: institution.id,
+          name: areaForm.name,
+          isMandatory: areaForm.isMandatory,
+          order: areas.length + 1,
+        })
       }
-      setAreas([...areas, newArea])
+      await loadAreas()
+      setShowAreaModal(false)
+    } catch (error: any) {
+      console.error('Error saving area:', error)
+      alert(error.response?.data?.message || 'Error al guardar el área')
+    } finally {
+      setSaving(false)
     }
-    setShowAreaModal(false)
   }
 
-  const saveSubject = () => {
+  const saveSubject = async () => {
     if (!subjectForm.name.trim()) return
+    setSaving(true)
 
-    setAreas(areas.map(area => {
-      if (area.id !== editingSubject.areaId) return area
-
-      // Si se marca como dominante, quitar dominante de las demás
-      const updatedSubjects = editingSubject.subject
-        ? area.subjects.map(s =>
-            s.id === editingSubject.subject!.id
-              ? { ...s, ...subjectForm }
-              : subjectForm.isDominant ? { ...s, isDominant: false } : s
-          )
-        : area.subjects.map(s => subjectForm.isDominant ? { ...s, isDominant: false } : s)
+    try {
+      const area = areas.find(a => a.id === editingSubject.areaId)
+      if (!area) return
 
       if (editingSubject.subject) {
-        return { ...area, subjects: updatedSubjects }
-      } else {
-        const newSubject: Subject = {
-          id: `subj-${Date.now()}`,
+        await areasApi.updateSubject(editingSubject.subject.id, {
           name: subjectForm.name,
           weeklyHours: subjectForm.weeklyHours,
-          weightPercentage: subjectForm.weightPercentage,
+          weight: subjectForm.weightPercentage / 100, // Frontend usa 0-100, backend usa 0-1
+          isDominant: subjectForm.isDominant,
+        })
+      } else {
+        await areasApi.addSubject(editingSubject.areaId, {
+          name: subjectForm.name,
+          weeklyHours: subjectForm.weeklyHours,
+          weight: subjectForm.weightPercentage / 100,
           isDominant: subjectForm.isDominant,
           order: area.subjects.length + 1,
-        }
-        return { ...area, subjects: [...updatedSubjects, newSubject] }
+        })
       }
-    }))
-    setShowSubjectModal(false)
+      await loadAreas()
+      setShowSubjectModal(false)
+    } catch (error: any) {
+      console.error('Error saving subject:', error)
+      alert(error.response?.data?.message || 'Error al guardar la asignatura')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteConfirm) return
+    setSaving(true)
 
-    if (deleteConfirm.type === 'area') {
-      setAreas(areas.filter(a => a.id !== deleteConfirm.id))
-    } else {
-      setAreas(areas.map(area => ({
-        ...area,
-        subjects: area.subjects.filter(s => s.id !== deleteConfirm.id),
-      })))
+    try {
+      if (deleteConfirm.type === 'area') {
+        await areasApi.delete(deleteConfirm.id)
+      } else {
+        await areasApi.deleteSubject(deleteConfirm.id)
+      }
+      await loadAreas()
+      setDeleteConfirm(null)
+    } catch (error: any) {
+      console.error('Error deleting:', error)
+      alert(error.response?.data?.message || 'Error al eliminar')
+    } finally {
+      setSaving(false)
     }
-    setDeleteConfirm(null)
   }
 
   return (
@@ -489,7 +499,23 @@ export default function AreasAdmin() {
         </div>
 
         <div className="divide-y divide-slate-100">
-          {areas.map((area) => (
+          {loading ? (
+            <div className="px-6 py-12 text-center">
+              <Loader2 className="w-8 h-8 mx-auto mb-3 text-blue-500 animate-spin" />
+              <p className="text-slate-500">Cargando áreas...</p>
+            </div>
+          ) : areas.length === 0 ? (
+            <div className="px-6 py-12 text-center text-slate-500">
+              <BookOpen className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+              <p>No hay áreas configuradas</p>
+              <button
+                onClick={() => openAreaModal()}
+                className="mt-3 text-blue-600 hover:underline"
+              >
+                Crear primera área
+              </button>
+            </div>
+          ) : areas.map((area) => (
             <div key={area.id}>
               <div 
                 className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 cursor-pointer"
@@ -593,19 +619,6 @@ export default function AreasAdmin() {
               )}
             </div>
           ))}
-
-          {areas.length === 0 && (
-            <div className="px-6 py-12 text-center text-slate-500">
-              <BookOpen className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-              <p>No hay áreas configuradas</p>
-              <button
-                onClick={() => openAreaModal()}
-                className="mt-3 text-blue-600 hover:underline"
-              >
-                Crear primera área
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
