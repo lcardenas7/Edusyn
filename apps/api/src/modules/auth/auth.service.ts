@@ -46,10 +46,11 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
+    // Obtener institución del usuario
+    const userInstitution = await this.usersService.findUserInstitution(user.id);
+    
     // Si se especifica institutionId, validar que el usuario pertenezca a esa institución
     if (dto.institutionId) {
-      const userInstitution = await this.usersService.findUserInstitution(user.id);
-      
       // Si el usuario no tiene institución asignada o no coincide con la solicitada
       if (!userInstitution || userInstitution.id !== dto.institutionId) {
         throw new UnauthorizedException('No tienes acceso a esta institución. Verifica que estés ingresando a tu institución correcta.');
@@ -58,10 +59,12 @@ export class AuthService {
 
     const roles = user.roles.map((r) => r.role.name);
 
+    // Incluir institutionId en el token JWT
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
       roles,
+      institutionId: userInstitution?.id || null,
     });
 
     return {
