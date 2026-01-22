@@ -298,32 +298,33 @@ export class InstitutionConfigService {
   // Sincroniza los períodos con AcademicTerm para que funcionen las ventanas de calificación
   private async syncPeriodsToAcademicTerms(institutionId: string, periods: PeriodConfig[]) {
     try {
-      // Obtener o crear el año académico actual
-      const currentYear = new Date().getFullYear()
-      let academicYear = await this.prisma.academicYear.findFirst({
-        where: { institutionId, year: currentYear }
+      // Obtener el año académico existente (NO crear automáticamente)
+      // Preferir ACTIVE; si no existe, usar el DRAFT más reciente
+      const activeYear = await this.prisma.academicYear.findFirst({
+        where: { institutionId, status: 'ACTIVE' },
+        orderBy: { year: 'desc' },
       })
+      const draftYear = await this.prisma.academicYear.findFirst({
+        where: { institutionId, status: 'DRAFT' },
+        orderBy: { year: 'desc' },
+      })
+      const academicYear = activeYear || draftYear
 
+      // Si no hay año lectivo, no se sincroniza (el wizard debe crear el año)
       if (!academicYear) {
-        academicYear = await this.prisma.academicYear.create({
-          data: {
-            institutionId,
-            year: currentYear,
-            startDate: new Date(currentYear, 0, 1),
-            endDate: new Date(currentYear, 11, 31),
-          }
-        })
+        return
       }
 
       // Obtener términos existentes
       const existingTerms = await this.prisma.academicTerm.findMany({
-        where: { academicYearId: academicYear.id }
+        where: { academicYearId: academicYear.id },
       })
 
       // Crear o actualizar términos para cada período
       for (let i = 0; i < periods.length; i++) {
         const period = periods[i]
-        const existingTerm = existingTerms.find(t => t.name === period.name || t.order === i)
+        const order = i + 1
+        const existingTerm = existingTerms.find(t => t.type === 'PERIOD' && (t.order === order || t.name === period.name))
 
         if (existingTerm) {
           // Actualizar término existente
@@ -331,7 +332,7 @@ export class InstitutionConfigService {
             where: { id: existingTerm.id },
             data: {
               name: period.name,
-              order: i,
+              order,
               weightPercentage: period.weight,
               startDate: period.startDate ? new Date(period.startDate) : null,
               endDate: period.endDate ? new Date(period.endDate) : null,
@@ -344,7 +345,7 @@ export class InstitutionConfigService {
               academicYearId: academicYear.id,
               type: 'PERIOD',
               name: period.name,
-              order: i,
+              order,
               weightPercentage: period.weight,
               startDate: period.startDate ? new Date(period.startDate) : null,
               endDate: period.endDate ? new Date(period.endDate) : null,
@@ -355,7 +356,11 @@ export class InstitutionConfigService {
 
       // Eliminar términos que ya no existen en los períodos
       const periodNames = periods.map(p => p.name)
-      const termsToDelete = existingTerms.filter(t => !periodNames.includes(t.name) && t.order >= periods.length)
+      const maxOrder = periods.length
+      const termsToDelete = existingTerms.filter(t =>
+        t.type === 'PERIOD' &&
+        (!periodNames.includes(t.name) || t.order > maxOrder)
+      )
       for (const term of termsToDelete) {
         await this.prisma.academicTerm.delete({ where: { id: term.id } }).catch(() => {
           // Ignorar errores si hay datos relacionados

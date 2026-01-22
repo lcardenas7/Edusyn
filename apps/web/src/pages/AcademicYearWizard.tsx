@@ -172,6 +172,15 @@ const AcademicYearWizard: React.FC = () => {
   const createYear = async () => {
     if (!institution?.id) return
 
+    // Verificar si el año ya existe
+    const existingYear = existingYears.find(y => y.year === yearData.year)
+    if (existingYear) {
+      setValidationErrors({
+        general: [`El año ${yearData.year} ya existe con estado: ${existingYear.status === 'DRAFT' ? 'Borrador' : existingYear.status === 'ACTIVE' ? 'Activo' : 'Cerrado'}. Usa el botón "Continuar Configuración" para editarlo.`]
+      })
+      return
+    }
+
     setIsCreating(true)
     try {
       const response = await academicYearLifecycleApi.create({
@@ -315,13 +324,38 @@ const AcademicYearWizard: React.FC = () => {
                   <input
                     type="number"
                     value={yearData.year}
-                    onChange={(e) => setYearData({ ...yearData, year: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                    onChange={(e) => {
+                      const newYear = parseInt(e.target.value) || 0
+                      setYearData({ ...yearData, year: newYear })
+                      // Limpiar error si el año es diferente
+                      if (existingYears.some(y => y.year === newYear)) {
+                        setValidationErrors(prev => ({
+                          ...prev,
+                          year: [`El año ${newYear} ya existe. Elige un año diferente.`]
+                        }))
+                      } else {
+                        setValidationErrors(prev => {
+                          const newErrors = { ...prev }
+                          delete newErrors.year
+                          return newErrors
+                        })
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 ${
+                      existingYears.some(y => y.year === yearData.year) 
+                        ? 'border-red-300 bg-red-50' 
+                        : 'border-slate-300'
+                    }`}
                     min="2000"
                     max="2100"
                   />
                   {validationErrors.year && (
                     <p className="text-red-500 text-sm mt-1">{validationErrors.year[0]}</p>
+                  )}
+                  {existingYears.some(y => y.year === yearData.year) && !validationErrors.year && (
+                    <p className="text-amber-600 text-sm mt-1">
+                      ⚠️ Este año ya existe. Usa "Continuar Configuración" para editarlo.
+                    </p>
                   )}
                 </div>
 
@@ -364,8 +398,11 @@ const AcademicYearWizard: React.FC = () => {
             {/* Años existentes */}
             {existingYears.length > 0 && (
               <div>
-                <h4 className="text-md font-medium text-slate-700 mb-3">Años Lectivos Existentes</h4>
-                <div className="bg-slate-50 rounded-lg p-4">
+                <h4 className="text-md font-medium text-slate-700 mb-3">⚠️ Años Lectivos Existentes</h4>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <p className="text-sm text-amber-800 mb-3">
+                    Ya existen años lectivos configurados. No puedes crear años duplicados.
+                  </p>
                   <div className="space-y-2">
                     {existingYears.map(year => (
                       <div key={year.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
@@ -374,8 +411,13 @@ const AcademicYearWizard: React.FC = () => {
                             year.status === 'ACTIVE' ? 'bg-green-500' :
                             year.status === 'CLOSED' ? 'bg-red-500' : 'bg-yellow-500'
                           }`} />
-                          <span className="font-medium">{year.name}</span>
-                          <span className="text-sm text-slate-500">({year.year})</span>
+                          <div>
+                            <span className="font-medium">{year.name}</span>
+                            <span className="text-sm text-slate-500 ml-2">({year.year})</span>
+                            {year.status === 'ACTIVE' && (
+                              <span className="text-xs text-green-600 ml-2">✓ Año actual</span>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           {year.status === 'DRAFT' && (
@@ -428,6 +470,11 @@ const AcademicYearWizard: React.FC = () => {
                       </div>
                     ))}
                   </div>
+                  {existingYears.some(y => y.status === 'DRAFT') && (
+                    <p className="text-xs text-amber-600 mt-3">
+                      💡 Tip: Usa "Continuar Configuración" para completar el año en borrador.
+                    </p>
+                  )}
                 </div>
               </div>
             )}
