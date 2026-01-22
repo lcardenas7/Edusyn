@@ -65,4 +65,14 @@ export class StudentsController {
   async getEnrollments(@Param('studentId') studentId: string) {
     return this.studentsService.getEnrollmentsByStudent(studentId);
   }
+
+  @Post('bulk-import')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async bulkImport(@Body() data: {
+    institutionId: string;
+    academicYearId: string;
+    students: any[];
+  }) {
+    return this.studentsService.bulkImport(data);
+  }
 }

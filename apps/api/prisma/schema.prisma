@@ -287,6 +287,7 @@ model Institution {
   performanceScale PerformanceScale[]
   evaluationComponents EvaluationComponent[]
   students      Student[]
+  guardians     Guardian[]
   messages      Message[]
   announcements Announcement[]
   galleryImages GalleryImage[]
@@ -681,22 +682,130 @@ model EvaluationPlanComponentWeight {
 model Student {
   id            String   @id @default(cuid())
   institutionId String
+  
+  // Información básica
   documentType  String
   documentNumber String
   firstName     String
+  secondName    String?
   lastName      String
+  secondLastName String?
   birthDate     DateTime?
+  birthPlace    String?
   gender        String?
   email         String?
   phone         String?
   address       String?
+  neighborhood  String?
+  city          String?
+  
+  // Información médica
+  bloodType     String?
+  eps           String?
+  allergies     String?
+  medicalConditions String?
+  medications   String?
+  emergencyContact String?
+  emergencyPhone String?
+  
+  // Información socioeconómica (para reportes MEN)
+  stratum       Int?
+  sisbenLevel   String?
+  ethnicity     String?
+  displacement  Boolean  @default(false)
+  disability    String?
+  disabilityType String?
+  
+  // Información adicional
+  previousSchool String?
+  photo         String?
+  observations  String?
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  enrollments StudentEnrollment[]
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  enrollments   StudentEnrollment[]
+  guardians     StudentGuardian[]
 
   @@unique([institutionId, documentNumber])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ACUDIENTES / PADRES DE FAMILIA
+// ═══════════════════════════════════════════════════════════════════════════
+
+model Guardian {
+  id              String   @id @default(cuid())
+  institutionId   String
+  
+  // Información básica
+  documentType    String
+  documentNumber  String
+  firstName       String
+  secondName      String?
+  lastName        String
+  secondLastName  String?
+  
+  // Contacto
+  phone           String
+  alternatePhone  String?
+  email           String?
+  address         String?
+  neighborhood    String?
+  city            String?
+  
+  // Información laboral
+  occupation      String?
+  workplace       String?
+  workPhone       String?
+  workAddress     String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  institution     Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  students        StudentGuardian[]
+
+  @@unique([institutionId, documentNumber])
+}
+
+model StudentGuardian {
+  id          String   @id @default(cuid())
+  studentId   String
+  guardianId  String
+  
+  // Tipo de relación
+  relationship GuardianRelationship
+  isPrimary   Boolean  @default(false)
+  canPickUp   Boolean  @default(true)
+  isEmergencyContact Boolean @default(false)
+  
+  // Permisos
+  receivesNotifications Boolean @default(true)
+  receivesGrades Boolean @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  guardian    Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, guardianId])
+}
+
+enum GuardianRelationship {
+  FATHER
+  MOTHER
+  STEPFATHER
+  STEPMOTHER
+  GRANDFATHER
+  GRANDMOTHER
+  UNCLE
+  AUNT
+  SIBLING
+  LEGAL_GUARDIAN
+  OTHER
 }
 
 model StudentEnrollment {

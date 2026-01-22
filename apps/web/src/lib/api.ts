@@ -93,6 +93,20 @@ export const subjectsApi = {
   create: (data: { areaId: string; name: string; weeklyHours?: number }) => api.post('/subjects', data),
 }
 
+// Guardians (Acudientes)
+export const guardiansApi = {
+  getAll: (params?: { institutionId?: string; search?: string }) => api.get('/guardians', { params }),
+  getById: (id: string) => api.get(`/guardians/${id}`),
+  getByStudent: (studentId: string) => api.get(`/guardians/student/${studentId}`),
+  create: (data: any) => api.post('/guardians', data),
+  createWithLink: (data: any) => api.post('/guardians/with-link', data),
+  update: (id: string, data: any) => api.put(`/guardians/${id}`, data),
+  delete: (id: string) => api.delete(`/guardians/${id}`),
+  linkToStudent: (data: { studentId: string; guardianId: string; relationship: string; isPrimary?: boolean; canPickUp?: boolean; isEmergencyContact?: boolean }) => api.post('/guardians/link', data),
+  unlinkFromStudent: (studentId: string, guardianId: string) => api.delete(`/guardians/link/${studentId}/${guardianId}`),
+  updateLink: (studentId: string, guardianId: string, data: any) => api.put(`/guardians/link/${studentId}/${guardianId}`, data),
+}
+
 // Academic Years
 export const academicYearsApi = {
   getAll: (institutionId?: string) => api.get('/academic-terms/years', { params: { institutionId } }),
@@ -278,12 +292,13 @@ export const communicationsApi = {
 export const studentsApi = {
   getAll: (params?: { institutionId?: string; groupId?: string; academicYearId?: string }) => api.get('/students', { params }),
   getById: (id: string) => api.get(`/students/${id}`),
-  create: (data: { institutionId: string; documentType: string; documentNumber: string; firstName: string; lastName: string; birthDate?: string; gender?: string; email?: string; phone?: string; address?: string }) => api.post('/students', data),
-  update: (id: string, data: { documentType?: string; documentNumber?: string; firstName?: string; lastName?: string; birthDate?: string; gender?: string; email?: string; phone?: string; address?: string }) => api.put(`/students/${id}`, data),
+  create: (data: any) => api.post('/students', data),
+  update: (id: string, data: any) => api.put(`/students/${id}`, data),
   delete: (id: string) => api.delete(`/students/${id}`),
   enroll: (data: { studentId: string; academicYearId: string; groupId: string }) => api.post('/students/enroll', data),
   updateEnrollmentStatus: (enrollmentId: string, status: string) => api.put(`/students/enrollment/${enrollmentId}/status`, { status }),
   getEnrollments: (studentId: string) => api.get(`/students/${studentId}/enrollments`),
+  bulkImport: (data: { institutionId: string; academicYearId: string; students: any[] }) => api.post('/students/bulk-import', data),
 }
 
 // Teachers
