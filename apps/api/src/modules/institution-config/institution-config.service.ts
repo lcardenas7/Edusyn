@@ -71,6 +71,13 @@ export interface PeriodConfig {
 interface InstitutionConfigRow {
   id: string
   name: string
+  daneCode: string | null
+  nit: string | null
+  address: string | null
+  phone: string | null
+  email: string | null
+  website: string | null
+  logo: string | null
   areaCalculationType: string
   areaApprovalRule: string
   areaRecoveryRule: string
@@ -90,7 +97,7 @@ export class InstitutionConfigService {
   
   async getFullConfig(institutionId: string) {
     const results = await this.prisma.$queryRaw<InstitutionConfigRow[]>`
-      SELECT id, name, 
+      SELECT id, name, "daneCode", nit, address, phone, email, website, logo,
         "areaCalculationType", "areaApprovalRule", "areaRecoveryRule", "areaFailIfAnyFails",
         "gradingConfig", "academicLevelsConfig", "periodsConfig"
       FROM "Institution" WHERE id = ${institutionId}
@@ -102,9 +109,40 @@ export class InstitutionConfigService {
 
     const institution = results[0]
 
+    // Obtener jornadas (shifts) de la institución
+    const shifts = await this.prisma.shift.findMany({
+      where: {
+        campus: {
+          institutionId
+        }
+      },
+      include: {
+        campus: true
+      }
+    })
+
     return {
       institutionId: institution.id,
       institutionName: institution.name,
+      // Información básica de la institución
+      institutionInfo: {
+        name: institution.name,
+        daneCode: institution.daneCode || '',
+        nit: institution.nit || '',
+        address: institution.address || '',
+        phone: institution.phone || '',
+        email: institution.email || '',
+        website: institution.website || '',
+        logo: institution.logo || '',
+      },
+      // Jornadas disponibles
+      shifts: shifts.map(s => ({
+        id: s.id,
+        name: s.name,
+        type: s.type,
+        campusId: s.campusId,
+        campusName: s.campus.name,
+      })),
       areaConfig: {
         calculationType: institution.areaCalculationType || 'WEIGHTED',
         approvalRule: institution.areaApprovalRule || 'AREA_AVERAGE',
@@ -251,7 +289,82 @@ export class InstitutionConfigService {
       UPDATE "Institution" SET "periodsConfig" = ${periodsJson}::jsonb WHERE id = ${institutionId}
     `
 
+    // Sincronizar con AcademicTerm para las ventanas de calificación
+    await this.syncPeriodsToAcademicTerms(institutionId, periods)
+
     return { success: true, periodsConfig: periods }
+  }
+
+  // Sincroniza los períodos con AcademicTerm para que funcionen las ventanas de calificación
+  private async syncPeriodsToAcademicTerms(institutionId: string, periods: PeriodConfig[]) {
+    try {
+      // Obtener o crear el año académico actual
+      const currentYear = new Date().getFullYear()
+      let academicYear = await this.prisma.academicYear.findFirst({
+        where: { institutionId, year: currentYear }
+      })
+
+      if (!academicYear) {
+        academicYear = await this.prisma.academicYear.create({
+          data: {
+            institutionId,
+            year: currentYear,
+            startDate: new Date(currentYear, 0, 1),
+            endDate: new Date(currentYear, 11, 31),
+          }
+        })
+      }
+
+      // Obtener términos existentes
+      const existingTerms = await this.prisma.academicTerm.findMany({
+        where: { academicYearId: academicYear.id }
+      })
+
+      // Crear o actualizar términos para cada período
+      for (let i = 0; i < periods.length; i++) {
+        const period = periods[i]
+        const existingTerm = existingTerms.find(t => t.name === period.name || t.order === i)
+
+        if (existingTerm) {
+          // Actualizar término existente
+          await this.prisma.academicTerm.update({
+            where: { id: existingTerm.id },
+            data: {
+              name: period.name,
+              order: i,
+              weightPercentage: period.weight,
+              startDate: period.startDate ? new Date(period.startDate) : null,
+              endDate: period.endDate ? new Date(period.endDate) : null,
+            }
+          })
+        } else {
+          // Crear nuevo término
+          await this.prisma.academicTerm.create({
+            data: {
+              academicYearId: academicYear.id,
+              type: 'PERIOD',
+              name: period.name,
+              order: i,
+              weightPercentage: period.weight,
+              startDate: period.startDate ? new Date(period.startDate) : null,
+              endDate: period.endDate ? new Date(period.endDate) : null,
+            }
+          })
+        }
+      }
+
+      // Eliminar términos que ya no existen en los períodos
+      const periodNames = periods.map(p => p.name)
+      const termsToDelete = existingTerms.filter(t => !periodNames.includes(t.name) && t.order >= periods.length)
+      for (const term of termsToDelete) {
+        await this.prisma.academicTerm.delete({ where: { id: term.id } }).catch(() => {
+          // Ignorar errores si hay datos relacionados
+        })
+      }
+    } catch (error) {
+      console.error('Error syncing periods to academic terms:', error)
+      // No lanzar error para no interrumpir el guardado de períodos
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

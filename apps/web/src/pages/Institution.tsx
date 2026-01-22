@@ -120,7 +120,7 @@ export default function Institution() {
     institution, setInstitution, 
     gradingConfig, setGradingConfig, 
     periods, setPeriods,
-    saveGradingConfigToAPI, saveAcademicLevelsToAPI, savePeriodsToAPI: _savePeriodsToAPI,
+    saveGradingConfigToAPI, saveAcademicLevelsToAPI, savePeriodsToAPI,
     isSaving 
   } = useInstitution()
   const { institution: authInstitution } = useAuth()
@@ -281,6 +281,35 @@ export default function Institution() {
       console.error('Error saving recovery period config:', err)
     } finally {
       setSavingRecoveryPeriod(null)
+    }
+  }
+
+  // Guardar períodos y recargar años académicos para ventanas de calificación
+  const [savingPeriods, setSavingPeriods] = useState(false)
+  const handleSavePeriodsAndSync = async () => {
+    setSavingPeriods(true)
+    try {
+      const success = await savePeriodsToAPI()
+      if (success) {
+        // Recargar años académicos después de guardar períodos
+        if (authInstitution?.id) {
+          const response = await academicYearsApi.getAll(authInstitution.id)
+          const years = response.data || []
+          setAcademicYears(years)
+          if (years.length > 0) {
+            const latestYear = years.sort((a: any, b: any) => b.year - a.year)[0]
+            setSelectedAcademicYear(latestYear.id)
+          }
+        }
+        alert('✅ Períodos guardados correctamente. Las ventanas de calificación y recuperación ahora mostrarán estos períodos.')
+      } else {
+        alert('❌ Error al guardar los períodos. Intente de nuevo.')
+      }
+    } catch (err) {
+      console.error('Error saving periods:', err)
+      alert('❌ Error al guardar los períodos. Intente de nuevo.')
+    } finally {
+      setSavingPeriods(false)
     }
   }
 
@@ -792,12 +821,20 @@ export default function Institution() {
                               <GraduationCap className={`w-5 h-5 ${level.gradingScaleType.startsWith('QUALITATIVE') ? 'text-amber-700' : 'text-purple-700'}`} />
                             </div>
                             <div className="flex-1">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-semibold text-slate-900">{level.name}</span>
                                 <span className="px-2 py-0.5 text-xs bg-white/50 text-slate-600 rounded">{level.code}</span>
                                 <span className={`px-2 py-0.5 text-xs rounded ${level.gradingScaleType.startsWith('QUALITATIVE') ? 'bg-amber-200 text-amber-700' : 'bg-purple-200 text-purple-700'}`}>
                                   {level.gradingScaleType.startsWith('QUALITATIVE') ? 'Cualitativo' : 'Numérico'}
                                 </span>
+                                {level.shift && (
+                                  <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
+                                    {level.shift === 'MORNING' ? '☀️ Mañana' : 
+                                     level.shift === 'AFTERNOON' ? '🌤️ Tarde' : 
+                                     level.shift === 'EVENING' ? '🌙 Noche' : 
+                                     level.shift === 'SINGLE' ? '📚 J. Única' : 'Otra'}
+                                  </span>
+                                )}
                               </div>
                               <div className="text-sm text-slate-500 mt-0.5">
                                 {level.grades.length > 0 ? level.grades.join(', ') : 'Sin grados asignados'}
@@ -834,7 +871,7 @@ export default function Institution() {
                         {isExpanded && (
                           <div className="p-4 bg-white border-t border-slate-100 space-y-4">
                             {/* Información básica */}
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-4 gap-4">
                               <div>
                                 <label className="block text-xs text-slate-500 mb-1">Nombre del nivel</label>
                                 <input
@@ -866,6 +903,27 @@ export default function Institution() {
                                   disabled={!canEditGradingLevels}
                                   className={`w-full px-2 py-1.5 text-sm border border-slate-300 rounded ${canEditGradingLevels ? 'bg-white' : 'bg-slate-100 cursor-not-allowed'}`}
                                 />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-slate-500 mb-1">Jornada</label>
+                                <select
+                                  value={level.shift || 'SINGLE'}
+                                  disabled={!canEditGradingLevels}
+                                  className={`w-full px-2 py-1.5 text-sm border border-slate-300 rounded ${canEditGradingLevels ? 'bg-white' : 'bg-slate-100 cursor-not-allowed'}`}
+                                  onChange={(e) => {
+                                    if (!canEditGradingLevels) return
+                                    const updated = institution.academicLevels.map(l =>
+                                      l.id === level.id ? { ...l, shift: e.target.value as any } : l
+                                    )
+                                    setInstitution({ ...institution, academicLevels: updated })
+                                  }}
+                                >
+                                  <option value="MORNING">Mañana</option>
+                                  <option value="AFTERNOON">Tarde</option>
+                                  <option value="EVENING">Noche</option>
+                                  <option value="SINGLE">Jornada Única</option>
+                                  <option value="OTHER">Otra</option>
+                                </select>
                               </div>
                               <div>
                                 <label className="block text-xs text-slate-500 mb-1">Tipo de calificación</label>
@@ -1744,6 +1802,20 @@ export default function Institution() {
                   ))}
                 </div>
 
+                {/* Botón Guardar Períodos */}
+                {canEditPeriods && (
+                  <div className="flex justify-end pt-4 mt-4 border-t border-slate-200">
+                    <button
+                      onClick={handleSavePeriodsAndSync}
+                      disabled={savingPeriods || isSaving}
+                      className={`px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 font-medium ${(savingPeriods || isSaving) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <Save className="w-4 h-4" />
+                      {savingPeriods ? 'Guardando...' : 'Guardar Períodos'}
+                    </button>
+                  </div>
+                )}
+
                 {/* Componentes Finales Institucionales */}
                 <div className="mt-6 pt-6 border-t border-slate-200">
                   <div className="flex items-center justify-between mb-3">
@@ -2098,10 +2170,17 @@ export default function Institution() {
                   <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                   </div>
+                ) : academicYears.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500">
+                    <Calendar className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                    <p className="mb-2">No hay años académicos configurados</p>
+                    <p className="text-sm">Guarda los períodos en la pestaña "Períodos Académicos" para crear automáticamente el año académico.</p>
+                  </div>
                 ) : gradingPeriods.length === 0 ? (
                   <div className="text-center py-12 text-slate-500">
                     <Calendar className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-                    <p>No hay períodos académicos configurados para este año</p>
+                    <p className="mb-2">No hay períodos académicos configurados para este año</p>
+                    <p className="text-sm">Configura los períodos en la pestaña "Períodos Académicos" y guárdalos para que aparezcan aquí.</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -2244,10 +2323,17 @@ export default function Institution() {
                   <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
                   </div>
+                ) : academicYears.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500">
+                    <Calendar className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                    <p className="mb-2">No hay años académicos configurados</p>
+                    <p className="text-sm">Guarda los períodos en la pestaña "Períodos Académicos" para crear automáticamente el año académico.</p>
+                  </div>
                 ) : recoveryPeriods.length === 0 ? (
                   <div className="text-center py-12 text-slate-500">
                     <Calendar className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-                    <p>No hay períodos académicos configurados para este año</p>
+                    <p className="mb-2">No hay períodos académicos configurados para este año</p>
+                    <p className="text-sm">Configura los períodos en la pestaña "Períodos Académicos" y guárdalos para que aparezcan aquí.</p>
                   </div>
                 ) : (
                   <div className="space-y-4">

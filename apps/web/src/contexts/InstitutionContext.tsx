@@ -91,6 +91,9 @@ interface QualitativeLevel {
   isApproved: boolean // Si este nivel representa aprobación
 }
 
+// Jornada escolar
+type SchoolShift = 'MORNING' | 'AFTERNOON' | 'EVENING' | 'SINGLE' | 'OTHER'
+
 // Nivel Académico (Preescolar, Primaria, Secundaria, Media, etc.)
 interface AcademicLevel {
   id: string
@@ -98,6 +101,8 @@ interface AcademicLevel {
   code: string                    // Ej: "PREESCOLAR", "PRIMARIA", "SECUNDARIA", "MEDIA"
   order: number
   gradingScaleType: GradingScaleType
+  // Jornada escolar
+  shift?: SchoolShift             // Ej: "MORNING", "AFTERNOON", "SINGLE"
   // Para escala numérica
   minGrade?: number               // Ej: 1.0
   maxGrade?: number               // Ej: 5.0
@@ -384,6 +389,23 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             const newConfig = { ...prev, ...data.gradingConfig }
             saveToStorage('edusyn_gradingConfig', newConfig)
             return newConfig
+          })
+        }
+
+        // Actualizar información de la institución
+        if (data.institutionInfo) {
+          setInstitutionState(prev => {
+            const newInst = { 
+              ...prev, 
+              name: data.institutionInfo.name || prev.name,
+              nit: data.institutionInfo.nit || prev.nit,
+              dane: data.institutionInfo.daneCode || prev.dane,
+              address: data.institutionInfo.address || prev.address,
+              phone: data.institutionInfo.phone || prev.phone,
+              email: data.institutionInfo.email || prev.email,
+            }
+            saveToStorage('edusyn_institution', newInst)
+            return newInst
           })
         }
 
