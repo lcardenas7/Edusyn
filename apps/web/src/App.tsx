@@ -24,6 +24,9 @@ import InstitutionLogin from './pages/InstitutionLogin'
 import SuperAdminDashboard from './pages/SuperAdminDashboard'
 import PermissionsAdmin from './pages/PermissionsAdmin'
 import StaffManagement from './pages/StaffManagement'
+import AcademicYearWizard from './pages/AcademicYearWizard'
+import Enrollments from './pages/Enrollments'
+import AcademicYearClosure from './pages/AcademicYearClosure'
 import Layout from './components/Layout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -102,6 +105,9 @@ function App() {
                   <Route path="/performances" element={<Performances />} />
                   <Route path="/admin/permissions" element={<PermissionsAdmin />} />
                   <Route path="/staff" element={<StaffManagement />} />
+                  <Route path="/academic-year-wizard" element={<AcademicYearWizard />} />
+                  <Route path="/enrollments" element={<Enrollments />} />
+                  <Route path="/academic-year-closure" element={<AcademicYearClosure />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

@@ -99,6 +99,53 @@ export const academicYearsApi = {
   create: (data: { institutionId: string; year: number; startDate?: string; endDate?: string }) => api.post('/academic-terms/years', data),
 }
 
+// Academic Year Lifecycle Management
+export const academicYearLifecycleApi = {
+  // CRUD básico
+  create: (data: { institutionId: string; year: number; name?: string; startDate?: string; endDate?: string }) => api.post('/academic-years', data),
+  getByInstitution: (institutionId: string) => api.get(`/academic-years/institution/${institutionId}`),
+  getCurrent: (institutionId: string) => api.get(`/academic-years/institution/${institutionId}/current`),
+  getById: (yearId: string) => api.get(`/academic-years/${yearId}`),
+  update: (yearId: string, data: { name?: string; startDate?: string; endDate?: string }) => api.put(`/academic-years/${yearId}`, data),
+  delete: (yearId: string) => api.delete(`/academic-years/${yearId}`),
+  
+  // Ciclo de vida
+  activate: (yearId: string) => api.post(`/academic-years/${yearId}/activate`),
+  close: (yearId: string, data: { calculatePromotions?: boolean }) => api.post(`/academic-years/${yearId}/close`, data),
+  
+  // Validaciones
+  validateActivation: (yearId: string) => api.get(`/academic-years/${yearId}/validate-activation`),
+  validateClosure: (yearId: string) => api.get(`/academic-years/${yearId}/validate-closure`),
+  
+  // Promociones
+  previewPromotions: (yearId: string) => api.get(`/academic-years/${yearId}/promotion-preview`),
+  promoteStudents: (fromYearId: string, toYearId: string) => api.post(`/academic-years/${fromYearId}/promote-to/${toYearId}`),
+  
+  // Permisos
+  getPermissions: (yearId: string) => api.get(`/academic-years/${yearId}/permissions`),
+}
+
+// Enrollment Management
+export const enrollmentsApi = {
+  // Matrículas
+  create: (data: { studentId: string; academicYearId: string; groupId: string; enrollmentType?: string; shift?: string; modality?: string; observations?: string }) => api.post('/enrollments', data),
+  getAll: (params?: { academicYearId?: string; gradeId?: string; groupId?: string; status?: string; search?: string }) => api.get('/enrollments', { params }),
+  getById: (enrollmentId: string) => api.get(`/enrollments/${enrollmentId}`),
+  
+  // Historial
+  getHistory: (enrollmentId: string) => api.get(`/enrollments/${enrollmentId}/history`),
+  getStudentHistory: (studentId: string) => api.get(`/enrollments/student/${studentId}/history`),
+  
+  // Estadísticas
+  getStats: (academicYearId: string) => api.get(`/enrollments/stats/${academicYearId}`),
+  
+  // Operaciones
+  withdraw: (enrollmentId: string, data: { reason: string; observations?: string }) => api.post(`/enrollments/${enrollmentId}/withdraw`, data),
+  transfer: (enrollmentId: string, data: { reason: string; destinationInstitution?: string; observations?: string }) => api.post(`/enrollments/${enrollmentId}/transfer`, data),
+  changeGroup: (enrollmentId: string, data: { newGroupId: string; reason: string; movementType: string; observations?: string }) => api.post(`/enrollments/${enrollmentId}/change-group`, data),
+  reactivate: (enrollmentId: string, data: { reason: string; observations?: string }) => api.post(`/enrollments/${enrollmentId}/reactivate`, data),
+}
+
 // Academic Terms (Periods)
 export const academicTermsApi = {
   getAll: (academicYearId?: string) => api.get('/academic-terms', { params: { academicYearId } }),

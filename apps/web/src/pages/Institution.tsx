@@ -534,6 +534,13 @@ export default function Institution() {
               {saveMessage.type === 'success' ? '✓' : '✗'} {saveMessage.text}
             </div>
           )}
+          <button
+            onClick={() => window.location.href = '/academic-year-wizard'}
+            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+          >
+            <Calendar className="w-4 h-4" />
+            Wizard Año Lectivo
+          </button>
           <button 
             onClick={handleSaveChanges}
             disabled={isSaving}
@@ -2193,7 +2200,14 @@ export default function Institution() {
                   <div className="text-center py-12 text-slate-500">
                     <Calendar className="w-12 h-12 mx-auto mb-4 text-slate-300" />
                     <p className="mb-2">No hay años académicos configurados</p>
-                    <p className="text-sm">Guarda los períodos en la pestaña "Períodos Académicos" para crear automáticamente el año académico.</p>
+                    <p className="text-sm mb-4">Usa el wizard para crear un nuevo año lectivo con todos sus períodos.</p>
+                    <button
+                      onClick={() => window.location.href = '/academic-year-wizard'}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Crear Año Lectivo
+                    </button>
                   </div>
                 ) : gradingPeriods.length === 0 ? (
                   <div className="text-center py-12 text-slate-500">
@@ -2346,7 +2360,14 @@ export default function Institution() {
                   <div className="text-center py-12 text-slate-500">
                     <Calendar className="w-12 h-12 mx-auto mb-4 text-slate-300" />
                     <p className="mb-2">No hay años académicos configurados</p>
-                    <p className="text-sm">Guarda los períodos en la pestaña "Períodos Académicos" para crear automáticamente el año académico.</p>
+                    <p className="text-sm mb-4">Usa el wizard para crear un nuevo año lectivo con todos sus períodos.</p>
+                    <button
+                      onClick={() => window.location.href = '/academic-year-wizard'}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Crear Año Lectivo
+                    </button>
                   </div>
                 ) : recoveryPeriods.length === 0 ? (
                   <div className="text-center py-12 text-slate-500">
