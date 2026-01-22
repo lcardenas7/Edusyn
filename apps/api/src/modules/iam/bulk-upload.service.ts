@@ -265,7 +265,7 @@ export class BulkUploadService {
     buffer: Buffer,
   ): Promise<UploadResult> {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
+    await workbook.xlsx.load(buffer as any);
 
     const sheet = workbook.getWorksheet(1);
     if (!sheet) {
@@ -368,7 +368,7 @@ export class BulkUploadService {
                 isAdmin: false,
               },
             },
-          },
+          } as any,
         });
 
         result.success++;
@@ -398,7 +398,7 @@ export class BulkUploadService {
     academicYearId?: string,
   ): Promise<UploadResult> {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
+    await workbook.xlsx.load(buffer as any);
 
     const sheet = workbook.getWorksheet(1);
     if (!sheet) {
@@ -550,7 +550,7 @@ export class BulkUploadService {
     buffer: Buffer,
   ): Promise<UploadResult> {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
+    await workbook.xlsx.load(buffer as any);
 
     const sheet = workbook.getWorksheet(1);
     if (!sheet) {
@@ -664,7 +664,7 @@ export class BulkUploadService {
                 isAdmin: false,
               },
             },
-          },
+          } as any,
         });
 
         result.success++;
