@@ -12,9 +12,13 @@ export class GalleryService {
     imageUrl: string;
     category?: string;
     uploadedById: string;
+    visibleToRoles?: string[];
   }) {
     return this.prisma.galleryImage.create({
-      data,
+      data: {
+        ...data,
+        visibleToRoles: data.visibleToRoles || [],
+      },
       include: { uploadedBy: true },
     });
   }
@@ -38,11 +42,29 @@ export class GalleryService {
     category: string;
     isActive: boolean;
     order: number;
+    visibleToRoles: string[];
   }>) {
     return this.prisma.galleryImage.update({
       where: { id },
       data,
       include: { uploadedBy: true },
+    });
+  }
+
+  async listForUser(institutionId: string, userRoles: string[], category?: string) {
+    const images = await this.prisma.galleryImage.findMany({
+      where: {
+        institutionId,
+        category,
+        isActive: true,
+      },
+      include: { uploadedBy: true },
+      orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+    });
+
+    return images.filter(img => {
+      if (!img.visibleToRoles || img.visibleToRoles.length === 0) return true;
+      return img.visibleToRoles.some(role => userRoles.includes(role));
     });
   }
 

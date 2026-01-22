@@ -52,7 +52,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
  * Verifica que el usuario tenga isSuperAdmin = true
  */
 function SuperAdminRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, isSuperAdmin } = useAuth()
+  const { isAuthenticated, isLoading, isSuperAdmin, user } = useAuth()
+  
+  // Debug log
+  console.log('[SuperAdminRoute] Check:', { isAuthenticated, isLoading, isSuperAdmin, userEmail: user?.email })
   
   if (isLoading) {
     return (
@@ -63,14 +66,17 @@ function SuperAdminRoute({ children }: { children: React.ReactNode }) {
   }
   
   if (!isAuthenticated) {
+    console.log('[SuperAdminRoute] Not authenticated, redirecting to /login')
     return <Navigate to="/login" replace />
   }
   
   // Si no es SuperAdmin, redirigir al dashboard normal
   if (!isSuperAdmin) {
+    console.log('[SuperAdminRoute] User is NOT SuperAdmin, redirecting to /')
     return <Navigate to="/" replace />
   }
   
+  console.log('[SuperAdminRoute] Access granted - user is SuperAdmin')
   return <>{children}</>
 }
 

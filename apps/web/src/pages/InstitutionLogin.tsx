@@ -160,18 +160,39 @@ export default function InstitutionLogin() {
       return
     }
 
+    if (!institution?.id) {
+      setError('Selecciona una institución primero')
+      return
+    }
+
     setLoading(true)
     setError('')
 
     try {
-      // Usar el login del AuthContext para mantener el estado sincronizado
-      await authLogin(email, password)
+      // Login con validación de institución
+      const response = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          institutionId: institution.id, // Enviar ID de institución para validación
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Credenciales incorrectas')
+      }
+
+      // Guardar token y datos de institución
+      localStorage.setItem('token', data.access_token)
+      localStorage.setItem('institutionId', institution.id)
+      localStorage.setItem('institutionName', institution.name)
       
-      // Guardar datos de institución seleccionada
-      localStorage.setItem('institutionId', institution?.id || '')
-      localStorage.setItem('institutionName', institution?.name || '')
-      
-      // La redirección se hace automáticamente por el useEffect cuando isAuthenticated cambia
+      // Recargar la página para que AuthContext cargue el perfil con el nuevo token
+      window.location.href = '/dashboard'
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Credenciales incorrectas'
       setError(errorMessage)

@@ -74,14 +74,17 @@ export default function ContentManager() {
     title: '',
     description: '',
     imageUrl: '',
-    category: ''
+    category: '',
+    visibleToRoles: [] as string[]
   })
   
   const [eventForm, setEventForm] = useState({
     title: '',
     description: '',
     eventDate: '',
+    eventTime: '',
     endDate: '',
+    endTime: '',
     location: '',
     eventType: 'GENERAL',
     visibleToRoles: [] as string[]
@@ -123,9 +126,9 @@ export default function ContentManager() {
     if (activeTab === 'announcements') {
       setAnnouncementForm({ title: '', content: '', imageUrl: '', priority: 0, expiresAt: '', visibleToRoles: [] })
     } else if (activeTab === 'gallery') {
-      setGalleryForm({ title: '', description: '', imageUrl: '', category: '' })
+      setGalleryForm({ title: '', description: '', imageUrl: '', category: '', visibleToRoles: [] })
     } else {
-      setEventForm({ title: '', description: '', eventDate: '', endDate: '', location: '', eventType: 'GENERAL', visibleToRoles: [] })
+      setEventForm({ title: '', description: '', eventDate: '', eventTime: '', endDate: '', endTime: '', location: '', eventType: 'GENERAL', visibleToRoles: [] })
     }
     setShowModal(true)
   }
@@ -146,14 +149,20 @@ export default function ContentManager() {
         title: item.title,
         description: item.description || '',
         imageUrl: item.imageUrl,
-        category: item.category || ''
+        category: item.category || '',
+        visibleToRoles: item.visibleToRoles || []
       })
     } else {
+      // Extraer fecha y hora del eventDate
+      const eventDateTime = item.eventDate ? new Date(item.eventDate) : null
+      const endDateTime = item.endDate ? new Date(item.endDate) : null
       setEventForm({
         title: item.title,
         description: item.description || '',
-        eventDate: item.eventDate ? item.eventDate.split('T')[0] : '',
-        endDate: item.endDate ? item.endDate.split('T')[0] : '',
+        eventDate: eventDateTime ? eventDateTime.toISOString().split('T')[0] : '',
+        eventTime: eventDateTime ? eventDateTime.toTimeString().slice(0, 5) : '',
+        endDate: endDateTime ? endDateTime.toISOString().split('T')[0] : '',
+        endTime: endDateTime ? endDateTime.toTimeString().slice(0, 5) : '',
         location: item.location || '',
         eventType: item.eventType,
         visibleToRoles: item.visibleToRoles || []
@@ -167,9 +176,13 @@ export default function ContentManager() {
     try {
       if (activeTab === 'announcements') {
         const data = {
-          ...announcementForm,
+          title: announcementForm.title,
+          content: announcementForm.content,
+          imageUrl: announcementForm.imageUrl || undefined,
+          priority: announcementForm.priority,
+          visibleToRoles: announcementForm.visibleToRoles,
           institutionId: institution.id,
-          expiresAt: announcementForm.expiresAt || undefined
+          expiresAt: announcementForm.expiresAt ? new Date(announcementForm.expiresAt).toISOString() : undefined
         }
         if (editingItem) {
           await announcementsApi.update(editingItem.id, data)
@@ -178,7 +191,11 @@ export default function ContentManager() {
         }
       } else if (activeTab === 'gallery') {
         const data = {
-          ...galleryForm,
+          title: galleryForm.title,
+          description: galleryForm.description || undefined,
+          imageUrl: galleryForm.imageUrl,
+          category: galleryForm.category || undefined,
+          visibleToRoles: galleryForm.visibleToRoles,
           institutionId: institution.id
         }
         if (editingItem) {
@@ -187,10 +204,23 @@ export default function ContentManager() {
           await galleryApi.create(data as any)
         }
       } else {
+        // Combinar fecha y hora para eventDate y endDate
+        const eventDateTime = eventForm.eventDate 
+          ? new Date(`${eventForm.eventDate}T${eventForm.eventTime || '00:00'}:00`)
+          : undefined
+        const endDateTime = eventForm.endDate 
+          ? new Date(`${eventForm.endDate}T${eventForm.endTime || '23:59'}:00`)
+          : undefined
+        
         const data = {
-          ...eventForm,
-          institutionId: institution.id,
-          endDate: eventForm.endDate || undefined
+          title: eventForm.title,
+          description: eventForm.description || undefined,
+          eventDate: eventDateTime?.toISOString(),
+          endDate: endDateTime?.toISOString(),
+          location: eventForm.location || undefined,
+          eventType: eventForm.eventType,
+          visibleToRoles: eventForm.visibleToRoles,
+          institutionId: institution.id
         }
         if (editingItem) {
           await eventsApi.update(editingItem.id, data)
@@ -202,6 +232,7 @@ export default function ContentManager() {
       fetchData()
     } catch (err) {
       console.error('Error saving:', err)
+      alert('Error al guardar. Verifica los datos e intenta de nuevo.')
     } finally {
       setSaving(false)
     }
@@ -447,14 +478,26 @@ export default function ContentManager() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">URL de Imagen (opcional)</label>
-                    <input
-                      type="url"
-                      value={announcementForm.imageUrl}
-                      onChange={(e) => setAnnouncementForm({ ...announcementForm, imageUrl: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="https://ejemplo.com/imagen.jpg"
-                    />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Imagen (opcional)</label>
+                    <div className="space-y-2">
+                      <input
+                        type="url"
+                        value={announcementForm.imageUrl}
+                        onChange={(e) => setAnnouncementForm({ ...announcementForm, imageUrl: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="https://ejemplo.com/imagen.jpg"
+                      />
+                      <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled
+                          className="flex-1 text-sm text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:bg-slate-200 file:text-slate-500 cursor-not-allowed opacity-60"
+                        />
+                        <span className="text-xs text-amber-700">Próximamente</span>
+                      </div>
+                      <p className="text-xs text-slate-500">Tamaño recomendado: 1200x630px (formato banner)</p>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -522,14 +565,26 @@ export default function ContentManager() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">URL de Imagen *</label>
-                    <input
-                      type="url"
-                      value={galleryForm.imageUrl}
-                      onChange={(e) => setGalleryForm({ ...galleryForm, imageUrl: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="https://ejemplo.com/imagen.jpg"
-                    />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Imagen *</label>
+                    <div className="space-y-2">
+                      <input
+                        type="url"
+                        value={galleryForm.imageUrl}
+                        onChange={(e) => setGalleryForm({ ...galleryForm, imageUrl: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="https://ejemplo.com/imagen.jpg"
+                      />
+                      <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled
+                          className="flex-1 text-sm text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:bg-slate-200 file:text-slate-500 cursor-not-allowed opacity-60"
+                        />
+                        <span className="text-xs text-amber-700">Próximamente</span>
+                      </div>
+                      <p className="text-xs text-slate-500">Tamaño recomendado: 800x600px o 1200x900px (ratio 4:3)</p>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Descripción (opcional)</label>
@@ -550,6 +605,33 @@ export default function ContentManager() {
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Ej: Eventos, Deportes, Académico"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Visible para (vacío = todos)</label>
+                    <div className="flex flex-wrap gap-2">
+                      {availableRoles.map(role => (
+                        <label key={role.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer transition-colors ${
+                          galleryForm.visibleToRoles.includes(role.id) 
+                            ? 'bg-purple-100 border-purple-500 text-purple-700' 
+                            : 'bg-white border-slate-300 hover:border-slate-400'
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={galleryForm.visibleToRoles.includes(role.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setGalleryForm({ ...galleryForm, visibleToRoles: [...galleryForm.visibleToRoles, role.id] })
+                              } else {
+                                setGalleryForm({ ...galleryForm, visibleToRoles: galleryForm.visibleToRoles.filter(r => r !== role.id) })
+                              }
+                            }}
+                            className="sr-only"
+                          />
+                          <span className="text-sm">{role.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">Si no selecciona ninguno, será visible para todos</p>
                   </div>
                 </>
               )}
@@ -587,11 +669,31 @@ export default function ContentManager() {
                       />
                     </div>
                     <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Hora Inicio</label>
+                      <input
+                        type="time"
+                        value={eventForm.eventTime}
+                        onChange={(e) => setEventForm({ ...eventForm, eventTime: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Fin (opcional)</label>
                       <input
                         type="date"
                         value={eventForm.endDate}
                         onChange={(e) => setEventForm({ ...eventForm, endDate: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Hora Fin</label>
+                      <input
+                        type="time"
+                        value={eventForm.endTime}
+                        onChange={(e) => setEventForm({ ...eventForm, endTime: e.target.value })}
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>

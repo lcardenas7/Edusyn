@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { GraduationCap, User, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { authApi } from '../lib/api'
+import { GraduationCap, User, Lock, AlertCircle, Eye, EyeOff, ShieldAlert } from 'lucide-react'
 
 export default function Login() {
   const [identifier, setIdentifier] = useState('')
@@ -11,6 +12,10 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  
+  // Detectar si estamos en la página de login de SuperAdmin
+  const isSuperAdminLogin = location.pathname.includes('/superadmin')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -18,9 +23,32 @@ export default function Login() {
     setIsLoading(true)
 
     try {
-      await login(identifier, password)
-      navigate('/dashboard')
+      // Primero hacer login normal
+      const loginRes = await authApi.login(identifier, password)
+      localStorage.setItem('token', loginRes.data.access_token)
+      
+      // Obtener perfil del usuario para verificar si es SuperAdmin
+      const profileRes = await authApi.me()
+      
+      // Si estamos en /superadmin/login, verificar que sea SuperAdmin
+      if (isSuperAdminLogin) {
+        if (!profileRes.data.isSuperAdmin) {
+          // No es SuperAdmin - limpiar token y mostrar error
+          localStorage.removeItem('token')
+          setError('Acceso denegado. Esta área es exclusiva para SuperAdmin del sistema.')
+          setIsLoading(false)
+          return
+        }
+        // Es SuperAdmin, continuar con login normal
+        await login(identifier, password)
+        navigate('/superadmin')
+      } else {
+        // Login normal de institución
+        await login(identifier, password)
+        navigate('/dashboard')
+      }
     } catch (err: any) {
+      localStorage.removeItem('token')
       setError(err.response?.data?.message || 'Error al iniciar sesión')
     } finally {
       setIsLoading(false)
@@ -28,15 +56,27 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4">
+    <div className={`min-h-screen flex items-center justify-center p-4 ${isSuperAdminLogin ? 'bg-gradient-to-br from-slate-800 to-slate-900' : 'bg-gradient-to-br from-blue-600 to-blue-800'}`}>
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <GraduationCap className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-slate-900">Edusyn</h1>
-            <p className="text-slate-500 mt-1">Sistema de Gestión Académica</p>
+            {isSuperAdminLogin ? (
+              <>
+                <div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <ShieldAlert className="w-10 h-10 text-amber-400" />
+                </div>
+                <h1 className="text-2xl font-bold text-slate-900">SuperAdmin</h1>
+                <p className="text-slate-500 mt-1">Acceso exclusivo para administradores del sistema</p>
+              </>
+            ) : (
+              <>
+                <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <GraduationCap className="w-10 h-10 text-white" />
+                </div>
+                <h1 className="text-2xl font-bold text-slate-900">Edusyn</h1>
+                <p className="text-slate-500 mt-1">Sistema de Gestión Académica</p>
+              </>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">

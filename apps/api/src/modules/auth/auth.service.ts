@@ -46,6 +46,16 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
+    // Si se especifica institutionId, validar que el usuario pertenezca a esa institución
+    if (dto.institutionId) {
+      const userInstitution = await this.usersService.findUserInstitution(user.id);
+      
+      // Si el usuario no tiene institución asignada o no coincide con la solicitada
+      if (!userInstitution || userInstitution.id !== dto.institutionId) {
+        throw new UnauthorizedException('No tienes acceso a esta institución. Verifica que estés ingresando a tu institución correcta.');
+      }
+    }
+
     const roles = user.roles.map((r) => r.role.name);
 
     const accessToken = await this.jwtService.signAsync({
@@ -76,6 +86,9 @@ export class AuthService {
     // Obtener institución del usuario a través de sus asignaciones o buscar la primera disponible
     const institution = await this.usersService.findUserInstitution(userId);
 
+    // Log para debug - verificar valor de isSuperAdmin
+    console.log(`[AUTH] getProfile for user ${user.email}: isSuperAdmin=${user.isSuperAdmin}`);
+
     return {
       id: user.id,
       email: user.email,
@@ -83,8 +96,8 @@ export class AuthService {
       lastName: user.lastName,
       roles: user.roles,
       institution,
-      isSuperAdmin: (user as any).isSuperAdmin || false,
-      mustChangePassword: (user as any).mustChangePassword || false,
+      isSuperAdmin: user.isSuperAdmin === true,
+      mustChangePassword: user.mustChangePassword === true,
     };
   }
 

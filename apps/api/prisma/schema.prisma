@@ -1169,6 +1169,10 @@ model GalleryImage {
   isActive      Boolean  @default(true)
   order         Int      @default(0)
   uploadedById  String
+  
+  // Visibilidad por rol - array de roles que pueden ver (vacío = todos)
+  visibleToRoles String[]  @default([])
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

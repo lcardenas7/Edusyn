@@ -3,6 +3,7 @@ import { IsString, IsOptional, IsEmail, IsArray, IsEnum, MinLength } from 'class
 // Enum local - debe coincidir con el de Prisma después de la migración
 export enum SystemModule {
   ACADEMIC = 'ACADEMIC',
+  ENROLLMENTS = 'ENROLLMENTS',
   ATTENDANCE = 'ATTENDANCE',
   EVALUATION = 'EVALUATION',
   RECOVERY = 'RECOVERY',
