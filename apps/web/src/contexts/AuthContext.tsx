@@ -22,6 +22,7 @@ interface User {
   lastName: string
   roles: { role: { name: string } }[]
   institution?: Institution
+  isSuperAdmin?: boolean
 }
 
 interface AuthContextType {
@@ -29,6 +30,7 @@ interface AuthContextType {
   institution: Institution | null
   isAuthenticated: boolean
   isLoading: boolean
+  isSuperAdmin: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => void
   enabledModules: string[]
@@ -86,15 +88,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ?.filter(m => m.isActive)
     ?.flatMap(m => m.features || []) || []
 
+  // Verificar si es SuperAdmin usando el campo isSuperAdmin del backend
+  const isSuperAdmin = user?.isSuperAdmin === true
+
   const hasModule = (moduleId: string) => {
     // SuperAdmin tiene acceso a todo
-    if (user?.roles?.some(r => r.role.name === 'SUPER_ADMIN' || r.role.name === 'SUPERADMIN')) return true
+    if (isSuperAdmin) return true
     return enabledModules.includes(moduleId)
   }
 
   const hasFeature = (featureId: string) => {
     // SuperAdmin tiene acceso a todo
-    if (user?.roles?.some(r => r.role.name === 'SUPER_ADMIN' || r.role.name === 'SUPERADMIN')) return true
+    if (isSuperAdmin) return true
     return enabledFeatures.includes(featureId)
   }
 
@@ -104,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       institution, 
       isAuthenticated: !!user, 
       isLoading, 
+      isSuperAdmin,
       login, 
       logout,
       enabledModules,

@@ -83,6 +83,7 @@ export class AuthService {
       lastName: user.lastName,
       roles: user.roles,
       institution,
+      isSuperAdmin: (user as any).isSuperAdmin || false,
       mustChangePassword: (user as any).mustChangePassword || false,
     };
   }

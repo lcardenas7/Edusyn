@@ -66,7 +66,8 @@ export default function ContentManager() {
     content: '',
     imageUrl: '',
     priority: 0,
-    expiresAt: ''
+    expiresAt: '',
+    visibleToRoles: [] as string[]
   })
   
   const [galleryForm, setGalleryForm] = useState({
@@ -82,8 +83,18 @@ export default function ContentManager() {
     eventDate: '',
     endDate: '',
     location: '',
-    eventType: 'GENERAL'
+    eventType: 'GENERAL',
+    visibleToRoles: [] as string[]
   })
+
+  // Roles disponibles para visibilidad
+  const availableRoles = [
+    { id: 'ADMIN_INSTITUTIONAL', label: 'Administrador' },
+    { id: 'COORDINADOR', label: 'Coordinador' },
+    { id: 'DOCENTE', label: 'Docente' },
+    { id: 'ESTUDIANTE', label: 'Estudiante' },
+    { id: 'ACUDIENTE', label: 'Acudiente' },
+  ]
 
   useEffect(() => {
     fetchData()
@@ -110,11 +121,11 @@ export default function ContentManager() {
   const openCreateModal = () => {
     setEditingItem(null)
     if (activeTab === 'announcements') {
-      setAnnouncementForm({ title: '', content: '', imageUrl: '', priority: 0, expiresAt: '' })
+      setAnnouncementForm({ title: '', content: '', imageUrl: '', priority: 0, expiresAt: '', visibleToRoles: [] })
     } else if (activeTab === 'gallery') {
       setGalleryForm({ title: '', description: '', imageUrl: '', category: '' })
     } else {
-      setEventForm({ title: '', description: '', eventDate: '', endDate: '', location: '', eventType: 'GENERAL' })
+      setEventForm({ title: '', description: '', eventDate: '', endDate: '', location: '', eventType: 'GENERAL', visibleToRoles: [] })
     }
     setShowModal(true)
   }
@@ -127,7 +138,8 @@ export default function ContentManager() {
         content: item.content,
         imageUrl: item.imageUrl || '',
         priority: item.priority,
-        expiresAt: item.expiresAt ? item.expiresAt.split('T')[0] : ''
+        expiresAt: item.expiresAt ? item.expiresAt.split('T')[0] : '',
+        visibleToRoles: item.visibleToRoles || []
       })
     } else if (activeTab === 'gallery') {
       setGalleryForm({
@@ -143,7 +155,8 @@ export default function ContentManager() {
         eventDate: item.eventDate ? item.eventDate.split('T')[0] : '',
         endDate: item.endDate ? item.endDate.split('T')[0] : '',
         location: item.location || '',
-        eventType: item.eventType
+        eventType: item.eventType,
+        visibleToRoles: item.visibleToRoles || []
       })
     }
     setShowModal(true)
@@ -466,6 +479,33 @@ export default function ContentManager() {
                       />
                     </div>
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Visible para (vacío = todos)</label>
+                    <div className="flex flex-wrap gap-2">
+                      {availableRoles.map(role => (
+                        <label key={role.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer transition-colors ${
+                          announcementForm.visibleToRoles.includes(role.id) 
+                            ? 'bg-blue-100 border-blue-500 text-blue-700' 
+                            : 'bg-white border-slate-300 hover:border-slate-400'
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={announcementForm.visibleToRoles.includes(role.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setAnnouncementForm({ ...announcementForm, visibleToRoles: [...announcementForm.visibleToRoles, role.id] })
+                              } else {
+                                setAnnouncementForm({ ...announcementForm, visibleToRoles: announcementForm.visibleToRoles.filter(r => r !== role.id) })
+                              }
+                            }}
+                            className="sr-only"
+                          />
+                          <span className="text-sm">{role.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">Si no selecciona ninguno, será visible para todos</p>
+                  </div>
                 </>
               )}
 
@@ -582,6 +622,33 @@ export default function ContentManager() {
                         <option value="FESTIVO">Festivo</option>
                       </select>
                     </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Visible para (vacío = todos)</label>
+                    <div className="flex flex-wrap gap-2">
+                      {availableRoles.map(role => (
+                        <label key={role.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer transition-colors ${
+                          eventForm.visibleToRoles.includes(role.id) 
+                            ? 'bg-green-100 border-green-500 text-green-700' 
+                            : 'bg-white border-slate-300 hover:border-slate-400'
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={eventForm.visibleToRoles.includes(role.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setEventForm({ ...eventForm, visibleToRoles: [...eventForm.visibleToRoles, role.id] })
+                              } else {
+                                setEventForm({ ...eventForm, visibleToRoles: eventForm.visibleToRoles.filter(r => r !== role.id) })
+                              }
+                            }}
+                            className="sr-only"
+                          />
+                          <span className="text-sm">{role.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">Si no selecciona ninguno, será visible para todos</p>
                   </div>
                 </>
               )}

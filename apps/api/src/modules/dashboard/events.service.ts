@@ -14,9 +14,13 @@ export class EventsService {
     location?: string;
     eventType?: string;
     authorId: string;
+    visibleToRoles?: string[];
   }) {
     return this.prisma.event.create({
-      data,
+      data: {
+        ...data,
+        visibleToRoles: data.visibleToRoles || [],
+      },
       include: { author: true },
     });
   }
@@ -32,6 +36,45 @@ export class EventsService {
       include: { author: true },
       orderBy: { eventDate: 'asc' },
     });
+  }
+
+  async listForUser(institutionId: string, userRoles: string[], upcoming = true) {
+    const now = new Date();
+    const events = await this.prisma.event.findMany({
+      where: {
+        institutionId,
+        isActive: true,
+        ...(upcoming && { eventDate: { gte: now } }),
+      },
+      include: { author: true },
+      orderBy: { eventDate: 'asc' },
+    });
+
+    return events.filter(e => {
+      if (!e.visibleToRoles || e.visibleToRoles.length === 0) return true;
+      return e.visibleToRoles.some(role => userRoles.includes(role));
+    });
+  }
+
+  async update(id: string, data: Partial<{
+    title: string;
+    description: string;
+    eventDate: Date;
+    endDate: Date;
+    location: string;
+    eventType: string;
+    isActive: boolean;
+    visibleToRoles: string[];
+  }>) {
+    return this.prisma.event.update({
+      where: { id },
+      data,
+      include: { author: true },
+    });
+  }
+
+  async delete(id: string) {
+    return this.prisma.event.delete({ where: { id } });
   }
 
   async getBirthdays(institutionId?: string) {
@@ -121,25 +164,5 @@ export class EventsService {
       });
 
     return allBirthdays;
-  }
-
-  async update(id: string, data: Partial<{
-    title: string;
-    description: string;
-    eventDate: Date;
-    endDate: Date;
-    location: string;
-    eventType: string;
-    isActive: boolean;
-  }>) {
-    return this.prisma.event.update({
-      where: { id },
-      data,
-      include: { author: true },
-    });
-  }
-
-  async delete(id: string) {
-    return this.prisma.event.delete({ where: { id } });
   }
 }

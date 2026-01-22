@@ -47,6 +47,33 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+/**
+ * Ruta protegida SOLO para SuperAdmin
+ * Verifica que el usuario tenga isSuperAdmin = true
+ */
+function SuperAdminRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, isSuperAdmin } = useAuth()
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+  
+  // Si no es SuperAdmin, redirigir al dashboard normal
+  if (!isSuperAdmin) {
+    return <Navigate to="/" replace />
+  }
+  
+  return <>{children}</>
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -57,11 +84,11 @@ function App() {
         <Route path="/login/:slug" element={<InstitutionLogin />} />
         <Route path="/auth/login" element={<Login />} />
         
-        {/* SuperAdmin con Layout */}
+        {/* SuperAdmin con Layout - SOLO usuarios con isSuperAdmin=true */}
         <Route
           path="/superadmin/*"
           element={
-            <ProtectedRoute>
+            <SuperAdminRoute>
               <Layout>
                 <Routes>
                   <Route path="/" element={<SuperAdminDashboard />} />
@@ -74,7 +101,7 @@ function App() {
                   <Route path="/clone-config" element={<SuperAdminDashboard />} />
                 </Routes>
               </Layout>
-            </ProtectedRoute>
+            </SuperAdminRoute>
           }
         />
         <Route path="/superadmin/login" element={<Login />} />

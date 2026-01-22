@@ -106,12 +106,9 @@ export class UsersService {
       return assignment.group.campus.institution;
     }
 
-    // Si no tiene asignaciones, buscar la primera institución disponible con módulos
-    return this.prisma.institution.findFirst({
-      include: {
-        modules: true,
-      }
-    });
+    // Si no tiene asignaciones, NO asignar ninguna institución
+    // Esto previene que usuarios accedan a instituciones a las que no pertenecen
+    return null;
   }
 
   async createUser(params: {

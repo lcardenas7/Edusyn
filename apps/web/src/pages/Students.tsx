@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
-import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, GraduationCap, FileText, AlertTriangle, Phone, Mail, MapPin, Users, CheckCircle2, XCircle, FileSpreadsheet } from 'lucide-react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, GraduationCap, FileText, AlertTriangle, Phone, Mail, MapPin, Users, CheckCircle2, XCircle, FileSpreadsheet, Heart, UserPlus, Loader2 } from 'lucide-react'
 import { generateTemplate, parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
-import { studentsApi } from '../lib/api'
+import { studentsApi, guardiansApi, academicYearLifecycleApi, groupsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
 type StudentStatus = 'ACTIVE' | 'INACTIVE' | 'TRANSFERRED' | 'GRADUATED' | 'WITHDRAWN'
@@ -89,16 +89,42 @@ export default function Students() {
   const [showModal, setShowModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
   const [editingStudent, setEditingStudent] = useState<Student | null>(null)
-  const [detailTab, setDetailTab] = useState<'info' | 'academic' | 'observer'>('info')
+  const [detailTab, setDetailTab] = useState<'info' | 'academic' | 'observer' | 'guardians'>('info')
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const [importing, setImporting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Estados para importación con backend
+  const [currentAcademicYear, setCurrentAcademicYear] = useState<{ id: string; year: number } | null>(null)
+  const [availableGroups, setAvailableGroups] = useState<{ id: string; name: string; grade?: { name: string } }[]>([])
+  const [studentGuardians, setStudentGuardians] = useState<any[]>([])
+  const [loadingGuardians, setLoadingGuardians] = useState(false)
 
   const [formData, setFormData] = useState<Partial<Student>>({
     firstName: '', lastName: '', documentType: 'TI', documentNumber: '', birthDate: '', gender: 'M',
     address: '', phone: '', email: '', group: '9°A', status: 'ACTIVE', enrollmentDate: new Date().toISOString().split('T')[0],
     parentName: '', parentPhone: '', parentEmail: '', bloodType: '', eps: '', observations: ''
   })
+
+  // Cargar año académico actual y grupos disponibles
+  useEffect(() => {
+    const loadInitialData = async () => {
+      if (!institution?.id) return
+      try {
+        // Cargar año académico actual
+        const yearRes = await academicYearLifecycleApi.getCurrent(institution.id)
+        if (yearRes.data) {
+          setCurrentAcademicYear({ id: yearRes.data.id, year: yearRes.data.year })
+        }
+        // Cargar grupos disponibles
+        const groupsRes = await groupsApi.getAll()
+        setAvailableGroups(groupsRes.data || [])
+      } catch (err) {
+        console.error('Error loading initial data:', err)
+      }
+    }
+    loadInitialData()
+  }, [institution?.id])
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -113,7 +139,7 @@ export default function Students() {
         const apiStudents: Student[] = (response.data || []).map((s: any) => ({
           id: s.id,
           firstName: s.firstName || '',
-          lastName: s.lastName || '',
+          lastName: `${s.lastName || ''} ${s.secondLastName || ''}`.trim(),
           documentType: s.documentType || 'TI',
           documentNumber: s.documentNumber || '',
           birthDate: s.birthDate || '',
@@ -124,12 +150,12 @@ export default function Students() {
           group: s.enrollments?.[0]?.group ? `${s.enrollments[0].group.grade?.name || ''} ${s.enrollments[0].group.name}`.trim() : '',
           status: s.enrollments?.[0]?.status || 'ACTIVE',
           enrollmentDate: s.enrollments?.[0]?.enrollmentDate || '',
-          parentName: '',
-          parentPhone: '',
-          parentEmail: '',
-          bloodType: '',
-          eps: '',
-          observations: ''
+          parentName: s.guardians?.[0]?.guardian ? `${s.guardians[0].guardian.firstName} ${s.guardians[0].guardian.lastName}` : '',
+          parentPhone: s.guardians?.[0]?.guardian?.phone || '',
+          parentEmail: s.guardians?.[0]?.guardian?.email || '',
+          bloodType: s.bloodType || '',
+          eps: s.eps || '',
+          observations: s.observations || ''
         }))
         setStudents(apiStudents)
       } catch (err: any) {
@@ -213,6 +239,33 @@ export default function Students() {
     setViewMode('detail')
   }
 
+  const loadStudentGuardians = async (studentId: string) => {
+    setLoadingGuardians(true)
+    try {
+      const response = await guardiansApi.getByStudent(studentId)
+      setStudentGuardians(response.data || [])
+    } catch (err) {
+      console.error('Error loading guardians:', err)
+      setStudentGuardians([])
+    } finally {
+      setLoadingGuardians(false)
+    }
+  }
+
+  const relationshipLabels: Record<string, string> = {
+    FATHER: 'Padre',
+    MOTHER: 'Madre',
+    STEPFATHER: 'Padrastro',
+    STEPMOTHER: 'Madrastra',
+    GRANDFATHER: 'Abuelo',
+    GRANDMOTHER: 'Abuela',
+    UNCLE: 'Tío',
+    AUNT: 'Tía',
+    SIBLING: 'Hermano/a',
+    LEGAL_GUARDIAN: 'Tutor Legal',
+    OTHER: 'Otro',
+  }
+
   const calculateAge = (birthDate: string) => {
     const today = new Date()
     const birth = new Date(birthDate)
@@ -249,35 +302,97 @@ export default function Students() {
     }
   }
 
-  const handleConfirmImport = () => {
+  const handleConfirmImport = async () => {
     if (!importResult || importResult.data.length === 0) return
+    if (!institution?.id || !currentAcademicYear?.id) {
+      alert('No hay año académico activo. Configure un año académico antes de importar.')
+      return
+    }
+
+    setImporting(true)
     
-    const newStudents: Student[] = importResult.data.map((row, index) => ({
-      id: `imported-${Date.now()}-${index}`,
-      firstName: row.firstName || '',
-      lastName: `${row.lastName || ''} ${row.secondLastName || ''}`.trim(),
-      documentType: row.documentType || 'TI',
-      documentNumber: row.documentNumber || '',
-      birthDate: row.birthDate || '',
-      gender: row.gender || 'M',
-      address: row.address || '',
-      phone: row.phone || '',
-      email: row.email || '',
-      group: row.group || '9°A',
-      status: 'ACTIVE' as StudentStatus,
-      enrollmentDate: new Date().toISOString().split('T')[0],
-      parentName: row.parentName || '',
-      parentPhone: row.parentPhone || '',
-      parentEmail: row.parentEmail || '',
-      bloodType: row.bloodType || '',
-      eps: row.eps || '',
-      observations: ''
-    }))
-    
-    setStudents([...students, ...newStudents])
-    setShowImportModal(false)
-    setImportResult(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
+    try {
+      // Mapear grupo del Excel al ID del grupo en la BD
+      const findGroupId = (groupName: string): string => {
+        const group = availableGroups.find(g => {
+          const fullName = g.grade?.name ? `${g.grade.name} ${g.name}` : g.name
+          return fullName.toLowerCase().includes(groupName.toLowerCase()) || 
+                 g.name.toLowerCase() === groupName.toLowerCase()
+        })
+        return group?.id || ''
+      }
+
+      const studentsToImport = importResult.data
+        .map(row => ({
+          documentType: row.documentType || 'TI',
+          documentNumber: row.documentNumber || '',
+          firstName: row.firstName || '',
+          secondName: row.secondName || '',
+          lastName: row.lastName || '',
+          secondLastName: row.secondLastName || '',
+          birthDate: row.birthDate || '',
+          gender: row.gender || 'M',
+          address: row.address || '',
+          phone: row.phone || '',
+          email: row.email || '',
+          groupId: findGroupId(row.group || ''),
+          bloodType: row.bloodType || '',
+          eps: row.eps || '',
+          guardianName: row.parentName || '',
+          guardianPhone: row.parentPhone || '',
+          guardianEmail: row.parentEmail || '',
+        }))
+        .filter(s => s.documentNumber && s.firstName && s.groupId)
+
+      if (studentsToImport.length === 0) {
+        alert('No hay estudiantes válidos para importar. Verifique que los grupos existan.')
+        setImporting(false)
+        return
+      }
+
+      const result = await studentsApi.bulkImport({
+        institutionId: institution.id,
+        academicYearId: currentAcademicYear.id,
+        students: studentsToImport,
+      })
+
+      const { created, updated, errors } = result.data
+      alert(`Importación completada:\n- Creados: ${created}\n- Actualizados: ${updated}\n- Errores: ${errors?.length || 0}`)
+
+      // Recargar estudiantes
+      const response = await studentsApi.getAll({ institutionId: institution.id })
+      const apiStudents: Student[] = (response.data || []).map((s: any) => ({
+        id: s.id,
+        firstName: s.firstName || '',
+        lastName: `${s.lastName || ''} ${s.secondLastName || ''}`.trim(),
+        documentType: s.documentType || 'TI',
+        documentNumber: s.documentNumber || '',
+        birthDate: s.birthDate || '',
+        gender: s.gender || '',
+        address: s.address || '',
+        phone: s.phone || '',
+        email: s.email || '',
+        group: s.enrollments?.[0]?.group ? `${s.enrollments[0].group.grade?.name || ''} ${s.enrollments[0].group.name}`.trim() : '',
+        status: s.enrollments?.[0]?.status || 'ACTIVE',
+        enrollmentDate: s.enrollments?.[0]?.enrollmentDate || '',
+        parentName: s.guardians?.[0]?.guardian ? `${s.guardians[0].guardian.firstName} ${s.guardians[0].guardian.lastName}` : '',
+        parentPhone: s.guardians?.[0]?.guardian?.phone || '',
+        parentEmail: s.guardians?.[0]?.guardian?.email || '',
+        bloodType: s.bloodType || '',
+        eps: s.eps || '',
+        observations: s.observations || ''
+      }))
+      setStudents(apiStudents)
+
+      setShowImportModal(false)
+      setImportResult(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    } catch (err: any) {
+      console.error('Error importing students:', err)
+      alert('Error al importar estudiantes: ' + (err.response?.data?.message || err.message))
+    } finally {
+      setImporting(false)
+    }
   }
 
   const handleExport = () => {
@@ -488,6 +603,9 @@ export default function Students() {
                 <button onClick={() => setDetailTab('info')} className={`px-6 py-3 font-medium text-sm border-b-2 ${detailTab === 'info' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                   <User className="w-4 h-4 inline mr-2" />Informacion Personal
                 </button>
+                <button onClick={() => { setDetailTab('guardians'); loadStudentGuardians(selectedStudent.id) }} className={`px-6 py-3 font-medium text-sm border-b-2 ${detailTab === 'guardians' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                  <Users className="w-4 h-4 inline mr-2" />Acudientes
+                </button>
                 <button onClick={() => setDetailTab('academic')} className={`px-6 py-3 font-medium text-sm border-b-2 ${detailTab === 'academic' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                   <GraduationCap className="w-4 h-4 inline mr-2" />Historial Academico
                 </button>
@@ -532,6 +650,92 @@ export default function Students() {
                       </>
                     )}
                   </div>
+                </div>
+              )}
+
+              {detailTab === 'guardians' && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-slate-900">Acudientes / Padres de Familia</h3>
+                    <button className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                      <UserPlus className="w-4 h-4" /> Agregar Acudiente
+                    </button>
+                  </div>
+                  
+                  {loadingGuardians ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                      <span className="ml-2 text-slate-500">Cargando acudientes...</span>
+                    </div>
+                  ) : studentGuardians.length === 0 ? (
+                    <div className="text-center py-8 bg-slate-50 rounded-lg">
+                      <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                      <p className="text-slate-500">No hay acudientes registrados</p>
+                      <p className="text-sm text-slate-400 mt-1">Agregue un acudiente para este estudiante</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {studentGuardians.map((sg: any) => (
+                        <div key={sg.id} className={`p-4 rounded-lg border ${sg.isPrimary ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-white'}`}>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${sg.isPrimary ? 'bg-blue-200 text-blue-700' : 'bg-slate-200 text-slate-600'}`}>
+                                <span className="text-lg font-bold">
+                                  {sg.guardian?.firstName?.[0]}{sg.guardian?.lastName?.[0]}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-900">
+                                  {sg.guardian?.firstName} {sg.guardian?.lastName}
+                                </p>
+                                <p className="text-sm text-slate-500">
+                                  {relationshipLabels[sg.relationship] || sg.relationship}
+                                  {sg.isPrimary && <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">Principal</span>}
+                                </p>
+                              </div>
+                            </div>
+                            <button className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600">
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                          
+                          <div className="mt-4 space-y-2 text-sm">
+                            <p className="flex items-center gap-2 text-slate-600">
+                              <Phone className="w-4 h-4 text-slate-400" />
+                              {sg.guardian?.phone || 'Sin teléfono'}
+                            </p>
+                            {sg.guardian?.email && (
+                              <p className="flex items-center gap-2 text-slate-600">
+                                <Mail className="w-4 h-4 text-slate-400" />
+                                {sg.guardian.email}
+                              </p>
+                            )}
+                            {sg.guardian?.address && (
+                              <p className="flex items-center gap-2 text-slate-600">
+                                <MapPin className="w-4 h-4 text-slate-400" />
+                                {sg.guardian.address}
+                              </p>
+                            )}
+                          </div>
+                          
+                          <div className="mt-4 pt-3 border-t border-slate-200 flex flex-wrap gap-2">
+                            {sg.canPickUp && (
+                              <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Puede recoger</span>
+                            )}
+                            {sg.isEmergencyContact && (
+                              <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">Contacto emergencia</span>
+                            )}
+                            {sg.receivesNotifications && (
+                              <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">Recibe notificaciones</span>
+                            )}
+                            {sg.receivesGrades && (
+                              <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs">Recibe notas</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -126,6 +126,19 @@ const AVAILABLE_MODULES: ModuleConfig[] = [
     ]
   },
   { 
+    id: 'ENROLLMENTS', 
+    name: 'Matrículas', 
+    description: 'Gestión de matrículas y acudientes',
+    required: true,  // Obligatorio - gestión de estudiantes matriculados
+    features: [
+      { id: 'ENROLLMENTS_MANAGE', name: 'Gestionar Matrículas', description: 'Matricular, retirar, trasladar estudiantes' },
+      { id: 'ENROLLMENTS_GUARDIANS', name: 'Acudientes', description: 'Gestionar acudientes y padres de familia' },
+      { id: 'ENROLLMENTS_IMPORT', name: 'Importar Estudiantes', description: 'Importación masiva de estudiantes' },
+      { id: 'ENROLLMENTS_GROUPS', name: 'Cambio de Grupo', description: 'Cambiar estudiantes de grupo' },
+      { id: 'ENROLLMENTS_HISTORY', name: 'Historial', description: 'Ver historial de movimientos' },
+    ]
+  },
+  { 
     id: 'ACADEMIC', 
     name: 'Gestión Académica', 
     description: 'Notas, áreas, asignaturas',
@@ -928,7 +941,7 @@ function CreateInstitutionModal({
     adminUsername: '',
     adminPassword: '',
     sendEmailNotification: false,
-    modules: ['DASHBOARD', 'ACADEMIC', 'CONFIG', 'USERS', 'ATTENDANCE', 'EVALUATION', 'RECOVERY', 'REPORTS', 'COMMUNICATIONS', 'OBSERVER', 'PERFORMANCE'] as string[],
+    modules: ['DASHBOARD', 'ACADEMIC', 'CONFIG', 'USERS', 'ENROLLMENTS', 'ATTENDANCE', 'EVALUATION', 'RECOVERY', 'REPORTS', 'COMMUNICATIONS', 'OBSERVER', 'PERFORMANCE'] as string[],
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showCredentialsModal, setShowCredentialsModal] = useState(false)

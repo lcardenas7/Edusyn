@@ -272,40 +272,77 @@ export default function Dashboard() {
                 Cumpleaños del Mes
               </h2>
             </div>
-            <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+            <div className="max-h-80 overflow-y-auto">
               {birthdays.length === 0 ? (
                 <div className="px-6 py-8 text-center text-slate-500">
                   <Cake className="w-10 h-10 mx-auto text-slate-300 mb-2" />
                   <p>No hay cumpleaños este mes</p>
                 </div>
               ) : (
-                birthdays.map((birthday) => (
-                  <div 
-                    key={birthday.id} 
-                    className={`px-6 py-3 hover:bg-slate-50 transition-colors ${birthday.isToday ? 'bg-pink-50' : ''}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${birthday.isToday ? 'bg-pink-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
-                        <span className="text-xs font-bold">
-                          {new Date(birthday.birthDate).getDate()}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-900 text-sm truncate">
-                          {birthday.name}
-                          {birthday.isToday && <span className="ml-2 text-pink-600">🎂</span>}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {birthday.type === 'DOCENTE' ? (
-                            <span className="text-blue-600 font-medium">Docente</span>
-                          ) : (
-                            birthday.detail
-                          )}
-                        </p>
+                <>
+                  {/* Cumpleaños de hoy destacados */}
+                  {birthdays.filter(b => b.isToday).length > 0 && (
+                    <div className="px-4 py-3 bg-gradient-to-r from-pink-50 to-purple-50 border-b border-pink-100">
+                      <p className="text-xs font-semibold text-pink-600 uppercase mb-2">🎂 ¡Hoy cumplen años!</p>
+                      <div className="space-y-2">
+                        {birthdays.filter(b => b.isToday).map((birthday) => (
+                          <div key={birthday.id} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-sm">
+                            <div className="w-8 h-8 bg-pink-500 text-white rounded-full flex items-center justify-center">
+                              <span className="text-xs font-bold">{new Date(birthday.birthDate).getDate()}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-slate-900 text-sm truncate">{birthday.name}</p>
+                              <p className="text-xs text-slate-500">
+                                {birthday.type === 'DOCENTE' ? (
+                                  <span className="text-blue-600 font-medium">Docente</span>
+                                ) : (
+                                  <span className="text-green-600">{birthday.detail}</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </div>
-                ))
+                  )}
+
+                  {/* Docentes */}
+                  {birthdays.filter(b => b.type === 'DOCENTE' && !b.isToday).length > 0 && (
+                    <div className="px-4 py-2 border-b border-slate-100">
+                      <p className="text-xs font-semibold text-blue-600 uppercase mb-2">Docentes</p>
+                      <div className="space-y-1">
+                        {birthdays.filter(b => b.type === 'DOCENTE' && !b.isToday).map((birthday) => (
+                          <div key={birthday.id} className="flex items-center gap-2 py-1">
+                            <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-bold">{new Date(birthday.birthDate).getDate()}</span>
+                            </div>
+                            <p className="text-sm text-slate-700 truncate">{birthday.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Estudiantes */}
+                  {birthdays.filter(b => b.type === 'ESTUDIANTE' && !b.isToday).length > 0 && (
+                    <div className="px-4 py-2">
+                      <p className="text-xs font-semibold text-green-600 uppercase mb-2">Estudiantes</p>
+                      <div className="space-y-1">
+                        {birthdays.filter(b => b.type === 'ESTUDIANTE' && !b.isToday).map((birthday) => (
+                          <div key={birthday.id} className="flex items-center gap-2 py-1">
+                            <div className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-bold">{new Date(birthday.birthDate).getDate()}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-slate-700 truncate">{birthday.name}</p>
+                              <p className="text-xs text-slate-400">{birthday.detail}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

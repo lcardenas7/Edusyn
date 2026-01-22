@@ -153,6 +153,7 @@ enum AreaRecoveryRule {
 // Módulos disponibles en el sistema
 enum SystemModule {
   ACADEMIC           // Gestión académica (notas, áreas, asignaturas)
+  ENROLLMENTS        // Matrículas y gestión de estudiantes
   ATTENDANCE         // Control de asistencia
   EVALUATION         // Actividades evaluativas
   RECOVERY           // Recuperaciones
@@ -1142,6 +1143,11 @@ model Announcement {
   publishedAt   DateTime  @default(now())
   expiresAt     DateTime?
   authorId      String
+  
+  // Visibilidad por rol - JSON array de roles que pueden ver (vacío = todos)
+  // Ejemplo: ["DOCENTE", "COORDINADOR"] o ["ESTUDIANTE"]
+  visibleToRoles String[]  @default([])
+  
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -1185,6 +1191,10 @@ model Event {
   eventType     String    @default("GENERAL")
   isActive      Boolean   @default(true)
   authorId      String
+  
+  // Visibilidad por rol - array de roles que pueden ver (vacío = todos)
+  visibleToRoles String[]  @default([])
+  
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
