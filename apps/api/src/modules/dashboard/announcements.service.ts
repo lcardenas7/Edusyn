@@ -15,19 +15,27 @@ export class AnnouncementsService {
     authorId: string;
     visibleToRoles?: string[];
   }) {
-    return this.prisma.announcement.create({
-      data: {
-        institutionId: data.institutionId,
-        title: data.title,
-        content: data.content,
-        imageUrl: data.imageUrl,
-        priority: data.priority ?? 0,
-        expiresAt: data.expiresAt,
-        authorId: data.authorId,
-        visibleToRoles: data.visibleToRoles || [],
-      },
-      include: { author: true },
-    });
+    console.log('[AnnouncementsService] Creating announcement with data:', data)
+    try {
+      const result = await this.prisma.announcement.create({
+        data: {
+          institutionId: data.institutionId,
+          title: data.title,
+          content: data.content,
+          imageUrl: data.imageUrl,
+          priority: data.priority ?? 0,
+          expiresAt: data.expiresAt,
+          authorId: data.authorId,
+          visibleToRoles: data.visibleToRoles || [],
+        },
+        include: { author: true },
+      });
+      console.log('[AnnouncementsService] Announcement created successfully:', result.id)
+      return result
+    } catch (error) {
+      console.error('[AnnouncementsService] Error creating announcement:', error)
+      throw error
+    }
   }
 
   async list(institutionId?: string, onlyActive = true) {

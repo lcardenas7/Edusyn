@@ -14,13 +14,21 @@ export class GalleryService {
     uploadedById: string;
     visibleToRoles?: string[];
   }) {
-    return this.prisma.galleryImage.create({
-      data: {
-        ...data,
-        visibleToRoles: data.visibleToRoles || [],
-      },
-      include: { uploadedBy: true },
-    });
+    console.log('[GalleryService] Creating image with data:', data)
+    try {
+      const result = await this.prisma.galleryImage.create({
+        data: {
+          ...data,
+          visibleToRoles: data.visibleToRoles || [],
+        },
+        include: { uploadedBy: true },
+      });
+      console.log('[GalleryService] Image created successfully:', result.id)
+      return result
+    } catch (error) {
+      console.error('[GalleryService] Error creating image:', error)
+      throw error
+    }
   }
 
   async list(institutionId?: string, category?: string, onlyActive = true) {

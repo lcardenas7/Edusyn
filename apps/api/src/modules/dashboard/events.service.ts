@@ -16,13 +16,21 @@ export class EventsService {
     authorId: string;
     visibleToRoles?: string[];
   }) {
-    return this.prisma.event.create({
-      data: {
-        ...data,
-        visibleToRoles: data.visibleToRoles || [],
-      },
-      include: { author: true },
-    });
+    console.log('[EventsService] Creating event with data:', data)
+    try {
+      const result = await this.prisma.event.create({
+        data: {
+          ...data,
+          visibleToRoles: data.visibleToRoles || [],
+        },
+        include: { author: true },
+      });
+      console.log('[EventsService] Event created successfully:', result.id)
+      return result
+    } catch (error) {
+      console.error('[EventsService] Error creating event:', error)
+      throw error
+    }
   }
 
   async list(institutionId?: string, onlyActive = true, upcoming = false) {

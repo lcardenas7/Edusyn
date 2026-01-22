@@ -174,6 +174,9 @@ export default function ContentManager() {
   const handleSave = async () => {
     setSaving(true)
     try {
+      // Debug logging
+      console.log('[ContentManager] Saving:', { activeTab, institutionId: institution?.id, editingItem: editingItem?.id })
+      
       if (activeTab === 'announcements') {
         const data = {
           title: announcementForm.title,
@@ -184,6 +187,7 @@ export default function ContentManager() {
           institutionId: institution.id,
           expiresAt: announcementForm.expiresAt ? new Date(announcementForm.expiresAt).toISOString() : undefined
         }
+        console.log('[ContentManager] Announcement data:', data)
         if (editingItem) {
           await announcementsApi.update(editingItem.id, data)
         } else {
@@ -198,6 +202,7 @@ export default function ContentManager() {
           visibleToRoles: galleryForm.visibleToRoles,
           institutionId: institution.id
         }
+        console.log('[ContentManager] Gallery data:', data)
         if (editingItem) {
           await galleryApi.update(editingItem.id, data)
         } else {

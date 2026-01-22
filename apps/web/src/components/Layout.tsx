@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { 
   LayoutDashboard, 
   Users, 
+  UserPlus,
   BookOpen, 
   ClipboardList, 
   Calendar, 
@@ -104,6 +105,19 @@ const institutionalNavigation: NavItem[] = [
     ]
   },
   
+  // Matrículas y Admisiones
+  { 
+    name: 'Matrículas', 
+    icon: UserPlus, 
+    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'],
+    module: 'ENROLLMENTS',
+    children: [
+      { name: 'Gestión de Matrículas', href: '/enrollments', icon: UserPlus, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ENROLLMENTS' },
+      { name: 'Cierre Año Académico', href: '/academic-year-closure', icon: FileText, roles: ['ADMIN_INSTITUTIONAL'], module: 'ENROLLMENTS' },
+      { name: 'Asistente Año Académico', href: '/academic-year-wizard', icon: RefreshCw, roles: ['ADMIN_INSTITUTIONAL'], module: 'ENROLLMENTS' },
+    ]
+  },
+
   // Gestión de Personas
   { 
     name: 'Gestión de Personas', 

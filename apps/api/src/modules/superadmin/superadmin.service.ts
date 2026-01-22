@@ -249,6 +249,7 @@ export class SuperadminService {
     const moduleFeaturePrefixes: Record<string, string[]> = {
       'DASHBOARD': ['DASHBOARD_'],
       'ACADEMIC': ['ACADEMIC_'],
+      'ENROLLMENTS': ['ENROLL_'],
       'ATTENDANCE': ['ATTENDANCE_'],
       'EVALUATION': ['EVALUATION_'],
       'RECOVERY': ['RECOVERY_'],
