@@ -146,7 +146,20 @@ export default function Institution() {
   const [editingPeriod, setEditingPeriod] = useState<Period | null>(null)
   const [periodForm, setPeriodForm] = useState({ name: '', weight: 25, startDate: '', endDate: '' })
 
-  const [grades, setGrades] = useState<Grade[]>(defaultGrades)
+  const [grades, setGrades] = useState<Grade[]>(() => {
+    // Cargar grados desde localStorage con clave específica por institución
+    const institutionId = authInstitution?.id || 'default'
+    const saved = localStorage.getItem(`edusyn_grades_${institutionId}`)
+    if (saved) {
+      try {
+        return JSON.parse(saved)
+      } catch {
+        return []
+      }
+    }
+    // Si no hay datos guardados, inicializar vacío (el usuario creará los grados)
+    return []
+  })
   const [showGradeModal, setShowGradeModal] = useState(false)
   const [editingGrade, setEditingGrade] = useState<Grade | null>(null)
   const [gradeForm, setGradeForm] = useState({ name: '', level: '', order: 0 })
@@ -420,6 +433,12 @@ export default function Institution() {
   }
 
   // gradesByLevel ya no se usa - ahora se filtra dinámicamente en el render
+
+  // Persistir grados en localStorage cuando cambien (con clave específica por institución)
+  useEffect(() => {
+    const institutionId = authInstitution?.id || 'default'
+    localStorage.setItem(`edusyn_grades_${institutionId}`, JSON.stringify(grades))
+  }, [grades, authInstitution?.id])
 
   const totalProcessWeight = gradingConfig.evaluationProcesses.reduce((sum, p) => sum + p.weightPercentage, 0)
   const totalPeriodWeight = periods.reduce((sum, p) => sum + p.weight, 0)

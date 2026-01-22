@@ -24,6 +24,10 @@ import { GradingPeriodConfigController } from './grading-period-config.controlle
 import { GradingPeriodConfigService } from './grading-period-config.service';
 import { RecoveryPeriodConfigController } from './recovery-period-config.controller';
 import { RecoveryPeriodConfigService } from './recovery-period-config.service';
+import { AcademicYearLifecycleController } from './academic-year-lifecycle.controller';
+import { AcademicYearLifecycleService } from './academic-year-lifecycle.service';
+import { EnrollmentController } from './enrollment.controller';
+import { EnrollmentService } from './enrollment.service';
 
 @Module({
   controllers: [
@@ -39,6 +43,8 @@ import { RecoveryPeriodConfigService } from './recovery-period-config.service';
     TeachersController,
     GradingPeriodConfigController,
     RecoveryPeriodConfigController,
+    AcademicYearLifecycleController,
+    EnrollmentController,
   ],
   providers: [
     InstitutionsService,
@@ -53,7 +59,9 @@ import { RecoveryPeriodConfigService } from './recovery-period-config.service';
     TeachersService,
     GradingPeriodConfigService,
     RecoveryPeriodConfigService,
+    AcademicYearLifecycleService,
+    EnrollmentService,
   ],
-  exports: [GradingPeriodConfigService, RecoveryPeriodConfigService],
+  exports: [GradingPeriodConfigService, RecoveryPeriodConfigService, AcademicYearLifecycleService, EnrollmentService],
 })
 export class AcademicModule {}
