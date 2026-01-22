@@ -363,13 +363,26 @@ const AcademicYearWizard: React.FC = () => {
                           <span className="font-medium">{year.name}</span>
                           <span className="text-sm text-slate-500">({year.year})</span>
                         </div>
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          year.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                          year.status === 'CLOSED' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {year.status === 'ACTIVE' ? 'Activo' :
-                           year.status === 'CLOSED' ? 'Cerrado' : 'Borrador'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {year.status === 'DRAFT' && (
+                            <button
+                              onClick={() => {
+                                setCreatedYear(year)
+                                setCurrentStep(3) // Ir directo a Acciones
+                              }}
+                              className="px-3 py-1 text-xs bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                            >
+                              Continuar y Activar
+                            </button>
+                          )}
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            year.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                            year.status === 'CLOSED' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            {year.status === 'ACTIVE' ? 'Activo' :
+                             year.status === 'CLOSED' ? 'Cerrado' : 'Borrador'}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
