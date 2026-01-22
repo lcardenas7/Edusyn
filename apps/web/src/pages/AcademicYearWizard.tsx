@@ -183,12 +183,21 @@ const AcademicYearWizard: React.FC = () => {
       })
 
       const newYear = response.data
+      console.log('Created year response:', newYear)
+      
+      if (!newYear?.id) {
+        throw new Error('No se recibió el ID del año lectivo creado')
+      }
+      
+      const yearId = newYear.id
       setCreatedYear(newYear)
 
       // Crear períodos académicos
+      console.log('Creating terms for yearId:', yearId)
       for (const term of terms) {
+        console.log('Creating term:', term.name, 'for year:', yearId)
         await academicTermsApi.create({
-          academicYearId: newYear.id,
+          academicYearId: yearId,
           type: 'PERIOD',
           name: term.name,
           order: term.order,
@@ -200,8 +209,9 @@ const AcademicYearWizard: React.FC = () => {
       if (useFinalComponents && finalComponents.length > 0) {
         for (let i = 0; i < finalComponents.length; i++) {
           const fc = finalComponents[i]
+          console.log('Creating final component:', fc.name, 'for year:', yearId)
           await academicTermsApi.create({
-            academicYearId: newYear.id,
+            academicYearId: yearId,
             type: 'SEMESTER_EXAM',
             name: fc.name,
             order: terms.length + i + 1,
@@ -214,8 +224,12 @@ const AcademicYearWizard: React.FC = () => {
       nextStep()
     } catch (error: any) {
       console.error('Error creating year:', error)
+      console.error('Error response:', error.response?.data)
+      const errorMessage = Array.isArray(error.response?.data?.message) 
+        ? error.response.data.message.join(', ')
+        : error.response?.data?.message || 'Error al crear el año lectivo'
       setValidationErrors({ 
-        general: [error.response?.data?.message || 'Error al crear el año lectivo'] 
+        general: [errorMessage] 
       })
     } finally {
       setIsCreating(false)
