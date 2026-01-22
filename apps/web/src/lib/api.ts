@@ -149,6 +149,7 @@ export const enrollmentsApi = {
 // Academic Terms (Periods)
 export const academicTermsApi = {
   getAll: (academicYearId?: string) => api.get('/academic-terms', { params: { academicYearId } }),
+  getByAcademicYear: (academicYearId: string) => api.get('/academic-terms', { params: { academicYearId } }),
   create: (data: { academicYearId: string; type: string; name: string; order: number; weightPercentage: number }) => api.post('/academic-terms', data),
 }
 

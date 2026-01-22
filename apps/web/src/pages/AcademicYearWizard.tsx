@@ -380,13 +380,41 @@ const AcademicYearWizard: React.FC = () => {
                         <div className="flex items-center gap-2">
                           {year.status === 'DRAFT' && (
                             <button
-                              onClick={() => {
+                              onClick={async () => {
                                 setCreatedYear(year)
-                                setCurrentStep(3) // Ir directo a Acciones
+                                // Cargar los términos existentes del año
+                                try {
+                                  const termsResponse = await academicTermsApi.getByAcademicYear(year.id)
+                                  if (termsResponse.data && termsResponse.data.length > 0) {
+                                    const loadedTerms = termsResponse.data.map((t: any) => ({
+                                      id: t.id,
+                                      name: t.name,
+                                      type: t.type,
+                                      order: t.order,
+                                      weightPercentage: t.weightPercentage
+                                    }))
+                                    setTerms(loadedTerms.filter((t: any) => t.type === 'PERIOD'))
+                                    const finalComps = loadedTerms.filter((t: any) => t.type === 'SEMESTER_EXAM')
+                                    if (finalComps.length > 0) {
+                                      setUseFinalComponents(true)
+                                      setFinalComponents(finalComps.map((fc: any) => ({
+                                        id: fc.id,
+                                        name: fc.name,
+                                        weightPercentage: fc.weightPercentage
+                                      })))
+                                    }
+                                    setCurrentStep(3) // Ir a Acciones si ya tiene términos
+                                  } else {
+                                    setCurrentStep(1) // Ir a configurar períodos si no tiene
+                                  }
+                                } catch (error) {
+                                  console.error('Error loading terms:', error)
+                                  setCurrentStep(1) // Ir a configurar períodos en caso de error
+                                }
                               }}
                               className="px-3 py-1 text-xs bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
                             >
-                              Continuar y Activar
+                              Continuar Configuración
                             </button>
                           )}
                           <span className={`px-2 py-1 text-xs rounded-full ${
@@ -739,10 +767,10 @@ const AcademicYearWizard: React.FC = () => {
                       </button>
                       
                       <button
-                        onClick={() => navigate('/institution')}
+                        onClick={() => setCurrentStep(1)}
                         className="w-full px-4 py-3 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors"
                       >
-                        Configurar Más Detalles
+                        Configurar Períodos
                       </button>
                     </div>
                   </div>

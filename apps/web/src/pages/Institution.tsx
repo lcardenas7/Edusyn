@@ -25,7 +25,7 @@ import {
 import { useInstitution, Period, AcademicLevel, GradingScaleType } from '../contexts/InstitutionContext'
 import { useAuth } from '../contexts/AuthContext'
 import { usePermissions, PERMISSIONS } from '../hooks/usePermissions'
-import { gradingPeriodConfigApi, recoveryPeriodConfigApi, academicYearsApi, academicYearLifecycleApi } from '../lib/api'
+import { gradingPeriodConfigApi, recoveryPeriodConfigApi, academicYearsApi, academicYearLifecycleApi, academicTermsApi } from '../lib/api'
 
 type TabType = 'general' | 'academic-levels' | 'grading' | 'periods' | 'grades' | 'grading-windows' | 'recovery-windows'
 
@@ -323,8 +323,27 @@ export default function Institution() {
     try {
       const success = await savePeriodsToAPI()
       if (success) {
-        // Recargar años académicos después de guardar períodos
-        if (authInstitution?.id) {
+        // Sincronizar períodos con AcademicTerms del año activo
+        if (authInstitution?.id && selectedAcademicYear) {
+          // Obtener términos existentes del año
+          const existingTermsResponse = await academicTermsApi.getByAcademicYear(selectedAcademicYear)
+          const existingTerms = existingTermsResponse.data || []
+          
+          // Si no hay términos, crearlos desde los períodos configurados
+          if (existingTerms.length === 0 && periods.length > 0) {
+            for (let i = 0; i < periods.length; i++) {
+              const period = periods[i]
+              await academicTermsApi.create({
+                academicYearId: selectedAcademicYear,
+                type: 'PERIOD',
+                name: period.name,
+                order: i + 1,
+                weightPercentage: period.weight
+              })
+            }
+          }
+          
+          // Recargar años académicos
           const response = await academicYearsApi.getAll(authInstitution.id)
           const years = response.data || []
           setAcademicYears(years)
