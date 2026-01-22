@@ -25,7 +25,7 @@ import {
 import { useInstitution, Period, AcademicLevel, GradingScaleType } from '../contexts/InstitutionContext'
 import { useAuth } from '../contexts/AuthContext'
 import { usePermissions, PERMISSIONS } from '../hooks/usePermissions'
-import { gradingPeriodConfigApi, recoveryPeriodConfigApi, academicYearsApi } from '../lib/api'
+import { gradingPeriodConfigApi, recoveryPeriodConfigApi, academicYearsApi, academicYearLifecycleApi } from '../lib/api'
 
 type TabType = 'general' | 'academic-levels' | 'grading' | 'periods' | 'grades' | 'grading-windows' | 'recovery-windows'
 
@@ -121,6 +121,7 @@ export default function Institution() {
     gradingConfig, setGradingConfig, 
     periods, setPeriods,
     saveGradingConfigToAPI, saveAcademicLevelsToAPI, savePeriodsToAPI,
+    loadPeriodsFromActiveYear,
     isSaving 
   } = useInstitution()
   const { institution: authInstitution } = useAuth()
@@ -172,8 +173,9 @@ export default function Institution() {
   const [gradingPeriods, setGradingPeriods] = useState<GradingPeriodConfig[]>([])
   const [loadingGradingPeriods, setLoadingGradingPeriods] = useState(false)
   const [savingPeriod, setSavingPeriod] = useState<string | null>(null)
-  const [academicYears, setAcademicYears] = useState<Array<{ id: string; year: number }>>([])
+  const [academicYears, setAcademicYears] = useState<Array<{ id: string; year: number; status?: string }>>([])
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>('')
+  const [activeYearStatus, setActiveYearStatus] = useState<'DRAFT' | 'ACTIVE' | 'CLOSED' | null>(null)
 
   // Cargar años académicos
   useEffect(() => {
@@ -194,6 +196,23 @@ export default function Institution() {
     }
     fetchAcademicYears()
   }, [authInstitution?.id])
+
+  // Cargar períodos y estado desde el año académico activo al iniciar
+  useEffect(() => {
+    const loadActiveYear = async () => {
+      if (!authInstitution?.id) return
+      try {
+        const response = await academicYearLifecycleApi.getCurrent(authInstitution.id)
+        if (response.data) {
+          setActiveYearStatus(response.data.status as 'DRAFT' | 'ACTIVE' | 'CLOSED')
+        }
+        loadPeriodsFromActiveYear(authInstitution.id)
+      } catch (error) {
+        console.error('Error loading active year:', error)
+      }
+    }
+    loadActiveYear()
+  }, [authInstitution?.id, loadPeriodsFromActiveYear])
 
   // Cargar configuración de períodos cuando cambia el año académico
   useEffect(() => {
@@ -560,6 +579,48 @@ export default function Institution() {
           </button>
         </div>
       </div>
+
+      {/* Banner de Estado del Año - Restricciones de Edición */}
+      {activeYearStatus && (
+        <div className={`mb-4 p-3 rounded-lg flex items-center justify-between ${
+          activeYearStatus === 'DRAFT' ? 'bg-amber-50 border border-amber-200' :
+          activeYearStatus === 'ACTIVE' ? 'bg-green-50 border border-green-200' :
+          'bg-red-50 border border-red-200'
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className={`w-3 h-3 rounded-full ${
+              activeYearStatus === 'DRAFT' ? 'bg-amber-500' :
+              activeYearStatus === 'ACTIVE' ? 'bg-green-500 animate-pulse' :
+              'bg-red-500'
+            }`} />
+            <div>
+              <p className={`text-sm font-medium ${
+                activeYearStatus === 'DRAFT' ? 'text-amber-800' :
+                activeYearStatus === 'ACTIVE' ? 'text-green-800' :
+                'text-red-800'
+              }`}>
+                Año en estado: <strong>{
+                  activeYearStatus === 'DRAFT' ? 'Borrador' :
+                  activeYearStatus === 'ACTIVE' ? 'Activo' :
+                  'Cerrado'
+                }</strong>
+              </p>
+              <p className={`text-xs ${
+                activeYearStatus === 'DRAFT' ? 'text-amber-600' :
+                activeYearStatus === 'ACTIVE' ? 'text-green-600' :
+                'text-red-600'
+              }`}>
+                {activeYearStatus === 'DRAFT' && 'Toda la configuración es editable. Active el año cuando esté listo.'}
+                {activeYearStatus === 'ACTIVE' && 'Algunos cambios están restringidos para proteger datos existentes.'}
+                {activeYearStatus === 'CLOSED' && 'El año está cerrado. Solo lectura. Correcciones requieren Acta Académica.'}
+              </p>
+            </div>
+          </div>
+          {activeYearStatus === 'CLOSED' && (
+            <Lock className="w-5 h-5 text-red-500" />
+          )}
+        </div>
+      )}
 
       <div className="flex gap-6">
         {/* Sidebar de tabs */}

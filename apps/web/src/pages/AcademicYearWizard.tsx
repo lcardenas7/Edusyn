@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronRight, ChevronLeft, Check, AlertCircle, Calendar, Users, Settings, Play, Square, Trash2, Plus } from 'lucide-react'
 import { academicYearLifecycleApi, academicTermsApi, enrollmentsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
+import { useInstitution } from '../contexts/InstitutionContext'
 
 interface AcademicYear {
   id: string
@@ -38,6 +39,7 @@ interface ValidationErrors {
 const AcademicYearWizard: React.FC = () => {
   const navigate = useNavigate()
   const { user, institution } = useAuth()
+  const { loadPeriodsFromActiveYear } = useInstitution()
   
   // Estado del wizard
   const [currentStep, setCurrentStep] = useState(0)
@@ -55,10 +57,10 @@ const AcademicYearWizard: React.FC = () => {
   
   // Períodos académicos
   const [terms, setTerms] = useState<AcademicTerm[]>([
-    { id: '1', name: 'Primer Período', type: 'ACADEMIC', order: 1, weightPercentage: 25 },
-    { id: '2', name: 'Segundo Período', type: 'ACADEMIC', order: 2, weightPercentage: 25 },
-    { id: '3', name: 'Tercer Período', type: 'ACADEMIC', order: 3, weightPercentage: 25 },
-    { id: '4', name: 'Cuarto Período', type: 'ACADEMIC', order: 4, weightPercentage: 25 }
+    { id: '1', name: 'Primer Período', type: 'PERIOD', order: 1, weightPercentage: 25 },
+    { id: '2', name: 'Segundo Período', type: 'PERIOD', order: 2, weightPercentage: 25 },
+    { id: '3', name: 'Tercer Período', type: 'PERIOD', order: 3, weightPercentage: 25 },
+    { id: '4', name: 'Cuarto Período', type: 'PERIOD', order: 4, weightPercentage: 25 }
   ])
   
   // Componentes Finales Institucionales (Pruebas Semestrales, etc.)
@@ -187,11 +189,25 @@ const AcademicYearWizard: React.FC = () => {
       for (const term of terms) {
         await academicTermsApi.create({
           academicYearId: newYear.id,
-          type: term.type,
+          type: 'PERIOD',
           name: term.name,
           order: term.order,
           weightPercentage: term.weightPercentage
         })
+      }
+
+      // Crear componentes finales si están habilitados
+      if (useFinalComponents && finalComponents.length > 0) {
+        for (let i = 0; i < finalComponents.length; i++) {
+          const fc = finalComponents[i]
+          await academicTermsApi.create({
+            academicYearId: newYear.id,
+            type: 'SEMESTER_EXAM',
+            name: fc.name,
+            order: terms.length + i + 1,
+            weightPercentage: fc.weightPercentage
+          })
+        }
       }
 
       setSuccessMessage('Año lectivo creado exitosamente')
@@ -224,6 +240,11 @@ const AcademicYearWizard: React.FC = () => {
       // Recargar datos
       await loadExistingYears()
       await loadCurrentYear()
+      
+      // Sincronizar períodos con la configuración institucional
+      if (institution?.id) {
+        await loadPeriodsFromActiveYear(institution.id)
+      }
       
       setTimeout(() => {
         navigate('/institution')
@@ -440,7 +461,7 @@ const AcademicYearWizard: React.FC = () => {
                   onClick={() => setTerms([...terms, { 
                     id: Date.now().toString(), 
                     name: `Período ${terms.length + 1}`, 
-                    type: 'ACADEMIC', 
+                    type: 'PERIOD', 
                     order: terms.length + 1, 
                     weightPercentage: 20 
                   }])}
@@ -767,6 +788,51 @@ const AcademicYearWizard: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-900 mb-2">Wizard de Año Lectivo</h1>
           <p className="text-slate-600">Configura y gestiona el ciclo de vida del año lectivo</p>
         </div>
+
+        {/* Panel de Estado Actual */}
+        {currentYear && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                <div>
+                  <p className="font-medium text-green-800">Año Activo: {currentYear.name}</p>
+                  <p className="text-sm text-green-600">Los cambios de configuración se aplicarán a este año</p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/institution')}
+                className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Ir a Configuración
+              </button>
+            </div>
+          </div>
+        )}
+
+        {existingYears.length > 0 && !currentYear && existingYears.some(y => y.status === 'DRAFT') && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-600" />
+              <div>
+                <p className="font-medium text-amber-800">Tienes un año en borrador pendiente de activar</p>
+                <p className="text-sm text-amber-600">Completa la configuración y activa el año para comenzar a usarlo</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {existingYears.length === 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-blue-600" />
+              <div>
+                <p className="font-medium text-blue-800">¡Bienvenido! Configura tu primer año lectivo</p>
+                <p className="text-sm text-blue-600">Sigue los pasos del wizard para crear y activar el año académico</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Progress Steps */}
         <div className="mb-8">

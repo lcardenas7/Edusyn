@@ -165,6 +165,7 @@ interface InstitutionContextType {
   saveAcademicLevelsToAPI: () => Promise<boolean>
   savePeriodsToAPI: () => Promise<boolean>
   loadConfigFromAPI: () => Promise<void>
+  loadPeriodsFromActiveYear: (institutionId: string) => Promise<void>
   isLoading: boolean
   isSaving: boolean
 }
@@ -544,6 +545,31 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  // Cargar períodos desde el año académico activo
+  const loadPeriodsFromActiveYear = useCallback(async (institutionId: string) => {
+    try {
+      // Obtener el año académico activo
+      const yearResponse = await api.get(`/academic-years/institution/${institutionId}/current`)
+      const activeYear = yearResponse.data
+      
+      if (activeYear && activeYear.terms && activeYear.terms.length > 0) {
+        // Convertir AcademicTerms a formato Period
+        const periodsFromDB: Period[] = activeYear.terms.map((term: any) => ({
+          id: term.id,
+          name: term.name,
+          startDate: term.startDate ? new Date(term.startDate).toISOString().split('T')[0] : '',
+          endDate: term.endDate ? new Date(term.endDate).toISOString().split('T')[0] : '',
+          weight: term.weightPercentage || 25
+        }))
+        
+        setPeriodsState(periodsFromDB)
+        saveToStorage('edusyn_periods', periodsFromDB)
+      }
+    } catch (error) {
+      console.error('Error loading periods from active year:', error)
+    }
+  }, [])
+
   return (
     <InstitutionContext.Provider
       value={{
@@ -562,6 +588,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
         saveAcademicLevelsToAPI,
         savePeriodsToAPI,
         loadConfigFromAPI,
+        loadPeriodsFromActiveYear,
         isLoading,
         isSaving,
       }}
