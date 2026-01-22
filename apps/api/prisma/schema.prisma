@@ -43,6 +43,82 @@ enum AcademicTermType {
   SEMESTER_EXAM
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ENUMS PARA GESTIÓN DE AÑO LECTIVO
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Estado del año académico
+enum AcademicYearStatus {
+  DRAFT      // En configuración - solo Admin puede editar estructura
+  ACTIVE     // Activo - docentes pueden registrar notas/asistencia
+  CLOSED     // Cerrado - solo lectura, histórico
+}
+
+// Tipo de calendario académico (Colombia)
+enum CalendarType {
+  A          // Calendario A (Feb-Nov)
+  B          // Calendario B (Sep-Jun)
+  FLEXIBLE   // Calendario flexible
+}
+
+// Estado de matrícula
+enum EnrollmentStatus {
+  ACTIVE       // Matriculado actualmente
+  PROMOTED     // Promovido al siguiente grado
+  REPEATED     // Repite el mismo grado
+  WITHDRAWN    // Retirado
+  TRANSFERRED  // Trasladado a otra institución
+}
+
+// Tipo de matrícula
+enum EnrollmentType {
+  NEW          // Matrícula nueva (primer ingreso)
+  RENEWAL      // Renovación (estudiante antiguo)
+  TRANSFER_IN  // Traslado desde otra institución
+  REENTRY      // Reingreso (estuvo retirado)
+}
+
+// Tipo de evento de matrícula (auditoría)
+enum EnrollmentEventType {
+  CREATED              // Matrícula inicial
+  GROUP_CHANGED        // Cambio de grupo/curso
+  WITHDRAWN            // Retiro
+  TRANSFERRED          // Traslado
+  PROMOTED             // Promoción
+  REPEATED             // Repitencia
+  REACTIVATED          // Reingreso
+  STATUS_CHANGED       // Cambio de estado genérico
+  GRADE_CORRECTED      // Corrección de nota (con acta)
+  PROMOTION_EXCEPTION  // Promoción excepcional (comité)
+}
+
+// Tipo de movimiento de matrícula
+enum EnrollmentMovementType {
+  ADMINISTRATIVE    // Cambio por razones administrativas
+  ACADEMIC          // Cambio por razones académicas
+}
+
+// Tipo de acta académica
+enum AcademicActType {
+  GRADE_CORRECTION       // Corrección de nota
+  PROMOTION_EXCEPTION    // Promoción excepcional
+  ATTENDANCE_CORRECTION  // Corrección de asistencia
+  ENROLLMENT_CORRECTION  // Corrección de matrícula
+  COMMITTEE_DECISION     // Decisión de comité académico
+  YEAR_CLOSURE           // Cierre de año lectivo
+  ACADEMIC_COUNCIL       // Acta de consejo académico
+  PROMOTION              // Acta de promoción
+  RECOVERY_APPROVAL      // Acta de aprobación de recuperación
+  FINAL_DECISION         // Acta de decisión final
+}
+
+// Modalidad de estudio
+enum StudyModality {
+  PRESENTIAL   // Presencial
+  VIRTUAL      // Virtual
+  HYBRID       // Híbrido
+}
+
 // Estado de la institución
 enum InstitutionStatus {
   ACTIVE
@@ -128,6 +204,12 @@ model User {
   
   // Instituciones creadas por SuperAdmin
   institutionsCreated       Institution[]       @relation("InstitutionCreatedBy")
+  
+  // Gestión de Año Lectivo
+  yearsActivated            AcademicYear[]      @relation("YearActivatedBy")
+  yearsClosed               AcademicYear[]      @relation("YearClosedBy")
+  enrollmentsCreated        StudentEnrollment[] @relation("EnrollmentCreatedBy")
+  enrollmentEventsPerformed EnrollmentEvent[]   @relation("EnrollmentEventPerformedBy")
   
   // Sistema de permisos granulares
   extraPermissions          UserExtraPermission[] @relation("UserExtraPermissions")
@@ -345,15 +427,33 @@ model Subject {
 }
 
 model AcademicYear {
-  id            String   @id @default(cuid())
+  id            String             @id @default(cuid())
   institutionId String
   year          Int
+  name          String?            // "Año Lectivo 2025"
   startDate     DateTime?
   endDate       DateTime?
+  status        AcademicYearStatus @default(ACTIVE)
+  // isCurrent es derivado: isCurrent = (status === ACTIVE)
+  // Solo puede haber 1 ACTIVE por institución (validar en código)
+  
+  // Auditoría de cambios de estado
+  activatedAt   DateTime?
+  activatedById String?
+  closedAt      DateTime?
+  closedById    String?
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   institution       Institution        @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  activatedBy       User?              @relation("YearActivatedBy", fields: [activatedById], references: [id])
+  closedBy          User?              @relation("YearClosedBy", fields: [closedById], references: [id])
+  
+  // Calendario académico
+  calendar          AcademicCalendar?
+  
+  // Relaciones académicas
   periods           Period[]
   terms             AcademicTerm[]
   teacherAssignments TeacherAssignment[]
@@ -363,6 +463,33 @@ model AcademicYear {
   academicActs       AcademicAct[]
 
   @@unique([institutionId, year])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CALENDARIO ACADÉMICO (Obligatorio en Colombia)
+// ═══════════════════════════════════════════════════════════════════════════
+
+model AcademicCalendar {
+  id              String        @id @default(cuid())
+  academicYearId  String        @unique
+  type            CalendarType  @default(A) // A, B, Flexible
+  
+  // Información del calendario
+  totalWeeks      Int           @default(40) // Semanas lectivas
+  totalHours      Int           @default(800) // Horas totales
+  classStartDate  DateTime?     // Inicio de clases
+  classEndDate    DateTime?     // Fin de clases
+  
+  // Semanas de desarrollo institucional
+  developmentWeeks Int          @default(5)
+  
+  // Vacaciones y recesos (JSON array)
+  vacations       Json?         // [{ name, startDate, endDate }]
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  academicYear    AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
 }
 
 model Period {
@@ -571,38 +698,91 @@ model Student {
 }
 
 model StudentEnrollment {
-  id            String   @id @default(cuid())
-  studentId     String
-  academicYearId String
-  groupId       String
-  status        EnrollmentStatus @default(ACTIVE)
-  enrollmentDate DateTime @default(now())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String           @id @default(cuid())
+  studentId       String
+  academicYearId  String
+  groupId         String
+  
+  // Tipo y estado de matrícula
+  enrollmentType  EnrollmentType   @default(NEW)
+  status          EnrollmentStatus @default(ACTIVE)
+  
+  // Jornada y modalidad
+  shift           SchoolShift?     // Jornada: Mañana, Tarde, Única, Noche
+  modality        StudyModality    @default(PRESENTIAL)
+  
+  // Fechas
+  enrollmentDate  DateTime         @default(now())
+  withdrawalDate  DateTime?        // Fecha de retiro si aplica
+  withdrawalReason String?         // Motivo del retiro
+  
+  // Trazabilidad de promoción
+  promotedFromId  String?  @unique // Matrícula del año anterior (1:1)
+  
+  // Observaciones y auditoría
+  observations    String?          // Observaciones de matrícula
+  enrolledById    String?          // Quién realizó la matrícula
+  
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
-  student      Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
-  group        Group @relation(fields: [groupId], references: [id], onDelete: Restrict)
-  grades       StudentGrade[]
-  periodFinalGrades PeriodFinalGrade[]
-  partialGrades PartialGrade[]
-  preventiveAlerts PreventiveAlert[]
-  attendanceRecords AttendanceRecord[]
-  observations StudentObservation[]
-  periodRecoveries   PeriodRecovery[]
-  finalRecoveryPlans FinalRecoveryPlan[]
-  academicActs       AcademicAct[]
+  student         Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicYear    AcademicYear     @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  group           Group            @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  enrolledBy      User?            @relation("EnrollmentCreatedBy", fields: [enrolledById], references: [id])
+  
+  // Trazabilidad de promoción (self-relation 1:1)
+  promotedFrom    StudentEnrollment? @relation("EnrollmentPromotion", fields: [promotedFromId], references: [id])
+  promotedTo      StudentEnrollment? @relation("EnrollmentPromotion")
+  
+  // Historial de eventos (AUDITORÍA)
+  events          EnrollmentEvent[]
+  
+  // Relaciones académicas
+  grades              StudentGrade[]
+  periodFinalGrades   PeriodFinalGrade[]
+  partialGrades       PartialGrade[]
+  preventiveAlerts    PreventiveAlert[]
+  attendanceRecords   AttendanceRecord[]
+  studentObservations StudentObservation[]
+  periodRecoveries    PeriodRecovery[]
+  finalRecoveryPlans  FinalRecoveryPlan[]
+  academicActs        AcademicAct[]
   performanceManualEdits PerformanceManualEdit[]
 
   @@unique([studentId, academicYearId])
 }
 
-enum EnrollmentStatus {
-  ACTIVE
-  INACTIVE
-  TRANSFERRED
-  GRADUATED
-  WITHDRAWN
+// ═══════════════════════════════════════════════════════════════════════════
+// HISTORIAL DE MATRÍCULA (AUDITORÍA LEGAL)
+// ═══════════════════════════════════════════════════════════════════════════
+
+model EnrollmentEvent {
+  id              String                  @id @default(cuid())
+  enrollmentId    String
+  type            EnrollmentEventType
+  movementType    EnrollmentMovementType?
+  
+  // Auditoría de cambios
+  previousValue   Json?                   // Estado anterior (para auditoría)
+  newValue        Json?                   // Estado nuevo
+  reason          String?                 // Motivo del cambio
+  observations    String?                 // Observaciones adicionales
+  
+  // Referencia a acta (si aplica)
+  academicActId   String?                 // Acta que respalda el cambio
+  
+  // Quién y cuándo
+  performedById   String
+  performedAt     DateTime                @default(now())
+  
+  enrollment      StudentEnrollment       @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  performedBy     User                    @relation("EnrollmentEventPerformedBy", fields: [performedById], references: [id])
+  academicAct     AcademicAct?            @relation(fields: [academicActId], references: [id])
+  
+  @@index([enrollmentId])
+  @@index([performedAt])
+  @@index([type])
 }
 
 model StudentGrade {
@@ -931,12 +1111,7 @@ enum RecoveryImpactType {
   QUALITATIVE_ONLY      // Solo registro cualitativo (no afecta nota)
 }
 
-enum AcademicActType {
-  ACADEMIC_COUNCIL      // Acta de consejo académico
-  PROMOTION             // Acta de promoción
-  RECOVERY_APPROVAL     // Acta de aprobación de recuperación
-  FINAL_DECISION        // Acta de decisión final
-}
+// AcademicActType movido a la sección de enums de Año Lectivo (línea ~102)
 
 // Configuración institucional de recuperaciones
 model RecoveryConfig {
@@ -1118,6 +1293,9 @@ model AcademicAct {
   finalRecoveryPlan FinalRecoveryPlan? @relation(fields: [finalRecoveryPlanId], references: [id])
   createdBy         User               @relation("ActCreatedBy", fields: [createdById], references: [id])
   approvedBy        User?              @relation("ActApprovedBy", fields: [approvedById], references: [id])
+  
+  // Eventos de matrícula relacionados con esta acta
+  enrollmentEvents  EnrollmentEvent[]
 
   @@index([institutionId])
   @@index([academicYearId])

@@ -87,6 +87,6 @@ export class EnrollStudentDto {
 }
 
 export class UpdateEnrollmentStatusDto {
-  @IsEnum(['ACTIVE', 'INACTIVE', 'TRANSFERRED', 'GRADUATED', 'WITHDRAWN'])
-  status: 'ACTIVE' | 'INACTIVE' | 'TRANSFERRED' | 'GRADUATED' | 'WITHDRAWN';
+  @IsEnum(['ACTIVE', 'PROMOTED', 'REPEATED', 'WITHDRAWN', 'TRANSFERRED'])
+  status: 'ACTIVE' | 'PROMOTED' | 'REPEATED' | 'WITHDRAWN' | 'TRANSFERRED';
 }
