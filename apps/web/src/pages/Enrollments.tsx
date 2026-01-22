@@ -16,9 +16,12 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  X,
+  UserPlus,
+  Loader2
 } from 'lucide-react'
-import { enrollmentsApi, academicYearLifecycleApi } from '../lib/api'
+import { enrollmentsApi, academicYearLifecycleApi, studentsApi, groupsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
 interface Student {
@@ -105,6 +108,28 @@ const Enrollments: React.FC = () => {
   // Estados de carga
   const [actionLoading, setActionLoading] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  
+  // Estados para el modal de nueva matrícula
+  const [availableStudents, setAvailableStudents] = useState<Student[]>([])
+  const [availableGroups, setAvailableGroups] = useState<any[]>([])
+  const [studentSearch, setStudentSearch] = useState('')
+  const [selectedStudentId, setSelectedStudentId] = useState('')
+  const [selectedGroupId, setSelectedGroupId] = useState('')
+  const [enrollmentType, setEnrollmentType] = useState('NEW')
+  const [enrollmentObservations, setEnrollmentObservations] = useState('')
+  const [loadingStudents, setLoadingStudents] = useState(false)
+  const [loadingGroups, setLoadingGroups] = useState(false)
+  const [enrollmentError, setEnrollmentError] = useState('')
+  const [savingEnrollment, setSavingEnrollment] = useState(false)
+  
+  // Estados para modal de retiro
+  const [withdrawReason, setWithdrawReason] = useState('')
+  const [withdrawObservations, setWithdrawObservations] = useState('')
+  
+  // Estados para modal de cambio de grupo
+  const [newGroupId, setNewGroupId] = useState('')
+  const [changeGroupReason, setChangeGroupReason] = useState('')
+  const [changeGroupObservations, setChangeGroupObservations] = useState('')
 
   useEffect(() => {
     if (institution?.id) {
@@ -166,6 +191,158 @@ const Enrollments: React.FC = () => {
     }
   }
 
+  // Cargar estudiantes disponibles para matricular
+  const loadStudents = async (search = '') => {
+    if (!institution?.id) return
+    setLoadingStudents(true)
+    try {
+      const response = await studentsApi.getAll({ institutionId: institution.id })
+      let students = response.data || []
+      
+      // Filtrar por búsqueda si hay término
+      if (search) {
+        const searchLower = search.toLowerCase()
+        students = students.filter((s: Student) => 
+          s.firstName?.toLowerCase().includes(searchLower) ||
+          s.lastName?.toLowerCase().includes(searchLower) ||
+          s.documentNumber?.includes(search)
+        )
+      }
+      setAvailableStudents(students)
+    } catch (err) {
+      console.error('Error loading students:', err)
+    } finally {
+      setLoadingStudents(false)
+    }
+  }
+
+  // Cargar grupos disponibles
+  const loadGroups = async () => {
+    setLoadingGroups(true)
+    try {
+      const response = await groupsApi.getAll()
+      setAvailableGroups(response.data || [])
+    } catch (err) {
+      console.error('Error loading groups:', err)
+    } finally {
+      setLoadingGroups(false)
+    }
+  }
+
+  // Abrir modal de nueva matrícula
+  const openEnrollModal = () => {
+    setSelectedStudentId('')
+    setSelectedGroupId('')
+    setEnrollmentType('NEW')
+    setEnrollmentObservations('')
+    setEnrollmentError('')
+    setStudentSearch('')
+    loadStudents()
+    loadGroups()
+    setShowEnrollModal(true)
+  }
+
+  // Guardar nueva matrícula
+  const handleSaveEnrollment = async () => {
+    if (!selectedStudentId) {
+      setEnrollmentError('Debe seleccionar un estudiante')
+      return
+    }
+    if (!selectedGroupId) {
+      setEnrollmentError('Debe seleccionar un grupo')
+      return
+    }
+    if (!currentYear?.id) {
+      setEnrollmentError('No hay año académico activo')
+      return
+    }
+
+    setSavingEnrollment(true)
+    setEnrollmentError('')
+
+    try {
+      await enrollmentsApi.create({
+        studentId: selectedStudentId,
+        academicYearId: currentYear.id,
+        groupId: selectedGroupId,
+        enrollmentType: enrollmentType,
+        observations: enrollmentObservations || undefined
+      })
+      
+      setSuccessMessage('Matrícula creada exitosamente')
+      setShowEnrollModal(false)
+      loadEnrollments()
+      
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (err: any) {
+      console.error('Error creating enrollment:', err)
+      setEnrollmentError(err.response?.data?.message || 'Error al crear la matrícula')
+    } finally {
+      setSavingEnrollment(false)
+    }
+  }
+
+  // Confirmar retiro
+  const handleConfirmWithdraw = async () => {
+    if (!selectedEnrollment || !withdrawReason) return
+    
+    setActionLoading('withdraw')
+    try {
+      await enrollmentsApi.withdraw(selectedEnrollment.id, {
+        reason: withdrawReason,
+        observations: withdrawObservations || undefined
+      })
+      setSuccessMessage('Estudiante retirado exitosamente')
+      setShowWithdrawModal(false)
+      setWithdrawReason('')
+      setWithdrawObservations('')
+      loadEnrollments()
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (err: any) {
+      console.error('Error withdrawing:', err)
+      alert(err.response?.data?.message || 'Error al retirar estudiante')
+    } finally {
+      setActionLoading('')
+    }
+  }
+
+  // Confirmar cambio de grupo
+  const handleConfirmChangeGroup = async () => {
+    if (!selectedEnrollment || !newGroupId || !changeGroupReason) return
+    
+    setActionLoading('changeGroup')
+    try {
+      await enrollmentsApi.changeGroup(selectedEnrollment.id, {
+        newGroupId,
+        reason: changeGroupReason,
+        movementType: 'INTERNAL',
+        observations: changeGroupObservations || undefined
+      })
+      setSuccessMessage('Grupo cambiado exitosamente')
+      setShowChangeGroupModal(false)
+      setNewGroupId('')
+      setChangeGroupReason('')
+      setChangeGroupObservations('')
+      loadEnrollments()
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (err: any) {
+      console.error('Error changing group:', err)
+      alert(err.response?.data?.message || 'Error al cambiar de grupo')
+    } finally {
+      setActionLoading('')
+    }
+  }
+
+  // Abrir modal de cambio de grupo
+  const openChangeGroupModal = (enrollment: Enrollment) => {
+    setSelectedEnrollment(enrollment)
+    setNewGroupId('')
+    setChangeGroupReason('')
+    setChangeGroupObservations('')
+    loadGroups()
+    setShowChangeGroupModal(true)
+  }
+
   const handleWithdraw = async (enrollment: Enrollment) => {
     setSelectedEnrollment(enrollment)
     setShowWithdrawModal(true)
@@ -174,11 +351,6 @@ const Enrollments: React.FC = () => {
   const handleTransfer = async (enrollment: Enrollment) => {
     setSelectedEnrollment(enrollment)
     setShowTransferModal(true)
-  }
-
-  const handleChangeGroup = async (enrollment: Enrollment) => {
-    setSelectedEnrollment(enrollment)
-    setShowChangeGroupModal(true)
   }
 
   const handleViewHistory = async (enrollment: Enrollment) => {
@@ -248,7 +420,7 @@ const Enrollments: React.FC = () => {
                 Wizard Año
               </button>
               <button
-                onClick={() => setShowEnrollModal(true)}
+                onClick={openEnrollModal}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
@@ -384,7 +556,7 @@ const Enrollments: React.FC = () => {
               <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
               <p className="text-slate-500 mb-4">No hay matrículas registradas</p>
               <button
-                onClick={() => setShowEnrollModal(true)}
+                onClick={openEnrollModal}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
@@ -470,7 +642,7 @@ const Enrollments: React.FC = () => {
                           {enrollment.status === 'ACTIVE' && (
                             <>
                               <button
-                                onClick={() => handleChangeGroup(enrollment)}
+                                onClick={() => openChangeGroupModal(enrollment)}
                                 className="p-1.5 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded"
                                 title="Cambiar de grupo"
                               >
@@ -515,33 +687,266 @@ const Enrollments: React.FC = () => {
         )}
       </div>
 
-      {/* Modales (placeholder por ahora) */}
+      {/* Modal Nueva Matrícula */}
       {showEnrollModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Nueva Matrícula</h3>
-            <p className="text-slate-600 mb-4">Modal de matrícula en desarrollo...</p>
-            <button
-              onClick={() => setShowEnrollModal(false)}
-              className="w-full px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
-            >
-              Cerrar
-            </button>
+          <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <UserPlus className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Nueva Matrícula</h3>
+                  <p className="text-sm text-slate-500">Año: {currentYear?.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowEnrollModal(false)}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {enrollmentError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{enrollmentError}</p>
+                </div>
+              )}
+
+              {/* Búsqueda de estudiante */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Estudiante *
+                </label>
+                <div className="relative mb-2">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    value={studentSearch}
+                    onChange={(e) => {
+                      setStudentSearch(e.target.value)
+                      loadStudents(e.target.value)
+                    }}
+                    placeholder="Buscar por nombre o documento..."
+                    className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                
+                {loadingStudents ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-lg">
+                    {availableStudents.length === 0 ? (
+                      <div className="p-4 text-center text-slate-500">
+                        <p>No hay estudiantes disponibles</p>
+                        <p className="text-xs mt-1">Primero debe registrar estudiantes en el sistema</p>
+                      </div>
+                    ) : (
+                      availableStudents.map(student => (
+                        <div
+                          key={student.id}
+                          onClick={() => setSelectedStudentId(student.id)}
+                          className={`p-3 cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors ${
+                            selectedStudentId === student.id 
+                              ? 'bg-blue-50 border-l-4 border-l-blue-500' 
+                              : 'hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="font-medium text-slate-900">
+                            {student.firstName} {student.lastName}
+                          </div>
+                          <div className="text-sm text-slate-500">
+                            {student.documentType}: {student.documentNumber}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Selección de grupo */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Grupo *
+                </label>
+                {loadingGroups ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                  </div>
+                ) : (
+                  <select
+                    value={selectedGroupId}
+                    onChange={(e) => setSelectedGroupId(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Seleccione un grupo</option>
+                    {availableGroups.map(group => (
+                      <option key={group.id} value={group.id}>
+                        {group.grade?.name || ''} - {group.name} ({group.campus?.name || 'Sin sede'})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Tipo de matrícula */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Tipo de Matrícula
+                </label>
+                <select
+                  value={enrollmentType}
+                  onChange={(e) => setEnrollmentType(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="NEW">Nuevo</option>
+                  <option value="RENEWAL">Renovación</option>
+                  <option value="REENTRY">Reingreso</option>
+                  <option value="TRANSFER">Transferencia</option>
+                </select>
+              </div>
+
+              {/* Observaciones */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Observaciones (opcional)
+                </label>
+                <textarea
+                  value={enrollmentObservations}
+                  onChange={(e) => setEnrollmentObservations(e.target.value)}
+                  rows={3}
+                  placeholder="Observaciones adicionales..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
+              <button
+                onClick={() => setShowEnrollModal(false)}
+                className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveEnrollment}
+                disabled={savingEnrollment || !selectedStudentId || !selectedGroupId}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {savingEnrollment ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    Crear Matrícula
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
+      {/* Modal Retiro */}
       {showWithdrawModal && selectedEnrollment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Retirar Estudiante</h3>
-            <p className="text-slate-600 mb-4">Modal de retiro en desarrollo...</p>
-            <button
-              onClick={() => setShowWithdrawModal(false)}
-              className="w-full px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
-            >
-              Cerrar
-            </button>
+          <div className="bg-white rounded-lg max-w-md w-full mx-4">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <UserMinus className="w-5 h-5 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900">Retirar Estudiante</h3>
+              </div>
+              <button
+                onClick={() => setShowWithdrawModal(false)}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-sm text-slate-600">
+                  <strong>Estudiante:</strong> {selectedEnrollment.student.firstName} {selectedEnrollment.student.lastName}
+                </p>
+                <p className="text-sm text-slate-600">
+                  <strong>Grupo:</strong> {selectedEnrollment.group.grade.name} - {selectedEnrollment.group.name}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Motivo del Retiro *
+                </label>
+                <select
+                  value={withdrawReason}
+                  onChange={(e) => setWithdrawReason(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                >
+                  <option value="">Seleccione un motivo</option>
+                  <option value="VOLUNTARIO">Retiro Voluntario</option>
+                  <option value="CAMBIO_CIUDAD">Cambio de Ciudad</option>
+                  <option value="PROBLEMAS_ECONOMICOS">Problemas Económicos</option>
+                  <option value="PROBLEMAS_SALUD">Problemas de Salud</option>
+                  <option value="CAMBIO_INSTITUCION">Cambio de Institución</option>
+                  <option value="OTRO">Otro</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Observaciones (opcional)
+                </label>
+                <textarea
+                  value={withdrawObservations}
+                  onChange={(e) => setWithdrawObservations(e.target.value)}
+                  rows={3}
+                  placeholder="Detalles adicionales..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowWithdrawModal(false)
+                  setWithdrawReason('')
+                  setWithdrawObservations('')
+                }}
+                className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmWithdraw}
+                disabled={!withdrawReason || actionLoading === 'withdraw'}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {actionLoading === 'withdraw' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    <UserMinus className="w-4 h-4" />
+                    Confirmar Retiro
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -561,17 +966,124 @@ const Enrollments: React.FC = () => {
         </div>
       )}
 
+      {/* Modal Cambio de Grupo */}
       {showChangeGroupModal && selectedEnrollment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Cambiar de Grupo</h3>
-            <p className="text-slate-600 mb-4">Modal de cambio de grupo en desarrollo...</p>
-            <button
-              onClick={() => setShowChangeGroupModal(false)}
-              className="w-full px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
-            >
-              Cerrar
-            </button>
+          <div className="bg-white rounded-lg max-w-md w-full mx-4">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <ArrowRightLeft className="w-5 h-5 text-yellow-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900">Cambiar de Grupo</h3>
+              </div>
+              <button
+                onClick={() => setShowChangeGroupModal(false)}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-sm text-slate-600">
+                  <strong>Estudiante:</strong> {selectedEnrollment.student.firstName} {selectedEnrollment.student.lastName}
+                </p>
+                <p className="text-sm text-slate-600">
+                  <strong>Grupo Actual:</strong> {selectedEnrollment.group.grade.name} - {selectedEnrollment.group.name}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Nuevo Grupo *
+                </label>
+                {loadingGroups ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 text-yellow-600 animate-spin" />
+                  </div>
+                ) : (
+                  <select
+                    value={newGroupId}
+                    onChange={(e) => setNewGroupId(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  >
+                    <option value="">Seleccione un grupo</option>
+                    {availableGroups
+                      .filter(g => g.id !== selectedEnrollment.group.id)
+                      .map(group => (
+                        <option key={group.id} value={group.id}>
+                          {group.grade?.name || ''} - {group.name} ({group.campus?.name || 'Sin sede'})
+                        </option>
+                      ))}
+                  </select>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Motivo del Cambio *
+                </label>
+                <select
+                  value={changeGroupReason}
+                  onChange={(e) => setChangeGroupReason(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                >
+                  <option value="">Seleccione un motivo</option>
+                  <option value="SOLICITUD_PADRE">Solicitud del Padre/Acudiente</option>
+                  <option value="RECOMENDACION_ACADEMICA">Recomendación Académica</option>
+                  <option value="CONFLICTO_CONVIVENCIA">Conflicto de Convivencia</option>
+                  <option value="REORGANIZACION_GRUPOS">Reorganización de Grupos</option>
+                  <option value="CAMBIO_JORNADA">Cambio de Jornada</option>
+                  <option value="OTRO">Otro</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Observaciones (opcional)
+                </label>
+                <textarea
+                  value={changeGroupObservations}
+                  onChange={(e) => setChangeGroupObservations(e.target.value)}
+                  rows={3}
+                  placeholder="Detalles adicionales..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowChangeGroupModal(false)
+                  setNewGroupId('')
+                  setChangeGroupReason('')
+                  setChangeGroupObservations('')
+                }}
+                className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmChangeGroup}
+                disabled={!newGroupId || !changeGroupReason || actionLoading === 'changeGroup'}
+                className="flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {actionLoading === 'changeGroup' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    <ArrowRightLeft className="w-4 h-4" />
+                    Confirmar Cambio
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
