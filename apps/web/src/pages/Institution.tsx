@@ -43,7 +43,7 @@ interface GradingPeriodConfig {
 interface Grade {
   id: string
   name: string
-  level: 'PREESCOLAR' | 'PRIMARIA' | 'SECUNDARIA' | 'MEDIA'
+  level: string // Código del nivel académico (dinámico)
   order: number
   groups: Group[]
 }
@@ -71,18 +71,48 @@ const defaultGrades: Grade[] = [
   { id: 'g12', name: 'Undécimo', level: 'MEDIA', order: 11, groups: [{ id: 'gr14', name: 'A', shift: 'MAÑANA', capacity: 40 }] },
 ]
 
-const levelLabels = {
+const defaultLevelLabels: Record<string, string> = {
   PREESCOLAR: 'Preescolar',
   PRIMARIA: 'Primaria',
   SECUNDARIA: 'Secundaria',
   MEDIA: 'Media',
 }
 
-const levelColors = {
+const defaultLevelColors: Record<string, string> = {
   PREESCOLAR: 'bg-pink-100 text-pink-700 border-pink-200',
   PRIMARIA: 'bg-blue-100 text-blue-700 border-blue-200',
   SECUNDARIA: 'bg-green-100 text-green-700 border-green-200',
   MEDIA: 'bg-purple-100 text-purple-700 border-purple-200',
+}
+
+// Colores adicionales para niveles personalizados
+const extraLevelColors = [
+  'bg-amber-100 text-amber-700 border-amber-200',
+  'bg-cyan-100 text-cyan-700 border-cyan-200',
+  'bg-rose-100 text-rose-700 border-rose-200',
+  'bg-indigo-100 text-indigo-700 border-indigo-200',
+  'bg-lime-100 text-lime-700 border-lime-200',
+  'bg-orange-100 text-orange-700 border-orange-200',
+]
+
+// Helper para obtener label de nivel (dinámico o default)
+function getLevelLabel(levelCode: string, academicLevels: AcademicLevel[]): string {
+  const level = academicLevels.find(l => l.code === levelCode)
+  if (level) return level.name
+  return defaultLevelLabels[levelCode] || levelCode
+}
+
+// Helper para obtener color de nivel (dinámico o default)
+function getLevelColor(levelCode: string, academicLevels: AcademicLevel[]): string {
+  if (defaultLevelColors[levelCode]) {
+    return defaultLevelColors[levelCode]
+  }
+  // Asignar color basado en el índice del nivel
+  const levelIndex = academicLevels.findIndex(l => l.code === levelCode)
+  if (levelIndex >= 0) {
+    return extraLevelColors[levelIndex % extraLevelColors.length]
+  }
+  return 'bg-slate-100 text-slate-700 border-slate-200'
 }
 
 export default function Institution() {
@@ -119,7 +149,7 @@ export default function Institution() {
   const [grades, setGrades] = useState<Grade[]>(defaultGrades)
   const [showGradeModal, setShowGradeModal] = useState(false)
   const [editingGrade, setEditingGrade] = useState<Grade | null>(null)
-  const [gradeForm, setGradeForm] = useState({ name: '', level: 'PRIMARIA' as Grade['level'], order: 0 })
+  const [gradeForm, setGradeForm] = useState({ name: '', level: '', order: 0 })
   const [showGroupModal, setShowGroupModal] = useState(false)
   const [editingGroup, setEditingGroup] = useState<{ gradeId: string; group: Group | null }>(null!)
   const [groupForm, setGroupForm] = useState({ name: '', shift: 'MAÑANA' as Group['shift'], capacity: 35, director: '' })
@@ -303,7 +333,9 @@ export default function Institution() {
       setGradeForm({ name: grade.name, level: grade.level, order: grade.order })
     } else {
       setEditingGrade(null)
-      setGradeForm({ name: '', level: 'PRIMARIA', order: grades.length })
+      // Usar el primer nivel académico disponible como default
+      const defaultLevel = institution.academicLevels[0]?.code || ''
+      setGradeForm({ name: '', level: defaultLevel, order: grades.length })
     }
     setShowGradeModal(true)
   }
@@ -358,12 +390,7 @@ export default function Institution() {
     ))
   }
 
-  const gradesByLevel = {
-    PREESCOLAR: grades.filter(g => g.level === 'PREESCOLAR'),
-    PRIMARIA: grades.filter(g => g.level === 'PRIMARIA'),
-    SECUNDARIA: grades.filter(g => g.level === 'SECUNDARIA'),
-    MEDIA: grades.filter(g => g.level === 'MEDIA'),
-  }
+  // gradesByLevel ya no se usa - ahora se filtra dinámicamente en el render
 
   const totalProcessWeight = gradingConfig.evaluationProcesses.reduce((sum, p) => sum + p.weightPercentage, 0)
   const totalPeriodWeight = periods.reduce((sum, p) => sum + p.weight, 0)
@@ -1934,24 +1961,27 @@ export default function Institution() {
                     <p className="text-xs text-slate-500">Capacidad Total</p>
                   </div>
                   <div className="bg-slate-50 rounded-lg p-4 text-center">
-                    <p className="text-2xl font-bold text-slate-900">4</p>
+                    <p className="text-2xl font-bold text-slate-900">{institution.academicLevels.length}</p>
                     <p className="text-xs text-slate-500">Niveles</p>
                   </div>
                 </div>
 
-                {/* Lista por nivel */}
+                {/* Lista por nivel - usa niveles académicos dinámicos */}
                 <div className="space-y-6">
-                  {(['PREESCOLAR', 'PRIMARIA', 'SECUNDARIA', 'MEDIA'] as const).map((level) => (
-                    <div key={level} className={`border rounded-lg overflow-hidden ${levelColors[level].replace('text-', 'border-').split(' ')[2]}`}>
-                      <div className={`px-4 py-3 ${levelColors[level]} flex items-center justify-between`}>
-                        <h3 className="font-semibold">{levelLabels[level]}</h3>
-                        <span className="text-sm">{gradesByLevel[level].length} grado(s)</span>
+                  {institution.academicLevels.map((level) => {
+                    const levelGrades = grades.filter(g => g.level === level.code)
+                    const colorClass = getLevelColor(level.code, institution.academicLevels)
+                    return (
+                    <div key={level.id} className={`border rounded-lg overflow-hidden ${colorClass.split(' ')[2] || 'border-slate-200'}`}>
+                      <div className={`px-4 py-3 ${colorClass} flex items-center justify-between`}>
+                        <h3 className="font-semibold">{level.name}</h3>
+                        <span className="text-sm">{levelGrades.length} grado(s)</span>
                       </div>
                       <div className="bg-white divide-y divide-slate-100">
-                        {gradesByLevel[level].length === 0 ? (
+                        {levelGrades.length === 0 ? (
                           <p className="px-4 py-6 text-center text-slate-400 text-sm">No hay grados en este nivel</p>
                         ) : (
-                          gradesByLevel[level].sort((a, b) => a.order - b.order).map((grade) => (
+                          levelGrades.sort((a, b) => a.order - b.order).map((grade) => (
                             <div key={grade.id}>
                               <div 
                                 className="px-4 py-3 flex items-center gap-3 hover:bg-slate-50 cursor-pointer"
@@ -2028,7 +2058,7 @@ export default function Institution() {
                         )}
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               </div>
             )}
@@ -2432,13 +2462,12 @@ export default function Institution() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Nivel educativo</label>
                 <select
                   value={gradeForm.level}
-                  onChange={(e) => setGradeForm({ ...gradeForm, level: e.target.value as Grade['level'] })}
+                  onChange={(e) => setGradeForm({ ...gradeForm, level: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
                 >
-                  <option value="PREESCOLAR">Preescolar</option>
-                  <option value="PRIMARIA">Primaria</option>
-                  <option value="SECUNDARIA">Secundaria</option>
-                  <option value="MEDIA">Media</option>
+                  {institution.academicLevels.map((level) => (
+                    <option key={level.id} value={level.code}>{level.name}</option>
+                  ))}
                 </select>
               </div>
               <div>
