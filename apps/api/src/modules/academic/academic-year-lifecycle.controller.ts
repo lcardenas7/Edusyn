@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -28,6 +29,16 @@ export class AcademicYearLifecycleController {
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN')
   async createYear(@Body() dto: CreateAcademicYearDto) {
     return this.yearService.createYear(dto);
+  }
+
+  // Endpoint con query param (para compatibilidad con frontend)
+  @Get()
+  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'SECRETARIA')
+  async getYears(@Query('institutionId') institutionId: string) {
+    if (!institutionId) {
+      return [];
+    }
+    return this.yearService.getYearsByInstitution(institutionId);
   }
 
   @Get('institution/:institutionId')

@@ -266,7 +266,7 @@ export default function InstitutionLogin() {
                 </p>
 
                 <div className="space-y-4">
-                  <div className="relative">
+                  <div className="relative" style={{ zIndex: 50 }}>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
                       Buscar institución
                     </label>
@@ -293,7 +293,7 @@ export default function InstitutionLogin() {
                     
                     {/* Dropdown de sugerencias - Mejorado */}
                     {showSuggestions && suggestions.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
+                      <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-64 overflow-y-auto" style={{ maxHeight: '280px' }}>
                         {suggestions.map((inst) => (
                           <button
                             key={inst.id}
