@@ -7,17 +7,23 @@ import {
   Param,
   Query,
   Request,
+  Response,
   UseGuards,
 } from '@nestjs/common';
+import type { Response as ExpressResponse } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ElectionsService } from './elections.service';
+import { ElectionsReportsService } from './elections-reports.service';
 
 @Controller('elections')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ElectionsController {
-  constructor(private readonly electionsService: ElectionsService) {}
+  constructor(
+    private readonly electionsService: ElectionsService,
+    private readonly reportsService: ElectionsReportsService,
+  ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PROCESOS ELECTORALES (Admin/Coordinador)
@@ -163,6 +169,61 @@ export class ElectionsController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async getVotingStats(@Param('processId') processId: string) {
     return this.electionsService.getVotingStats(processId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // REPORTES PDF
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('process/:processId/report/acta')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async downloadActaEscrutinio(
+    @Param('processId') processId: string,
+    @Response() res: ExpressResponse,
+  ) {
+    const buffer = await this.reportsService.generateActaEscrutinio(processId);
+    
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="acta-escrutinio-${processId}.pdf"`,
+      'Content-Length': buffer.length,
+    });
+    
+    res.end(buffer);
+  }
+
+  @Get('process/:processId/report/participation')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async downloadParticipationReport(
+    @Param('processId') processId: string,
+    @Response() res: ExpressResponse,
+  ) {
+    const buffer = await this.reportsService.generateParticipationReport(processId);
+    
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="participacion-${processId}.pdf"`,
+      'Content-Length': buffer.length,
+    });
+    
+    res.end(buffer);
+  }
+
+  @Get('election/:electionId/report')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async downloadElectionResults(
+    @Param('electionId') electionId: string,
+    @Response() res: ExpressResponse,
+  ) {
+    const buffer = await this.reportsService.generateElectionResults(electionId);
+    
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="resultados-${electionId}.pdf"`,
+      'Content-Length': buffer.length,
+    });
+    
+    res.end(buffer);
   }
 
   // Helper para obtener estudiante del usuario

@@ -402,6 +402,28 @@ export default function Elections() {
                       Cerrar y Calcular
                     </button>
                   )}
+                  {selectedProcess.status === 'CLOSED' && (
+                    <>
+                      <a
+                        href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/elections/process/${selectedProcess.id}/report/acta`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+                      >
+                        <Download className="w-4 h-4" />
+                        Acta de Escrutinio
+                      </a>
+                      <a
+                        href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/elections/process/${selectedProcess.id}/report/participation`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                      >
+                        <Download className="w-4 h-4" />
+                        Informe Participación
+                      </a>
+                    </>
+                  )}
                 </div>
               </div>
 
