@@ -1,6 +1,7 @@
 import { ReactNode, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { authApi } from '../lib/api'
 import { 
   LayoutDashboard, 
   Users, 
@@ -29,7 +30,13 @@ import {
   UserCheck,
   Target,
   TrendingUp,
-  Plus
+  Plus,
+  Key,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Eye,
+  EyeOff
 } from 'lucide-react'
 
 type Role = 'SUPER_ADMIN' | 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE'
@@ -190,6 +197,14 @@ export default function Layout({ children }: { children: ReactNode }) {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [expandedMenus, setExpandedMenus] = useState<string[]>([])
+  
+  // Estado para modal de cambio de contraseña
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   const userRoles = useMemo(() => {
     if (!user?.roles) return []
@@ -239,6 +254,46 @@ export default function Layout({ children }: { children: ReactNode }) {
       }
     })
   }, [location.pathname, filteredNavigation])
+
+  // Función para cambiar contraseña
+  const handleChangePassword = async () => {
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      setPasswordMessage({ type: 'error', text: 'Complete todos los campos' })
+      return
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordMessage({ type: 'error', text: 'Las contraseñas nuevas no coinciden' })
+      return
+    }
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordMessage({ type: 'error', text: 'La contraseña debe tener al menos 6 caracteres' })
+      return
+    }
+
+    setChangingPassword(true)
+    setPasswordMessage(null)
+    try {
+      await authApi.changePassword(passwordForm.currentPassword, passwordForm.newPassword)
+      setPasswordMessage({ type: 'success', text: 'Contraseña cambiada exitosamente' })
+      setTimeout(() => {
+        setShowPasswordModal(false)
+        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+        setPasswordMessage(null)
+      }, 2000)
+    } catch (err: any) {
+      console.error('Error changing password:', err)
+      const errorMsg = err.response?.data?.message || 'Error al cambiar la contraseña'
+      setPasswordMessage({ type: 'error', text: errorMsg })
+    } finally {
+      setChangingPassword(false)
+    }
+  }
+
+  const openPasswordModal = () => {
+    setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+    setPasswordMessage(null)
+    setShowPasswordModal(true)
+  }
 
   const toggleMenu = (menuName: string) => {
     setExpandedMenus(prev => 
@@ -386,6 +441,13 @@ export default function Layout({ children }: { children: ReactNode }) {
             </div>
           </div>
           <button
+            onClick={openPasswordModal}
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <Key className="w-4 h-4" />
+            Cambiar contraseña
+          </button>
+          <button
             onClick={logout}
             className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
           >
@@ -394,6 +456,99 @@ export default function Layout({ children }: { children: ReactNode }) {
           </button>
         </div>
       </aside>
+
+      {/* Modal Cambiar Contraseña */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Key className="w-5 h-5 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-semibold">Cambiar Contraseña</h3>
+              </div>
+              <button onClick={() => setShowPasswordModal(false)} className="p-2 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña Actual</label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                    className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="Ingrese su contraseña actual"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nueva Contraseña</label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="Mínimo 6 caracteres"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Confirmar Nueva Contraseña</label>
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="Repita la nueva contraseña"
+                />
+              </div>
+              
+              {passwordMessage && (
+                <div className={`p-3 rounded-lg flex items-center gap-2 ${passwordMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                  {passwordMessage.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                  <span className="text-sm">{passwordMessage.text}</span>
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                disabled={changingPassword}
+                className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleChangePassword}
+                disabled={changingPassword}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {changingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+                {changingPassword ? 'Cambiando...' : 'Cambiar Contraseña'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main content */}
       <main className="lg:pl-64 pt-14 lg:pt-0">
