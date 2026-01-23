@@ -335,6 +335,18 @@ const AVAILABLE_MODULES: ModuleConfig[] = [
     ]
   },
   { 
+    id: 'ELECTIONS', 
+    name: 'Elecciones Escolares', 
+    description: 'Gobierno escolar y votaciones',
+    features: [
+      { id: 'ELECTIONS_PROCESS', name: 'Procesos Electorales', description: 'Crear y gestionar procesos' },
+      { id: 'ELECTIONS_CANDIDATES', name: 'Candidatos', description: 'Inscripción y aprobación' },
+      { id: 'ELECTIONS_VOTING', name: 'Votación', description: 'Portal de votación estudiantil' },
+      { id: 'ELECTIONS_RESULTS', name: 'Resultados', description: 'Resultados en tiempo real' },
+      { id: 'ELECTIONS_REPORTS', name: 'Reportes', description: 'Actas y reportes PDF' },
+    ]
+  },
+  { 
     id: 'USERS', 
     name: 'Gestión de Usuarios', 
     description: 'Administración de usuarios',

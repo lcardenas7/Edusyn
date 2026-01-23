@@ -165,6 +165,7 @@ enum SystemModule {
   DASHBOARD          // Dashboard y analytics
   USERS              // Gestión de usuarios
   CONFIG             // Configuración institucional
+  ELECTIONS          // Elecciones escolares
 }
 
 model User {
