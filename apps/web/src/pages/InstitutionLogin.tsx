@@ -291,29 +291,31 @@ export default function InstitutionLogin() {
                       )}
                     </div>
                     
-                    {/* Dropdown de sugerencias */}
+                    {/* Dropdown de sugerencias - Mejorado */}
                     {showSuggestions && suggestions.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
                         {suggestions.map((inst) => (
                           <button
                             key={inst.id}
                             type="button"
                             onClick={() => selectInstitution(inst)}
-                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors text-left"
+                            className="w-full flex items-start gap-3 px-4 py-3 hover:bg-blue-50 transition-colors text-left border-b border-slate-100 last:border-b-0"
                           >
                             {inst.logo ? (
-                              <img src={inst.logo} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                              <img src={inst.logo} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                             ) : (
-                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center flex-shrink-0">
                                 <Building2 className="w-5 h-5 text-blue-600" />
                               </div>
                             )}
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-slate-900 truncate">{inst.name}</div>
-                              <div className="text-sm text-slate-500 truncate">/{inst.slug}</div>
+                            <div className="flex-1 min-w-0 py-0.5">
+                              <div className="font-medium text-slate-900 leading-tight" title={inst.name}>
+                                {inst.name}
+                              </div>
+                              <div className="text-sm text-slate-500 mt-0.5">/{inst.slug}</div>
                             </div>
                             {inst.status === 'TRIAL' && (
-                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full flex-shrink-0 mt-0.5">
                                 Prueba
                               </span>
                             )}

@@ -237,4 +237,107 @@ export class UsersController {
   private getInitialPassword(documentNumber?: string): string {
     return documentNumber || 'temporal123';
   }
+
+  /**
+   * Vincular un usuario existente a la institución actual
+   * Útil para reparar docentes creados sin vínculo
+   */
+  @Post('users/:id/link-institution')
+  async linkUserToInstitution(@Request() req: any, @Param('id') userId: string) {
+    // Obtener institución del usuario actual
+    const institutionUser = await this.prisma.institutionUser.findFirst({
+      where: { userId: req.user.id },
+    });
+
+    if (!institutionUser) {
+      throw new BadRequestException('Usuario no asociado a ninguna institución');
+    }
+
+    // Verificar que el usuario existe
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!targetUser) {
+      throw new BadRequestException('Usuario no encontrado');
+    }
+
+    // Verificar si ya existe el vínculo
+    const existingLink = await this.prisma.institutionUser.findFirst({
+      where: { userId, institutionId: institutionUser.institutionId }
+    });
+
+    if (existingLink) {
+      return { message: 'El usuario ya está vinculado a esta institución', alreadyLinked: true };
+    }
+
+    // Crear el vínculo
+    await this.prisma.institutionUser.create({
+      data: {
+        userId,
+        institutionId: institutionUser.institutionId,
+        isAdmin: false,
+      }
+    });
+
+    return { 
+      message: 'Usuario vinculado correctamente a la institución',
+      userId,
+      institutionId: institutionUser.institutionId
+    };
+  }
+
+  /**
+   * Obtener usuarios sin vínculo a institución (para diagnóstico)
+   */
+  @Get('users-without-institution')
+  async getUsersWithoutInstitution(@Request() req: any) {
+    // Solo para admins
+    const institutionUser = await this.prisma.institutionUser.findFirst({
+      where: { userId: req.user.id },
+    });
+
+    if (!institutionUser) {
+      throw new BadRequestException('Usuario no asociado a ninguna institución');
+    }
+
+    // Buscar usuarios con rol DOCENTE que no tienen InstitutionUser
+    const usersWithoutInstitution = await this.prisma.user.findMany({
+      where: {
+        roles: {
+          some: {
+            role: { name: 'DOCENTE' }
+          }
+        },
+        institutionUsers: {
+          none: {}
+        }
+      },
+      include: {
+        roles: { include: { role: true } },
+        teacherAssignments: {
+          take: 1,
+          include: {
+            group: {
+              include: {
+                campus: {
+                  include: { institution: true }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return usersWithoutInstitution.map(u => ({
+      id: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      documentNumber: u.documentNumber,
+      hasAssignments: u.teacherAssignments.length > 0,
+      assignmentInstitution: u.teacherAssignments[0]?.group?.campus?.institution?.name || null
+    }));
+  }
 }

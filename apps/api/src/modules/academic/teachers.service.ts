@@ -166,15 +166,35 @@ export class TeachersService {
   }
 
   async update(id: string, dto: UpdateTeacherDto) {
+    // Si cambia el documento, actualizar también contraseña y username
+    let updateData: any = {
+      ...(dto.firstName && { firstName: dto.firstName }),
+      ...(dto.lastName && { lastName: dto.lastName }),
+      ...(dto.documentType && { documentType: dto.documentType as any }),
+      ...(dto.documentNumber && { documentNumber: dto.documentNumber }),
+      ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+    };
+
+    // Si cambia el documento, actualizar contraseña y username
+    if (dto.documentNumber) {
+      const currentUser = await this.prisma.user.findUnique({ where: { id } });
+      if (currentUser) {
+        // Nueva contraseña = nuevo documento
+        const newPasswordHash = await bcryptjs.hash(dto.documentNumber, 10);
+        updateData.passwordHash = newPasswordHash;
+        updateData.mustChangePassword = true; // Forzar cambio de contraseña
+        
+        // Regenerar username con el nuevo documento
+        const firstName = dto.firstName || currentUser.firstName;
+        const lastName = dto.lastName || currentUser.lastName;
+        const newUsername = await this.generateUsername(firstName, lastName, dto.documentNumber);
+        updateData.username = newUsername;
+      }
+    }
+
     return this.prisma.user.update({
       where: { id },
-      data: {
-        ...(dto.firstName && { firstName: dto.firstName }),
-        ...(dto.lastName && { lastName: dto.lastName }),
-        ...(dto.documentType && { documentType: dto.documentType as any }),
-        ...(dto.documentNumber && { documentNumber: dto.documentNumber }),
-        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
-      },
+      data: updateData,
       include: {
         roles: {
           include: {

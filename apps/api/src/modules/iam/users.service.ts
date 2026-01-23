@@ -66,6 +66,8 @@ export class UsersService {
   }
 
   async findUserInstitution(userId: string) {
+    console.log(`[findUserInstitution] Buscando institución para usuario: ${userId}`);
+    
     // Buscar institución a través de InstitutionUser primero
     const institutionUser = await this.prisma.institutionUser.findFirst({
       where: { userId },
@@ -79,6 +81,7 @@ export class UsersService {
     });
 
     if (institutionUser?.institution) {
+      console.log(`[findUserInstitution] Encontrado via InstitutionUser: ${institutionUser.institution.name}`);
       return institutionUser.institution;
     }
 
@@ -103,12 +106,39 @@ export class UsersService {
     });
 
     if (assignment?.group?.campus?.institution) {
+      console.log(`[findUserInstitution] Encontrado via TeacherAssignment: ${assignment.group.campus.institution.name}`);
       return assignment.group.campus.institution;
     }
 
+    console.log(`[findUserInstitution] NO se encontró institución para usuario: ${userId}`);
     // Si no tiene asignaciones, NO asignar ninguna institución
     // Esto previene que usuarios accedan a instituciones a las que no pertenecen
     return null;
+  }
+
+  // Vincular usuario a institución (para reparar usuarios sin vínculo)
+  async linkUserToInstitution(userId: string, institutionId: string) {
+    // Verificar si ya existe el vínculo
+    const existing = await this.prisma.institutionUser.findFirst({
+      where: { userId, institutionId }
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    // Crear el vínculo
+    return this.prisma.institutionUser.create({
+      data: {
+        userId,
+        institutionId,
+        isAdmin: false,
+      },
+      include: {
+        institution: true,
+        user: true,
+      }
+    });
   }
 
   async createUser(params: {
