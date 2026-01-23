@@ -106,6 +106,10 @@ export default function Students() {
     parentName: '', parentPhone: '', parentEmail: '', bloodType: '', eps: '', observations: ''
   })
 
+  // Estados para guardar estudiante
+  const [saving, setSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+
   // Cargar año académico actual y grupos disponibles
   useEffect(() => {
     const loadInitialData = async () => {
@@ -216,9 +220,6 @@ export default function Students() {
     setFormData(student)
     setShowModal(true)
   }
-
-  const [saving, setSaving] = useState(false)
-  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   const handleSave = async () => {
     if (!formData.firstName || !formData.lastName || !formData.documentNumber) {
