@@ -222,6 +222,10 @@ model User {
   
   // Estudiante asociado (si el usuario es un estudiante con acceso)
   studentProfile            Student?
+  
+  // Elecciones
+  electionProcessesCreated  ElectionProcess[] @relation("ElectionProcessCreatedBy")
+  candidatesApproved        Candidate[]       @relation("CandidateApprovedBy")
 }
 
 model Role {
@@ -301,6 +305,7 @@ model Institution {
   performanceLevelComplements PerformanceLevelComplement[]
   performanceConfig           PerformanceConfig?
   permissionAuditLogs         PermissionAuditLog[]
+  electionProcesses           ElectionProcess[]
 }
 
 // Módulos habilitados por institución
@@ -370,7 +375,8 @@ model Grade {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  groups Group[]
+  groups    Group[]
+  elections Election[]  // Elecciones de representante de grado
 
   @@unique([stage, name])
 }
@@ -391,6 +397,7 @@ model Group {
 
   teacherAssignments TeacherAssignment[]
   studentEnrollments StudentEnrollment[]
+  elections          Election[]  // Elecciones de representante de curso
 
   @@unique([campusId, shiftId, gradeId, name])
 }
@@ -468,6 +475,7 @@ model AcademicYear {
   recoveryConfigs    RecoveryConfig[]
   finalRecoveryPlans FinalRecoveryPlan[] @relation("FinalRecoveryYear")
   academicActs       AcademicAct[]
+  electionProcesses  ElectionProcess[]
 
   @@unique([institutionId, year])
 }
@@ -733,6 +741,10 @@ model Student {
   user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   enrollments   StudentEnrollment[]
   guardians     StudentGuardian[]
+  
+  // Elecciones
+  candidatures  Candidate[]   // Candidaturas del estudiante
+  votes         Vote[]        @relation("VoterVotes") // Votos emitidos
 
   @@unique([institutionId, documentNumber])
 }
@@ -1625,4 +1637,176 @@ model PermissionAuditLog {
   @@index([institutionId, performedAt])
   @@index([targetUserId])
   @@index([action])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MÓDULO DE ELECCIONES ESCOLARES
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Proceso electoral (agrupa todas las elecciones de un período)
+model ElectionProcess {
+  id              String   @id @default(cuid())
+  institutionId   String
+  academicYearId  String
+  
+  name            String   // "Elecciones Gobierno Escolar 2026"
+  description     String?
+  
+  // Fechas del proceso general
+  registrationStart DateTime  // Inicio inscripción candidatos
+  registrationEnd   DateTime  // Fin inscripción candidatos
+  campaignStart     DateTime  // Inicio campaña
+  campaignEnd       DateTime  // Fin campaña
+  votingStart       DateTime  // Inicio votación
+  votingEnd         DateTime  // Fin votación
+  
+  status          ElectionProcessStatus @default(DRAFT)
+  
+  // Configuración de cargos habilitados
+  enablePersonero           Boolean @default(true)
+  enableContralor           Boolean @default(true)
+  enableRepresentanteGrado  Boolean @default(true)
+  enableRepresentanteCurso  Boolean @default(true)
+  
+  // Configuración de votación
+  allowBlankVote  Boolean @default(true)
+  
+  createdById     String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  institution     Institution   @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  academicYear    AcademicYear  @relation(fields: [academicYearId], references: [id])
+  createdBy       User          @relation("ElectionProcessCreatedBy", fields: [createdById], references: [id])
+  elections       Election[]
+  
+  @@unique([institutionId, academicYearId])
+}
+
+enum ElectionProcessStatus {
+  DRAFT           // Borrador
+  REGISTRATION    // Inscripción de candidatos
+  CAMPAIGN        // Campaña electoral
+  VOTING          // Votación activa
+  CLOSED          // Cerrada (resultados disponibles)
+  CANCELLED       // Anulada
+}
+
+// Elección específica (Personero, Contralor, Rep. Grado X, Rep. Curso XA)
+model Election {
+  id                String   @id @default(cuid())
+  electionProcessId String
+  
+  type              ElectionType
+  
+  // Para representantes de grado/curso, especificar cuál
+  gradeId           String?  // Si es REPRESENTANTE_GRADO
+  groupId           String?  // Si es REPRESENTANTE_CURSO
+  
+  // Quiénes pueden votar (si es null, todos los estudiantes activos)
+  // Para personero/contralor: todos
+  // Para rep. grado: estudiantes del grado
+  // Para rep. curso: estudiantes del curso
+  
+  status            ElectionStatus @default(ACTIVE)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  electionProcess   ElectionProcess @relation(fields: [electionProcessId], references: [id], onDelete: Cascade)
+  grade             Grade?          @relation(fields: [gradeId], references: [id])
+  group             Group?          @relation(fields: [groupId], references: [id])
+  candidates        Candidate[]
+  votes             Vote[]
+  results           ElectionResult[]
+  
+  @@unique([electionProcessId, type, gradeId, groupId])
+}
+
+enum ElectionType {
+  PERSONERO             // Personero estudiantil (toda la institución)
+  CONTRALOR             // Contralor estudiantil (toda la institución)
+  REPRESENTANTE_GRADO   // Representante de grado (por grado)
+  REPRESENTANTE_CURSO   // Representante de curso (por grupo)
+}
+
+enum ElectionStatus {
+  ACTIVE      // Activa
+  CANCELLED   // Anulada
+}
+
+// Candidato inscrito
+model Candidate {
+  id            String   @id @default(cuid())
+  electionId    String
+  studentId     String
+  
+  // Información de campaña
+  slogan        String?           // Eslogan de campaña
+  proposals     String?           // Propuestas (texto o HTML)
+  photo         String?           // Foto de campaña
+  
+  // Estado de aprobación
+  status        CandidateStatus @default(PENDING)
+  rejectionReason String?
+  
+  approvedById  String?
+  approvedAt    DateTime?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  election      Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  student       Student  @relation(fields: [studentId], references: [id])
+  approvedBy    User?    @relation("CandidateApprovedBy", fields: [approvedById], references: [id])
+  votes         Vote[]
+  result        ElectionResult?
+  
+  @@unique([electionId, studentId])
+}
+
+enum CandidateStatus {
+  PENDING   // Pendiente de aprobación
+  APPROVED  // Aprobado
+  REJECTED  // Rechazado
+}
+
+// Voto emitido
+model Vote {
+  id            String   @id @default(cuid())
+  electionId    String
+  
+  // Quién votó (para evitar duplicados, NO se guarda por quién votó públicamente)
+  voterId       String   // ID del estudiante que votó
+  
+  // Por quién votó (null = voto en blanco)
+  candidateId   String?
+  
+  votedAt       DateTime @default(now())
+
+  election      Election   @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  voter         Student    @relation("VoterVotes", fields: [voterId], references: [id])
+  candidate     Candidate? @relation(fields: [candidateId], references: [id])
+  
+  @@unique([electionId, voterId]) // Un voto por estudiante por elección
+  @@index([electionId])
+}
+
+// Resultado de elección (calculado al cerrar)
+model ElectionResult {
+  id            String   @id @default(cuid())
+  electionId    String
+  candidateId   String?  @unique // null = votos en blanco
+  
+  votes         Int      // Total de votos
+  percentage    Float    // Porcentaje
+  position      Int      // Posición (1°, 2°, 3°...)
+  isWinner      Boolean  @default(false)
+  
+  calculatedAt  DateTime @default(now())
+
+  election      Election   @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  candidate     Candidate? @relation(fields: [candidateId], references: [id])
+  
+  @@unique([electionId, candidateId])
 }

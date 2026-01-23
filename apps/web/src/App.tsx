@@ -27,6 +27,8 @@ import StaffManagement from './pages/StaffManagement'
 import AcademicYearWizard from './pages/AcademicYearWizard'
 import Enrollments from './pages/Enrollments'
 import AcademicYearClosure from './pages/AcademicYearClosure'
+import VotingPortal from './pages/VotingPortal'
+import Elections from './pages/Elections'
 import Layout from './components/Layout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -90,6 +92,16 @@ function App() {
         <Route path="/login/:slug" element={<InstitutionLogin />} />
         <Route path="/auth/login" element={<Login />} />
         
+        {/* Portal de Votación - Ruta especial sin Layout para estudiantes */}
+        <Route
+          path="/votar"
+          element={
+            <ProtectedRoute>
+              <VotingPortal />
+            </ProtectedRoute>
+          }
+        />
+        
         {/* SuperAdmin con Layout - SOLO usuarios con isSuperAdmin=true */}
         <Route
           path="/superadmin/*"
@@ -141,6 +153,7 @@ function App() {
                   <Route path="/academic-year-wizard" element={<AcademicYearWizard />} />
                   <Route path="/enrollments" element={<Enrollments />} />
                   <Route path="/academic-year-closure" element={<AcademicYearClosure />} />
+                  <Route path="/elections" element={<Elections />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

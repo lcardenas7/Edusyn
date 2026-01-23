@@ -36,7 +36,8 @@ import {
   CheckCircle2,
   XCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  Vote
 } from 'lucide-react'
 
 type Role = 'SUPER_ADMIN' | 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE'
@@ -165,6 +166,9 @@ const institutionalNavigation: NavItem[] = [
       { name: 'Alertas', href: '/alerts', icon: AlertTriangle, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'] },
     ]
   },
+  
+  // Elecciones Escolares
+  { name: 'Elecciones', href: '/elections', icon: Vote, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
   
   // Reportes y Estadísticas
   { 
