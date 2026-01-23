@@ -73,12 +73,24 @@ export class EventsService {
     eventType: string;
     isActive: boolean;
     visibleToRoles: string[];
+    institutionId: string;
   }>) {
-    return this.prisma.event.update({
-      where: { id },
-      data,
-      include: { author: true },
-    });
+    console.log('[EventsService] Updating event:', { id, data });
+    try {
+      // Remove institutionId from update data - it should not be changed
+      const { institutionId, ...updateData } = data as any;
+      
+      const result = await this.prisma.event.update({
+        where: { id },
+        data: updateData,
+        include: { author: true },
+      });
+      console.log('[EventsService] Event updated successfully:', result.id);
+      return result;
+    } catch (error) {
+      console.error('[EventsService] Error updating event:', error);
+      throw error;
+    }
   }
 
   async delete(id: string) {

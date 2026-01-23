@@ -217,14 +217,70 @@ export default function Students() {
     setShowModal(true)
   }
 
-  const handleSave = () => {
-    if (editingStudent) {
-      setStudents(students.map(s => s.id === editingStudent.id ? { ...s, ...formData } as Student : s))
-    } else {
-      const newStudent: Student = { ...formData, id: Date.now().toString() } as Student
-      setStudents([...students, newStudent])
+  const [saving, setSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+
+  const handleSave = async () => {
+    if (!formData.firstName || !formData.lastName || !formData.documentNumber) {
+      setSaveMessage({ type: 'error', text: 'Complete los campos obligatorios: Nombre, Apellido y Documento' })
+      return
     }
-    setShowModal(false)
+
+    setSaving(true)
+    setSaveMessage(null)
+
+    try {
+      if (editingStudent) {
+        // Actualizar estudiante existente
+        await studentsApi.update(editingStudent.id, {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          documentType: formData.documentType,
+          documentNumber: formData.documentNumber,
+          birthDate: formData.birthDate,
+          gender: formData.gender,
+          address: formData.address,
+          phone: formData.phone,
+          email: formData.email
+        })
+        
+        setStudents(students.map(s => s.id === editingStudent.id ? { ...s, ...formData } as Student : s))
+        setSaveMessage({ type: 'success', text: 'Estudiante actualizado correctamente' })
+      } else {
+        // Crear nuevo estudiante
+        const response = await studentsApi.create({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          documentType: formData.documentType || 'TI',
+          documentNumber: formData.documentNumber,
+          birthDate: formData.birthDate,
+          gender: formData.gender || 'M',
+          address: formData.address,
+          phone: formData.phone,
+          email: formData.email,
+          institutionId: institution?.id
+        })
+        
+        const newStudent: Student = { 
+          ...formData, 
+          id: response.data.id 
+        } as Student
+        setStudents([...students, newStudent])
+        setSaveMessage({ type: 'success', text: 'Estudiante creado correctamente' })
+      }
+
+      setTimeout(() => {
+        setShowModal(false)
+        setSaveMessage(null)
+      }, 2000)
+      
+    } catch (err: any) {
+      console.error('Error saving student:', err)
+      const errorMsg = err.response?.data?.message || 'Error al guardar el estudiante'
+      setSaveMessage({ type: 'error', text: errorMsg })
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleDelete = (id: string) => {
@@ -893,9 +949,24 @@ export default function Students() {
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
-              <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Guardar</button>
+            <div className="px-6 py-4 border-t border-slate-200">
+              {saveMessage && (
+                <div className={`mb-3 p-3 rounded-lg flex items-center gap-2 ${saveMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                  {saveMessage.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                  <span className="text-sm">{saveMessage.text}</span>
+                </div>
+              )}
+              <div className="flex justify-end gap-3">
+                <button onClick={() => { setShowModal(false); setSaveMessage(null) }} className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50" disabled={saving}>Cancelar</button>
+                <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : 'Guardar'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

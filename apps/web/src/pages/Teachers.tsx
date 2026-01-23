@@ -141,15 +141,81 @@ export default function Teachers() {
     setShowModal(true)
   }
 
-  const handleSave = () => {
-    if (!form.documentNumber || !form.firstName || !form.firstLastName || !form.mobile || !form.email) return
-    if (editingTeacher) {
-      setTeachers(teachers.map(t => t.id === editingTeacher.id ? { ...t, ...form } as Teacher : t))
-    } else {
-      const newTeacher: Teacher = { ...form, id: Date.now().toString(), createdAt: new Date().toISOString().split('T')[0] }
-      setTeachers([...teachers, newTeacher])
+  const [saving, setSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+
+  // Generar nombre de usuario: primeraLetraNombre + primerApellido + 4últimosDigitos + d (docente)
+  const generateUsername = (firstName: string, lastName: string, documentNumber: string) => {
+    const firstLetter = firstName.charAt(0).toLowerCase()
+    const cleanLastName = lastName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '')
+    const last4Digits = documentNumber.slice(-4)
+    return `${firstLetter}${cleanLastName}${last4Digits}d`
+  }
+
+  const handleSave = async () => {
+    if (!form.documentNumber || !form.firstName || !form.firstLastName || !form.email) {
+      setSaveMessage({ type: 'error', text: 'Complete los campos obligatorios: Nombre, Apellido, Documento y Email' })
+      return
     }
-    setShowModal(false)
+    
+    setSaving(true)
+    setSaveMessage(null)
+    
+    try {
+      if (editingTeacher) {
+        // Actualizar docente existente
+        await teachersApi.update(editingTeacher.id, {
+          firstName: form.firstName,
+          lastName: form.firstLastName,
+          documentType: form.documentType,
+          documentNumber: form.documentNumber,
+          isActive: form.status === 'ACTIVE'
+        })
+        
+        // Actualizar estado local
+        setTeachers(teachers.map(t => t.id === editingTeacher.id ? { ...t, ...form } as Teacher : t))
+        setSaveMessage({ type: 'success', text: 'Docente actualizado correctamente' })
+      } else {
+        // Crear nuevo docente - la contraseña es el número de documento
+        const generatedUsername = generateUsername(form.firstName, form.firstLastName, form.documentNumber)
+        
+        const response = await teachersApi.create({
+          email: form.email,
+          password: form.documentNumber, // Contraseña = número de documento
+          firstName: form.firstName,
+          lastName: form.firstLastName,
+          documentType: form.documentType,
+          documentNumber: form.documentNumber,
+          phone: form.mobile
+        })
+        
+        // Agregar al estado local
+        const newTeacher: Teacher = { 
+          ...form, 
+          id: response.data.id, 
+          createdAt: new Date().toISOString().split('T')[0] 
+        }
+        setTeachers([...teachers, newTeacher])
+        
+        setSaveMessage({ 
+          type: 'success', 
+          text: `Docente creado. Usuario: ${generatedUsername} | Contraseña: ${form.documentNumber}` 
+        })
+      }
+      
+      // Cerrar modal después de 2 segundos si fue exitoso
+      setTimeout(() => {
+        setShowModal(false)
+        setSaveMessage(null)
+      }, 3000)
+      
+    } catch (err: any) {
+      console.error('Error saving teacher:', err)
+      const errorMsg = err.response?.data?.message || 'Error al guardar el docente'
+      setSaveMessage({ type: 'error', text: errorMsg })
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleDelete = () => {
@@ -587,9 +653,24 @@ export default function Teachers() {
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
-              <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Guardar</button>
+            <div className="px-6 py-4 border-t border-slate-200">
+              {saveMessage && (
+                <div className={`mb-3 p-3 rounded-lg flex items-center gap-2 ${saveMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                  {saveMessage.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                  <span className="text-sm">{saveMessage.text}</span>
+                </div>
+              )}
+              <div className="flex justify-end gap-3">
+                <button onClick={() => { setShowModal(false); setSaveMessage(null) }} className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50" disabled={saving}>Cancelar</button>
+                <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                  {saving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Guardando...
+                    </>
+                  ) : 'Guardar'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

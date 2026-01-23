@@ -61,12 +61,24 @@ export class AnnouncementsService {
     isActive: boolean;
     expiresAt: Date;
     visibleToRoles: string[];
+    institutionId: string;
   }>) {
-    return this.prisma.announcement.update({
-      where: { id },
-      data,
-      include: { author: true },
-    });
+    console.log('[AnnouncementsService] Updating announcement:', { id, data });
+    try {
+      // Remove institutionId from update data - it should not be changed
+      const { institutionId, ...updateData } = data as any;
+      
+      const result = await this.prisma.announcement.update({
+        where: { id },
+        data: updateData,
+        include: { author: true },
+      });
+      console.log('[AnnouncementsService] Announcement updated successfully:', result.id);
+      return result;
+    } catch (error) {
+      console.error('[AnnouncementsService] Error updating announcement:', error);
+      throw error;
+    }
   }
 
   async listForUser(institutionId: string, userRoles: string[]) {

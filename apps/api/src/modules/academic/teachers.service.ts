@@ -7,15 +7,19 @@ import * as bcryptjs from 'bcryptjs';
 export class TeachersService {
   constructor(private prisma: PrismaService) {}
 
-  private async generateUsername(firstName: string, lastName: string): Promise<string> {
-    const baseUsername = `${firstName.toLowerCase().charAt(0)}${lastName.toLowerCase().replace(/\s+/g, '')}`;
-    const cleanUsername = baseUsername.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+  // Generar username: primeraLetraNombre + primerApellido + 4últimosDigitos + d (docente)
+  private async generateUsername(firstName: string, lastName: string, documentNumber: string): Promise<string> {
+    const firstLetter = firstName.toLowerCase().charAt(0);
+    const cleanLastName = lastName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
+    const last4Digits = documentNumber.slice(-4);
+    const baseUsername = `${firstLetter}${cleanLastName}${last4Digits}d`;
     
-    let username = cleanUsername;
+    let username = baseUsername;
     let counter = 1;
     
+    // Si ya existe, agregar contador
     while (await this.prisma.user.findUnique({ where: { username } })) {
-      username = `${cleanUsername}${counter}`;
+      username = `${baseUsername}${counter}`;
       counter++;
     }
     
@@ -23,8 +27,10 @@ export class TeachersService {
   }
 
   async create(dto: CreateTeacherDto) {
-    const passwordHash = await bcryptjs.hash(dto.password, 10);
-    const username = await this.generateUsername(dto.firstName, dto.lastName);
+    // La contraseña es el número de documento si no se proporciona
+    const password = dto.password || dto.documentNumber || 'temporal123';
+    const passwordHash = await bcryptjs.hash(password, 10);
+    const username = await this.generateUsername(dto.firstName, dto.lastName, dto.documentNumber || '');
 
     // Find or create DOCENTE role
     let docenteRole = await this.prisma.role.findUnique({
@@ -47,6 +53,7 @@ export class TeachersService {
         documentType: dto.documentType as any,
         documentNumber: dto.documentNumber,
         phone: dto.phone,
+        mustChangePassword: true, // El docente debe cambiar su contraseña al primer inicio de sesión
         roles: {
           create: {
             roleId: docenteRole.id,

@@ -51,12 +51,24 @@ export class GalleryService {
     isActive: boolean;
     order: number;
     visibleToRoles: string[];
+    institutionId: string;
   }>) {
-    return this.prisma.galleryImage.update({
-      where: { id },
-      data,
-      include: { uploadedBy: true },
-    });
+    console.log('[GalleryService] Updating image:', { id, data });
+    try {
+      // Remove institutionId from update data - it should not be changed
+      const { institutionId, ...updateData } = data as any;
+      
+      const result = await this.prisma.galleryImage.update({
+        where: { id },
+        data: updateData,
+        include: { uploadedBy: true },
+      });
+      console.log('[GalleryService] Image updated successfully:', result.id);
+      return result;
+    } catch (error) {
+      console.error('[GalleryService] Error updating image:', error);
+      throw error;
+    }
   }
 
   async listForUser(institutionId: string, userRoles: string[], category?: string) {

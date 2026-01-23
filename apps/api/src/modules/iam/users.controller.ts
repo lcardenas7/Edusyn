@@ -122,10 +122,10 @@ export class UsersController {
       });
     }
 
-    // Generar username y contraseña temporal
-    const username = await this.generateUsername(body.firstName, body.lastName);
-    const tempPassword = this.generateTempPassword();
-    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    // Generar username y contraseña (número de documento)
+    const username = await this.generateUsername(body.firstName, body.lastName, body.documentNumber, body.role);
+    const initialPassword = this.getInitialPassword(body.documentNumber);
+    const passwordHash = await bcrypt.hash(initialPassword, 10);
 
     // Crear usuario
     const user = await this.prisma.user.create({
@@ -162,8 +162,9 @@ export class UsersController {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
+      username,
       roles: (user as any).roles,
-      tempPassword, // Solo se muestra una vez
+      initialPassword, // Solo se muestra una vez (número de documento)
     };
   }
 
@@ -201,30 +202,39 @@ export class UsersController {
   }
 
   // Helpers
-  private async generateUsername(firstName: string, lastName: string): Promise<string> {
-    const baseUsername = `${firstName.toLowerCase().charAt(0)}${lastName.toLowerCase().replace(/\s+/g, '')}`;
-    const cleanUsername = baseUsername
+  // Generar username: primeraLetraNombre + primerApellido + 4últimosDigitos + letraRol
+  private async generateUsername(firstName: string, lastName: string, documentNumber?: string, roleName?: string): Promise<string> {
+    const firstLetter = firstName.toLowerCase().charAt(0);
+    const cleanLastName = lastName.toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]/g, '');
+      .replace(/\s+/g, '');
+    const last4Digits = (documentNumber || '0000').slice(-4);
+    
+    // Determinar letra del rol
+    let roleLetter = 'u'; // default user
+    if (roleName === 'COORDINADOR') roleLetter = 'c';
+    else if (roleName === 'SECRETARIA') roleLetter = 's';
+    else if (roleName === 'ORIENTADOR') roleLetter = 'o';
+    else if (roleName === 'BIBLIOTECARIO') roleLetter = 'b';
+    else if (roleName === 'AUXILIAR') roleLetter = 'x';
+    else if (roleName === 'ADMIN_INSTITUTIONAL') roleLetter = 'a';
+    
+    const baseUsername = `${firstLetter}${cleanLastName}${last4Digits}${roleLetter}`;
 
-    let username = cleanUsername;
+    let username = baseUsername;
     let counter = 1;
 
     while (await this.prisma.user.findUnique({ where: { username } })) {
-      username = `${cleanUsername}${counter}`;
+      username = `${baseUsername}${counter}`;
       counter++;
     }
 
     return username;
   }
 
-  private generateTempPassword(): string {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-    let password = '';
-    for (let i = 0; i < 8; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
+  // La contraseña es el número de documento
+  private getInitialPassword(documentNumber?: string): string {
+    return documentNumber || 'temporal123';
   }
 }

@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { 
   Users, Search, Plus, Upload, Download, X, CheckCircle2, XCircle, 
-  AlertTriangle, FileSpreadsheet, User, Mail, Phone, Shield, Trash2, Edit2
+  AlertTriangle, FileSpreadsheet, User, Mail, Phone, Shield, Trash2, Edit2,
+  Key, Eye, EyeOff, FileText, Printer
 } from 'lucide-react'
-import { bulkUploadApi, staffApi } from '../lib/api'
+import { bulkUploadApi, staffApi, teachersApi } from '../lib/api'
 import api from '../lib/api'
+import { exportToExcel } from '../utils/excelImport'
 
-type TabType = 'staff' | 'bulk-upload'
+type TabType = 'staff' | 'bulk-upload' | 'credentials'
 
 interface StaffUser {
   id: string
@@ -63,6 +65,13 @@ export default function StaffManagement() {
   const [uploading, setUploading] = useState(false)
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Credentials states
+  const [allUsers, setAllUsers] = useState<any[]>([])
+  const [loadingCredentials, setLoadingCredentials] = useState(false)
+  const [credentialsSearch, setCredentialsSearch] = useState('')
+  const [credentialsRoleFilter, setCredentialsRoleFilter] = useState<string>('ALL')
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
 
   // Load users
   useEffect(() => {
@@ -85,6 +94,63 @@ export default function StaffManagement() {
     }
   }
 
+  // Load all users for credentials tab
+  const loadAllUsersForCredentials = async () => {
+    setLoadingCredentials(true)
+    try {
+      // Get staff users
+      const staffResponse = await staffApi.getAll()
+      // Get teachers
+      const teachersResponse = await teachersApi.getAll()
+      
+      // Combine and format
+      const allStaff = (staffResponse.data || []).map((u: any) => ({
+        ...u,
+        username: u.username || generateUsernameFromData(u.firstName, u.lastName, u.documentNumber, u.roles),
+        initialPassword: u.documentNumber || 'Sin documento',
+        userType: 'staff'
+      }))
+      
+      const allTeachers = (teachersResponse.data || []).map((u: any) => ({
+        ...u,
+        username: u.username || generateUsernameFromData(u.firstName, u.lastName, u.documentNumber, [{ role: { name: 'DOCENTE' } }]),
+        initialPassword: u.documentNumber || 'Sin documento',
+        userType: 'teacher'
+      }))
+      
+      setAllUsers([...allStaff, ...allTeachers])
+    } catch (error) {
+      console.error('Error loading credentials:', error)
+    } finally {
+      setLoadingCredentials(false)
+    }
+  }
+
+  // Generate username based on the rule
+  const generateUsernameFromData = (firstName: string, lastName: string, documentNumber: string, roles: any[]) => {
+    if (!firstName || !lastName) return 'N/A'
+    const firstLetter = firstName.charAt(0).toLowerCase()
+    const cleanLastName = lastName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '')
+    const last4Digits = (documentNumber || '0000').slice(-4)
+    
+    // Determine role letter
+    let roleLetter = 'u' // default user
+    if (roles?.some((r: any) => r.role?.name === 'DOCENTE')) roleLetter = 'd'
+    else if (roles?.some((r: any) => r.role?.name === 'ESTUDIANTE')) roleLetter = 'e'
+    else if (roles?.some((r: any) => r.role?.name === 'COORDINADOR')) roleLetter = 'c'
+    else if (roles?.some((r: any) => r.role?.name === 'SECRETARIA')) roleLetter = 's'
+    else if (roles?.some((r: any) => r.role?.name === 'ADMIN_INSTITUTIONAL')) roleLetter = 'a'
+    
+    return `${firstLetter}${cleanLastName}${last4Digits}${roleLetter}`
+  }
+
+  // Load credentials when tab changes
+  useEffect(() => {
+    if (activeTab === 'credentials') {
+      loadAllUsersForCredentials()
+    }
+  }, [activeTab])
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
       user.firstName.toLowerCase().includes(search.toLowerCase()) ||
@@ -99,7 +165,104 @@ export default function StaffManagement() {
 
   const getRoleBadge = (roleName: string) => {
     const role = STAFF_ROLES.find(r => r.value === roleName)
-    return role || { label: roleName, color: 'bg-slate-100 text-slate-700' }
+    if (role) return role
+    if (roleName === 'DOCENTE') return { label: 'Docente', color: 'bg-blue-100 text-blue-700' }
+    if (roleName === 'ADMIN_INSTITUTIONAL') return { label: 'Admin', color: 'bg-red-100 text-red-700' }
+    return { label: roleName, color: 'bg-slate-100 text-slate-700' }
+  }
+
+  // Filter credentials
+  const filteredCredentials = allUsers.filter(user => {
+    const fullName = `${user.firstName} ${user.lastName} ${user.email} ${user.documentNumber || ''}`.toLowerCase()
+    const matchesSearch = fullName.includes(credentialsSearch.toLowerCase())
+    
+    const matchesRole = credentialsRoleFilter === 'ALL' || 
+      user.roles?.some((r: any) => r.role?.name === credentialsRoleFilter)
+    
+    return matchesSearch && matchesRole
+  })
+
+  // Export credentials to Excel
+  const handleExportCredentials = () => {
+    const columns = [
+      { header: 'Nombre', key: 'fullName' },
+      { header: 'Documento', key: 'documentNumber' },
+      { header: 'Email', key: 'email' },
+      { header: 'Usuario', key: 'username' },
+      { header: 'Contraseña Inicial', key: 'initialPassword' },
+      { header: 'Rol', key: 'roleName' },
+    ]
+    
+    const data = filteredCredentials.map(u => ({
+      fullName: `${u.firstName} ${u.lastName}`,
+      documentNumber: u.documentNumber || 'N/A',
+      email: u.email,
+      username: u.username,
+      initialPassword: u.initialPassword,
+      roleName: u.roles?.map((r: any) => r.role?.name).join(', ') || 'N/A'
+    }))
+    
+    exportToExcel(data, columns, 'Credenciales_Personal.xlsx')
+  }
+
+  // Print credentials
+  const handlePrintCredentials = () => {
+    const printContent = `
+      <html>
+        <head>
+          <title>Credenciales de Personal</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h1 { text-align: center; color: #1e293b; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; }
+            th { background-color: #f1f5f9; font-weight: bold; }
+            tr:nth-child(even) { background-color: #f8fafc; }
+            .password { font-family: monospace; background: #fef3c7; padding: 2px 6px; border-radius: 4px; }
+            .username { font-family: monospace; background: #dbeafe; padding: 2px 6px; border-radius: 4px; }
+            @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+          </style>
+        </head>
+        <body>
+          <h1>Credenciales de Acceso - Personal</h1>
+          <p style="text-align: center; color: #64748b;">Generado el ${new Date().toLocaleDateString('es-CO')}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Documento</th>
+                <th>Email</th>
+                <th>Usuario</th>
+                <th>Contraseña Inicial</th>
+                <th>Rol</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredCredentials.map(u => `
+                <tr>
+                  <td>${u.firstName} ${u.lastName}</td>
+                  <td>${u.documentNumber || 'N/A'}</td>
+                  <td>${u.email}</td>
+                  <td><span class="username">${u.username}</span></td>
+                  <td><span class="password">${u.initialPassword}</span></td>
+                  <td>${u.roles?.map((r: any) => r.role?.name).join(', ') || 'N/A'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <p style="margin-top: 20px; font-size: 12px; color: #94a3b8;">
+            Nota: La contraseña inicial es el número de documento. Se recomienda cambiarla en el primer inicio de sesión.
+          </p>
+        </body>
+      </html>
+    `
+    
+    const printWindow = window.open('', '_blank')
+    if (printWindow) {
+      printWindow.document.write(printContent)
+      printWindow.document.close()
+      printWindow.print()
+    }
   }
 
   // Form handlers
@@ -266,6 +429,17 @@ export default function StaffManagement() {
             <Upload className="w-4 h-4" />
             Carga Masiva
           </button>
+          <button
+            onClick={() => setActiveTab('credentials')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'credentials'
+                ? 'bg-violet-100 text-violet-700'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Key className="w-4 h-4" />
+            Credenciales
+          </button>
         </div>
 
         {activeTab === 'staff' ? (
@@ -388,7 +562,7 @@ export default function StaffManagement() {
               )}
             </div>
           </>
-        ) : (
+        ) : activeTab === 'bulk-upload' ? (
           /* Bulk Upload Tab */
           <div className="space-y-6">
             {/* Upload Type Selection */}
@@ -558,7 +732,152 @@ export default function StaffManagement() {
               </div>
             )}
           </div>
-        )}
+        ) : activeTab === 'credentials' ? (
+          /* Credentials Tab */
+          <div className="space-y-6">
+            {/* Header with actions */}
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                    <Key className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900">Credenciales de Acceso</h3>
+                    <p className="text-sm text-slate-500">Usuarios y contraseñas iniciales del personal</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleExportCredentials}
+                    className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    Exportar Excel
+                  </button>
+                  <button
+                    onClick={handlePrintCredentials}
+                    className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm"
+                  >
+                    <Printer className="w-4 h-4" />
+                    Imprimir
+                  </button>
+                </div>
+              </div>
+              
+              {/* Filters */}
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre, email o documento..."
+                    value={credentialsSearch}
+                    onChange={(e) => setCredentialsSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                  />
+                </div>
+                <select
+                  value={credentialsRoleFilter}
+                  onChange={(e) => setCredentialsRoleFilter(e.target.value)}
+                  className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                >
+                  <option value="ALL">Todos los roles</option>
+                  <option value="DOCENTE">Docentes</option>
+                  <option value="COORDINADOR">Coordinadores</option>
+                  <option value="SECRETARIA">Secretarias</option>
+                  <option value="ORIENTADOR">Orientadores</option>
+                  <option value="ADMIN_INSTITUTIONAL">Administradores</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Credentials Table */}
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              {loadingCredentials ? (
+                <div className="p-8 text-center text-slate-500">
+                  <div className="w-8 h-8 border-2 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                  Cargando credenciales...
+                </div>
+              ) : filteredCredentials.length === 0 ? (
+                <div className="p-8 text-center text-slate-500">
+                  <Key className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                  <p>No hay usuarios registrados</p>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Personal</th>
+                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Documento</th>
+                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Email</th>
+                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Usuario</th>
+                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Contraseña Inicial</th>
+                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Rol</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredCredentials.map(user => (
+                      <tr key={user.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center">
+                              <User className="w-4 h-4 text-amber-600" />
+                            </div>
+                            <span className="font-medium text-slate-900">{user.firstName} {user.lastName}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-600">
+                          {user.documentNumber || 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-600">
+                          {user.email}
+                        </td>
+                        <td className="px-4 py-3">
+                          <code className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-sm font-mono">
+                            {user.username}
+                          </code>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <code className="px-2 py-1 bg-amber-50 text-amber-700 rounded text-sm font-mono">
+                              {showPasswords[user.id] ? user.initialPassword : '••••••••'}
+                            </code>
+                            <button
+                              onClick={() => setShowPasswords(prev => ({ ...prev, [user.id]: !prev[user.id] }))}
+                              className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600"
+                            >
+                              {showPasswords[user.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {user.roles?.map((r: any, idx: number) => {
+                              const badge = getRoleBadge(r.role?.name)
+                              return (
+                                <span key={idx} className={`px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}>
+                                  {badge.label}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              
+              <div className="px-4 py-3 border-t border-slate-200 bg-slate-50">
+                <p className="text-sm text-slate-500">
+                  Mostrando {filteredCredentials.length} usuarios • 
+                  <span className="text-amber-600 ml-1">La contraseña inicial es el número de documento</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {/* Create/Edit Modal */}
         {showModal && (

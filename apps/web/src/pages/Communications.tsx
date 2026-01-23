@@ -1,5 +1,7 @@
-import { useState } from 'react'
-import { Search, Plus, X, Send, Mail, Bell, Users, Calendar, Eye, Trash2, FileText, MessageSquare, Megaphone } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Plus, X, Send, Mail, Bell, Users, Calendar, Eye, Trash2, FileText, MessageSquare, Megaphone, Loader2 } from 'lucide-react'
+import { communicationsApi } from '../lib/api'
+import { useAuth } from '../contexts/AuthContext'
 
 type CommunicationType = 'CIRCULAR' | 'NOTIFICATION' | 'MESSAGE' | 'ANNOUNCEMENT'
 type RecipientType = 'ALL' | 'TEACHERS' | 'STUDENTS' | 'PARENTS' | 'GROUP' | 'INDIVIDUAL'
@@ -43,16 +45,12 @@ const statusLabels: Record<CommunicationStatus, { label: string; color: string }
   SCHEDULED: { label: 'Programado', color: 'bg-blue-100 text-blue-700' },
 }
 
-const mockCommunications: Communication[] = [
-  { id: '1', type: 'CIRCULAR', subject: 'Inicio del Segundo Periodo Academico', content: 'Se informa a toda la comunidad educativa que el segundo periodo academico inicia el dia lunes 15 de abril...', recipientType: 'ALL', status: 'SENT', createdAt: '2025-01-15', sentAt: '2025-01-15', author: 'Rectoria', readCount: 450, totalRecipients: 520 },
-  { id: '2', type: 'NOTIFICATION', subject: 'Entrega de Boletines Primer Periodo', content: 'Se convoca a los padres de familia a la entrega de boletines del primer periodo...', recipientType: 'PARENTS', status: 'SENT', createdAt: '2025-01-14', sentAt: '2025-01-14', author: 'Coordinacion', readCount: 280, totalRecipients: 350 },
-  { id: '3', type: 'ANNOUNCEMENT', subject: 'Jornada Pedagogica - Suspension de Clases', content: 'Se informa que el dia viernes 20 de enero no habra clases debido a jornada pedagogica institucional...', recipientType: 'ALL', status: 'SCHEDULED', createdAt: '2025-01-13', scheduledAt: '2025-01-18', author: 'Rectoria', totalRecipients: 520 },
-  { id: '4', type: 'MESSAGE', subject: 'Reunion de Docentes Area de Matematicas', content: 'Se convoca a reunion del area de matematicas para el dia jueves 18 de enero a las 2:00 PM...', recipientType: 'TEACHERS', status: 'SENT', createdAt: '2025-01-12', sentAt: '2025-01-12', author: 'Jefe de Area', readCount: 8, totalRecipients: 10 },
-  { id: '5', type: 'CIRCULAR', subject: 'Actualizacion del Manual de Convivencia', content: 'Borrador de circular sobre actualizaciones al manual de convivencia...', recipientType: 'ALL', status: 'DRAFT', createdAt: '2025-01-10', author: 'Coordinacion', totalRecipients: 0 },
-]
 
 export default function Communications() {
-  const [communications, setCommunications] = useState<Communication[]>(mockCommunications)
+  const { institution } = useAuth()
+  const [communications, setCommunications] = useState<Communication[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState<CommunicationType | 'ALL'>('ALL')
   const [filterStatus, setFilterStatus] = useState<CommunicationStatus | 'ALL'>('ALL')
@@ -68,6 +66,54 @@ export default function Communications() {
     recipientType: 'ALL' as RecipientType,
     scheduledAt: '',
   })
+  const [saving, setSaving] = useState(false)
+
+  // Cargar comunicaciones desde la API
+  useEffect(() => {
+    const loadCommunications = async () => {
+      if (!institution?.id) {
+        setLoading(false)
+        return
+      }
+      setLoading(true)
+      setError(null)
+      try {
+        const response = await communicationsApi.getAll({ institutionId: institution.id })
+        const apiComms: Communication[] = (response.data || []).map((c: any) => ({
+          id: c.id,
+          type: (c.type || 'CIRCULAR') as CommunicationType,
+          subject: c.subject || '',
+          content: c.content || '',
+          recipientType: mapRecipientType(c.recipients),
+          status: (c.status || 'DRAFT') as CommunicationStatus,
+          createdAt: c.createdAt ? new Date(c.createdAt).toISOString().split('T')[0] : '',
+          sentAt: c.sentAt ? new Date(c.sentAt).toISOString().split('T')[0] : undefined,
+          scheduledAt: c.scheduledAt ? new Date(c.scheduledAt).toISOString().split('T')[0] : undefined,
+          author: c.author ? `${c.author.firstName} ${c.author.lastName}` : 'Sistema',
+          readCount: c.readCount || 0,
+          totalRecipients: c.recipients?.length || 0,
+        }))
+        setCommunications(apiComms)
+      } catch (err: any) {
+        console.error('Error loading communications:', err)
+        setError('Error al cargar comunicaciones')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadCommunications()
+  }, [institution?.id])
+
+  // Mapear tipo de destinatario desde recipients
+  const mapRecipientType = (recipients: any[]): RecipientType => {
+    if (!recipients || recipients.length === 0) return 'ALL'
+    const types = recipients.map((r: any) => r.recipientType)
+    if (types.includes('ALL_TEACHERS') && types.includes('ALL_STUDENTS')) return 'ALL'
+    if (types.includes('ALL_TEACHERS')) return 'TEACHERS'
+    if (types.includes('ALL_STUDENTS')) return 'STUDENTS'
+    if (types.includes('ALL_PARENTS')) return 'PARENTS'
+    return 'INDIVIDUAL'
+  }
 
   const filteredCommunications = communications.filter(c => {
     const matchesSearch = c.subject.toLowerCase().includes(search.toLowerCase()) || c.content.toLowerCase().includes(search.toLowerCase())
@@ -93,47 +139,112 @@ export default function Communications() {
     setShowViewModal(true)
   }
 
-  const handleSaveDraft = () => {
-    if (!form.subject.trim()) return
-    const newComm: Communication = {
-      id: Date.now().toString(),
-      type: form.type,
-      subject: form.subject,
-      content: form.content,
-      recipientType: form.recipientType,
-      status: 'DRAFT',
-      createdAt: new Date().toISOString().split('T')[0],
-      author: 'Usuario Actual',
-      totalRecipients: 0,
+  // Mapear recipientType a formato de API
+  const getRecipientsForApi = (recipientType: RecipientType): string[] => {
+    switch (recipientType) {
+      case 'ALL': return ['ALL_TEACHERS', 'ALL_STUDENTS', 'ALL_PARENTS']
+      case 'TEACHERS': return ['ALL_TEACHERS']
+      case 'STUDENTS': return ['ALL_STUDENTS']
+      case 'PARENTS': return ['ALL_PARENTS']
+      default: return []
     }
-    setCommunications([newComm, ...communications])
-    setShowModal(false)
   }
 
-  const handleSend = () => {
-    if (!form.subject.trim()) return
-    const newComm: Communication = {
-      id: Date.now().toString(),
-      type: form.type,
-      subject: form.subject,
-      content: form.content,
-      recipientType: form.recipientType,
-      status: form.scheduledAt ? 'SCHEDULED' : 'SENT',
-      createdAt: new Date().toISOString().split('T')[0],
-      sentAt: form.scheduledAt ? undefined : new Date().toISOString().split('T')[0],
-      scheduledAt: form.scheduledAt || undefined,
-      author: 'Usuario Actual',
-      totalRecipients: form.recipientType === 'ALL' ? 520 : form.recipientType === 'TEACHERS' ? 45 : form.recipientType === 'PARENTS' ? 350 : 125,
-      readCount: 0,
+  const handleSaveDraft = async () => {
+    if (!form.subject.trim() || !institution?.id) return
+    setSaving(true)
+    try {
+      const response = await communicationsApi.create({
+        institutionId: institution.id,
+        type: form.type,
+        subject: form.subject,
+        content: form.content,
+        recipients: getRecipientsForApi(form.recipientType)
+      })
+      
+      const newComm: Communication = {
+        id: response.data.id,
+        type: form.type,
+        subject: form.subject,
+        content: form.content,
+        recipientType: form.recipientType,
+        status: 'DRAFT',
+        createdAt: new Date().toISOString().split('T')[0],
+        author: 'Usuario Actual',
+        totalRecipients: 0,
+      }
+      setCommunications([newComm, ...communications])
+      setShowModal(false)
+    } catch (err: any) {
+      console.error('Error saving draft:', err)
+      alert(err.response?.data?.message || 'Error al guardar borrador')
+    } finally {
+      setSaving(false)
     }
-    setCommunications([newComm, ...communications])
-    setShowModal(false)
+  }
+
+  const handleSend = async () => {
+    if (!form.subject.trim() || !institution?.id) return
+    setSaving(true)
+    try {
+      const response = await communicationsApi.create({
+        institutionId: institution.id,
+        type: form.type,
+        subject: form.subject,
+        content: form.content,
+        recipients: getRecipientsForApi(form.recipientType)
+      })
+      
+      const newComm: Communication = {
+        id: response.data.id,
+        type: form.type,
+        subject: form.subject,
+        content: form.content,
+        recipientType: form.recipientType,
+        status: form.scheduledAt ? 'SCHEDULED' : 'SENT',
+        createdAt: new Date().toISOString().split('T')[0],
+        sentAt: form.scheduledAt ? undefined : new Date().toISOString().split('T')[0],
+        scheduledAt: form.scheduledAt || undefined,
+        author: 'Usuario Actual',
+        totalRecipients: 0,
+        readCount: 0,
+      }
+      setCommunications([newComm, ...communications])
+      setShowModal(false)
+    } catch (err: any) {
+      console.error('Error sending:', err)
+      alert(err.response?.data?.message || 'Error al enviar comunicación')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleDelete = () => {
     if (!deleteConfirm) return
     setCommunications(communications.filter(c => c.id !== deleteConfirm.id))
     setDeleteConfirm(null)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto" />
+          <p className="mt-4 text-slate-600">Cargando comunicaciones...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Mail className="w-12 h-12 text-red-500 mx-auto" />
+          <p className="mt-4 text-red-600">{error}</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -315,10 +426,13 @@ export default function Communications() {
               </div>
             </div>
             <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
-              <button onClick={handleSaveDraft} className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50">Guardar Borrador</button>
-              <button onClick={handleSend} disabled={!form.subject.trim()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
-                <Send className="w-4 h-4" />
+              <button onClick={() => setShowModal(false)} disabled={saving} className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50">Cancelar</button>
+              <button onClick={handleSaveDraft} disabled={saving || !form.subject.trim()} className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 flex items-center gap-2">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Guardar Borrador
+              </button>
+              <button onClick={handleSend} disabled={saving || !form.subject.trim()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {form.scheduledAt ? 'Programar' : 'Enviar'}
               </button>
             </div>
