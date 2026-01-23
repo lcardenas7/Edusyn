@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards, Request } from '@nestjs/common';
 
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,8 +13,10 @@ export class TeachersController {
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async create(@Body() dto: CreateTeacherDto) {
-    return this.teachersService.create(dto);
+  async create(@Request() req: any, @Body() dto: CreateTeacherDto) {
+    // Obtener institutionId del usuario autenticado
+    const institutionId = req.user?.institutionId;
+    return this.teachersService.create(dto, institutionId);
   }
 
   @Get()

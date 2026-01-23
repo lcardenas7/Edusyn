@@ -26,7 +26,7 @@ export class TeachersService {
     return username;
   }
 
-  async create(dto: CreateTeacherDto) {
+  async create(dto: CreateTeacherDto, institutionId?: string) {
     // La contraseña es el número de documento si no se proporciona
     const password = dto.password || dto.documentNumber || 'temporal123';
     const passwordHash = await bcryptjs.hash(password, 10);
@@ -59,11 +59,25 @@ export class TeachersService {
             roleId: docenteRole.id,
           },
         },
+        // Asociar con la institución si se proporciona
+        ...(institutionId && {
+          institutionUsers: {
+            create: {
+              institutionId,
+              isAdmin: false,
+            },
+          },
+        }),
       },
       include: {
         roles: {
           include: {
             role: true,
+          },
+        },
+        institutionUsers: {
+          include: {
+            institution: true,
           },
         },
       },
