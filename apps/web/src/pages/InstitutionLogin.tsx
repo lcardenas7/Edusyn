@@ -223,7 +223,7 @@ export default function InstitutionLogin() {
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200">
           {/* Header con institución seleccionada */}
           {institution && step === 'credentials' && (
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
