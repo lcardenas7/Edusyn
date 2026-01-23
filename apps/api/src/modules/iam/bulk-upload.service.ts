@@ -339,10 +339,10 @@ export class BulkUploadService {
           continue;
         }
 
-        // Generar username y contraseña temporal
-        const username = await this.generateUsername(row.firstName, row.lastName);
-        const tempPassword = this.generateTempPassword();
-        const passwordHash = await bcrypt.hash(tempPassword, 10);
+        // Generar username con regla consistente y contraseña = documento
+        const username = await this.generateUsernameWithRole(row.firstName, row.lastName, row.documentNumber, 'DOCENTE');
+        const initialPassword = row.documentNumber || 'temporal123';
+        const passwordHash = await bcrypt.hash(initialPassword, 10);
 
         // Crear usuario
         const user = await this.prisma.user.create({
@@ -448,6 +448,16 @@ export class BulkUploadService {
     });
     const groupMap = new Map(groups.map((g) => [g.code || g.name, g.id]));
 
+    // Obtener o crear rol ESTUDIANTE
+    let estudianteRole = await this.prisma.role.findUnique({
+      where: { name: 'ESTUDIANTE' },
+    });
+    if (!estudianteRole) {
+      estudianteRole = await this.prisma.role.create({
+        data: { name: 'ESTUDIANTE' },
+      });
+    }
+
     // Procesar cada fila
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -468,8 +478,8 @@ export class BulkUploadService {
           continue;
         }
 
-        // Verificar si ya existe
-        const existing = await this.prisma.student.findUnique({
+        // Verificar si ya existe estudiante
+        const existingStudent = await this.prisma.student.findUnique({
           where: {
             institutionId_documentNumber: {
               institutionId,
@@ -477,7 +487,7 @@ export class BulkUploadService {
             },
           },
         });
-        if (existing) {
+        if (existingStudent) {
           result.errors.push({
             row: rowNum,
             message: `Estudiante con documento ${row.documentNumber} ya existe`,
@@ -494,10 +504,58 @@ export class BulkUploadService {
           }
         }
 
-        // Crear estudiante
+        // Generar username y contraseña para el usuario
+        const username = await this.generateUsernameWithRole(row.firstName, row.lastName, row.documentNumber, 'ESTUDIANTE');
+        const initialPassword = row.documentNumber;
+        const passwordHash = await bcrypt.hash(initialPassword, 10);
+        
+        // Generar email si no tiene (requerido para User)
+        const email = row.email || `${username}@estudiante.local`;
+
+        // Verificar que el email no exista
+        const existingUser = await this.prisma.user.findUnique({
+          where: { email },
+        });
+        if (existingUser) {
+          result.errors.push({
+            row: rowNum,
+            message: `El correo ${email} ya está registrado`,
+          });
+          continue;
+        }
+
+        // Crear usuario primero
+        const user = await this.prisma.user.create({
+          data: {
+            email,
+            username,
+            firstName: row.firstName,
+            lastName: row.lastName,
+            passwordHash,
+            documentType: row.documentType as any,
+            documentNumber: row.documentNumber,
+            phone: row.phone,
+            isActive: true,
+            mustChangePassword: true,
+            roles: {
+              create: {
+                roleId: estudianteRole.id,
+              },
+            },
+            institutionUsers: {
+              create: {
+                institutionId,
+                isAdmin: false,
+              },
+            },
+          } as any,
+        });
+
+        // Crear estudiante vinculado al usuario
         const student = await this.prisma.student.create({
           data: {
             institutionId,
+            userId: user.id,
             firstName: row.firstName,
             lastName: row.lastName,
             documentType: row.documentType,
@@ -529,6 +587,7 @@ export class BulkUploadService {
         result.created.push({
           id: student.id,
           name: `${student.firstName} ${student.lastName}`,
+          email: user.email,
         });
       } catch (error: any) {
         result.errors.push({
@@ -635,10 +694,10 @@ export class BulkUploadService {
           });
         }
 
-        // Generar username y contraseña temporal
-        const username = await this.generateUsername(row.firstName, row.lastName);
-        const tempPassword = this.generateTempPassword();
-        const passwordHash = await bcrypt.hash(tempPassword, 10);
+        // Generar username con regla consistente y contraseña = documento
+        const username = await this.generateUsernameWithRole(row.firstName, row.lastName, row.documentNumber, row.role);
+        const initialPassword = row.documentNumber || 'temporal123';
+        const passwordHash = await bcrypt.hash(initialPassword, 10);
 
         // Crear usuario
         const user = await this.prisma.user.create({
@@ -711,6 +770,38 @@ export class BulkUploadService {
 
     while (await this.prisma.user.findUnique({ where: { username } })) {
       username = `${cleanUsername}${counter}`;
+      counter++;
+    }
+
+    return username;
+  }
+
+  // Generar username con regla consistente: primeraLetra + apellido + 4digitos + letraRol
+  private async generateUsernameWithRole(firstName: string, lastName: string, documentNumber?: string, roleName?: string): Promise<string> {
+    const firstLetter = firstName.toLowerCase().charAt(0);
+    const cleanLastName = lastName.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '');
+    const last4Digits = (documentNumber || '0000').slice(-4);
+    
+    // Determinar letra del rol
+    let roleLetter = 'u';
+    if (roleName === 'DOCENTE') roleLetter = 'd';
+    else if (roleName === 'ESTUDIANTE') roleLetter = 'e';
+    else if (roleName === 'COORDINADOR') roleLetter = 'c';
+    else if (roleName === 'SECRETARIA') roleLetter = 's';
+    else if (roleName === 'ORIENTADOR') roleLetter = 'o';
+    else if (roleName === 'BIBLIOTECARIO') roleLetter = 'b';
+    else if (roleName === 'AUXILIAR') roleLetter = 'x';
+    
+    const baseUsername = `${firstLetter}${cleanLastName}${last4Digits}${roleLetter}`;
+
+    let username = baseUsername;
+    let counter = 1;
+
+    while (await this.prisma.user.findUnique({ where: { username } })) {
+      username = `${baseUsername}${counter}`;
       counter++;
     }
 

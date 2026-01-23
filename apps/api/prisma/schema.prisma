@@ -219,6 +219,9 @@ model User {
   permissionsRevoked        UserExtraPermission[] @relation("RevokedPermissions")
   auditLogsAsTarget         PermissionAuditLog[]  @relation("AuditTarget")
   auditLogsAsPerformer      PermissionAuditLog[]  @relation("AuditPerformer")
+  
+  // Estudiante asociado (si el usuario es un estudiante con acceso)
+  studentProfile            Student?
 }
 
 model Role {
@@ -683,6 +686,7 @@ model EvaluationPlanComponentWeight {
 model Student {
   id            String   @id @default(cuid())
   institutionId String
+  userId        String?  @unique  // Usuario opcional para acceso al sistema
   
   // Información básica
   documentType  String
@@ -726,6 +730,7 @@ model Student {
   updatedAt     DateTime @updatedAt
 
   institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   enrollments   StudentEnrollment[]
   guardians     StudentGuardian[]
 

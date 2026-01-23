@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateStudentDto, UpdateStudentDto, EnrollStudentDto, UpdateEnrollmentStatusDto } from './dto/create-student.dto';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class StudentsService {
@@ -411,5 +412,157 @@ export class StudentsService {
     }
 
     return results;
+  }
+
+  /**
+   * Activa acceso al sistema para un estudiante
+   * Crea un User asociado con rol ESTUDIANTE
+   */
+  async activateAccess(studentId: string) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      include: { user: true },
+    });
+
+    if (!student) {
+      throw new BadRequestException('Estudiante no encontrado');
+    }
+
+    if (student.userId) {
+      throw new BadRequestException('El estudiante ya tiene acceso al sistema');
+    }
+
+    // Obtener o crear rol ESTUDIANTE
+    let estudianteRole = await this.prisma.role.findUnique({
+      where: { name: 'ESTUDIANTE' },
+    });
+    if (!estudianteRole) {
+      estudianteRole = await this.prisma.role.create({
+        data: { name: 'ESTUDIANTE' },
+      });
+    }
+
+    // Generar username y contraseña
+    const username = await this.generateStudentUsername(student.firstName, student.lastName, student.documentNumber);
+    const initialPassword = student.documentNumber; // Contraseña = documento
+    const passwordHash = await bcrypt.hash(initialPassword, 10);
+
+    // Generar email si no tiene
+    const email = student.email || `${username}@estudiante.local`;
+
+    // Crear usuario
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        username,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        passwordHash,
+        documentType: student.documentType as any,
+        documentNumber: student.documentNumber,
+        phone: student.phone,
+        isActive: true,
+        mustChangePassword: true,
+        roles: {
+          create: {
+            roleId: estudianteRole.id,
+          },
+        },
+        institutionUsers: {
+          create: {
+            institutionId: student.institutionId,
+            isAdmin: false,
+          },
+        },
+      },
+    });
+
+    // Vincular usuario con estudiante
+    await this.prisma.student.update({
+      where: { id: studentId },
+      data: { userId: user.id },
+    });
+
+    return {
+      studentId,
+      userId: user.id,
+      username,
+      initialPassword,
+      message: 'Acceso activado correctamente',
+    };
+  }
+
+  /**
+   * Desactiva acceso al sistema para un estudiante
+   */
+  async deactivateAccess(studentId: string) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+    });
+
+    if (!student) {
+      throw new BadRequestException('Estudiante no encontrado');
+    }
+
+    if (!student.userId) {
+      throw new BadRequestException('El estudiante no tiene acceso al sistema');
+    }
+
+    // Desvincular y eliminar usuario
+    await this.prisma.student.update({
+      where: { id: studentId },
+      data: { userId: null },
+    });
+
+    await this.prisma.user.delete({
+      where: { id: student.userId },
+    });
+
+    return { success: true, message: 'Acceso desactivado' };
+  }
+
+  /**
+   * Activa acceso masivo para múltiples estudiantes
+   */
+  async bulkActivateAccess(studentIds: string[]) {
+    const results = {
+      activated: 0,
+      errors: [] as { studentId: string; error: string }[],
+    };
+
+    for (const studentId of studentIds) {
+      try {
+        await this.activateAccess(studentId);
+        results.activated++;
+      } catch (error: any) {
+        results.errors.push({
+          studentId,
+          error: error.message || 'Error desconocido',
+        });
+      }
+    }
+
+    return results;
+  }
+
+  // Generar username para estudiante: primeraLetra + apellido + 4digitos + e
+  private async generateStudentUsername(firstName: string, lastName: string, documentNumber: string): Promise<string> {
+    const firstLetter = firstName.toLowerCase().charAt(0);
+    const cleanLastName = lastName.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '');
+    const last4Digits = documentNumber.slice(-4);
+    const baseUsername = `${firstLetter}${cleanLastName}${last4Digits}e`;
+
+    let username = baseUsername;
+    let counter = 1;
+
+    while (await this.prisma.user.findUnique({ where: { username } })) {
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
+
+    return username;
   }
 }

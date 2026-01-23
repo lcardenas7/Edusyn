@@ -75,4 +75,31 @@ export class StudentsController {
   }) {
     return this.studentsService.bulkImport(data);
   }
+
+  /**
+   * Activa acceso al sistema para un estudiante
+   */
+  @Post(':id/activate-access')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async activateAccess(@Param('id') id: string) {
+    return this.studentsService.activateAccess(id);
+  }
+
+  /**
+   * Desactiva acceso al sistema para un estudiante
+   */
+  @Post(':id/deactivate-access')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async deactivateAccess(@Param('id') id: string) {
+    return this.studentsService.deactivateAccess(id);
+  }
+
+  /**
+   * Activa acceso masivo para múltiples estudiantes
+   */
+  @Post('bulk-activate-access')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async bulkActivateAccess(@Body() data: { studentIds: string[] }) {
+    return this.studentsService.bulkActivateAccess(data.studentIds);
+  }
 }
