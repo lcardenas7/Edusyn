@@ -16,6 +16,7 @@ export enum SystemModule {
   USERS = 'USERS',
   CONFIG = 'CONFIG',
   ELECTIONS = 'ELECTIONS',
+  PAYMENTS = 'PAYMENTS',
 }
 
 export class CreateInstitutionDto {

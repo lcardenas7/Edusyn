@@ -347,6 +347,17 @@ const AVAILABLE_MODULES: ModuleConfig[] = [
     ]
   },
   { 
+    id: 'PAYMENTS', 
+    name: 'Gestión de Pagos', 
+    description: 'Control financiero y eventos de pago',
+    features: [
+      { id: 'PAYMENTS_CONCEPTS', name: 'Conceptos', description: 'Configurar conceptos de pago' },
+      { id: 'PAYMENTS_EVENTS', name: 'Eventos', description: 'Crear eventos de cobro' },
+      { id: 'PAYMENTS_REGISTER', name: 'Registrar Pagos', description: 'Registrar abonos y pagos' },
+      { id: 'PAYMENTS_REPORTS', name: 'Reportes', description: 'Cartera y estadísticas' },
+    ]
+  },
+  { 
     id: 'USERS', 
     name: 'Gestión de Usuarios', 
     description: 'Administración de usuarios',

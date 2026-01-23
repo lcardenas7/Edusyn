@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { 
   Users, Search, Plus, Upload, Download, X, CheckCircle2, XCircle, 
   AlertTriangle, FileSpreadsheet, User, Mail, Phone, Shield, Trash2, Edit2,
@@ -7,6 +7,7 @@ import {
 import { bulkUploadApi, staffApi, teachersApi } from '../lib/api'
 import api from '../lib/api'
 import { exportToExcel } from '../utils/excelImport'
+import { useAuth } from '../contexts/AuthContext'
 
 type TabType = 'staff' | 'bulk-upload' | 'credentials'
 
@@ -47,6 +48,13 @@ const emptyForm = {
 }
 
 export default function StaffManagement() {
+  const { user } = useAuth()
+  
+  // Verificar si el usuario es ADMIN_INSTITUTIONAL (solo ellos pueden ver credenciales)
+  const isAdmin = useMemo(() => {
+    return user?.roles?.some((r: any) => r.role?.name === 'ADMIN_INSTITUTIONAL') || false
+  }, [user])
+  
   const [activeTab, setActiveTab] = useState<TabType>('staff')
   const [users, setUsers] = useState<StaffUser[]>([])
   const [loading, setLoading] = useState(true)
@@ -103,13 +111,15 @@ export default function StaffManagement() {
       // Get teachers
       const teachersResponse = await teachersApi.getAll()
       
-      // Combine and format
-      const allStaff = (staffResponse.data || []).map((u: any) => ({
-        ...u,
-        username: u.username || generateUsernameFromData(u.firstName, u.lastName, u.documentNumber, u.roles),
-        initialPassword: u.documentNumber || 'Sin documento',
-        userType: 'staff'
-      }))
+      // Combine and format - EXCLUIR ADMIN_INSTITUTIONAL del listado
+      const allStaff = (staffResponse.data || [])
+        .filter((u: any) => !u.roles?.some((r: any) => r.role?.name === 'ADMIN_INSTITUTIONAL'))
+        .map((u: any) => ({
+          ...u,
+          username: u.username || generateUsernameFromData(u.firstName, u.lastName, u.documentNumber, u.roles),
+          initialPassword: u.documentNumber || 'Sin documento',
+          userType: 'staff'
+        }))
       
       const allTeachers = (teachersResponse.data || []).map((u: any) => ({
         ...u,
@@ -144,12 +154,12 @@ export default function StaffManagement() {
     return `${firstLetter}${cleanLastName}${last4Digits}${roleLetter}`
   }
 
-  // Load credentials when tab changes
+  // Load credentials when tab changes (solo si es admin)
   useEffect(() => {
-    if (activeTab === 'credentials') {
+    if (activeTab === 'credentials' && isAdmin) {
       loadAllUsersForCredentials()
     }
-  }, [activeTab])
+  }, [activeTab, isAdmin])
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
@@ -429,17 +439,20 @@ export default function StaffManagement() {
             <Upload className="w-4 h-4" />
             Carga Masiva
           </button>
-          <button
-            onClick={() => setActiveTab('credentials')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'credentials'
-                ? 'bg-violet-100 text-violet-700'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Key className="w-4 h-4" />
-            Credenciales
-          </button>
+          {/* Solo ADMIN_INSTITUTIONAL puede ver credenciales */}
+          {isAdmin && (
+            <button
+              onClick={() => setActiveTab('credentials')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'credentials'
+                  ? 'bg-violet-100 text-violet-700'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Key className="w-4 h-4" />
+              Credenciales
+            </button>
+          )}
         </div>
 
         {activeTab === 'staff' ? (
@@ -732,8 +745,8 @@ export default function StaffManagement() {
               </div>
             )}
           </div>
-        ) : activeTab === 'credentials' ? (
-          /* Credentials Tab */
+        ) : activeTab === 'credentials' && isAdmin ? (
+          /* Credentials Tab - Solo ADMIN_INSTITUTIONAL */
           <div className="space-y-6">
             {/* Header with actions */}
             <div className="bg-white rounded-xl border border-slate-200 p-4">

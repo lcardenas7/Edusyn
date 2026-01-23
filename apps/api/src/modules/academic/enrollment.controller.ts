@@ -16,6 +16,7 @@ import {
   EnrollmentService,
   EnrollStudentDto,
   EnrollmentFilters,
+  CreateStudentAndEnrollDto,
 } from './enrollment.service';
 import { EnrollmentStatus, EnrollmentMovementType } from '@prisma/client';
 
@@ -35,6 +36,35 @@ export class EnrollmentController {
       ...dto,
       enrolledById: req.user.id,
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CREAR ESTUDIANTE Y MATRICULAR (FLUJO UNIFICADO)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('create-and-enroll')
+  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'SECRETARIA')
+  async createStudentAndEnroll(
+    @Body() dto: Omit<CreateStudentAndEnrollDto, 'enrolledById'>,
+    @Request() req: any,
+  ) {
+    return this.enrollmentService.createStudentAndEnroll({
+      ...dto,
+      enrolledById: req.user.id,
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BUSCAR ESTUDIANTE POR DOCUMENTO
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('find-student')
+  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'SECRETARIA')
+  async findStudentByDocument(
+    @Query('institutionId') institutionId: string,
+    @Query('documentNumber') documentNumber: string,
+  ) {
+    return this.enrollmentService.findStudentByDocument(institutionId, documentNumber);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -182,5 +212,36 @@ export class EnrollmentController {
       observations: body.observations,
       performedById: req.user.id,
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GESTIÓN DE CUPOS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('capacity/:academicYearId')
+  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'SECRETARIA')
+  async getCapacityByAcademicYear(
+    @Param('academicYearId') academicYearId: string,
+    @Query('institutionId') institutionId: string,
+  ) {
+    return this.enrollmentService.getCapacityByAcademicYear(academicYearId, institutionId);
+  }
+
+  @Get('capacity/:academicYearId/group/:groupId')
+  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'SECRETARIA')
+  async getGroupCapacity(
+    @Param('groupId') groupId: string,
+    @Param('academicYearId') academicYearId: string,
+  ) {
+    return this.enrollmentService.getGroupCapacity(groupId, academicYearId);
+  }
+
+  @Put('capacity/group/:groupId')
+  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR')
+  async updateGroupCapacity(
+    @Param('groupId') groupId: string,
+    @Body() body: { maxCapacity: number | null },
+  ) {
+    return this.enrollmentService.updateGroupCapacity(groupId, body.maxCapacity);
   }
 }

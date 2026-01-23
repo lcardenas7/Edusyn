@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, GraduationCap, FileText, AlertTriangle, Phone, Mail, MapPin, Users, CheckCircle2, XCircle, FileSpreadsheet, Heart, UserPlus, Loader2 } from 'lucide-react'
 import { generateTemplate, parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
-import { studentsApi, guardiansApi, academicYearLifecycleApi, groupsApi } from '../lib/api'
+import api, { studentsApi, guardiansApi, academicYearLifecycleApi, groupsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
 type StudentStatus = 'ACTIVE' | 'INACTIVE' | 'TRANSFERRED' | 'GRADUATED' | 'WITHDRAWN'
@@ -109,6 +109,10 @@ export default function Students() {
   // Estados para guardar estudiante
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  
+  // Estados para matrícula inmediata
+  const [enrollNow, setEnrollNow] = useState(true) // Por defecto activado para nuevos
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('')
 
   // Cargar año académico actual y grupos disponibles
   useEffect(() => {
@@ -209,9 +213,11 @@ export default function Students() {
     setEditingStudent(null)
     setFormData({
       firstName: '', lastName: '', documentType: 'TI', documentNumber: '', birthDate: '', gender: 'M',
-      address: '', phone: '', email: '', group: '9°A', status: 'ACTIVE', enrollmentDate: new Date().toISOString().split('T')[0],
+      address: '', phone: '', email: '', group: '', status: 'ACTIVE', enrollmentDate: new Date().toISOString().split('T')[0],
       parentName: '', parentPhone: '', parentEmail: '', bloodType: '', eps: '', observations: ''
     })
+    setEnrollNow(true) // Por defecto matricular inmediatamente
+    setSelectedGroupId(availableGroups[0]?.id || '')
     setShowModal(true)
   }
 
@@ -224,6 +230,12 @@ export default function Students() {
   const handleSave = async () => {
     if (!formData.firstName || !formData.lastName || !formData.documentNumber) {
       setSaveMessage({ type: 'error', text: 'Complete los campos obligatorios: Nombre, Apellido y Documento' })
+      return
+    }
+
+    // Validar grupo si se va a matricular
+    if (!editingStudent && enrollNow && !selectedGroupId) {
+      setSaveMessage({ type: 'error', text: 'Seleccione un grupo para matricular al estudiante' })
       return
     }
 
@@ -247,8 +259,38 @@ export default function Students() {
         
         setStudents(students.map(s => s.id === editingStudent.id ? { ...s, ...formData } as Student : s))
         setSaveMessage({ type: 'success', text: 'Estudiante actualizado correctamente' })
+      } else if (enrollNow && currentAcademicYear && selectedGroupId) {
+        // Crear estudiante Y matricular en un solo paso (flujo unificado)
+        const response = await api.post('/enrollments/create-and-enroll', {
+          // Datos del estudiante
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          documentType: formData.documentType || 'TI',
+          documentNumber: formData.documentNumber,
+          birthDate: formData.birthDate,
+          gender: formData.gender || 'M',
+          address: formData.address,
+          phone: formData.phone,
+          email: formData.email,
+          eps: formData.eps,
+          bloodType: formData.bloodType,
+          // Datos de matrícula
+          academicYearId: currentAcademicYear.id,
+          groupId: selectedGroupId,
+          enrollmentType: 'NEW',
+          observations: formData.observations
+        })
+        
+        const selectedGroup = availableGroups.find(g => g.id === selectedGroupId)
+        const newStudent: Student = { 
+          ...formData, 
+          id: response.data.studentId,
+          group: selectedGroup ? `${selectedGroup.grade?.name || ''} ${selectedGroup.name}`.trim() : ''
+        } as Student
+        setStudents([...students, newStudent])
+        setSaveMessage({ type: 'success', text: 'Estudiante creado y matriculado correctamente' })
       } else {
-        // Crear nuevo estudiante
+        // Crear solo estudiante (sin matrícula)
         const response = await studentsApi.create({
           firstName: formData.firstName,
           lastName: formData.lastName,
@@ -267,7 +309,7 @@ export default function Students() {
           id: response.data.id 
         } as Student
         setStudents([...students, newStudent])
-        setSaveMessage({ type: 'success', text: 'Estudiante creado correctamente' })
+        setSaveMessage({ type: 'success', text: 'Estudiante creado correctamente (sin matrícula)' })
       }
 
       setTimeout(() => {
@@ -888,21 +930,63 @@ export default function Students() {
                     <option value="F">Femenino</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Grupo *</label>
-                  <select value={formData.group || '9°A'} onChange={(e) => setFormData({ ...formData, group: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
-                    {groups.map(g => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
-                  <select value={formData.status || 'ACTIVE'} onChange={(e) => setFormData({ ...formData, status: e.target.value as StudentStatus })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
-                    <option value="ACTIVE">Activo</option>
-                    <option value="INACTIVE">Inactivo</option>
-                    <option value="TRANSFERRED">Trasladado</option>
-                    <option value="WITHDRAWN">Retirado</option>
-                  </select>
-                </div>
+                {/* Sección de Matrícula Inmediata - Solo para nuevos estudiantes */}
+                {!editingStudent && (
+                  <div className="col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <input
+                        type="checkbox"
+                        id="enrollNow"
+                        checked={enrollNow}
+                        onChange={(e) => setEnrollNow(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor="enrollNow" className="font-medium text-blue-900">
+                        Matricular inmediatamente en {currentAcademicYear?.year || 'año actual'}
+                      </label>
+                    </div>
+                    {enrollNow && (
+                      <div className="grid grid-cols-2 gap-4 mt-3">
+                        <div>
+                          <label className="block text-sm font-medium text-blue-800 mb-1">Grupo *</label>
+                          <select 
+                            value={selectedGroupId} 
+                            onChange={(e) => setSelectedGroupId(e.target.value)} 
+                            className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">Seleccionar grupo...</option>
+                            {availableGroups.map(g => (
+                              <option key={g.id} value={g.id}>
+                                {g.grade?.name} - {g.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-blue-800 mb-1">Tipo de Matrícula</label>
+                          <select className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white">
+                            <option value="NEW">Nuevo</option>
+                            <option value="RENEWAL">Antiguo</option>
+                            <option value="TRANSFER">Traslado</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                    {!enrollNow && (
+                      <p className="text-sm text-blue-700 mt-2">
+                        El estudiante se creará sin matrícula. Podrá matricularlo después desde el módulo de Matrículas.
+                      </p>
+                    )}
+                  </div>
+                )}
+                
+                {/* Grupo solo lectura para edición */}
+                {editingStudent && formData.group && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Grupo Actual</label>
+                    <input type="text" value={formData.group} disabled className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-500" />
+                  </div>
+                )}
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-slate-700 mb-1">Direccion</label>
                   <input type="text" value={formData.address || ''} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />

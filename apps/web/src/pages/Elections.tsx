@@ -142,7 +142,7 @@ export default function Elections() {
       setError(null)
 
       // Obtener año académico activo
-      const yearsRes = await api.get(`/academic/years?institutionId=${institution?.id}`)
+      const yearsRes = await api.get(`/academic-years?institutionId=${institution?.id}`)
       const activeYear = yearsRes.data?.find((y: any) => y.status === 'ACTIVE')
 
       if (!activeYear) {

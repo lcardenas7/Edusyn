@@ -30,6 +30,10 @@ import { EnrollmentController } from './enrollment.controller';
 import { EnrollmentService } from './enrollment.service';
 import { GuardiansController } from './guardians.controller';
 import { GuardiansService } from './guardians.service';
+import { StudentDocumentsController } from './student-documents.controller';
+import { StudentDocumentsService } from './student-documents.service';
+import { EnrollmentReportsController } from './enrollment-reports.controller';
+import { EnrollmentReportsService } from './enrollment-reports.service';
 
 @Module({
   controllers: [
@@ -48,6 +52,8 @@ import { GuardiansService } from './guardians.service';
     AcademicYearLifecycleController,
     EnrollmentController,
     GuardiansController,
+    StudentDocumentsController,
+    EnrollmentReportsController,
   ],
   providers: [
     InstitutionsService,
@@ -65,7 +71,9 @@ import { GuardiansService } from './guardians.service';
     AcademicYearLifecycleService,
     EnrollmentService,
     GuardiansService,
+    StudentDocumentsService,
+    EnrollmentReportsService,
   ],
-  exports: [GradingPeriodConfigService, RecoveryPeriodConfigService, AcademicYearLifecycleService, EnrollmentService, GuardiansService],
+  exports: [GradingPeriodConfigService, RecoveryPeriodConfigService, AcademicYearLifecycleService, EnrollmentService, GuardiansService, StudentDocumentsService, EnrollmentReportsService],
 })
 export class AcademicModule {}

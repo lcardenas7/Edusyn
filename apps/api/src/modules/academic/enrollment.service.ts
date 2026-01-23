@@ -54,6 +54,48 @@ export interface EnrollmentFilters {
   search?: string;
 }
 
+// DTO para crear estudiante + matrícula en un solo flujo
+export interface CreateStudentAndEnrollDto {
+  // Datos del estudiante
+  institutionId: string;
+  documentType: string;
+  documentNumber: string;
+  firstName: string;
+  secondName?: string;
+  lastName: string;
+  secondLastName?: string;
+  birthDate?: string;
+  birthPlace?: string;
+  gender?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  neighborhood?: string;
+  city?: string;
+  // Información médica
+  bloodType?: string;
+  eps?: string;
+  allergies?: string;
+  medicalConditions?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
+  // Información socioeconómica
+  stratum?: number;
+  sisbenLevel?: string;
+  ethnicity?: string;
+  displacement?: boolean;
+  disability?: string;
+  previousSchool?: string;
+  // Datos de matrícula
+  academicYearId: string;
+  groupId: string;
+  enrollmentType?: EnrollmentType;
+  shift?: SchoolShift;
+  modality?: StudyModality;
+  observations?: string;
+  enrolledById: string;
+}
+
 @Injectable()
 export class EnrollmentService {
   constructor(
@@ -89,11 +131,33 @@ export class EnrollmentService {
     // Verificar que el grupo exista
     const group = await this.prisma.group.findUnique({
       where: { id: dto.groupId },
-      include: { grade: true },
+      include: { 
+        grade: true,
+        _count: {
+          select: {
+            studentEnrollments: {
+              where: {
+                academicYearId: dto.academicYearId,
+                status: 'ACTIVE',
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!group) {
       throw new NotFoundException('Grupo no encontrado');
+    }
+
+    // Validar cupo disponible
+    if (group.maxCapacity !== null) {
+      const currentEnrollments = group._count.studentEnrollments;
+      if (currentEnrollments >= group.maxCapacity) {
+        throw new BadRequestException(
+          `El grupo ${group.name} ha alcanzado su cupo máximo (${group.maxCapacity} estudiantes)`
+        );
+      }
     }
 
     // Crear la matrícula
@@ -137,6 +201,210 @@ export class EnrollmentService {
     });
 
     return enrollment;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CREAR ESTUDIANTE Y MATRICULAR (FLUJO UNIFICADO)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async createStudentAndEnroll(dto: CreateStudentAndEnrollDto) {
+    // Validar que el año permita matrículas
+    const canEnroll = await this.yearLifecycleService.canEnrollStudents(dto.academicYearId);
+    if (!canEnroll) {
+      throw new ForbiddenException('El año lectivo no permite matrículas en su estado actual');
+    }
+
+    // Verificar si el estudiante ya existe por documento
+    const existingStudent = await this.prisma.student.findUnique({
+      where: {
+        institutionId_documentNumber: {
+          institutionId: dto.institutionId,
+          documentNumber: dto.documentNumber,
+        },
+      },
+    });
+
+    if (existingStudent) {
+      // Verificar si ya está matriculado en este año
+      const existingEnrollment = await this.prisma.studentEnrollment.findUnique({
+        where: {
+          studentId_academicYearId: {
+            studentId: existingStudent.id,
+            academicYearId: dto.academicYearId,
+          },
+        },
+      });
+
+      if (existingEnrollment) {
+        throw new BadRequestException(
+          `El estudiante con documento ${dto.documentNumber} ya está matriculado en este año lectivo`
+        );
+      }
+
+      // Matricular estudiante existente
+      return this.enrollStudent({
+        studentId: existingStudent.id,
+        academicYearId: dto.academicYearId,
+        groupId: dto.groupId,
+        enrollmentType: dto.enrollmentType || 'RENEWAL',
+        shift: dto.shift,
+        modality: dto.modality,
+        observations: dto.observations,
+        enrolledById: dto.enrolledById,
+      });
+    }
+
+    // Verificar cupo del grupo
+    const group = await this.prisma.group.findUnique({
+      where: { id: dto.groupId },
+      include: {
+        grade: true,
+        _count: {
+          select: {
+            studentEnrollments: {
+              where: {
+                academicYearId: dto.academicYearId,
+                status: 'ACTIVE',
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!group) {
+      throw new NotFoundException('Grupo no encontrado');
+    }
+
+    if (group.maxCapacity !== null) {
+      const currentEnrollments = group._count.studentEnrollments;
+      if (currentEnrollments >= group.maxCapacity) {
+        throw new BadRequestException(
+          `El grupo ${group.name} ha alcanzado su cupo máximo (${group.maxCapacity} estudiantes)`
+        );
+      }
+    }
+
+    // Crear estudiante y matrícula en transacción
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Crear estudiante
+      const student = await tx.student.create({
+        data: {
+          institutionId: dto.institutionId,
+          documentType: dto.documentType,
+          documentNumber: dto.documentNumber,
+          firstName: dto.firstName,
+          secondName: dto.secondName,
+          lastName: dto.lastName,
+          secondLastName: dto.secondLastName,
+          birthDate: dto.birthDate ? new Date(dto.birthDate) : null,
+          birthPlace: dto.birthPlace,
+          gender: dto.gender,
+          email: dto.email,
+          phone: dto.phone,
+          address: dto.address,
+          neighborhood: dto.neighborhood,
+          city: dto.city,
+          bloodType: dto.bloodType,
+          eps: dto.eps,
+          allergies: dto.allergies,
+          medicalConditions: dto.medicalConditions,
+          emergencyContact: dto.emergencyContact,
+          emergencyPhone: dto.emergencyPhone,
+          stratum: dto.stratum,
+          sisbenLevel: dto.sisbenLevel,
+          ethnicity: dto.ethnicity,
+          displacement: dto.displacement || false,
+          disability: dto.disability,
+          previousSchool: dto.previousSchool,
+        },
+      });
+
+      // Crear matrícula
+      const enrollment = await tx.studentEnrollment.create({
+        data: {
+          studentId: student.id,
+          academicYearId: dto.academicYearId,
+          groupId: dto.groupId,
+          enrollmentType: dto.enrollmentType || 'NEW',
+          status: 'ACTIVE',
+          shift: dto.shift,
+          modality: dto.modality || 'PRESENTIAL',
+          observations: dto.observations,
+          enrolledById: dto.enrolledById,
+        },
+        include: {
+          student: true,
+          group: {
+            include: {
+              grade: true,
+              campus: true,
+            },
+          },
+          academicYear: true,
+        },
+      });
+
+      // Crear evento de auditoría
+      await tx.enrollmentEvent.create({
+        data: {
+          enrollmentId: enrollment.id,
+          type: 'CREATED',
+          newValue: {
+            groupId: dto.groupId,
+            enrollmentType: dto.enrollmentType || 'NEW',
+            shift: dto.shift,
+            modality: dto.modality || 'PRESENTIAL',
+            studentCreated: true,
+          },
+          reason: 'Matrícula inicial con creación de estudiante',
+          observations: dto.observations,
+          performedById: dto.enrolledById,
+        },
+      });
+
+      return enrollment;
+    });
+
+    return result;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BUSCAR ESTUDIANTE POR DOCUMENTO (para verificar si existe antes de matricular)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async findStudentByDocument(institutionId: string, documentNumber: string) {
+    const student = await this.prisma.student.findUnique({
+      where: {
+        institutionId_documentNumber: {
+          institutionId,
+          documentNumber,
+        },
+      },
+      include: {
+        enrollments: {
+          include: {
+            group: {
+              include: {
+                grade: true,
+              },
+            },
+            academicYear: true,
+          },
+          orderBy: {
+            academicYear: { year: 'desc' },
+          },
+          take: 3,
+        },
+        guardians: {
+          include: {
+            guardian: true,
+          },
+        },
+      },
+    });
+
+    return student;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -261,14 +529,36 @@ export class EnrollmentService {
       throw new BadRequestException(`No se puede cambiar el grupo de una matrícula en estado ${enrollment.status}`);
     }
 
-    // Verificar que el nuevo grupo exista
+    // Verificar que el nuevo grupo exista y validar cupo
     const newGroup = await this.prisma.group.findUnique({
       where: { id: dto.newGroupId },
-      include: { grade: true },
+      include: { 
+        grade: true,
+        _count: {
+          select: {
+            studentEnrollments: {
+              where: {
+                academicYearId: enrollment.academicYearId,
+                status: 'ACTIVE',
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!newGroup) {
       throw new NotFoundException('Grupo destino no encontrado');
+    }
+
+    // Validar cupo disponible en el nuevo grupo
+    if (newGroup.maxCapacity !== null) {
+      const currentEnrollments = newGroup._count.studentEnrollments;
+      if (currentEnrollments >= newGroup.maxCapacity) {
+        throw new BadRequestException(
+          `El grupo ${newGroup.name} ha alcanzado su cupo máximo (${newGroup.maxCapacity} estudiantes)`
+        );
+      }
     }
 
     const previousGroupId = enrollment.groupId;
@@ -511,6 +801,99 @@ export class EnrollmentService {
         },
       },
       orderBy: { academicYear: { year: 'desc' } },
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GESTIÓN DE CUPOS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async getGroupCapacity(groupId: string, academicYearId: string) {
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      include: {
+        grade: true,
+        campus: true,
+        shift: true,
+        _count: {
+          select: {
+            studentEnrollments: {
+              where: {
+                academicYearId,
+                status: 'ACTIVE',
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!group) {
+      throw new NotFoundException('Grupo no encontrado');
+    }
+
+    return {
+      groupId: group.id,
+      groupName: group.name,
+      gradeName: group.grade.name,
+      campusName: group.campus.name,
+      shiftName: group.shift.name,
+      maxCapacity: group.maxCapacity,
+      currentEnrollments: group._count.studentEnrollments,
+      availableSlots: group.maxCapacity !== null 
+        ? Math.max(0, group.maxCapacity - group._count.studentEnrollments)
+        : null,
+      isFull: group.maxCapacity !== null && group._count.studentEnrollments >= group.maxCapacity,
+    };
+  }
+
+  async getCapacityByAcademicYear(academicYearId: string, institutionId: string) {
+    const groups = await this.prisma.group.findMany({
+      where: {
+        campus: { institutionId },
+      },
+      include: {
+        grade: true,
+        campus: true,
+        shift: true,
+        _count: {
+          select: {
+            studentEnrollments: {
+              where: {
+                academicYearId,
+                status: 'ACTIVE',
+              },
+            },
+          },
+        },
+      },
+      orderBy: [
+        { grade: { stage: 'asc' } },
+        { grade: { number: 'asc' } },
+        { name: 'asc' },
+      ],
+    });
+
+    return groups.map(group => ({
+      groupId: group.id,
+      groupName: group.name,
+      groupCode: group.code,
+      gradeName: group.grade.name,
+      campusName: group.campus.name,
+      shiftName: group.shift.name,
+      maxCapacity: group.maxCapacity,
+      currentEnrollments: group._count.studentEnrollments,
+      availableSlots: group.maxCapacity !== null 
+        ? Math.max(0, group.maxCapacity - group._count.studentEnrollments)
+        : null,
+      isFull: group.maxCapacity !== null && group._count.studentEnrollments >= group.maxCapacity,
+    }));
+  }
+
+  async updateGroupCapacity(groupId: string, maxCapacity: number | null) {
+    return this.prisma.group.update({
+      where: { id: groupId },
+      data: { maxCapacity },
     });
   }
 

@@ -19,6 +19,7 @@ import { SuperadminModule } from './modules/superadmin/superadmin.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { InstitutionConfigModule } from './modules/institution-config/institution-config.module';
 import { ElectionsModule } from './modules/elections/elections.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { ElectionsModule } from './modules/elections/elections.module';
     PermissionsModule,
     InstitutionConfigModule,
     ElectionsModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
