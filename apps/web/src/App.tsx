@@ -29,6 +29,7 @@ import Enrollments from './pages/Enrollments'
 import AcademicYearClosure from './pages/AcademicYearClosure'
 import VotingPortal from './pages/VotingPortal'
 import Elections from './pages/Elections'
+import ElectionResults from './pages/ElectionResults'
 import Layout from './components/Layout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -98,6 +99,16 @@ function App() {
           element={
             <ProtectedRoute>
               <VotingPortal />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Resultados en tiempo real - Sin Layout para pantalla completa */}
+        <Route
+          path="/resultados-elecciones"
+          element={
+            <ProtectedRoute>
+              <ElectionResults />
             </ProtectedRoute>
           }
         />
