@@ -462,12 +462,59 @@ export default function Students() {
     setImporting(true)
     
     try {
+      // Helper para convertir número a nombre de grado
+      const numberToGradeName = (num: string): string => {
+        const names: Record<string, string> = {
+          '0': 'preescolar', '1': 'primero', '2': 'segundo', '3': 'tercero',
+          '4': 'cuarto', '5': 'quinto', '6': 'sexto', '7': 'septimo',
+          '8': 'octavo', '9': 'noveno', '10': 'decimo', '11': 'once'
+        }
+        return names[num] || num
+      }
+      
       // Mapear grupo del Excel al ID del grupo en la BD
+      // Soporta formatos: "9A", "9°A", "9 A", "Noveno A", "A" (si es único)
       const findGroupId = (groupName: string): string => {
+        if (!groupName) return ''
+        const searchTerm = groupName.toString().trim().toLowerCase()
+        
+        // Normalizar: quitar ° y espacios extras
+        const normalized = searchTerm.replace(/°/g, '').replace(/\s+/g, '')
+        
+        // Extraer posible número de grado y letra de grupo
+        const match = normalized.match(/^(\d+)?([a-z])?$/i)
+        const gradeNumber = match?.[1]
+        const groupLetter = match?.[2]?.toUpperCase()
+        
         const group = availableGroups.find(g => {
           const fullName = g.grade?.name ? `${g.grade.name} ${g.name}` : g.name
-          return fullName.toLowerCase().includes(groupName.toLowerCase()) || 
-                 g.name.toLowerCase() === groupName.toLowerCase()
+          const fullNameNormalized = fullName.toLowerCase().replace(/°/g, '').replace(/\s+/g, '')
+          
+          // Coincidencia exacta con nombre completo
+          if (fullNameNormalized === normalized) return true
+          
+          // Coincidencia con nombre del grupo solamente (ej: "A")
+          if (g.name.toLowerCase() === searchTerm) return true
+          
+          // Coincidencia por número de grado + letra (ej: "9A" -> grado contiene "9" o "noveno" y grupo es "A")
+          if (gradeNumber && groupLetter) {
+            const gradeNameLower = (g.grade?.name || '').toLowerCase()
+            const groupNameLower = g.name.toLowerCase()
+            
+            // Verificar si el grado contiene el número o su equivalente en texto
+            const gradeMatches = gradeNameLower.includes(gradeNumber) || 
+                                 gradeNameLower.includes(numberToGradeName(gradeNumber))
+            const groupMatches = groupNameLower === groupLetter.toLowerCase() ||
+                                 groupNameLower.startsWith(groupLetter.toLowerCase())
+            
+            if (gradeMatches && groupMatches) return true
+          }
+          
+          // Coincidencia parcial (el nombre del grupo está contenido)
+          if (fullName.toLowerCase().includes(searchTerm) || 
+              searchTerm.includes(g.name.toLowerCase())) return true
+          
+          return false
         })
         return group?.id || ''
       }
@@ -495,7 +542,17 @@ export default function Students() {
         .filter(s => s.documentNumber && s.firstName && s.groupId)
 
       if (studentsToImport.length === 0) {
-        alert('No hay estudiantes válidos para importar. Verifique que los grupos existan.')
+        // Mostrar qué grupos no se encontraron para ayudar al usuario
+        const missingGroups = importResult.data
+          .filter(row => row.group && !findGroupId(row.group))
+          .map(row => row.group)
+          .filter((v, i, a) => a.indexOf(v) === i) // Únicos
+        
+        const availableGroupNames = availableGroups.map(g => 
+          g.grade?.name ? `${g.grade.name} ${g.name}` : g.name
+        ).join(', ')
+        
+        alert(`No hay estudiantes válidos para importar.\n\nGrupos no encontrados: ${missingGroups.join(', ') || 'N/A'}\n\nGrupos disponibles: ${availableGroupNames || 'Ninguno'}`)
         setImporting(false)
         return
       }
