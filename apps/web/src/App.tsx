@@ -30,6 +30,7 @@ import AcademicYearClosure from './pages/AcademicYearClosure'
 import VotingPortal from './pages/VotingPortal'
 import Elections from './pages/Elections'
 import ElectionResults from './pages/ElectionResults'
+import LandingPage from './pages/LandingPage'
 import Layout from './components/Layout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -88,6 +89,9 @@ function App() {
     <AuthProvider>
       <InstitutionProvider>
       <Routes>
+        {/* Landing Page - Página principal pública */}
+        <Route path="/" element={<LandingPage />} />
+        
         {/* Login por institución (multi-tenant) */}
         <Route path="/login" element={<InstitutionLogin />} />
         <Route path="/login/:slug" element={<InstitutionLogin />} />
@@ -140,7 +144,6 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <Routes>
-                  <Route path="/" element={<Dashboard />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/institution" element={<Institution />} />
                   <Route path="/students" element={<Students />} />
