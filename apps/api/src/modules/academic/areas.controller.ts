@@ -4,7 +4,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { AreasService } from './areas.service';
-import { CreateAreaDto, UpdateAreaDto, AddSubjectToAreaDto, UpdateSubjectDto } from './dto/create-area.dto';
+import { CreateAreaDto, UpdateAreaDto, AddSubjectWithConfigDto, UpdateSubjectDto, CreateSubjectLevelConfigDto, UpdateSubjectLevelConfigDto } from './dto/create-area.dto';
 
 @Controller('areas')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -56,8 +56,33 @@ export class AreasController {
 
   @Post(':id/subjects')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async addSubject(@Param('id') areaId: string, @Body() dto: AddSubjectToAreaDto) {
-    return this.areasService.addSubjectToArea(areaId, dto);
+  async addSubject(@Param('id') areaId: string, @Body() dto: AddSubjectWithConfigDto) {
+    return this.areasService.addSubjectWithConfig(areaId, dto);
+  }
+
+  @Post(':id/subjects/:subjectId/configs')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async addSubjectConfig(
+    @Param('id') areaId: string,
+    @Param('subjectId') subjectId: string,
+    @Body() dto: CreateSubjectLevelConfigDto,
+  ) {
+    return this.areasService.addSubjectLevelConfig(subjectId, dto);
+  }
+
+  @Put('configs/:configId')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async updateSubjectConfig(
+    @Param('configId') configId: string,
+    @Body() dto: UpdateSubjectLevelConfigDto,
+  ) {
+    return this.areasService.updateSubjectLevelConfig(configId, dto);
+  }
+
+  @Delete('configs/:configId')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async deleteSubjectConfig(@Param('configId') configId: string) {
+    return this.areasService.removeSubjectLevelConfig(configId);
   }
 
   @Put('subjects/:subjectId')
