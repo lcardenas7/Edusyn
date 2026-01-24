@@ -4,7 +4,7 @@ import api from '../lib/api'
 import { 
   Vote, Plus, Calendar, Users, CheckCircle, XCircle, 
   Clock, BarChart3, FileText, Loader2, AlertCircle,
-  Play, Pause, Square, Eye, Download
+  Play, Pause, Square, Eye, Download, UserPlus, Edit2, Search
 } from 'lucide-react'
 
 interface ElectionProcess {
@@ -44,11 +44,27 @@ interface Candidate {
   status: string
   slogan: string | null
   proposals: string | null
+  photo: string | null
+  color: string | null
+  ballotNumber: number | null
   student: {
     id: string
     firstName: string
     lastName: string
   }
+}
+
+interface EligibleStudent {
+  id: string
+  firstName: string
+  lastName: string
+  documentNumber: string
+  enrollments: Array<{
+    group: {
+      name: string
+      grade: { name: string }
+    }
+  }>
 }
 
 interface ElectionResult {
@@ -87,6 +103,20 @@ export default function Elections() {
   const [stats, setStats] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+  
+  // Estados para inscripción de candidatos
+  const [showRegisterModal, setShowRegisterModal] = useState(false)
+  const [eligibleStudents, setEligibleStudents] = useState<EligibleStudent[]>([])
+  const [loadingStudents, setLoadingStudents] = useState(false)
+  const [selectedStudentId, setSelectedStudentId] = useState('')
+  const [candidateForm, setCandidateForm] = useState({
+    slogan: '',
+    proposals: '',
+    color: '#6366f1',
+    ballotNumber: '',
+  })
+  const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null)
+  const [studentSearch, setStudentSearch] = useState('')
 
   const [formData, setFormData] = useState({
     name: '',
@@ -226,6 +256,101 @@ export default function Elections() {
       setError(err.response?.data?.message || 'Error al rechazar candidato')
     }
   }
+
+  const loadEligibleStudents = async (electionId: string) => {
+    try {
+      setLoadingStudents(true)
+      const response = await api.get(`/elections/election/${electionId}/eligible-students`)
+      setEligibleStudents(response.data || [])
+    } catch (err) {
+      console.error('Error loading eligible students:', err)
+      setEligibleStudents([])
+    } finally {
+      setLoadingStudents(false)
+    }
+  }
+
+  const handleOpenRegisterModal = async () => {
+    if (!selectedElection) return
+    setShowRegisterModal(true)
+    setSelectedStudentId('')
+    setCandidateForm({ slogan: '', proposals: '', color: '#6366f1', ballotNumber: '' })
+    setEditingCandidate(null)
+    setStudentSearch('')
+    await loadEligibleStudents(selectedElection.id)
+  }
+
+  const handleRegisterCandidate = async () => {
+    if (!selectedElection || !selectedStudentId) return
+    try {
+      setActionLoading(true)
+      await api.post('/elections/candidate', {
+        electionId: selectedElection.id,
+        studentId: selectedStudentId,
+        slogan: candidateForm.slogan || undefined,
+        proposals: candidateForm.proposals || undefined,
+        color: candidateForm.color || undefined,
+        ballotNumber: candidateForm.ballotNumber ? parseInt(candidateForm.ballotNumber) : undefined,
+      })
+      setShowRegisterModal(false)
+      if (selectedProcess) {
+        await loadProcessDetails(selectedProcess.id)
+        // Recargar la elección seleccionada
+        const updatedProcess = await api.get(`/elections/process/${selectedProcess.id}`)
+        const updatedElection = updatedProcess.data.elections?.find((e: Election) => e.id === selectedElection.id)
+        if (updatedElection) {
+          setSelectedElection(updatedElection)
+        }
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al inscribir candidato')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleEditCandidate = (candidate: Candidate) => {
+    setEditingCandidate(candidate)
+    setCandidateForm({
+      slogan: candidate.slogan || '',
+      proposals: candidate.proposals || '',
+      color: candidate.color || '#6366f1',
+      ballotNumber: candidate.ballotNumber?.toString() || '',
+    })
+    setShowRegisterModal(true)
+  }
+
+  const handleUpdateCandidate = async () => {
+    if (!editingCandidate) return
+    try {
+      setActionLoading(true)
+      await api.put(`/elections/candidate/${editingCandidate.id}`, {
+        slogan: candidateForm.slogan || undefined,
+        proposals: candidateForm.proposals || undefined,
+        color: candidateForm.color || undefined,
+        ballotNumber: candidateForm.ballotNumber ? parseInt(candidateForm.ballotNumber) : undefined,
+      })
+      setShowRegisterModal(false)
+      setEditingCandidate(null)
+      if (selectedProcess) {
+        await loadProcessDetails(selectedProcess.id)
+        const updatedProcess = await api.get(`/elections/process/${selectedProcess.id}`)
+        const updatedElection = updatedProcess.data.elections?.find((e: Election) => e.id === selectedElection?.id)
+        if (updatedElection) {
+          setSelectedElection(updatedElection)
+        }
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al actualizar candidato')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const filteredStudents = eligibleStudents.filter(s => 
+    `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearch.toLowerCase()) ||
+    s.documentNumber?.includes(studentSearch)
+  )
 
   const resetForm = () => {
     setFormData({
@@ -690,58 +815,118 @@ export default function Elections() {
       {/* Modal Candidatos */}
       {showCandidatesModal && selectedElection && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-800">
-                {getElectionTitle(selectedElection)}
-              </h2>
-              <p className="text-gray-500 text-sm">Candidatos inscritos</p>
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">
+                  {getElectionTitle(selectedElection)}
+                </h2>
+                <p className="text-gray-500 text-sm">Candidatos inscritos</p>
+              </div>
+              {(selectedProcess?.status === 'DRAFT' || selectedProcess?.status === 'REGISTRATION') && (
+                <button
+                  onClick={handleOpenRegisterModal}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Inscribir Candidato
+                </button>
+              )}
             </div>
             <div className="p-6">
               {selectedElection.candidates?.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">No hay candidatos inscritos</p>
+                <div className="text-center py-12">
+                  <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 mb-2">No hay candidatos inscritos</p>
+                  {(selectedProcess?.status === 'DRAFT' || selectedProcess?.status === 'REGISTRATION') && (
+                    <button
+                      onClick={handleOpenRegisterModal}
+                      className="text-purple-600 hover:underline"
+                    >
+                      Inscribir el primer candidato
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div className="space-y-4">
                   {selectedElection.candidates?.map((candidate) => (
                     <div
                       key={candidate.id}
                       className="border border-gray-200 rounded-lg p-4"
+                      style={{ borderLeftColor: candidate.color || '#6366f1', borderLeftWidth: '4px' }}
                     >
                       <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="font-medium text-gray-800">
-                            {candidate.student.firstName} {candidate.student.lastName}
-                          </h4>
-                          {candidate.slogan && (
-                            <p className="text-purple-600 text-sm italic">"{candidate.slogan}"</p>
+                        <div className="flex items-start gap-4">
+                          {candidate.photo ? (
+                            <img 
+                              src={candidate.photo} 
+                              alt={candidate.student.firstName}
+                              className="w-16 h-16 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div 
+                              className="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold"
+                              style={{ backgroundColor: candidate.color || '#6366f1' }}
+                            >
+                              {candidate.student.firstName[0]}{candidate.student.lastName[0]}
+                            </div>
                           )}
-                          <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs ${
-                            candidate.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                            candidate.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
-                            'bg-yellow-100 text-yellow-700'
-                          }`}>
-                            {candidate.status === 'APPROVED' ? 'Aprobado' :
-                             candidate.status === 'REJECTED' ? 'Rechazado' : 'Pendiente'}
-                          </span>
-                        </div>
-                        {candidate.status === 'PENDING' && selectedProcess?.status === 'REGISTRATION' && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleApproveCandidate(candidate.id)}
-                              className="p-1.5 text-green-600 hover:bg-green-50 rounded"
-                              title="Aprobar"
-                            >
-                              <CheckCircle className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() => handleRejectCandidate(candidate.id)}
-                              className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                              title="Rechazar"
-                            >
-                              <XCircle className="w-5 h-5" />
-                            </button>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              {candidate.ballotNumber && (
+                                <span className="bg-gray-800 text-white text-xs px-2 py-0.5 rounded font-bold">
+                                  #{candidate.ballotNumber}
+                                </span>
+                              )}
+                              <h4 className="font-medium text-gray-800">
+                                {candidate.student.firstName} {candidate.student.lastName}
+                              </h4>
+                            </div>
+                            {candidate.slogan && (
+                              <p className="text-purple-600 text-sm italic mt-1">"{candidate.slogan}"</p>
+                            )}
+                            {candidate.proposals && (
+                              <p className="text-gray-500 text-sm mt-1 line-clamp-2">{candidate.proposals}</p>
+                            )}
+                            <span className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs ${
+                              candidate.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                              candidate.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                              'bg-yellow-100 text-yellow-700'
+                            }`}>
+                              {candidate.status === 'APPROVED' ? 'Aprobado' :
+                               candidate.status === 'REJECTED' ? 'Rechazado' : 'Pendiente'}
+                            </span>
                           </div>
-                        )}
+                        </div>
+                        <div className="flex gap-1">
+                          {(selectedProcess?.status === 'DRAFT' || selectedProcess?.status === 'REGISTRATION') && (
+                            <button
+                              onClick={() => handleEditCandidate(candidate)}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                              title="Editar"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                          )}
+                          {candidate.status === 'PENDING' && selectedProcess?.status === 'REGISTRATION' && (
+                            <>
+                              <button
+                                onClick={() => handleApproveCandidate(candidate.id)}
+                                className="p-1.5 text-green-600 hover:bg-green-50 rounded"
+                                title="Aprobar"
+                              >
+                                <CheckCircle className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => handleRejectCandidate(candidate.id)}
+                                className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                                title="Rechazar"
+                              >
+                                <XCircle className="w-5 h-5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -757,6 +942,154 @@ export default function Elections() {
                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
               >
                 Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Inscribir/Editar Candidato */}
+      {showRegisterModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-800">
+                {editingCandidate ? 'Editar Candidato' : 'Inscribir Candidato'}
+              </h2>
+              <p className="text-gray-500 text-sm">
+                {editingCandidate 
+                  ? `${editingCandidate.student.firstName} ${editingCandidate.student.lastName}`
+                  : getElectionTitle(selectedElection!)}
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              {/* Selección de estudiante (solo para nuevo) */}
+              {!editingCandidate && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Seleccionar Estudiante
+                  </label>
+                  <div className="relative mb-2">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={studentSearch}
+                      onChange={(e) => setStudentSearch(e.target.value)}
+                      placeholder="Buscar por nombre o documento..."
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  {loadingStudents ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
+                    </div>
+                  ) : filteredStudents.length === 0 ? (
+                    <p className="text-center text-gray-500 py-4">
+                      {eligibleStudents.length === 0 
+                        ? 'No hay estudiantes elegibles para esta elección'
+                        : 'No se encontraron estudiantes'}
+                    </p>
+                  ) : (
+                    <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg divide-y">
+                      {filteredStudents.map((student) => (
+                        <button
+                          key={student.id}
+                          onClick={() => setSelectedStudentId(student.id)}
+                          className={`w-full text-left p-3 hover:bg-gray-50 transition-colors ${
+                            selectedStudentId === student.id ? 'bg-purple-50 border-l-4 border-purple-600' : ''
+                          }`}
+                        >
+                          <div className="font-medium text-gray-800">
+                            {student.firstName} {student.lastName}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {student.documentNumber} • {student.enrollments[0]?.group?.grade?.name} {student.enrollments[0]?.group?.name}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Campos del candidato */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Número en Tarjetón
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={candidateForm.ballotNumber}
+                    onChange={(e) => setCandidateForm({ ...candidateForm, ballotNumber: e.target.value })}
+                    placeholder="Ej: 1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Color de Campaña
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={candidateForm.color}
+                      onChange={(e) => setCandidateForm({ ...candidateForm, color: e.target.value })}
+                      className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={candidateForm.color}
+                      onChange={(e) => setCandidateForm({ ...candidateForm, color: e.target.value })}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Lema de Campaña (opcional)
+                </label>
+                <input
+                  type="text"
+                  value={candidateForm.slogan}
+                  onChange={(e) => setCandidateForm({ ...candidateForm, slogan: e.target.value })}
+                  placeholder="Ej: ¡Juntos por un mejor colegio!"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Propuestas (opcional)
+                </label>
+                <textarea
+                  value={candidateForm.proposals}
+                  onChange={(e) => setCandidateForm({ ...candidateForm, proposals: e.target.value })}
+                  rows={3}
+                  placeholder="Describe las propuestas del candidato..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowRegisterModal(false)
+                  setEditingCandidate(null)
+                }}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={editingCandidate ? handleUpdateCandidate : handleRegisterCandidate}
+                disabled={actionLoading || (!editingCandidate && !selectedStudentId)}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              >
+                {actionLoading ? 'Guardando...' : editingCandidate ? 'Guardar Cambios' : 'Inscribir Candidato'}
               </button>
             </div>
           </div>

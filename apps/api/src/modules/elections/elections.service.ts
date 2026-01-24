@@ -207,6 +207,8 @@ export class ElectionsService {
     slogan?: string;
     proposals?: string;
     photo?: string;
+    color?: string;
+    ballotNumber?: number;
   }) {
     // Verificar que la elección existe y está en período de inscripción
     const election = await this.prisma.election.findUnique({
@@ -243,6 +245,8 @@ export class ElectionsService {
         slogan: data.slogan,
         proposals: data.proposals,
         photo: data.photo,
+        color: data.color,
+        ballotNumber: data.ballotNumber,
       },
       include: {
         student: true,
@@ -285,7 +289,104 @@ export class ElectionsService {
           select: { id: true, firstName: true, lastName: true },
         },
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: [{ ballotNumber: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  async updateCandidate(candidateId: string, data: {
+    slogan?: string;
+    proposals?: string;
+    photo?: string;
+    color?: string;
+    ballotNumber?: number;
+  }) {
+    return this.prisma.candidate.update({
+      where: { id: candidateId },
+      data,
+      include: {
+        student: true,
+        election: {
+          include: { grade: true, group: true },
+        },
+      },
+    });
+  }
+
+  async deleteCandidate(candidateId: string) {
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      include: { election: { include: { electionProcess: true } } },
+    });
+
+    if (!candidate) {
+      throw new NotFoundException('Candidato no encontrado');
+    }
+
+    if (candidate.election.electionProcess.status !== 'REGISTRATION' && 
+        candidate.election.electionProcess.status !== 'DRAFT') {
+      throw new BadRequestException('Solo se pueden eliminar candidatos durante el período de inscripción');
+    }
+
+    return this.prisma.candidate.delete({
+      where: { id: candidateId },
+    });
+  }
+
+  async getEligibleStudentsForElection(electionId: string) {
+    const election = await this.prisma.election.findUnique({
+      where: { id: electionId },
+      include: {
+        electionProcess: true,
+        grade: true,
+        group: { include: { grade: true } },
+        candidates: { select: { studentId: true } },
+      },
+    });
+
+    if (!election) {
+      throw new NotFoundException('Elección no encontrada');
+    }
+
+    // Obtener IDs de estudiantes ya inscritos
+    const enrolledStudentIds = election.candidates.map(c => c.studentId);
+
+    // Filtrar estudiantes según el tipo de elección
+    let whereClause: any = {
+      enrollments: {
+        some: {
+          status: 'ACTIVE',
+          academicYearId: election.electionProcess.academicYearId,
+        },
+      },
+    };
+
+    // Para representante de curso, solo estudiantes del grupo
+    if (election.type === 'REPRESENTANTE_CURSO' && election.groupId) {
+      whereClause.enrollments.some.groupId = election.groupId;
+    }
+
+    // Para representante de grado, solo estudiantes del grado
+    if (election.type === 'REPRESENTANTE_GRADO' && election.gradeId) {
+      whereClause.enrollments.some.group = { gradeId: election.gradeId };
+    }
+
+    // Excluir estudiantes ya inscritos
+    if (enrolledStudentIds.length > 0) {
+      whereClause.id = { notIn: enrolledStudentIds };
+    }
+
+    return this.prisma.student.findMany({
+      where: whereClause,
+      include: {
+        enrollments: {
+          where: { status: 'ACTIVE' },
+          include: {
+            group: { include: { grade: true } },
+          },
+          take: 1,
+        },
+      },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     });
   }
 

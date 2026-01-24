@@ -103,6 +103,18 @@ export class ElectionsController {
     return this.electionsService.rejectCandidate(id, req.user.id, reason);
   }
 
+  @Put('candidate/:id')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async updateCandidate(@Param('id') id: string, @Body() body: any) {
+    return this.electionsService.updateCandidate(id, body);
+  }
+
+  @Get('election/:electionId/eligible-students')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async getEligibleStudents(@Param('electionId') electionId: string) {
+    return this.electionsService.getEligibleStudentsForElection(electionId);
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // VOTACIÓN (Estudiantes)
   // ═══════════════════════════════════════════════════════════════════════════

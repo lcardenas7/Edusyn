@@ -1823,7 +1823,9 @@ model Candidate {
   // Información de campaña
   slogan        String?           // Eslogan de campaña
   proposals     String?           // Propuestas (texto o HTML)
-  photo         String?           // Foto de campaña
+  photo         String?           // Foto de campaña (URL)
+  color         String?           // Color de campaña (hex)
+  ballotNumber  Int?              // Número en el tarjetón
   
   // Estado de aprobación
   status        CandidateStatus @default(PENDING)
