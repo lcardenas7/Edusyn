@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, BookOpen, Settings, Star, Lock, Save, AlertTriangle, Loader2 } from 'lucide-react'
-import { useInstitution, AreaType, AreaCalculationMethod, AreaApprovalCriteria, AreaRecoveryType } from '../contexts/InstitutionContext'
+import { useInstitution, AreaType, AreaCalculationMethod, AreaApprovalCriteria, AreaRecoveryType, AcademicLevel } from '../contexts/InstitutionContext'
 import { useAuth } from '../contexts/AuthContext'
-import { areasApi } from '../lib/api'
+import { areasApi, academicGradesApi } from '../lib/api'
 
 interface Subject {
   id: string
@@ -57,14 +57,12 @@ const getConfigSummary = (areaType: AreaType, calcMethod: AreaCalculationMethod,
   return `${calculationMethodLabels[calcMethod].label} • ${approvalCriteriaLabels[approvalCriteria].label} • Recup: ${recoveryTypeLabels[recoveryType].label}`
 }
 
-// Niveles académicos disponibles
-const academicLevels = [
-  { code: 'TODOS', label: 'Todos los niveles' },
-  { code: 'PREESCOLAR', label: 'Preescolar' },
-  { code: 'PRIMARIA', label: 'Primaria' },
-  { code: 'SECUNDARIA', label: 'Secundaria' },
-  { code: 'MEDIA', label: 'Media' },
-]
+// Interfaz para grados
+interface Grade {
+  id: string
+  name: string
+  stage: string
+}
 
 // Helper para mapear datos del backend al formato del frontend
 const mapBackendAreaToFrontend = (backendArea: any): Area => ({
@@ -86,8 +84,17 @@ const mapBackendAreaToFrontend = (backendArea: any): Area => ({
 })
 
 export default function AreasAdmin() {
-  const { areaConfig, setAreaConfig, saveAreaConfigToAPI, isSaving } = useInstitution()
+  const { areaConfig, setAreaConfig, saveAreaConfigToAPI, isSaving, institution: institutionConfig } = useInstitution()
   const { user, institution } = useAuth()
+  
+  // Obtener niveles académicos configurados en la institución
+  const academicLevels = useMemo(() => {
+    const levels = institutionConfig?.academicLevels || []
+    return [
+      { code: 'TODOS', name: 'Todos los niveles' },
+      ...levels.map(l => ({ code: l.code, name: l.name }))
+    ]
+  }, [institutionConfig?.academicLevels])
   
   // Solo admin y rector pueden editar la configuración global
   const canEditGlobalConfig = user?.roles?.some(r => {
@@ -96,6 +103,7 @@ export default function AreasAdmin() {
   }) ?? true
   
   const [areas, setAreas] = useState<Area[]>([])
+  const [grades, setGrades] = useState<Grade[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [expandedAreas, setExpandedAreas] = useState<Set<string>>(new Set())
@@ -109,6 +117,20 @@ export default function AreasAdmin() {
   // Filtro por nivel académico
   const [selectedLevel, setSelectedLevel] = useState<string>('TODOS')
   
+  // Grados filtrados por nivel seleccionado
+  const filteredGrades = useMemo(() => {
+    if (selectedLevel === 'TODOS') return grades
+    // Mapear código de nivel a stage del backend
+    const stageMap: Record<string, string> = {
+      'PREESCOLAR': 'PRESCHOOL',
+      'PRIMARIA': 'PRIMARY',
+      'SECUNDARIA': 'SECONDARY',
+      'MEDIA': 'HIGH_SCHOOL',
+    }
+    const stage = stageMap[selectedLevel] || selectedLevel
+    return grades.filter(g => g.stage === stage)
+  }, [grades, selectedLevel])
+  
   // Filtrar áreas según nivel seleccionado
   const filteredAreas = useMemo(() => {
     if (selectedLevel === 'TODOS') return areas
@@ -121,6 +143,7 @@ export default function AreasAdmin() {
     name: '',
     isMandatory: true,
     academicLevel: '' as string,
+    gradeId: '' as string,
   })
 
   const [subjectForm, setSubjectForm] = useState({
@@ -138,7 +161,6 @@ export default function AreasAdmin() {
       const response = await areasApi.getAll(institution.id)
       const mappedAreas = (response.data || []).map(mapBackendAreaToFrontend)
       setAreas(mappedAreas)
-      // No expandir áreas automáticamente - el usuario las expande manualmente
     } catch (error) {
       console.error('Error loading areas:', error)
     } finally {
@@ -146,9 +168,21 @@ export default function AreasAdmin() {
     }
   }, [institution?.id])
 
+  // Cargar grados desde el backend
+  const loadGrades = useCallback(async () => {
+    if (!institution?.id) return
+    try {
+      const response = await academicGradesApi.getAll(institution.id)
+      setGrades(response.data || [])
+    } catch (error) {
+      console.error('Error loading grades:', error)
+    }
+  }, [institution?.id])
+
   useEffect(() => {
     loadAreas()
-  }, [loadAreas])
+    loadGrades()
+  }, [loadAreas, loadGrades])
 
   const toggleExpand = (areaId: string) => {
     const newExpanded = new Set(expandedAreas)
@@ -167,10 +201,16 @@ export default function AreasAdmin() {
         name: area.name,
         isMandatory: area.isMandatory,
         academicLevel: area.academicLevel || '',
+        gradeId: area.gradeId || '',
       })
     } else {
       setEditingArea(null)
-      setAreaForm({ name: '', isMandatory: true, academicLevel: selectedLevel === 'TODOS' ? '' : selectedLevel })
+      setAreaForm({ 
+        name: '', 
+        isMandatory: true, 
+        academicLevel: selectedLevel === 'TODOS' ? '' : selectedLevel,
+        gradeId: '',
+      })
     }
     setShowAreaModal(true)
   }
@@ -209,6 +249,7 @@ export default function AreasAdmin() {
           name: areaForm.name,
           isMandatory: areaForm.isMandatory,
           academicLevel: areaForm.academicLevel || undefined,
+          gradeId: areaForm.gradeId || undefined,
         })
       } else {
         await areasApi.create({
@@ -217,6 +258,7 @@ export default function AreasAdmin() {
           isMandatory: areaForm.isMandatory,
           order: areas.length + 1,
           academicLevel: areaForm.academicLevel || undefined,
+          gradeId: areaForm.gradeId || undefined,
         })
       }
       await loadAreas()
@@ -534,7 +576,7 @@ export default function AreasAdmin() {
                 className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               >
                 {academicLevels.map(level => (
-                  <option key={level.code} value={level.code}>{level.label}</option>
+                  <option key={level.code} value={level.code}>{level.name}</option>
                 ))}
               </select>
             </div>
@@ -550,7 +592,7 @@ export default function AreasAdmin() {
           ) : filteredAreas.length === 0 ? (
             <div className="px-6 py-12 text-center text-slate-500">
               <BookOpen className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-              <p>{selectedLevel === 'TODOS' ? 'No hay áreas configuradas' : `No hay áreas para ${academicLevels.find(l => l.code === selectedLevel)?.label || selectedLevel}`}</p>
+              <p>{selectedLevel === 'TODOS' ? 'No hay áreas configuradas' : `No hay áreas para ${academicLevels.find(l => l.code === selectedLevel)?.name || selectedLevel}`}</p>
               <button
                 onClick={() => openAreaModal()}
                 className="mt-3 text-blue-600 hover:underline"
@@ -583,13 +625,19 @@ export default function AreasAdmin() {
                       )}
                       {area.academicLevel && (
                         <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
-                          {academicLevels.find(l => l.code === area.academicLevel)?.label || area.academicLevel}
+                          {academicLevels.find(l => l.code === area.academicLevel)?.name || area.academicLevel}
+                        </span>
+                      )}
+                      {area.gradeId && area.grade && (
+                        <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 rounded">
+                          Solo {area.grade.name}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                       <span>{area.subjects.length} asignatura{area.subjects.length !== 1 ? 's' : ''}</span>
-                      {!area.academicLevel && <span className="text-slate-400">• Global</span>}
+                      {!area.academicLevel && !area.gradeId && <span className="text-slate-400">• Global</span>}
+                      {area.academicLevel && !area.gradeId && <span className="text-slate-400">• Todo el nivel</span>}
                     </div>
                   </div>
                 </div>
@@ -697,22 +745,58 @@ export default function AreasAdmin() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nivel académico</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Alcance del área</label>
                 <select
                   value={areaForm.academicLevel}
-                  onChange={(e) => setAreaForm({ ...areaForm, academicLevel: e.target.value })}
+                  onChange={(e) => setAreaForm({ ...areaForm, academicLevel: e.target.value, gradeId: '' })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 >
-                  <option value="">Todos los niveles (global)</option>
-                  <option value="PREESCOLAR">Preescolar</option>
-                  <option value="PRIMARIA">Primaria</option>
-                  <option value="SECUNDARIA">Secundaria</option>
-                  <option value="MEDIA">Media</option>
+                  <option value="">🌐 Global - Todos los niveles</option>
+                  {academicLevels.filter(l => l.code !== 'TODOS').map(level => (
+                    <option key={level.code} value={level.code}>📚 {level.name}</option>
+                  ))}
                 </select>
                 <p className="text-xs text-slate-500 mt-1">
-                  Si no selecciona nivel, el área aplica a todos los niveles
+                  {!areaForm.academicLevel 
+                    ? 'El área aplica a todos los niveles y grados'
+                    : `El área aplica solo a ${academicLevels.find(l => l.code === areaForm.academicLevel)?.name || areaForm.academicLevel}`
+                  }
                 </p>
               </div>
+
+              {/* Selector de grado específico - solo si hay nivel seleccionado */}
+              {areaForm.academicLevel && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Grado específico (opcional)</label>
+                  <select
+                    value={areaForm.gradeId}
+                    onChange={(e) => setAreaForm({ ...areaForm, gradeId: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  >
+                    <option value="">Todos los grados del nivel</option>
+                    {grades
+                      .filter(g => {
+                        const stageMap: Record<string, string> = {
+                          'PREESCOLAR': 'PRESCHOOL',
+                          'PRIMARIA': 'PRIMARY',
+                          'SECUNDARIA': 'SECONDARY',
+                          'MEDIA': 'HIGH_SCHOOL',
+                        }
+                        return g.stage === (stageMap[areaForm.academicLevel] || areaForm.academicLevel)
+                      })
+                      .map(grade => (
+                        <option key={grade.id} value={grade.id}>🎓 {grade.name}</option>
+                      ))
+                    }
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {!areaForm.gradeId 
+                      ? 'El área aplica a todos los grados del nivel seleccionado'
+                      : `El área aplica SOLO a ${grades.find(g => g.id === areaForm.gradeId)?.name || 'este grado'}`
+                    }
+                  </p>
+                </div>
+              )}
 
               <div className="flex items-center gap-3">
                 <input
