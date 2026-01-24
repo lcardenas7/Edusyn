@@ -98,7 +98,11 @@ export class BulkUploadController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Post('upload/teachers')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', {
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB
+    },
+  }))
   async uploadTeachers(
     @Request() req: any,
     @UploadedFile() file: any,
@@ -112,7 +116,11 @@ export class BulkUploadController {
   }
 
   @Post('upload/students')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', {
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB
+    },
+  }))
   async uploadStudents(
     @Request() req: any,
     @UploadedFile() file: any,
@@ -131,7 +139,11 @@ export class BulkUploadController {
   }
 
   @Post('upload/staff')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', {
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB
+    },
+  }))
   async uploadStaff(
     @Request() req: any,
     @UploadedFile() file: any,
