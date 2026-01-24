@@ -19,8 +19,21 @@ export class AreasController {
 
   @Get()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'TEACHER')
-  async list(@Query('institutionId') institutionId?: string) {
-    return this.areasService.list({ institutionId });
+  async list(
+    @Query('institutionId') institutionId?: string,
+    @Query('academicLevel') academicLevel?: string,
+    @Query('gradeId') gradeId?: string,
+  ) {
+    return this.areasService.list({ institutionId, academicLevel, gradeId });
+  }
+
+  @Get('for-grade/:gradeId')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'TEACHER')
+  async getAreasForGrade(
+    @Query('institutionId') institutionId: string,
+    @Param('gradeId') gradeId: string,
+  ) {
+    return this.areasService.getAreasForGrade(institutionId, gradeId);
   }
 
   @Get(':id')

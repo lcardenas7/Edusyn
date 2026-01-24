@@ -16,8 +16,13 @@ export class AreasService {
         calculationType: dto.calculationType ?? 'AVERAGE',
         customFormula: dto.customFormula,
         order: dto.order ?? 0,
+        academicLevel: dto.academicLevel,
+        gradeId: dto.gradeId,
       },
-      include: { subjects: true },
+      include: { 
+        subjects: true,
+        grade: true,
+      },
     });
   }
 
@@ -28,6 +33,7 @@ export class AreasService {
         subjects: {
           orderBy: { order: 'asc' },
         },
+        grade: true,
       },
     });
     if (!area) throw new NotFoundException('Área no encontrada');
@@ -44,8 +50,13 @@ export class AreasService {
         calculationType: dto.calculationType,
         customFormula: dto.customFormula,
         order: dto.order,
+        academicLevel: dto.academicLevel,
+        gradeId: dto.gradeId,
       },
-      include: { subjects: true },
+      include: { 
+        subjects: true,
+        grade: true,
+      },
     });
   }
 
@@ -54,15 +65,60 @@ export class AreasService {
     return this.prisma.area.delete({ where: { id } });
   }
 
-  async list(params: { institutionId?: string }) {
+  async list(params: { institutionId?: string; academicLevel?: string; gradeId?: string }) {
     return this.prisma.area.findMany({
       where: {
         institutionId: params.institutionId,
+        ...(params.academicLevel && { academicLevel: params.academicLevel }),
+        ...(params.gradeId && { gradeId: params.gradeId }),
       },
       include: {
         subjects: {
           orderBy: { order: 'asc' },
         },
+        grade: true,
+      },
+      orderBy: { order: 'asc' },
+    });
+  }
+
+  // Obtener áreas aplicables a un grado específico
+  // Incluye: áreas globales (sin nivel ni grado) + áreas del nivel + áreas del grado específico
+  async getAreasForGrade(institutionId: string, gradeId: string) {
+    const grade = await this.prisma.grade.findUnique({
+      where: { id: gradeId },
+    });
+
+    if (!grade) {
+      throw new NotFoundException('Grado no encontrado');
+    }
+
+    // Mapear stage a academicLevel
+    const stageToLevel: Record<string, string> = {
+      PRESCHOOL: 'PREESCOLAR',
+      PRIMARY: 'PRIMARIA',
+      SECONDARY: 'SECUNDARIA',
+      HIGH_SCHOOL: 'MEDIA',
+    };
+    const academicLevel = stageToLevel[grade.stage] || grade.stage;
+
+    return this.prisma.area.findMany({
+      where: {
+        institutionId,
+        OR: [
+          // Áreas globales (sin nivel ni grado específico)
+          { academicLevel: null, gradeId: null },
+          // Áreas del nivel académico (sin grado específico)
+          { academicLevel, gradeId: null },
+          // Áreas específicas de este grado
+          { gradeId },
+        ],
+      },
+      include: {
+        subjects: {
+          orderBy: { order: 'asc' },
+        },
+        grade: true,
       },
       orderBy: { order: 'asc' },
     });

@@ -77,13 +77,20 @@ export const groupsApi = {
 
 // Areas
 export const areasApi = {
-  getAll: (institutionId?: string) => api.get('/areas', { params: { institutionId } }),
+  getAll: (institutionId?: string, academicLevel?: string, gradeId?: string) => 
+    api.get('/areas', { params: { institutionId, academicLevel, gradeId } }),
   getById: (id: string) => api.get(`/areas/${id}`),
-  create: (data: { institutionId: string; name: string; isMandatory?: boolean; order?: number }) => api.post('/areas', data),
-  update: (id: string, data: { name?: string; isMandatory?: boolean; order?: number }) => api.put(`/areas/${id}`, data),
+  getForGrade: (institutionId: string, gradeId: string) => 
+    api.get(`/areas/for-grade/${gradeId}`, { params: { institutionId } }),
+  create: (data: { institutionId: string; name: string; isMandatory?: boolean; order?: number; academicLevel?: string; gradeId?: string }) => 
+    api.post('/areas', data),
+  update: (id: string, data: { name?: string; isMandatory?: boolean; order?: number; academicLevel?: string; gradeId?: string }) => 
+    api.put(`/areas/${id}`, data),
   delete: (id: string) => api.delete(`/areas/${id}`),
-  addSubject: (areaId: string, data: { name: string; weeklyHours?: number; weight?: number; isDominant?: boolean; order?: number }) => api.post(`/areas/${areaId}/subjects`, data),
-  updateSubject: (subjectId: string, data: { name?: string; weeklyHours?: number; weight?: number; isDominant?: boolean; order?: number }) => api.put(`/areas/subjects/${subjectId}`, data),
+  addSubject: (areaId: string, data: { name: string; weeklyHours?: number; weight?: number; isDominant?: boolean; order?: number }) => 
+    api.post(`/areas/${areaId}/subjects`, data),
+  updateSubject: (subjectId: string, data: { name?: string; weeklyHours?: number; weight?: number; isDominant?: boolean; order?: number }) => 
+    api.put(`/areas/subjects/${subjectId}`, data),
   deleteSubject: (subjectId: string) => api.delete(`/areas/subjects/${subjectId}`),
 }
 

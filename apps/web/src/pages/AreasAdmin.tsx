@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, BookOpen, Settings, Star, Lock, Save, AlertTriangle, Loader2 } from 'lucide-react'
 import { useInstitution, AreaType, AreaCalculationMethod, AreaApprovalCriteria, AreaRecoveryType } from '../contexts/InstitutionContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -19,6 +19,9 @@ interface Area {
   isMandatory: boolean      // Si es obligatoria para promoción
   order: number
   subjects: Subject[]
+  academicLevel?: string | null  // PREESCOLAR, PRIMARIA, SECUNDARIA, MEDIA
+  gradeId?: string | null
+  grade?: { id: string; name: string } | null
 }
 
 // Labels para los nuevos tipos
@@ -54,12 +57,24 @@ const getConfigSummary = (areaType: AreaType, calcMethod: AreaCalculationMethod,
   return `${calculationMethodLabels[calcMethod].label} • ${approvalCriteriaLabels[approvalCriteria].label} • Recup: ${recoveryTypeLabels[recoveryType].label}`
 }
 
+// Niveles académicos disponibles
+const academicLevels = [
+  { code: 'TODOS', label: 'Todos los niveles' },
+  { code: 'PREESCOLAR', label: 'Preescolar' },
+  { code: 'PRIMARIA', label: 'Primaria' },
+  { code: 'SECUNDARIA', label: 'Secundaria' },
+  { code: 'MEDIA', label: 'Media' },
+]
+
 // Helper para mapear datos del backend al formato del frontend
 const mapBackendAreaToFrontend = (backendArea: any): Area => ({
   id: backendArea.id,
   name: backendArea.name,
   isMandatory: backendArea.isMandatory,
   order: backendArea.order,
+  academicLevel: backendArea.academicLevel,
+  gradeId: backendArea.gradeId,
+  grade: backendArea.grade,
   subjects: (backendArea.subjects || []).map((s: any) => ({
     id: s.id,
     name: s.name,
@@ -90,10 +105,22 @@ export default function AreasAdmin() {
   const [editingArea, setEditingArea] = useState<Area | null>(null)
   const [editingSubject, setEditingSubject] = useState<{ areaId: string; subject: Subject | null }>({ areaId: '', subject: null })
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'area' | 'subject'; id: string; name: string } | null>(null)
+  
+  // Filtro por nivel académico
+  const [selectedLevel, setSelectedLevel] = useState<string>('TODOS')
+  
+  // Filtrar áreas según nivel seleccionado
+  const filteredAreas = useMemo(() => {
+    if (selectedLevel === 'TODOS') return areas
+    return areas.filter(area => 
+      !area.academicLevel || area.academicLevel === selectedLevel
+    )
+  }, [areas, selectedLevel])
 
   const [areaForm, setAreaForm] = useState({
     name: '',
     isMandatory: true,
+    academicLevel: '' as string,
   })
 
   const [subjectForm, setSubjectForm] = useState({
@@ -111,8 +138,7 @@ export default function AreasAdmin() {
       const response = await areasApi.getAll(institution.id)
       const mappedAreas = (response.data || []).map(mapBackendAreaToFrontend)
       setAreas(mappedAreas)
-      // Expandir las primeras 3 áreas por defecto
-      setExpandedAreas(new Set(mappedAreas.slice(0, 3).map((a: Area) => a.id)))
+      // No expandir áreas automáticamente - el usuario las expande manualmente
     } catch (error) {
       console.error('Error loading areas:', error)
     } finally {
@@ -140,10 +166,11 @@ export default function AreasAdmin() {
       setAreaForm({
         name: area.name,
         isMandatory: area.isMandatory,
+        academicLevel: area.academicLevel || '',
       })
     } else {
       setEditingArea(null)
-      setAreaForm({ name: '', isMandatory: true })
+      setAreaForm({ name: '', isMandatory: true, academicLevel: selectedLevel === 'TODOS' ? '' : selectedLevel })
     }
     setShowAreaModal(true)
   }
@@ -181,6 +208,7 @@ export default function AreasAdmin() {
         await areasApi.update(editingArea.id, {
           name: areaForm.name,
           isMandatory: areaForm.isMandatory,
+          academicLevel: areaForm.academicLevel || undefined,
         })
       } else {
         await areasApi.create({
@@ -188,6 +216,7 @@ export default function AreasAdmin() {
           name: areaForm.name,
           isMandatory: areaForm.isMandatory,
           order: areas.length + 1,
+          academicLevel: areaForm.academicLevel || undefined,
         })
       }
       await loadAreas()
@@ -487,13 +516,27 @@ export default function AreasAdmin() {
       {/* Lista de Áreas */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
         <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-          <div className="flex items-center gap-3">
-            <BookOpen className="w-5 h-5 text-blue-600" />
-            <div>
-              <h2 className="font-semibold text-slate-900">Áreas Académicas</h2>
-              <p className="text-sm text-slate-500">
-                {getConfigSummary(areaConfig.areaType, areaConfig.calculationMethod, areaConfig.approvalCriteria, areaConfig.recoveryType)}
-              </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <BookOpen className="w-5 h-5 text-blue-600" />
+              <div>
+                <h2 className="font-semibold text-slate-900">Áreas Académicas</h2>
+                <p className="text-sm text-slate-500">
+                  {getConfigSummary(areaConfig.areaType, areaConfig.calculationMethod, areaConfig.approvalCriteria, areaConfig.recoveryType)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="text-sm text-slate-600">Filtrar por nivel:</label>
+              <select
+                value={selectedLevel}
+                onChange={(e) => setSelectedLevel(e.target.value)}
+                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              >
+                {academicLevels.map(level => (
+                  <option key={level.code} value={level.code}>{level.label}</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
@@ -504,10 +547,10 @@ export default function AreasAdmin() {
               <Loader2 className="w-8 h-8 mx-auto mb-3 text-blue-500 animate-spin" />
               <p className="text-slate-500">Cargando áreas...</p>
             </div>
-          ) : areas.length === 0 ? (
+          ) : filteredAreas.length === 0 ? (
             <div className="px-6 py-12 text-center text-slate-500">
               <BookOpen className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-              <p>No hay áreas configuradas</p>
+              <p>{selectedLevel === 'TODOS' ? 'No hay áreas configuradas' : `No hay áreas para ${academicLevels.find(l => l.code === selectedLevel)?.label || selectedLevel}`}</p>
               <button
                 onClick={() => openAreaModal()}
                 className="mt-3 text-blue-600 hover:underline"
@@ -515,7 +558,7 @@ export default function AreasAdmin() {
                 Crear primera área
               </button>
             </div>
-          ) : areas.map((area) => (
+          ) : filteredAreas.map((area) => (
             <div key={area.id}>
               <div 
                 className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 cursor-pointer"
@@ -538,9 +581,15 @@ export default function AreasAdmin() {
                           Obligatoria
                         </span>
                       )}
+                      {area.academicLevel && (
+                        <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                          {academicLevels.find(l => l.code === area.academicLevel)?.label || area.academicLevel}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                       <span>{area.subjects.length} asignatura{area.subjects.length !== 1 ? 's' : ''}</span>
+                      {!area.academicLevel && <span className="text-slate-400">• Global</span>}
                     </div>
                   </div>
                 </div>
@@ -645,6 +694,24 @@ export default function AreasAdmin() {
                   placeholder="Ej: Matemáticas, Ciencias Naturales..."
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nivel académico</label>
+                <select
+                  value={areaForm.academicLevel}
+                  onChange={(e) => setAreaForm({ ...areaForm, academicLevel: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                >
+                  <option value="">Todos los niveles (global)</option>
+                  <option value="PREESCOLAR">Preescolar</option>
+                  <option value="PRIMARIA">Primaria</option>
+                  <option value="SECUNDARIA">Secundaria</option>
+                  <option value="MEDIA">Media</option>
+                </select>
+                <p className="text-xs text-slate-500 mt-1">
+                  Si no selecciona nivel, el área aplica a todos los niveles
+                </p>
               </div>
 
               <div className="flex items-center gap-3">

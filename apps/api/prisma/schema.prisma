@@ -390,6 +390,7 @@ model Grade {
 
   groups    Group[]
   elections Election[]  // Elecciones de representante de grado
+  areas     Area[]      // Áreas específicas para este grado
 
   @@unique([stage, name])
 }
@@ -424,14 +425,25 @@ model Area {
   calculationType AreaCalculationType @default(AVERAGE)
   customFormula String?
   order         Int      @default(0)
+  
+  // Configuración por nivel académico y grado (opcional)
+  // Si academicLevel es null, aplica a todos los niveles
+  // Si gradeId es null pero academicLevel tiene valor, aplica a todo el nivel
+  // Si ambos tienen valor, aplica solo a ese grado específico
+  academicLevel String?  // PREESCOLAR, PRIMARIA, SECUNDARIA, MEDIA, etc.
+  gradeId       String?  // Si se especifica, aplica solo a este grado
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  grade       Grade?      @relation(fields: [gradeId], references: [id], onDelete: SetNull)
   subjects    Subject[]
   finalRecoveryPlans FinalRecoveryPlan[]
 
-  @@unique([institutionId, name])
+  @@unique([institutionId, name, academicLevel, gradeId])
+  @@index([institutionId, academicLevel])
+  @@index([institutionId, gradeId])
 }
 
 model Subject {
