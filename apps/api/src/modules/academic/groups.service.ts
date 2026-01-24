@@ -19,12 +19,18 @@ export class GroupsService {
     });
   }
 
-  async list(params: { campusId?: string; shiftId?: string; gradeId?: string }) {
+  async list(params: { campusId?: string; shiftId?: string; gradeId?: string; institutionId?: string }) {
     return this.prisma.group.findMany({
       where: {
         campusId: params.campusId,
         shiftId: params.shiftId,
         gradeId: params.gradeId,
+        // Filtrar por institución a través del campus
+        ...(params.institutionId && {
+          campus: {
+            institutionId: params.institutionId
+          }
+        }),
       },
       include: {
         grade: true,
