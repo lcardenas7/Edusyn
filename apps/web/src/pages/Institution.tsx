@@ -472,10 +472,25 @@ export default function Institution() {
 
   // gradesByLevel ya no se usa - ahora se filtra dinámicamente en el render
 
-  // Persistir grados en localStorage cuando cambien (con clave específica por institución)
+  // Persistir grados en localStorage y sincronizar con BD cuando cambien
   useEffect(() => {
     const institutionId = authInstitution?.id || 'default'
     localStorage.setItem(`edusyn_grades_${institutionId}`, JSON.stringify(grades))
+    
+    // Sincronizar con la BD (debounced para evitar muchas llamadas)
+    const syncTimeout = setTimeout(async () => {
+      if (grades.length > 0 && authInstitution?.id) {
+        try {
+          const { academicGradesApi } = await import('../lib/api')
+          await academicGradesApi.sync(grades)
+          console.log('[Institution] Grados sincronizados con BD')
+        } catch (err) {
+          console.error('[Institution] Error sincronizando grados:', err)
+        }
+      }
+    }, 2000) // Esperar 2 segundos después del último cambio
+    
+    return () => clearTimeout(syncTimeout)
   }, [grades, authInstitution?.id])
 
   const totalProcessWeight = gradingConfig.evaluationProcesses.reduce((sum, p) => sum + p.weightPercentage, 0)

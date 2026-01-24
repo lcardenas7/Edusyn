@@ -316,6 +316,12 @@ export const gradesApi = {
   upsert: (data: { studentEnrollmentId: string; evaluativeActivityId: string; score: number }) => api.post('/student-grades', data),
 }
 
+// Academic Grades (grados académicos - Transición, Primero, etc.)
+export const academicGradesApi = {
+  getAll: (institutionId?: string) => api.get('/grades', { params: { institutionId } }),
+  sync: (grades: any[]) => api.post('/grades/sync', { grades }),
+}
+
 // Dashboard APIs
 export const dashboardApi = {
   getData: (institutionId?: string) => api.get('/dashboard', { params: { institutionId } }),
