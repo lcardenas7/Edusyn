@@ -144,10 +144,10 @@ export default function AreasAdmin() {
     if (selectedLevel === 'TODOS') return grades
     // Mapear código de nivel a stage del backend
     const stageMap: Record<string, string> = {
-      'PREESCOLAR': 'PRESCHOOL',
-      'PRIMARIA': 'PRIMARY',
-      'SECUNDARIA': 'SECONDARY',
-      'MEDIA': 'HIGH_SCHOOL',
+      'PREESCOLAR': 'PREESCOLAR',
+      'PRIMARIA': 'BASICA_PRIMARIA',
+      'SECUNDARIA': 'BASICA_SECUNDARIA',
+      'MEDIA': 'MEDIA',
     }
     const stage = stageMap[selectedLevel] || selectedLevel
     return grades.filter(g => g.stage === stage)
@@ -1041,10 +1041,10 @@ export default function AreasAdmin() {
                       {grades
                         .filter(g => {
                           const stageMap: Record<string, string> = {
-                            'PREESCOLAR': 'PRESCHOOL',
-                            'PRIMARIA': 'PRIMARY',
-                            'SECUNDARIA': 'SECONDARY',
-                            'MEDIA': 'HIGH_SCHOOL',
+                            'PREESCOLAR': 'PREESCOLAR',
+                            'PRIMARIA': 'BASICA_PRIMARIA',
+                            'SECUNDARIA': 'BASICA_SECUNDARIA',
+                            'MEDIA': 'MEDIA',
                           }
                           return g.stage === (stageMap[subjectConfigForm.academicLevel] || subjectConfigForm.academicLevel)
                         })
