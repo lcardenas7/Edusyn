@@ -16,9 +16,11 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  Save,
+  X
 } from 'lucide-react'
-import { enrollmentsApi, academicYearLifecycleApi } from '../lib/api'
+import { enrollmentsApi, academicYearLifecycleApi, groupsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
 interface Student {
@@ -105,6 +107,15 @@ const Enrollments: React.FC = () => {
   // Estados de carga
   const [actionLoading, setActionLoading] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  
+  // Estados para modales funcionales
+  const [availableGroups, setAvailableGroups] = useState<Group[]>([])
+  const [enrollmentHistory, setEnrollmentHistory] = useState<any[]>([])
+  
+  // Formularios
+  const [withdrawForm, setWithdrawForm] = useState({ reason: '', observations: '' })
+  const [transferForm, setTransferForm] = useState({ reason: '', destinationInstitution: '', observations: '' })
+  const [changeGroupForm, setChangeGroupForm] = useState({ newGroupId: '', reason: '', movementType: 'ACADEMIC', observations: '' })
 
   useEffect(() => {
     if (institution?.id) {
@@ -183,6 +194,12 @@ const Enrollments: React.FC = () => {
 
   const handleViewHistory = async (enrollment: Enrollment) => {
     setSelectedEnrollment(enrollment)
+    try {
+      const response = await enrollmentsApi.getHistory(enrollment.id)
+      setEnrollmentHistory(response.data)
+    } catch (err) {
+      console.error('Error loading history:', err)
+    }
     setShowHistoryModal(true)
   }
 
@@ -228,6 +245,72 @@ const Enrollments: React.FC = () => {
       default: return type
     }
   }
+
+  // Funciones para ejecutar acciones
+  const executeWithdraw = async () => {
+    if (!selectedEnrollment || !withdrawForm.reason) return
+    
+    setActionLoading('withdraw')
+    try {
+      await enrollmentsApi.withdraw(selectedEnrollment.id, withdrawForm)
+      setSuccessMessage('Estudiante retirado exitosamente')
+      setShowWithdrawModal(false)
+      setWithdrawForm({ reason: '', observations: '' })
+      loadEnrollments()
+    } catch (err: any) {
+      console.error('Error withdrawing student:', err)
+      setError(err.response?.data?.message || 'Error al retirar estudiante')
+    } finally {
+      setActionLoading('')
+    }
+  }
+
+  const executeTransfer = async () => {
+    if (!selectedEnrollment || !transferForm.reason) return
+    
+    setActionLoading('transfer')
+    try {
+      await enrollmentsApi.transfer(selectedEnrollment.id, transferForm)
+      setSuccessMessage('Estudiante transferido exitosamente')
+      setShowTransferModal(false)
+      setTransferForm({ reason: '', destinationInstitution: '', observations: '' })
+      loadEnrollments()
+    } catch (err: any) {
+      console.error('Error transferring student:', err)
+      setError(err.response?.data?.message || 'Error al transferir estudiante')
+    } finally {
+      setActionLoading('')
+    }
+  }
+
+  const executeChangeGroup = async () => {
+    if (!selectedEnrollment || !changeGroupForm.newGroupId || !changeGroupForm.reason) return
+    
+    setActionLoading('changeGroup')
+    try {
+      await enrollmentsApi.changeGroup(selectedEnrollment.id, changeGroupForm)
+      setSuccessMessage('Cambio de grupo realizado exitosamente')
+      setShowChangeGroupModal(false)
+      setChangeGroupForm({ newGroupId: '', reason: '', movementType: 'ACADEMIC', observations: '' })
+      loadEnrollments()
+    } catch (err: any) {
+      console.error('Error changing group:', err)
+      setError(err.response?.data?.message || 'Error al cambiar de grupo')
+    } finally {
+      setActionLoading('')
+    }
+  }
+
+  // Cargar grupos disponibles para cambio de grupo
+  useEffect(() => {
+    if (showChangeGroupModal && institution?.id) {
+      groupsApi.getAll({ institutionId: institution.id }).then(response => {
+        setAvailableGroups(response.data)
+      }).catch(err => {
+        console.error('Error loading groups:', err)
+      })
+    }
+  }, [showChangeGroupModal, institution])
 
   return (
     <div className="min-h-screen bg-slate-50 py-8">
@@ -534,14 +617,79 @@ const Enrollments: React.FC = () => {
       {showWithdrawModal && selectedEnrollment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Retirar Estudiante</h3>
-            <p className="text-slate-600 mb-4">Modal de retiro en desarrollo...</p>
-            <button
-              onClick={() => setShowWithdrawModal(false)}
-              className="w-full px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
-            >
-              Cerrar
-            </button>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Retirar Estudiante</h3>
+              <button
+                onClick={() => setShowWithdrawModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-sm text-slate-600 mb-2">
+                <strong>Estudiante:</strong> {selectedEnrollment.student.firstName} {selectedEnrollment.student.lastName}
+              </p>
+              <p className="text-sm text-slate-600">
+                <strong>Grupo actual:</strong> {selectedEnrollment.group.name}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Motivo del retiro *
+                </label>
+                <textarea
+                  value={withdrawForm.reason}
+                  onChange={(e) => setWithdrawForm(prev => ({ ...prev, reason: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  rows={3}
+                  placeholder="Ej: Cambio de ciudad, problemas económicos, etc."
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Observaciones (opcional)
+                </label>
+                <textarea
+                  value={withdrawForm.observations}
+                  onChange={(e) => setWithdrawForm(prev => ({ ...prev, observations: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  rows={2}
+                  placeholder="Notas adicionales sobre el retiro"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowWithdrawModal(false)}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={executeWithdraw}
+                disabled={!withdrawForm.reason || actionLoading === 'withdraw'}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {actionLoading === 'withdraw' ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    <UserMinus className="w-4 h-4" />
+                    Retirar
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -549,14 +697,92 @@ const Enrollments: React.FC = () => {
       {showTransferModal && selectedEnrollment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Transferir Estudiante</h3>
-            <p className="text-slate-600 mb-4">Modal de transferencia en desarrollo...</p>
-            <button
-              onClick={() => setShowTransferModal(false)}
-              className="w-full px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
-            >
-              Cerrar
-            </button>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Transferir Estudiante</h3>
+              <button
+                onClick={() => setShowTransferModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-sm text-slate-600 mb-2">
+                <strong>Estudiante:</strong> {selectedEnrollment.student.firstName} {selectedEnrollment.student.lastName}
+              </p>
+              <p className="text-sm text-slate-600">
+                <strong>Grupo actual:</strong> {selectedEnrollment.group.name}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Motivo de la transferencia *
+                </label>
+                <textarea
+                  value={transferForm.reason}
+                  onChange={(e) => setTransferForm(prev => ({ ...prev, reason: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  rows={3}
+                  placeholder="Ej: Traslado a otra ciudad, cambio de institución, etc."
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Institución de destino (opcional)
+                </label>
+                <input
+                  type="text"
+                  value={transferForm.destinationInstitution}
+                  onChange={(e) => setTransferForm(prev => ({ ...prev, destinationInstitution: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Nombre de la nueva institución"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Observaciones (opcional)
+                </label>
+                <textarea
+                  value={transferForm.observations}
+                  onChange={(e) => setTransferForm(prev => ({ ...prev, observations: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  rows={2}
+                  placeholder="Notas adicionales sobre la transferencia"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowTransferModal(false)}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={executeTransfer}
+                disabled={!transferForm.reason || actionLoading === 'transfer'}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {actionLoading === 'transfer' ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    <ArrowRightLeft className="w-4 h-4" />
+                    Transferir
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -564,14 +790,114 @@ const Enrollments: React.FC = () => {
       {showChangeGroupModal && selectedEnrollment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Cambiar de Grupo</h3>
-            <p className="text-slate-600 mb-4">Modal de cambio de grupo en desarrollo...</p>
-            <button
-              onClick={() => setShowChangeGroupModal(false)}
-              className="w-full px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
-            >
-              Cerrar
-            </button>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Cambiar de Grupo</h3>
+              <button
+                onClick={() => setShowChangeGroupModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-sm text-slate-600 mb-2">
+                <strong>Estudiante:</strong> {selectedEnrollment.student.firstName} {selectedEnrollment.student.lastName}
+              </p>
+              <p className="text-sm text-slate-600">
+                <strong>Grupo actual:</strong> {selectedEnrollment.group.name} ({selectedEnrollment.group.grade.name})
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Nuevo grupo *
+                </label>
+                <select
+                  value={changeGroupForm.newGroupId}
+                  onChange={(e) => setChangeGroupForm(prev => ({ ...prev, newGroupId: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  required
+                >
+                  <option value="">Seleccionar grupo...</option>
+                  {availableGroups
+                    .filter(g => g.id !== selectedEnrollment.group.id)
+                    .map(group => (
+                      <option key={group.id} value={group.id}>
+                        {group.grade.name} - {group.name} ({group.campus.name})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Tipo de movimiento
+                </label>
+                <select
+                  value={changeGroupForm.movementType}
+                  onChange={(e) => setChangeGroupForm(prev => ({ ...prev, movementType: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                >
+                  <option value="ACADEMIC">Académico</option>
+                  <option value="ADMINISTRATIVE">Administrativo</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Motivo del cambio *
+                </label>
+                <textarea
+                  value={changeGroupForm.reason}
+                  onChange={(e) => setChangeGroupForm(prev => ({ ...prev, reason: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  rows={3}
+                  placeholder="Ej: Reubicación por cupos, compatibilidad de horarios, etc."
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Observaciones (opcional)
+                </label>
+                <textarea
+                  value={changeGroupForm.observations}
+                  onChange={(e) => setChangeGroupForm(prev => ({ ...prev, observations: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  rows={2}
+                  placeholder="Notas adicionales sobre el cambio"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowChangeGroupModal(false)}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={executeChangeGroup}
+                disabled={!changeGroupForm.newGroupId || !changeGroupForm.reason || actionLoading === 'changeGroup'}
+                className="flex-1 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {actionLoading === 'changeGroup' ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    <Edit2 className="w-4 h-4" />
+                    Cambiar Grupo
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -579,22 +905,89 @@ const Enrollments: React.FC = () => {
       {showHistoryModal && selectedEnrollment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">Historial de Matrícula</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Historial de Matrícula</h3>
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
             <div className="mb-4">
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600 mb-2">
                 <strong>Estudiante:</strong> {selectedEnrollment.student.firstName} {selectedEnrollment.student.lastName}
               </p>
               <p className="text-sm text-slate-600">
                 <strong>Documento:</strong> {selectedEnrollment.student.documentType} {selectedEnrollment.student.documentNumber}
               </p>
+              <p className="text-sm text-slate-600">
+                <strong>Grupo actual:</strong> {selectedEnrollment.group.name} ({selectedEnrollment.group.grade.name})
+              </p>
             </div>
-            <p className="text-slate-600 mb-4">Historial en desarrollo...</p>
-            <button
-              onClick={() => setShowHistoryModal(false)}
-              className="w-full px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
-            >
-              Cerrar
-            </button>
+
+            {enrollmentHistory.length > 0 ? (
+              <div className="space-y-3">
+                {enrollmentHistory.map((event, index) => (
+                  <div key={event.id || index} className="border-l-4 border-blue-500 pl-4 py-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-slate-900">
+                        {event.type === 'CREATED' && 'Matrícula creada'}
+                        {event.type === 'GROUP_CHANGED' && 'Cambio de grupo'}
+                        {event.type === 'WITHDRAWN' && 'Retiro'}
+                        {event.type === 'TRANSFERRED' && 'Transferencia'}
+                        {event.type === 'PROMOTED' && 'Promoción'}
+                        {event.type === 'REPEATED' && 'Repitencia'}
+                        {event.type === 'REACTIVATED' && 'Reactivación'}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {new Date(event.performedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    
+                    {event.reason && (
+                      <p className="text-sm text-slate-600 mb-1">
+                        <strong>Motivo:</strong> {event.reason}
+                      </p>
+                    )}
+                    
+                    {event.previousValue && (
+                      <div className="text-xs text-slate-500 mb-1">
+                        <strong>Cambio:</strong>
+                        {typeof event.previousValue === 'object' 
+                          ? JSON.stringify(event.previousValue, null, 2)
+                          : event.previousValue}
+                      </div>
+                    )}
+                    
+                    {event.observations && (
+                      <p className="text-sm text-slate-600">
+                        <strong>Observaciones:</strong> {event.observations}
+                      </p>
+                    )}
+                    
+                    <div className="text-xs text-slate-400 mt-1">
+                      Realizado por: {event.performedBy?.firstName || 'Sistema'} {event.performedBy?.lastName || ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Clock className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500">No hay eventos en el historial</p>
+              </div>
+            )}
+
+            <div className="mt-6 pt-4 border-t">
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="w-full px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -71,7 +71,7 @@ export const gradesConfigApi = {
 
 // Groups (Grupos)
 export const groupsApi = {
-  getAll: (params?: { campusId?: string; shiftId?: string; gradeId?: string }) => api.get('/groups', { params }),
+  getAll: (params?: { campusId?: string; shiftId?: string; gradeId?: string; institutionId?: string }) => api.get('/groups', { params }),
   create: (data: { campusId: string; shiftId: string; gradeId: string; name: string; code?: string }) => api.post('/groups', data),
 }
 
