@@ -160,6 +160,13 @@ export const enrollmentsApi = {
   reactivate: (enrollmentId: string, data: { reason: string; observations?: string }) => api.post(`/enrollments/${enrollmentId}/reactivate`, data),
 }
 
+// Grade Change (cambios de grado con validaciones estrictas)
+export const gradeChangeApi = {
+  validate: (data: { enrollmentId: string; newGroupId: string }) => api.post('/grade-change/validate', data),
+  execute: (data: { enrollmentId: string; newGroupId: string; gradeChangeType: string; movementType: string; reason: string; observations?: string; academicActId?: string }) => api.post('/grade-change/execute', data),
+  getRules: () => api.get('/grade-change/rules'),
+}
+
 // Academic Terms (Periods)
 export const academicTermsApi = {
   getAll: (academicYearId?: string) => api.get('/academic-terms', { params: { academicYearId } }),

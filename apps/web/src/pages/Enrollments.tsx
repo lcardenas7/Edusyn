@@ -20,7 +20,7 @@ import {
   Save,
   X
 } from 'lucide-react'
-import { enrollmentsApi, academicYearLifecycleApi, groupsApi } from '../lib/api'
+import { enrollmentsApi, academicYearLifecycleApi, groupsApi, gradeChangeApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
 interface Student {
@@ -116,6 +116,10 @@ const Enrollments: React.FC = () => {
   const [withdrawForm, setWithdrawForm] = useState({ reason: '', observations: '' })
   const [transferForm, setTransferForm] = useState({ reason: '', destinationInstitution: '', observations: '' })
   const [changeGroupForm, setChangeGroupForm] = useState({ newGroupId: '', reason: '', movementType: 'ACADEMIC', observations: '' })
+  
+  // Estados para validación de cambio de grado
+  const [gradeChangeValidation, setGradeChangeValidation] = useState<any>(null)
+  const [validatingChange, setValidatingChange] = useState(false)
 
   useEffect(() => {
     if (institution?.id) {
@@ -286,18 +290,58 @@ const Enrollments: React.FC = () => {
   const executeChangeGroup = async () => {
     if (!selectedEnrollment || !changeGroupForm.newGroupId || !changeGroupForm.reason) return
     
-    setActionLoading('changeGroup')
+    // Primero validar el cambio
+    setValidatingChange(true)
     try {
-      await enrollmentsApi.changeGroup(selectedEnrollment.id, changeGroupForm)
-      setSuccessMessage('Cambio de grupo realizado exitosamente')
+      const validation = await gradeChangeApi.validate({
+        enrollmentId: selectedEnrollment.id,
+        newGroupId: changeGroupForm.newGroupId
+      })
+      
+      setGradeChangeValidation(validation.data)
+      
+      // Si no está permitido, mostrar error
+      if (!validation.data.canChange) {
+        setError(`Cambio no permitido: ${validation.data.restrictions.join(', ')}`)
+        setValidatingChange(false)
+        return
+      }
+      
+      // Si hay advertencias, mostrarlas pero permitir continuar
+      if (validation.data.warnings.length > 0) {
+        console.warn('Advertencias de cambio:', validation.data.warnings)
+      }
+      
+      // Si es cambio de grado (no mismo grado), requerir confirmación adicional
+      if (validation.data.gradeChangeType !== 'SAME_GRADE') {
+        if (!confirm(`¡Atención! Está a punto de cambiar de grado.\n\nDe: ${validation.data.currentGrade.name}\nA: ${validation.data.newGrade.name}\n\nRequerimientos:\n${validation.data.requirements.join('\n')}\n\n¿Desea continuar?`)) {
+          setValidatingChange(false)
+          return
+        }
+      }
+      
+      // Ejecutar el cambio
+      setActionLoading('changeGroup')
+      await gradeChangeApi.execute({
+        enrollmentId: selectedEnrollment.id,
+        newGroupId: changeGroupForm.newGroupId,
+        gradeChangeType: validation.data.gradeChangeType,
+        movementType: changeGroupForm.movementType,
+        reason: changeGroupForm.reason,
+        observations: changeGroupForm.observations
+      })
+      
+      setSuccessMessage('Cambio realizado exitosamente')
       setShowChangeGroupModal(false)
       setChangeGroupForm({ newGroupId: '', reason: '', movementType: 'ACADEMIC', observations: '' })
+      setGradeChangeValidation(null)
       loadEnrollments()
     } catch (err: any) {
       console.error('Error changing group:', err)
-      setError(err.response?.data?.message || 'Error al cambiar de grupo')
+      setError(err.response?.data?.message || 'Error al realizar el cambio')
     } finally {
       setActionLoading('')
+      setValidatingChange(false)
     }
   }
 
@@ -816,9 +860,13 @@ const Enrollments: React.FC = () => {
                 </label>
                 <select
                   value={changeGroupForm.newGroupId}
-                  onChange={(e) => setChangeGroupForm(prev => ({ ...prev, newGroupId: e.target.value }))}
+                  onChange={(e) => {
+                    setChangeGroupForm(prev => ({ ...prev, newGroupId: e.target.value }))
+                    setGradeChangeValidation(null) // Resetear validación al cambiar
+                  }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
                   required
+                  disabled={validatingChange || actionLoading === 'changeGroup'}
                 >
                   <option value="">Seleccionar grupo...</option>
                   {availableGroups
@@ -830,6 +878,72 @@ const Enrollments: React.FC = () => {
                     ))}
                 </select>
               </div>
+
+              {/* Sección de validación */}
+              {gradeChangeValidation && (
+                <div className={`p-4 rounded-lg border ${
+                  gradeChangeValidation.canChange 
+                    ? 'border-green-200 bg-green-50' 
+                    : 'border-red-200 bg-red-50'
+                }`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`text-sm font-medium ${
+                      gradeChangeValidation.canChange ? 'text-green-700' : 'text-red-700'
+                    }`}>
+                      {gradeChangeValidation.canChange ? '✓ Cambio permitido' : '✗ Cambio no permitido'}
+                    </span>
+                    {gradeChangeValidation.gradeChangeType !== 'SAME_GRADE' && (
+                      <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded">
+                        Cambio de grado detectado
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Información del cambio */}
+                  {gradeChangeValidation.gradeChangeType !== 'SAME_GRADE' && (
+                    <div className="text-sm text-slate-600 mb-2">
+                      <div>De: <strong>{gradeChangeValidation.currentGrade.name}</strong></div>
+                      <div>A: <strong>{gradeChangeValidation.newGrade.name}</strong></div>
+                    </div>
+                  )}
+
+                  {/* Advertencias */}
+                  {gradeChangeValidation.warnings.length > 0 && (
+                    <div className="mb-2">
+                      <div className="text-sm font-medium text-yellow-700 mb-1">Advertencias:</div>
+                      <ul className="text-xs text-yellow-600 list-disc list-inside">
+                        {gradeChangeValidation.warnings.map((warning: string, index: number) => (
+                          <li key={index}>{warning}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Requerimientos */}
+                  {gradeChangeValidation.requirements.length > 0 && (
+                    <div className="mb-2">
+                      <div className="text-sm font-medium text-blue-700 mb-1">Requerimientos:</div>
+                      <ul className="text-xs text-blue-600 list-disc list-inside">
+                        {gradeChangeValidation.requirements.map((req: string, index: number) => (
+                          <li key={index}>{req}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Restricciones */}
+                  {gradeChangeValidation.restrictions.length > 0 && (
+                    <div>
+                      <div className="text-sm font-medium text-red-700 mb-1">Restricciones:</div>
+                      <ul className="text-xs text-red-600 list-disc list-inside">
+                        {gradeChangeValidation.restrictions.map((restriction: string, index: number) => (
+                          <li key={index}>{restriction}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -882,18 +996,18 @@ const Enrollments: React.FC = () => {
               </button>
               <button
                 onClick={executeChangeGroup}
-                disabled={!changeGroupForm.newGroupId || !changeGroupForm.reason || actionLoading === 'changeGroup'}
+                disabled={!changeGroupForm.newGroupId || !changeGroupForm.reason || actionLoading === 'changeGroup' || validatingChange || (gradeChangeValidation && !gradeChangeValidation.canChange)}
                 className="flex-1 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {actionLoading === 'changeGroup' ? (
+                {(actionLoading === 'changeGroup' || validatingChange) ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Procesando...
+                    {validatingChange ? 'Validando...' : 'Procesando...'}
                   </>
                 ) : (
                   <>
                     <Edit2 className="w-4 h-4" />
-                    Cambiar Grupo
+                    {gradeChangeValidation?.gradeChangeType !== 'SAME_GRADE' ? 'Cambiar Grado' : 'Cambiar Grupo'}
                   </>
                 )}
               </button>
