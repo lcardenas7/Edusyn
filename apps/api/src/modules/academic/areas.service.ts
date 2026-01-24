@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAreaDto, UpdateAreaDto } from './dto/create-area.dto';
@@ -20,7 +20,9 @@ export class AreasService {
         gradeId: dto.gradeId,
       },
       include: { 
-        subjects: true,
+        subjects: {
+          include: { levelConfigs: { include: { grade: true } } },
+        },
         grade: true,
       },
     });
@@ -32,6 +34,7 @@ export class AreasService {
       include: { 
         subjects: {
           orderBy: { order: 'asc' },
+          include: { levelConfigs: { include: { grade: true } } },
         },
         grade: true,
       },
@@ -54,7 +57,9 @@ export class AreasService {
         gradeId: dto.gradeId,
       },
       include: { 
-        subjects: true,
+        subjects: {
+          include: { levelConfigs: { include: { grade: true } } },
+        },
         grade: true,
       },
     });
@@ -75,6 +80,7 @@ export class AreasService {
       include: {
         subjects: {
           orderBy: { order: 'asc' },
+          include: { levelConfigs: { include: { grade: true } } },
         },
         grade: true,
       },
@@ -83,7 +89,6 @@ export class AreasService {
   }
 
   // Obtener áreas aplicables a un grado específico
-  // Incluye: áreas globales (sin nivel ni grado) + áreas del nivel + áreas del grado específico
   async getAreasForGrade(institutionId: string, gradeId: string) {
     const grade = await this.prisma.grade.findUnique({
       where: { id: gradeId },
@@ -93,7 +98,6 @@ export class AreasService {
       throw new NotFoundException('Grado no encontrado');
     }
 
-    // Mapear stage a academicLevel
     const stageToLevel: Record<string, string> = {
       PRESCHOOL: 'PREESCOLAR',
       PRIMARY: 'PRIMARIA',
@@ -106,17 +110,15 @@ export class AreasService {
       where: {
         institutionId,
         OR: [
-          // Áreas globales (sin nivel ni grado específico)
           { academicLevel: null, gradeId: null },
-          // Áreas del nivel académico (sin grado específico)
           { academicLevel, gradeId: null },
-          // Áreas específicas de este grado
           { gradeId },
         ],
       },
       include: {
         subjects: {
           orderBy: { order: 'asc' },
+          include: { levelConfigs: { include: { grade: true } } },
         },
         grade: true,
       },
@@ -124,82 +126,206 @@ export class AreasService {
     });
   }
 
-  async addSubjectToArea(areaId: string, subjectData: { 
-    name: string; 
-    weeklyHours?: number; 
-    weight?: number; 
-    isDominant?: boolean; 
-    order?: number;
-    academicLevel?: string;
-    gradeId?: string;
-  }) {
+  // ========== ASIGNATURAS (Catálogo único) ==========
+
+  // Crear asignatura (solo nombre, sin configuración de nivel)
+  async addSubjectToArea(areaId: string, subjectData: { name: string; order?: number }) {
     await this.findById(areaId);
     
-    // Si se marca como dominante, quitar dominante de las demás asignaturas del área
-    // (solo dentro del mismo nivel/grado si está especificado)
-    if (subjectData.isDominant) {
-      await this.prisma.subject.updateMany({
-        where: { 
-          areaId,
-          academicLevel: subjectData.academicLevel || null,
-          gradeId: subjectData.gradeId || null,
-        },
-        data: { isDominant: false },
-      });
+    // Verificar si ya existe una asignatura con ese nombre en el área
+    const existing = await this.prisma.subject.findUnique({
+      where: { areaId_name: { areaId, name: subjectData.name } },
+    });
+    
+    if (existing) {
+      throw new BadRequestException(`Ya existe una asignatura "${subjectData.name}" en esta área`);
     }
     
     return this.prisma.subject.create({
       data: {
         areaId,
         name: subjectData.name,
-        weeklyHours: subjectData.weeklyHours ?? 0,
-        weight: subjectData.weight ?? 1.0,
-        isDominant: subjectData.isDominant ?? false,
         order: subjectData.order ?? 0,
-        academicLevel: subjectData.academicLevel,
-        gradeId: subjectData.gradeId,
       },
-      include: {
-        grade: true,
-      },
+      include: { levelConfigs: { include: { grade: true } } },
     });
   }
 
-  async updateSubject(subjectId: string, data: { 
-    name?: string; 
-    weeklyHours?: number; 
-    weight?: number; 
-    isDominant?: boolean; 
-    order?: number;
-    academicLevel?: string;
-    gradeId?: string;
-  }) {
-    // Si se marca como dominante, quitar dominante de las demás asignaturas del área
-    if (data.isDominant) {
-      const subject = await this.prisma.subject.findUnique({ where: { id: subjectId } });
-      if (subject) {
-        await this.prisma.subject.updateMany({
-          where: { 
-            areaId: subject.areaId, 
-            id: { not: subjectId },
-            academicLevel: subject.academicLevel,
-            gradeId: subject.gradeId,
-          },
-          data: { isDominant: false },
-        });
-      }
-    }
-    
+  // Actualizar asignatura (solo nombre y orden)
+  async updateSubject(subjectId: string, data: { name?: string; order?: number }) {
     return this.prisma.subject.update({
       where: { id: subjectId },
       data,
-      include: {
-        grade: true,
-      },
+      include: { levelConfigs: { include: { grade: true } } },
     });
   }
 
+  // Eliminar asignatura (solo si no tiene configuraciones activas)
   async removeSubject(subjectId: string) {
+    const subject = await this.prisma.subject.findUnique({
+      where: { id: subjectId },
+      include: { levelConfigs: true },
+    });
+    
+    if (!subject) {
+      throw new NotFoundException('Asignatura no encontrada');
+    }
+    
+    // Eliminar todas las configuraciones asociadas primero
+    await this.prisma.subjectLevelConfig.deleteMany({
+      where: { subjectId },
+    });
+    
     return this.prisma.subject.delete({ where: { id: subjectId } });
+  }
+
+  // Obtener asignaturas de un área (catálogo)
+  async getSubjectsOfArea(areaId: string) {
+    return this.prisma.subject.findMany({
+      where: { areaId },
+      orderBy: { order: 'asc' },
+      include: { levelConfigs: { include: { grade: true } } },
+    });
+  }
+
+  // ========== CONFIGURACIONES POR NIVEL ==========
+
+  // Agregar configuración de nivel a una asignatura
+  async addSubjectLevelConfig(subjectId: string, configData: {
+    weeklyHours?: number;
+    weight?: number;
+    isDominant?: boolean;
+    academicLevel?: string;
+    gradeId?: string;
+  }) {
+    const subject = await this.prisma.subject.findUnique({
+      where: { id: subjectId },
+    });
+    
+    if (!subject) {
+      throw new NotFoundException('Asignatura no encontrada');
+    }
+
+    // Si se marca como dominante, quitar dominante de otras configs del mismo nivel/grado
+    if (configData.isDominant) {
+      await this.prisma.subjectLevelConfig.updateMany({
+        where: {
+          subject: { areaId: subject.areaId },
+          academicLevel: configData.academicLevel || null,
+          gradeId: configData.gradeId || null,
+        },
+        data: { isDominant: false },
+      });
+    }
+
+    return this.prisma.subjectLevelConfig.create({
+      data: {
+        subjectId,
+        weeklyHours: configData.weeklyHours ?? 0,
+        weight: configData.weight ?? 1.0,
+        isDominant: configData.isDominant ?? false,
+        academicLevel: configData.academicLevel || null,
+        gradeId: configData.gradeId || null,
+      },
+      include: { grade: true, subject: true },
+    });
+  }
+
+  // Actualizar configuración de nivel
+  async updateSubjectLevelConfig(configId: string, data: {
+    weeklyHours?: number;
+    weight?: number;
+    isDominant?: boolean;
+  }) {
+    const config = await this.prisma.subjectLevelConfig.findUnique({
+      where: { id: configId },
+      include: { subject: true },
+    });
+
+    if (!config) {
+      throw new NotFoundException('Configuración no encontrada');
+    }
+
+    // Si se marca como dominante, quitar dominante de otras configs del mismo nivel/grado
+    if (data.isDominant) {
+      await this.prisma.subjectLevelConfig.updateMany({
+        where: {
+          subject: { areaId: config.subject.areaId },
+          academicLevel: config.academicLevel,
+          gradeId: config.gradeId,
+          id: { not: configId },
+        },
+        data: { isDominant: false },
+      });
+    }
+
+    return this.prisma.subjectLevelConfig.update({
+      where: { id: configId },
+      data,
+      include: { grade: true, subject: true },
+    });
+  }
+
+  // Eliminar configuración de nivel
+  async removeSubjectLevelConfig(configId: string) {
+    return this.prisma.subjectLevelConfig.delete({ where: { id: configId } });
+  }
+
+  // ========== MÉTODO COMBINADO (para compatibilidad con frontend actual) ==========
+
+  // Agregar asignatura con configuración en un solo paso
+  // Si la asignatura ya existe, solo agrega la configuración
+  async addSubjectWithConfig(areaId: string, data: {
+    name: string;
+    weeklyHours?: number;
+    weight?: number;
+    isDominant?: boolean;
+    academicLevel?: string;
+    gradeId?: string;
+  }) {
+    await this.findById(areaId);
+
+    // Buscar si ya existe la asignatura
+    let subject = await this.prisma.subject.findUnique({
+      where: { areaId_name: { areaId, name: data.name } },
+    });
+
+    // Si no existe, crearla
+    if (!subject) {
+      subject = await this.prisma.subject.create({
+        data: {
+          areaId,
+          name: data.name,
+          order: 0,
+        },
+      });
+    }
+
+    // Verificar si ya existe una config para este nivel/grado
+    const existingConfig = await this.prisma.subjectLevelConfig.findFirst({
+      where: {
+        subjectId: subject.id,
+        academicLevel: data.academicLevel || null,
+        gradeId: data.gradeId || null,
+      },
+    });
+
+    if (existingConfig) {
+      // Actualizar configuración existente
+      return this.updateSubjectLevelConfig(existingConfig.id, {
+        weeklyHours: data.weeklyHours,
+        weight: data.weight,
+        isDominant: data.isDominant,
+      });
+    }
+
+    // Crear nueva configuración
+    return this.addSubjectLevelConfig(subject.id, {
+      weeklyHours: data.weeklyHours,
+      weight: data.weight,
+      isDominant: data.isDominant,
+      academicLevel: data.academicLevel,
+      gradeId: data.gradeId,
+    });
   }
 }

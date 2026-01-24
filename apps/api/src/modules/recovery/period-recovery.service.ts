@@ -61,7 +61,7 @@ export class PeriodRecoveryService {
             group: { include: { grade: true } },
           },
         },
-        subject: { include: { area: true } },
+        subject: { include: { area: true, levelConfigs: true } },
       },
     });
 
@@ -89,12 +89,14 @@ export class PeriodRecoveryService {
         });
       }
       
+      // Obtener configuración de nivel (usar la primera disponible o valores por defecto)
+      const levelConfig = grade.subject.levelConfigs?.[0];
       studentAreas.get(areaId)!.grades.push({
         subjectId: grade.subjectId,
         subjectName: grade.subject.name,
         score: Number(grade.finalScore),
-        weight: Number(grade.subject.weight),
-        isDominant: grade.subject.isDominant,
+        weight: levelConfig ? Number(levelConfig.weight) : 1.0,
+        isDominant: levelConfig?.isDominant ?? false,
       });
     }
 

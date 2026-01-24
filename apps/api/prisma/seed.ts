@@ -265,17 +265,27 @@ async function main() {
         where: { 
           areaId: area.id, 
           name: subjectName,
-          academicLevel: null,
-          gradeId: null,
         },
       });
       
       if (!subject) {
-        await prisma.subject.create({
+        subject = await prisma.subject.create({
           data: {
             name: subjectName,
             areaId: area.id,
+            order: subjectCount,
+          },
+        });
+        
+        // Crear configuración global por defecto
+        await prisma.subjectLevelConfig.create({
+          data: {
+            subjectId: subject.id,
             weeklyHours: 4,
+            weight: 1.0,
+            isDominant: false,
+            academicLevel: null,
+            gradeId: null,
           },
         });
       }

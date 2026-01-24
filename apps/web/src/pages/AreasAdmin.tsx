@@ -4,50 +4,40 @@ import { useInstitution, AreaType, AreaCalculationMethod, AreaApprovalCriteria, 
 import { useAuth } from '../contexts/AuthContext'
 import { areasApi, academicGradesApi } from '../lib/api'
 
+// Configuración de asignatura por nivel/grado
+interface SubjectLevelConfig {
+  id: string
+  weeklyHours: number
+  weight: number  // 0-1
+  isDominant: boolean
+  academicLevel?: string | null
+  gradeId?: string | null
+  grade?: { id: string; name: string } | null
+}
+
+// Asignatura (catálogo único)
 interface Subject {
   id: string
   name: string
-  weeklyHours: number
-  weightPercentage: number  // Porcentaje (0-100) para ponderado
-  isDominant: boolean       // Si es la asignatura dominante
   order: number
-  academicLevel?: string | null  // PREESCOLAR, PRIMARIA, SECUNDARIA, MEDIA
-  gradeId?: string | null
-  grade?: { id: string; name: string } | null
+  levelConfigs: SubjectLevelConfig[]  // Configuraciones por nivel
 }
 
 interface Area {
   id: string
   name: string
-  isMandatory: boolean      // Si es obligatoria para promoción
+  isMandatory: boolean
   order: number
   subjects: Subject[]
-  academicLevel?: string | null  // PREESCOLAR, PRIMARIA, SECUNDARIA, MEDIA
+  academicLevel?: string | null
   gradeId?: string | null
   grade?: { id: string; name: string } | null
 }
 
-// Configuración de asignaturas por nivel (para el modal integrado)
-interface LevelSubjectConfig {
-  id?: string  // ID temporal para nuevas, real para existentes
+interface Grade {
+  id: string
   name: string
-  weeklyHours: number
-  weightPercentage: number
-  isDominant: boolean
-  isNew?: boolean  // Para distinguir nuevas de existentes
-  toDelete?: boolean  // Marcar para eliminar
-}
-
-interface LevelConfig {
-  levelCode: string
-  levelName: string
-  subjects: LevelSubjectConfig[]
-}
-
-interface GradeException {
-  gradeId: string
-  gradeName: string
-  subjects: LevelSubjectConfig[]
+  stage: string
 }
 
 // Labels para los nuevos tipos
@@ -102,13 +92,16 @@ const mapBackendAreaToFrontend = (backendArea: any): Area => ({
   subjects: (backendArea.subjects || []).map((s: any) => ({
     id: s.id,
     name: s.name,
-    weeklyHours: s.weeklyHours,
-    weightPercentage: Math.round(s.weight * 100), // Backend usa 0-1, frontend usa 0-100
-    isDominant: s.isDominant,
     order: s.order,
-    academicLevel: s.academicLevel,
-    gradeId: s.gradeId,
-    grade: s.grade,
+    levelConfigs: (s.levelConfigs || []).map((lc: any) => ({
+      id: lc.id,
+      weeklyHours: lc.weeklyHours,
+      weight: lc.weight,
+      isDominant: lc.isDominant,
+      academicLevel: lc.academicLevel,
+      gradeId: lc.gradeId,
+      grade: lc.grade,
+    })),
   })),
 })
 
@@ -173,20 +166,19 @@ export default function AreasAdmin() {
     isMandatory: true,
   })
 
-  // Configuración de asignaturas por nivel (para el modal integrado)
-  const [levelConfigs, setLevelConfigs] = useState<LevelConfig[]>([])
-  const [gradeExceptions, setGradeExceptions] = useState<GradeException[]>([])
-  const [activeConfigTab, setActiveConfigTab] = useState<'levels' | 'exceptions'>('levels')
-  const [selectedConfigLevel, setSelectedConfigLevel] = useState<string>('')
-
-  const [subjectForm, setSubjectForm] = useState({
-    name: '',
+  // Formulario para agregar/editar configuración de asignatura por nivel
+  const [subjectConfigForm, setSubjectConfigForm] = useState({
+    subjectId: '',  // ID de asignatura existente o vacío para crear nueva
+    subjectName: '',  // Nombre de la asignatura
     weeklyHours: 0,
     weightPercentage: 0,
     isDominant: false,
     academicLevel: '' as string,
     gradeId: '' as string,
   })
+  
+  // Estado para el modal de configuración de asignatura
+  const [editingConfig, setEditingConfig] = useState<SubjectLevelConfig | null>(null)
 
   // Cargar áreas desde el backend
   const loadAreas = useCallback(async () => {
@@ -236,100 +228,50 @@ export default function AreasAdmin() {
         name: area.name,
         isMandatory: area.isMandatory,
       })
-      
-      // Cargar configuraciones por nivel desde las asignaturas existentes
-      const levelConfigsMap = new Map<string, LevelSubjectConfig[]>()
-      const gradeExceptionsMap = new Map<string, { gradeName: string; subjects: LevelSubjectConfig[] }>()
-      
-      area.subjects.forEach(subject => {
-        const subjectConfig: LevelSubjectConfig = {
-          id: subject.id,
-          name: subject.name,
-          weeklyHours: subject.weeklyHours,
-          weightPercentage: subject.weightPercentage,
-          isDominant: subject.isDominant,
-        }
-        
-        if (subject.gradeId && subject.grade) {
-          // Es una excepción por grado
-          const existing = gradeExceptionsMap.get(subject.gradeId)
-          if (existing) {
-            existing.subjects.push(subjectConfig)
-          } else {
-            gradeExceptionsMap.set(subject.gradeId, {
-              gradeName: subject.grade.name,
-              subjects: [subjectConfig]
-            })
-          }
-        } else if (subject.academicLevel) {
-          // Es configuración por nivel
-          const existing = levelConfigsMap.get(subject.academicLevel)
-          if (existing) {
-            existing.push(subjectConfig)
-          } else {
-            levelConfigsMap.set(subject.academicLevel, [subjectConfig])
-          }
-        } else {
-          // Es global - agregar a un nivel especial "GLOBAL"
-          const existing = levelConfigsMap.get('GLOBAL')
-          if (existing) {
-            existing.push(subjectConfig)
-          } else {
-            levelConfigsMap.set('GLOBAL', [subjectConfig])
-          }
-        }
-      })
-      
-      // Convertir maps a arrays
-      const configs: LevelConfig[] = []
-      levelConfigsMap.forEach((subjects, levelCode) => {
-        const levelName = levelCode === 'GLOBAL' 
-          ? 'Configuración Global (todos los niveles)'
-          : academicLevels.find(l => l.code === levelCode)?.name || levelCode
-        configs.push({ levelCode, levelName, subjects })
-      })
-      setLevelConfigs(configs)
-      
-      const exceptions: GradeException[] = []
-      gradeExceptionsMap.forEach((data, gradeId) => {
-        exceptions.push({ gradeId, gradeName: data.gradeName, subjects: data.subjects })
-      })
-      setGradeExceptions(exceptions)
-      
     } else {
       setEditingArea(null)
       setAreaForm({ name: '', isMandatory: true })
-      setLevelConfigs([])
-      setGradeExceptions([])
     }
-    setActiveConfigTab('levels')
-    setSelectedConfigLevel('')
     setShowAreaModal(true)
   }
 
-  const openSubjectModal = (areaId: string, subject?: Subject) => {
+  // Abrir modal para agregar/editar configuración de asignatura por nivel
+  const openSubjectModal = (areaId: string, subject?: Subject, config?: SubjectLevelConfig) => {
     setEditingSubject({ areaId, subject: subject || null })
-    const area = areas.find(a => a.id === areaId)
-    const existingSubjects = area?.subjects || []
-    const remainingWeight = 100 - existingSubjects.reduce((sum, s) => sum + (subject && s.id === subject.id ? 0 : s.weightPercentage), 0)
+    setEditingConfig(config || null)
     
-    if (subject) {
-      setSubjectForm({ 
-        name: subject.name, 
-        weeklyHours: subject.weeklyHours, 
-        weightPercentage: subject.weightPercentage,
-        isDominant: subject.isDominant,
-        academicLevel: subject.academicLevel || '',
-        gradeId: subject.gradeId || '',
+    if (subject && config) {
+      // Editando configuración existente
+      setSubjectConfigForm({
+        subjectId: subject.id,
+        subjectName: subject.name,
+        weeklyHours: config.weeklyHours,
+        weightPercentage: Math.round(config.weight * 100),
+        isDominant: config.isDominant,
+        academicLevel: config.academicLevel || '',
+        gradeId: config.gradeId || '',
       })
-    } else {
-      setSubjectForm({ 
-        name: '', 
-        weeklyHours: 0, 
-        weightPercentage: Math.min(remainingWeight, 100),
+    } else if (subject) {
+      // Agregando nueva configuración a asignatura existente
+      setSubjectConfigForm({
+        subjectId: subject.id,
+        subjectName: subject.name,
+        weeklyHours: 0,
+        weightPercentage: 0,
+        isDominant: false,
         academicLevel: selectedLevel === 'TODOS' ? '' : selectedLevel,
         gradeId: '',
+      })
+    } else {
+      // Creando nueva asignatura con configuración
+      setSubjectConfigForm({
+        subjectId: '',
+        subjectName: '',
+        weeklyHours: 0,
+        weightPercentage: 0,
         isDominant: false,
+        academicLevel: selectedLevel === 'TODOS' ? '' : selectedLevel,
+        gradeId: '',
       })
     }
     setShowSubjectModal(true)
@@ -366,34 +308,23 @@ export default function AreasAdmin() {
     }
   }
 
+  // Guardar asignatura con configuración (usa el método combinado del backend)
   const saveSubject = async () => {
-    if (!subjectForm.name.trim()) return
+    if (!subjectConfigForm.subjectName.trim()) return
     setSaving(true)
 
     try {
-      const area = areas.find(a => a.id === editingSubject.areaId)
-      if (!area) return
-
-      if (editingSubject.subject) {
-        await areasApi.updateSubject(editingSubject.subject.id, {
-          name: subjectForm.name,
-          weeklyHours: subjectForm.weeklyHours,
-          weight: subjectForm.weightPercentage / 100, // Frontend usa 0-100, backend usa 0-1
-          isDominant: subjectForm.isDominant,
-          academicLevel: subjectForm.academicLevel || undefined,
-          gradeId: subjectForm.gradeId || undefined,
-        })
-      } else {
-        await areasApi.addSubject(editingSubject.areaId, {
-          name: subjectForm.name,
-          weeklyHours: subjectForm.weeklyHours,
-          weight: subjectForm.weightPercentage / 100,
-          isDominant: subjectForm.isDominant,
-          order: area.subjects.length + 1,
-          academicLevel: subjectForm.academicLevel || undefined,
-          gradeId: subjectForm.gradeId || undefined,
-        })
-      }
+      // El backend maneja la lógica de crear asignatura si no existe
+      // y agregar/actualizar la configuración por nivel
+      await areasApi.addSubject(editingSubject.areaId, {
+        name: subjectConfigForm.subjectName,
+        weeklyHours: subjectConfigForm.weeklyHours,
+        weight: subjectConfigForm.weightPercentage / 100,
+        isDominant: subjectConfigForm.isDominant,
+        academicLevel: subjectConfigForm.academicLevel || undefined,
+        gradeId: subjectConfigForm.gradeId || undefined,
+      })
+      
       await loadAreas()
       setShowSubjectModal(false)
     } catch (error: any) {
@@ -734,11 +665,13 @@ export default function AreasAdmin() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-slate-500 flex-wrap">
-                      <span>{area.subjects.length} asignatura{area.subjects.length !== 1 ? 's' : ''}</span>
+                      <span>{area.subjects.length} asignatura{area.subjects.length !== 1 ? 's' : ''} única{area.subjects.length !== 1 ? 's' : ''}</span>
                       {(() => {
-                        const levels = new Set(area.subjects.filter(s => s.academicLevel && !s.gradeId).map(s => s.academicLevel))
-                        const grades = new Set(area.subjects.filter(s => s.gradeId).map(s => s.gradeId))
-                        const hasGlobal = area.subjects.some(s => !s.academicLevel && !s.gradeId)
+                        // Contar configuraciones por nivel/grado
+                        const allConfigs = area.subjects.flatMap(s => s.levelConfigs)
+                        const levels = new Set(allConfigs.filter(c => c.academicLevel && !c.gradeId).map(c => c.academicLevel))
+                        const grades = new Set(allConfigs.filter(c => c.gradeId).map(c => c.gradeId))
+                        const hasGlobal = allConfigs.some(c => !c.academicLevel && !c.gradeId)
                         const configs: string[] = []
                         if (hasGlobal) configs.push('Global')
                         if (levels.size > 0) configs.push(`${levels.size} nivel${levels.size > 1 ? 'es' : ''}`)
@@ -771,116 +704,90 @@ export default function AreasAdmin() {
               {expandedAreas.has(area.id) && (
                 <div className="bg-slate-50 px-6 py-3 border-t border-slate-100">
                   <div className="ml-8 space-y-3">
-                    {/* Agrupar asignaturas por nivel/grado */}
+                    {/* Agrupar configuraciones por nivel/grado */}
                     {(() => {
-                      // Agrupar asignaturas
-                      const globalSubjects = area.subjects.filter(s => !s.academicLevel && !s.gradeId)
-                      const levelGroups = new Map<string, Subject[]>()
-                      const gradeGroups = new Map<string, { gradeName: string; subjects: Subject[] }>()
+                      // Agrupar todas las configuraciones de todas las asignaturas
+                      type ConfigWithSubject = { subject: Subject; config: SubjectLevelConfig }
+                      const globalConfigs: ConfigWithSubject[] = []
+                      const levelGroups = new Map<string, ConfigWithSubject[]>()
+                      const gradeGroups = new Map<string, { gradeName: string; configs: ConfigWithSubject[] }>()
                       
                       area.subjects.forEach(subject => {
-                        if (subject.gradeId && subject.grade) {
-                          const existing = gradeGroups.get(subject.gradeId)
-                          if (existing) {
-                            existing.subjects.push(subject)
+                        subject.levelConfigs.forEach(config => {
+                          const item = { subject, config }
+                          if (config.gradeId && config.grade) {
+                            const existing = gradeGroups.get(config.gradeId)
+                            if (existing) {
+                              existing.configs.push(item)
+                            } else {
+                              gradeGroups.set(config.gradeId, { gradeName: config.grade.name, configs: [item] })
+                            }
+                          } else if (config.academicLevel) {
+                            const existing = levelGroups.get(config.academicLevel)
+                            if (existing) {
+                              existing.push(item)
+                            } else {
+                              levelGroups.set(config.academicLevel, [item])
+                            }
                           } else {
-                            gradeGroups.set(subject.gradeId, { gradeName: subject.grade.name, subjects: [subject] })
+                            globalConfigs.push(item)
                           }
-                        } else if (subject.academicLevel) {
-                          const existing = levelGroups.get(subject.academicLevel)
-                          if (existing) {
-                            existing.push(subject)
-                          } else {
-                            levelGroups.set(subject.academicLevel, [subject])
-                          }
-                        }
+                        })
                       })
+
+                      const renderConfigItem = (item: ConfigWithSubject, borderColor: string) => (
+                        <div key={item.config.id} className={`flex items-center justify-between bg-white px-3 py-2 rounded border ${borderColor}`}>
+                          <div className="flex items-center gap-2">
+                            {item.config.isDominant ? <Star className="w-4 h-4 text-amber-500" /> : <div className="w-2 h-2 bg-blue-500 rounded-full" />}
+                            <span className="font-medium text-slate-800">{item.subject.name}</span>
+                            {item.config.isDominant && <span className="px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded">Dominante</span>}
+                            <span className="text-xs text-slate-500">{item.config.weeklyHours}h • {Math.round(item.config.weight * 100)}%</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => openSubjectModal(area.id, item.subject, item.config)} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600">
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={() => setDeleteConfirm({ type: 'subject', id: item.subject.id, name: item.subject.name })} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-red-600">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )
 
                       return (
                         <>
-                          {/* Asignaturas Globales */}
-                          {globalSubjects.length > 0 && (
+                          {/* Configuraciones Globales */}
+                          {globalConfigs.length > 0 && (
                             <div className="border border-slate-200 rounded-lg overflow-hidden">
                               <div className="bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 flex items-center gap-2">
                                 🌐 Global (todos los niveles)
                               </div>
                               <div className="p-2 space-y-1">
-                                {globalSubjects.map(subject => (
-                                  <div key={subject.id} className="flex items-center justify-between bg-white px-3 py-2 rounded border border-slate-200">
-                                    <div className="flex items-center gap-2">
-                                      {subject.isDominant ? <Star className="w-4 h-4 text-amber-500" /> : <div className="w-2 h-2 bg-blue-500 rounded-full" />}
-                                      <span className="font-medium text-slate-800">{subject.name}</span>
-                                      {subject.isDominant && <span className="px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded">Dominante</span>}
-                                      <span className="text-xs text-slate-500">{subject.weeklyHours}h • {subject.weightPercentage}%</span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                      <button onClick={() => openSubjectModal(area.id, subject)} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600">
-                                        <Edit2 className="w-3.5 h-3.5" />
-                                      </button>
-                                      <button onClick={() => setDeleteConfirm({ type: 'subject', id: subject.id, name: subject.name })} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-red-600">
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
+                                {globalConfigs.map(item => renderConfigItem(item, 'border-slate-200'))}
                               </div>
                             </div>
                           )}
 
-                          {/* Asignaturas por Nivel */}
-                          {Array.from(levelGroups.entries()).map(([levelCode, subjects]) => (
+                          {/* Configuraciones por Nivel */}
+                          {Array.from(levelGroups.entries()).map(([levelCode, configs]) => (
                             <div key={levelCode} className="border border-blue-200 rounded-lg overflow-hidden">
                               <div className="bg-blue-100 px-3 py-2 text-sm font-medium text-blue-800 flex items-center gap-2">
                                 📚 {academicLevels.find(l => l.code === levelCode)?.name || levelCode}
                               </div>
                               <div className="p-2 space-y-1">
-                                {subjects.map(subject => (
-                                  <div key={subject.id} className="flex items-center justify-between bg-white px-3 py-2 rounded border border-blue-200">
-                                    <div className="flex items-center gap-2">
-                                      {subject.isDominant ? <Star className="w-4 h-4 text-amber-500" /> : <div className="w-2 h-2 bg-blue-500 rounded-full" />}
-                                      <span className="font-medium text-slate-800">{subject.name}</span>
-                                      {subject.isDominant && <span className="px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded">Dominante</span>}
-                                      <span className="text-xs text-slate-500">{subject.weeklyHours}h • {subject.weightPercentage}%</span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                      <button onClick={() => openSubjectModal(area.id, subject)} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600">
-                                        <Edit2 className="w-3.5 h-3.5" />
-                                      </button>
-                                      <button onClick={() => setDeleteConfirm({ type: 'subject', id: subject.id, name: subject.name })} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-red-600">
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
+                                {configs.map(item => renderConfigItem(item, 'border-blue-200'))}
                               </div>
                             </div>
                           ))}
 
                           {/* Excepciones por Grado */}
-                          {Array.from(gradeGroups.entries()).map(([gradeId, { gradeName, subjects }]) => (
+                          {Array.from(gradeGroups.entries()).map(([gradeId, { gradeName, configs }]) => (
                             <div key={gradeId} className="border border-purple-200 rounded-lg overflow-hidden">
                               <div className="bg-purple-100 px-3 py-2 text-sm font-medium text-purple-800 flex items-center gap-2">
                                 🎓 Excepción: {gradeName}
                               </div>
                               <div className="p-2 space-y-1">
-                                {subjects.map(subject => (
-                                  <div key={subject.id} className="flex items-center justify-between bg-white px-3 py-2 rounded border border-purple-200">
-                                    <div className="flex items-center gap-2">
-                                      {subject.isDominant ? <Star className="w-4 h-4 text-amber-500" /> : <div className="w-2 h-2 bg-purple-500 rounded-full" />}
-                                      <span className="font-medium text-slate-800">{subject.name}</span>
-                                      {subject.isDominant && <span className="px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded">Dominante</span>}
-                                      <span className="text-xs text-slate-500">{subject.weeklyHours}h • {subject.weightPercentage}%</span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                      <button onClick={() => openSubjectModal(area.id, subject)} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600">
-                                        <Edit2 className="w-3.5 h-3.5" />
-                                      </button>
-                                      <button onClick={() => setDeleteConfirm({ type: 'subject', id: subject.id, name: subject.name })} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-red-600">
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
+                                {configs.map(item => renderConfigItem(item, 'border-purple-200'))}
                               </div>
                             </div>
                           ))}
@@ -991,13 +898,20 @@ export default function AreasAdmin() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Nombre de la asignatura</label>
-                <input
-                  type="text"
-                  value={subjectForm.name}
-                  onChange={(e) => setSubjectForm({ ...subjectForm, name: e.target.value })}
-                  placeholder="Ej: Álgebra, Biología..."
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
+                {editingSubject.subject ? (
+                  <div className="px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-700">
+                    {subjectConfigForm.subjectName}
+                    <span className="text-xs text-slate-500 ml-2">(asignatura existente)</span>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={subjectConfigForm.subjectName}
+                    onChange={(e) => setSubjectConfigForm({ ...subjectConfigForm, subjectName: e.target.value })}
+                    placeholder="Ej: Álgebra, Biología..."
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                )}
               </div>
 
               <div>
@@ -1005,8 +919,8 @@ export default function AreasAdmin() {
                 <input
                   type="number"
                   min="0"
-                  value={subjectForm.weeklyHours}
-                  onChange={(e) => setSubjectForm({ ...subjectForm, weeklyHours: parseInt(e.target.value) || 0 })}
+                  value={subjectConfigForm.weeklyHours}
+                  onChange={(e) => setSubjectConfigForm({ ...subjectConfigForm, weeklyHours: parseInt(e.target.value) || 0 })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 />
               </div>
@@ -1017,8 +931,8 @@ export default function AreasAdmin() {
                   type="number"
                   min="0"
                   max="100"
-                  value={subjectForm.weightPercentage}
-                  onChange={(e) => setSubjectForm({ ...subjectForm, weightPercentage: parseInt(e.target.value) || 0 })}
+                  value={subjectConfigForm.weightPercentage}
+                  onChange={(e) => setSubjectConfigForm({ ...subjectConfigForm, weightPercentage: parseInt(e.target.value) || 0 })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 />
                 <p className="text-xs text-slate-500 mt-1">Para promedio ponderado. La suma de todas las asignaturas debe ser 100%</p>
@@ -1028,8 +942,8 @@ export default function AreasAdmin() {
                 <input
                   type="checkbox"
                   id="isDominant"
-                  checked={subjectForm.isDominant}
-                  onChange={(e) => setSubjectForm({ ...subjectForm, isDominant: e.target.checked })}
+                  checked={subjectConfigForm.isDominant}
+                  onChange={(e) => setSubjectConfigForm({ ...subjectConfigForm, isDominant: e.target.checked })}
                   className="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500"
                 />
                 <div>
@@ -1043,16 +957,16 @@ export default function AreasAdmin() {
 
               {/* Configuración por nivel/grado */}
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
-                <h4 className="text-sm font-medium text-blue-800">📚 Alcance de la asignatura</h4>
+                <h4 className="text-sm font-medium text-blue-800">📚 Alcance de esta configuración</h4>
                 <p className="text-xs text-blue-600 mb-2">
-                  Define en qué niveles o grados específicos aplica esta asignatura
+                  Define en qué nivel o grado específico aplica esta configuración
                 </p>
                 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Nivel académico</label>
                   <select
-                    value={subjectForm.academicLevel}
-                    onChange={(e) => setSubjectForm({ ...subjectForm, academicLevel: e.target.value, gradeId: '' })}
+                    value={subjectConfigForm.academicLevel}
+                    onChange={(e) => setSubjectConfigForm({ ...subjectConfigForm, academicLevel: e.target.value, gradeId: '' })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                   >
                     <option value="">🌐 Todos los niveles (global)</option>
@@ -1062,12 +976,12 @@ export default function AreasAdmin() {
                   </select>
                 </div>
 
-                {subjectForm.academicLevel && (
+                {subjectConfigForm.academicLevel && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Grado específico (opcional)</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Grado específico (excepción)</label>
                     <select
-                      value={subjectForm.gradeId}
-                      onChange={(e) => setSubjectForm({ ...subjectForm, gradeId: e.target.value })}
+                      value={subjectConfigForm.gradeId}
+                      onChange={(e) => setSubjectConfigForm({ ...subjectConfigForm, gradeId: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                     >
                       <option value="">Todos los grados del nivel</option>
@@ -1079,7 +993,7 @@ export default function AreasAdmin() {
                             'SECUNDARIA': 'SECONDARY',
                             'MEDIA': 'HIGH_SCHOOL',
                           }
-                          return g.stage === (stageMap[subjectForm.academicLevel] || subjectForm.academicLevel)
+                          return g.stage === (stageMap[subjectConfigForm.academicLevel] || subjectConfigForm.academicLevel)
                         })
                         .map(grade => (
                           <option key={grade.id} value={grade.id}>🎓 {grade.name}</option>
@@ -1090,11 +1004,11 @@ export default function AreasAdmin() {
                 )}
 
                 <p className="text-xs text-blue-600 italic">
-                  {!subjectForm.academicLevel 
-                    ? '✓ Esta asignatura aplica a todos los niveles y grados'
-                    : subjectForm.gradeId 
-                      ? `✓ Esta asignatura aplica SOLO a ${grades.find(g => g.id === subjectForm.gradeId)?.name || 'este grado'}`
-                      : `✓ Esta asignatura aplica a todo ${academicLevels.find(l => l.code === subjectForm.academicLevel)?.name || subjectForm.academicLevel}`
+                  {!subjectConfigForm.academicLevel 
+                    ? '✓ Esta configuración aplica a todos los niveles y grados'
+                    : subjectConfigForm.gradeId 
+                      ? `✓ Esta configuración aplica SOLO a ${grades.find(g => g.id === subjectConfigForm.gradeId)?.name || 'este grado'}`
+                      : `✓ Esta configuración aplica a todo ${academicLevels.find(l => l.code === subjectConfigForm.academicLevel)?.name || subjectConfigForm.academicLevel}`
                   }
                 </p>
               </div>
@@ -1109,10 +1023,10 @@ export default function AreasAdmin() {
               </button>
               <button
                 onClick={saveSubject}
-                disabled={!subjectForm.name.trim()}
+                disabled={!subjectConfigForm.subjectName.trim()}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
-                {editingSubject.subject ? 'Guardar' : 'Crear'}
+                {editingConfig ? 'Guardar' : 'Crear'}
               </button>
             </div>
           </div>

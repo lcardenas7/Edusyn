@@ -391,7 +391,7 @@ model Grade {
   groups    Group[]
   elections Election[]  // Elecciones de representante de grado
   areas     Area[]      // Áreas específicas para este grado
-  subjects  Subject[]   // Asignaturas específicas para este grado
+  subjectLevelConfigs SubjectLevelConfig[]  // Configuraciones de asignaturas para este grado
 
   @@unique([stage, name])
 }
@@ -451,31 +451,49 @@ model Subject {
   id          String   @id @default(cuid())
   areaId      String
   name        String
-  weeklyHours Int      @default(0)
-  weight      Float    @default(1.0)
-  isDominant  Boolean  @default(false)  // Si es la asignatura dominante del área
   order       Int      @default(0)
   
-  // Configuración por nivel académico y grado (opcional)
-  // Si academicLevel es null, la asignatura aplica a todos los niveles
-  // Si gradeId es null pero academicLevel tiene valor, aplica a todo el nivel
-  // Si ambos tienen valor, aplica solo a ese grado específico
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  area              Area                @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  levelConfigs      SubjectLevelConfig[]
+  teacherAssignments TeacherAssignment[]
+  periodFinalGrades PeriodFinalGrade[]
+  periodRecoveries  PeriodRecovery[]
+  performanceManualEdits PerformanceManualEdit[]
+
+  @@unique([areaId, name])  // Una asignatura única por área
+  @@index([areaId])
+}
+
+// Configuración de una asignatura por nivel académico o grado específico
+model SubjectLevelConfig {
+  id          String   @id @default(cuid())
+  subjectId   String
+  
+  // Configuración específica para este nivel/grado
+  weeklyHours Int      @default(0)
+  weight      Float    @default(1.0)  // Porcentaje (0.0 - 1.0)
+  isDominant  Boolean  @default(false)
+  
+  // Alcance de la configuración:
+  // - academicLevel null + gradeId null = Global (todos los niveles)
+  // - academicLevel con valor + gradeId null = Todo el nivel
+  // - gradeId con valor = Solo ese grado específico (excepción)
   academicLevel String?  // PREESCOLAR, PRIMARIA, SECUNDARIA, MEDIA
   gradeId       String?  // ID del grado específico (opcional)
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  area              Area                @relation(fields: [areaId], references: [id], onDelete: Cascade)
-  grade             Grade?              @relation(fields: [gradeId], references: [id], onDelete: SetNull)
-  teacherAssignments TeacherAssignment[]
-  periodFinalGrades PeriodFinalGrade[]
-  periodRecoveries  PeriodRecovery[]
-  performanceManualEdits PerformanceManualEdit[]
+  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  grade       Grade?   @relation(fields: [gradeId], references: [id], onDelete: SetNull)
 
-  @@unique([areaId, name, academicLevel, gradeId])
-  @@index([areaId, academicLevel])
-  @@index([areaId, gradeId])
+  @@unique([subjectId, academicLevel, gradeId])  // Una config por asignatura/nivel/grado
+  @@index([subjectId])
+  @@index([academicLevel])
+  @@index([gradeId])
 }
 
 model AcademicYear {

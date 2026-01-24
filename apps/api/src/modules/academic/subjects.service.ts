@@ -12,7 +12,10 @@ export class SubjectsService {
       data: {
         areaId: dto.areaId,
         name: dto.name,
-        weeklyHours: dto.weeklyHours ?? 0,
+        order: 0,
+      },
+      include: {
+        levelConfigs: true,
       },
     });
   }
@@ -24,6 +27,9 @@ export class SubjectsService {
       },
       include: {
         area: true,
+        levelConfigs: {
+          include: { grade: true },
+        },
       },
       orderBy: { name: 'asc' },
     });
