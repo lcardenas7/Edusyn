@@ -8,6 +8,7 @@ import {
   Query,
   UseGuards,
   Request,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -19,11 +20,15 @@ import {
   CreateStudentAndEnrollDto,
 } from './enrollment.service';
 import { EnrollmentStatus, EnrollmentMovementType } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Controller('enrollments')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class EnrollmentController {
-  constructor(private readonly enrollmentService: EnrollmentService) {}
+  constructor(
+    private readonly enrollmentService: EnrollmentService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // MATRICULAR ESTUDIANTE
@@ -45,11 +50,28 @@ export class EnrollmentController {
   @Post('create-and-enroll')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'SECRETARIA')
   async createStudentAndEnroll(
-    @Body() dto: Omit<CreateStudentAndEnrollDto, 'enrolledById'>,
+    @Body() dto: Omit<CreateStudentAndEnrollDto, 'enrolledById' | 'institutionId'>,
     @Request() req: any,
   ) {
+    // Obtener institutionId del JWT
+    let institutionId = req.user?.institutionId;
+    
+    // Si no viene en el JWT, buscar en InstitutionUser
+    if (!institutionId && req.user?.id) {
+      const institutionUser = await this.prisma.institutionUser.findFirst({
+        where: { userId: req.user.id },
+        select: { institutionId: true }
+      });
+      institutionId = institutionUser?.institutionId;
+    }
+
+    if (!institutionId) {
+      throw new UnauthorizedException('No se pudo determinar la institución del usuario');
+    }
+
     return this.enrollmentService.createStudentAndEnroll({
       ...dto,
+      institutionId,
       enrolledById: req.user.id,
     });
   }
