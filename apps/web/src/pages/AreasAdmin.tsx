@@ -27,6 +27,29 @@ interface Area {
   grade?: { id: string; name: string } | null
 }
 
+// Configuración de asignaturas por nivel (para el modal integrado)
+interface LevelSubjectConfig {
+  id?: string  // ID temporal para nuevas, real para existentes
+  name: string
+  weeklyHours: number
+  weightPercentage: number
+  isDominant: boolean
+  isNew?: boolean  // Para distinguir nuevas de existentes
+  toDelete?: boolean  // Marcar para eliminar
+}
+
+interface LevelConfig {
+  levelCode: string
+  levelName: string
+  subjects: LevelSubjectConfig[]
+}
+
+interface GradeException {
+  gradeId: string
+  gradeName: string
+  subjects: LevelSubjectConfig[]
+}
+
 // Labels para los nuevos tipos
 const areaTypeLabels: Record<AreaType, { label: string; desc: string; color: string }> = {
   EVALUABLE: { label: 'Evaluable', desc: 'Afecta promoción, se calcula nota', color: 'green' },
@@ -148,9 +171,13 @@ export default function AreasAdmin() {
   const [areaForm, setAreaForm] = useState({
     name: '',
     isMandatory: true,
-    academicLevel: '' as string,
-    gradeId: '' as string,
   })
+
+  // Configuración de asignaturas por nivel (para el modal integrado)
+  const [levelConfigs, setLevelConfigs] = useState<LevelConfig[]>([])
+  const [gradeExceptions, setGradeExceptions] = useState<GradeException[]>([])
+  const [activeConfigTab, setActiveConfigTab] = useState<'levels' | 'exceptions'>('levels')
+  const [selectedConfigLevel, setSelectedConfigLevel] = useState<string>('')
 
   const [subjectForm, setSubjectForm] = useState({
     name: '',
@@ -208,18 +235,75 @@ export default function AreasAdmin() {
       setAreaForm({
         name: area.name,
         isMandatory: area.isMandatory,
-        academicLevel: area.academicLevel || '',
-        gradeId: area.gradeId || '',
       })
+      
+      // Cargar configuraciones por nivel desde las asignaturas existentes
+      const levelConfigsMap = new Map<string, LevelSubjectConfig[]>()
+      const gradeExceptionsMap = new Map<string, { gradeName: string; subjects: LevelSubjectConfig[] }>()
+      
+      area.subjects.forEach(subject => {
+        const subjectConfig: LevelSubjectConfig = {
+          id: subject.id,
+          name: subject.name,
+          weeklyHours: subject.weeklyHours,
+          weightPercentage: subject.weightPercentage,
+          isDominant: subject.isDominant,
+        }
+        
+        if (subject.gradeId && subject.grade) {
+          // Es una excepción por grado
+          const existing = gradeExceptionsMap.get(subject.gradeId)
+          if (existing) {
+            existing.subjects.push(subjectConfig)
+          } else {
+            gradeExceptionsMap.set(subject.gradeId, {
+              gradeName: subject.grade.name,
+              subjects: [subjectConfig]
+            })
+          }
+        } else if (subject.academicLevel) {
+          // Es configuración por nivel
+          const existing = levelConfigsMap.get(subject.academicLevel)
+          if (existing) {
+            existing.push(subjectConfig)
+          } else {
+            levelConfigsMap.set(subject.academicLevel, [subjectConfig])
+          }
+        } else {
+          // Es global - agregar a un nivel especial "GLOBAL"
+          const existing = levelConfigsMap.get('GLOBAL')
+          if (existing) {
+            existing.push(subjectConfig)
+          } else {
+            levelConfigsMap.set('GLOBAL', [subjectConfig])
+          }
+        }
+      })
+      
+      // Convertir maps a arrays
+      const configs: LevelConfig[] = []
+      levelConfigsMap.forEach((subjects, levelCode) => {
+        const levelName = levelCode === 'GLOBAL' 
+          ? 'Configuración Global (todos los niveles)'
+          : academicLevels.find(l => l.code === levelCode)?.name || levelCode
+        configs.push({ levelCode, levelName, subjects })
+      })
+      setLevelConfigs(configs)
+      
+      const exceptions: GradeException[] = []
+      gradeExceptionsMap.forEach((data, gradeId) => {
+        exceptions.push({ gradeId, gradeName: data.gradeName, subjects: data.subjects })
+      })
+      setGradeExceptions(exceptions)
+      
     } else {
       setEditingArea(null)
-      setAreaForm({ 
-        name: '', 
-        isMandatory: true, 
-        academicLevel: selectedLevel === 'TODOS' ? '' : selectedLevel,
-        gradeId: '',
-      })
+      setAreaForm({ name: '', isMandatory: true })
+      setLevelConfigs([])
+      setGradeExceptions([])
     }
+    setActiveConfigTab('levels')
+    setSelectedConfigLevel('')
     setShowAreaModal(true)
   }
 
@@ -256,23 +340,99 @@ export default function AreasAdmin() {
     setSaving(true)
 
     try {
+      let areaId = editingArea?.id
+      
       if (editingArea) {
+        // Actualizar área existente
         await areasApi.update(editingArea.id, {
           name: areaForm.name,
           isMandatory: areaForm.isMandatory,
-          academicLevel: areaForm.academicLevel || undefined,
-          gradeId: areaForm.gradeId || undefined,
         })
       } else {
-        await areasApi.create({
+        // Crear nueva área
+        const response = await areasApi.create({
           institutionId: institution.id,
           name: areaForm.name,
           isMandatory: areaForm.isMandatory,
           order: areas.length + 1,
-          academicLevel: areaForm.academicLevel || undefined,
-          gradeId: areaForm.gradeId || undefined,
         })
+        areaId = response.data.id
       }
+
+      if (areaId) {
+        // Obtener IDs de asignaturas existentes para saber cuáles eliminar
+        const existingSubjectIds = new Set(
+          editingArea?.subjects.map(s => s.id) || []
+        )
+        const processedIds = new Set<string>()
+
+        // Guardar configuraciones por nivel
+        for (const levelConfig of levelConfigs) {
+          for (const subject of levelConfig.subjects) {
+            if (subject.toDelete) continue
+            
+            const academicLevel = levelConfig.levelCode === 'GLOBAL' ? undefined : levelConfig.levelCode
+            
+            if (subject.id && !subject.isNew) {
+              // Actualizar asignatura existente
+              await areasApi.updateSubject(subject.id, {
+                name: subject.name,
+                weeklyHours: subject.weeklyHours,
+                weight: subject.weightPercentage / 100,
+                isDominant: subject.isDominant,
+                academicLevel,
+                gradeId: undefined,
+              })
+              processedIds.add(subject.id)
+            } else {
+              // Crear nueva asignatura
+              await areasApi.addSubject(areaId, {
+                name: subject.name,
+                weeklyHours: subject.weeklyHours,
+                weight: subject.weightPercentage / 100,
+                isDominant: subject.isDominant,
+                academicLevel,
+              })
+            }
+          }
+        }
+
+        // Guardar excepciones por grado
+        for (const exception of gradeExceptions) {
+          for (const subject of exception.subjects) {
+            if (subject.toDelete) continue
+            
+            if (subject.id && !subject.isNew) {
+              // Actualizar asignatura existente
+              await areasApi.updateSubject(subject.id, {
+                name: subject.name,
+                weeklyHours: subject.weeklyHours,
+                weight: subject.weightPercentage / 100,
+                isDominant: subject.isDominant,
+                gradeId: exception.gradeId,
+              })
+              processedIds.add(subject.id)
+            } else {
+              // Crear nueva asignatura con excepción de grado
+              await areasApi.addSubject(areaId, {
+                name: subject.name,
+                weeklyHours: subject.weeklyHours,
+                weight: subject.weightPercentage / 100,
+                isDominant: subject.isDominant,
+                gradeId: exception.gradeId,
+              })
+            }
+          }
+        }
+
+        // Eliminar asignaturas que ya no están en la configuración
+        for (const existingId of existingSubjectIds) {
+          if (!processedIds.has(existingId)) {
+            await areasApi.deleteSubject(existingId)
+          }
+        }
+      }
+
       await loadAreas()
       setShowAreaModal(false)
     } catch (error: any) {
@@ -746,97 +906,420 @@ export default function AreasAdmin() {
         </div>
       </div>
 
-      {/* Modal Área */}
+      {/* Modal Área - Configuración Integrada */}
       {showAreaModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-slate-200">
               <h3 className="text-lg font-semibold text-slate-900">
-                {editingArea ? 'Editar Área' : 'Nueva Área'}
+                {editingArea ? `Configurar Área: ${areaForm.name}` : 'Nueva Área'}
               </h3>
               <button onClick={() => setShowAreaModal(false)} className="p-1 hover:bg-slate-100 rounded">
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del área</label>
-                <input
-                  type="text"
-                  value={areaForm.name}
-                  onChange={(e) => setAreaForm({ ...areaForm, name: e.target.value })}
-                  placeholder="Ej: Matemáticas, Ciencias Naturales..."
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Alcance del área</label>
-                <select
-                  value={areaForm.academicLevel}
-                  onChange={(e) => setAreaForm({ ...areaForm, academicLevel: e.target.value, gradeId: '' })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                >
-                  <option value="">🌐 Global - Todos los niveles</option>
-                  {academicLevels.filter(l => l.code !== 'TODOS').map(level => (
-                    <option key={level.code} value={level.code}>📚 {level.name}</option>
-                  ))}
-                </select>
-                <p className="text-xs text-slate-500 mt-1">
-                  {!areaForm.academicLevel 
-                    ? 'El área aplica a todos los niveles y grados'
-                    : `El área aplica solo a ${academicLevels.find(l => l.code === areaForm.academicLevel)?.name || areaForm.academicLevel}`
-                  }
-                </p>
-              </div>
-
-              {/* Selector de grado específico - solo si hay nivel seleccionado */}
-              {areaForm.academicLevel && (
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Información básica del área */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Grado específico (opcional)</label>
-                  <select
-                    value={areaForm.gradeId}
-                    onChange={(e) => setAreaForm({ ...areaForm, gradeId: e.target.value })}
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del área</label>
+                  <input
+                    type="text"
+                    value={areaForm.name}
+                    onChange={(e) => setAreaForm({ ...areaForm, name: e.target.value })}
+                    placeholder="Ej: Matemáticas, Ciencias Naturales..."
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+                <div className="flex items-center">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={areaForm.isMandatory}
+                      onChange={(e) => setAreaForm({ ...areaForm, isMandatory: e.target.checked })}
+                      className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-slate-700">Área obligatoria para promoción</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Tabs de configuración */}
+              <div className="border-b border-slate-200">
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setActiveConfigTab('levels')}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                      activeConfigTab === 'levels'
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-slate-500 hover:text-slate-700'
+                    }`}
                   >
-                    <option value="">Todos los grados del nivel</option>
-                    {grades
-                      .filter(g => {
-                        const stageMap: Record<string, string> = {
-                          'PREESCOLAR': 'PRESCHOOL',
-                          'PRIMARIA': 'PRIMARY',
-                          'SECUNDARIA': 'SECONDARY',
-                          'MEDIA': 'HIGH_SCHOOL',
-                        }
-                        return g.stage === (stageMap[areaForm.academicLevel] || areaForm.academicLevel)
-                      })
-                      .map(grade => (
-                        <option key={grade.id} value={grade.id}>🎓 {grade.name}</option>
-                      ))
-                    }
-                  </select>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {!areaForm.gradeId 
-                      ? 'El área aplica a todos los grados del nivel seleccionado'
-                      : `El área aplica SOLO a ${grades.find(g => g.id === areaForm.gradeId)?.name || 'este grado'}`
-                    }
+                    📚 Configuración por Niveles
+                  </button>
+                  <button
+                    onClick={() => setActiveConfigTab('exceptions')}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                      activeConfigTab === 'exceptions'
+                        ? 'border-purple-600 text-purple-600'
+                        : 'border-transparent text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    🎯 Excepciones por Grado ({gradeExceptions.length})
+                  </button>
+                </div>
+              </div>
+
+              {/* Tab: Configuración por Niveles */}
+              {activeConfigTab === 'levels' && (
+                <div className="space-y-4">
+                  <p className="text-sm text-slate-600">
+                    Configure las asignaturas de esta área para cada nivel académico. Si no configura un nivel específico, 
+                    se usará la configuración global.
                   </p>
+
+                  {/* Selector para agregar configuración de nivel */}
+                  <div className="flex items-center gap-3">
+                    <select
+                      value={selectedConfigLevel}
+                      onChange={(e) => setSelectedConfigLevel(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                      <option value="">Seleccionar nivel para configurar...</option>
+                      <option value="GLOBAL" disabled={levelConfigs.some(c => c.levelCode === 'GLOBAL')}>
+                        🌐 Global (todos los niveles)
+                      </option>
+                      {academicLevels.filter(l => l.code !== 'TODOS').map(level => (
+                        <option 
+                          key={level.code} 
+                          value={level.code}
+                          disabled={levelConfigs.some(c => c.levelCode === level.code)}
+                        >
+                          📚 {level.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => {
+                        if (selectedConfigLevel) {
+                          const levelName = selectedConfigLevel === 'GLOBAL'
+                            ? 'Configuración Global (todos los niveles)'
+                            : academicLevels.find(l => l.code === selectedConfigLevel)?.name || selectedConfigLevel
+                          setLevelConfigs([...levelConfigs, {
+                            levelCode: selectedConfigLevel,
+                            levelName,
+                            subjects: []
+                          }])
+                          setSelectedConfigLevel('')
+                        }
+                      }}
+                      disabled={!selectedConfigLevel}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Lista de configuraciones por nivel */}
+                  {levelConfigs.length === 0 ? (
+                    <div className="text-center py-8 text-slate-500 bg-slate-50 rounded-lg">
+                      <BookOpen className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+                      <p>No hay configuraciones de nivel. Agregue una configuración global o por nivel específico.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {levelConfigs.map((config, configIndex) => (
+                        <div key={config.levelCode} className="border border-slate-200 rounded-lg overflow-hidden">
+                          <div className="bg-slate-100 px-4 py-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">{config.levelCode === 'GLOBAL' ? '🌐' : '📚'}</span>
+                              <span className="font-medium text-slate-800">{config.levelName}</span>
+                              <span className="text-xs text-slate-500">
+                                ({config.subjects.filter(s => !s.toDelete).length} asignaturas)
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => setLevelConfigs(levelConfigs.filter((_, i) => i !== configIndex))}
+                              className="p-1 hover:bg-red-100 rounded text-slate-400 hover:text-red-600"
+                              title="Eliminar configuración"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                          
+                          <div className="p-4 space-y-2">
+                            {/* Lista de asignaturas del nivel */}
+                            {config.subjects.filter(s => !s.toDelete).map((subject, subjectIndex) => (
+                              <div key={subject.id || subjectIndex} className="flex items-center gap-3 bg-white p-3 rounded border border-slate-200">
+                                <input
+                                  type="text"
+                                  value={subject.name}
+                                  onChange={(e) => {
+                                    const newConfigs = [...levelConfigs]
+                                    newConfigs[configIndex].subjects[subjectIndex].name = e.target.value
+                                    setLevelConfigs(newConfigs)
+                                  }}
+                                  placeholder="Nombre asignatura"
+                                  className="flex-1 px-2 py-1 border border-slate-200 rounded text-sm"
+                                />
+                                <input
+                                  type="number"
+                                  value={subject.weeklyHours}
+                                  onChange={(e) => {
+                                    const newConfigs = [...levelConfigs]
+                                    newConfigs[configIndex].subjects[subjectIndex].weeklyHours = parseInt(e.target.value) || 0
+                                    setLevelConfigs(newConfigs)
+                                  }}
+                                  placeholder="Horas"
+                                  className="w-16 px-2 py-1 border border-slate-200 rounded text-sm text-center"
+                                  min="0"
+                                />
+                                <span className="text-xs text-slate-500">h/sem</span>
+                                <input
+                                  type="number"
+                                  value={subject.weightPercentage}
+                                  onChange={(e) => {
+                                    const newConfigs = [...levelConfigs]
+                                    newConfigs[configIndex].subjects[subjectIndex].weightPercentage = parseInt(e.target.value) || 0
+                                    setLevelConfigs(newConfigs)
+                                  }}
+                                  placeholder="%"
+                                  className="w-16 px-2 py-1 border border-slate-200 rounded text-sm text-center"
+                                  min="0"
+                                  max="100"
+                                />
+                                <span className="text-xs text-slate-500">%</span>
+                                <label className="flex items-center gap-1 text-xs text-amber-600">
+                                  <input
+                                    type="checkbox"
+                                    checked={subject.isDominant}
+                                    onChange={(e) => {
+                                      const newConfigs = [...levelConfigs]
+                                      // Desmarcar otras dominantes del mismo nivel
+                                      newConfigs[configIndex].subjects.forEach((s, i) => {
+                                        if (i !== subjectIndex) s.isDominant = false
+                                      })
+                                      newConfigs[configIndex].subjects[subjectIndex].isDominant = e.target.checked
+                                      setLevelConfigs(newConfigs)
+                                    }}
+                                    className="w-3 h-3"
+                                  />
+                                  <Star className="w-3 h-3" />
+                                </label>
+                                <button
+                                  onClick={() => {
+                                    const newConfigs = [...levelConfigs]
+                                    if (subject.id && !subject.isNew) {
+                                      newConfigs[configIndex].subjects[subjectIndex].toDelete = true
+                                    } else {
+                                      newConfigs[configIndex].subjects.splice(subjectIndex, 1)
+                                    }
+                                    setLevelConfigs(newConfigs)
+                                  }}
+                                  className="p-1 hover:bg-red-100 rounded text-slate-400 hover:text-red-600"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                            
+                            {/* Botón agregar asignatura */}
+                            <button
+                              onClick={() => {
+                                const newConfigs = [...levelConfigs]
+                                newConfigs[configIndex].subjects.push({
+                                  id: `new-${Date.now()}`,
+                                  name: '',
+                                  weeklyHours: 0,
+                                  weightPercentage: 0,
+                                  isDominant: false,
+                                  isNew: true,
+                                })
+                                setLevelConfigs(newConfigs)
+                              }}
+                              className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded w-full"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Agregar asignatura
+                            </button>
+
+                            {/* Suma de porcentajes */}
+                            {config.subjects.filter(s => !s.toDelete).length > 0 && (
+                              <div className={`text-xs text-right ${
+                                config.subjects.filter(s => !s.toDelete).reduce((sum, s) => sum + s.weightPercentage, 0) === 100
+                                  ? 'text-green-600'
+                                  : 'text-amber-600'
+                              }`}>
+                                Total: {config.subjects.filter(s => !s.toDelete).reduce((sum, s) => sum + s.weightPercentage, 0)}%
+                                {config.subjects.filter(s => !s.toDelete).reduce((sum, s) => sum + s.weightPercentage, 0) !== 100 && ' (debe ser 100%)'}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="isMandatory"
-                  checked={areaForm.isMandatory}
-                  onChange={(e) => setAreaForm({ ...areaForm, isMandatory: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
-                />
-                <label htmlFor="isMandatory" className="text-sm text-slate-700">
-                  Área obligatoria para promoción
-                </label>
-              </div>
+              {/* Tab: Excepciones por Grado */}
+              {activeConfigTab === 'exceptions' && (
+                <div className="space-y-4">
+                  <p className="text-sm text-slate-600">
+                    Configure excepciones para grados específicos. Estas configuraciones tienen prioridad sobre la configuración del nivel.
+                  </p>
+
+                  {/* Selector para agregar excepción */}
+                  <div className="flex items-center gap-3">
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        const gradeId = e.target.value
+                        if (gradeId && !gradeExceptions.some(ex => ex.gradeId === gradeId)) {
+                          const grade = grades.find(g => g.id === gradeId)
+                          if (grade) {
+                            setGradeExceptions([...gradeExceptions, {
+                              gradeId,
+                              gradeName: grade.name,
+                              subjects: []
+                            }])
+                          }
+                        }
+                      }}
+                      className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                    >
+                      <option value="">Seleccionar grado para excepción...</option>
+                      {grades.map(grade => (
+                        <option 
+                          key={grade.id} 
+                          value={grade.id}
+                          disabled={gradeExceptions.some(ex => ex.gradeId === grade.id)}
+                        >
+                          🎓 {grade.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Lista de excepciones */}
+                  {gradeExceptions.length === 0 ? (
+                    <div className="text-center py-8 text-slate-500 bg-purple-50 rounded-lg">
+                      <AlertTriangle className="w-10 h-10 mx-auto mb-2 text-purple-300" />
+                      <p>No hay excepciones configuradas. Las excepciones permiten configurar asignaturas diferentes para grados específicos.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {gradeExceptions.map((exception, exIndex) => (
+                        <div key={exception.gradeId} className="border border-purple-200 rounded-lg overflow-hidden">
+                          <div className="bg-purple-100 px-4 py-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">🎓</span>
+                              <span className="font-medium text-purple-800">Excepción: {exception.gradeName}</span>
+                              <span className="text-xs text-purple-600">
+                                ({exception.subjects.filter(s => !s.toDelete).length} asignaturas)
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => setGradeExceptions(gradeExceptions.filter((_, i) => i !== exIndex))}
+                              className="p-1 hover:bg-red-100 rounded text-purple-400 hover:text-red-600"
+                              title="Eliminar excepción"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                          
+                          <div className="p-4 space-y-2">
+                            {exception.subjects.filter(s => !s.toDelete).map((subject, subjectIndex) => (
+                              <div key={subject.id || subjectIndex} className="flex items-center gap-3 bg-white p-3 rounded border border-purple-200">
+                                <input
+                                  type="text"
+                                  value={subject.name}
+                                  onChange={(e) => {
+                                    const newExceptions = [...gradeExceptions]
+                                    newExceptions[exIndex].subjects[subjectIndex].name = e.target.value
+                                    setGradeExceptions(newExceptions)
+                                  }}
+                                  placeholder="Nombre asignatura"
+                                  className="flex-1 px-2 py-1 border border-slate-200 rounded text-sm"
+                                />
+                                <input
+                                  type="number"
+                                  value={subject.weeklyHours}
+                                  onChange={(e) => {
+                                    const newExceptions = [...gradeExceptions]
+                                    newExceptions[exIndex].subjects[subjectIndex].weeklyHours = parseInt(e.target.value) || 0
+                                    setGradeExceptions(newExceptions)
+                                  }}
+                                  className="w-16 px-2 py-1 border border-slate-200 rounded text-sm text-center"
+                                  min="0"
+                                />
+                                <span className="text-xs text-slate-500">h/sem</span>
+                                <input
+                                  type="number"
+                                  value={subject.weightPercentage}
+                                  onChange={(e) => {
+                                    const newExceptions = [...gradeExceptions]
+                                    newExceptions[exIndex].subjects[subjectIndex].weightPercentage = parseInt(e.target.value) || 0
+                                    setGradeExceptions(newExceptions)
+                                  }}
+                                  className="w-16 px-2 py-1 border border-slate-200 rounded text-sm text-center"
+                                  min="0"
+                                  max="100"
+                                />
+                                <span className="text-xs text-slate-500">%</span>
+                                <button
+                                  onClick={() => {
+                                    const newExceptions = [...gradeExceptions]
+                                    if (subject.id && !subject.isNew) {
+                                      newExceptions[exIndex].subjects[subjectIndex].toDelete = true
+                                    } else {
+                                      newExceptions[exIndex].subjects.splice(subjectIndex, 1)
+                                    }
+                                    setGradeExceptions(newExceptions)
+                                  }}
+                                  className="p-1 hover:bg-red-100 rounded text-slate-400 hover:text-red-600"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                            
+                            <button
+                              onClick={() => {
+                                const newExceptions = [...gradeExceptions]
+                                newExceptions[exIndex].subjects.push({
+                                  id: `new-${Date.now()}`,
+                                  name: '',
+                                  weeklyHours: 0,
+                                  weightPercentage: 0,
+                                  isDominant: false,
+                                  isNew: true,
+                                })
+                                setGradeExceptions(newExceptions)
+                              }}
+                              className="flex items-center gap-2 px-3 py-2 text-sm text-purple-600 hover:bg-purple-50 rounded w-full"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Agregar asignatura
+                            </button>
+
+                            {exception.subjects.filter(s => !s.toDelete).length > 0 && (
+                              <div className={`text-xs text-right ${
+                                exception.subjects.filter(s => !s.toDelete).reduce((sum, s) => sum + s.weightPercentage, 0) === 100
+                                  ? 'text-green-600'
+                                  : 'text-amber-600'
+                              }`}>
+                                Total: {exception.subjects.filter(s => !s.toDelete).reduce((sum, s) => sum + s.weightPercentage, 0)}%
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 p-6 border-t border-slate-200 bg-slate-50">
@@ -848,9 +1331,10 @@ export default function AreasAdmin() {
               </button>
               <button
                 onClick={saveArea}
-                disabled={!areaForm.name.trim()}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                disabled={!areaForm.name.trim() || saving}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                 {editingArea ? 'Guardar cambios' : 'Crear área'}
               </button>
             </div>
