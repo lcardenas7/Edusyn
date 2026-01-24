@@ -440,11 +440,6 @@ export default function InstitutionLogin() {
             )}
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="text-center mt-6 text-sm text-slate-500">
-          <p>¿Eres SuperAdmin? <a href="/superadmin/login" className="text-blue-600 hover:underline">Acceder aquí</a></p>
-        </div>
       </div>
     </div>
   )

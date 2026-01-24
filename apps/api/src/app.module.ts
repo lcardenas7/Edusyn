@@ -20,6 +20,7 @@ import { PermissionsModule } from './modules/permissions/permissions.module';
 import { InstitutionConfigModule } from './modules/institution-config/institution-config.module';
 import { ElectionsModule } from './modules/elections/elections.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { StorageModule } from './modules/storage/storage.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
     InstitutionConfigModule,
     ElectionsModule,
     PaymentsModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [AppService],
