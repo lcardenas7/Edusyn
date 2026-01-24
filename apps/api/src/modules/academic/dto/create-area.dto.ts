@@ -84,6 +84,14 @@ export class AddSubjectToAreaDto {
   @IsOptional()
   @IsNumber()
   order?: number;
+
+  @IsOptional()
+  @IsString()
+  academicLevel?: string;  // PREESCOLAR, PRIMARIA, SECUNDARIA, MEDIA
+
+  @IsOptional()
+  @IsString()
+  gradeId?: string;  // ID del grado específico (opcional)
 }
 
 export class UpdateSubjectDto {
@@ -106,4 +114,12 @@ export class UpdateSubjectDto {
   @IsOptional()
   @IsNumber()
   order?: number;
+
+  @IsOptional()
+  @IsString()
+  academicLevel?: string;
+
+  @IsOptional()
+  @IsString()
+  gradeId?: string;
 }

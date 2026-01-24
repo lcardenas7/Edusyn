@@ -124,13 +124,26 @@ export class AreasService {
     });
   }
 
-  async addSubjectToArea(areaId: string, subjectData: { name: string; weeklyHours?: number; weight?: number; isDominant?: boolean; order?: number }) {
+  async addSubjectToArea(areaId: string, subjectData: { 
+    name: string; 
+    weeklyHours?: number; 
+    weight?: number; 
+    isDominant?: boolean; 
+    order?: number;
+    academicLevel?: string;
+    gradeId?: string;
+  }) {
     await this.findById(areaId);
     
     // Si se marca como dominante, quitar dominante de las demás asignaturas del área
+    // (solo dentro del mismo nivel/grado si está especificado)
     if (subjectData.isDominant) {
       await this.prisma.subject.updateMany({
-        where: { areaId },
+        where: { 
+          areaId,
+          academicLevel: subjectData.academicLevel || null,
+          gradeId: subjectData.gradeId || null,
+        },
         data: { isDominant: false },
       });
     }
@@ -143,17 +156,35 @@ export class AreasService {
         weight: subjectData.weight ?? 1.0,
         isDominant: subjectData.isDominant ?? false,
         order: subjectData.order ?? 0,
+        academicLevel: subjectData.academicLevel,
+        gradeId: subjectData.gradeId,
+      },
+      include: {
+        grade: true,
       },
     });
   }
 
-  async updateSubject(subjectId: string, data: { name?: string; weeklyHours?: number; weight?: number; isDominant?: boolean; order?: number }) {
+  async updateSubject(subjectId: string, data: { 
+    name?: string; 
+    weeklyHours?: number; 
+    weight?: number; 
+    isDominant?: boolean; 
+    order?: number;
+    academicLevel?: string;
+    gradeId?: string;
+  }) {
     // Si se marca como dominante, quitar dominante de las demás asignaturas del área
     if (data.isDominant) {
       const subject = await this.prisma.subject.findUnique({ where: { id: subjectId } });
       if (subject) {
         await this.prisma.subject.updateMany({
-          where: { areaId: subject.areaId, id: { not: subjectId } },
+          where: { 
+            areaId: subject.areaId, 
+            id: { not: subjectId },
+            academicLevel: subject.academicLevel,
+            gradeId: subject.gradeId,
+          },
           data: { isDominant: false },
         });
       }
@@ -162,6 +193,9 @@ export class AreasService {
     return this.prisma.subject.update({
       where: { id: subjectId },
       data,
+      include: {
+        grade: true,
+      },
     });
   }
 

@@ -260,15 +260,25 @@ async function main() {
     }
 
     for (const subjectName of areaData.subjects) {
-      await prisma.subject.upsert({
-        where: { areaId_name: { areaId: area.id, name: subjectName } },
-        update: {},
-        create: {
+      // Buscar asignatura existente o crear nueva
+      let subject = await prisma.subject.findFirst({
+        where: { 
+          areaId: area.id, 
           name: subjectName,
-          areaId: area.id,
-          weeklyHours: 4,
+          academicLevel: null,
+          gradeId: null,
         },
       });
+      
+      if (!subject) {
+        await prisma.subject.create({
+          data: {
+            name: subjectName,
+            areaId: area.id,
+            weeklyHours: 4,
+          },
+        });
+      }
       subjectCount++;
     }
   }

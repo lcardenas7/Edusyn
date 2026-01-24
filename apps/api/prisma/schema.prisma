@@ -391,6 +391,7 @@ model Grade {
   groups    Group[]
   elections Election[]  // Elecciones de representante de grado
   areas     Area[]      // Áreas específicas para este grado
+  subjects  Subject[]   // Asignaturas específicas para este grado
 
   @@unique([stage, name])
 }
@@ -454,16 +455,27 @@ model Subject {
   weight      Float    @default(1.0)
   isDominant  Boolean  @default(false)  // Si es la asignatura dominante del área
   order       Int      @default(0)
+  
+  // Configuración por nivel académico y grado (opcional)
+  // Si academicLevel es null, la asignatura aplica a todos los niveles
+  // Si gradeId es null pero academicLevel tiene valor, aplica a todo el nivel
+  // Si ambos tienen valor, aplica solo a ese grado específico
+  academicLevel String?  // PREESCOLAR, PRIMARIA, SECUNDARIA, MEDIA
+  gradeId       String?  // ID del grado específico (opcional)
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   area              Area                @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  grade             Grade?              @relation(fields: [gradeId], references: [id], onDelete: SetNull)
   teacherAssignments TeacherAssignment[]
   periodFinalGrades PeriodFinalGrade[]
   periodRecoveries  PeriodRecovery[]
   performanceManualEdits PerformanceManualEdit[]
 
-  @@unique([areaId, name])
+  @@unique([areaId, name, academicLevel, gradeId])
+  @@index([areaId, academicLevel])
+  @@index([areaId, gradeId])
 }
 
 model AcademicYear {

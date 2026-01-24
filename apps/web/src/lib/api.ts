@@ -87,9 +87,9 @@ export const areasApi = {
   update: (id: string, data: { name?: string; isMandatory?: boolean; order?: number; academicLevel?: string; gradeId?: string }) => 
     api.put(`/areas/${id}`, data),
   delete: (id: string) => api.delete(`/areas/${id}`),
-  addSubject: (areaId: string, data: { name: string; weeklyHours?: number; weight?: number; isDominant?: boolean; order?: number }) => 
+  addSubject: (areaId: string, data: { name: string; weeklyHours?: number; weight?: number; isDominant?: boolean; order?: number; academicLevel?: string; gradeId?: string }) => 
     api.post(`/areas/${areaId}/subjects`, data),
-  updateSubject: (subjectId: string, data: { name?: string; weeklyHours?: number; weight?: number; isDominant?: boolean; order?: number }) => 
+  updateSubject: (subjectId: string, data: { name?: string; weeklyHours?: number; weight?: number; isDominant?: boolean; order?: number; academicLevel?: string; gradeId?: string }) => 
     api.put(`/areas/subjects/${subjectId}`, data),
   deleteSubject: (subjectId: string) => api.delete(`/areas/subjects/${subjectId}`),
 }

@@ -11,6 +11,9 @@ interface Subject {
   weightPercentage: number  // Porcentaje (0-100) para ponderado
   isDominant: boolean       // Si es la asignatura dominante
   order: number
+  academicLevel?: string | null  // PREESCOLAR, PRIMARIA, SECUNDARIA, MEDIA
+  gradeId?: string | null
+  grade?: { id: string; name: string } | null
 }
 
 interface Area {
@@ -80,6 +83,9 @@ const mapBackendAreaToFrontend = (backendArea: any): Area => ({
     weightPercentage: Math.round(s.weight * 100), // Backend usa 0-1, frontend usa 0-100
     isDominant: s.isDominant,
     order: s.order,
+    academicLevel: s.academicLevel,
+    gradeId: s.gradeId,
+    grade: s.grade,
   })),
 })
 
@@ -151,6 +157,8 @@ export default function AreasAdmin() {
     weeklyHours: 0,
     weightPercentage: 0,
     isDominant: false,
+    academicLevel: '' as string,
+    gradeId: '' as string,
   })
 
   // Cargar áreas desde el backend
@@ -227,12 +235,16 @@ export default function AreasAdmin() {
         weeklyHours: subject.weeklyHours, 
         weightPercentage: subject.weightPercentage,
         isDominant: subject.isDominant,
+        academicLevel: subject.academicLevel || '',
+        gradeId: subject.gradeId || '',
       })
     } else {
       setSubjectForm({ 
         name: '', 
         weeklyHours: 0, 
         weightPercentage: Math.min(remainingWeight, 100),
+        academicLevel: selectedLevel === 'TODOS' ? '' : selectedLevel,
+        gradeId: '',
         isDominant: false,
       })
     }
@@ -285,6 +297,8 @@ export default function AreasAdmin() {
           weeklyHours: subjectForm.weeklyHours,
           weight: subjectForm.weightPercentage / 100, // Frontend usa 0-100, backend usa 0-1
           isDominant: subjectForm.isDominant,
+          academicLevel: subjectForm.academicLevel || undefined,
+          gradeId: subjectForm.gradeId || undefined,
         })
       } else {
         await areasApi.addSubject(editingSubject.areaId, {
@@ -293,6 +307,8 @@ export default function AreasAdmin() {
           weight: subjectForm.weightPercentage / 100,
           isDominant: subjectForm.isDominant,
           order: area.subjects.length + 1,
+          academicLevel: subjectForm.academicLevel || undefined,
+          gradeId: subjectForm.gradeId || undefined,
         })
       }
       await loadAreas()
@@ -674,10 +690,20 @@ export default function AreasAdmin() {
                             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                           )}
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-medium text-slate-800">{subject.name}</span>
                               {subject.isDominant && (
                                 <span className="px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded">Dominante</span>
+                              )}
+                              {subject.academicLevel && (
+                                <span className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
+                                  {academicLevels.find(l => l.code === subject.academicLevel)?.name || subject.academicLevel}
+                                </span>
+                              )}
+                              {subject.gradeId && subject.grade && (
+                                <span className="px-1.5 py-0.5 text-xs bg-purple-100 text-purple-700 rounded">
+                                  Solo {subject.grade.name}
+                                </span>
                               )}
                             </div>
                             <div className="text-xs text-slate-500">
@@ -685,6 +711,7 @@ export default function AreasAdmin() {
                               {(areaConfig.calculationMethod === 'WEIGHTED' || areaConfig.calculationMethod === 'DOMINANT') && (
                                 <span className="ml-2">• {subject.weightPercentage}%</span>
                               )}
+                              {!subject.academicLevel && <span className="ml-2 text-slate-400">• Global</span>}
                             </div>
                           </div>
                         </div>
@@ -895,6 +922,64 @@ export default function AreasAdmin() {
                   </label>
                   <p className="text-xs text-amber-600">Si está aprobada, el área se considera aprobada (según configuración)</p>
                 </div>
+              </div>
+
+              {/* Configuración por nivel/grado */}
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+                <h4 className="text-sm font-medium text-blue-800">📚 Alcance de la asignatura</h4>
+                <p className="text-xs text-blue-600 mb-2">
+                  Define en qué niveles o grados específicos aplica esta asignatura
+                </p>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Nivel académico</label>
+                  <select
+                    value={subjectForm.academicLevel}
+                    onChange={(e) => setSubjectForm({ ...subjectForm, academicLevel: e.target.value, gradeId: '' })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  >
+                    <option value="">🌐 Todos los niveles (global)</option>
+                    {academicLevels.filter(l => l.code !== 'TODOS').map(level => (
+                      <option key={level.code} value={level.code}>📚 {level.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {subjectForm.academicLevel && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Grado específico (opcional)</label>
+                    <select
+                      value={subjectForm.gradeId}
+                      onChange={(e) => setSubjectForm({ ...subjectForm, gradeId: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    >
+                      <option value="">Todos los grados del nivel</option>
+                      {grades
+                        .filter(g => {
+                          const stageMap: Record<string, string> = {
+                            'PREESCOLAR': 'PRESCHOOL',
+                            'PRIMARIA': 'PRIMARY',
+                            'SECUNDARIA': 'SECONDARY',
+                            'MEDIA': 'HIGH_SCHOOL',
+                          }
+                          return g.stage === (stageMap[subjectForm.academicLevel] || subjectForm.academicLevel)
+                        })
+                        .map(grade => (
+                          <option key={grade.id} value={grade.id}>🎓 {grade.name}</option>
+                        ))
+                      }
+                    </select>
+                  </div>
+                )}
+
+                <p className="text-xs text-blue-600 italic">
+                  {!subjectForm.academicLevel 
+                    ? '✓ Esta asignatura aplica a todos los niveles y grados'
+                    : subjectForm.gradeId 
+                      ? `✓ Esta asignatura aplica SOLO a ${grades.find(g => g.id === subjectForm.gradeId)?.name || 'este grado'}`
+                      : `✓ Esta asignatura aplica a todo ${academicLevels.find(l => l.code === subjectForm.academicLevel)?.name || subjectForm.academicLevel}`
+                  }
+                </p>
               </div>
             </div>
 
