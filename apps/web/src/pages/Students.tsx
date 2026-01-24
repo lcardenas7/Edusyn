@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, GraduationCap, FileText, AlertTriangle, Phone, Mail, MapPin, Users, CheckCircle2, XCircle, FileSpreadsheet, Heart, UserPlus, Loader2 } from 'lucide-react'
 import { generateTemplate, parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
-import api, { studentsApi, guardiansApi, academicYearLifecycleApi, groupsApi } from '../lib/api'
+import api, { studentsApi, guardiansApi, academicYearLifecycleApi, groupsApi, enrollmentsApi, observerApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
 type StudentStatus = 'ACTIVE' | 'INACTIVE' | 'TRANSFERRED' | 'GRADUATED' | 'WITHDRAWN'
@@ -49,17 +49,23 @@ interface ObserverEntry {
 }
 
 
-const mockHistory: AcademicHistory[] = [
-  { year: 2024, grade: '8°', average: 4.2, status: 'APPROVED', rank: 5, totalStudents: 35 },
-  { year: 2023, grade: '7°', average: 4.0, status: 'APPROVED', rank: 8, totalStudents: 36 },
-  { year: 2022, grade: '6°', average: 3.8, status: 'APPROVED', rank: 12, totalStudents: 34 },
-]
+// Interfaces para datos del backend
+interface EnrollmentHistoryItem {
+  id: string
+  academicYear: { year: number }
+  group: { name: string; grade: { name: string } }
+  status: string
+  enrollmentDate: string
+}
 
-const mockObserver: ObserverEntry[] = [
-  { id: '1', date: '2025-01-15', type: 'POSITIVE', category: 'Academico', description: 'Excelente participacion en clase de matematicas', author: 'Prof. Carlos Perez' },
-  { id: '2', date: '2025-01-10', type: 'NEUTRAL', category: 'Asistencia', description: 'Llego tarde a primera hora', author: 'Coordinacion' },
-  { id: '3', date: '2024-11-20', type: 'POSITIVE', category: 'Comportamiento', description: 'Ayudo a companeros con dificultades', author: 'Prof. Maria Lopez' },
-]
+interface ObservationItem {
+  id: string
+  date: string
+  type: string
+  category: string
+  description: string
+  author: { firstName: string; lastName: string }
+}
 
 // Los grupos se obtienen dinámicamente de los estudiantes cargados
 const statusLabels: Record<StudentStatus, { label: string, color: string }> = {
@@ -99,6 +105,12 @@ export default function Students() {
   const [availableGroups, setAvailableGroups] = useState<{ id: string; name: string; grade?: { name: string } }[]>([])
   const [studentGuardians, setStudentGuardians] = useState<any[]>([])
   const [loadingGuardians, setLoadingGuardians] = useState(false)
+  
+  // Estados para historial académico y observador (datos reales)
+  const [academicHistory, setAcademicHistory] = useState<EnrollmentHistoryItem[]>([])
+  const [observerEntries, setObserverEntries] = useState<ObservationItem[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [loadingObserver, setLoadingObserver] = useState(false)
 
   const [formData, setFormData] = useState<Partial<Student>>({
     firstName: '', lastName: '', documentType: 'TI', documentNumber: '', birthDate: '', gender: 'M',
@@ -175,6 +187,43 @@ export default function Students() {
     }
     fetchStudents()
   }, [institution?.id])
+
+  // Cargar historial académico y observador cuando se selecciona un estudiante
+  const loadStudentDetails = async (studentId: string) => {
+    // Cargar historial de matrículas
+    setLoadingHistory(true)
+    try {
+      const historyRes = await enrollmentsApi.getStudentHistory(studentId)
+      setAcademicHistory(historyRes.data || [])
+    } catch (err) {
+      console.error('Error loading academic history:', err)
+      setAcademicHistory([])
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
+  // Cargar observador cuando se cambia a esa pestaña
+  const loadObserverEntries = async (studentId: string) => {
+    setLoadingObserver(true)
+    try {
+      // Necesitamos el enrollmentId, no el studentId
+      // Por ahora usamos el historial para obtener la matrícula actual
+      const historyRes = await enrollmentsApi.getStudentHistory(studentId)
+      const currentEnrollment = historyRes.data?.find((e: any) => e.status === 'ACTIVE')
+      if (currentEnrollment) {
+        const observerRes = await observerApi.getByStudent(currentEnrollment.id)
+        setObserverEntries(observerRes.data || [])
+      } else {
+        setObserverEntries([])
+      }
+    } catch (err) {
+      console.error('Error loading observer entries:', err)
+      setObserverEntries([])
+    } finally {
+      setLoadingObserver(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -336,6 +385,8 @@ export default function Students() {
     setSelectedStudent(student)
     setDetailTab('info')
     setViewMode('detail')
+    // Cargar historial académico al ver detalles
+    loadStudentDetails(student.id)
   }
 
   const loadStudentGuardians = async (studentId: string) => {
@@ -708,7 +759,7 @@ export default function Students() {
                 <button onClick={() => setDetailTab('academic')} className={`px-6 py-3 font-medium text-sm border-b-2 ${detailTab === 'academic' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                   <GraduationCap className="w-4 h-4 inline mr-2" />Historial Academico
                 </button>
-                <button onClick={() => setDetailTab('observer')} className={`px-6 py-3 font-medium text-sm border-b-2 ${detailTab === 'observer' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                <button onClick={() => { setDetailTab('observer'); loadObserverEntries(selectedStudent.id) }} className={`px-6 py-3 font-medium text-sm border-b-2 ${detailTab === 'observer' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                   <FileText className="w-4 h-4 inline mr-2" />Observador
                 </button>
               </div>
@@ -841,46 +892,86 @@ export default function Students() {
               {detailTab === 'academic' && (
                 <div>
                   <h3 className="font-semibold text-slate-900 mb-4">Historial Academico</h3>
-                  <table className="w-full">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Ano</th>
-                        <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Grado</th>
-                        <th className="text-center px-4 py-3 text-sm font-medium text-slate-600">Promedio</th>
-                        <th className="text-center px-4 py-3 text-sm font-medium text-slate-600">Puesto</th>
-                        <th className="text-center px-4 py-3 text-sm font-medium text-slate-600">Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {mockHistory.map((h, i) => (
-                        <tr key={i} className="hover:bg-slate-50">
-                          <td className="px-4 py-3 font-medium">{h.year}</td>
-                          <td className="px-4 py-3">{h.grade}</td>
-                          <td className="px-4 py-3 text-center"><span className={`font-bold ${h.average >= 4 ? 'text-green-600' : h.average >= 3 ? 'text-amber-600' : 'text-red-600'}`}>{h.average.toFixed(1)}</span></td>
-                          <td className="px-4 py-3 text-center">{h.rank}/{h.totalStudents}</td>
-                          <td className="px-4 py-3 text-center"><span className={`px-2 py-1 rounded text-xs font-medium ${h.status === 'APPROVED' ? 'bg-green-100 text-green-700' : h.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>{h.status === 'APPROVED' ? 'Aprobado' : h.status === 'IN_PROGRESS' ? 'En Curso' : 'Reprobado'}</span></td>
+                  {loadingHistory ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                      <span className="ml-2 text-slate-600">Cargando historial...</span>
+                    </div>
+                  ) : academicHistory.length > 0 ? (
+                    <table className="w-full">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Año</th>
+                          <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Grado</th>
+                          <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Grupo</th>
+                          <th className="text-center px-4 py-3 text-sm font-medium text-slate-600">Estado</th>
+                          <th className="text-center px-4 py-3 text-sm font-medium text-slate-600">Fecha Matrícula</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {academicHistory.map((h: EnrollmentHistoryItem, i: number) => (
+                          <tr key={h.id || i} className="hover:bg-slate-50">
+                            <td className="px-4 py-3 font-medium">{h.academicYear?.year || '-'}</td>
+                            <td className="px-4 py-3">{h.group?.grade?.name || '-'}</td>
+                            <td className="px-4 py-3">{h.group?.name || '-'}</td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                h.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 
+                                h.status === 'PROMOTED' ? 'bg-blue-100 text-blue-700' : 
+                                h.status === 'WITHDRAWN' ? 'bg-red-100 text-red-700' :
+                                h.status === 'TRANSFERRED' ? 'bg-amber-100 text-amber-700' :
+                                'bg-slate-100 text-slate-700'
+                              }`}>
+                                {h.status === 'ACTIVE' ? 'Activo' : 
+                                 h.status === 'PROMOTED' ? 'Promovido' : 
+                                 h.status === 'WITHDRAWN' ? 'Retirado' :
+                                 h.status === 'TRANSFERRED' ? 'Trasladado' :
+                                 h.status === 'REPEATED' ? 'Repitente' : h.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center text-sm text-slate-600">
+                              {h.enrollmentDate ? new Date(h.enrollmentDate).toLocaleDateString('es-CO') : '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div className="text-center py-8 text-slate-500">
+                      <GraduationCap className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                      <p>No hay historial académico registrado</p>
+                    </div>
+                  )}
                 </div>
               )}
 
               {detailTab === 'observer' && (
                 <div>
                   <h3 className="font-semibold text-slate-900 mb-4">Observador del Estudiante</h3>
-                  <div className="space-y-3">
-                    {mockObserver.map((o) => (
-                      <div key={o.id} className={`p-4 rounded-lg border-l-4 ${o.type === 'POSITIVE' ? 'bg-green-50 border-green-500' : o.type === 'NEGATIVE' ? 'bg-red-50 border-red-500' : 'bg-slate-50 border-slate-400'}`}>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${o.type === 'POSITIVE' ? 'bg-green-100 text-green-700' : o.type === 'NEGATIVE' ? 'bg-red-100 text-red-700' : 'bg-slate-200 text-slate-700'}`}>{o.category}</span>
-                          <span className="text-xs text-slate-500">{new Date(o.date).toLocaleDateString('es-CO')}</span>
+                  {loadingObserver ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                      <span className="ml-2 text-slate-600">Cargando observador...</span>
+                    </div>
+                  ) : observerEntries.length > 0 ? (
+                    <div className="space-y-3">
+                      {observerEntries.map((o: ObservationItem) => (
+                        <div key={o.id} className={`p-4 rounded-lg border-l-4 ${o.type === 'POSITIVE' ? 'bg-green-50 border-green-500' : o.type === 'NEGATIVE' ? 'bg-red-50 border-red-500' : 'bg-slate-50 border-slate-400'}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${o.type === 'POSITIVE' ? 'bg-green-100 text-green-700' : o.type === 'NEGATIVE' ? 'bg-red-100 text-red-700' : 'bg-slate-200 text-slate-700'}`}>{o.category}</span>
+                            <span className="text-xs text-slate-500">{new Date(o.date).toLocaleDateString('es-CO')}</span>
+                          </div>
+                          <p className="text-sm text-slate-700">{o.description}</p>
+                          <p className="text-xs text-slate-500 mt-2">Registrado por: {o.author?.firstName} {o.author?.lastName}</p>
                         </div>
-                        <p className="text-sm text-slate-700">{o.description}</p>
-                        <p className="text-xs text-slate-500 mt-2">Registrado por: {o.author}</p>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-slate-500">
+                      <FileText className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                      <p>No hay observaciones registradas</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
