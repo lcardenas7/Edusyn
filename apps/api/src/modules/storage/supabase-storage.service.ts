@@ -13,17 +13,23 @@ export interface UploadResult {
 export class SupabaseStorageService {
   private supabase: SupabaseClient;
   private readonly buckets = {
-    documents: 'documents',    // Documentos de estudiantes (RC, EPS, etc.)
-    gallery: 'gallery',        // Imágenes del dashboard
-    reports: 'reports',        // Informes especiales (PIAR, actas)
+    boletines: 'boletines',           // Boletines de notas (PDF)
+    evidencias: 'evidencias',         // Evidencias académicas
+    reportes: 'reportes',             // Reportes e informes (PIAR, actas)
+    importaciones: 'importaciones',   // Archivos de carga masiva
+    exportaciones: 'exportaciones',   // Archivos exportados
+    perfiles: 'perfiles',             // Fotos de perfil (estudiantes, docentes)
+    documentos: 'documentos',         // Documentos de estudiantes (RC, EPS, etc.)
+    galeria: 'galeria',               // Imágenes del dashboard institucional
   };
 
   constructor() {
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+    // Usar SERVICE_ROLE_KEY (nombre estandarizado) con fallback a SERVICE_KEY (legacy)
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-      console.warn('[SupabaseStorage] SUPABASE_URL or SUPABASE_SERVICE_KEY not configured');
+      console.warn('[SupabaseStorage] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not configured');
       return;
     }
 
@@ -55,7 +61,7 @@ export class SupabaseStorageService {
     const fileName = `${documentType}_${Date.now()}.${ext}`;
     const path = `institucion/${institutionId}/estudiantes/${studentId}/documentos/${fileName}`;
 
-    return this.uploadFile(this.buckets.documents, path, file);
+    return this.uploadFile(this.buckets.documentos, path, file);
   }
 
   /**
@@ -78,7 +84,7 @@ export class SupabaseStorageService {
     const fileName = `img_${Date.now()}.${ext}`;
     const path = `institucion/${institutionId}/gallery/${categoryPath}${fileName}`;
 
-    return this.uploadFile(this.buckets.gallery, path, file);
+    return this.uploadFile(this.buckets.galeria, path, file);
   }
 
   /**
@@ -102,7 +108,7 @@ export class SupabaseStorageService {
     const fileName = `${reportType}_${Date.now()}.${ext}`;
     const path = `institucion/${institutionId}/informes/${yearPath}/${fileName}`;
 
-    return this.uploadFile(this.buckets.reports, path, file);
+    return this.uploadFile(this.buckets.reportes, path, file);
   }
 
   /**
@@ -123,7 +129,7 @@ export class SupabaseStorageService {
     const path = `institucion/${institutionId}/estudiantes/${studentId}/${fileName}`;
 
     const { data, error } = await this.supabase.storage
-      .from(this.buckets.documents)
+      .from(this.buckets.boletines)
       .upload(path, pdfBuffer, {
         contentType: 'application/pdf',
         upsert: true, // Sobrescribir si existe
@@ -135,7 +141,7 @@ export class SupabaseStorageService {
     }
 
     const { data: urlData } = this.supabase.storage
-      .from(this.buckets.documents)
+      .from(this.buckets.boletines)
       .getPublicUrl(path);
 
     return {
