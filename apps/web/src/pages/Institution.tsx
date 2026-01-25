@@ -514,14 +514,18 @@ export default function Institution() {
   const handleSaveChanges = async () => {
     setIsLocalSaving(true)
     try {
-      // Los cambios ya se guardan automáticamente en localStorage por el contexto
-      // Aquí podríamos agregar llamada al backend en el futuro
+      // Guardar configuración de calificaciones en el backend
+      const gradingSuccess = await saveGradingConfigToAPI()
       
-      // Simular guardado
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Guardar niveles académicos en el backend
+      const levelsSuccess = await saveAcademicLevelsToAPI()
       
-      setSaveMessage({ type: 'success', text: '¡Configuración guardada exitosamente!' })
-      setPendingChanges(false)
+      if (gradingSuccess && levelsSuccess) {
+        setSaveMessage({ type: 'success', text: '¡Configuración guardada exitosamente!' })
+        setPendingChanges(false)
+      } else {
+        setSaveMessage({ type: 'error', text: 'Error al guardar algunas configuraciones' })
+      }
       
       // Limpiar mensaje después de 3 segundos
       setTimeout(() => setSaveMessage(null), 3000)
