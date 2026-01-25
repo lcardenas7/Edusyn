@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx'
 
-// Plantilla para Estudiantes
+// Plantilla para Estudiantes (soporta múltiples formatos de grupo)
 export const studentTemplateColumns = [
   { header: 'Tipo Documento', key: 'documentType', example: 'TI', required: true, options: 'TI, CC, RC, CE' },
   { header: 'Numero Documento', key: 'documentNumber', example: '1001234567', required: true },
@@ -8,15 +8,21 @@ export const studentTemplateColumns = [
   { header: 'Segundo Nombre', key: 'secondName', example: 'CARLOS', required: false },
   { header: 'Primer Apellido', key: 'lastName', example: 'PEREZ', required: true },
   { header: 'Segundo Apellido', key: 'secondLastName', example: 'GARCIA', required: false },
-  { header: 'Fecha Nacimiento', key: 'birthDate', example: '2010-05-15', required: true, format: 'YYYY-MM-DD' },
-  { header: 'Genero', key: 'gender', example: 'M', required: true, options: 'M, F' },
+  { header: 'Fecha Nacimiento', key: 'birthDate', example: '2010-05-15', required: false, format: 'YYYY-MM-DD' },
+  { header: 'Genero', key: 'gender', example: 'M', required: false, options: 'M, F' },
   { header: 'Direccion', key: 'address', example: 'Calle 10 # 15-20', required: false },
   { header: 'Telefono', key: 'phone', example: '3001234567', required: false },
   { header: 'Email', key: 'email', example: 'estudiante@email.com', required: false },
-  { header: 'Grupo', key: 'group', example: '9A', required: true },
-  { header: 'Nombre Acudiente', key: 'parentName', example: 'MARIA GARCIA', required: true },
-  { header: 'Telefono Acudiente', key: 'parentPhone', example: '3009876543', required: true },
-  { header: 'Email Acudiente', key: 'parentEmail', example: 'acudiente@email.com', required: false },
+  // Grupo: acepta múltiples formatos (11A, 11-A, Undécimo A, 11-01, etc.)
+  { header: 'Grupo', key: 'grupo', example: '11A', required: false, note: 'Formatos: 11A, 11-A, Undécimo A, 11-01' },
+  // Alternativa: columnas separadas de grado y sección (tienen prioridad sobre Grupo)
+  { header: 'Grado', key: 'grado', example: '11', required: false, note: 'Número (11) o texto (Undécimo)' },
+  { header: 'Seccion', key: 'seccion', example: 'A', required: false, note: 'Letra (A-Z) o número (01-99)' },
+  { header: 'Nombre Acudiente', key: 'guardianName', example: 'MARIA GARCIA', required: false },
+  { header: 'Telefono Acudiente', key: 'guardianPhone', example: '3009876543', required: false },
+  { header: 'Email Acudiente', key: 'guardianEmail', example: 'acudiente@email.com', required: false },
+  { header: 'Documento Acudiente', key: 'guardianDocumentNumber', example: '12345678', required: false },
+  { header: 'Parentesco', key: 'guardianRelationship', example: 'MOTHER', required: false, options: 'FATHER, MOTHER, GRANDFATHER, GRANDMOTHER, UNCLE, AUNT, LEGAL_GUARDIAN, OTHER' },
   { header: 'EPS', key: 'eps', example: 'SURA', required: false },
   { header: 'Tipo Sangre', key: 'bloodType', example: 'O+', required: false, options: 'O+, O-, A+, A-, B+, B-, AB+, AB-' },
 ]

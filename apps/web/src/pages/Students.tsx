@@ -535,97 +535,240 @@ export default function Students() {
     setImporting(true)
     
     try {
-      // Helper para convertir número a nombre de grado
+      // ═══════════════════════════════════════════════════════════════════════════
+      // NORMALIZACIÓN DE GRUPOS - Soporta múltiples formatos de entrada
+      // ═══════════════════════════════════════════════════════════════════════════
+      
+      // Tabla de equivalencias: nombres textuales de grados → número
+      const gradeTextToNumber: Record<string, string> = {
+        'primero': '1', 'segundo': '2', 'tercero': '3', 'cuarto': '4',
+        'quinto': '5', 'sexto': '6', 'septimo': '7', 'octavo': '8',
+        'noveno': '9', 'decimo': '10', 'undecimo': '11', 'once': '11',
+        'transicion': '0', 'prejardin': '-2', 'jardin': '-1', 'kinder': '-1'
+      }
+      
+      // Helper para convertir número a nombre de grado (normalizado sin tildes)
       const numberToGradeName = (num: string): string => {
         const names: Record<string, string> = {
-          '0': 'preescolar', '1': 'primero', '2': 'segundo', '3': 'tercero',
-          '4': 'cuarto', '5': 'quinto', '6': 'sexto', '7': 'septimo',
-          '8': 'octavo', '9': 'noveno', '10': 'decimo', '11': 'once'
+          '-2': 'prejardin', '-1': 'jardin', '0': 'transicion',
+          '1': 'primero', '2': 'segundo', '3': 'tercero', '4': 'cuarto',
+          '5': 'quinto', '6': 'sexto', '7': 'septimo', '8': 'octavo',
+          '9': 'noveno', '10': 'decimo', '11': 'undecimo'
         }
         return names[num] || num
       }
+
+      // Normalizar texto: quitar tildes, °, espacios
+      const normalizeText = (text: string): string => {
+        if (!text) return ''
+        return text.toString().toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Quitar tildes
+          .replace(/°/g, '')
+          .replace(/[\-\s]+/g, '') // Quitar guiones y espacios
+          .trim()
+      }
+      
+      // Normalizar sección: letra A-Z o número 01-99
+      const normalizeSection = (section: string): string => {
+        if (!section) return ''
+        const cleaned = section.toString().trim().toUpperCase()
+        // Si es una sola letra
+        if (/^[A-Z]$/.test(cleaned)) return cleaned
+        // Si es un número, normalizar a dos dígitos
+        const num = parseInt(cleaned, 10)
+        if (!isNaN(num) && num >= 1 && num <= 99) {
+          return num.toString().padStart(2, '0')
+        }
+        return cleaned
+      }
+      
+      // Detectar grado desde texto (puede ser número o nombre textual)
+      const detectGrade = (text: string): string | null => {
+        const normalized = normalizeText(text)
+        // Primero intentar como número directo
+        if (/^\d{1,2}$/.test(normalized)) return normalized
+        // Luego buscar en tabla de equivalencias
+        for (const [name, num] of Object.entries(gradeTextToNumber)) {
+          if (normalized.includes(name)) return num
+        }
+        return null
+      }
+      
+      // Detectar sección desde texto restante
+      const detectSection = (text: string): string | null => {
+        const cleaned = normalizeText(text).replace(/^[\-\s]+/, '')
+        if (!cleaned) return null
+        // Si es una sola letra
+        if (/^[a-z]$/.test(cleaned)) return cleaned.toUpperCase()
+        // Si es un número
+        const num = parseInt(cleaned, 10)
+        if (!isNaN(num) && num >= 1 && num <= 99) {
+          return num.toString().padStart(2, '0')
+        }
+        return null
+      }
+      
+      // Parsear grupo combinado (11A, 11-A, Undécimo A, 11-01, etc.)
+      const parseGroupString = (groupStr: string): { grade: string | null; section: string | null } => {
+        if (!groupStr) return { grade: null, section: null }
+        const normalized = normalizeText(groupStr)
+        
+        // Patrón 1: número + letra/número (11a, 10b, 11-01)
+        const match1 = normalized.match(/^(\d{1,2})([a-z]|\d{1,2})$/)
+        if (match1) {
+          const grade = match1[1]
+          const section = detectSection(match1[2])
+          return { grade, section }
+        }
+        
+        // Patrón 2: nombre textual + sección (undecimoa, sextob)
+        for (const [name, num] of Object.entries(gradeTextToNumber)) {
+          if (normalized.startsWith(name)) {
+            const remaining = normalized.slice(name.length)
+            const section = detectSection(remaining)
+            return { grade: num, section }
+          }
+        }
+        
+        return { grade: null, section: null }
+      }
       
       // Mapear grupo del Excel al ID del grupo en la BD
-      // Soporta formatos: "9A", "9°A", "9 A", "Noveno A", "A" (si es único)
-      const findGroupId = (groupName: string): string => {
-        if (!groupName) return ''
-        const searchTerm = groupName.toString().trim().toLowerCase()
+      const findGroupId = (row: any): { id: string; matched: string; original: string } => {
+        let gradeNum: string | null = null
+        let section: string | null = null
+        let original = ''
         
-        // Normalizar: quitar ° y espacios extras
-        const normalized = searchTerm.replace(/°/g, '').replace(/\s+/g, '')
+        // PRIORIDAD 1: Columnas separadas grado + seccion
+        if (row.grado && row.seccion) {
+          gradeNum = detectGrade(row.grado)
+          section = normalizeSection(row.seccion)
+          original = `${row.grado}-${row.seccion}`
+        }
+        // PRIORIDAD 2: Columna grupo combinada
+        else if (row.grupo) {
+          const parsed = parseGroupString(row.grupo)
+          gradeNum = parsed.grade
+          section = parsed.section
+          original = row.grupo
+        }
+        // PRIORIDAD 3: Columna group (compatibilidad con plantilla anterior)
+        else if (row.group) {
+          const parsed = parseGroupString(row.group)
+          gradeNum = parsed.grade
+          section = parsed.section
+          original = row.group
+        }
         
-        // Extraer posible número de grado y letra de grupo
-        const match = normalized.match(/^(\d+)?([a-z])?$/i)
-        const gradeNumber = match?.[1]
-        const groupLetter = match?.[2]?.toUpperCase()
+        if (!gradeNum || !section) {
+          return { id: '', matched: '', original }
+        }
         
+        const gradeNameExpected = numberToGradeName(gradeNum)
+        
+        // Buscar grupo en la BD
         const group = availableGroups.find(g => {
-          const fullName = g.grade?.name ? `${g.grade.name} ${g.name}` : g.name
-          const fullNameNormalized = fullName.toLowerCase().replace(/°/g, '').replace(/\s+/g, '')
+          if (!g.grade?.name) return false
+          const gradeNameNorm = normalizeText(g.grade.name)
+          const groupNameNorm = normalizeText(g.name)
           
-          // Coincidencia exacta con nombre completo
-          if (fullNameNormalized === normalized) return true
+          // El grado debe contener el número O el nombre esperado
+          const gradeMatches = gradeNameNorm.includes(gradeNum!) || 
+                               gradeNameNorm.includes(gradeNameExpected)
+          // La sección debe coincidir
+          const sectionMatches = groupNameNorm === section!.toLowerCase() ||
+                                 g.name.toUpperCase() === section
           
-          // Coincidencia con nombre del grupo solamente (ej: "A")
-          if (g.name.toLowerCase() === searchTerm) return true
-          
-          // Coincidencia por número de grado + letra (ej: "9A" -> grado contiene "9" o "noveno" y grupo es "A")
-          if (gradeNumber && groupLetter) {
-            const gradeNameLower = (g.grade?.name || '').toLowerCase()
-            const groupNameLower = g.name.toLowerCase()
-            
-            // Verificar si el grado contiene el número o su equivalente en texto
-            const gradeMatches = gradeNameLower.includes(gradeNumber) || 
-                                 gradeNameLower.includes(numberToGradeName(gradeNumber))
-            const groupMatches = groupNameLower === groupLetter.toLowerCase() ||
-                                 groupNameLower.startsWith(groupLetter.toLowerCase())
-            
-            if (gradeMatches && groupMatches) return true
-          }
-          
-          // Coincidencia parcial (el nombre del grupo está contenido)
-          if (fullName.toLowerCase().includes(searchTerm) || 
-              searchTerm.includes(g.name.toLowerCase())) return true
-          
-          return false
+          return gradeMatches && sectionMatches
         })
-        return group?.id || ''
+        
+        if (group) {
+          return { id: group.id, matched: `${group.grade?.name} ${group.name}`, original }
+        }
+        
+        return { id: '', matched: '', original }
+      }
+      
+      // ═══════════════════════════════════════════════════════════════════════════
+      // PRE-VALIDACIÓN Y RESUMEN DE MAPEO
+      // ═══════════════════════════════════════════════════════════════════════════
+      
+      const groupMappingResults: Record<string, { id: string; matched: string; count: number }> = {}
+      importResult.data.forEach(row => {
+        const result = findGroupId(row)
+        const groupCode = result.original || row.grupo || row.group || `${row.grado || ''}-${row.seccion || ''}`
+        if (!groupMappingResults[groupCode]) {
+          groupMappingResults[groupCode] = { id: result.id, matched: result.matched, count: 0 }
+        }
+        groupMappingResults[groupCode].count++
+      })
+      
+      // Mostrar resumen de mapeo
+      const mappedGroups = Object.entries(groupMappingResults).filter(([, v]) => v.id)
+      const unmappedGroups = Object.entries(groupMappingResults).filter(([, v]) => !v.id)
+      
+      let summaryMsg = '📋 MAPEO DE GRUPOS:\n\n'
+      if (mappedGroups.length > 0) {
+        summaryMsg += '✅ Grupos encontrados:\n'
+        mappedGroups.forEach(([code, v]) => {
+          summaryMsg += `   "${code}" → ${v.matched} (${v.count} estudiantes)\n`
+        })
+      }
+      if (unmappedGroups.length > 0) {
+        summaryMsg += '\n❌ Grupos NO encontrados:\n'
+        unmappedGroups.forEach(([code, v]) => {
+          summaryMsg += `   "${code}" (${v.count} estudiantes)\n`
+        })
+        summaryMsg += '\n⚠️ Estos estudiantes NO se importarán.\n'
+        summaryMsg += '\nGrupos disponibles en el sistema:\n'
+        const availableGroupNames = availableGroups
+          .map(g => g.grade?.name ? `${g.grade.name} ${g.name}` : g.name)
+          .sort()
+          .join(', ')
+        summaryMsg += availableGroupNames || 'Ninguno'
+      }
+      
+      summaryMsg += '\n\n¿Desea continuar con la importación?'
+      
+      if (!confirm(summaryMsg)) {
+        setImporting(false)
+        return
       }
 
+      // ═══════════════════════════════════════════════════════════════════════════
+      // PREPARAR DATOS PARA IMPORTACIÓN
+      // ═══════════════════════════════════════════════════════════════════════════
+      
       const studentsToImport = importResult.data
-        .map(row => ({
-          documentType: row.documentType || 'TI',
-          documentNumber: row.documentNumber || '',
-          firstName: row.firstName || '',
-          secondName: row.secondName || '',
-          lastName: row.lastName || '',
-          secondLastName: row.secondLastName || '',
-          birthDate: row.birthDate || '',
-          gender: row.gender || 'M',
-          address: row.address || '',
-          phone: row.phone || '',
-          email: row.email || '',
-          groupId: findGroupId(row.group || ''),
-          bloodType: row.bloodType || '',
-          eps: row.eps || '',
-          guardianName: row.parentName || '',
-          guardianPhone: row.parentPhone || '',
-          guardianEmail: row.parentEmail || '',
-        }))
+        .map(row => {
+          const groupResult = findGroupId(row)
+          return {
+            documentType: row.documentType || 'TI',
+            documentNumber: row.documentNumber || '',
+            firstName: row.firstName || '',
+            secondName: row.secondName || '',
+            lastName: row.lastName || '',
+            secondLastName: row.secondLastName || '',
+            birthDate: row.birthDate || '',
+            gender: row.gender || 'M',
+            address: row.address || '',
+            phone: row.phone || '',
+            email: row.email || '',
+            groupId: groupResult.id,
+            bloodType: row.bloodType || '',
+            eps: row.eps || '',
+            // Soportar ambos nombres de columnas para acudiente
+            guardianName: row.guardianName || row.parentName || '',
+            guardianPhone: row.guardianPhone || row.parentPhone || '',
+            guardianEmail: row.guardianEmail || row.parentEmail || '',
+            guardianDocumentNumber: row.guardianDocumentNumber || '',
+            guardianRelationship: row.guardianRelationship || '',
+          }
+        })
         .filter(s => s.documentNumber && s.firstName && s.groupId)
 
       if (studentsToImport.length === 0) {
-        // Mostrar qué grupos no se encontraron para ayudar al usuario
-        const missingGroups = importResult.data
-          .filter(row => row.group && !findGroupId(row.group))
-          .map(row => row.group)
-          .filter((v, i, a) => a.indexOf(v) === i) // Únicos
-        
-        const availableGroupNames = availableGroups.map(g => 
-          g.grade?.name ? `${g.grade.name} ${g.name}` : g.name
-        ).join(', ')
-        
-        alert(`No hay estudiantes válidos para importar.\n\nGrupos no encontrados: ${missingGroups.join(', ') || 'N/A'}\n\nGrupos disponibles: ${availableGroupNames || 'Ninguno'}`)
+        alert('No hay estudiantes válidos para importar. Verifique que los grupos existan en el sistema.')
         setImporting(false)
         return
       }
@@ -1326,7 +1469,7 @@ export default function Students() {
                     )}
                   </div>
                   <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-sm text-amber-800 flex items-center gap-2"><AlertTriangle className="w-4 h-4" />Descarga la plantilla para asegurar el formato correcto</p>
+                    <p className="text-sm text-amber-800 flex items-center gap-2"><AlertTriangle className="w-4 h-4" />Formatos de grupo aceptados: 11A, 11-A, Undécimo A, 11-01</p>
                     <button onClick={handleDownloadTemplate} className="mt-2 text-sm text-blue-600 hover:underline flex items-center gap-1"><Download className="w-4 h-4" />Descargar plantilla de estudiantes</button>
                   </div>
                 </>
@@ -1376,8 +1519,8 @@ export default function Students() {
                               <tr key={i} className="border-t border-slate-200">
                                 <td className="px-2 py-1">{row.documentNumber}</td>
                                 <td className="px-2 py-1">{row.firstName} {row.lastName}</td>
-                                <td className="px-2 py-1">{row.group}</td>
-                                <td className="px-2 py-1">{row.parentName}</td>
+                                <td className="px-2 py-1">{row.grupo || row.group || `${row.grado || ''}-${row.seccion || ''}`}</td>
+                                <td className="px-2 py-1">{row.guardianName || row.parentName}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -1394,7 +1537,8 @@ export default function Students() {
               {importResult ? (
                 <>
                   <button onClick={() => { setImportResult(null); if (fileInputRef.current) fileInputRef.current.value = '' }} className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50">Seleccionar otro archivo</button>
-                  <button onClick={handleConfirmImport} disabled={importResult.validRows === 0} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                  <button onClick={handleConfirmImport} disabled={importResult.validRows === 0 || importing} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                    {importing && <Loader2 className="w-4 h-4 animate-spin" />}
                     Importar {importResult.validRows} estudiantes
                   </button>
                 </>
