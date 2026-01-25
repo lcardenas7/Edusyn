@@ -52,12 +52,20 @@ export class TeacherAssignmentsService {
     });
   }
 
-  async list(params: { academicYearId?: string; groupId?: string; teacherId?: string }) {
+  async list(params: { academicYearId?: string; groupId?: string; teacherId?: string; institutionId?: string }) {
     return this.prisma.teacherAssignment.findMany({
       where: {
         academicYearId: params.academicYearId,
         groupId: params.groupId,
         teacherId: params.teacherId,
+        // Filtrar por institución a través del grupo → campus
+        ...(params.institutionId && {
+          group: {
+            campus: {
+              institutionId: params.institutionId,
+            },
+          },
+        }),
       },
       include: {
         teacher: true,

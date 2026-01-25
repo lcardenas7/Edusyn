@@ -41,6 +41,8 @@ export class GroupsController {
       instId = institutionUser?.institutionId;
     }
 
+    console.log('[GroupsController] GET /groups - userId:', req.user?.id, 'institutionId resuelto:', instId);
+
     return this.groupsService.list({ campusId, shiftId, gradeId, institutionId: instId });
   }
 }

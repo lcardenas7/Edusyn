@@ -20,10 +20,16 @@ export class SubjectsService {
     });
   }
 
-  async list(params: { areaId?: string }) {
+  async list(params: { areaId?: string; institutionId?: string }) {
     return this.prisma.subject.findMany({
       where: {
         areaId: params.areaId,
+        // Filtrar por institución a través del área
+        ...(params.institutionId && {
+          area: {
+            institutionId: params.institutionId,
+          },
+        }),
       },
       include: {
         area: true,

@@ -96,8 +96,8 @@ export default function AcademicLoad() {
         }))
         setTeachers(teachersData)
 
-        // Cargar grupos
-        const groupsRes = await groupsApi.getAll()
+        // Cargar grupos (filtrar por institución)
+        const groupsRes = await groupsApi.getAll({ institutionId: institution.id })
         const groupsData = (groupsRes.data || []).map((g: any) => ({
           id: g.id,
           name: g.name,
@@ -405,7 +405,7 @@ export default function AcademicLoad() {
             >
               <option value="">Todos los grupos</option>
               {groups.map(g => (
-                <option key={g.id} value={g.id}>{g.name} - {g.shift}</option>
+                <option key={g.id} value={g.id}>{g.name} - {g.grade} ({g.shift})</option>
               ))}
             </select>
           </div>

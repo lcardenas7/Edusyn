@@ -20,7 +20,9 @@ export class GroupsService {
   }
 
   async list(params: { campusId?: string; shiftId?: string; gradeId?: string; institutionId?: string }) {
-    return this.prisma.group.findMany({
+    console.log('[GroupsService] Listando grupos con params:', params);
+    
+    const groups = await this.prisma.group.findMany({
       where: {
         campusId: params.campusId,
         shiftId: params.shiftId,
@@ -37,7 +39,13 @@ export class GroupsService {
         shift: true,
         campus: true,
       },
-      orderBy: { name: 'asc' },
+      orderBy: [
+        { grade: { number: 'asc' } },
+        { name: 'asc' },
+      ],
     });
+    
+    console.log(`[GroupsService] Encontrados ${groups.length} grupos`);
+    return groups;
   }
 }

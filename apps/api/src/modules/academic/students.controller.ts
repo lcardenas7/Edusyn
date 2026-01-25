@@ -1,15 +1,32 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards, Request } from '@nestjs/common';
 
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { StudentsService } from './students.service';
 import { CreateStudentDto, UpdateStudentDto, EnrollStudentDto, UpdateEnrollmentStatusDto } from './dto/create-student.dto';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Controller('students')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class StudentsController {
-  constructor(private readonly studentsService: StudentsService) {}
+  constructor(
+    private readonly studentsService: StudentsService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  // Helper para obtener institutionId del usuario
+  private async resolveInstitutionId(req: any, queryInstitutionId?: string): Promise<string | undefined> {
+    let instId = queryInstitutionId || req.user?.institutionId;
+    if (!instId && req.user?.id) {
+      const institutionUser = await this.prisma.institutionUser.findFirst({
+        where: { userId: req.user.id },
+        select: { institutionId: true }
+      });
+      instId = institutionUser?.institutionId;
+    }
+    return instId;
+  }
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
@@ -20,11 +37,13 @@ export class StudentsController {
   @Get()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async list(
+    @Request() req: any,
     @Query('institutionId') institutionId?: string,
     @Query('groupId') groupId?: string,
     @Query('academicYearId') academicYearId?: string,
   ) {
-    return this.studentsService.list({ institutionId, groupId, academicYearId });
+    const instId = await this.resolveInstitutionId(req, institutionId);
+    return this.studentsService.list({ institutionId: instId, groupId, academicYearId });
   }
 
   @Get(':id')
