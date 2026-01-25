@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, Phone, Mail, MapPin, Users, Briefcase, AlertTriangle, CheckCircle2, XCircle, FileSpreadsheet } from 'lucide-react'
 import { generateTemplate, parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
-import { teachersApi } from '../lib/api'
+import { teachersApi, bulkUploadApi } from '../lib/api'
 
 type TeacherStatus = 'ACTIVE' | 'INACTIVE' | 'RETIRED'
 type ContractType = 'PLANTA' | 'PROVISIONAL' | 'CONTRATO' | 'HORA_CATEDRA'
@@ -68,6 +68,7 @@ export default function Teachers() {
   const [deleteConfirm, setDeleteConfirm] = useState<Teacher | null>(null)
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const [importing, setImporting] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState(emptyTeacher)
 
@@ -256,6 +257,7 @@ export default function Teachers() {
     if (!file) return
     setImporting(true)
     setImportResult(null)
+    setImportFile(file) // Guardar archivo para enviar al backend
     try {
       const result = await parseExcelFile(file, 'teachers')
       setImportResult(result)
@@ -266,34 +268,54 @@ export default function Teachers() {
     }
   }
 
-  const handleConfirmImport = () => {
-    if (!importResult || importResult.data.length === 0) return
-    const newTeachers: Teacher[] = importResult.data.map((row, index) => ({
-      id: `imported-${Date.now()}-${index}`,
-      documentType: (row.documentType || 'CC') as DocumentType,
-      documentNumber: row.documentNumber || '',
-      firstName: row.firstName || '',
-      secondName: row.secondName || '',
-      firstLastName: row.firstLastName || '',
-      secondLastName: row.secondLastName || '',
-      gender: (row.gender || 'M') as Gender,
-      birthDate: row.birthDate || '',
-      birthPlace: row.birthPlace || '',
-      address: row.address || '',
-      phone: row.phone || '',
-      mobile: row.mobile || '',
-      email: row.email || '',
-      institutionalEmail: row.institutionalEmail || '',
-      contractType: (row.contractType || 'PLANTA') as ContractType,
-      status: 'ACTIVE' as TeacherStatus,
-      createdAt: new Date().toISOString().split('T')[0],
-      specialty: row.specialty || '',
-      title: row.title || ''
-    }))
-    setTeachers([...teachers, ...newTeachers])
-    setShowImportModal(false)
-    setImportResult(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
+  const handleConfirmImport = async () => {
+    if (!importFile || !importResult || importResult.data.length === 0) return
+    
+    setImporting(true)
+    try {
+      // Enviar archivo al backend para guardar en BD
+      const response = await bulkUploadApi.uploadTeachers(importFile)
+      const result = response.data
+      
+      if (result.success > 0) {
+        // Recargar lista de docentes desde el servidor
+        const teachersResponse = await teachersApi.getAll()
+        const apiTeachers: Teacher[] = (teachersResponse.data || []).map((t: any) => ({
+          id: t.id,
+          documentType: (t.documentType || 'CC') as DocumentType,
+          documentNumber: t.documentNumber || '',
+          firstName: t.firstName || '',
+          secondName: '',
+          firstLastName: t.lastName || '',
+          secondLastName: '',
+          gender: 'M' as Gender,
+          birthDate: '',
+          mobile: '',
+          email: t.email || '',
+          institutionalEmail: '',
+          contractType: 'PLANTA' as ContractType,
+          status: t.isActive ? 'ACTIVE' : 'INACTIVE' as TeacherStatus,
+          createdAt: t.createdAt || '',
+          specialty: '',
+          title: ''
+        }))
+        setTeachers(apiTeachers)
+        
+        alert(`Importación exitosa: ${result.success} docentes creados${result.errors?.length > 0 ? `, ${result.errors.length} errores` : ''}`)
+      } else {
+        alert(`Error en importación: ${result.errors?.map((e: any) => e.message).join(', ') || 'Error desconocido'}`)
+      }
+      
+      setShowImportModal(false)
+      setImportResult(null)
+      setImportFile(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    } catch (err: any) {
+      console.error('Error importing teachers:', err)
+      alert(err.response?.data?.message || 'Error al importar docentes')
+    } finally {
+      setImporting(false)
+    }
   }
 
   const handleExport = () => {
@@ -314,6 +336,7 @@ export default function Teachers() {
   const closeImportModal = () => {
     setShowImportModal(false)
     setImportResult(null)
+    setImportFile(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
