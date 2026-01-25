@@ -235,6 +235,9 @@ model User {
   // Pagos
   paymentEventsCreated      PaymentEvent[]         @relation("PaymentEventCreatedBy")
   paymentsReceived          PaymentTransaction[]   @relation("PaymentReceivedBy")
+  
+  // Logros aprobados
+  achievementsApproved      StudentAchievement[]   @relation("AchievementApprovedBy")
 }
 
 model Role {
@@ -313,6 +316,7 @@ model Institution {
   academicActs    AcademicAct[]
   performanceLevelComplements PerformanceLevelComplement[]
   performanceConfig           PerformanceConfig?
+  achievementConfig           AchievementConfig?
   permissionAuditLogs         PermissionAuditLog[]
   electionProcesses           ElectionProcess[]
   
@@ -603,6 +607,8 @@ model AcademicTerm {
   performanceManualEdits PerformanceManualEdit[]
   gradingPeriodConfig GradingPeriodConfig?
   recoveryPeriodConfig RecoveryPeriodConfig? @relation("RecoveryPeriodConfig")
+  achievements Achievement[]
+  attitudinalAchievements AttitudinalAchievement[]
 
   @@unique([academicYearId, order])
 }
@@ -658,6 +664,8 @@ model TeacherAssignment {
   attendanceRecords AttendanceRecord[]
   subjectPerformances SubjectPerformance[]
   partialGrades PartialGrade[]
+  achievements Achievement[]
+  attitudinalAchievements AttitudinalAchievement[]
 
   @@unique([academicYearId, groupId, subjectId, teacherId])
 }
@@ -1004,6 +1012,7 @@ model StudentEnrollment {
   finalRecoveryPlans  FinalRecoveryPlan[]
   academicActs        AcademicAct[]
   performanceManualEdits PerformanceManualEdit[]
+  studentAchievements StudentAchievement[]
 
   @@unique([studentId, academicYearId])
 }
@@ -1651,6 +1660,128 @@ model PerformanceManualEdit {
 
   @@index([studentEnrollmentId])
   @@index([academicTermId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SISTEMA DE LOGROS Y JUICIOS VALORATIVOS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Configuración institucional del módulo de logros
+model AchievementConfig {
+  id                        String   @id @default(cuid())
+  institutionId             String   @unique
+  
+  // Configuración de logros por período
+  achievementsPerPeriod     Int      @default(1)        // Número de logros académicos por período
+  usePromotionalAchievement Boolean  @default(true)     // Usar logro promocional (fin de año)
+  
+  // Configuración de logro actitudinal
+  useAttitudinalAchievement Boolean  @default(false)    // Habilitar logro actitudinal
+  attitudinalMode           AttitudinalAchievementMode @default(GENERAL_PER_PERIOD) // Modo del logro actitudinal
+  
+  // Configuración de juicios valorativos
+  useValueJudgments         Boolean  @default(true)     // Habilitar juicios valorativos por desempeño
+  
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  institution               Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  valueJudgmentTemplates    ValueJudgmentTemplate[]
+}
+
+enum AttitudinalAchievementMode {
+  GENERAL_PER_PERIOD        // Un logro actitudinal general por período
+  PER_ACADEMIC_ACHIEVEMENT  // Un logro actitudinal por cada logro académico
+}
+
+// Plantillas de juicios valorativos por nivel de desempeño
+model ValueJudgmentTemplate {
+  id                  String           @id @default(cuid())
+  achievementConfigId String
+  level               PerformanceLevel
+  template            String           @db.Text  // Texto sugerido para este nivel
+  isActive            Boolean          @default(true)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  achievementConfig   AchievementConfig @relation(fields: [achievementConfigId], references: [id], onDelete: Cascade)
+
+  @@unique([achievementConfigId, level])
+}
+
+// Logro académico definido por el docente (por asignatura, período)
+model Achievement {
+  id                    String          @id @default(cuid())
+  teacherAssignmentId   String
+  academicTermId        String
+  orderNumber           Int             @default(1)  // Número de logro (1, 2, 3...)
+  baseDescription       String          @db.Text     // Texto base del logro
+  isPromotional         Boolean         @default(false) // Es logro promocional (fin de año)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  teacherAssignment     TeacherAssignment @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
+  academicTerm          AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
+  studentAchievements   StudentAchievement[]
+  attitudinalAchievements AttitudinalAchievement[]
+
+  @@unique([teacherAssignmentId, academicTermId, orderNumber, isPromotional])
+  @@index([teacherAssignmentId])
+  @@index([academicTermId])
+}
+
+// Logro actitudinal (puede ser general o asociado a un logro académico)
+model AttitudinalAchievement {
+  id                    String       @id @default(cuid())
+  teacherAssignmentId   String
+  academicTermId        String
+  achievementId         String?      // NULL = general por período, NOT NULL = asociado a logro académico
+  description           String       @db.Text
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  teacherAssignment     TeacherAssignment @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
+  academicTerm          AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
+  achievement           Achievement?      @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@index([teacherAssignmentId])
+  @@index([academicTermId])
+}
+
+// Logro del estudiante (con nota, texto adaptado y juicio valorativo)
+model StudentAchievement {
+  id                    String           @id @default(cuid())
+  studentEnrollmentId   String
+  achievementId         String
+  
+  // El desempeño se calcula automáticamente desde la nota
+  performanceLevel      PerformanceLevel // BAJO, BASICO, ALTO, SUPERIOR (calculado)
+  
+  // Textos sugeridos por el sistema, editables por el docente
+  suggestedText         String?          @db.Text  // Texto sugerido según desempeño
+  approvedText          String?          @db.Text  // Texto aprobado por el docente
+  isTextApproved        Boolean          @default(false)
+  
+  // Juicio valorativo
+  suggestedJudgment     String?          @db.Text  // Juicio sugerido según desempeño
+  approvedJudgment      String?          @db.Text  // Juicio aprobado por el docente
+  isJudgmentApproved    Boolean          @default(false)
+  
+  // Logro actitudinal combinado (si aplica)
+  attitudinalText       String?          @db.Text
+  
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  approvedAt            DateTime?        // Fecha de aprobación final
+  approvedById          String?          // Quién aprobó
+
+  studentEnrollment     StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+  achievement           Achievement       @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  approvedBy            User?             @relation("AchievementApprovedBy", fields: [approvedById], references: [id])
+
+  @@unique([studentEnrollmentId, achievementId])
+  @@index([studentEnrollmentId])
+  @@index([achievementId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

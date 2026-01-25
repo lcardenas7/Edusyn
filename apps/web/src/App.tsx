@@ -20,6 +20,7 @@ import ContentManager from './pages/ContentManager'
 import PeriodFinalGrades from './pages/PeriodFinalGrades'
 import Recoveries from './pages/Recoveries'
 import Performances from './pages/Performances'
+import Achievements from './pages/Achievements'
 import InstitutionLogin from './pages/InstitutionLogin'
 import SuperAdminDashboard from './pages/SuperAdminDashboard'
 import PermissionsAdmin from './pages/PermissionsAdmin'
@@ -162,6 +163,7 @@ function App() {
                   <Route path="/period-final-grades" element={<PeriodFinalGrades />} />
                   <Route path="/recoveries" element={<Recoveries />} />
                   <Route path="/performances" element={<Performances />} />
+                  <Route path="/achievements" element={<Achievements />} />
                   <Route path="/admin/permissions" element={<PermissionsAdmin />} />
                   <Route path="/staff" element={<StaffManagement />} />
                   <Route path="/academic-year-wizard" element={<AcademicYearWizard />} />

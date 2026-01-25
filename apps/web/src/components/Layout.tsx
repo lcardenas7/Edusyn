@@ -150,7 +150,7 @@ const institutionalNavigation: NavItem[] = [
     children: [
       { name: 'Calificaciones', href: '/grades', icon: BookOpen, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'ACADEMIC' },
       { name: 'Nota Final Período', href: '/period-final-grades', icon: FileText, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
-      { name: 'Desempeños', href: '/performances', icon: Target, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'PERFORMANCE' },
+      { name: 'Logros y Juicios', href: '/achievements', icon: Target, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'PERFORMANCE' },
       { name: 'Recuperaciones', href: '/recoveries', icon: RefreshCw, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'RECOVERY' },
     ]
   },

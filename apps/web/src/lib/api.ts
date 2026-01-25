@@ -530,6 +530,96 @@ export const performanceGeneratorApi = {
     api.get('/performance-generator/scale', { params: { institutionId } }),
 }
 
+// ==================== ACHIEVEMENTS (LOGROS Y JUICIOS VALORATIVOS) ====================
+
+export const achievementConfigApi = {
+  get: (institutionId: string) => 
+    api.get(`/achievements/config/${institutionId}`),
+  upsert: (data: {
+    institutionId: string;
+    achievementsPerPeriod?: number;
+    usePromotionalAchievement?: boolean;
+    useAttitudinalAchievement?: boolean;
+    attitudinalMode?: 'GENERAL_PER_PERIOD' | 'PER_ACADEMIC_ACHIEVEMENT';
+    useValueJudgments?: boolean;
+  }) => api.put('/achievements/config', data),
+  getTemplates: (institutionId: string) => 
+    api.get(`/achievements/config/${institutionId}/templates`),
+  bulkUpsertTemplates: (data: {
+    institutionId: string;
+    templates: Array<{
+      level: 'SUPERIOR' | 'ALTO' | 'BASICO' | 'BAJO';
+      template: string;
+      isActive?: boolean;
+    }>;
+  }) => api.put('/achievements/config/templates', data),
+  createDefaultTemplates: (institutionId: string) => 
+    api.post(`/achievements/config/${institutionId}/templates/defaults`),
+}
+
+export const achievementsApi = {
+  getByAssignment: (teacherAssignmentId: string, academicTermId: string) => 
+    api.get('/achievements/by-assignment', { params: { teacherAssignmentId, academicTermId } }),
+  getPromotional: (teacherAssignmentId: string) => 
+    api.get(`/achievements/promotional/${teacherAssignmentId}`),
+  create: (data: {
+    teacherAssignmentId: string;
+    academicTermId: string;
+    orderNumber: number;
+    baseDescription: string;
+    isPromotional?: boolean;
+  }) => api.post('/achievements', data),
+  update: (id: string, data: { baseDescription: string }) => 
+    api.put(`/achievements/${id}`, data),
+  delete: (id: string) => api.delete(`/achievements/${id}`),
+  
+  // Attitudinal achievements
+  getAttitudinal: (teacherAssignmentId: string, academicTermId: string) => 
+    api.get('/achievements/attitudinal', { params: { teacherAssignmentId, academicTermId } }),
+  upsertAttitudinal: (data: {
+    teacherAssignmentId: string;
+    academicTermId: string;
+    achievementId?: string;
+    description: string;
+  }) => api.put('/achievements/attitudinal', data),
+  
+  // Student achievements
+  getStudentAchievements: (achievementId: string) => 
+    api.get(`/achievements/students/${achievementId}`),
+  getByEnrollment: (studentEnrollmentId: string, academicTermId?: string) => 
+    api.get(`/achievements/by-enrollment/${studentEnrollmentId}`, { params: { academicTermId } }),
+  generateSuggestions: (data: {
+    achievementId: string;
+    institutionId: string;
+    studentGrades: Array<{
+      studentEnrollmentId: string;
+      finalGrade: number;
+    }>;
+  }) => api.post('/achievements/students/generate-suggestions', data),
+  upsertStudentAchievement: (id: string, data: {
+    studentEnrollmentId: string;
+    achievementId: string;
+    performanceLevel: 'BAJO' | 'BASICO' | 'ALTO' | 'SUPERIOR';
+    suggestedText?: string;
+    approvedText?: string;
+    isTextApproved?: boolean;
+    suggestedJudgment?: string;
+    approvedJudgment?: string;
+    isJudgmentApproved?: boolean;
+    attitudinalText?: string;
+  }) => api.put(`/achievements/students/${id}`, data),
+  approveStudentAchievement: (id: string, data: {
+    approvedText: string;
+    approvedJudgment?: string;
+  }) => api.post(`/achievements/students/${id}/approve`, data),
+  
+  // Validation
+  validate: (teacherAssignmentId: string, academicTermId: string, requiredCount: number) => 
+    api.get('/achievements/validate', { params: { teacherAssignmentId, academicTermId, requiredCount } }),
+  getUnapproved: (teacherAssignmentId: string, academicTermId: string) => 
+    api.get('/achievements/unapproved', { params: { teacherAssignmentId, academicTermId } }),
+}
+
 // ==================== GRADING PERIOD CONFIG ====================
 
 export const gradingPeriodConfigApi = {

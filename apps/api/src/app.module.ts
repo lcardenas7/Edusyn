@@ -21,6 +21,7 @@ import { InstitutionConfigModule } from './modules/institution-config/institutio
 import { ElectionsModule } from './modules/elections/elections.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { AchievementsModule } from './modules/achievements/achievements.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { StorageModule } from './modules/storage/storage.module';
     ElectionsModule,
     PaymentsModule,
     StorageModule,
+    AchievementsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
