@@ -31,7 +31,12 @@ export class AchievementController {
   @Get('config/:institutionId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async getConfig(@Param('institutionId') institutionId: string) {
-    return this.configService.getConfig(institutionId);
+    try {
+      return await this.configService.getConfig(institutionId);
+    } catch (error) {
+      console.error('[AchievementController] Error getting config:', error);
+      throw error;
+    }
   }
 
   @Put('config')
@@ -50,7 +55,13 @@ export class AchievementController {
       judgmentPosition?: 'END_OF_EACH' | 'END_OF_ALL' | 'NONE';
     },
   ) {
-    return this.configService.upsertConfig(body);
+    try {
+      console.log('[AchievementController] Upserting config for institution:', body.institutionId);
+      return await this.configService.upsertConfig(body);
+    } catch (error) {
+      console.error('[AchievementController] Error upserting config:', error);
+      throw error;
+    }
   }
 
   @Get('config/:institutionId/templates')

@@ -141,6 +141,7 @@ export class InstitutionConfigService {
       institutionName: institution.name,
       // Información básica de la institución
       institutionInfo: {
+        id: institution.id,
         name: institution.name,
         daneCode: institution.daneCode || '',
         nit: institution.nit || '',

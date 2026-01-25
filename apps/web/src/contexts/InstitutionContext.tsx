@@ -444,6 +444,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
           setInstitutionState(prev => {
             const newInst = { 
               ...prev, 
+              id: data.institutionInfo.id || prev.id,
               name: data.institutionInfo.name || prev.name,
               nit: data.institutionInfo.nit || prev.nit,
               dane: data.institutionInfo.daneCode || prev.dane,
