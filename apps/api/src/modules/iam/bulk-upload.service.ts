@@ -275,24 +275,61 @@ export class BulkUploadService {
     const result: UploadResult = { success: 0, errors: [], created: [] };
     const rows: TeacherRow[] = [];
 
+    // Mapear encabezados dinámicamente
+    const headerRow = sheet.getRow(1);
+    const columnMap: Record<string, number> = {};
+    
+    headerRow.eachCell((cell, colNumber) => {
+      const header = cell.value?.toString()?.toLowerCase()?.trim() || '';
+      // Mapear diferentes nombres posibles de columnas
+      if (header.includes('nombre') && !header.includes('segundo') && !header.includes('apellido')) {
+        columnMap.firstName = colNumber;
+      } else if (header.includes('segundo nombre')) {
+        columnMap.secondName = colNumber;
+      } else if (header.includes('primer apellido') || (header.includes('apellido') && !header.includes('segundo'))) {
+        columnMap.lastName = colNumber;
+      } else if (header.includes('segundo apellido')) {
+        columnMap.secondLastName = colNumber;
+      } else if (header.includes('email') || header.includes('correo')) {
+        if (!columnMap.email) columnMap.email = colNumber; // Tomar el primero (email personal)
+      } else if (header.includes('tipo') && header.includes('doc')) {
+        columnMap.documentType = colNumber;
+      } else if (header.includes('documento') || header.includes('número doc') || header.includes('numero doc')) {
+        columnMap.documentNumber = colNumber;
+      } else if (header.includes('teléfono') || header.includes('telefono') || header.includes('celular') || header.includes('móvil') || header.includes('movil')) {
+        if (!columnMap.phone) columnMap.phone = colNumber;
+      }
+    });
+
+    console.log('[BulkUpload] Column mapping:', columnMap);
+
+    // Fallback a posiciones fijas si no se encontraron encabezados
+    if (!columnMap.firstName) columnMap.firstName = 1;
+    if (!columnMap.lastName) columnMap.lastName = 2;
+    if (!columnMap.email) columnMap.email = 3;
+
     // Leer filas (saltando encabezado)
     sheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return; // Skip header
 
-      const firstName = row.getCell(1).value?.toString()?.trim();
-      const lastName = row.getCell(2).value?.toString()?.trim();
-      const email = row.getCell(3).value?.toString()?.trim()?.toLowerCase();
+      const firstName = row.getCell(columnMap.firstName || 1).value?.toString()?.trim();
+      const secondName = columnMap.secondName ? row.getCell(columnMap.secondName).value?.toString()?.trim() : '';
+      const lastName = row.getCell(columnMap.lastName || 2).value?.toString()?.trim();
+      const email = row.getCell(columnMap.email || 3).value?.toString()?.trim()?.toLowerCase();
 
       // Ignorar filas vacías o de notas
       if (!firstName || firstName.startsWith('*') || firstName.startsWith('Tipos')) return;
 
+      // Combinar nombre si hay segundo nombre
+      const fullFirstName = secondName ? `${firstName} ${secondName}` : firstName;
+
       rows.push({
-        firstName,
+        firstName: fullFirstName || '',
         lastName: lastName || '',
         email: email || '',
-        documentType: row.getCell(4).value?.toString()?.trim(),
-        documentNumber: row.getCell(5).value?.toString()?.trim(),
-        phone: row.getCell(6).value?.toString()?.trim(),
+        documentType: columnMap.documentType ? row.getCell(columnMap.documentType).value?.toString()?.trim() : undefined,
+        documentNumber: columnMap.documentNumber ? row.getCell(columnMap.documentNumber).value?.toString()?.trim() : undefined,
+        phone: columnMap.phone ? row.getCell(columnMap.phone).value?.toString()?.trim() : undefined,
       });
     });
 
