@@ -375,9 +375,15 @@ export default function Students() {
     }
   }
 
-  const handleDelete = (id: string) => {
-    if (confirm('Esta seguro de eliminar este estudiante?')) {
-      setStudents(students.filter(s => s.id !== id))
+  const handleDelete = async (id: string) => {
+    if (confirm('¿Está seguro de eliminar este estudiante? Esta acción no se puede deshacer.')) {
+      try {
+        await studentsApi.delete(id)
+        setStudents(students.filter(s => s.id !== id))
+      } catch (err: any) {
+        console.error('Error deleting student:', err)
+        alert(err.response?.data?.message || 'Error al eliminar el estudiante')
+      }
     }
   }
 

@@ -41,8 +41,21 @@ export class TeachersController {
 
   @Get()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async list(@Query('isActive') isActive?: string) {
+  async list(@Request() req: any, @Query('isActive') isActive?: string) {
+    // Obtener institutionId del usuario autenticado
+    let institutionId = req.user?.institutionId;
+    
+    // Si no viene en el JWT, buscarlo en la BD
+    if (!institutionId && req.user?.id) {
+      const institutionUser = await this.prisma.institutionUser.findFirst({
+        where: { userId: req.user.id },
+        select: { institutionId: true }
+      });
+      institutionId = institutionUser?.institutionId;
+    }
+
     return this.teachersService.list({
+      institutionId,
       isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
     });
   }

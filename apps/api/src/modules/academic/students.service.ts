@@ -48,8 +48,8 @@ export class StudentsService {
     });
   }
 
-  async list(params: { institutionId?: string; groupId?: string; academicYearId?: string }) {
-    const { institutionId, groupId, academicYearId } = params;
+  async list(params: { institutionId?: string; groupId?: string; academicYearId?: string; includeInactive?: boolean }) {
+    const { institutionId, groupId, academicYearId, includeInactive } = params;
 
     if (groupId || academicYearId) {
       // Get students with enrollments
@@ -57,6 +57,8 @@ export class StudentsService {
         where: {
           ...(groupId && { groupId }),
           ...(academicYearId && { academicYearId }),
+          // Filtrar estudiantes inactivos por defecto
+          ...(!includeInactive && { student: { isActive: true } }),
         },
         include: {
           student: true,
@@ -77,6 +79,8 @@ export class StudentsService {
     return this.prisma.student.findMany({
       where: {
         ...(institutionId && { institutionId }),
+        // Filtrar estudiantes inactivos por defecto
+        ...(!includeInactive && { isActive: true }),
       },
       include: {
         enrollments: {
@@ -177,10 +181,56 @@ export class StudentsService {
     });
   }
 
-  async delete(id: string) {
-    return this.prisma.student.delete({
+  /**
+   * Elimina un estudiante.
+   * - Si tiene historial académico (notas, asistencias, observaciones): soft delete
+   * - Si no tiene relaciones: borrado físico
+   */
+  async delete(id: string, reason?: string) {
+    // Verificar si tiene historial académico
+    const student = await this.prisma.student.findUnique({
       where: { id },
+      include: {
+        enrollments: {
+          include: {
+            grades: { take: 1 },
+            attendanceRecords: { take: 1 },
+            studentObservations: { take: 1 },
+          },
+        },
+      },
     });
+
+    if (!student) {
+      throw new BadRequestException('Estudiante no encontrado');
+    }
+
+    // Verificar si tiene historial académico
+    const hasAcademicHistory = student.enrollments.some(
+      (e) => e.grades.length > 0 || e.attendanceRecords.length > 0 || e.studentObservations.length > 0
+    );
+
+    if (hasAcademicHistory) {
+      // Soft delete: marcar como inactivo
+      return this.prisma.student.update({
+        where: { id },
+        data: {
+          isActive: false,
+          deletedAt: new Date(),
+          deletedReason: reason || 'Eliminado por administrador',
+        },
+      });
+    } else {
+      // Borrado físico: no tiene historial
+      // Primero eliminar relaciones sin historial
+      await this.prisma.studentGuardian.deleteMany({ where: { studentId: id } });
+      await this.prisma.studentDocument.deleteMany({ where: { studentId: id } });
+      await this.prisma.studentEnrollment.deleteMany({ where: { studentId: id } });
+      
+      return this.prisma.student.delete({
+        where: { id },
+      });
+    }
   }
 
   async enroll(dto: EnrollStudentDto) {

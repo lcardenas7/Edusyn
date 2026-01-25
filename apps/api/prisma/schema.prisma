@@ -791,6 +791,11 @@ model Student {
   photo         String?
   observations  String?
   
+  // Estado del registro
+  isActive      Boolean  @default(true)  // false = borrado lógico
+  deletedAt     DateTime?                // Fecha de borrado lógico
+  deletedReason String?                  // Razón del borrado
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

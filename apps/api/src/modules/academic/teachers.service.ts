@@ -90,10 +90,10 @@ export class TeachersService {
     };
   }
 
-  async list(params: { isActive?: boolean }) {
-    const { isActive } = params;
+  async list(params: { institutionId?: string; isActive?: boolean }) {
+    const { institutionId, isActive } = params;
 
-    // Get users with DOCENTE role
+    // Get users with DOCENTE role, filtered by institution
     return this.prisma.user.findMany({
       where: {
         roles: {
@@ -103,6 +103,14 @@ export class TeachersService {
             },
           },
         },
+        // Filtrar por institución si se proporciona
+        ...(institutionId && {
+          institutionUsers: {
+            some: {
+              institutionId,
+            },
+          },
+        }),
         ...(isActive !== undefined && { isActive }),
       },
       include: {
@@ -205,10 +213,48 @@ export class TeachersService {
     });
   }
 
+  /**
+   * Elimina un docente.
+   * - Si tiene historial académico (calificaciones, observaciones): soft delete
+   * - Si no tiene relaciones: borrado físico
+   */
   async delete(id: string) {
-    return this.prisma.user.delete({
+    // Verificar si tiene historial académico
+    const teacher = await this.prisma.user.findUnique({
       where: { id },
+      include: {
+        teacherAssignments: { take: 1 },
+        studentObservations: { take: 1 },
+        periodFinalGrades: { take: 1 },
+      },
     });
+
+    if (!teacher) {
+      throw new Error('Docente no encontrado');
+    }
+
+    // Verificar si tiene historial
+    const hasHistory = 
+      teacher.teacherAssignments.length > 0 ||
+      teacher.studentObservations.length > 0 ||
+      teacher.periodFinalGrades.length > 0;
+
+    if (hasHistory) {
+      // Soft delete: marcar como inactivo
+      return this.prisma.user.update({
+        where: { id },
+        data: { isActive: false },
+      });
+    } else {
+      // Borrado físico: no tiene historial
+      // Primero eliminar relaciones
+      await this.prisma.userRole.deleteMany({ where: { userId: id } });
+      await this.prisma.institutionUser.deleteMany({ where: { userId: id } });
+      
+      return this.prisma.user.delete({
+        where: { id },
+      });
+    }
   }
 
   async getAssignments(teacherId: string, academicYearId?: string) {

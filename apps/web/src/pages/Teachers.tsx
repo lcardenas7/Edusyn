@@ -218,10 +218,17 @@ export default function Teachers() {
     }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteConfirm) return
-    setTeachers(teachers.filter(t => t.id !== deleteConfirm.id))
-    setDeleteConfirm(null)
+    try {
+      await teachersApi.delete(deleteConfirm.id)
+      setTeachers(teachers.filter(t => t.id !== deleteConfirm.id))
+      setDeleteConfirm(null)
+    } catch (err: any) {
+      console.error('Error deleting teacher:', err)
+      alert(err.response?.data?.message || 'Error al eliminar el docente')
+      setDeleteConfirm(null)
+    }
   }
 
   const handleViewDetail = (teacher: Teacher) => {
