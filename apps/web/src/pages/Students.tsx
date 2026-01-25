@@ -82,14 +82,35 @@ export default function Students() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [filterGrade, setFilterGrade] = useState('ALL')
   const [filterGroup, setFilterGroup] = useState('ALL')
   const [filterStatus, setFilterStatus] = useState<StudentStatus | 'ALL'>('ALL')
   
-  // Obtener grupos únicos de los estudiantes cargados (debe estar antes de early returns)
-  const groups = useMemo(() => {
-    const uniqueGroups = new Set(students.map(s => s.group).filter(Boolean))
-    return Array.from(uniqueGroups).sort((a, b) => a.localeCompare(b))
+  // Obtener grados únicos de los estudiantes cargados
+  const grades = useMemo(() => {
+    const uniqueGrades = new Set(
+      students
+        .map(s => {
+          // Extraer el grado del grupo (ej: "Sexto A" -> "Sexto", "11° A" -> "11°")
+          const parts = s.group?.split(/\s+/)
+          return parts && parts.length > 1 ? parts.slice(0, -1).join(' ') : s.group
+        })
+        .filter(Boolean)
+    )
+    return Array.from(uniqueGrades).sort((a, b) => a.localeCompare(b))
   }, [students])
+  
+  // Obtener grupos únicos, filtrados por grado si hay uno seleccionado
+  const groups = useMemo(() => {
+    let filteredGroups = students.map(s => s.group).filter(Boolean)
+    
+    if (filterGrade !== 'ALL') {
+      filteredGroups = filteredGroups.filter(g => g.startsWith(filterGrade))
+    }
+    
+    const uniqueGroups = new Set(filteredGroups)
+    return Array.from(uniqueGroups).sort((a, b) => a.localeCompare(b))
+  }, [students, filterGrade])
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
   const [showModal, setShowModal] = useState(false)
@@ -250,9 +271,10 @@ export default function Students() {
 
   const filteredStudents = students.filter(s => {
     const matchesSearch = `${s.firstName} ${s.lastName} ${s.documentNumber}`.toLowerCase().includes(search.toLowerCase())
+    const matchesGrade = filterGrade === 'ALL' || s.group?.startsWith(filterGrade)
     const matchesGroup = filterGroup === 'ALL' || s.group === filterGroup
     const matchesStatus = filterStatus === 'ALL' || s.status === filterStatus
-    return matchesSearch && matchesGroup && matchesStatus
+    return matchesSearch && matchesGrade && matchesGroup && matchesStatus
   })
 
   const stats = {
@@ -939,6 +961,10 @@ export default function Students() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input type="text" placeholder="Buscar por nombre o documento..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                 </div>
+                <select value={filterGrade} onChange={(e) => { setFilterGrade(e.target.value); setFilterGroup('ALL') }} className="px-3 py-2 border border-slate-300 rounded-lg">
+                  <option value="ALL">Todos los grados</option>
+                  {grades.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
                 <select value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)} className="px-3 py-2 border border-slate-300 rounded-lg">
                   <option value="ALL">Todos los grupos</option>
                   {groups.map(g => <option key={g} value={g}>{g}</option>)}
