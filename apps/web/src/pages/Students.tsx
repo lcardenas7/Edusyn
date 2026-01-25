@@ -125,6 +125,10 @@ export default function Students() {
   // Estados para matrícula inmediata
   const [enrollNow, setEnrollNow] = useState(true) // Por defecto activado para nuevos
   const [selectedGroupId, setSelectedGroupId] = useState<string>('')
+  
+  // Estados para crear acceso masivo
+  const [creatingAccess, setCreatingAccess] = useState(false)
+  const [showAccessModal, setShowAccessModal] = useState(false)
 
   // Cargar año académico actual y grupos disponibles
   useEffect(() => {
@@ -387,6 +391,69 @@ export default function Students() {
     }
   }
 
+  // Crear acceso masivo para estudiantes filtrados
+  const handleBulkCreateAccess = async () => {
+    const studentIds = filteredStudents.map(s => s.id)
+    if (studentIds.length === 0) {
+      alert('No hay estudiantes para crear acceso')
+      return
+    }
+    
+    const confirmMsg = `¿Crear acceso al sistema para ${studentIds.length} estudiantes del grupo "${filterGroup === 'ALL' ? 'Todos' : filterGroup}"?\n\nSe creará un usuario con:\n- Email: documento@estudiante.edusyn.com\n- Contraseña inicial: número de documento\n- Rol: ESTUDIANTE`
+    if (!confirm(confirmMsg)) return
+    
+    setCreatingAccess(true)
+    try {
+      const response = await studentsApi.bulkActivateAccess(studentIds)
+      const result = response.data
+      alert(`✅ Acceso creado para ${result.activated} estudiantes${result.errors?.length > 0 ? `\n⚠️ ${result.errors.length} errores` : ''}`)
+      setShowAccessModal(false)
+    } catch (err: any) {
+      console.error('Error creating access:', err)
+      alert(err.response?.data?.message || 'Error al crear acceso')
+    } finally {
+      setCreatingAccess(false)
+    }
+  }
+
+  // Borrar estudiantes sin registros (solo admin)
+  const handleBulkDeleteWithoutRecords = async () => {
+    if (!institution?.id) return
+    
+    const confirmMsg = '⚠️ ADVERTENCIA: Esta acción eliminará TODOS los estudiantes que NO tengan:\n- Notas\n- Asistencias\n- Observaciones\n\n¿Está seguro de continuar?'
+    if (!confirm(confirmMsg)) return
+    if (!confirm('¿CONFIRMAR ELIMINACIÓN MASIVA? Esta acción NO se puede deshacer.')) return
+    
+    try {
+      const response = await studentsApi.bulkDeleteWithoutRecords(institution.id)
+      const result = response.data
+      alert(`✅ Eliminados ${result.deleted} estudiantes sin registros`)
+      // Recargar lista
+      const studentsRes = await studentsApi.getAll({ institutionId: institution.id })
+      const apiStudents = (studentsRes.data || []).map((s: any) => ({
+        id: s.id,
+        firstName: s.firstName || '',
+        lastName: s.lastName || '',
+        documentType: s.documentType || 'TI',
+        documentNumber: s.documentNumber || '',
+        birthDate: s.birthDate?.split('T')[0] || '',
+        gender: s.gender || 'M',
+        address: s.address || '',
+        phone: s.phone || '',
+        email: s.email || '',
+        group: s.enrollments?.[0]?.group?.name || 'Sin grupo',
+        status: s.enrollments?.[0]?.status || 'ACTIVE',
+        enrollmentDate: s.enrollments?.[0]?.enrollmentDate?.split('T')[0] || '',
+        parentName: '', parentPhone: '', parentEmail: '',
+        bloodType: s.bloodType || '', eps: s.eps || '', observations: s.observations || ''
+      }))
+      setStudents(apiStudents)
+    } catch (err: any) {
+      console.error('Error deleting students:', err)
+      alert(err.response?.data?.message || 'Error al eliminar estudiantes')
+    }
+  }
+
   const handleViewDetail = (student: Student) => {
     setSelectedStudent(student)
     setDetailTab('info')
@@ -641,6 +708,26 @@ export default function Students() {
               <p className="text-slate-500 mt-1">Gestion de estudiantes matriculados</p>
             </div>
             <div className="flex items-center gap-2">
+              {/* Botón Crear Acceso - Solo visible cuando hay filtro de grupo */}
+              {filterGroup !== 'ALL' && (
+                <button 
+                  onClick={handleBulkCreateAccess} 
+                  disabled={creatingAccess || filteredStudents.length === 0}
+                  className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm disabled:opacity-50"
+                >
+                  {creatingAccess ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                  Crear Acceso ({filteredStudents.length})
+                </button>
+              )}
+              {/* Botón temporal para borrar estudiantes sin registros - Solo admin */}
+              <button 
+                onClick={handleBulkDeleteWithoutRecords}
+                className="flex items-center gap-2 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 text-sm"
+                title="Eliminar estudiantes sin registros académicos"
+              >
+                <Trash2 className="w-4 h-4" />
+                Limpiar
+              </button>
               <button onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm">
                 <Upload className="w-4 h-4" />
                 Importar

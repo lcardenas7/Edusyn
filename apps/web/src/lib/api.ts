@@ -313,6 +313,11 @@ export const studentsApi = {
   updateEnrollmentStatus: (enrollmentId: string, status: string) => api.put(`/students/enrollment/${enrollmentId}/status`, { status }),
   getEnrollments: (studentId: string) => api.get(`/students/${studentId}/enrollments`),
   bulkImport: (data: { institutionId: string; academicYearId: string; students: any[] }) => api.post('/students/bulk-import', data),
+  // Acceso al sistema
+  activateAccess: (studentId: string) => api.post(`/students/${studentId}/activate-access`),
+  deactivateAccess: (studentId: string) => api.post(`/students/${studentId}/deactivate-access`),
+  bulkActivateAccess: (studentIds: string[]) => api.post('/students/bulk-activate-access', { studentIds }),
+  bulkDeleteWithoutRecords: (institutionId: string) => api.post('/students/bulk-delete-without-records', { institutionId }),
 }
 
 // Teachers

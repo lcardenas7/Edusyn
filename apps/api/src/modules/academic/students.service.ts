@@ -615,4 +615,67 @@ export class StudentsService {
 
     return username;
   }
+
+  /**
+   * Elimina estudiantes sin registros académicos (notas, asistencias, observaciones)
+   * Solo elimina estudiantes que NO tienen historial
+   */
+  async bulkDeleteWithoutRecords(institutionId: string) {
+    // Obtener todos los estudiantes de la institución
+    const students = await this.prisma.student.findMany({
+      where: { institutionId },
+      include: {
+        enrollments: {
+          include: {
+            grades: { take: 1 },
+            attendanceRecords: { take: 1 },
+            studentObservations: { take: 1 },
+          },
+        },
+      },
+    });
+
+    const studentsToDelete: string[] = [];
+    const studentsWithRecords: string[] = [];
+
+    for (const student of students) {
+      const hasRecords = student.enrollments.some(
+        (e) => e.grades.length > 0 || e.attendanceRecords.length > 0 || e.studentObservations.length > 0
+      );
+
+      if (hasRecords) {
+        studentsWithRecords.push(student.id);
+      } else {
+        studentsToDelete.push(student.id);
+      }
+    }
+
+    console.log(`[bulkDeleteWithoutRecords] Total: ${students.length}, Con registros: ${studentsWithRecords.length}, Sin registros: ${studentsToDelete.length}`);
+
+    if (studentsToDelete.length === 0) {
+      return { deleted: 0, skipped: studentsWithRecords.length, message: 'No hay estudiantes sin registros para eliminar' };
+    }
+
+    // Eliminar relaciones primero
+    await this.prisma.studentEnrollment.deleteMany({
+      where: { studentId: { in: studentsToDelete } },
+    });
+    await this.prisma.studentGuardian.deleteMany({
+      where: { studentId: { in: studentsToDelete } },
+    });
+    await this.prisma.studentDocument.deleteMany({
+      where: { studentId: { in: studentsToDelete } },
+    });
+
+    // Eliminar estudiantes
+    const result = await this.prisma.student.deleteMany({
+      where: { id: { in: studentsToDelete } },
+    });
+
+    return {
+      deleted: result.count,
+      skipped: studentsWithRecords.length,
+      message: `Eliminados ${result.count} estudiantes sin registros`,
+    };
+  }
 }

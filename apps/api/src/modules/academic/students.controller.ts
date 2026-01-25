@@ -102,4 +102,13 @@ export class StudentsController {
   async bulkActivateAccess(@Body() data: { studentIds: string[] }) {
     return this.studentsService.bulkActivateAccess(data.studentIds);
   }
+
+  /**
+   * Elimina estudiantes sin registros académicos (notas, asistencias, observaciones)
+   */
+  @Post('bulk-delete-without-records')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async bulkDeleteWithoutRecords(@Body() data: { institutionId: string }) {
+    return this.studentsService.bulkDeleteWithoutRecords(data.institutionId);
+  }
 }
