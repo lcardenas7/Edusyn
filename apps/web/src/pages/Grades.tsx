@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { BookOpen, ChevronDown, Save, Plus, Trash2, X, Settings, AlertTriangle, Lock } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useInstitution } from '../contexts/InstitutionContext'
-import { teacherAssignmentsApi, studentsApi, gradingPeriodConfigApi, periodFinalGradesApi, partialGradesApi } from '../lib/api'
+import { teacherAssignmentsApi, studentsApi, gradingPeriodConfigApi, periodFinalGradesApi, partialGradesApi, achievementsApi, achievementConfigApi } from '../lib/api'
 
 interface TeacherAssignment {
   id: string
@@ -66,7 +66,7 @@ interface ProcessConfig {
 
 export default function Grades() {
   const { user } = useAuth()
-  const { gradingConfig, setGradingConfig, periods, selectedPeriod, setSelectedPeriod } = useInstitution()
+  const { gradingConfig, setGradingConfig, periods, selectedPeriod, setSelectedPeriod, institution } = useInstitution()
   
   const userRoles = useMemo(() => {
     if (!user?.roles) return []
@@ -134,7 +134,7 @@ export default function Grades() {
   const [showAddActivity, setShowAddActivity] = useState(false)
   const [showConfig, setShowConfig] = useState(false)
   const [addToProcessCode, setAddToProcessCode] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'detailed' | 'summary'>('detailed')
+  const [viewMode, setViewMode] = useState<'detailed' | 'summary' | 'achievements'>('detailed')
   const [deleteConfirm, setDeleteConfirm] = useState<{ processCode: string; activityId: string; activityName: string } | null>(null)
   
   // Estado de períodos habilitados para calificaciones
@@ -152,6 +152,27 @@ export default function Grades() {
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [academicTermId, setAcademicTermId] = useState<string | null>(null)
+  
+  // Estado para logros
+  const [achievements, setAchievements] = useState<Array<{
+    id: string;
+    code: string;
+    orderNumber: number;
+    baseDescription: string;
+    achievementType: string;
+    studentAchievements?: Array<{
+      id: string;
+      studentEnrollmentId: string;
+      performanceLevel: string;
+      suggestedText?: string;
+      approvedText?: string;
+      isTextApproved: boolean;
+    }>;
+  }>>([])
+  const [achievementConfig, setAchievementConfig] = useState<{
+    achievementsPerPeriod: number;
+    useValueJudgments: boolean;
+  } | null>(null)
 
   // ============================================
   // CONFIGURACIÓN DINÁMICA DE PROCESOS
@@ -508,6 +529,29 @@ export default function Grades() {
     return total
   }
 
+  // Cargar logros cuando se cambia a la pestaña de logros
+  useEffect(() => {
+    const loadAchievements = async () => {
+      if (viewMode !== 'achievements' || !selectedAssignment?.id || !academicTermId || !institution?.id) return
+      try {
+        const [achievementsRes, configRes] = await Promise.all([
+          achievementsApi.getByAssignment(selectedAssignment.id, academicTermId),
+          achievementConfigApi.get(institution.id)
+        ])
+        setAchievements(achievementsRes.data || [])
+        if (configRes.data) {
+          setAchievementConfig({
+            achievementsPerPeriod: configRes.data.achievementsPerPeriod || 1,
+            useValueJudgments: configRes.data.useValueJudgments ?? true,
+          })
+        }
+      } catch (err) {
+        console.error('Error loading achievements:', err)
+      }
+    }
+    loadAchievements()
+  }, [viewMode, selectedAssignment?.id, academicTermId, institution?.id])
+
   // Todas las columnas para navegación
   const allActivityColumns = useMemo(() => {
     const cols: string[] = []
@@ -807,6 +851,12 @@ export default function Grades() {
           >
             Resumen
           </button>
+          <button
+            onClick={() => setViewMode('achievements')}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${viewMode === 'achievements' ? 'bg-white shadow-sm' : 'text-slate-600'}`}
+          >
+            Logros
+          </button>
         </div>
 
         <div className="ml-auto flex gap-2 flex-wrap">
@@ -993,7 +1043,7 @@ export default function Grades() {
               </tbody>
             </table>
           </div>
-        ) : (
+        ) : viewMode === 'summary' ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-slate-50">
@@ -1060,7 +1110,106 @@ export default function Grades() {
               </tbody>
             </table>
           </div>
-        )}
+        ) : viewMode === 'achievements' ? (
+          /* Vista de Logros - Asociación automática logro-desempeño */
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+              <h3 className="font-semibold text-slate-900">Asociación Logros - Desempeño</h3>
+              <p className="text-sm text-slate-500 mt-1">
+                Visualización de la asociación automática entre logros y nivel de desempeño según la nota final
+              </p>
+            </div>
+            
+            {achievements.length === 0 ? (
+              <div className="p-8 text-center">
+                <BookOpen className="w-12 h-12 mx-auto text-slate-300 mb-4" />
+                <p className="text-slate-500">No hay logros creados para este período</p>
+                <p className="text-sm text-slate-400 mt-1">
+                  Vaya al módulo de Logros y Juicios para crear los logros de esta asignatura
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-100">
+                      <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Estudiante</th>
+                      <th className="text-center px-4 py-3 text-xs font-medium text-slate-500 uppercase">Nota Final</th>
+                      <th className="text-center px-4 py-3 text-xs font-medium text-slate-500 uppercase">Desempeño</th>
+                      {achievements.map((ach) => (
+                        <th key={ach.id} className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase min-w-[200px]">
+                          <div className="flex flex-col">
+                            <span className="text-blue-600 font-mono text-[10px]">{ach.code}</span>
+                            <span>Logro {ach.orderNumber}</span>
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {students.map((student) => {
+                      const finalGrade = calculateFinalGrade(student.id)
+                      const performance = getPerformanceLevel(finalGrade)
+                      
+                      return (
+                        <tr key={student.id} className="hover:bg-slate-50">
+                          <td className="px-4 py-3 font-medium text-slate-900">{student.name}</td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="text-lg font-bold">{finalGrade > 0 ? finalGrade.toFixed(1) : '-'}</span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${performance.color}`}>
+                              {performance.label}
+                            </span>
+                          </td>
+                          {achievements.map((ach) => {
+                            const studentAch = ach.studentAchievements?.find(
+                              sa => sa.studentEnrollmentId === student.enrollmentId
+                            )
+                            return (
+                              <td key={ach.id} className="px-4 py-3">
+                                {studentAch ? (
+                                  <div className="space-y-1">
+                                    <p className="text-xs text-slate-600 line-clamp-2">
+                                      {studentAch.approvedText || studentAch.suggestedText || ach.baseDescription}
+                                    </p>
+                                    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                      studentAch.isTextApproved 
+                                        ? 'bg-green-100 text-green-700' 
+                                        : 'bg-amber-100 text-amber-700'
+                                    }`}>
+                                      {studentAch.isTextApproved ? 'Aprobado' : 'Pendiente'}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-slate-400 italic">
+                                    Sin asociar - {performance.label}
+                                  </span>
+                                )}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            
+            {achievementConfig && achievements.length < achievementConfig.achievementsPerPeriod && (
+              <div className="px-6 py-4 bg-amber-50 border-t border-amber-200">
+                <div className="flex items-center gap-2 text-amber-700">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span className="text-sm">
+                    Faltan {achievementConfig.achievementsPerPeriod - achievements.length} logro(s) por crear. 
+                    Requeridos: {achievementConfig.achievementsPerPeriod}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
 
       {/* Modal Nueva Actividad */}

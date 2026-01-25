@@ -45,6 +45,9 @@ export class AchievementController {
       useAttitudinalAchievement?: boolean;
       attitudinalMode?: 'GENERAL_PER_PERIOD' | 'PER_ACADEMIC_ACHIEVEMENT';
       useValueJudgments?: boolean;
+      displayMode?: 'SEPARATE' | 'COMBINED';
+      displayFormat?: 'LIST' | 'PARAGRAPH';
+      judgmentPosition?: 'END_OF_EACH' | 'END_OF_ALL' | 'NONE';
     },
   ) {
     return this.configService.upsertConfig(body);

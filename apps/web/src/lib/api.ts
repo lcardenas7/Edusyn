@@ -542,6 +542,9 @@ export const achievementConfigApi = {
     useAttitudinalAchievement?: boolean;
     attitudinalMode?: 'GENERAL_PER_PERIOD' | 'PER_ACADEMIC_ACHIEVEMENT';
     useValueJudgments?: boolean;
+    displayMode?: 'SEPARATE' | 'COMBINED';
+    displayFormat?: 'LIST' | 'PARAGRAPH';
+    judgmentPosition?: 'END_OF_EACH' | 'END_OF_ALL' | 'NONE';
   }) => api.put('/achievements/config', data),
   getTemplates: (institutionId: string) => 
     api.get(`/achievements/config/${institutionId}/templates`),

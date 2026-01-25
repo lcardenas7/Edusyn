@@ -23,6 +23,9 @@ export class AchievementConfigService {
     useAttitudinalAchievement?: boolean;
     attitudinalMode?: 'GENERAL_PER_PERIOD' | 'PER_ACADEMIC_ACHIEVEMENT';
     useValueJudgments?: boolean;
+    displayMode?: 'SEPARATE' | 'COMBINED';
+    displayFormat?: 'LIST' | 'PARAGRAPH';
+    judgmentPosition?: 'END_OF_EACH' | 'END_OF_ALL' | 'NONE';
   }) {
     return this.prisma.achievementConfig.upsert({
       where: { institutionId: data.institutionId },
@@ -32,6 +35,9 @@ export class AchievementConfigService {
         useAttitudinalAchievement: data.useAttitudinalAchievement,
         attitudinalMode: data.attitudinalMode,
         useValueJudgments: data.useValueJudgments,
+        displayMode: data.displayMode,
+        displayFormat: data.displayFormat,
+        judgmentPosition: data.judgmentPosition,
       },
       create: {
         institutionId: data.institutionId,
@@ -40,6 +46,9 @@ export class AchievementConfigService {
         useAttitudinalAchievement: data.useAttitudinalAchievement ?? false,
         attitudinalMode: data.attitudinalMode ?? 'GENERAL_PER_PERIOD',
         useValueJudgments: data.useValueJudgments ?? true,
+        displayMode: data.displayMode ?? 'SEPARATE',
+        displayFormat: data.displayFormat ?? 'LIST',
+        judgmentPosition: data.judgmentPosition ?? 'END_OF_EACH',
       },
       include: {
         valueJudgmentTemplates: true,

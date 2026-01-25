@@ -58,12 +58,34 @@ export class AchievementService {
     orderNumber: number;
     baseDescription: string;
     isPromotional?: boolean;
+    achievementType?: 'ACADEMIC' | 'ATTITUDINAL' | 'PROMOTIONAL';
   }) {
+    // Generate code automatically
+    const assignment = await this.prisma.teacherAssignment.findUnique({
+      where: { id: data.teacherAssignmentId },
+      include: {
+        subject: true,
+        academicYear: true,
+      },
+    });
+
+    const term = await this.prisma.academicTerm.findUnique({
+      where: { id: data.academicTermId },
+    });
+
+    // Generate code: LOG-[SUBJECT_CODE]-P[PERIOD]-[ORDER]
+    const subjectCode = assignment?.subject?.name?.substring(0, 3).toUpperCase() || 'XXX';
+    const periodOrder = term?.order || 1;
+    const typePrefix = data.isPromotional ? 'PROM' : (data.achievementType === 'ATTITUDINAL' ? 'ACT' : 'LOG');
+    const code = `${typePrefix}-${subjectCode}-P${periodOrder}-${String(data.orderNumber).padStart(2, '0')}`;
+
     return this.prisma.achievement.create({
       data: {
+        code,
         teacherAssignmentId: data.teacherAssignmentId,
         academicTermId: data.academicTermId,
         orderNumber: data.orderNumber,
+        achievementType: data.achievementType ?? 'ACADEMIC',
         baseDescription: data.baseDescription,
         isPromotional: data.isPromotional ?? false,
       },

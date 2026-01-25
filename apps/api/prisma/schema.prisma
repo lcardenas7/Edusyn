@@ -1682,11 +1682,32 @@ model AchievementConfig {
   // Configuración de juicios valorativos
   useValueJudgments         Boolean  @default(true)     // Habilitar juicios valorativos por desempeño
   
+  // Configuración de visualización en boletín
+  displayMode               AchievementDisplayMode @default(SEPARATE) // Cómo mostrar logros en boletín
+  displayFormat             AchievementDisplayFormat @default(LIST)   // Formato de visualización
+  judgmentPosition          JudgmentPosition @default(END_OF_EACH)    // Posición del juicio valorativo
+  
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt
 
   institution               Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   valueJudgmentTemplates    ValueJudgmentTemplate[]
+}
+
+enum AchievementDisplayMode {
+  SEPARATE      // Académico y Actitudinal separados
+  COMBINED      // Todo en un solo texto combinado
+}
+
+enum AchievementDisplayFormat {
+  LIST          // Lista numerada
+  PARAGRAPH     // Párrafo continuo
+}
+
+enum JudgmentPosition {
+  END_OF_EACH   // Al final de cada logro
+  END_OF_ALL    // Al final de todos los logros
+  NONE          // No mostrar
 }
 
 enum AttitudinalAchievementMode {
@@ -1712,9 +1733,11 @@ model ValueJudgmentTemplate {
 // Logro académico definido por el docente (por asignatura, período)
 model Achievement {
   id                    String          @id @default(cuid())
+  code                  String          // Código interno (ej: LOG-MAT-P1-01)
   teacherAssignmentId   String
   academicTermId        String
   orderNumber           Int             @default(1)  // Número de logro (1, 2, 3...)
+  achievementType       AchievementType @default(ACADEMIC) // Tipo de logro
   baseDescription       String          @db.Text     // Texto base del logro
   isPromotional         Boolean         @default(false) // Es logro promocional (fin de año)
   createdAt             DateTime        @default(now())
@@ -1726,8 +1749,16 @@ model Achievement {
   attitudinalAchievements AttitudinalAchievement[]
 
   @@unique([teacherAssignmentId, academicTermId, orderNumber, isPromotional])
+  @@unique([code, teacherAssignmentId]) // Código único por asignación
   @@index([teacherAssignmentId])
   @@index([academicTermId])
+  @@index([code])
+}
+
+enum AchievementType {
+  ACADEMIC      // Logro académico
+  ATTITUDINAL   // Logro actitudinal
+  PROMOTIONAL   // Logro promocional
 }
 
 // Logro actitudinal (puede ser general o asociado a un logro académico)

@@ -37,6 +37,9 @@ interface AchievementConfig {
   useAttitudinalAchievement: boolean
   attitudinalMode: 'GENERAL_PER_PERIOD' | 'PER_ACADEMIC_ACHIEVEMENT'
   useValueJudgments: boolean
+  displayMode: 'SEPARATE' | 'COMBINED'
+  displayFormat: 'LIST' | 'PARAGRAPH'
+  judgmentPosition: 'END_OF_EACH' | 'END_OF_ALL' | 'NONE'
 }
 
 interface ValueJudgmentTemplate {
@@ -118,6 +121,9 @@ export default function Achievements() {
     useAttitudinalAchievement: false,
     attitudinalMode: 'GENERAL_PER_PERIOD',
     useValueJudgments: true,
+    displayMode: 'SEPARATE',
+    displayFormat: 'LIST',
+    judgmentPosition: 'END_OF_EACH',
   })
   const [templates, setTemplates] = useState<ValueJudgmentTemplate[]>(DEFAULT_TEMPLATES)
 
@@ -171,16 +177,16 @@ export default function Achievements() {
   // Load groups when year changes
   useEffect(() => {
     const loadGroups = async () => {
-      if (!selectedYearId) return
+      if (!selectedYearId || !institution?.id) return
       try {
-        const response = await groupsApi.getAll()
+        const response = await groupsApi.getAll({ institutionId: institution.id })
         setGroups(response.data)
       } catch (err) {
         console.error('Error loading groups:', err)
       }
     }
     loadGroups()
-  }, [selectedYearId])
+  }, [selectedYearId, institution?.id])
 
   // Load config when institution changes
   useEffect(() => {
@@ -195,6 +201,9 @@ export default function Achievements() {
             useAttitudinalAchievement: response.data.useAttitudinalAchievement ?? false,
             attitudinalMode: response.data.attitudinalMode || 'GENERAL_PER_PERIOD',
             useValueJudgments: response.data.useValueJudgments ?? true,
+            displayMode: response.data.displayMode || 'SEPARATE',
+            displayFormat: response.data.displayFormat || 'LIST',
+            judgmentPosition: response.data.judgmentPosition || 'END_OF_EACH',
           })
         }
         
@@ -869,6 +878,56 @@ export default function Achievements() {
                   </select>
                 </div>
               )}
+            </div>
+
+            {/* Display Configuration for Report Card */}
+            <div className="border-t border-slate-200 pt-6">
+              <h4 className="font-medium text-slate-800 mb-4">Visualización en Boletín</h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Modo de visualización
+                  </label>
+                  <select
+                    value={config.displayMode}
+                    onChange={(e) => setConfig({ ...config, displayMode: e.target.value as any })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                  >
+                    <option value="SEPARATE">Académico y Actitudinal separados</option>
+                    <option value="COMBINED">Todo en un solo texto combinado</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Formato de visualización
+                  </label>
+                  <select
+                    value={config.displayFormat}
+                    onChange={(e) => setConfig({ ...config, displayFormat: e.target.value as any })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                  >
+                    <option value="LIST">Lista numerada</option>
+                    <option value="PARAGRAPH">Párrafo continuo</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Posición del juicio valorativo
+                  </label>
+                  <select
+                    value={config.judgmentPosition}
+                    onChange={(e) => setConfig({ ...config, judgmentPosition: e.target.value as any })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                  >
+                    <option value="END_OF_EACH">Al final de cada logro</option>
+                    <option value="END_OF_ALL">Al final de todos los logros</option>
+                    <option value="NONE">No mostrar</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
             {/* Value Judgment Templates */}
