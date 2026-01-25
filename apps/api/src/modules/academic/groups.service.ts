@@ -37,7 +37,11 @@ export class GroupsService {
       include: {
         grade: true,
         shift: true,
-        campus: true,
+        campus: {
+          include: {
+            institution: true
+          }
+        },
       },
       orderBy: [
         { grade: { number: 'asc' } },
@@ -45,7 +49,17 @@ export class GroupsService {
       ],
     });
     
-    console.log(`[GroupsService] Encontrados ${groups.length} grupos`);
+    // Log detallado para debugging
+    console.log(`[GroupsService] Encontrados ${groups.length} grupos para institutionId: ${params.institutionId}`);
+    if (groups.length > 0) {
+      console.log('[GroupsService] Muestra de grupos:', groups.slice(0, 3).map(g => ({
+        name: g.name,
+        grade: g.grade?.name,
+        campusInstitutionId: g.campus?.institutionId,
+        institutionName: (g.campus as any)?.institution?.name
+      })));
+    }
+    
     return groups;
   }
 }

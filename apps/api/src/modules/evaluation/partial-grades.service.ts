@@ -49,10 +49,26 @@ export class PartialGradesService {
   }>) {
     const results: any[] = [];
     for (const grade of grades) {
-      // Solo guardar si la nota es mayor a 0
       if (grade.score > 0) {
+        // Guardar o actualizar nota
         const result = await this.upsert(grade);
-        results.push(result);
+        results.push({ action: 'upsert', ...result });
+      } else {
+        // Eliminar nota si existe (score = 0 significa borrar)
+        try {
+          await this.prisma.partialGrade.deleteMany({
+            where: {
+              studentEnrollmentId: grade.studentEnrollmentId,
+              teacherAssignmentId: grade.teacherAssignmentId,
+              academicTermId: grade.academicTermId,
+              componentType: grade.componentType,
+              activityIndex: grade.activityIndex,
+            },
+          });
+          results.push({ action: 'delete', ...grade });
+        } catch (e) {
+          // Ignorar si no existe
+        }
       }
     }
     return results;

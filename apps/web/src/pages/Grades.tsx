@@ -551,41 +551,37 @@ export default function Grades() {
       students.forEach(student => {
         const studentGrades = grades[student.id] || {}
         
-        // Guardar notas cognitivas
+        // Guardar notas cognitivas (incluir score=0 para eliminar notas borradas)
         cognitivoActivities.forEach((activity, idx) => {
           const score = studentGrades[activity.id] || 0
-          if (score > 0) {
-            partialGradesToSave.push({
-              studentEnrollmentId: student.enrollmentId,
-              teacherAssignmentId: selectedAssignment.id,
-              academicTermId: academicTermId!,
-              componentType: 'COGNITIVO',
-              activityIndex: idx + 1,
-              activityName: activity.name,
-              activityType: activity.type,
-              score,
-            })
-          }
+          partialGradesToSave.push({
+            studentEnrollmentId: student.enrollmentId,
+            teacherAssignmentId: selectedAssignment.id,
+            academicTermId: academicTermId!,
+            componentType: 'COGNITIVO',
+            activityIndex: idx + 1,
+            activityName: activity.name,
+            activityType: activity.type,
+            score,
+          })
         })
         
-        // Guardar notas procedimentales
+        // Guardar notas procedimentales (incluir score=0 para eliminar notas borradas)
         procedimentalActivities.forEach((activity, idx) => {
           const score = studentGrades[activity.id] || 0
-          if (score > 0) {
-            partialGradesToSave.push({
-              studentEnrollmentId: student.enrollmentId,
-              teacherAssignmentId: selectedAssignment.id,
-              academicTermId: academicTermId!,
-              componentType: 'PROCEDIMENTAL',
-              activityIndex: idx + 1,
-              activityName: activity.name,
-              activityType: activity.type,
-              score,
-            })
-          }
+          partialGradesToSave.push({
+            studentEnrollmentId: student.enrollmentId,
+            teacherAssignmentId: selectedAssignment.id,
+            academicTermId: academicTermId!,
+            componentType: 'PROCEDIMENTAL',
+            activityIndex: idx + 1,
+            activityName: activity.name,
+            activityType: activity.type,
+            score,
+          })
         })
         
-        // Guardar notas actitudinales
+        // Guardar notas actitudinales (incluir score=0 para eliminar notas borradas)
         const attitudinalKeys = [
           { key: 'personal', name: 'Personal' },
           { key: 'social', name: 'Social' },
@@ -594,26 +590,20 @@ export default function Grades() {
         ]
         attitudinalKeys.forEach((att, idx) => {
           const score = studentGrades[att.key] || 0
-          if (score > 0) {
-            partialGradesToSave.push({
-              studentEnrollmentId: student.enrollmentId,
-              teacherAssignmentId: selectedAssignment.id,
-              academicTermId: academicTermId!,
-              componentType: 'ACTITUDINAL',
-              activityIndex: idx + 1,
-              activityName: att.name,
-              score,
-            })
-          }
+          partialGradesToSave.push({
+            studentEnrollmentId: student.enrollmentId,
+            teacherAssignmentId: selectedAssignment.id,
+            academicTermId: academicTermId!,
+            componentType: 'ACTITUDINAL',
+            activityIndex: idx + 1,
+            activityName: att.name,
+            score,
+          })
         })
       })
 
-      if (partialGradesToSave.length === 0) {
-        setSaveMessage({ type: 'error', text: 'No hay calificaciones para guardar' })
-        setTimeout(() => setSaveMessage(null), 3000)
-        setSaving(false)
-        return
-      }
+      // Ya no validamos si hay notas > 0 porque ahora enviamos todas
+      // (incluyendo score=0 para eliminar notas borradas)
 
       // Guardar notas parciales
       await partialGradesApi.bulkUpsert(partialGradesToSave)
@@ -638,7 +628,8 @@ export default function Grades() {
         await periodFinalGradesApi.bulkUpsert(finalGradesToSave)
       }
       
-      setSaveMessage({ type: 'success', text: `Se guardaron ${partialGradesToSave.length} notas correctamente` })
+      const notasConValor = partialGradesToSave.filter(g => g.score > 0).length
+      setSaveMessage({ type: 'success', text: `Calificaciones actualizadas correctamente (${notasConValor} notas guardadas)` })
       setTimeout(() => setSaveMessage(null), 3000)
     } catch (err: any) {
       console.error('Error saving grades:', err)

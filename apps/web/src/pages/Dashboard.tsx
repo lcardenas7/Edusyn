@@ -59,6 +59,7 @@ export default function Dashboard() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const sliderRef = useRef<NodeJS.Timeout | null>(null)
   const [imageModal, setImageModal] = useState<{ url: string; title: string } | null>(null)
+  const [eventModal, setEventModal] = useState<Event | null>(null)
 
   // Auto-slide para galería
   useEffect(() => {
@@ -258,7 +259,11 @@ export default function Dashboard() {
                 </div>
               ) : (
                 events.map((event) => (
-                  <div key={event.id} className="px-6 py-3 hover:bg-slate-50 transition-colors">
+                  <div 
+                    key={event.id} 
+                    className="px-6 py-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                    onClick={() => setEventModal(event)}
+                  >
                     <div className="flex items-start gap-3">
                       <div className="bg-green-100 text-green-700 rounded-lg px-2 py-1 text-center min-w-[50px]">
                         <p className="text-xs font-medium">{formatDate(event.eventDate)}</p>
@@ -414,6 +419,90 @@ export default function Dashboard() {
               onClick={(e) => e.stopPropagation()}
             />
             <p className="text-white text-center mt-4 font-medium">{imageModal.title}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para ver detalle de evento */}
+      {eventModal && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setEventModal(null)}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header con color según tipo de evento */}
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-white/20 rounded-lg p-2">
+                    <Calendar className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-white/80 text-sm">
+                      {new Date(eventModal.eventDate).toLocaleDateString('es-CO', { 
+                        weekday: 'long', 
+                        day: 'numeric', 
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </p>
+                    <p className="text-white/60 text-xs">
+                      {new Date(eventModal.eventDate).toLocaleTimeString('es-CO', { 
+                        hour: '2-digit', 
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setEventModal(null)}
+                  className="text-white/80 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenido */}
+            <div className="px-6 py-5">
+              <h3 className="text-xl font-bold text-slate-900 mb-3">{eventModal.title}</h3>
+              
+              {eventModal.eventType && (
+                <span className="inline-block px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full mb-4">
+                  {eventModal.eventType}
+                </span>
+              )}
+
+              {eventModal.description ? (
+                <p className="text-slate-600 text-sm leading-relaxed mb-4">
+                  {eventModal.description}
+                </p>
+              ) : (
+                <p className="text-slate-400 text-sm italic mb-4">
+                  No hay descripción disponible para este evento.
+                </p>
+              )}
+
+              {eventModal.location && (
+                <div className="flex items-center gap-2 text-slate-500 bg-slate-50 rounded-lg px-4 py-3">
+                  <MapPin className="w-5 h-5 text-green-600" />
+                  <span className="text-sm">{eventModal.location}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100">
+              <button
+                onClick={() => setEventModal(null)}
+                className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
