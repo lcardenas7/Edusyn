@@ -9,10 +9,25 @@ export interface UploadResult {
   mimeType: string;
 }
 
+// Información de auditoría para tracking de archivos
+export interface FileAuditInfo {
+  bucket: string;
+  path: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  uploadedBy?: string;      // userId que subió el archivo
+  uploadedAt: Date;
+  module: string;           // Módulo desde donde se subió (boletines, reportes, etc.)
+  metadata?: Record<string, any>;
+}
+
 @Injectable()
 export class SupabaseStorageService {
   private supabase: SupabaseClient;
-  private readonly buckets = {
+  
+  // Buckets organizados por tipo de contenido
+  readonly buckets = {
     boletines: 'boletines',           // Boletines de notas (PDF)
     evidencias: 'evidencias',         // Evidencias académicas
     reportes: 'reportes',             // Reportes e informes (PIAR, actas)
@@ -21,6 +36,18 @@ export class SupabaseStorageService {
     perfiles: 'perfiles',             // Fotos de perfil (estudiantes, docentes)
     documentos: 'documentos',         // Documentos de estudiantes (RC, EPS, etc.)
     galeria: 'galeria',               // Imágenes del dashboard institucional
+  };
+
+  // Tiempos de expiración para URLs firmadas (en segundos)
+  private readonly signedUrlExpiration = {
+    boletines: 5 * 60,      // 5 minutos - muy sensible
+    evidencias: 10 * 60,    // 10 minutos
+    reportes: 10 * 60,      // 10 minutos
+    documentos: 15 * 60,    // 15 minutos
+    importaciones: 30 * 60, // 30 minutos (archivos de trabajo)
+    exportaciones: 60 * 60, // 1 hora (descargas)
+    perfiles: 0,            // Público - no necesita firma
+    galeria: 0,             // Público - no necesita firma
   };
 
   constructor() {
@@ -112,27 +139,34 @@ export class SupabaseStorageService {
   }
 
   /**
-   * Sube el boletín final anual de un estudiante
-   * Ruta: institucion/{institutionId}/estudiantes/{studentId}/boletin_final_{year}.pdf
+   * Sube el boletín de un estudiante
+   * Estructura: {year}/{gradeName}/{studentId}.pdf
+   * Ejemplo: 2026/grado-9/abc123-uuid.pdf
    */
-  async uploadFinalReportCard(
+  async uploadReportCard(
     institutionId: string,
     studentId: string,
     year: number,
+    gradeName: string,
+    periodName: string,
     pdfBuffer: Buffer,
-  ): Promise<UploadResult> {
+    uploadedBy?: string,
+  ): Promise<UploadResult & { auditInfo: FileAuditInfo }> {
     if (!this.isConfigured()) {
       throw new BadRequestException('Storage no configurado');
     }
 
-    const fileName = `boletin_final_${year}.pdf`;
-    const path = `institucion/${institutionId}/estudiantes/${studentId}/${fileName}`;
+    // Estructura: año/grado-normalizado/periodo/estudiante.pdf
+    const gradeSlug = this.slugify(gradeName);
+    const periodSlug = this.slugify(periodName);
+    const fileName = `${studentId}.pdf`;
+    const path = `${institutionId}/${year}/${gradeSlug}/${periodSlug}/${fileName}`;
 
     const { data, error } = await this.supabase.storage
       .from(this.buckets.boletines)
       .upload(path, pdfBuffer, {
         contentType: 'application/pdf',
-        upsert: true, // Sobrescribir si existe
+        upsert: true,
       });
 
     if (error) {
@@ -140,23 +174,84 @@ export class SupabaseStorageService {
       throw new BadRequestException(`Error al subir archivo: ${error.message}`);
     }
 
-    const { data: urlData } = this.supabase.storage
-      .from(this.buckets.boletines)
-      .getPublicUrl(path);
+    // Para boletines, NO devolver URL pública, usar URL firmada
+    const signedUrl = await this.getSignedUrlForBucket(this.buckets.boletines, path);
 
-    return {
-      url: urlData.publicUrl,
+    const auditInfo: FileAuditInfo = {
+      bucket: this.buckets.boletines,
       path: data.path,
       fileName,
       fileSize: pdfBuffer.length,
       mimeType: 'application/pdf',
+      uploadedBy,
+      uploadedAt: new Date(),
+      module: 'boletines',
+      metadata: { year, gradeName, periodName, studentId, institutionId },
+    };
+
+    return {
+      url: signedUrl,
+      path: data.path,
+      fileName,
+      fileSize: pdfBuffer.length,
+      mimeType: 'application/pdf',
+      auditInfo,
     };
   }
 
   /**
-   * Obtiene una URL firmada (temporal) para acceso privado
+   * Sube el boletín final anual de un estudiante (legacy - mantener compatibilidad)
    */
-  async getSignedUrl(bucket: string, path: string, expiresIn = 3600): Promise<string> {
+  async uploadFinalReportCard(
+    institutionId: string,
+    studentId: string,
+    year: number,
+    pdfBuffer: Buffer,
+  ): Promise<UploadResult> {
+    const result = await this.uploadReportCard(
+      institutionId,
+      studentId,
+      year,
+      'final',
+      'anual',
+      pdfBuffer,
+    );
+    return result;
+  }
+
+  /**
+   * Obtiene una URL firmada con tiempo de expiración según el bucket
+   * Usa tiempos cortos para contenido sensible (boletines: 5min, reportes: 10min)
+   */
+  async getSignedUrlForBucket(bucket: string, path: string): Promise<string> {
+    if (!this.isConfigured()) {
+      throw new BadRequestException('Storage no configurado');
+    }
+
+    const expiresIn = this.signedUrlExpiration[bucket as keyof typeof this.signedUrlExpiration] || 600;
+    
+    // Si es bucket público, devolver URL pública
+    if (expiresIn === 0) {
+      const { data } = this.supabase.storage.from(bucket).getPublicUrl(path);
+      return data.publicUrl;
+    }
+
+    const { data, error } = await this.supabase.storage
+      .from(bucket)
+      .createSignedUrl(path, expiresIn);
+
+    if (error) {
+      throw new BadRequestException(`Error al generar URL: ${error.message}`);
+    }
+
+    return data.signedUrl;
+  }
+
+  /**
+   * Obtiene una URL firmada (temporal) para acceso privado
+   * @param expiresIn - Tiempo en segundos (default: 10 minutos)
+   */
+  async getSignedUrl(bucket: string, path: string, expiresIn = 600): Promise<string> {
     if (!this.isConfigured()) {
       throw new BadRequestException('Storage no configurado');
     }
@@ -170,6 +265,23 @@ export class SupabaseStorageService {
     }
 
     return data.signedUrl;
+  }
+
+  /**
+   * Genera URL de descarga para boletín (con expiración corta de 5 min)
+   */
+  async getReportCardDownloadUrl(
+    institutionId: string,
+    year: number,
+    gradeName: string,
+    periodName: string,
+    studentId: string,
+  ): Promise<string> {
+    const gradeSlug = this.slugify(gradeName);
+    const periodSlug = this.slugify(periodName);
+    const path = `${institutionId}/${year}/${gradeSlug}/${periodSlug}/${studentId}.pdf`;
+    
+    return this.getSignedUrlForBucket(this.buckets.boletines, path);
   }
 
   /**
@@ -261,5 +373,21 @@ export class SupabaseStorageService {
 
   private getFileExtension(filename: string): string {
     return filename.split('.').pop()?.toLowerCase() || 'bin';
+  }
+
+  /**
+   * Convierte texto a slug (URL-friendly)
+   * "Grado 9°" -> "grado-9"
+   * "Período 1" -> "periodo-1"
+   */
+  private slugify(text: string): string {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Quitar acentos
+      .replace(/[°º]/g, '')            // Quitar símbolos de grado
+      .replace(/[^a-z0-9]+/g, '-')     // Reemplazar no-alfanuméricos por guión
+      .replace(/^-+|-+$/g, '')         // Quitar guiones al inicio/final
+      .substring(0, 50);               // Limitar longitud
   }
 }
