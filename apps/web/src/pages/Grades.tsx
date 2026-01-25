@@ -901,13 +901,13 @@ export default function Grades() {
                     Estudiante
                   </th>
                   <th 
-                    colSpan={cognitivoActivities.length + 2}
+                    colSpan={cognitivoActivities.length + (allowAddCognitivo ? 1 : 0) + 1}
                     className="text-center px-2 py-2 text-xs font-semibold text-blue-700 bg-blue-50 border-r border-slate-200"
                   >
                     COGNITIVO - {componentWeights.COGNITIVO}%
                   </th>
                   <th 
-                    colSpan={procedimentalActivities.length + 2}
+                    colSpan={procedimentalActivities.length + (allowAddProcedimental ? 1 : 0) + 1}
                     className="text-center px-2 py-2 text-xs font-semibold text-green-700 bg-green-50 border-r border-slate-200"
                   >
                     PROCEDIMENTAL - {componentWeights.PROCEDIMENTAL}%
@@ -1064,7 +1064,7 @@ export default function Grades() {
                           />
                         </td>
                       ))}
-                      <td className="px-1 py-1"></td>
+                      {allowAddCognitivo && <td className="px-1 py-1"></td>}
                       <td className="px-1 py-1 text-center font-semibold text-blue-700 bg-blue-50/50">
                         {cogAvg > 0 ? cogAvg.toFixed(1) : '-'}
                       </td>
@@ -1086,7 +1086,7 @@ export default function Grades() {
                           />
                         </td>
                       ))}
-                      <td className="px-1 py-1"></td>
+                      {allowAddProcedimental && <td className="px-1 py-1"></td>}
                       <td className="px-1 py-1 text-center font-semibold text-green-700 bg-green-50/50">
                         {procAvg > 0 ? procAvg.toFixed(1) : '-'}
                       </td>
