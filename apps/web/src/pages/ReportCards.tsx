@@ -532,12 +532,12 @@ export default function ReportCards() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Boletines Académicos</h1>
-          <p className="text-slate-500 mt-1">Generación y entrega de boletines de calificaciones</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Boletines Académicos</h1>
+          <p className="text-sm sm:text-base text-slate-500 mt-1">Generación y entrega de boletines de calificaciones</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button 
             onClick={() => setShowBulkDownloadModal(true)}
             className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
@@ -565,7 +565,7 @@ export default function ReportCards() {
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Año</label>
             <select

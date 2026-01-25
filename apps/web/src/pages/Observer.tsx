@@ -446,10 +446,10 @@ export default function Observer() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-slate-900">Observador del Estudiante</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Observador del Estudiante</h1>
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
               currentUser.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' :
               currentUser.role === 'COORDINATOR' ? 'bg-green-100 text-green-700' :
@@ -459,13 +459,13 @@ export default function Observer() {
               {permissions.label}
             </span>
           </div>
-          <p className="text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             {permissions.canViewAll 
               ? 'Acceso completo a todos los registros' 
               : `Grupos asignados: ${currentUser.assignedGroups.join(', ')}`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm">
             <Download className="w-4 h-4" />
             Exportar
@@ -496,7 +496,7 @@ export default function Observer() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">

@@ -250,10 +250,10 @@ export default function Communications() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Comunicaciones</h1>
-          <p className="text-slate-500 mt-1">Gestion de circulares, notificaciones y mensajes</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Comunicaciones</h1>
+          <p className="text-sm sm:text-base text-slate-500 mt-1">Gestion de circulares, notificaciones y mensajes</p>
         </div>
         <button onClick={handleOpenNew} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
           <Plus className="w-4 h-4" />
@@ -262,7 +262,7 @@ export default function Communications() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -312,24 +312,26 @@ export default function Communications() {
       {/* Filters & List */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
         <div className="p-4 border-b border-slate-200">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input type="text" placeholder="Buscar por asunto o contenido..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
             </div>
-            <select value={filterType} onChange={(e) => setFilterType(e.target.value as any)} className="px-3 py-2 border border-slate-300 rounded-lg">
-              <option value="ALL">Todos los tipos</option>
-              <option value="CIRCULAR">Circulares</option>
-              <option value="NOTIFICATION">Notificaciones</option>
-              <option value="MESSAGE">Mensajes</option>
-              <option value="ANNOUNCEMENT">Anuncios</option>
-            </select>
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)} className="px-3 py-2 border border-slate-300 rounded-lg">
-              <option value="ALL">Todos los estados</option>
-              <option value="SENT">Enviados</option>
-              <option value="DRAFT">Borradores</option>
-              <option value="SCHEDULED">Programados</option>
-            </select>
+            <div className="flex flex-wrap gap-2">
+              <select value={filterType} onChange={(e) => setFilterType(e.target.value as any)} className="flex-1 min-w-[140px] px-3 py-2 border border-slate-300 rounded-lg">
+                <option value="ALL">Todos los tipos</option>
+                <option value="CIRCULAR">Circulares</option>
+                <option value="NOTIFICATION">Notificaciones</option>
+                <option value="MESSAGE">Mensajes</option>
+                <option value="ANNOUNCEMENT">Anuncios</option>
+              </select>
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)} className="flex-1 min-w-[140px] px-3 py-2 border border-slate-300 rounded-lg">
+                <option value="ALL">Todos los estados</option>
+                <option value="SENT">Enviados</option>
+                <option value="DRAFT">Borradores</option>
+                <option value="SCHEDULED">Programados</option>
+              </select>
+            </div>
           </div>
         </div>
 

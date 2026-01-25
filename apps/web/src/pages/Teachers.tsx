@@ -370,12 +370,12 @@ export default function Teachers() {
       {viewMode === 'list' ? (
         <>
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Docentes</h1>
               <p className="text-slate-500 mt-1">Gestion del personal docente de la institucion</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm">
                 <Upload className="w-4 h-4" />
                 Importar
@@ -392,7 +392,7 @@ export default function Teachers() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="bg-white rounded-xl border border-slate-200 p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -439,24 +439,26 @@ export default function Teachers() {
           {/* Filters & Table */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
             <div className="p-4 border-b border-slate-200">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input type="text" placeholder="Buscar por nombre, documento o email..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                 </div>
-                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)} className="px-3 py-2 border border-slate-300 rounded-lg">
-                  <option value="ALL">Todos los estados</option>
-                  <option value="ACTIVE">Activos</option>
-                  <option value="INACTIVE">Inactivos</option>
-                  <option value="RETIRED">Retirados</option>
-                </select>
-                <select value={filterContract} onChange={(e) => setFilterContract(e.target.value as any)} className="px-3 py-2 border border-slate-300 rounded-lg">
-                  <option value="ALL">Todos los contratos</option>
-                  <option value="PLANTA">Planta</option>
-                  <option value="PROVISIONAL">Provisional</option>
-                  <option value="CONTRATO">Contrato</option>
-                  <option value="HORA_CATEDRA">Hora Catedra</option>
-                </select>
+                <div className="flex flex-wrap gap-2">
+                  <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)} className="flex-1 min-w-[140px] px-3 py-2 border border-slate-300 rounded-lg">
+                    <option value="ALL">Todos los estados</option>
+                    <option value="ACTIVE">Activos</option>
+                    <option value="INACTIVE">Inactivos</option>
+                    <option value="RETIRED">Retirados</option>
+                  </select>
+                  <select value={filterContract} onChange={(e) => setFilterContract(e.target.value as any)} className="flex-1 min-w-[140px] px-3 py-2 border border-slate-300 rounded-lg">
+                    <option value="ALL">Todos los contratos</option>
+                    <option value="PLANTA">Planta</option>
+                    <option value="PROVISIONAL">Provisional</option>
+                    <option value="CONTRATO">Contrato</option>
+                    <option value="HORA_CATEDRA">Hora Catedra</option>
+                  </select>
+                </div>
               </div>
             </div>
 

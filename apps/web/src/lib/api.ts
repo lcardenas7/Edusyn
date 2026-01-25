@@ -360,6 +360,27 @@ export const galleryApi = {
   delete: (id: string) => api.delete(`/gallery/${id}`),
 }
 
+// Storage API - Subida de archivos a Supabase
+export const storageApi = {
+  uploadGalleryImage: (file: File, institutionId: string, category?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('institutionId', institutionId);
+    if (category) formData.append('category', category);
+    return api.post('/storage/upload/gallery', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  uploadAnnouncementImage: (file: File, institutionId: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('institutionId', institutionId);
+    return api.post('/storage/upload/announcement', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+}
+
 export const eventsApi = {
   getAll: (institutionId?: string, onlyActive = true, upcoming = false) => api.get('/events', { params: { institutionId, onlyActive, upcoming } }),
   getBirthdays: (institutionId?: string) => api.get('/events/birthdays', { params: { institutionId } }),

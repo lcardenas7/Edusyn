@@ -357,10 +357,10 @@ export default function AreasAdmin() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Áreas y Asignaturas</h1>
-          <p className="text-slate-500 mt-1">Configuración de áreas académicas y sus asignaturas</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Áreas y Asignaturas</h1>
+          <p className="text-sm sm:text-base text-slate-500 mt-1">Configuración de áreas académicas y sus asignaturas</p>
         </div>
         <button
           onClick={() => openAreaModal()}

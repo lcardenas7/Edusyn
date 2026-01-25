@@ -867,12 +867,12 @@ export default function Students() {
       {viewMode === 'list' ? (
         <>
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Estudiantes</h1>
               <p className="text-slate-500 mt-1">Gestion de estudiantes matriculados</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {/* Botón Crear Acceso - Solo visible cuando hay filtro de grupo */}
               {filterGroup !== 'ALL' && (
                 <button 
@@ -909,7 +909,7 @@ export default function Students() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="bg-white rounded-xl border border-slate-200 p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -956,20 +956,21 @@ export default function Students() {
           {/* Filters & Table */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
             <div className="p-4 border-b border-slate-200">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input type="text" placeholder="Buscar por nombre o documento..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                 </div>
-                <select value={filterGrade} onChange={(e) => { setFilterGrade(e.target.value); setFilterGroup('ALL') }} className="px-3 py-2 border border-slate-300 rounded-lg">
-                  <option value="ALL">Todos los grados</option>
-                  {grades.map(g => <option key={g} value={g}>{g}</option>)}
-                </select>
-                <select value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)} className="px-3 py-2 border border-slate-300 rounded-lg">
-                  <option value="ALL">Todos los grupos</option>
-                  {groups.map(g => <option key={g} value={g}>{g}</option>)}
-                </select>
-                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)} className="px-3 py-2 border border-slate-300 rounded-lg">
+                <div className="flex flex-wrap gap-2">
+                  <select value={filterGrade} onChange={(e) => { setFilterGrade(e.target.value); setFilterGroup('ALL') }} className="flex-1 min-w-[140px] px-3 py-2 border border-slate-300 rounded-lg">
+                    <option value="ALL">Todos los grados</option>
+                    {grades.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                  <select value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)} className="flex-1 min-w-[140px] px-3 py-2 border border-slate-300 rounded-lg">
+                    <option value="ALL">Todos los grupos</option>
+                    {groups.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                  <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)} className="flex-1 min-w-[140px] px-3 py-2 border border-slate-300 rounded-lg">
                   <option value="ALL">Todos los estados</option>
                   <option value="ACTIVE">Activos</option>
                   <option value="INACTIVE">Inactivos</option>
@@ -977,6 +978,7 @@ export default function Students() {
                   <option value="GRADUATED">Graduados</option>
                   <option value="WITHDRAWN">Retirados</option>
                 </select>
+                </div>
               </div>
             </div>
 

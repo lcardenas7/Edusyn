@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Megaphone,
   Image,
@@ -9,9 +9,11 @@ import {
   X,
   Save,
   Eye,
-  EyeOff
+  EyeOff,
+  Upload,
+  Loader2
 } from 'lucide-react'
-import { announcementsApi, galleryApi, eventsApi } from '../lib/api'
+import { announcementsApi, galleryApi, eventsApi, storageApi } from '../lib/api'
 import { useInstitution } from '../contexts/InstitutionContext'
 
 type TabType = 'announcements' | 'gallery' | 'events'
@@ -60,6 +62,9 @@ export default function ContentManager() {
   
   const [showModal, setShowModal] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const galleryFileInputRef = useRef<HTMLInputElement>(null)
   
   const [announcementForm, setAnnouncementForm] = useState({
     title: '',
@@ -102,6 +107,47 @@ export default function ContentManager() {
   useEffect(() => {
     fetchData()
   }, [])
+
+  // Manejar subida de imagen a Supabase
+  const handleFileUpload = async (file: File, type: 'announcement' | 'gallery') => {
+    if (!institution?.id) {
+      alert('No se pudo determinar la institución')
+      return
+    }
+    
+    // Validar tamaño (max 500KB)
+    if (file.size > 500 * 1024) {
+      alert('La imagen es muy grande. Máximo 500KB.')
+      return
+    }
+    
+    // Validar tipo
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Formato no válido. Use JPG, PNG o WebP.')
+      return
+    }
+    
+    setUploading(true)
+    try {
+      const response = type === 'gallery' 
+        ? await storageApi.uploadGalleryImage(file, institution.id, galleryForm.category || undefined)
+        : await storageApi.uploadAnnouncementImage(file, institution.id)
+      
+      const imageUrl = response.data?.data?.url
+      if (imageUrl) {
+        if (type === 'gallery') {
+          setGalleryForm(prev => ({ ...prev, imageUrl }))
+        } else {
+          setAnnouncementForm(prev => ({ ...prev, imageUrl }))
+        }
+      }
+    } catch (err: any) {
+      console.error('Error uploading file:', err)
+      alert(err.response?.data?.message || 'Error al subir la imagen')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const fetchData = async () => {
     setLoading(true)
@@ -290,10 +336,10 @@ export default function ContentManager() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Gestión de Contenidos</h1>
-          <p className="text-slate-500 mt-1">Administra los contenidos del dashboard institucional</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Gestión de Contenidos</h1>
+          <p className="text-sm sm:text-base text-slate-500 mt-1">Administra los contenidos del dashboard institucional</p>
         </div>
         <button
           onClick={openCreateModal}
@@ -305,7 +351,7 @@ export default function ContentManager() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -490,18 +536,52 @@ export default function ContentManager() {
                         value={announcementForm.imageUrl}
                         onChange={(e) => setAnnouncementForm({ ...announcementForm, imageUrl: e.target.value })}
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="https://ejemplo.com/imagen.jpg"
+                        placeholder="https://ejemplo.com/imagen.jpg o sube una imagen"
                       />
-                      <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="text-center text-xs text-slate-400 py-1">— o —</div>
+                      <div className="flex items-center gap-2">
                         <input
+                          ref={fileInputRef}
                           type="file"
-                          accept="image/*"
-                          disabled
-                          className="flex-1 text-sm text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:bg-slate-200 file:text-slate-500 cursor-not-allowed opacity-60"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) handleFileUpload(file, 'announcement')
+                          }}
+                          className="hidden"
                         />
-                        <span className="text-xs text-amber-700">Próximamente</span>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploading}
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 transition-colors disabled:opacity-50"
+                        >
+                          {uploading ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Subiendo...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-4 h-4" />
+                              Subir imagen desde PC
+                            </>
+                          )}
+                        </button>
                       </div>
-                      <p className="text-xs text-slate-500">Tamaño recomendado: 1200x630px (formato banner)</p>
+                      {announcementForm.imageUrl && (
+                        <div className="relative">
+                          <img src={announcementForm.imageUrl} alt="Preview" className="w-full h-32 object-cover rounded-lg" />
+                          <button
+                            type="button"
+                            onClick={() => setAnnouncementForm({ ...announcementForm, imageUrl: '' })}
+                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                      <p className="text-xs text-slate-500">Máximo 500KB. Formatos: JPG, PNG, WebP</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -577,18 +657,52 @@ export default function ContentManager() {
                         value={galleryForm.imageUrl}
                         onChange={(e) => setGalleryForm({ ...galleryForm, imageUrl: e.target.value })}
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="https://ejemplo.com/imagen.jpg"
+                        placeholder="https://ejemplo.com/imagen.jpg o sube una imagen"
                       />
-                      <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="text-center text-xs text-slate-400 py-1">— o —</div>
+                      <div className="flex items-center gap-2">
                         <input
+                          ref={galleryFileInputRef}
                           type="file"
-                          accept="image/*"
-                          disabled
-                          className="flex-1 text-sm text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:bg-slate-200 file:text-slate-500 cursor-not-allowed opacity-60"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) handleFileUpload(file, 'gallery')
+                          }}
+                          className="hidden"
                         />
-                        <span className="text-xs text-amber-700">Próximamente</span>
+                        <button
+                          type="button"
+                          onClick={() => galleryFileInputRef.current?.click()}
+                          disabled={uploading}
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg text-purple-700 hover:bg-purple-100 transition-colors disabled:opacity-50"
+                        >
+                          {uploading ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Subiendo...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-4 h-4" />
+                              Subir imagen desde PC
+                            </>
+                          )}
+                        </button>
                       </div>
-                      <p className="text-xs text-slate-500">Tamaño recomendado: 800x600px o 1200x900px (ratio 4:3)</p>
+                      {galleryForm.imageUrl && (
+                        <div className="relative">
+                          <img src={galleryForm.imageUrl} alt="Preview" className="w-full h-40 object-contain bg-slate-100 rounded-lg" />
+                          <button
+                            type="button"
+                            onClick={() => setGalleryForm({ ...galleryForm, imageUrl: '' })}
+                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                      <p className="text-xs text-slate-500">Máximo 500KB. Formatos: JPG, PNG, WebP</p>
                     </div>
                   </div>
                   <div>

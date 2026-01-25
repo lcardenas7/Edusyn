@@ -459,7 +459,7 @@ export default function StaffManagement() {
           <>
             {/* Filters & Actions */}
             <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
@@ -470,23 +470,25 @@ export default function StaffManagement() {
                     className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none"
                   />
                 </div>
-                <select
-                  value={filterRole}
-                  onChange={(e) => setFilterRole(e.target.value)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none"
-                >
-                  <option value="ALL">Todos los roles</option>
-                  {STAFF_ROLES.map(role => (
-                    <option key={role.value} value={role.value}>{role.label}</option>
-                  ))}
-                </select>
-                <button
-                  onClick={openCreateModal}
-                  className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Nuevo Usuario
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    value={filterRole}
+                    onChange={(e) => setFilterRole(e.target.value)}
+                    className="flex-1 min-w-[150px] px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none"
+                  >
+                    <option value="ALL">Todos los roles</option>
+                    {STAFF_ROLES.map(role => (
+                      <option key={role.value} value={role.value}>{role.label}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={openCreateModal}
+                    className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors whitespace-nowrap"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Nuevo Usuario
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -581,7 +583,7 @@ export default function StaffManagement() {
             {/* Upload Type Selection */}
             <div className="bg-white rounded-xl border border-slate-200 p-6">
               <h3 className="text-lg font-semibold text-slate-900 mb-4">Tipo de Carga</h3>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <button
                   onClick={() => setUploadType('teachers')}
                   className={`p-4 rounded-xl border-2 transition-all ${

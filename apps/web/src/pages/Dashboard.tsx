@@ -8,7 +8,9 @@ import {
   ChevronRight,
   ChevronLeft,
   Clock,
-  MapPin
+  MapPin,
+  X,
+  ZoomIn
 } from 'lucide-react'
 import { dashboardApi } from '../lib/api'
 
@@ -44,6 +46,7 @@ interface Birthday {
   type: 'ESTUDIANTE' | 'DOCENTE'
   detail: string
   isToday: boolean
+  daysFromToday: number
 }
 
 export default function Dashboard() {
@@ -55,6 +58,7 @@ export default function Dashboard() {
   const [birthdays, setBirthdays] = useState<Birthday[]>([])
   const [currentSlide, setCurrentSlide] = useState(0)
   const sliderRef = useRef<NodeJS.Timeout | null>(null)
+  const [imageModal, setImageModal] = useState<{ url: string; title: string } | null>(null)
 
   // Auto-slide para galería
   useEffect(() => {
@@ -132,11 +136,19 @@ export default function Dashboard() {
                   <div key={announcement.id} className="px-6 py-4 hover:bg-slate-50 transition-colors">
                     <div className="flex gap-4">
                       {announcement.imageUrl && (
-                        <img 
-                          src={announcement.imageUrl} 
-                          alt={announcement.title}
-                          className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-                        />
+                        <div 
+                          className="relative group cursor-pointer flex-shrink-0"
+                          onClick={() => setImageModal({ url: announcement.imageUrl!, title: announcement.title })}
+                        >
+                          <img 
+                            src={announcement.imageUrl} 
+                            alt={announcement.title}
+                            className="w-20 h-20 object-cover rounded-lg"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                            <ZoomIn className="w-5 h-5 text-white" />
+                          </div>
+                        </div>
                       )}
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-slate-900">{announcement.title}</h3>
@@ -188,22 +200,26 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <>
-                  <div className="relative h-64 overflow-hidden">
+                  <div className="relative h-72 overflow-hidden bg-slate-100">
                     {gallery.map((img, index) => (
                       <div 
                         key={img.id} 
-                        className={`absolute inset-0 transition-opacity duration-500 ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}
+                        className={`absolute inset-0 transition-opacity duration-500 cursor-pointer ${index === currentSlide ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                        onClick={() => setImageModal({ url: img.imageUrl, title: img.title })}
                       >
                         <img 
                           src={img.imageUrl} 
                           alt={img.title}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-contain"
                         />
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
                           <p className="text-white font-medium">{img.title}</p>
                           {img.category && (
                             <span className="text-white/70 text-sm">{img.category}</span>
                           )}
+                        </div>
+                        <div className="absolute top-2 right-2 bg-black/50 rounded-full p-1.5 opacity-0 hover:opacity-100 transition-opacity">
+                          <ZoomIn className="w-4 h-4 text-white" />
                         </div>
                       </div>
                     ))}
@@ -264,90 +280,143 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Cumpleaños del Mes */}
+          {/* Cumpleaños Próximos */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
             <div className="px-6 py-4 border-b border-slate-200">
               <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
                 <Cake className="w-5 h-5 text-pink-600" />
-                Cumpleaños del Mes
+                Cumpleaños Próximos
               </h2>
             </div>
             <div className="max-h-80 overflow-y-auto">
               {birthdays.length === 0 ? (
                 <div className="px-6 py-8 text-center text-slate-500">
                   <Cake className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-                  <p>No hay cumpleaños este mes</p>
+                  <p>No hay cumpleaños próximos</p>
                 </div>
               ) : (
                 <>
-                  {/* Cumpleaños de hoy destacados */}
+                  {/* Cumpleaños de hoy */}
                   {birthdays.filter(b => b.isToday).length > 0 && (
                     <div className="px-4 py-3 bg-gradient-to-r from-pink-50 to-purple-50 border-b border-pink-100">
                       <p className="text-xs font-semibold text-pink-600 uppercase mb-2">🎂 ¡Hoy cumplen años!</p>
-                      <div className="space-y-2">
-                        {birthdays.filter(b => b.isToday).map((birthday) => (
-                          <div key={birthday.id} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-sm">
-                            <div className="w-8 h-8 bg-pink-500 text-white rounded-full flex items-center justify-center">
-                              <span className="text-xs font-bold">{new Date(birthday.birthDate).getDate()}</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-slate-900 text-sm truncate">{birthday.name}</p>
-                              <p className="text-xs text-slate-500">
-                                {birthday.type === 'DOCENTE' ? (
-                                  <span className="text-blue-600 font-medium">Docente</span>
-                                ) : (
-                                  <span className="text-green-600">{birthday.detail}</span>
-                                )}
-                              </p>
-                            </div>
+                      {/* Docentes de hoy */}
+                      {birthdays.filter(b => b.isToday && b.type === 'DOCENTE').length > 0 && (
+                        <div className="mb-2">
+                          <p className="text-xs text-blue-600 font-medium mb-1">Docentes</p>
+                          <div className="space-y-1">
+                            {birthdays.filter(b => b.isToday && b.type === 'DOCENTE').map((birthday) => (
+                              <div key={birthday.id} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-sm">
+                                <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center">
+                                  <span className="text-xs font-bold">{new Date(birthday.birthDate).getDate()}</span>
+                                </div>
+                                <p className="font-medium text-slate-900 text-sm truncate">{birthday.name}</p>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      )}
+                      {/* Estudiantes de hoy */}
+                      {birthdays.filter(b => b.isToday && b.type === 'ESTUDIANTE').length > 0 && (
+                        <div>
+                          <p className="text-xs text-green-600 font-medium mb-1">Estudiantes</p>
+                          <div className="space-y-1">
+                            {birthdays.filter(b => b.isToday && b.type === 'ESTUDIANTE').map((birthday) => (
+                              <div key={birthday.id} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-sm">
+                                <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center">
+                                  <span className="text-xs font-bold">{new Date(birthday.birthDate).getDate()}</span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-slate-900 text-sm truncate">{birthday.name}</p>
+                                  <p className="text-xs text-slate-500">{birthday.detail}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  {/* Docentes */}
-                  {birthdays.filter(b => b.type === 'DOCENTE' && !b.isToday).length > 0 && (
-                    <div className="px-4 py-2 border-b border-slate-100">
-                      <p className="text-xs font-semibold text-blue-600 uppercase mb-2">Docentes</p>
-                      <div className="space-y-1">
-                        {birthdays.filter(b => b.type === 'DOCENTE' && !b.isToday).map((birthday) => (
-                          <div key={birthday.id} className="flex items-center gap-2 py-1">
-                            <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
-                              <span className="text-xs font-bold">{new Date(birthday.birthDate).getDate()}</span>
-                            </div>
-                            <p className="text-sm text-slate-700 truncate">{birthday.name}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Estudiantes */}
-                  {birthdays.filter(b => b.type === 'ESTUDIANTE' && !b.isToday).length > 0 && (
-                    <div className="px-4 py-2">
-                      <p className="text-xs font-semibold text-green-600 uppercase mb-2">Estudiantes</p>
-                      <div className="space-y-1">
-                        {birthdays.filter(b => b.type === 'ESTUDIANTE' && !b.isToday).map((birthday) => (
-                          <div key={birthday.id} className="flex items-center gap-2 py-1">
-                            <div className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-                              <span className="text-xs font-bold">{new Date(birthday.birthDate).getDate()}</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-slate-700 truncate">{birthday.name}</p>
-                              <p className="text-xs text-slate-400">{birthday.detail}</p>
+                  {/* Próximos días (agrupados por día) */}
+                  {[1, 2, 3].map(daysAhead => {
+                    const dayBirthdays = birthdays.filter(b => b.daysFromToday === daysAhead);
+                    if (dayBirthdays.length === 0) return null;
+                    const futureDate = new Date();
+                    futureDate.setDate(futureDate.getDate() + daysAhead);
+                    const dayLabel = daysAhead === 1 ? 'Mañana' : futureDate.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'short' });
+                    
+                    return (
+                      <div key={daysAhead} className="px-4 py-3 border-b border-slate-100 last:border-b-0">
+                        <p className="text-xs font-semibold text-slate-500 uppercase mb-2">{dayLabel}</p>
+                        {/* Docentes del día */}
+                        {dayBirthdays.filter(b => b.type === 'DOCENTE').length > 0 && (
+                          <div className="mb-2">
+                            <p className="text-xs text-blue-600 font-medium mb-1">Docentes</p>
+                            <div className="space-y-1">
+                              {dayBirthdays.filter(b => b.type === 'DOCENTE').map((birthday) => (
+                                <div key={birthday.id} className="flex items-center gap-2 py-1">
+                                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
+                                    <span className="text-xs font-bold">{new Date(birthday.birthDate).getDate()}</span>
+                                  </div>
+                                  <p className="text-sm text-slate-700 truncate">{birthday.name}</p>
+                                </div>
+                              ))}
                             </div>
                           </div>
-                        ))}
+                        )}
+                        {/* Estudiantes del día */}
+                        {dayBirthdays.filter(b => b.type === 'ESTUDIANTE').length > 0 && (
+                          <div>
+                            <p className="text-xs text-green-600 font-medium mb-1">Estudiantes</p>
+                            <div className="space-y-1">
+                              {dayBirthdays.filter(b => b.type === 'ESTUDIANTE').map((birthday) => (
+                                <div key={birthday.id} className="flex items-center gap-2 py-1">
+                                  <div className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                                    <span className="text-xs font-bold">{new Date(birthday.birthDate).getDate()}</span>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-slate-700 truncate">{birthday.name}</p>
+                                    <p className="text-xs text-slate-400">{birthday.detail}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })}
                 </>
               )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modal para ver imagen en grande */}
+      {imageModal && (
+        <div 
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          onClick={() => setImageModal(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] w-full">
+            <button 
+              onClick={() => setImageModal(null)}
+              className="absolute -top-10 right-0 text-white hover:text-slate-300 transition-colors"
+            >
+              <X className="w-8 h-8" />
+            </button>
+            <img 
+              src={imageModal.url} 
+              alt={imageModal.title}
+              className="w-full h-full object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <p className="text-white text-center mt-4 font-medium">{imageModal.title}</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

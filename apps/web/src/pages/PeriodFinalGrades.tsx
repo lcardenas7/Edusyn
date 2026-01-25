@@ -229,10 +229,10 @@ export default function PeriodFinalGrades() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Ingresar Nota Final de Período</h1>
-          <p className="text-slate-500 mt-1">Ingresa notas finales directamente (solo Coordinador/Admin)</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Ingresar Nota Final de Período</h1>
+          <p className="text-sm sm:text-base text-slate-500 mt-1">Ingresa notas finales directamente (solo Coordinador/Admin)</p>
         </div>
       </div>
 

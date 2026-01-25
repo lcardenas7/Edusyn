@@ -1038,7 +1038,7 @@ export default function Reports() {
     if (reportCategory === 'admin') {
       return (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Año Escolar</label>
               <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
@@ -2156,10 +2156,10 @@ export default function Reports() {
   // Vista principal - Lista de reportes
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Centro de Reportes</h1>
-          <p className="text-slate-500 mt-1">Genera y descarga reportes institucionales</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Centro de Reportes</h1>
+          <p className="text-sm sm:text-base text-slate-500 mt-1">Genera y descarga reportes institucionales</p>
         </div>
       </div>
 

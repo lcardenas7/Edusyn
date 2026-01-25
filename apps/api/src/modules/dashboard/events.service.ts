@@ -102,7 +102,19 @@ export class EventsService {
     const currentMonth = now.getMonth() + 1;
     const currentDay = now.getDate();
     
-    // Obtener estudiantes con cumpleaños este mes
+    // Calcular los próximos 3 días (hoy + 3 días siguientes)
+    const daysToCheck: { month: number; day: number; daysFromToday: number }[] = [];
+    for (let i = 0; i <= 3; i++) {
+      const checkDate = new Date(now);
+      checkDate.setDate(now.getDate() + i);
+      daysToCheck.push({
+        month: checkDate.getMonth() + 1,
+        day: checkDate.getDate(),
+        daysFromToday: i,
+      });
+    }
+    
+    // Obtener estudiantes con cumpleaños
     const students = await this.prisma.student.findMany({
       where: {
         institutionId,
@@ -121,7 +133,7 @@ export class EventsService {
       },
     });
 
-    // Obtener docentes con cumpleaños este mes (usuarios con rol DOCENTE)
+    // Obtener docentes con cumpleaños (usuarios con rol DOCENTE)
     const teachers = await this.prisma.user.findMany({
       where: {
         birthDate: { not: null },
@@ -141,47 +153,61 @@ export class EventsService {
       },
     });
 
-    // Filtrar estudiantes por mes actual
+    // Filtrar estudiantes por hoy + próximos 3 días
     const studentBirthdays = students
       .filter(s => {
         if (!s.birthDate) return false;
         const bd = new Date(s.birthDate);
-        return bd.getMonth() + 1 === currentMonth;
+        const bdMonth = bd.getMonth() + 1;
+        const bdDay = bd.getDate();
+        return daysToCheck.some(d => d.month === bdMonth && d.day === bdDay);
       })
-      .map(s => ({
-        id: s.id,
-        name: `${s.firstName} ${s.lastName}`,
-        birthDate: s.birthDate,
-        type: 'ESTUDIANTE' as const,
-        detail: s.enrollments[0] 
-          ? `${s.enrollments[0].group?.grade?.name || ''} ${s.enrollments[0].group?.name || ''}`.trim()
-          : '',
-        isToday: s.birthDate ? new Date(s.birthDate).getDate() === currentDay : false,
-      }));
+      .map(s => {
+        const bd = new Date(s.birthDate!);
+        const bdMonth = bd.getMonth() + 1;
+        const bdDay = bd.getDate();
+        const dayInfo = daysToCheck.find(d => d.month === bdMonth && d.day === bdDay);
+        return {
+          id: s.id,
+          name: `${s.firstName} ${s.lastName}`,
+          birthDate: s.birthDate,
+          type: 'ESTUDIANTE' as const,
+          detail: s.enrollments[0] 
+            ? `${s.enrollments[0].group?.grade?.name || ''} ${s.enrollments[0].group?.name || ''}`.trim()
+            : '',
+          isToday: dayInfo?.daysFromToday === 0,
+          daysFromToday: dayInfo?.daysFromToday ?? 99,
+        };
+      });
 
-    // Filtrar docentes por mes actual
+    // Filtrar docentes por hoy + próximos 3 días
     const teacherBirthdays = teachers
       .filter(t => {
         if (!t.birthDate) return false;
         const bd = new Date(t.birthDate);
-        return bd.getMonth() + 1 === currentMonth;
+        const bdMonth = bd.getMonth() + 1;
+        const bdDay = bd.getDate();
+        return daysToCheck.some(d => d.month === bdMonth && d.day === bdDay);
       })
-      .map(t => ({
-        id: t.id,
-        name: `${t.firstName} ${t.lastName}`,
-        birthDate: t.birthDate,
-        type: 'DOCENTE' as const,
-        detail: 'Docente',
-        isToday: t.birthDate ? new Date(t.birthDate).getDate() === currentDay : false,
-      }));
-    
-    // Combinar y ordenar por día del mes
-    const allBirthdays = [...studentBirthdays, ...teacherBirthdays]
-      .sort((a, b) => {
-        const dayA = a.birthDate ? new Date(a.birthDate).getDate() : 0;
-        const dayB = b.birthDate ? new Date(b.birthDate).getDate() : 0;
-        return dayA - dayB;
+      .map(t => {
+        const bd = new Date(t.birthDate!);
+        const bdMonth = bd.getMonth() + 1;
+        const bdDay = bd.getDate();
+        const dayInfo = daysToCheck.find(d => d.month === bdMonth && d.day === bdDay);
+        return {
+          id: t.id,
+          name: `${t.firstName} ${t.lastName}`,
+          birthDate: t.birthDate,
+          type: 'DOCENTE' as const,
+          detail: 'Docente',
+          isToday: dayInfo?.daysFromToday === 0,
+          daysFromToday: dayInfo?.daysFromToday ?? 99,
+        };
       });
+    
+    // Combinar y ordenar por días desde hoy (primero los de hoy, luego mañana, etc.)
+    const allBirthdays = [...studentBirthdays, ...teacherBirthdays]
+      .sort((a, b) => a.daysFromToday - b.daysFromToday);
 
     return allBirthdays;
   }
