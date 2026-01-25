@@ -6,6 +6,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { AreasService } from './areas.service';
 import { CreateAreaDto, UpdateAreaDto, AddSubjectWithConfigDto, UpdateSubjectDto, CreateSubjectLevelConfigDto, UpdateSubjectLevelConfigDto } from './dto/create-area.dto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { resolveInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('areas')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -14,19 +15,6 @@ export class AreasController {
     private readonly areasService: AreasService,
     private readonly prisma: PrismaService,
   ) {}
-
-  // Helper para obtener institutionId del usuario
-  private async resolveInstitutionId(req: any, queryInstitutionId?: string): Promise<string | undefined> {
-    let instId = queryInstitutionId || req.user?.institutionId;
-    if (!instId && req.user?.id) {
-      const institutionUser = await this.prisma.institutionUser.findFirst({
-        where: { userId: req.user.id },
-        select: { institutionId: true }
-      });
-      instId = institutionUser?.institutionId;
-    }
-    return instId;
-  }
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
@@ -42,7 +30,7 @@ export class AreasController {
     @Query('academicLevel') academicLevel?: string,
     @Query('gradeId') gradeId?: string,
   ) {
-    const instId = await this.resolveInstitutionId(req, institutionId);
+    const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
     return this.areasService.list({ institutionId: instId, academicLevel, gradeId });
   }
 

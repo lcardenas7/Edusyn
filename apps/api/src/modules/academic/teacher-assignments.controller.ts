@@ -6,6 +6,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { CreateTeacherAssignmentDto } from './dto/create-teacher-assignment.dto';
 import { TeacherAssignmentsService } from './teacher-assignments.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { resolveInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('teacher-assignments')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -14,19 +15,6 @@ export class TeacherAssignmentsController {
     private readonly teacherAssignmentsService: TeacherAssignmentsService,
     private readonly prisma: PrismaService,
   ) {}
-
-  // Helper para obtener institutionId del usuario
-  private async resolveInstitutionId(req: any, queryInstitutionId?: string): Promise<string | undefined> {
-    let instId = queryInstitutionId || req.user?.institutionId;
-    if (!instId && req.user?.id) {
-      const institutionUser = await this.prisma.institutionUser.findFirst({
-        where: { userId: req.user.id },
-        select: { institutionId: true }
-      });
-      instId = institutionUser?.institutionId;
-    }
-    return instId;
-  }
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
@@ -43,7 +31,7 @@ export class TeacherAssignmentsController {
     @Query('teacherId') teacherId?: string,
     @Query('institutionId') institutionId?: string,
   ) {
-    const instId = await this.resolveInstitutionId(req, institutionId);
+    const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
     return this.teacherAssignmentsService.list({ academicYearId, groupId, teacherId, institutionId: instId });
   }
 }

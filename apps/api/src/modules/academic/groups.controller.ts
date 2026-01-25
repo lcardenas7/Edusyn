@@ -6,6 +6,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { GroupsService } from './groups.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { resolveInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('groups')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -30,18 +31,8 @@ export class GroupsController {
     @Query('gradeId') gradeId?: string,
     @Query('institutionId') institutionId?: string,
   ) {
-    // Si no viene institutionId, intentar obtenerlo del JWT o de la BD
-    let instId = institutionId || req.user?.institutionId;
-    
-    if (!instId && req.user?.id) {
-      const institutionUser = await this.prisma.institutionUser.findFirst({
-        where: { userId: req.user.id },
-        select: { institutionId: true }
-      });
-      instId = institutionUser?.institutionId;
-    }
-
-    console.log('[GroupsController] GET /groups - userId:', req.user?.id, 'institutionId resuelto:', instId);
+    // Usar helper seguro que respeta roles (SUPERADMIN puede usar query, otros no)
+    const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
 
     return this.groupsService.list({ campusId, shiftId, gradeId, institutionId: instId });
   }
