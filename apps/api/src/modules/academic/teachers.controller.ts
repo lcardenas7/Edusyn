@@ -54,10 +54,16 @@ export class TeachersController {
       institutionId = institutionUser?.institutionId;
     }
 
-    return this.teachersService.list({
+    console.log(`[TeachersController.list] userId=${req.user?.id}, institutionId=${institutionId}, isActive=${isActive}`);
+
+    const teachers = await this.teachersService.list({
       institutionId,
       isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
     });
+
+    console.log(`[TeachersController.list] Found ${teachers.length} teachers`);
+    
+    return teachers;
   }
 
   @Get(':id')
