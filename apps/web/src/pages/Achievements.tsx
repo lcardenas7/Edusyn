@@ -97,8 +97,11 @@ const DEFAULT_TEMPLATES: ValueJudgmentTemplate[] = [
 ]
 
 export default function Achievements() {
-  const { user } = useAuth()
-  const { institution, periods, selectedPeriod, setSelectedPeriod } = useInstitution()
+  const { user, institution: authInstitution } = useAuth()
+  const { periods, selectedPeriod, setSelectedPeriod } = useInstitution()
+  
+  // Usar el institution del AuthContext que tiene el id real de la BD
+  const institutionId = authInstitution?.id
   const [activeTab, setActiveTab] = useState<TabType>('achievements')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -177,23 +180,23 @@ export default function Achievements() {
   // Load groups when year changes
   useEffect(() => {
     const loadGroups = async () => {
-      if (!selectedYearId || !institution?.id) return
+      if (!selectedYearId || !institutionId) return
       try {
-        const response = await groupsApi.getAll({ institutionId: institution.id })
+        const response = await groupsApi.getAll({ institutionId })
         setGroups(response.data)
       } catch (err) {
         console.error('Error loading groups:', err)
       }
     }
     loadGroups()
-  }, [selectedYearId, institution?.id])
+  }, [selectedYearId, institutionId])
 
   // Load config when institution changes
   useEffect(() => {
     const loadConfig = async () => {
-      if (!institution?.id) return
+      if (!institutionId) return
       try {
-        const response = await achievementConfigApi.get(institution.id)
+        const response = await achievementConfigApi.get(institutionId)
         if (response.data) {
           setConfig({
             achievementsPerPeriod: response.data.achievementsPerPeriod || 1,
@@ -207,7 +210,7 @@ export default function Achievements() {
           })
         }
         
-        const templatesResponse = await achievementConfigApi.getTemplates(institution.id)
+        const templatesResponse = await achievementConfigApi.getTemplates(institutionId)
         if (templatesResponse.data?.length > 0) {
           setTemplates(templatesResponse.data)
         }
@@ -216,7 +219,7 @@ export default function Achievements() {
       }
     }
     loadConfig()
-  }, [institution?.id])
+  }, [institutionId])
 
   // Load teacher assignments when group changes
   useEffect(() => {
@@ -331,15 +334,15 @@ export default function Achievements() {
 
   // Save config
   const handleSaveConfig = async () => {
-    if (!institution?.id) return
+    if (!institutionId) return
     setSaving(true)
     try {
       await achievementConfigApi.upsert({
-        institutionId: institution.id,
+        institutionId,
         ...config,
       })
       await achievementConfigApi.bulkUpsertTemplates({
-        institutionId: institution.id,
+        institutionId,
         templates: templates.map(t => ({
           level: t.level,
           template: t.template,
@@ -358,11 +361,11 @@ export default function Achievements() {
 
   // Create default templates
   const handleCreateDefaultTemplates = async () => {
-    if (!institution?.id) return
+    if (!institutionId) return
     setSaving(true)
     try {
-      await achievementConfigApi.createDefaultTemplates(institution.id)
-      const response = await achievementConfigApi.getTemplates(institution.id)
+      await achievementConfigApi.createDefaultTemplates(institutionId)
+      const response = await achievementConfigApi.getTemplates(institutionId)
       setTemplates(response.data || DEFAULT_TEMPLATES)
       setMessage({ type: 'success', text: 'Plantillas por defecto creadas' })
     } catch (err) {
@@ -441,7 +444,7 @@ export default function Achievements() {
 
   // Generate suggestions for all students
   const handleGenerateSuggestions = async () => {
-    if (!selectedAchievementId || !institution?.id) return
+    if (!selectedAchievementId || !institutionId) return
     setSaving(true)
     try {
       const studentGradesArray = students.map(s => ({
@@ -451,7 +454,7 @@ export default function Achievements() {
       
       await achievementsApi.generateSuggestions({
         achievementId: selectedAchievementId,
-        institutionId: institution.id,
+        institutionId,
         studentGrades: studentGradesArray,
       })
       
