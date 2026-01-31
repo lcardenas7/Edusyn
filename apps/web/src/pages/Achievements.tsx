@@ -103,7 +103,7 @@ export default function Achievements() {
   // Usar el institution del AuthContext que tiene el id real de la BD
   const institutionId = authInstitution?.id
   const [activeTab, setActiveTab] = useState<TabType>('achievements')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -154,16 +154,23 @@ export default function Achievements() {
 
   const selectedAssignment = teacherAssignments.find(a => a.id === selectedAssignmentId)
 
-  // Load academic years
+  // Load academic years when institutionId is available
   useEffect(() => {
     const loadAcademicYears = async () => {
+      if (!institutionId) {
+        console.log('[Achievements] loadAcademicYears - skipping, no institutionId')
+        return
+      }
       try {
-        const response = await academicYearsApi.getAll()
-        setAcademicYears(response.data)
-        const current = response.data.find((y: any) => y.isCurrent)
+        console.log('[Achievements] Loading academic years for institutionId:', institutionId)
+        const response = await academicYearsApi.getAll(institutionId)
+        console.log('[Achievements] Academic years loaded:', response.data?.length || 0)
+        setAcademicYears(response.data || [])
+        const current = (response.data || []).find((y: any) => y.isCurrent)
         if (current) {
           setSelectedYearId(current.id)
           setTerms(current.terms || [])
+          console.log('[Achievements] Terms loaded:', current.terms?.length || 0)
           if (current.terms?.length > 0) {
             setSelectedTermId(current.terms[0].id)
           }
@@ -175,27 +182,27 @@ export default function Achievements() {
       }
     }
     loadAcademicYears()
-  }, [])
+  }, [institutionId])
 
-  // Load groups when year changes
+  // Load groups when institutionId is available
   useEffect(() => {
     const loadGroups = async () => {
-      console.log('[Achievements] loadGroups - selectedYearId:', selectedYearId, 'institutionId:', institutionId)
-      if (!selectedYearId || !institutionId) {
-        console.log('[Achievements] loadGroups - skipping, missing params')
+      console.log('[Achievements] loadGroups - institutionId:', institutionId)
+      if (!institutionId) {
+        console.log('[Achievements] loadGroups - skipping, no institutionId')
         return
       }
       try {
         console.log('[Achievements] Calling groupsApi.getAll with institutionId:', institutionId)
         const response = await groupsApi.getAll({ institutionId })
-        console.log('[Achievements] Groups loaded:', response.data?.length || 0)
+        console.log('[Achievements] Groups loaded:', response.data?.length || 0, response.data)
         setGroups(response.data || [])
       } catch (err) {
         console.error('Error loading groups:', err)
       }
     }
     loadGroups()
-  }, [selectedYearId, institutionId])
+  }, [institutionId])
 
   // Load config when institution changes
   useEffect(() => {
