@@ -18,6 +18,8 @@ async function bootstrap() {
         'http://localhost:3000',
         'https://web-production-8237c.up.railway.app',
         'https://edusyn.up.railway.app',
+        'https://www.edusyn.co',
+        'https://edusyn.co',
       ]
   )
     .map((o) => o.trim())
