@@ -10,9 +10,14 @@ export class AcademicTermsService {
   async listYears(institutionId?: string) {
     const years = await this.prisma.academicYear.findMany({
       where: institutionId ? { institutionId } : undefined,
+      include: {
+        terms: {
+          orderBy: { order: 'asc' },
+        },
+      },
       orderBy: { year: 'desc' },
     });
-    console.log('Academic years found:', years.length, 'for institutionId:', institutionId);
+    console.log('[AcademicTermsService] Years found:', years.length, 'for institutionId:', institutionId);
     return years;
   }
 

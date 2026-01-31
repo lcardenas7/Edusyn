@@ -117,8 +117,8 @@ export const guardiansApi = {
 
 // Academic Years
 export const academicYearsApi = {
-  getAll: (institutionId?: string) => api.get('/academic-years', { params: { institutionId } }),
-  create: (data: { institutionId: string; year: number; startDate?: string; endDate?: string }) => api.post('/academic-years', data),
+  getAll: (institutionId?: string) => api.get('/academic-terms/years', { params: { institutionId } }),
+  create: (data: { institutionId: string; year: number; startDate?: string; endDate?: string }) => api.post('/academic-terms/years', data),
 }
 
 // Academic Year Lifecycle Management
