@@ -121,6 +121,9 @@ export class AcademicYearLifecycleService {
       where: { institutionId },
       include: {
         calendar: true,
+        terms: {
+          orderBy: { order: 'asc' },
+        },
         _count: {
           select: {
             studentEnrollments: true,
