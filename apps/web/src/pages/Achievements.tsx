@@ -154,73 +154,122 @@ export default function Achievements() {
 
   const selectedAssignment = teacherAssignments.find(a => a.id === selectedAssignmentId)
 
-  // Load academic years when institutionId is available
+  // 1. Cargar años académicos cuando institutionId esté disponible
   useEffect(() => {
     const loadAcademicYears = async () => {
-      if (!institutionId) {
-        console.log('[Achievements] loadAcademicYears - skipping, no institutionId')
-        return
-      }
+      if (!institutionId) return
       try {
-        console.log('[Achievements] Loading academic years for institutionId:', institutionId)
+        console.log('[Achievements] 1. Loading academic years for institutionId:', institutionId)
         const response = await academicYearsApi.getAll(institutionId)
-        console.log('[Achievements] Academic years loaded:', response.data?.length || 0)
-        setAcademicYears(response.data || [])
-        const current = (response.data || []).find((y: any) => y.isCurrent)
+        const yearsData = response.data || []
+        console.log('[Achievements] Academic years loaded:', yearsData.length)
+        setAcademicYears(yearsData)
+        
+        // Seleccionar año actual o el primero
+        const current = yearsData.find((y: any) => y.isCurrent) || yearsData[0]
         if (current) {
           setSelectedYearId(current.id)
-          const termsData = current.terms || []
-          setTerms(termsData)
-          console.log('[Achievements] Terms loaded:', termsData.length)
-          
-          // Seleccionar el período actual basado en la fecha
-          if (termsData.length > 0) {
-            const today = new Date()
-            const currentTerm = termsData.find((t: any) => {
-              const start = new Date(t.startDate)
-              const end = new Date(t.endDate)
-              return today >= start && today <= end
-            })
-            // Si hay período actual, seleccionarlo; si no, el primero
-            setSelectedTermId(currentTerm?.id || termsData[0].id)
-            console.log('[Achievements] Selected term:', currentTerm?.name || termsData[0].name)
-          }
         }
       } catch (err) {
         console.error('Error loading academic years:', err)
-      } finally {
-        setLoading(false)
       }
     }
     loadAcademicYears()
   }, [institutionId])
 
-  // Load groups when institutionId is available
+  // 2. Cuando cambia el año, cargar los períodos de ese año
   useEffect(() => {
-    const loadGroups = async () => {
-      console.log('[Achievements] loadGroups - institutionId:', institutionId)
-      if (!institutionId) {
-        console.log('[Achievements] loadGroups - skipping, no institutionId')
+    if (!selectedYearId || academicYears.length === 0) {
+      setTerms([])
+      setSelectedTermId('')
+      return
+    }
+    const selectedYear = academicYears.find((y: any) => y.id === selectedYearId)
+    const termsData = selectedYear?.terms || []
+    console.log('[Achievements] 2. Terms for year:', termsData.length)
+    setTerms(termsData)
+    
+    // Seleccionar período actual basado en fecha, o el primero
+    if (termsData.length > 0) {
+      const today = new Date()
+      const currentTerm = termsData.find((t: any) => {
+        const start = new Date(t.startDate)
+        const end = new Date(t.endDate)
+        return today >= start && today <= end
+      })
+      setSelectedTermId((currentTerm || termsData[0]).id)
+    } else {
+      setSelectedTermId('')
+    }
+  }, [selectedYearId, academicYears])
+
+  // 3. Cargar asignaturas del docente cuando cambia el año
+  useEffect(() => {
+    const loadTeacherAssignments = async () => {
+      if (!selectedYearId || !institutionId) {
+        setTeacherAssignments([])
+        setSelectedAssignmentId('')
         return
       }
       try {
-        console.log('[Achievements] Calling groupsApi.getAll with institutionId:', institutionId)
+        const params: any = { academicYearId: selectedYearId }
+        if (isTeacher && user?.id) {
+          params.teacherId = user.id
+        }
+        console.log('[Achievements] 3. Loading assignments with params:', params)
+        const response = await teacherAssignmentsApi.getAll(params)
+        const assignmentsData = response.data || []
+        console.log('[Achievements] Assignments loaded:', assignmentsData.length)
+        setTeacherAssignments(assignmentsData)
+        
+        // Seleccionar primera asignatura
+        if (assignmentsData.length > 0) {
+          setSelectedAssignmentId(assignmentsData[0].id)
+        } else {
+          setSelectedAssignmentId('')
+        }
+      } catch (err) {
+        console.error('Error loading teacher assignments:', err)
+      }
+    }
+    loadTeacherAssignments()
+  }, [selectedYearId, institutionId, isTeacher, user?.id])
+
+  // 4. Cargar grupos basados en la asignatura seleccionada (o todos si es admin)
+  useEffect(() => {
+    const loadGroups = async () => {
+      if (!institutionId) {
+        setGroups([])
+        setSelectedGroupId('')
+        return
+      }
+      try {
+        console.log('[Achievements] 4. Loading groups for institutionId:', institutionId)
         const response = await groupsApi.getAll({ institutionId })
         const groupsData = response.data || []
         console.log('[Achievements] Groups loaded:', groupsData.length)
-        setGroups(groupsData)
         
-        // Seleccionar el primer grupo por defecto
-        if (groupsData.length > 0 && !selectedGroupId) {
-          setSelectedGroupId(groupsData[0].id)
-          console.log('[Achievements] Selected first group:', groupsData[0].grade?.name, groupsData[0].name)
+        // Si hay asignatura seleccionada, filtrar grupos que tengan esa asignatura
+        let filteredGroups = groupsData
+        if (selectedAssignmentId) {
+          const assignment = teacherAssignments.find(a => a.id === selectedAssignmentId)
+          if (assignment?.groupId) {
+            filteredGroups = groupsData.filter((g: any) => g.id === assignment.groupId)
+          }
+        }
+        
+        setGroups(filteredGroups)
+        if (filteredGroups.length > 0) {
+          setSelectedGroupId(filteredGroups[0].id)
+        } else {
+          setSelectedGroupId('')
         }
       } catch (err) {
         console.error('Error loading groups:', err)
       }
     }
     loadGroups()
-  }, [institutionId])
+  }, [institutionId, selectedAssignmentId, teacherAssignments])
 
   // Load config when institution changes
   useEffect(() => {
@@ -251,35 +300,6 @@ export default function Achievements() {
     }
     loadConfig()
   }, [institutionId])
-
-  // Load teacher assignments when year is available (for teachers, load their assignments)
-  useEffect(() => {
-    const loadTeacherAssignments = async () => {
-      if (!selectedYearId) return
-      try {
-        const params: any = { academicYearId: selectedYearId }
-        // Para docentes, filtrar por su ID para mostrar solo sus asignaturas
-        if (isTeacher && user?.id) {
-          params.teacherId = user.id
-        }
-        // Si hay grupo seleccionado, filtrar también por grupo
-        if (selectedGroupId) {
-          params.groupId = selectedGroupId
-        }
-        console.log('[Achievements] Loading teacher assignments with params:', params)
-        const response = await teacherAssignmentsApi.getAll(params)
-        console.log('[Achievements] Teacher assignments loaded:', response.data?.length || 0)
-        setTeacherAssignments(response.data || [])
-        // Seleccionar la primera asignatura por defecto
-        if (response.data?.length > 0 && !selectedAssignmentId) {
-          setSelectedAssignmentId(response.data[0].id)
-        }
-      } catch (err) {
-        console.error('Error loading teacher assignments:', err)
-      }
-    }
-    loadTeacherAssignments()
-  }, [selectedGroupId, selectedYearId, isTeacher, user?.id])
 
   // Load achievements when assignment/term changes
   useEffect(() => {
@@ -602,13 +622,32 @@ export default function Achievements() {
 
       {activeTab === 'achievements' ? (
         <div className="space-y-6">
-          {/* Selectors - Orden: Período → Asignatura → Grupo */}
-          <div className="flex gap-4 flex-wrap">
+          {/* Selectors - Orden: Año → Período → Asignatura → Grupo */}
+          <div className="flex gap-4 flex-wrap items-center">
+            {/* 1. Año Académico */}
+            <div className="relative">
+              <select
+                value={selectedYearId}
+                onChange={(e) => setSelectedYearId(e.target.value)}
+                className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              >
+                <option value="">Año académico</option>
+                {academicYears.map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {year.year} {year.isCurrent && '(Actual)'}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            </div>
+
+            {/* 2. Período */}
             <div className="relative">
               <select
                 value={selectedTermId}
                 onChange={(e) => setSelectedTermId(e.target.value)}
                 className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                disabled={!selectedYearId}
               >
                 <option value="">Seleccionar período</option>
                 {terms.map((term) => (
@@ -620,37 +659,43 @@ export default function Achievements() {
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             </div>
 
+            {/* 3. Asignatura */}
             <div className="relative">
               <select
                 value={selectedAssignmentId}
                 onChange={(e) => setSelectedAssignmentId(e.target.value)}
                 className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                disabled={!selectedYearId}
               >
                 <option value="">Seleccionar asignatura</option>
                 {teacherAssignments.map((ta) => (
                   <option key={ta.id} value={ta.id}>
-                    {ta.subject?.name}
+                    {ta.subject?.name} - {ta.group?.grade?.name} {ta.group?.name}
                   </option>
                 ))}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             </div>
 
-            <div className="relative">
-              <select
-                value={selectedGroupId}
-                onChange={(e) => setSelectedGroupId(e.target.value)}
-                className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              >
-                <option value="">Seleccionar grupo</option>
-                {groups.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.grade?.name} {group.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-            </div>
+            {/* 4. Grupo (opcional, se auto-selecciona con la asignatura) */}
+            {isAdmin && (
+              <div className="relative">
+                <select
+                  value={selectedGroupId}
+                  onChange={(e) => setSelectedGroupId(e.target.value)}
+                  className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  disabled={!selectedAssignmentId}
+                >
+                  <option value="">Seleccionar grupo</option>
+                  {groups.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.grade?.name} {group.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              </div>
+            )}
           </div>
 
           {selectedAssignmentId && selectedTermId ? (
