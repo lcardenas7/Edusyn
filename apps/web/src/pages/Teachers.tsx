@@ -58,7 +58,7 @@ export default function Teachers() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState<TeacherStatus | 'ALL'>('ALL')
+  const [filterStatus, setFilterStatus] = useState<TeacherStatus | 'ALL'>('ACTIVE')
   const [filterContract, setFilterContract] = useState<ContractType | 'ALL'>('ALL')
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null)

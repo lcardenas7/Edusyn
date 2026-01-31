@@ -46,6 +46,11 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
+    // Verificar si el usuario está activo
+    if (user.isActive === false) {
+      throw new UnauthorizedException('Tu cuenta ha sido desactivada. Contacta al administrador de tu institución.');
+    }
+
     // Obtener institución del usuario
     const userInstitution = await this.usersService.findUserInstitution(user.id);
     

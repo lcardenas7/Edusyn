@@ -180,10 +180,16 @@ export default function Achievements() {
   // Load groups when year changes
   useEffect(() => {
     const loadGroups = async () => {
-      if (!selectedYearId || !institutionId) return
+      console.log('[Achievements] loadGroups - selectedYearId:', selectedYearId, 'institutionId:', institutionId)
+      if (!selectedYearId || !institutionId) {
+        console.log('[Achievements] loadGroups - skipping, missing params')
+        return
+      }
       try {
+        console.log('[Achievements] Calling groupsApi.getAll with institutionId:', institutionId)
         const response = await groupsApi.getAll({ institutionId })
-        setGroups(response.data)
+        console.log('[Achievements] Groups loaded:', response.data?.length || 0)
+        setGroups(response.data || [])
       } catch (err) {
         console.error('Error loading groups:', err)
       }
