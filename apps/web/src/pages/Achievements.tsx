@@ -622,23 +622,11 @@ export default function Achievements() {
 
       {activeTab === 'achievements' ? (
         <div className="space-y-6">
-          {/* Selectors - Orden: Año → Período → Asignatura → Grupo */}
+          {/* Selectors - Orden: Año (fijo) → Período → Asignatura → Grupo */}
           <div className="flex gap-4 flex-wrap items-center">
-            {/* 1. Año Académico */}
-            <div className="relative">
-              <select
-                value={selectedYearId}
-                onChange={(e) => setSelectedYearId(e.target.value)}
-                className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              >
-                <option value="">Año académico</option>
-                {academicYears.map((year) => (
-                  <option key={year.id} value={year.id}>
-                    {year.year} {year.isCurrent && '(Actual)'}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            {/* 1. Año Académico (fijo, solo informativo) */}
+            <div className="px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 font-medium">
+              {academicYears.find(y => y.id === selectedYearId)?.year || 'Cargando...'}
             </div>
 
             {/* 2. Período */}
