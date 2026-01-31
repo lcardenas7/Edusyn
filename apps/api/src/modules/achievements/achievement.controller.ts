@@ -29,7 +29,7 @@ export class AchievementController {
   // ============================================
 
   @Get('config/:institutionId')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getConfig(@Param('institutionId') institutionId: string) {
     try {
       return await this.configService.getConfig(institutionId);

@@ -252,18 +252,26 @@ export default function Achievements() {
     loadConfig()
   }, [institutionId])
 
-  // Load teacher assignments when group changes
+  // Load teacher assignments when year is available (for teachers, load their assignments)
   useEffect(() => {
     const loadTeacherAssignments = async () => {
-      if (!selectedGroupId || !selectedYearId) return
+      if (!selectedYearId) return
       try {
-        const params: any = { groupId: selectedGroupId, academicYearId: selectedYearId }
+        const params: any = { academicYearId: selectedYearId }
+        // Para docentes, filtrar por su ID para mostrar solo sus asignaturas
         if (isTeacher && user?.id) {
           params.teacherId = user.id
         }
+        // Si hay grupo seleccionado, filtrar también por grupo
+        if (selectedGroupId) {
+          params.groupId = selectedGroupId
+        }
+        console.log('[Achievements] Loading teacher assignments with params:', params)
         const response = await teacherAssignmentsApi.getAll(params)
-        setTeacherAssignments(response.data)
-        if (response.data.length > 0) {
+        console.log('[Achievements] Teacher assignments loaded:', response.data?.length || 0)
+        setTeacherAssignments(response.data || [])
+        // Seleccionar la primera asignatura por defecto
+        if (response.data?.length > 0 && !selectedAssignmentId) {
           setSelectedAssignmentId(response.data[0].id)
         }
       } catch (err) {
@@ -594,18 +602,18 @@ export default function Achievements() {
 
       {activeTab === 'achievements' ? (
         <div className="space-y-6">
-          {/* Selectors */}
+          {/* Selectors - Orden: Período → Asignatura → Grupo */}
           <div className="flex gap-4 flex-wrap">
             <div className="relative">
               <select
-                value={selectedGroupId}
-                onChange={(e) => setSelectedGroupId(e.target.value)}
+                value={selectedTermId}
+                onChange={(e) => setSelectedTermId(e.target.value)}
                 className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               >
-                <option value="">Seleccionar grupo</option>
-                {groups.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.grade?.name} {group.name}
+                <option value="">Seleccionar período</option>
+                {terms.map((term) => (
+                  <option key={term.id} value={term.id}>
+                    {term.name}
                   </option>
                 ))}
               </select>
@@ -630,14 +638,14 @@ export default function Achievements() {
 
             <div className="relative">
               <select
-                value={selectedTermId}
-                onChange={(e) => setSelectedTermId(e.target.value)}
+                value={selectedGroupId}
+                onChange={(e) => setSelectedGroupId(e.target.value)}
                 className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               >
-                <option value="">Seleccionar período</option>
-                {terms.map((term) => (
-                  <option key={term.id} value={term.id}>
-                    {term.name}
+                <option value="">Seleccionar grupo</option>
+                {groups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.grade?.name} {group.name}
                   </option>
                 ))}
               </select>
