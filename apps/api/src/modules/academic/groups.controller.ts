@@ -31,9 +31,15 @@ export class GroupsController {
     @Query('gradeId') gradeId?: string,
     @Query('institutionId') institutionId?: string,
   ) {
+    console.log('[GroupsController] list called with query institutionId:', institutionId);
+    console.log('[GroupsController] user from JWT:', req.user?.id, 'institutionId:', req.user?.institutionId);
+    
     // Usar helper seguro que respeta roles (SUPERADMIN puede usar query, otros no)
     const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
+    console.log('[GroupsController] resolved institutionId:', instId);
 
-    return this.groupsService.list({ campusId, shiftId, gradeId, institutionId: instId });
+    const groups = await this.groupsService.list({ campusId, shiftId, gradeId, institutionId: instId });
+    console.log('[GroupsController] returning', groups.length, 'groups');
+    return groups;
   }
 }
