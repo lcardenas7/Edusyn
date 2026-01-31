@@ -169,10 +169,21 @@ export default function Achievements() {
         const current = (response.data || []).find((y: any) => y.isCurrent)
         if (current) {
           setSelectedYearId(current.id)
-          setTerms(current.terms || [])
-          console.log('[Achievements] Terms loaded:', current.terms?.length || 0)
-          if (current.terms?.length > 0) {
-            setSelectedTermId(current.terms[0].id)
+          const termsData = current.terms || []
+          setTerms(termsData)
+          console.log('[Achievements] Terms loaded:', termsData.length)
+          
+          // Seleccionar el período actual basado en la fecha
+          if (termsData.length > 0) {
+            const today = new Date()
+            const currentTerm = termsData.find((t: any) => {
+              const start = new Date(t.startDate)
+              const end = new Date(t.endDate)
+              return today >= start && today <= end
+            })
+            // Si hay período actual, seleccionarlo; si no, el primero
+            setSelectedTermId(currentTerm?.id || termsData[0].id)
+            console.log('[Achievements] Selected term:', currentTerm?.name || termsData[0].name)
           }
         }
       } catch (err) {
@@ -195,8 +206,15 @@ export default function Achievements() {
       try {
         console.log('[Achievements] Calling groupsApi.getAll with institutionId:', institutionId)
         const response = await groupsApi.getAll({ institutionId })
-        console.log('[Achievements] Groups loaded:', response.data?.length || 0, response.data)
-        setGroups(response.data || [])
+        const groupsData = response.data || []
+        console.log('[Achievements] Groups loaded:', groupsData.length)
+        setGroups(groupsData)
+        
+        // Seleccionar el primer grupo por defecto
+        if (groupsData.length > 0 && !selectedGroupId) {
+          setSelectedGroupId(groupsData[0].id)
+          console.log('[Achievements] Selected first group:', groupsData[0].grade?.name, groupsData[0].name)
+        }
       } catch (err) {
         console.error('Error loading groups:', err)
       }
