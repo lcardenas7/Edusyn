@@ -35,10 +35,13 @@ export class AcademicYearLifecycleController {
   @Get()
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'SECRETARIA')
   async getYears(@Query('institutionId') institutionId: string) {
+    console.log('[AcademicYearController] getYears called with institutionId:', institutionId);
     if (!institutionId) {
       return [];
     }
-    return this.yearService.getYearsByInstitution(institutionId);
+    const years = await this.yearService.getYearsByInstitution(institutionId);
+    console.log('[AcademicYearController] Returning', years.length, 'years with terms');
+    return years;
   }
 
   @Get('institution/:institutionId')
