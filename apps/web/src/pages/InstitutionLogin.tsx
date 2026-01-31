@@ -14,9 +14,10 @@ import { Building2, Mail, Lock, ArrowRight, AlertCircle, CheckCircle, Search, Ey
 import { useAuth } from '../contexts/AuthContext'
 
 // Detectar URL de API según entorno
-const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('railway.app')
+const isProduction = typeof window !== 'undefined' && 
+  (window.location.hostname.includes('railway.app') || window.location.hostname.includes('edusyn.co'))
 const API_BASE = isProduction 
-  ? 'https://api-production-e5d7.up.railway.app/api'
+  ? 'https://api.edusyn.co/api'
   : '/api'
 
 interface InstitutionInfo {

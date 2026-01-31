@@ -1,9 +1,10 @@
 import axios from 'axios'
 
 // Detectar si estamos en producción por el hostname
-const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('railway.app')
+const isProduction = typeof window !== 'undefined' && 
+  (window.location.hostname.includes('railway.app') || window.location.hostname.includes('edusyn.co'))
 const API_BASE_URL = isProduction 
-  ? 'https://api-production-e5d7.up.railway.app/api'
+  ? 'https://api.edusyn.co/api'
   : (import.meta.env.VITE_API_URL || '/api')
 
 console.log('[API] Base URL:', API_BASE_URL, '| Production:', isProduction)
