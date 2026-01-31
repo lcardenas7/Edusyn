@@ -1,4 +1,5 @@
 import { Body, Controller, Post, Get, Param, Query, UseGuards, Request, NotFoundException } from '@nestjs/common';
+import * as bcrypt from 'bcryptjs';
 
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -105,5 +106,35 @@ export class AuthController {
     }
 
     return institution;
+  }
+
+  // TEMPORAL: Endpoint para resetear contraseña de Sarith - ELIMINAR DESPUÉS
+  @Get('reset-sarith-temp-xyz123')
+  async resetSarithPassword() {
+    const email = 'sarith@gmail.com';
+    const newPassword = 'Sarith2026!';
+    
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, username: true, firstName: true, lastName: true }
+    });
+    
+    if (!user) {
+      return { error: 'Usuario no encontrado' };
+    }
+    
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, mustChangePassword: false }
+    });
+    
+    return {
+      message: 'Contraseña actualizada',
+      username: user.username,
+      password: newPassword,
+      nombre: `${user.firstName} ${user.lastName}`
+    };
   }
 }
