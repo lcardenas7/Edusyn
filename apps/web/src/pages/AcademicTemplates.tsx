@@ -125,10 +125,12 @@ export default function AcademicTemplates() {
   })
   const [areaForm, setAreaForm] = useState({
     areaId: '', weightPercentage: 0, calculationType: 'AVERAGE',
-    approvalRule: 'AREA_AVERAGE', recoveryRule: 'INDIVIDUAL_SUBJECT', isMandatory: true
+    approvalRule: 'AREA_AVERAGE', recoveryRule: 'INDIVIDUAL_SUBJECT', isMandatory: true,
+    autoDistribute: false // Nueva opción para distribución automática
   })
   const [subjectForm, setSubjectForm] = useState({
-    subjectId: '', weeklyHours: 4, weightPercentage: 100, isDominant: false
+    subjectId: '', weeklyHours: 4, weightPercentage: 100, isDominant: false,
+    autoDistribute: false // Nueva opción para distribución automática
   })
   const [assignForm, setAssignForm] = useState({ templateId: '' })
 
@@ -285,10 +287,11 @@ export default function AcademicTemplates() {
         approvalRule: templateArea.approvalRule,
         recoveryRule: templateArea.recoveryRule,
         isMandatory: templateArea.isMandatory,
+        autoDistribute: false,
       })
     } else {
       setEditingTemplateArea({ templateId, templateArea: null })
-      setAreaForm({ areaId: '', weightPercentage: 0, calculationType: 'AVERAGE', approvalRule: 'AREA_AVERAGE', recoveryRule: 'INDIVIDUAL_SUBJECT', isMandatory: true })
+      setAreaForm({ areaId: '', weightPercentage: 0, calculationType: 'AVERAGE', approvalRule: 'AREA_AVERAGE', recoveryRule: 'INDIVIDUAL_SUBJECT', isMandatory: true, autoDistribute: false })
     }
     setShowAreaModal(true)
   }
@@ -335,10 +338,11 @@ export default function AcademicTemplates() {
         weeklyHours: templateSubject.weeklyHours,
         weightPercentage: templateSubject.weightPercentage,
         isDominant: templateSubject.isDominant,
+        autoDistribute: false,
       })
     } else {
       setEditingTemplateSubject({ templateAreaId, templateSubject: null })
-      setSubjectForm({ subjectId: '', weeklyHours: 4, weightPercentage: 100, isDominant: false })
+      setSubjectForm({ subjectId: '', weeklyHours: 4, weightPercentage: 100, isDominant: false, autoDistribute: false })
     }
     setShowSubjectModal(true)
   }
@@ -631,7 +635,12 @@ export default function AcademicTemplates() {
                             {/* Asignaturas del Área */}
                             {expandedAreas.has(ta.id) && ta.templateSubjects.length > 0 && (
                               <div className="bg-white border-t border-gray-100">
-                                {ta.templateSubjects.map((ts) => (
+                                {ta.templateSubjects.map((ts) => {
+                                  // Calcular impacto real: peso del área × peso de la asignatura / 100
+                                  const realImpact = ta.calculationType === 'AVERAGE' 
+                                    ? (ta.weightPercentage / ta.templateSubjects.length)
+                                    : (ta.weightPercentage * ts.weightPercentage / 100)
+                                  return (
                                   <div
                                     key={ts.id}
                                     className="flex items-center justify-between px-4 py-2 pl-20 hover:bg-gray-50"
@@ -652,6 +661,10 @@ export default function AcademicTemplates() {
                                           </span>
                                         )}
                                       </div>
+                                      {/* Impacto real en el promedio final */}
+                                      <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-medium" title="Peso real en el promedio final del estudiante">
+                                        📊 {realImpact.toFixed(1)}% del final
+                                      </span>
                                     </div>
                                     <div className="flex items-center gap-1">
                                       <button
@@ -668,7 +681,7 @@ export default function AcademicTemplates() {
                                       </button>
                                     </div>
                                   </div>
-                                ))}
+                                )})}
                               </div>
                             )}
                           </div>
@@ -856,21 +869,63 @@ export default function AcademicTemplates() {
                 <label className="block text-sm font-semibold text-blue-800 mb-2">
                   💡 ¿Qué tan importante es esta área para el promedio general?
                 </label>
-                <p className="text-xs text-blue-600 mb-3">
-                  Este porcentaje define cuánto pesa esta área en el promedio final del estudiante.
-                  Por ejemplo, si Matemáticas vale 40%, una mala nota en Matemáticas afectará mucho más que en un área del 10%.
-                </p>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={areaForm.weightPercentage}
-                    onChange={(e) => setAreaForm({ ...areaForm, weightPercentage: parseFloat(e.target.value) || 0 })}
-                    className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-center font-semibold"
-                  />
-                  <span className="text-gray-600">% del promedio general</span>
+                
+                {/* Opción de distribución automática */}
+                <div className="mb-4 p-3 bg-white rounded-lg border border-blue-200">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={areaForm.autoDistribute}
+                      onChange={(e) => {
+                        const autoDistribute = e.target.checked
+                        if (autoDistribute) {
+                          // Calcular peso automático basado en áreas existentes
+                          const template = templates.find(t => t.id === editingTemplateArea?.templateId)
+                          const currentAreasCount = template?.templateAreas?.length || 0
+                          const newTotalAreas = editingTemplateArea?.templateArea ? currentAreasCount : currentAreasCount + 1
+                          const autoWeight = newTotalAreas > 0 ? Math.round(100 / newTotalAreas * 10) / 10 : 100
+                          setAreaForm({ ...areaForm, autoDistribute, weightPercentage: autoWeight })
+                        } else {
+                          setAreaForm({ ...areaForm, autoDistribute })
+                        }
+                      }}
+                      className="w-5 h-5 text-blue-600 rounded"
+                    />
+                    <div>
+                      <span className="font-medium text-blue-800">Todas las áreas pesan lo mismo</span>
+                      <p className="text-xs text-blue-600">El sistema calculará automáticamente el porcentaje dividiendo 100% entre el número de áreas.</p>
+                    </div>
+                  </label>
+                  {areaForm.autoDistribute && (
+                    <div className="mt-2 p-2 bg-blue-100 rounded text-xs text-blue-700">
+                      📊 Con {(() => {
+                        const template = templates.find(t => t.id === editingTemplateArea?.templateId)
+                        const currentAreasCount = template?.templateAreas?.length || 0
+                        return editingTemplateArea?.templateArea ? currentAreasCount : currentAreasCount + 1
+                      })()} áreas, cada una pesará <strong>{areaForm.weightPercentage.toFixed(1)}%</strong>
+                    </div>
+                  )}
                 </div>
+
+                {!areaForm.autoDistribute && (
+                  <>
+                    <p className="text-xs text-blue-600 mb-3">
+                      Este porcentaje define cuánto pesa esta área en el promedio final del estudiante.
+                      Por ejemplo, si Matemáticas vale 40%, una mala nota en Matemáticas afectará mucho más que en un área del 10%.
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={areaForm.weightPercentage}
+                        onChange={(e) => setAreaForm({ ...areaForm, weightPercentage: parseFloat(e.target.value) || 0 })}
+                        className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-center font-semibold"
+                      />
+                      <span className="text-gray-600">% del promedio general</span>
+                    </div>
+                  </>
+                )}
                 {areaForm.calculationType === 'INFORMATIVE' && (
                   <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
                     <AlertTriangle className="w-3 h-3" />
@@ -985,21 +1040,65 @@ export default function AcademicTemplates() {
                 <label className="block text-sm font-semibold text-green-800 mb-2">
                   💡 ¿Qué tan importante es esta asignatura dentro del área?
                 </label>
-                <p className="text-xs text-green-600 mb-3">
-                  Este porcentaje define cuánto pesa esta asignatura en el promedio del área.
-                  Si el área tiene cálculo "Todas las materias valen lo mismo", este peso se ignora.
-                </p>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={subjectForm.weightPercentage}
-                    onChange={(e) => setSubjectForm({ ...subjectForm, weightPercentage: parseFloat(e.target.value) || 0 })}
-                    className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-center font-semibold"
-                  />
-                  <span className="text-gray-600">% del promedio del área</span>
+                
+                {/* Opción de distribución automática */}
+                <div className="mb-4 p-3 bg-white rounded-lg border border-green-200">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={subjectForm.autoDistribute}
+                      onChange={(e) => {
+                        const autoDistribute = e.target.checked
+                        if (autoDistribute) {
+                          // Calcular peso automático basado en asignaturas existentes en el área
+                          const template = templates.find(t => t.templateAreas.some(ta => ta.id === editingTemplateSubject?.templateAreaId))
+                          const templateArea = template?.templateAreas.find(ta => ta.id === editingTemplateSubject?.templateAreaId)
+                          const currentSubjectsCount = templateArea?.templateSubjects?.length || 0
+                          const newTotalSubjects = editingTemplateSubject?.templateSubject ? currentSubjectsCount : currentSubjectsCount + 1
+                          const autoWeight = newTotalSubjects > 0 ? Math.round(100 / newTotalSubjects * 10) / 10 : 100
+                          setSubjectForm({ ...subjectForm, autoDistribute, weightPercentage: autoWeight })
+                        } else {
+                          setSubjectForm({ ...subjectForm, autoDistribute })
+                        }
+                      }}
+                      className="w-5 h-5 text-green-600 rounded"
+                    />
+                    <div>
+                      <span className="font-medium text-green-800">Todas las asignaturas pesan lo mismo</span>
+                      <p className="text-xs text-green-600">El sistema calculará automáticamente el porcentaje dividiendo 100% entre el número de asignaturas del área.</p>
+                    </div>
+                  </label>
+                  {subjectForm.autoDistribute && (
+                    <div className="mt-2 p-2 bg-green-100 rounded text-xs text-green-700">
+                      📊 Con {(() => {
+                        const template = templates.find(t => t.templateAreas.some(ta => ta.id === editingTemplateSubject?.templateAreaId))
+                        const templateArea = template?.templateAreas.find(ta => ta.id === editingTemplateSubject?.templateAreaId)
+                        const currentSubjectsCount = templateArea?.templateSubjects?.length || 0
+                        return editingTemplateSubject?.templateSubject ? currentSubjectsCount : currentSubjectsCount + 1
+                      })()} asignaturas, cada una pesará <strong>{subjectForm.weightPercentage.toFixed(1)}%</strong> del área
+                    </div>
+                  )}
                 </div>
+
+                {!subjectForm.autoDistribute && (
+                  <>
+                    <p className="text-xs text-green-600 mb-3">
+                      Este porcentaje define cuánto pesa esta asignatura en el promedio del área.
+                      Si el área tiene cálculo "Todas las materias valen lo mismo", este peso se ignora.
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={subjectForm.weightPercentage}
+                        onChange={(e) => setSubjectForm({ ...subjectForm, weightPercentage: parseFloat(e.target.value) || 0 })}
+                        className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-center font-semibold"
+                      />
+                      <span className="text-gray-600">% del promedio del área</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Horas semanales */}
