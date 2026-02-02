@@ -18,7 +18,6 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { InstitutionalDocumentsService } from './institutional-documents.service';
 import type { CreateDocumentDto, UpdateDocumentDto } from './institutional-documents.service';
-import { InstitutionalDocumentCategory } from '@prisma/client';
 
 @Controller('institutional-documents')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -33,21 +32,44 @@ export class InstitutionalDocumentsController {
     @Body('institutionId') institutionId: string,
     @Body('title') title: string,
     @Body('description') description: string,
-    @Body('category') category: InstitutionalDocumentCategory,
+    @Body('category') category: string,
     @Body('visibleToRoles') visibleToRolesStr: string,
     @Request() req: any,
   ) {
+    console.log('[DocumentsController] POST /institutional-documents', {
+      institutionId,
+      title,
+      category,
+      hasFile: !!file,
+      fileName: file?.originalname,
+      userId: req.user?.id,
+    });
+    
     const visibleToRoles = visibleToRolesStr ? JSON.parse(visibleToRolesStr) : [];
+    
+    // Validar y convertir categoría
+    const validCategories = ['MANUAL', 'REGLAMENTO', 'FORMATO', 'CIRCULAR', 'PEI', 'SIEE', 'OTRO'];
+    const normalizedCategory = category?.toUpperCase() || 'OTRO';
+    if (!validCategories.includes(normalizedCategory)) {
+      throw new Error(`Categoría inválida: ${category}. Válidas: ${validCategories.join(', ')}`);
+    }
     
     const dto: CreateDocumentDto = {
       institutionId,
       title,
       description,
-      category,
+      category: normalizedCategory as any,
       visibleToRoles,
     };
     
-    return this.documentsService.create(dto, file, req.user.id);
+    try {
+      const result = await this.documentsService.create(dto, file, req.user.id);
+      console.log('[DocumentsController] Document created successfully:', result.id);
+      return result;
+    } catch (error) {
+      console.error('[DocumentsController] Error creating document:', error);
+      throw error;
+    }
   }
 
   @Get()

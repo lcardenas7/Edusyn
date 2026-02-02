@@ -111,6 +111,8 @@ const institutionalNavigation: NavItem[] = [
     module: 'CONFIG',
     children: [
       { name: 'Configuración', href: '/institution', icon: Settings, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'CONFIG' },
+      { name: 'Catálogo Académico', href: '/academic-catalog', icon: Layers, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
+      { name: 'Plantillas Académicas', href: '/academic-templates', icon: BookOpen, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
     ]
   },
   
@@ -199,17 +201,6 @@ const institutionalNavigation: NavItem[] = [
   // Documentos y Gestión
   { name: 'Documentos', href: '/institutional-documents', icon: FolderOpen, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'SECRETARIA'] },
   { name: 'Gestión de Tareas', href: '/management-tasks', icon: ListTodo, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'] },
-  
-  // Configuración Académica
-  { 
-    name: 'Configuración Académica', 
-    icon: BookOpen, 
-    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'],
-    children: [
-      { name: 'Catálogo', href: '/academic-catalog', icon: Layers, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
-      { name: 'Plantillas', href: '/academic-templates', icon: Settings, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
-    ]
-  },
 ]
 
 export default function Layout({ children }: { children: ReactNode }) {
