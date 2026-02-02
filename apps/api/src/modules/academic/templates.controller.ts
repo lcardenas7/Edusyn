@@ -63,6 +63,16 @@ export class TemplatesController {
     return this.templatesService.getEnums();
   }
 
+  // 🔥 IMPORTANTE: Esta ruta debe estar ANTES de @Get(':id') para no ser capturada
+  @Get('grades')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async listGradesWithTemplates(
+    @Query('institutionId') institutionId: string,
+    @Query('academicYearId') academicYearId: string,
+  ) {
+    return this.templatesService.listGradesWithTemplates(institutionId, academicYearId);
+  }
+
   @Get(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getTemplate(@Param('id') id: string) {
@@ -207,15 +217,6 @@ export class TemplatesController {
     @Query('academicYearId') academicYearId: string,
   ) {
     return this.templatesService.getGradeTemplate(gradeId, academicYearId);
-  }
-
-  @Get('grades')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async listGradesWithTemplates(
-    @Query('institutionId') institutionId: string,
-    @Query('academicYearId') academicYearId: string,
-  ) {
-    return this.templatesService.listGradesWithTemplates(institutionId, academicYearId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
