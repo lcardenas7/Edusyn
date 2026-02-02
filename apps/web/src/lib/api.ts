@@ -807,3 +807,56 @@ export const superadminApi = {
   deleteInstitution: (id: string, confirmationName: string) => 
     api.delete(`/superadmin/institutions/${id}`, { data: { confirmationName } }),
 }
+
+// Documentos Institucionales
+export const institutionalDocumentsApi = {
+  getAll: (institutionId: string) => api.get('/institutional-documents', { params: { institutionId } }),
+  getOne: (id: string) => api.get(`/institutional-documents/${id}`),
+  getCategories: () => api.get('/institutional-documents/categories'),
+  getStorageUsage: (institutionId: string) => api.get('/institutional-documents/storage-usage', { params: { institutionId } }),
+  create: (formData: FormData) => api.post('/institutional-documents', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  update: (id: string, data: { title?: string; description?: string; category?: string; visibleToRoles?: string[]; isActive?: boolean }) => 
+    api.put(`/institutional-documents/${id}`, data),
+  delete: (id: string) => api.delete(`/institutional-documents/${id}`),
+}
+
+// Gestión de Tareas
+export const managementTasksApi = {
+  // Líderes
+  getLeaders: (institutionId: string) => api.get('/management-tasks/leaders', { params: { institutionId } }),
+  createLeader: (data: { institutionId: string; userId: string; area: string }) => api.post('/management-tasks/leaders', data),
+  removeLeader: (id: string) => api.delete(`/management-tasks/leaders/${id}`),
+  
+  // Tareas
+  getTasks: (institutionId: string, filters?: { status?: string; priority?: string; category?: string }) => 
+    api.get('/management-tasks', { params: { institutionId, ...filters } }),
+  getTask: (id: string) => api.get(`/management-tasks/${id}`),
+  createTask: (data: { institutionId: string; title: string; description?: string; category: string; priority?: string; dueDate?: string; assigneeIds: string[] }) => 
+    api.post('/management-tasks', data),
+  updateTask: (id: string, data: { title?: string; description?: string; category?: string; priority?: string; dueDate?: string }) => 
+    api.put(`/management-tasks/${id}`, data),
+  deleteTask: (id: string) => api.delete(`/management-tasks/${id}`),
+  
+  // Mis tareas (docente)
+  getMyTasks: (status?: string) => api.get('/management-tasks/my-tasks', { params: { status } }),
+  getMyPendingCount: () => api.get('/management-tasks/my-pending-count'),
+  
+  // Verificaciones pendientes
+  getPendingVerifications: (institutionId: string) => api.get('/management-tasks/pending-verifications', { params: { institutionId } }),
+  
+  // Acciones del docente
+  startTask: (assignmentId: string) => api.post(`/management-tasks/assignments/${assignmentId}/start`),
+  submitEvidence: (assignmentId: string, formData: FormData) => api.post(`/management-tasks/assignments/${assignmentId}/submit`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  completeTask: (assignmentId: string, responseNote?: string) => api.post(`/management-tasks/assignments/${assignmentId}/complete`, { responseNote }),
+  
+  // Verificación (coordinador/líder)
+  verifyTask: (assignmentId: string, data: { status: 'APPROVED' | 'REJECTED'; verificationNote?: string }) => 
+    api.post(`/management-tasks/assignments/${assignmentId}/verify`, data),
+  
+  // Enums
+  getEnums: () => api.get('/management-tasks/enums'),
+}

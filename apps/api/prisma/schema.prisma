@@ -238,6 +238,14 @@ model User {
   
   // Logros aprobados
   achievementsApproved      StudentAchievement[]   @relation("AchievementApprovedBy")
+  
+  // Documentos institucionales y Gestión de tareas
+  documentsUploaded         InstitutionalDocument[] @relation("DocumentUploader")
+  managementLeaderRoles     ManagementLeader[]      @relation("ManagementLeaderUser")
+  managementLeadersAssigned ManagementLeader[]      @relation("ManagementLeaderAssigner")
+  tasksCreated              ManagementTask[]        @relation("TaskCreatedBy")
+  taskAssignments           TaskAssignment[]        @relation("TaskAssignee")
+  taskVerifications         TaskAssignment[]        @relation("TaskVerifier")
 }
 
 model Role {
@@ -323,6 +331,12 @@ model Institution {
   // Pagos
   paymentConcepts             PaymentConcept[]
   paymentEvents               PaymentEvent[]
+  
+  // Documentos y Gestión
+  institutionalDocuments      InstitutionalDocument[]
+  managementLeaders           ManagementLeader[]
+  managementTasks             ManagementTask[]
+  storageUsage                InstitutionStorageUsage?
 }
 
 // Módulos habilitados por institución
@@ -2220,4 +2234,205 @@ model PaymentTransaction {
   receivedBy       User           @relation("PaymentReceivedBy", fields: [receivedById], references: [id])
 
   @@index([studentPaymentId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DOCUMENTOS INSTITUCIONALES
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum InstitutionalDocumentCategory {
+  MANUAL           // Manuales de convivencia, procedimientos
+  REGLAMENTO       // Reglamentos institucionales
+  FORMATO          // Formatos y plantillas
+  CIRCULAR         // Circulares informativas
+  PEI              // Proyecto Educativo Institucional
+  SIEE             // Sistema Institucional de Evaluación
+  OTRO             // Otros documentos
+}
+
+model InstitutionalDocument {
+  id            String   @id @default(cuid())
+  institutionId String
+  
+  title         String
+  description   String?
+  category      InstitutionalDocumentCategory
+  
+  // Archivo
+  fileUrl       String
+  fileName      String
+  fileSize      Int      // Bytes
+  mimeType      String
+  
+  // Control
+  isActive      Boolean  @default(true)
+  uploadedById  String
+  
+  // Visibilidad por rol (vacío = todos pueden ver)
+  visibleToRoles String[] @default([])
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  uploadedBy    User        @relation("DocumentUploader", fields: [uploadedById], references: [id])
+
+  @@index([institutionId])
+  @@index([category])
+  @@index([isActive])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GESTIÓN DE TAREAS DOCENTES
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum ManagementArea {
+  ACADEMICA        // Gestión Académica
+  DIRECTIVA        // Gestión Directiva
+  COMUNITARIA      // Gestión Comunitaria
+  ADMINISTRATIVA   // Gestión Administrativa
+}
+
+enum TaskPriority {
+  BAJA
+  NORMAL
+  ALTA
+  URGENTE
+}
+
+enum TaskCategory {
+  PLANEACION       // Planeación curricular
+  SEGUIMIENTO      // Seguimiento académico
+  EVIDENCIA        // Recolección de evidencias
+  REUNION          // Reuniones
+  CAPACITACION     // Capacitaciones
+  PROYECTO         // Proyectos institucionales
+  OTRO             // Otros
+}
+
+enum TaskAssignmentStatus {
+  PENDING          // Pendiente
+  IN_PROGRESS      // En progreso
+  SUBMITTED        // Entregada (esperando verificación)
+  APPROVED         // Aprobada
+  REJECTED         // Rechazada
+  CANCELLED        // Cancelada
+}
+
+// Líder de gestión (docente con rol de liderazgo en un área)
+model ManagementLeader {
+  id            String         @id @default(cuid())
+  institutionId String
+  userId        String         // El docente que es líder
+  area          ManagementArea
+  isActive      Boolean        @default(true)
+  assignedById  String         // Quién lo nombró líder
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  user          User        @relation("ManagementLeaderUser", fields: [userId], references: [id])
+  assignedBy    User        @relation("ManagementLeaderAssigner", fields: [assignedById], references: [id])
+  tasksCreated  ManagementTask[] @relation("TaskCreator")
+
+  @@unique([institutionId, userId, area])
+  @@index([institutionId])
+  @@index([userId])
+}
+
+// Tarea de gestión
+model ManagementTask {
+  id            String       @id @default(cuid())
+  institutionId String
+  
+  title         String
+  description   String?      @db.Text
+  category      TaskCategory
+  priority      TaskPriority @default(NORMAL)
+  dueDate       DateTime?
+  
+  // Quién creó la tarea
+  createdById   String
+  leaderId      String?      // Si fue creada por un líder de gestión
+  
+  isActive      Boolean      @default(true)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution   Institution      @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  createdBy     User             @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  leader        ManagementLeader? @relation("TaskCreator", fields: [leaderId], references: [id])
+  assignments   TaskAssignment[]
+
+  @@index([institutionId])
+  @@index([createdById])
+  @@index([dueDate])
+  @@index([priority])
+}
+
+// Asignación de tarea a docente
+model TaskAssignment {
+  id            String               @id @default(cuid())
+  taskId        String
+  assigneeId    String               // Docente asignado
+  
+  status        TaskAssignmentStatus @default(PENDING)
+  
+  // Respuesta del docente
+  startedAt     DateTime?
+  completedAt   DateTime?
+  responseNote  String?              @db.Text
+  
+  // Evidencia (archivo)
+  evidenceUrl      String?
+  evidenceFileName String?
+  evidenceFileSize Int?
+  evidenceMimeType String?
+  
+  // Verificación por coordinador/líder
+  verifiedById     String?
+  verifiedAt       DateTime?
+  verificationNote String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  task          ManagementTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  assignee      User           @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  verifiedBy    User?          @relation("TaskVerifier", fields: [verifiedById], references: [id])
+
+  @@unique([taskId, assigneeId])
+  @@index([taskId])
+  @@index([assigneeId])
+  @@index([status])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONTROL DE ALMACENAMIENTO POR INSTITUCIÓN
+// ═══════════════════════════════════════════════════════════════════════════
+
+model InstitutionStorageUsage {
+  id            String   @id @default(cuid())
+  institutionId String   @unique
+  
+  // Uso actual en bytes
+  documentsUsage    BigInt   @default(0)  // Documentos institucionales
+  evidencesUsage    BigInt   @default(0)  // Evidencias de tareas
+  galleryUsage      BigInt   @default(0)  // Galería
+  otherUsage        BigInt   @default(0)  // Otros
+  
+  // Límites en bytes (0 = sin límite)
+  documentsLimit    BigInt   @default(524288000)  // 500 MB default
+  evidencesLimit    BigInt   @default(1073741824) // 1 GB default
+  galleryLimit      BigInt   @default(104857600)  // 100 MB default
+  
+  // Última actualización
+  lastCalculatedAt  DateTime @default(now())
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
 }

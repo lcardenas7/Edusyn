@@ -22,6 +22,8 @@ import { ElectionsModule } from './modules/elections/elections.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { AchievementsModule } from './modules/achievements/achievements.module';
+import { DocumentsModule } from './modules/documents/documents.module';
+import { ManagementTasksModule } from './modules/management-tasks/management-tasks.module';
 
 @Module({
   imports: [
@@ -48,6 +50,8 @@ import { AchievementsModule } from './modules/achievements/achievements.module';
     PaymentsModule,
     StorageModule,
     AchievementsModule,
+    DocumentsModule,
+    ManagementTasksModule,
   ],
   controllers: [AppController],
   providers: [AppService],

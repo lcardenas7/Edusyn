@@ -32,6 +32,8 @@ import VotingPortal from './pages/VotingPortal'
 import Elections from './pages/Elections'
 import ElectionResults from './pages/ElectionResults'
 import LandingPage from './pages/LandingPage'
+import InstitutionalDocuments from './pages/InstitutionalDocuments'
+import ManagementTasks from './pages/ManagementTasks'
 import Layout from './components/Layout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -170,6 +172,8 @@ function App() {
                   <Route path="/enrollments" element={<Enrollments />} />
                   <Route path="/academic-year-closure" element={<AcademicYearClosure />} />
                   <Route path="/elections" element={<Elections />} />
+                  <Route path="/institutional-documents" element={<InstitutionalDocuments />} />
+                  <Route path="/management-tasks" element={<ManagementTasks />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

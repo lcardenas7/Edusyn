@@ -37,10 +37,12 @@ import {
   XCircle,
   Eye,
   EyeOff,
-  Vote
+  Vote,
+  FolderOpen,
+  ListTodo
 } from 'lucide-react'
 
-type Role = 'SUPER_ADMIN' | 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE'
+type Role = 'SUPER_ADMIN' | 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE' | 'SECRETARIA'
 
 interface NavItem {
   name: string
@@ -194,6 +196,10 @@ const institutionalNavigation: NavItem[] = [
       { name: 'Contenidos', href: '/content-manager', icon: Megaphone, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'COMMUNICATIONS' },
     ]
   },
+  
+  // Documentos y Gestión
+  { name: 'Documentos', href: '/institutional-documents', icon: FolderOpen, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'SECRETARIA'] },
+  { name: 'Gestión de Tareas', href: '/management-tasks', icon: ListTodo, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'] },
 ]
 
 export default function Layout({ children }: { children: ReactNode }) {
