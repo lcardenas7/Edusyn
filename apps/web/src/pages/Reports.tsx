@@ -28,7 +28,7 @@ import {
   Search,
   ChevronLeft
 } from 'lucide-react'
-import { academicYearsApi, academicTermsApi, teacherAssignmentsApi, groupsApi, periodFinalGradesApi, attendanceApi, subjectsApi, studentsApi } from '../lib/api'
+import { academicYearsApi, academicTermsApi, teacherAssignmentsApi, groupsApi, periodFinalGradesApi, attendanceApi, subjectsApi, studentsApi, reportsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
 type ReportCategory = 'admin' | 'academic' | 'evaluation' | 'attendance' | 'official' | 'alerts' | 'config'
@@ -188,6 +188,8 @@ export default function Reports() {
   const [criticalAbsencesData, setCriticalAbsencesData] = useState<any[]>([])
   const [consolidatedData, setConsolidatedData] = useState<{ byGrade: any[], bySubject: any[], byPeriod: any[] }>({ byGrade: [], bySubject: [], byPeriod: [] })
   const [alertsData, setAlertsData] = useState<any[]>([])
+  const [minimumGradeData, setMinimumGradeData] = useState<any>(null)
+  const [minimumGradeGroupData, setMinimumGradeGroupData] = useState<any[]>([])
   const [filterMinPercent, setFilterMinPercent] = useState('80')
   const [loadingReport, setLoadingReport] = useState(false)
   const [students, setStudents] = useState<any[]>([])
@@ -913,6 +915,31 @@ export default function Reports() {
         setAlertsData(alertsList)
       }
       
+      // Reporte de nota mínima requerida para aprobar
+      if (reportId === 'min-grade') {
+        try {
+          if (filterStudentId && filterStudentId !== 'all') {
+            // Reporte individual de un estudiante
+            const response = await reportsApi.getMinimumGrade(filterStudentId, filterYear)
+            setMinimumGradeData(response.data)
+            setMinimumGradeGroupData([])
+          } else if (filterGrade && filterGrade !== 'all') {
+            // Reporte de todo el grupo
+            const response = await reportsApi.getMinimumGradeForGroup(filterGrade, filterYear)
+            setMinimumGradeGroupData(response.data || [])
+            setMinimumGradeData(null)
+          } else {
+            // Sin filtro específico, mostrar mensaje
+            setMinimumGradeData(null)
+            setMinimumGradeGroupData([])
+          }
+        } catch (err) {
+          console.error('Error loading minimum grade report:', err)
+          setMinimumGradeData(null)
+          setMinimumGradeGroupData([])
+        }
+      }
+      
     } catch (err) {
       console.error('Error loading report data:', err)
     } finally {
@@ -941,6 +968,53 @@ export default function Reports() {
 
   // Renderizar filtros según la categoría
   const renderFilters = () => {
+    // Filtros específicos para reporte de nota mínima
+    if (selectedReport === 'min-grade') {
+      return (
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Año Escolar</label>
+              <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
+                <option value="">Seleccionar...</option>
+                {academicYears.map(year => (
+                  <option key={year.id} value={year.id}>{year.year}{year.status === 'ACTIVE' ? ' - Activo' : ''}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Grupo</label>
+              <select value={filterGrade} onChange={(e) => { setFilterGrade(e.target.value); setFilterStudentId('all'); }} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
+                <option value="all">Seleccionar grupo...</option>
+                {groups.map(group => (
+                  <option key={group.id} value={group.id}>{group.grade?.name} {group.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Estudiante (opcional)</label>
+              <select value={filterStudentId} onChange={(e) => setFilterStudentId(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" disabled={filterGrade === 'all'}>
+                <option value="all">Todos los estudiantes</option>
+                {students.map(s => (
+                  <option key={s.enrollmentId || s.id} value={s.enrollmentId || s.id}>{s.lastName} {s.firstName}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-end">
+              <button onClick={() => {
+                if (selectedReport) loadReportData(selectedReport)
+              }} className="px-4 py-1.5 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 w-full">
+                Calcular Nota Mínima
+              </button>
+            </div>
+          </div>
+          <div className="bg-purple-100 rounded-lg p-3 text-sm text-purple-800">
+            <strong>💡 ¿Cómo funciona?</strong> Este reporte calcula la nota mínima que necesita cada estudiante en los períodos restantes para aprobar cada asignatura, considerando las notas ya obtenidas y los pesos de cada período.
+          </div>
+        </div>
+      )
+    }
+
     if (reportCategory === 'academic') {
       return (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-4">
@@ -2139,8 +2213,185 @@ export default function Reports() {
               </table>
             )}
 
+            {/* REPORTE DE NOTA MÍNIMA REQUERIDA */}
+            {selectedReport === 'min-grade' && (
+              <div>
+                {loadingReport ? (
+                  <div className="p-8 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                    <p className="mt-2 text-slate-500">Calculando notas mínimas...</p>
+                  </div>
+                ) : minimumGradeData ? (
+                  // Vista individual de estudiante
+                  <div className="p-4">
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-bold text-lg text-purple-900">
+                            {minimumGradeData.student?.firstName} {minimumGradeData.student?.lastName}
+                          </h3>
+                          <p className="text-sm text-purple-700">
+                            {minimumGradeData.group?.gradeName} - {minimumGradeData.group?.name}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-purple-600">Nota mínima aprobatoria</p>
+                          <p className="text-2xl font-bold text-purple-900">{minimumGradeData.passingGrade?.toFixed(1)}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-4 gap-4 mt-4">
+                        <div className="bg-green-100 rounded-lg p-3 text-center">
+                          <p className="text-2xl font-bold text-green-700">{minimumGradeData.summary?.approved || 0}</p>
+                          <p className="text-xs text-green-600">Aprobadas</p>
+                        </div>
+                        <div className="bg-amber-100 rounded-lg p-3 text-center">
+                          <p className="text-2xl font-bold text-amber-700">{minimumGradeData.summary?.atRisk || 0}</p>
+                          <p className="text-xs text-amber-600">En riesgo</p>
+                        </div>
+                        <div className="bg-red-100 rounded-lg p-3 text-center">
+                          <p className="text-2xl font-bold text-red-700">{minimumGradeData.summary?.impossible || 0}</p>
+                          <p className="text-xs text-red-600">Imposible aprobar</p>
+                        </div>
+                        <div className="bg-slate-100 rounded-lg p-3 text-center">
+                          <p className="text-2xl font-bold text-slate-700">{minimumGradeData.summary?.pending || 0}</p>
+                          <p className="text-xs text-slate-600">Sin notas</p>
+                        </div>
+                      </div>
+                    </div>
+                    <table className="w-full text-sm">
+                      <thead className="bg-purple-100">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium text-slate-700">Asignatura</th>
+                          <th className="px-3 py-2 text-left font-medium text-slate-700">Área</th>
+                          {minimumGradeData.subjects?.[0]?.termGrades?.map((t: any) => (
+                            <th key={t.termId} className="px-3 py-2 text-center font-medium text-slate-700">{t.termName}</th>
+                          ))}
+                          <th className="px-3 py-2 text-center font-medium text-slate-700">Acumulado</th>
+                          <th className="px-3 py-2 text-center font-medium text-slate-700">Nota Mínima</th>
+                          <th className="px-3 py-2 text-left font-medium text-slate-700">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {minimumGradeData.subjects?.map((s: any, idx: number) => (
+                          <tr key={idx} className={`hover:bg-slate-50 ${
+                            s.status === 'impossible' ? 'bg-red-50' : 
+                            s.status === 'at_risk' ? 'bg-amber-50' : 
+                            s.status === 'approved' ? 'bg-green-50' : ''
+                          }`}>
+                            <td className="px-3 py-2 font-medium">{s.subjectName}</td>
+                            <td className="px-3 py-2 text-slate-600">{s.areaName}</td>
+                            {s.termGrades?.map((t: any) => (
+                              <td key={t.termId} className="px-3 py-2 text-center">
+                                {t.grade !== null ? (
+                                  <span className={`font-semibold ${t.grade >= minimumGradeData.passingGrade ? 'text-green-600' : 'text-red-600'}`}>
+                                    {t.grade.toFixed(1)}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400">-</span>
+                                )}
+                              </td>
+                            ))}
+                            <td className="px-3 py-2 text-center font-bold">
+                              {s.currentAnnualGrade !== null ? (
+                                <span className={s.currentAnnualGrade >= minimumGradeData.passingGrade ? 'text-green-600' : 'text-red-600'}>
+                                  {s.currentAnnualGrade.toFixed(1)}
+                                </span>
+                              ) : '-'}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {s.minimumRequired !== null ? (
+                                <span className={`font-bold ${
+                                  s.minimumRequired > 5.0 ? 'text-red-600' : 
+                                  s.minimumRequired > 4.0 ? 'text-amber-600' : 'text-green-600'
+                                }`}>
+                                  {s.minimumRequired.toFixed(1)}
+                                </span>
+                              ) : '-'}
+                            </td>
+                            <td className="px-3 py-2">
+                              <span className={`text-xs ${
+                                s.status === 'approved' ? 'text-green-700' :
+                                s.status === 'at_risk' ? 'text-amber-700' :
+                                s.status === 'impossible' ? 'text-red-700' : 'text-slate-500'
+                              }`}>
+                                {s.message}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : minimumGradeGroupData.length > 0 ? (
+                  // Vista de grupo
+                  <table className="w-full text-sm">
+                    <thead className="bg-purple-100">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium text-slate-700">Nro</th>
+                        <th className="px-3 py-2 text-left font-medium text-slate-700 min-w-[250px]">Estudiante</th>
+                        <th className="px-3 py-2 text-center font-medium text-slate-700">Aprobadas</th>
+                        <th className="px-3 py-2 text-center font-medium text-slate-700">En Riesgo</th>
+                        <th className="px-3 py-2 text-center font-medium text-slate-700">Imposible</th>
+                        <th className="px-3 py-2 text-center font-medium text-slate-700">Pendientes</th>
+                        <th className="px-3 py-2 text-left font-medium text-slate-700">Asignaturas Críticas</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {minimumGradeGroupData.map((s: any, idx: number) => (
+                        <tr key={idx} className={`hover:bg-slate-50 ${
+                          s.summary?.impossible > 0 ? 'bg-red-50' : 
+                          s.summary?.atRisk > 0 ? 'bg-amber-50' : ''
+                        }`}>
+                          <td className="px-3 py-2 text-center">{idx + 1}</td>
+                          <td className="px-3 py-2 font-medium">{s.studentName}</td>
+                          <td className="px-3 py-2 text-center">
+                            <span className="bg-green-100 text-green-700 px-2 py-1 rounded font-semibold">
+                              {s.summary?.approved || 0}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded font-semibold">
+                              {s.summary?.atRisk || 0}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <span className="bg-red-100 text-red-700 px-2 py-1 rounded font-semibold">
+                              {s.summary?.impossible || 0}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded font-semibold">
+                              {s.summary?.pending || 0}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-xs">
+                            {s.criticalSubjects?.slice(0, 3).map((cs: any, i: number) => (
+                              <span key={i} className={`inline-block mr-1 mb-1 px-2 py-0.5 rounded ${
+                                cs.status === 'impossible' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {cs.subjectName} ({cs.minimumRequired?.toFixed(1) || 'N/A'})
+                              </span>
+                            ))}
+                            {s.criticalSubjects?.length > 3 && (
+                              <span className="text-slate-500">+{s.criticalSubjects.length - 3} más</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="p-8 text-center text-slate-500">
+                    <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-purple-300" />
+                    <p className="font-medium">Selecciona un grupo o estudiante</p>
+                    <p className="text-sm mt-1">Elige un grupo para ver el resumen de todos los estudiantes, o un estudiante específico para ver el detalle por asignatura.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Reporte genérico para los demás */}
-            {!['load-teacher', 'load-group', 'teachers-active', 'cons-subjects', 'avg-group', 'att-group', 'att-student', 'att-subject', 'att-teacher', 'att-critical', 'att-consolidated', 'alert-low-performance'].includes(selectedReport) && (
+            {!['load-teacher', 'load-group', 'teachers-active', 'cons-subjects', 'avg-group', 'att-group', 'att-student', 'att-subject', 'att-teacher', 'att-critical', 'att-consolidated', 'alert-low-performance', 'min-grade'].includes(selectedReport) && (
               <div className="p-8 text-center text-slate-500">
                 <FileText className="w-12 h-12 mx-auto mb-3 text-slate-300" />
                 <p className="font-medium">Reporte: {currentReportData?.name}</p>

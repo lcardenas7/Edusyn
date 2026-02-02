@@ -437,4 +437,324 @@ export class ReportsService {
 
     return results;
   }
+
+  /**
+   * Calcula la nota mínima requerida para aprobar cada asignatura.
+   * Considera: períodos con sus pesos, notas ya obtenidas, y nota mínima aprobatoria.
+   * 
+   * Fórmula: Si ya tengo notas en algunos períodos, ¿qué nota necesito en los restantes?
+   * notaMinima = (notaAprobatoria * 100 - Σ(notaObtenida * pesoPeríodo)) / Σ(pesoPeríodosRestantes)
+   */
+  async calculateMinimumGradeRequired(
+    studentEnrollmentId: string,
+    academicYearId: string,
+  ): Promise<{
+    student: { id: string; firstName: string; lastName: string };
+    group: { id: string; name: string; gradeName: string };
+    passingGrade: number;
+    subjects: Array<{
+      subjectId: string;
+      subjectName: string;
+      areaName: string;
+      currentAnnualGrade: number | null;
+      termGrades: Array<{
+        termId: string;
+        termName: string;
+        weight: number;
+        grade: number | null;
+        status: 'obtained' | 'pending';
+      }>;
+      minimumRequired: number | null;
+      status: 'approved' | 'at_risk' | 'impossible' | 'pending';
+      message: string;
+    }>;
+    summary: {
+      totalSubjects: number;
+      approved: number;
+      atRisk: number;
+      impossible: number;
+      pending: number;
+    };
+  }> {
+    // 1. Obtener datos del estudiante y matrícula
+    const enrollment = await this.prisma.studentEnrollment.findUnique({
+      where: { id: studentEnrollmentId },
+      include: {
+        student: true,
+        group: { include: { grade: true } },
+        academicYear: { include: { institution: true } },
+      },
+    });
+
+    if (!enrollment) {
+      throw new NotFoundException('Matrícula no encontrada');
+    }
+
+    // 2. Obtener nota mínima aprobatoria de la escala institucional
+    // Buscar el nivel BASICO que es el mínimo aprobatorio
+    const passingScale = await this.prisma.performanceScale.findFirst({
+      where: {
+        institutionId: enrollment.academicYear.institutionId,
+        level: 'BASICO',
+      },
+      orderBy: { minScore: 'asc' },
+    });
+
+    // Si no encuentra escala, usar 3.0 como default (común en Colombia)
+    const passingGrade = passingScale ? Number(passingScale.minScore) : 3.0;
+
+    // 3. Obtener períodos académicos con sus pesos
+    const terms = await this.prisma.academicTerm.findMany({
+      where: { academicYearId },
+      orderBy: { order: 'asc' },
+    });
+
+    // 4. Obtener estructura de asignaturas del estudiante
+    const enrollmentStructure = await this.getEnrollmentSubjects(
+      studentEnrollmentId,
+      enrollment.groupId,
+      academicYearId,
+    );
+
+    // 5. Calcular nota mínima para cada asignatura
+    const subjectResults: Array<{
+      subjectId: string;
+      subjectName: string;
+      areaName: string;
+      currentAnnualGrade: number | null;
+      termGrades: Array<{
+        termId: string;
+        termName: string;
+        weight: number;
+        grade: number | null;
+        status: 'obtained' | 'pending';
+      }>;
+      minimumRequired: number | null;
+      status: 'approved' | 'at_risk' | 'impossible' | 'pending';
+      message: string;
+    }> = [];
+    let approved = 0, atRisk = 0, impossible = 0, pending = 0;
+
+    for (const area of enrollmentStructure.areas) {
+      for (const subject of area.subjects) {
+        if (!subject.teacherAssignmentId) {
+          // Sin asignación de docente, no se puede calcular
+          subjectResults.push({
+            subjectId: subject.id || '',
+            subjectName: subject.name,
+            areaName: area.name,
+            currentAnnualGrade: null,
+            termGrades: terms.map(t => ({
+              termId: t.id,
+              termName: t.name,
+              weight: t.weightPercentage,
+              grade: null,
+              status: 'pending' as const,
+            })),
+            minimumRequired: null,
+            status: 'pending' as const,
+            message: 'Sin docente asignado',
+          });
+          pending++;
+          continue;
+        }
+
+        // Obtener notas por período
+        const termGrades = await Promise.all(
+          terms.map(async (term) => {
+            const result = await this.studentGradesService.calculateTermGrade(
+              studentEnrollmentId,
+              subject.teacherAssignmentId!,
+              term.id,
+            );
+            return {
+              termId: term.id,
+              termName: term.name,
+              weight: term.weightPercentage,
+              grade: result.grade,
+              status: (result.grade !== null ? 'obtained' : 'pending') as 'obtained' | 'pending',
+            };
+          }),
+        );
+
+        // Calcular nota anual actual
+        const obtainedTerms = termGrades.filter(t => t.grade !== null);
+        const pendingTerms = termGrades.filter(t => t.grade === null);
+        
+        let currentAnnualGrade: number | null = null;
+        if (obtainedTerms.length > 0) {
+          const weightedSum = obtainedTerms.reduce((acc, t) => acc + (t.grade! * t.weight), 0);
+          const totalObtainedWeight = obtainedTerms.reduce((acc, t) => acc + t.weight, 0);
+          currentAnnualGrade = Math.round((weightedSum / totalObtainedWeight) * 10) / 10;
+        }
+
+        // Calcular nota mínima requerida en períodos pendientes
+        let minimumRequired: number | null = null;
+        let status: 'approved' | 'at_risk' | 'impossible' | 'pending';
+        let message: string;
+
+        const totalPendingWeight = pendingTerms.reduce((acc, t) => acc + t.weight, 0);
+        const obtainedWeightedSum = obtainedTerms.reduce((acc, t) => acc + (t.grade! * t.weight), 0);
+
+        if (pendingTerms.length === 0) {
+          // Todos los períodos calificados
+          if (currentAnnualGrade !== null && currentAnnualGrade >= passingGrade) {
+            status = 'approved';
+            message = `✅ Aprobado con ${currentAnnualGrade.toFixed(1)}`;
+            approved++;
+          } else {
+            status = 'impossible';
+            message = `❌ Reprobado con ${currentAnnualGrade?.toFixed(1) || 'N/A'}`;
+            impossible++;
+          }
+        } else if (obtainedTerms.length === 0) {
+          // Sin notas aún
+          minimumRequired = passingGrade;
+          status = 'pending';
+          message = `📝 Necesita mínimo ${passingGrade.toFixed(1)} en todos los períodos`;
+          pending++;
+        } else {
+          // Algunos períodos calificados, otros pendientes
+          // Fórmula: notaRequerida = (notaAprobatoria * 100 - sumaObtenida) / pesoPendiente
+          const requiredWeightedSum = passingGrade * 100 - obtainedWeightedSum;
+          minimumRequired = Math.round((requiredWeightedSum / totalPendingWeight) * 10) / 10;
+
+          if (minimumRequired <= 1.0) {
+            // Ya aprobó matemáticamente
+            status = 'approved';
+            message = `✅ Ya tiene asegurada la aprobación (actual: ${currentAnnualGrade?.toFixed(1)})`;
+            minimumRequired = 1.0; // Nota mínima posible
+            approved++;
+          } else if (minimumRequired > 5.0) {
+            // Imposible aprobar (nota máxima es 5.0)
+            status = 'impossible';
+            message = `❌ Matemáticamente imposible aprobar (necesitaría ${minimumRequired.toFixed(1)})`;
+            impossible++;
+          } else {
+            status = 'at_risk';
+            message = `⚠️ Necesita mínimo ${minimumRequired.toFixed(1)} en ${pendingTerms.length === 1 ? 'el período restante' : `los ${pendingTerms.length} períodos restantes`}`;
+            atRisk++;
+          }
+        }
+
+        subjectResults.push({
+          subjectId: subject.id || '',
+          subjectName: subject.name,
+          areaName: area.name,
+          currentAnnualGrade,
+          termGrades,
+          minimumRequired,
+          status,
+          message,
+        });
+      }
+    }
+
+    return {
+      student: {
+        id: enrollment.student.id,
+        firstName: enrollment.student.firstName,
+        lastName: enrollment.student.lastName,
+      },
+      group: {
+        id: enrollment.group.id,
+        name: enrollment.group.name,
+        gradeName: enrollment.group.grade.name,
+      },
+      passingGrade,
+      subjects: subjectResults,
+      summary: {
+        totalSubjects: subjectResults.length,
+        approved,
+        atRisk,
+        impossible,
+        pending,
+      },
+    };
+  }
+
+  /**
+   * Calcula la nota mínima requerida para todos los estudiantes de un grupo.
+   */
+  async calculateMinimumGradeForGroup(
+    groupId: string,
+    academicYearId: string,
+  ): Promise<Array<{
+    studentId: string;
+    studentName: string;
+    summary: {
+      totalSubjects: number;
+      approved: number;
+      atRisk: number;
+      impossible: number;
+      pending: number;
+    };
+    criticalSubjects: Array<{
+      subjectName: string;
+      status: string;
+      minimumRequired: number | null;
+    }>;
+  }>> {
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: {
+        groupId,
+        academicYearId,
+        status: 'ACTIVE',
+      },
+      include: {
+        student: true,
+      },
+      orderBy: {
+        student: { lastName: 'asc' },
+      },
+    });
+
+    const results: Array<{
+      studentId: string;
+      studentName: string;
+      summary: {
+        totalSubjects: number;
+        approved: number;
+        atRisk: number;
+        impossible: number;
+        pending: number;
+      };
+      criticalSubjects: Array<{
+        subjectName: string;
+        status: string;
+        minimumRequired: number | null;
+      }>;
+    }> = [];
+
+    for (const enrollment of enrollments) {
+      try {
+        const data = await this.calculateMinimumGradeRequired(enrollment.id, academicYearId);
+        
+        // Filtrar solo asignaturas críticas (at_risk o impossible)
+        const criticalSubjects = data.subjects
+          .filter(s => s.status === 'at_risk' || s.status === 'impossible')
+          .map(s => ({
+            subjectName: s.subjectName,
+            status: s.status,
+            minimumRequired: s.minimumRequired,
+          }));
+
+        results.push({
+          studentId: enrollment.student.id,
+          studentName: `${enrollment.student.lastName} ${enrollment.student.firstName}`,
+          summary: data.summary,
+          criticalSubjects,
+        });
+      } catch (error) {
+        results.push({
+          studentId: enrollment.student.id,
+          studentName: `${enrollment.student.lastName} ${enrollment.student.firstName}`,
+          summary: { totalSubjects: 0, approved: 0, atRisk: 0, impossible: 0, pending: 0 },
+          criticalSubjects: [],
+        });
+      }
+    }
+
+    return results;
+  }
 }

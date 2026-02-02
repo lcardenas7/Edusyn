@@ -51,4 +51,40 @@ export class ReportsController {
       dto.academicYearId,
     );
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // REPORTES PREDICTIVOS - NOTA MÍNIMA REQUERIDA
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Calcula la nota mínima requerida para aprobar cada asignatura de un estudiante.
+   * Considera períodos con sus pesos, notas ya obtenidas, y nota mínima aprobatoria.
+   */
+  @Get('minimum-grade/:studentEnrollmentId')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getMinimumGradeRequired(
+    @Param('studentEnrollmentId') studentEnrollmentId: string,
+    @Query('academicYearId') academicYearId: string,
+  ) {
+    return this.reportsService.calculateMinimumGradeRequired(
+      studentEnrollmentId,
+      academicYearId,
+    );
+  }
+
+  /**
+   * Calcula la nota mínima requerida para todos los estudiantes de un grupo.
+   * Retorna un resumen con estudiantes en riesgo y asignaturas críticas.
+   */
+  @Get('minimum-grade/group/:groupId')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getMinimumGradeForGroup(
+    @Param('groupId') groupId: string,
+    @Query('academicYearId') academicYearId: string,
+  ) {
+    return this.reportsService.calculateMinimumGradeForGroup(
+      groupId,
+      academicYearId,
+    );
+  }
 }

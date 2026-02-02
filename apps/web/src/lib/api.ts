@@ -299,6 +299,11 @@ export const reportsApi = {
     api.get('/reports/report-card', { params: { studentEnrollmentId, academicTermId } }),
   getGroupReport: (groupId: string, academicTermId: string) =>
     api.get('/reports/group', { params: { groupId, academicTermId } }),
+  // Reportes predictivos - Nota mínima requerida
+  getMinimumGrade: (studentEnrollmentId: string, academicYearId: string) =>
+    api.get(`/reports/minimum-grade/${studentEnrollmentId}`, { params: { academicYearId } }),
+  getMinimumGradeForGroup: (groupId: string, academicYearId: string) =>
+    api.get(`/reports/minimum-grade/group/${groupId}`, { params: { academicYearId } }),
 }
 
 // Communications
