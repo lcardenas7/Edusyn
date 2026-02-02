@@ -286,14 +286,12 @@ export default function AreasAdmin() {
         // Actualizar área existente
         await areasApi.update(editingArea.id, {
           name: areaForm.name,
-          isMandatory: areaForm.isMandatory,
         })
       } else {
         // Crear nueva área
         await areasApi.create({
           institutionId: institution.id,
           name: areaForm.name,
-          isMandatory: areaForm.isMandatory,
           order: areas.length + 1,
         })
       }
@@ -314,15 +312,9 @@ export default function AreasAdmin() {
     setSaving(true)
 
     try {
-      // El backend maneja la lógica de crear asignatura si no existe
-      // y agregar/actualizar la configuración por nivel
+      // Crear asignatura en el catálogo
       await areasApi.addSubject(editingSubject.areaId, {
         name: subjectConfigForm.subjectName,
-        weeklyHours: subjectConfigForm.weeklyHours,
-        weight: subjectConfigForm.weightPercentage / 100,
-        isDominant: subjectConfigForm.isDominant,
-        academicLevel: subjectConfigForm.academicLevel || undefined,
-        gradeId: subjectConfigForm.gradeId || undefined,
       })
       
       await loadAreas()

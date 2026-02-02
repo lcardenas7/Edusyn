@@ -338,23 +338,37 @@ export default function InstitutionalDocuments() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <a
-                        href={doc.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await institutionalDocumentsApi.getDownloadUrl(doc.id)
+                            window.open(res.data.url, '_blank')
+                          } catch (e) {
+                            window.open(doc.fileUrl, '_blank')
+                          }
+                        }}
                         className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
                         title="Ver documento"
                       >
                         <Eye className="w-4 h-4" />
-                      </a>
-                      <a
-                        href={doc.fileUrl}
-                        download={doc.fileName}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await institutionalDocumentsApi.getDownloadUrl(doc.id)
+                            const link = document.createElement('a')
+                            link.href = res.data.url
+                            link.download = doc.fileName
+                            link.click()
+                          } catch (e) {
+                            window.open(doc.fileUrl, '_blank')
+                          }
+                        }}
                         className="p-2 text-slate-500 hover:text-green-600 hover:bg-green-50 rounded-lg"
                         title="Descargar"
                       >
                         <Download className="w-4 h-4" />
-                      </a>
+                      </button>
                       {isAdmin && (
                         <>
                           <button

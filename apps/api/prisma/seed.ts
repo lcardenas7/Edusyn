@@ -245,8 +245,6 @@ async function main() {
       where: { 
         institutionId: institution.id, 
         name: areaData.name,
-        academicLevel: null,
-        gradeId: null,
       },
     });
     
@@ -274,18 +272,6 @@ async function main() {
             name: subjectName,
             areaId: area.id,
             order: subjectCount,
-          },
-        });
-        
-        // Crear configuración global por defecto
-        await prisma.subjectLevelConfig.create({
-          data: {
-            subjectId: subject.id,
-            weeklyHours: 4,
-            weight: 1.0,
-            isDominant: false,
-            academicLevel: null,
-            gradeId: null,
           },
         });
       }

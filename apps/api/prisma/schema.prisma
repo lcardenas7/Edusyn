@@ -169,6 +169,35 @@ enum SystemModule {
   PAYMENTS           // Gestión de pagos y eventos financieros
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ENUMS PARA PLANTILLAS ACADÉMICAS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Nivel académico para plantillas
+enum AcademicLevel {
+  PREESCOLAR
+  PRIMARIA
+  SECUNDARIA
+  MEDIA
+  MEDIA_TECNICA
+  OTRO
+}
+
+// Tipo de asignatura
+enum SubjectType {
+  MANDATORY       // Obligatoria
+  ELECTIVE        // Electiva
+  OPTIONAL        // Opcional
+  TECHNICAL       // Técnica (media técnica)
+}
+
+// Tipo de excepción de grupo
+enum GroupExceptionType {
+  EXCLUDE         // Excluir asignatura del grupo
+  INCLUDE         // Incluir asignatura adicional
+  MODIFY          // Modificar configuración (horas, peso, etc.)
+}
+
 model User {
   id             String     @id @default(cuid())
   email          String     @unique
@@ -246,6 +275,9 @@ model User {
   tasksCreated              ManagementTask[]        @relation("TaskCreatedBy")
   taskAssignments           TaskAssignment[]        @relation("TaskAssignee")
   taskVerifications         TaskAssignment[]        @relation("TaskVerifier")
+  
+  // Snapshot de docentes en matrículas (histórico)
+  enrollmentSubjectsAsTeacher EnrollmentSubject[]   @relation("EnrollmentSubjectTeacher")
 }
 
 model Role {
@@ -309,9 +341,10 @@ model Institution {
   modules     InstitutionModule[]  // Módulos habilitados
   users       InstitutionUser[]    // Usuarios de esta institución
   
-  campuses      Campus[]
-  areas         Area[]
-  academicYears AcademicYear[]
+  campuses          Campus[]
+  areas             Area[]
+  academicTemplates AcademicTemplate[]
+  academicYears     AcademicYear[]
   performanceScale PerformanceScale[]
   evaluationComponents EvaluationComponent[]
   students      Student[]
@@ -406,10 +439,9 @@ model Grade {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  groups    Group[]
-  elections Election[]  // Elecciones de representante de grado
-  areas     Area[]      // Áreas específicas para este grado
-  subjectLevelConfigs SubjectLevelConfig[]  // Configuraciones de asignaturas para este grado
+  groups        Group[]
+  elections      Election[]       // Elecciones de representante de grado
+  gradeTemplates GradeTemplate[]  // Plantillas académicas por año (una por año académico)
 
   @@unique([stage, name])
 }
@@ -429,89 +461,213 @@ model Group {
   shift  Shift  @relation(fields: [shiftId], references: [id], onDelete: Restrict)
   grade  Grade  @relation(fields: [gradeId], references: [id], onDelete: Restrict)
 
-  teacherAssignments TeacherAssignment[]
-  studentEnrollments StudentEnrollment[]
-  elections          Election[]  // Elecciones de representante de curso
+  teacherAssignments  TeacherAssignment[]
+  studentEnrollments  StudentEnrollment[]
+  elections           Election[]              // Elecciones de representante de curso
+  subjectExceptions   GroupSubjectException[] // Excepciones de asignaturas para este grupo
 
   @@unique([campusId, shiftId, gradeId, name])
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// CATÁLOGO ACADÉMICO INSTITUCIONAL
+// Las áreas y asignaturas se crean UNA SOLA VEZ como catálogo
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Catálogo de Áreas (institucional, no depende de grados ni grupos)
 model Area {
   id            String   @id @default(cuid())
   institutionId String
   name          String
-  isMandatory   Boolean  @default(false)
-  calculationType AreaCalculationType @default(AVERAGE)
-  customFormula String?
+  code          String?  // Código corto (MAT, LEN, NAT, etc.)
+  description   String?
   order         Int      @default(0)
-  
-  // Configuración por nivel académico y grado (opcional)
-  // Si academicLevel es null, aplica a todos los niveles
-  // Si gradeId es null pero academicLevel tiene valor, aplica a todo el nivel
-  // Si ambos tienen valor, aplica solo a ese grado específico
-  academicLevel String?  // PREESCOLAR, PRIMARIA, SECUNDARIA, MEDIA, etc.
-  gradeId       String?  // Si se especifica, aplica solo a este grado
+  isActive      Boolean  @default(true)
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  grade       Grade?      @relation(fields: [gradeId], references: [id], onDelete: SetNull)
-  subjects    Subject[]
+  institution       Institution          @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  subjects          Subject[]
+  templateAreas     TemplateArea[]
   finalRecoveryPlans FinalRecoveryPlan[]
+  enrollmentAreas   EnrollmentArea[]     // Snapshots en matrículas
 
-  @@unique([institutionId, name, academicLevel, gradeId])
-  @@index([institutionId, academicLevel])
-  @@index([institutionId, gradeId])
+  @@unique([institutionId, name])
+  @@index([institutionId])
 }
 
+// Catálogo de Asignaturas (pertenecen a un área del catálogo)
 model Subject {
-  id          String   @id @default(cuid())
-  areaId      String
-  name        String
-  order       Int      @default(0)
+  id            String      @id @default(cuid())
+  areaId        String
+  name          String
+  code          String?     // Código corto (MAT01, GEO, BIO, etc.)
+  description   String?
+  subjectType   SubjectType @default(MANDATORY)
+  order         Int         @default(0)
+  isActive      Boolean     @default(true)
   
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  area              Area                @relation(fields: [areaId], references: [id], onDelete: Cascade)
-  levelConfigs      SubjectLevelConfig[]
-  teacherAssignments TeacherAssignment[]
-  periodFinalGrades PeriodFinalGrade[]
-  periodRecoveries  PeriodRecovery[]
+  area                   Area                    @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  templateSubjects       TemplateSubject[]
+  teacherAssignments     TeacherAssignment[]
+  periodFinalGrades      PeriodFinalGrade[]
+  periodRecoveries       PeriodRecovery[]
   performanceManualEdits PerformanceManualEdit[]
+  groupExceptions        GroupSubjectException[]
+  enrollmentSubjects     EnrollmentSubject[]     // Snapshots en matrículas
 
-  @@unique([areaId, name])  // Una asignatura única por área
+  @@unique([areaId, name])
   @@index([areaId])
 }
 
-// Configuración de una asignatura por nivel académico o grado específico
-model SubjectLevelConfig {
-  id          String   @id @default(cuid())
-  subjectId   String
+// ═══════════════════════════════════════════════════════════════════════════
+// PLANTILLAS ACADÉMICAS
+// La "receta" que define qué áreas/asignaturas tiene un nivel o grado
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Plantilla Académica (ej: "Primaria Estándar", "Media Técnica Sistemas")
+model AcademicTemplate {
+  id              String        @id @default(cuid())
+  institutionId   String
+  academicYearId  String        // 🔥 CRÍTICO: Plantilla pertenece a un año específico
+  name            String        // "Plantilla Primaria", "Media Técnica"
+  description     String?
+  level           AcademicLevel // Nivel académico principal
+  isDefault       Boolean       @default(false) // Plantilla por defecto para el nivel en este año
+  isActive        Boolean       @default(true)
   
-  // Configuración específica para este nivel/grado
-  weeklyHours Int      @default(0)
-  weight      Float    @default(1.0)  // Porcentaje (0.0 - 1.0)
-  isDominant  Boolean  @default(false)
+  // Configuración de logros para esta plantilla
+  achievementsPerPeriod     Int     @default(1)   // Logros académicos por período
+  useAttitudinalAchievement Boolean @default(false) // Usa logro actitudinal
   
-  // Alcance de la configuración:
-  // - academicLevel null + gradeId null = Global (todos los niveles)
-  // - academicLevel con valor + gradeId null = Todo el nivel
-  // - gradeId con valor = Solo ese grado específico (excepción)
-  academicLevel String?  // PREESCOLAR, PRIMARIA, SECUNDARIA, MEDIA
-  gradeId       String?  // ID del grado específico (opcional)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution    Institution      @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  academicYear   AcademicYear     @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  templateAreas  TemplateArea[]
+  gradeTemplates GradeTemplate[]
+
+  @@unique([institutionId, academicYearId, name]) // Nombre único por institución Y año
+  @@index([institutionId, academicYearId, level])
+  @@index([academicYearId])
+}
+
+// Área dentro de una plantilla (con su configuración específica)
+model TemplateArea {
+  id              String              @id @default(cuid())
+  templateId      String
+  areaId          String
+  
+  // Configuración del área en esta plantilla
+  weightPercentage Float              @default(0)  // % del área en el promedio general (0-100)
+  calculationType  AreaCalculationType @default(AVERAGE)
+  approvalRule     AreaApprovalRule   @default(AREA_AVERAGE)
+  recoveryRule     AreaRecoveryRule   @default(INDIVIDUAL_SUBJECT)
+  isMandatory      Boolean            @default(true)
+  order            Int                @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  template         AcademicTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  area             Area               @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  templateSubjects TemplateSubject[]
+
+  @@unique([templateId, areaId])
+  @@index([templateId])
+  @@index([areaId])
+}
+
+// Asignatura dentro de un área de plantilla (con su configuración específica)
+model TemplateSubject {
+  id              String   @id @default(cuid())
+  templateAreaId  String
+  subjectId       String
+  
+  // Configuración de la asignatura en esta plantilla
+  weeklyHours     Int      @default(0)      // Horas semanales
+  weightPercentage Float   @default(0)      // % dentro del área (0-100)
+  isDominant      Boolean  @default(false)  // Es la asignatura dominante del área
+  order           Int      @default(0)
+  
+  // Configuración de logros específica (sobrescribe la de la plantilla si se define)
+  achievementsPerPeriod     Int?     // NULL = usa el de la plantilla
+  useAttitudinalAchievement Boolean? // NULL = usa el de la plantilla
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  templateArea    TemplateArea @relation(fields: [templateAreaId], references: [id], onDelete: Cascade)
+  subject         Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([templateAreaId, subjectId])
+  @@index([templateAreaId])
+  @@index([subjectId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ASIGNACIÓN DE PLANTILLAS A GRADOS
+// El grado hereda la configuración de una plantilla
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Asignación de plantilla a un grado POR AÑO ACADÉMICO
+model GradeTemplate {
+  id              String   @id @default(cuid())
+  gradeId         String
+  templateId      String
+  academicYearId  String   // 🔥 CRÍTICO: Asignación es por año
+  
+  // Sobrescrituras específicas del grado (JSON para flexibilidad)
+  // Ej: {"excludeSubjects": ["id1"], "modifyHours": {"id2": 4}}
+  overrides   Json?
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  grade       Grade?   @relation(fields: [gradeId], references: [id], onDelete: SetNull)
+  grade        Grade            @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  template     AcademicTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear     @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
 
-  @@unique([subjectId, academicLevel, gradeId])  // Una config por asignatura/nivel/grado
+  @@unique([gradeId, academicYearId]) // Un grado solo puede tener una plantilla POR AÑO
+  @@index([templateId])
+  @@index([academicYearId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXCEPCIONES POR GRUPO
+// Ajustes específicos que un grupo tiene sobre la plantilla heredada
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Excepción de asignatura por grupo POR AÑO ACADÉMICO
+model GroupSubjectException {
+  id              String             @id @default(cuid())
+  groupId         String
+  subjectId       String
+  academicYearId  String             // 🔥 CRÍTICO: Excepción es por año
+  type            GroupExceptionType
+  
+  // Configuración modificada (solo aplica si type = MODIFY)
+  weeklyHours      Int?
+  weightPercentage Float?
+  
+  reason      String?  // Razón de la excepción
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  group        Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, subjectId, academicYearId]) // Excepción única por grupo+asignatura+año
+  @@index([groupId])
   @@index([subjectId])
-  @@index([academicLevel])
-  @@index([gradeId])
+  @@index([academicYearId])
 }
 
 model AcademicYear {
@@ -551,6 +707,11 @@ model AcademicYear {
   academicActs       AcademicAct[]
   electionProcesses  ElectionProcess[]
   paymentEvents      PaymentEvent[]
+  
+  // 🔥 Estructura académica por año (histórico inmutable)
+  academicTemplates      AcademicTemplate[]
+  gradeTemplates         GradeTemplate[]
+  groupSubjectExceptions GroupSubjectException[]
 
   @@unique([institutionId, year])
 }
@@ -1027,8 +1188,84 @@ model StudentEnrollment {
   academicActs        AcademicAct[]
   performanceManualEdits PerformanceManualEdit[]
   studentAchievements StudentAchievement[]
+  
+  // 🔥 SNAPSHOT de estructura académica al momento de matrícula
+  enrollmentAreas    EnrollmentArea[]
+  enrollmentSubjects EnrollmentSubject[]
 
   @@unique([studentId, academicYearId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SNAPSHOT DE ESTRUCTURA ACADÉMICA POR MATRÍCULA
+// Copia inmutable de la configuración académica al momento de matricular
+// Protege contra cambios posteriores en plantillas que dañarían históricos
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Snapshot de área académica para una matrícula específica
+// 🔥 100% AUTOSUFICIENTE: No depende del catálogo para existir
+model EnrollmentArea {
+  id                String   @id @default(cuid())
+  enrollmentId      String
+  areaId            String?  // Referencia OPCIONAL al catálogo (puede ser eliminada en el futuro)
+  
+  // Datos copiados de TemplateArea al momento de matrícula (INMUTABLES)
+  areaName          String   // Nombre del área (snapshot)
+  areaCode          String?  // Código del área (snapshot)
+  weightPercentage  Float    // % del área en promedio general
+  calculationType   AreaCalculationType  // AVERAGE, WEIGHTED, DOMINANT, INFORMATIVE
+  approvalRule      AreaApprovalRule     // Regla de aprobación
+  recoveryRule      AreaRecoveryRule     // Regla de recuperación
+  isMandatory       Boolean  @default(true)
+  order             Int      @default(0)
+  
+  createdAt         DateTime @default(now())
+
+  enrollment        StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  area              Area?             @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  enrollmentSubjects EnrollmentSubject[]
+
+  @@unique([enrollmentId, areaId])
+  @@index([enrollmentId])
+  @@index([areaId])
+}
+
+// Snapshot de asignatura académica para una matrícula específica
+// 🔥 100% AUTOSUFICIENTE: No depende del catálogo para existir
+model EnrollmentSubject {
+  id                String   @id @default(cuid())
+  enrollmentId      String
+  enrollmentAreaId  String
+  subjectId         String?  // Referencia OPCIONAL al catálogo (puede ser eliminada en el futuro)
+  
+  // Datos copiados de TemplateSubject al momento de matrícula (INMUTABLES)
+  subjectName       String   // Nombre de la asignatura (snapshot)
+  subjectCode       String?  // Código de la asignatura (snapshot)
+  weeklyHours       Int      @default(0)
+  weightPercentage  Float    // % dentro del área
+  isDominant        Boolean  @default(false)
+  order             Int      @default(0)
+  
+  // Configuración de logros (snapshot)
+  achievementsPerPeriod     Int     @default(1)
+  useAttitudinalAchievement Boolean @default(false)
+  
+  // 🔥 Docente asignado al momento de matrícula (histórico)
+  teacherId         String?  // Referencia OPCIONAL al docente
+  teacherName       String?  // Nombre completo del docente (snapshot)
+  
+  createdAt         DateTime @default(now())
+
+  enrollment        StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  enrollmentArea    EnrollmentArea    @relation(fields: [enrollmentAreaId], references: [id], onDelete: Cascade)
+  subject           Subject?          @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  teacher           User?             @relation("EnrollmentSubjectTeacher", fields: [teacherId], references: [id], onDelete: SetNull)
+
+  @@unique([enrollmentId, subjectId])
+  @@index([enrollmentId])
+  @@index([enrollmentAreaId])
+  @@index([subjectId])
+  @@index([teacherId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

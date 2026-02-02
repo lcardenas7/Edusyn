@@ -266,4 +266,20 @@ export class EnrollmentController {
   ) {
     return this.enrollmentService.updateGroupCapacity(groupId, body.maxCapacity);
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ESTRUCTURA ACADÉMICA DE MATRÍCULA (SNAPSHOT)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get(':enrollmentId/academic-structure')
+  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'SECRETARIA')
+  async getEnrollmentAcademicStructure(@Param('enrollmentId') enrollmentId: string) {
+    return this.enrollmentService.getEnrollmentAcademicStructure(enrollmentId);
+  }
+
+  @Post(':enrollmentId/regenerate-snapshot')
+  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN')
+  async regenerateAcademicSnapshot(@Param('enrollmentId') enrollmentId: string) {
+    return this.enrollmentService.regenerateAcademicSnapshot(enrollmentId);
+  }
 }

@@ -305,4 +305,32 @@ export class InstitutionalDocumentsService {
         : 0,
     };
   }
+
+  /**
+   * Genera una URL firmada temporal para descargar/ver un documento
+   * Esto es necesario porque el bucket 'documentos' no es público
+   */
+  async getDownloadUrl(id: string): Promise<{ url: string; expiresIn: number }> {
+    const document = await this.findOne(id);
+    
+    // Extraer el path del fileUrl (quitar la parte base de Supabase)
+    // El fileUrl guardado es la URL pública, necesitamos extraer el path
+    const urlParts = document.fileUrl.split('/storage/v1/object/public/documentos/');
+    const path = urlParts.length > 1 ? urlParts[1] : document.fileUrl;
+    
+    try {
+      const signedUrl = await this.storageService.getSignedUrl('documentos', path, 900); // 15 minutos
+      return {
+        url: signedUrl,
+        expiresIn: 900,
+      };
+    } catch (error) {
+      console.error('[InstitutionalDocuments] Error generating signed URL:', error);
+      // Fallback: devolver la URL original (por si el bucket es público)
+      return {
+        url: document.fileUrl,
+        expiresIn: 0,
+      };
+    }
+  }
 }

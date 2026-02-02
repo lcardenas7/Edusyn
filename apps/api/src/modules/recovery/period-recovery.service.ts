@@ -61,7 +61,7 @@ export class PeriodRecoveryService {
             group: { include: { grade: true } },
           },
         },
-        subject: { include: { area: true, levelConfigs: true } },
+        subject: { include: { area: true } },
       },
     });
 
@@ -72,9 +72,9 @@ export class PeriodRecoveryService {
       areaName: string;
     }>>();
 
-    for (const grade of allGrades) {
-      const studentKey = grade.studentEnrollmentId;
-      const areaId = grade.subject.areaId;
+    for (const gradeRecord of allGrades) {
+      const studentKey = gradeRecord.studentEnrollmentId;
+      const areaId = gradeRecord.subject.areaId;
       
       if (!studentAreaGrades.has(studentKey)) {
         studentAreaGrades.set(studentKey, new Map());
@@ -85,18 +85,17 @@ export class PeriodRecoveryService {
         studentAreas.set(areaId, {
           grades: [],
           areaId,
-          areaName: grade.subject.area.name,
+          areaName: gradeRecord.subject.area.name,
         });
       }
       
-      // Obtener configuración de nivel (usar la primera disponible o valores por defecto)
-      const levelConfig = grade.subject.levelConfigs?.[0];
+      // Usar valores por defecto (la configuración ahora viene de las plantillas)
       studentAreas.get(areaId)!.grades.push({
-        subjectId: grade.subjectId,
-        subjectName: grade.subject.name,
-        score: Number(grade.finalScore),
-        weight: levelConfig ? Number(levelConfig.weight) : 1.0,
-        isDominant: levelConfig?.isDominant ?? false,
+        subjectId: gradeRecord.subjectId,
+        subjectName: gradeRecord.subject.name,
+        score: Number(gradeRecord.finalScore),
+        weight: 1.0,  // Peso por defecto, se obtiene de plantillas
+        isDominant: false,  // Por defecto, se obtiene de plantillas
       });
     }
 
@@ -133,10 +132,11 @@ export class PeriodRecoveryService {
           );
 
           if (recoveryResult.required) {
+            const enrollment = studentGrade.studentEnrollment;
             studentsNeedingRecovery.push({
               studentEnrollmentId,
-              studentName: `${studentGrade.studentEnrollment.student.firstName} ${studentGrade.studentEnrollment.student.lastName}`,
-              group: `${studentGrade.studentEnrollment.group.grade?.name} ${studentGrade.studentEnrollment.group.name}`,
+              studentName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
+              group: `${enrollment.group.grade?.name} ${enrollment.group.name}`,
               subjectId: subjectGrade.subjectId,
               subjectName: subjectGrade.subjectName,
               areaId,

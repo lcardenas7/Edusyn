@@ -1,7 +1,8 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { EnrollmentStatus, EnrollmentType, EnrollmentEventType, EnrollmentMovementType, SchoolShift, StudyModality } from '@prisma/client';
+import { EnrollmentStatus, EnrollmentType, EnrollmentEventType, EnrollmentMovementType, SchoolShift, StudyModality, Prisma } from '@prisma/client';
 import { AcademicYearLifecycleService } from './academic-year-lifecycle.service';
+import { TemplatesService } from './templates.service';
 
 // DTOs
 export interface EnrollStudentDto {
@@ -101,6 +102,7 @@ export class EnrollmentService {
   constructor(
     private prisma: PrismaService,
     private yearLifecycleService: AcademicYearLifecycleService,
+    private templatesService: TemplatesService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -199,6 +201,9 @@ export class EnrollmentService {
       observations: dto.observations,
       performedById: dto.enrolledById,
     });
+
+    // 🔥 SNAPSHOT: Copiar estructura académica al momento de matrícula
+    await this.createAcademicSnapshot(enrollment.id, dto.groupId, dto.academicYearId);
 
     return enrollment;
   }
@@ -365,6 +370,9 @@ export class EnrollmentService {
 
       return enrollment;
     });
+
+    // 🔥 SNAPSHOT: Copiar estructura académica al momento de matrícula
+    await this.createAcademicSnapshot(result.id, dto.groupId, dto.academicYearId);
 
     return result;
   }
@@ -956,5 +964,177 @@ export class EnrollmentService {
         performedById: data.performedById,
       },
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SNAPSHOT DE ESTRUCTURA ACADÉMICA
+  // Copia inmutable de áreas y asignaturas al momento de la matrícula
+  // Protege contra cambios posteriores en plantillas que dañarían históricos
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Crea una copia de la estructura académica efectiva del grupo
+   * al momento de la matrícula. Esta "foto" es inmutable y se usa
+   * para cálculos de notas, evitando que cambios posteriores en
+   * plantillas afecten matrículas existentes.
+   */
+  private async createAcademicSnapshot(
+    enrollmentId: string,
+    groupId: string,
+    academicYearId: string,
+  ): Promise<void> {
+    try {
+      // Obtener estructura académica efectiva del grupo
+      const structure = await this.templatesService.getEffectiveStructureForGroup(groupId, academicYearId);
+      
+      if (!structure.areas || structure.areas.length === 0) {
+        console.warn(`[Enrollment] No academic structure found for group ${groupId} in year ${academicYearId}`);
+        return;
+      }
+
+      // 🔥 Obtener docentes asignados al grupo para incluir en snapshot
+      const teacherAssignments = await this.prisma.teacherAssignment.findMany({
+        where: { groupId, academicYearId },
+        include: {
+          teacher: { select: { id: true, firstName: true, lastName: true } },
+        },
+      });
+      
+      // Mapear subjectId -> teacher info
+      const teacherBySubject = new Map(
+        teacherAssignments.map(ta => [
+          ta.subjectId,
+          { id: ta.teacher.id, name: `${ta.teacher.firstName} ${ta.teacher.lastName}` }
+        ])
+      );
+
+      // Crear snapshot de áreas y asignaturas en transacción
+      await this.prisma.$transaction(async (tx) => {
+        for (const templateArea of structure.areas) {
+          // Crear EnrollmentArea (snapshot del área)
+          const enrollmentArea = await tx.enrollmentArea.create({
+            data: {
+              enrollmentId,
+              areaId: templateArea.areaId,
+              areaName: templateArea.area.name,
+              areaCode: templateArea.area.code,
+              weightPercentage: templateArea.weightPercentage,
+              calculationType: templateArea.calculationType,
+              approvalRule: templateArea.approvalRule,
+              recoveryRule: templateArea.recoveryRule,
+              isMandatory: templateArea.isMandatory,
+              order: templateArea.order,
+            },
+          });
+
+          // Crear EnrollmentSubject para cada asignatura del área
+          for (const templateSubject of templateArea.templateSubjects) {
+            // 🔥 Obtener docente asignado a esta asignatura
+            const teacher = teacherBySubject.get(templateSubject.subjectId);
+            
+            await tx.enrollmentSubject.create({
+              data: {
+                enrollmentId,
+                enrollmentAreaId: enrollmentArea.id,
+                subjectId: templateSubject.subjectId,
+                subjectName: templateSubject.subject.name,
+                subjectCode: templateSubject.subject.code,
+                weeklyHours: templateSubject.weeklyHours,
+                weightPercentage: templateSubject.weightPercentage,
+                isDominant: templateSubject.isDominant,
+                order: templateSubject.order,
+                achievementsPerPeriod: structure.template?.achievementsPerPeriod ?? 1,
+                useAttitudinalAchievement: structure.template?.useAttitudinalAchievement ?? false,
+                // 🔥 Snapshot del docente al momento de matrícula
+                teacherId: teacher?.id ?? null,
+                teacherName: teacher?.name ?? null,
+              },
+            });
+          }
+        }
+      });
+
+      console.log(`[Enrollment] Academic snapshot created for enrollment ${enrollmentId}`);
+    } catch (error) {
+      // No fallar la matrícula si el snapshot falla, solo loguear
+      console.error(`[Enrollment] Error creating academic snapshot for enrollment ${enrollmentId}:`, error);
+    }
+  }
+
+  /**
+   * Obtiene la estructura académica de una matrícula específica
+   * Usa el snapshot si existe, o calcula la estructura efectiva como fallback
+   */
+  async getEnrollmentAcademicStructure(enrollmentId: string) {
+    // Intentar obtener snapshot
+    const enrollmentAreas = await this.prisma.enrollmentArea.findMany({
+      where: { enrollmentId },
+      include: {
+        area: true,
+        enrollmentSubjects: {
+          include: { subject: true },
+          orderBy: { order: 'asc' },
+        },
+      },
+      orderBy: { order: 'asc' },
+    });
+
+    if (enrollmentAreas.length > 0) {
+      return {
+        source: 'snapshot' as const,
+        areas: enrollmentAreas,
+      };
+    }
+
+    // Fallback: calcular estructura efectiva (para matrículas antiguas sin snapshot)
+    const enrollment = await this.prisma.studentEnrollment.findUnique({
+      where: { id: enrollmentId },
+      select: { groupId: true, academicYearId: true },
+    });
+
+    if (!enrollment) {
+      throw new NotFoundException('Matrícula no encontrada');
+    }
+
+    const structure = await this.templatesService.getEffectiveStructureForGroup(
+      enrollment.groupId,
+      enrollment.academicYearId,
+    );
+
+    return {
+      source: 'calculated' as const,
+      areas: structure.areas,
+      warning: 'Esta matrícula no tiene snapshot. Usando estructura actual del grupo.',
+    };
+  }
+
+  /**
+   * Regenera el snapshot académico de una matrícula
+   * Útil para matrículas antiguas o si se necesita actualizar manualmente
+   */
+  async regenerateAcademicSnapshot(enrollmentId: string): Promise<{ created: number; deleted: number }> {
+    const enrollment = await this.prisma.studentEnrollment.findUnique({
+      where: { id: enrollmentId },
+      select: { groupId: true, academicYearId: true },
+    });
+
+    if (!enrollment) {
+      throw new NotFoundException('Matrícula no encontrada');
+    }
+
+    // Eliminar snapshot existente
+    const deleted = await this.prisma.enrollmentArea.deleteMany({
+      where: { enrollmentId },
+    });
+
+    // Crear nuevo snapshot
+    await this.createAcademicSnapshot(enrollmentId, enrollment.groupId, enrollment.academicYearId);
+
+    // Contar nuevos registros
+    const created = await this.prisma.enrollmentArea.count({
+      where: { enrollmentId },
+    });
+
+    return { created, deleted: deleted.count };
   }
 }

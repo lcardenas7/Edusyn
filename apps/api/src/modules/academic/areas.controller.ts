@@ -1,12 +1,16 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards, Request } from '@nestjs/common';
-
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { AreasService } from './areas.service';
-import { CreateAreaDto, UpdateAreaDto, AddSubjectWithConfigDto, UpdateSubjectDto, CreateSubjectLevelConfigDto, UpdateSubjectLevelConfigDto } from './dto/create-area.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { resolveInstitutionId } from '../../common/utils/institution-resolver';
+import { SubjectType } from '@prisma/client';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONTROLADOR DE CATÁLOGO ACADÉMICO
+// Gestiona el catálogo de áreas y asignaturas (independiente de plantillas)
+// ═══════════════════════════════════════════════════════════════════════════
 
 @Controller('areas')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -16,91 +20,128 @@ export class AreasController {
     private readonly prisma: PrismaService,
   ) {}
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ÁREAS
+  // ═══════════════════════════════════════════════════════════════════════════
+
   @Post()
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async create(@Body() dto: CreateAreaDto) {
-    return this.areasService.create(dto);
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async createArea(
+    @Body() body: {
+      institutionId: string;
+      name: string;
+      code?: string;
+      description?: string;
+      order?: number;
+    },
+  ) {
+    return this.areasService.createArea(body);
   }
 
   @Get()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'TEACHER', 'DOCENTE', 'COORDINADOR')
-  async list(
+  async listAreas(
     @Request() req: any,
     @Query('institutionId') institutionId?: string,
-    @Query('academicLevel') academicLevel?: string,
-    @Query('gradeId') gradeId?: string,
+    @Query('includeInactive') includeInactive?: string,
   ) {
     const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
-    return this.areasService.list({ institutionId: instId, academicLevel, gradeId });
-  }
-
-  @Get('for-grade/:gradeId')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'TEACHER')
-  async getAreasForGrade(
-    @Query('institutionId') institutionId: string,
-    @Param('gradeId') gradeId: string,
-  ) {
-    return this.areasService.getAreasForGrade(institutionId, gradeId);
+    if (!instId) return [];
+    return this.areasService.listAreas(instId, includeInactive === 'true');
   }
 
   @Get(':id')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'TEACHER')
-  async findById(@Param('id') id: string) {
-    return this.areasService.findById(id);
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'TEACHER', 'DOCENTE', 'COORDINADOR')
+  async getArea(@Param('id') id: string) {
+    return this.areasService.findAreaById(id);
   }
 
   @Put(':id')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async update(@Param('id') id: string, @Body() dto: UpdateAreaDto) {
-    return this.areasService.update(id, dto);
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async updateArea(
+    @Param('id') id: string,
+    @Body() body: {
+      name?: string;
+      code?: string;
+      description?: string;
+      order?: number;
+      isActive?: boolean;
+    },
+  ) {
+    return this.areasService.updateArea(id, body);
   }
 
   @Delete(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async delete(@Param('id') id: string) {
-    return this.areasService.delete(id);
+  async deleteArea(@Param('id') id: string) {
+    return this.areasService.deleteArea(id);
   }
 
-  @Post(':id/subjects')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async addSubject(@Param('id') areaId: string, @Body() dto: AddSubjectWithConfigDto) {
-    return this.areasService.addSubjectWithConfig(areaId, dto);
-  }
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ASIGNATURAS
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  @Post(':id/subjects/:subjectId/configs')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async addSubjectConfig(
-    @Param('id') areaId: string,
-    @Param('subjectId') subjectId: string,
-    @Body() dto: CreateSubjectLevelConfigDto,
+  @Post(':areaId/subjects')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async createSubject(
+    @Param('areaId') areaId: string,
+    @Body() body: {
+      name: string;
+      code?: string;
+      description?: string;
+      subjectType?: SubjectType;
+      order?: number;
+    },
   ) {
-    return this.areasService.addSubjectLevelConfig(subjectId, dto);
+    return this.areasService.createSubject({ areaId, ...body });
   }
 
-  @Put('configs/:configId')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async updateSubjectConfig(
-    @Param('configId') configId: string,
-    @Body() dto: UpdateSubjectLevelConfigDto,
+  @Get(':areaId/subjects')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'TEACHER', 'DOCENTE', 'COORDINADOR')
+  async listSubjectsByArea(
+    @Param('areaId') areaId: string,
+    @Query('includeInactive') includeInactive?: string,
   ) {
-    return this.areasService.updateSubjectLevelConfig(configId, dto);
+    return this.areasService.listSubjectsByArea(areaId, includeInactive === 'true');
   }
 
-  @Delete('configs/:configId')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async deleteSubjectConfig(@Param('configId') configId: string) {
-    return this.areasService.removeSubjectLevelConfig(configId);
+  @Get('subjects/all')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'TEACHER', 'DOCENTE', 'COORDINADOR')
+  async listAllSubjects(
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
+    @Query('includeInactive') includeInactive?: string,
+  ) {
+    const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
+    if (!instId) return [];
+    return this.areasService.listAllSubjects(instId, includeInactive === 'true');
+  }
+
+  @Get('subjects/:subjectId')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'TEACHER', 'DOCENTE', 'COORDINADOR')
+  async getSubject(@Param('subjectId') subjectId: string) {
+    return this.areasService.findSubjectById(subjectId);
   }
 
   @Put('subjects/:subjectId')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async updateSubject(@Param('subjectId') subjectId: string, @Body() dto: UpdateSubjectDto) {
-    return this.areasService.updateSubject(subjectId, dto);
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async updateSubject(
+    @Param('subjectId') subjectId: string,
+    @Body() body: {
+      name?: string;
+      code?: string;
+      description?: string;
+      subjectType?: SubjectType;
+      order?: number;
+      isActive?: boolean;
+    },
+  ) {
+    return this.areasService.updateSubject(subjectId, body);
   }
 
   @Delete('subjects/:subjectId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async removeSubject(@Param('subjectId') subjectId: string) {
-    return this.areasService.removeSubject(subjectId);
+  async deleteSubject(@Param('subjectId') subjectId: string) {
+    return this.areasService.deleteSubject(subjectId);
   }
 }

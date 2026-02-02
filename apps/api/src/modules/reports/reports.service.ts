@@ -14,6 +14,113 @@ export class ReportsService {
     private readonly attendanceService: AttendanceService,
   ) {}
 
+  /**
+   * Obtiene las asignaturas que aplican a una matrícula específica.
+   * Usa el snapshot (EnrollmentSubject) si existe, o calcula desde TeacherAssignment como fallback.
+   * Esto protege contra cambios en plantillas que afectarían históricos.
+   */
+  private async getEnrollmentSubjects(enrollmentId: string, groupId: string, academicYearId: string) {
+    // Intentar obtener snapshot de la matrícula
+    const enrollmentAreas = await this.prisma.enrollmentArea.findMany({
+      where: { enrollmentId },
+      include: {
+        enrollmentSubjects: {
+          include: { subject: true },
+          orderBy: { order: 'asc' },
+        },
+      },
+      orderBy: { order: 'asc' },
+    });
+
+    if (enrollmentAreas.length > 0) {
+      // Usar snapshot: obtener TeacherAssignments solo para las asignaturas del snapshot
+      const subjectIds = enrollmentAreas
+        .flatMap(a => a.enrollmentSubjects.map(s => s.subjectId))
+        .filter((id): id is string => id !== null);
+      
+      const teacherAssignments = subjectIds.length > 0 
+        ? await this.prisma.teacherAssignment.findMany({
+            where: {
+              groupId,
+              academicYearId,
+              subjectId: { in: subjectIds },
+            },
+            include: {
+              subject: true,
+              teacher: { select: { firstName: true, lastName: true } },
+            },
+          })
+        : [];
+
+      // Mapear asignaturas del snapshot con sus asignaciones de docente
+      return {
+        source: 'snapshot' as const,
+        areas: enrollmentAreas.map(area => ({
+          id: area.id,
+          name: area.areaName,
+          code: area.areaCode,
+          weightPercentage: area.weightPercentage,
+          calculationType: area.calculationType,
+          subjects: area.enrollmentSubjects.map(es => {
+            const assignment = es.subjectId 
+              ? teacherAssignments.find(ta => ta.subjectId === es.subjectId)
+              : null;
+            return {
+              id: es.subjectId,
+              name: es.subjectName,
+              code: es.subjectCode,
+              weightPercentage: es.weightPercentage,
+              teacherAssignmentId: assignment?.id ?? null,
+              // 🔥 Usar nombre del docente del snapshot si existe, sino del assignment actual
+              teacher: es.teacherName ?? (assignment ? `${assignment.teacher.firstName} ${assignment.teacher.lastName}` : null),
+            };
+          }),
+        })),
+      };
+    }
+
+    // Fallback: usar TeacherAssignments actuales (para matrículas sin snapshot)
+    const teacherAssignments = await this.prisma.teacherAssignment.findMany({
+      where: { groupId, academicYearId },
+      include: {
+        subject: { include: { area: true } },
+        teacher: { select: { firstName: true, lastName: true } },
+      },
+    });
+
+    // Agrupar por área
+    const areaMap = new Map<string, { area: any; subjects: any[] }>();
+    for (const ta of teacherAssignments) {
+      const areaId = ta.subject.areaId;
+      if (!areaMap.has(areaId)) {
+        areaMap.set(areaId, {
+          area: ta.subject.area,
+          subjects: [],
+        });
+      }
+      areaMap.get(areaId)!.subjects.push({
+        id: ta.subjectId,
+        name: ta.subject.name,
+        code: ta.subject.code,
+        weightPercentage: 100 / teacherAssignments.filter(t => t.subject.areaId === areaId).length,
+        teacherAssignmentId: ta.id,
+        teacher: `${ta.teacher.firstName} ${ta.teacher.lastName}`,
+      });
+    }
+
+    return {
+      source: 'calculated' as const,
+      areas: Array.from(areaMap.values()).map(({ area, subjects }) => ({
+        id: area.id,
+        name: area.name,
+        code: area.code,
+        weightPercentage: 100 / areaMap.size,
+        calculationType: 'AVERAGE',
+        subjects,
+      })),
+    };
+  }
+
   async getReportCardData(studentEnrollmentId: string, academicTermId: string) {
     const enrollment = await this.prisma.studentEnrollment.findUnique({
       where: { id: studentEnrollmentId },
@@ -44,43 +151,84 @@ export class ReportsService {
       throw new NotFoundException('Academic term not found');
     }
 
-    const teacherAssignments = await this.prisma.teacherAssignment.findMany({
-      where: {
-        groupId: enrollment.groupId,
-        academicYearId: enrollment.academicYearId,
-      },
-      include: {
-        subject: true,
-        teacher: {
-          select: { firstName: true, lastName: true },
-        },
-      },
-    });
+    // 🔥 Usar snapshot de matrícula para obtener asignaturas
+    // Esto protege contra cambios en plantillas después de la matrícula
+    const enrollmentStructure = await this.getEnrollmentSubjects(
+      studentEnrollmentId,
+      enrollment.groupId,
+      enrollment.academicYearId,
+    );
 
-    const subjectGrades = await Promise.all(
-      teacherAssignments.map(async (assignment) => {
-        const termGrade = await this.studentGradesService.calculateTermGrade(
-          studentEnrollmentId,
-          assignment.id,
-          academicTermId,
+    // Calcular notas por área y asignatura
+    const areaGrades = await Promise.all(
+      enrollmentStructure.areas.map(async (area) => {
+        const subjectResults = await Promise.all(
+          area.subjects.map(async (subject) => {
+            let termGrade = { grade: null as number | null, components: [] as any[] };
+            
+            if (subject.teacherAssignmentId) {
+              termGrade = await this.studentGradesService.calculateTermGrade(
+                studentEnrollmentId,
+                subject.teacherAssignmentId,
+                academicTermId,
+              );
+            }
+
+            const performanceResult = termGrade.grade
+              ? await this.studentGradesService.getPerformanceLevel(
+                  enrollment.academicYear.institution.id,
+                  termGrade.grade,
+                )
+              : null;
+
+            return {
+              subject: subject.name,
+              subjectCode: subject.code,
+              teacher: subject.teacher,
+              grade: termGrade.grade,
+              weightPercentage: subject.weightPercentage,
+              performanceLevel: performanceResult?.level || null,
+              components: termGrade.components,
+            };
+          }),
         );
 
-        const performanceResult = termGrade.grade
+        // Calcular promedio del área según tipo de cálculo
+        const validGrades = subjectResults.filter(s => s.grade !== null);
+        let areaAverage: number | null = null;
+        
+        if (validGrades.length > 0) {
+          if (area.calculationType === 'WEIGHTED') {
+            const weightedSum = validGrades.reduce((acc, s) => acc + (s.grade! * s.weightPercentage), 0);
+            const totalWeight = validGrades.reduce((acc, s) => acc + s.weightPercentage, 0);
+            areaAverage = totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 10) / 10 : null;
+          } else {
+            // AVERAGE por defecto
+            areaAverage = Math.round((validGrades.reduce((acc, s) => acc + s.grade!, 0) / validGrades.length) * 10) / 10;
+          }
+        }
+
+        const areaPerformance = areaAverage
           ? await this.studentGradesService.getPerformanceLevel(
               enrollment.academicYear.institution.id,
-              termGrade.grade,
+              areaAverage,
             )
           : null;
 
         return {
-          subject: assignment.subject.name,
-          teacher: `${assignment.teacher.firstName} ${assignment.teacher.lastName}`,
-          grade: termGrade.grade,
-          performanceLevel: performanceResult?.level || null,
-          components: termGrade.components,
+          area: area.name,
+          areaCode: area.code,
+          weightPercentage: area.weightPercentage,
+          calculationType: area.calculationType,
+          areaAverage,
+          areaPerformanceLevel: areaPerformance?.level || null,
+          subjects: subjectResults,
         };
       }),
     );
+
+    // Aplanar para compatibilidad con formato anterior
+    const subjectGrades = areaGrades.flatMap(a => a.subjects);
 
     const attendanceSummary = await this.attendanceService.getStudentSummary(
       studentEnrollmentId,
@@ -124,7 +272,12 @@ export class ReportsService {
         name: enrollment.group.name,
         gradeLevel: enrollment.group.grade.name,
       },
+      // 🔥 Estructura por áreas (nuevo formato con snapshot)
+      areaGrades,
+      // Compatibilidad: lista plana de asignaturas
       subjectGrades,
+      // Fuente de datos: 'snapshot' o 'calculated'
+      structureSource: enrollmentStructure.source,
       attendance: attendanceSummary,
       observations: observations.map((o) => ({
         date: o.date,

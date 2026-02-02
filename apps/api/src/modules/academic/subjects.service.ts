@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 
@@ -15,7 +14,7 @@ export class SubjectsService {
         order: 0,
       },
       include: {
-        levelConfigs: true,
+        area: true,
       },
     });
   }
@@ -24,19 +23,11 @@ export class SubjectsService {
     return this.prisma.subject.findMany({
       where: {
         areaId: params.areaId,
-        // Filtrar por institución a través del área
         ...(params.institutionId && {
-          area: {
-            institutionId: params.institutionId,
-          },
+          area: { institutionId: params.institutionId },
         }),
       },
-      include: {
-        area: true,
-        levelConfigs: {
-          include: { grade: true },
-        },
-      },
+      include: { area: true },
       orderBy: { name: 'asc' },
     });
   }

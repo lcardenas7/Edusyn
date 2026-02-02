@@ -200,6 +200,17 @@ const institutionalNavigation: NavItem[] = [
   // Documentos y Gestión
   { name: 'Documentos', href: '/institutional-documents', icon: FolderOpen, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'SECRETARIA'] },
   { name: 'Gestión de Tareas', href: '/management-tasks', icon: ListTodo, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'] },
+  
+  // Configuración Académica
+  { 
+    name: 'Configuración Académica', 
+    icon: BookOpen, 
+    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'],
+    children: [
+      { name: 'Catálogo', href: '/academic-catalog', icon: Layers, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
+      { name: 'Plantillas', href: '/academic-templates', icon: Settings, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
+    ]
+  },
 ]
 
 export default function Layout({ children }: { children: ReactNode }) {

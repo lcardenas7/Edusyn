@@ -76,21 +76,26 @@ export const groupsApi = {
   create: (data: { campusId: string; shiftId: string; gradeId: string; name: string; code?: string }) => api.post('/groups', data),
 }
 
-// Areas
+// Areas (Catálogo Académico)
 export const areasApi = {
-  getAll: (institutionId?: string, academicLevel?: string, gradeId?: string) => 
-    api.get('/areas', { params: { institutionId, academicLevel, gradeId } }),
+  getAll: (institutionId?: string, includeInactive?: boolean) => 
+    api.get('/areas', { params: { institutionId, includeInactive } }),
   getById: (id: string) => api.get(`/areas/${id}`),
-  getForGrade: (institutionId: string, gradeId: string) => 
-    api.get(`/areas/for-grade/${gradeId}`, { params: { institutionId } }),
-  create: (data: { institutionId: string; name: string; isMandatory?: boolean; order?: number; academicLevel?: string; gradeId?: string }) => 
+  create: (data: { institutionId: string; name: string; code?: string; description?: string; order?: number }) => 
     api.post('/areas', data),
-  update: (id: string, data: { name?: string; isMandatory?: boolean; order?: number; academicLevel?: string; gradeId?: string }) => 
+  update: (id: string, data: { name?: string; code?: string; description?: string; order?: number; isActive?: boolean }) => 
     api.put(`/areas/${id}`, data),
   delete: (id: string) => api.delete(`/areas/${id}`),
-  addSubject: (areaId: string, data: { name: string; weeklyHours?: number; weight?: number; isDominant?: boolean; order?: number; academicLevel?: string; gradeId?: string }) => 
+  
+  // Asignaturas
+  getSubjects: (areaId: string, includeInactive?: boolean) => 
+    api.get(`/areas/${areaId}/subjects`, { params: { includeInactive } }),
+  getAllSubjects: (institutionId: string, includeInactive?: boolean) => 
+    api.get('/areas/subjects/all', { params: { institutionId, includeInactive } }),
+  getSubject: (subjectId: string) => api.get(`/areas/subjects/${subjectId}`),
+  addSubject: (areaId: string, data: { name: string; code?: string; description?: string; subjectType?: string; order?: number }) => 
     api.post(`/areas/${areaId}/subjects`, data),
-  updateSubject: (subjectId: string, data: { name?: string; weeklyHours?: number; weight?: number; isDominant?: boolean; order?: number; academicLevel?: string; gradeId?: string }) => 
+  updateSubject: (subjectId: string, data: { name?: string; code?: string; description?: string; subjectType?: string; order?: number; isActive?: boolean }) => 
     api.put(`/areas/subjects/${subjectId}`, data),
   deleteSubject: (subjectId: string) => api.delete(`/areas/subjects/${subjectId}`),
 }
@@ -814,6 +819,7 @@ export const institutionalDocumentsApi = {
   getOne: (id: string) => api.get(`/institutional-documents/${id}`),
   getCategories: () => api.get('/institutional-documents/categories'),
   getStorageUsage: (institutionId: string) => api.get('/institutional-documents/storage-usage', { params: { institutionId } }),
+  getDownloadUrl: (id: string) => api.get(`/institutional-documents/${id}/download-url`),
   create: (formData: FormData) => api.post('/institutional-documents', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
@@ -859,4 +865,102 @@ export const managementTasksApi = {
   
   // Enums
   getEnums: () => api.get('/management-tasks/enums'),
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PLANTILLAS ACADÉMICAS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const academicTemplatesApi = {
+  // Plantillas (filtradas por año académico)
+  getAll: (institutionId: string, academicYearId: string, level?: string, includeInactive?: boolean) => 
+    api.get('/academic-templates', { params: { institutionId, academicYearId, level, includeInactive } }),
+  getOne: (id: string) => api.get(`/academic-templates/${id}`),
+  create: (data: {
+    institutionId: string;
+    academicYearId: string;  // 🔥 REQUERIDO
+    name: string;
+    description?: string;
+    level: string;
+    isDefault?: boolean;
+    achievementsPerPeriod?: number;
+    useAttitudinalAchievement?: boolean;
+  }) => api.post('/academic-templates', data),
+  update: (id: string, data: {
+    name?: string;
+    description?: string;
+    level?: string;
+    isDefault?: boolean;
+    isActive?: boolean;
+    achievementsPerPeriod?: number;
+    useAttitudinalAchievement?: boolean;
+  }) => api.put(`/academic-templates/${id}`, data),
+  delete: (id: string) => api.delete(`/academic-templates/${id}`),
+  getEnums: () => api.get('/academic-templates/enums'),
+
+  // Áreas en plantilla
+  addArea: (templateId: string, data: {
+    areaId: string;
+    weightPercentage?: number;
+    calculationType?: string;
+    approvalRule?: string;
+    recoveryRule?: string;
+    isMandatory?: boolean;
+    order?: number;
+  }) => api.post(`/academic-templates/${templateId}/areas`, data),
+  updateArea: (templateAreaId: string, data: {
+    weightPercentage?: number;
+    calculationType?: string;
+    approvalRule?: string;
+    recoveryRule?: string;
+    isMandatory?: boolean;
+    order?: number;
+  }) => api.put(`/academic-templates/areas/${templateAreaId}`, data),
+  removeArea: (templateAreaId: string) => api.delete(`/academic-templates/areas/${templateAreaId}`),
+
+  // Asignaturas en plantilla
+  addSubject: (templateAreaId: string, data: {
+    subjectId: string;
+    weeklyHours?: number;
+    weightPercentage?: number;
+    isDominant?: boolean;
+    order?: number;
+    achievementsPerPeriod?: number;
+    useAttitudinalAchievement?: boolean;
+  }) => api.post(`/academic-templates/areas/${templateAreaId}/subjects`, data),
+  updateSubject: (templateSubjectId: string, data: {
+    weeklyHours?: number;
+    weightPercentage?: number;
+    isDominant?: boolean;
+    order?: number;
+    achievementsPerPeriod?: number | null;
+    useAttitudinalAchievement?: boolean | null;
+  }) => api.put(`/academic-templates/subjects/${templateSubjectId}`, data),
+  removeSubject: (templateSubjectId: string) => api.delete(`/academic-templates/subjects/${templateSubjectId}`),
+
+  // Asignación a grados (por año académico)
+  assignToGrade: (gradeId: string, templateId: string, academicYearId: string, overrides?: any) => 
+    api.post(`/academic-templates/grades/${gradeId}/assign`, { templateId, academicYearId, overrides }),
+  removeFromGrade: (gradeId: string, academicYearId: string) => 
+    api.delete(`/academic-templates/grades/${gradeId}/assign`, { params: { academicYearId } }),
+  getGradeTemplate: (gradeId: string, academicYearId: string) => 
+    api.get(`/academic-templates/grades/${gradeId}`, { params: { academicYearId } }),
+  listGradesWithTemplates: (institutionId: string, academicYearId: string) => 
+    api.get('/academic-templates/grades', { params: { institutionId, academicYearId } }),
+
+  // Excepciones por grupo (por año académico)
+  addGroupException: (groupId: string, data: {
+    subjectId: string;
+    academicYearId: string;  // 🔥 REQUERIDO
+    type: 'EXCLUDE' | 'INCLUDE' | 'MODIFY';
+    weeklyHours?: number;
+    weightPercentage?: number;
+    reason?: string;
+  }) => api.post(`/academic-templates/groups/${groupId}/exceptions`, data),
+  removeGroupException: (groupId: string, subjectId: string, academicYearId: string) => 
+    api.delete(`/academic-templates/groups/${groupId}/exceptions/${subjectId}`, { params: { academicYearId } }),
+  getGroupExceptions: (groupId: string, academicYearId: string) => 
+    api.get(`/academic-templates/groups/${groupId}/exceptions`, { params: { academicYearId } }),
+  getEffectiveStructure: (groupId: string, academicYearId: string) => 
+    api.get(`/academic-templates/groups/${groupId}/effective-structure`, { params: { academicYearId } }),
 }

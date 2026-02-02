@@ -78,6 +78,12 @@ export class InstitutionalDocumentsController {
     return this.documentsService.findOne(id);
   }
 
+  @Get(':id/download-url')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'SECRETARIA')
+  async getDownloadUrl(@Param('id') id: string) {
+    return this.documentsService.getDownloadUrl(id);
+  }
+
   @Put(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async update(
