@@ -208,21 +208,41 @@ export default function AcademicTemplates() {
   }
 
   const saveTemplate = async () => {
-    if (!institution?.id || !selectedYear?.id || !templateForm.name.trim()) return
+    if (!institution?.id) {
+      alert('Error: No se encontró la institución')
+      return
+    }
+    if (!selectedYear?.id) {
+      alert('Error: Debe seleccionar un año académico')
+      return
+    }
+    if (!templateForm.name.trim()) {
+      alert('Error: El nombre de la plantilla es requerido')
+      return
+    }
+    
     setSaving(true)
     try {
+      console.log('[AcademicTemplates] Saving template:', { 
+        institutionId: institution.id, 
+        academicYearId: selectedYear.id,
+        ...templateForm 
+      })
+      
       if (editingTemplate) {
         await academicTemplatesApi.update(editingTemplate.id, templateForm)
       } else {
-        await academicTemplatesApi.create({ 
+        const response = await academicTemplatesApi.create({ 
           institutionId: institution.id, 
           academicYearId: selectedYear.id,
           ...templateForm 
         })
+        console.log('[AcademicTemplates] Template created:', response.data)
       }
       await loadData()
       setShowTemplateModal(false)
     } catch (error: any) {
+      console.error('[AcademicTemplates] Error saving template:', error)
       alert(error.response?.data?.message || 'Error al guardar plantilla')
     } finally {
       setSaving(false)
