@@ -826,6 +826,7 @@ export const institutionalDocumentsApi = {
   update: (id: string, data: { title?: string; description?: string; category?: string; visibleToRoles?: string[]; isActive?: boolean }) => 
     api.put(`/institutional-documents/${id}`, data),
   delete: (id: string) => api.delete(`/institutional-documents/${id}`),
+  cleanup: (institutionId: string) => api.post('/institutional-documents/cleanup', { institutionId }),
 }
 
 // Gestión de Tareas

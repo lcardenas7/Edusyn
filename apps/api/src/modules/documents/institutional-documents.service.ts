@@ -328,6 +328,113 @@ export class InstitutionalDocumentsService {
   }
 
   /**
+   * Limpia archivos huérfanos de Supabase (archivos sin registro en BD)
+   * y recalcula el uso de almacenamiento basado en los documentos reales
+   */
+  async cleanupOrphanedFiles(institutionId: string): Promise<{ 
+    deletedFiles: string[]; 
+    recalculatedUsage: number;
+    message: string;
+  }> {
+    console.log('[InstitutionalDocuments] Cleaning up orphaned files for institution:', institutionId);
+    
+    // 1. Obtener todos los documentos registrados en BD para esta institución
+    const dbDocuments = await this.prisma.institutionalDocument.findMany({
+      where: { institutionId },
+      select: { fileUrl: true, fileSize: true },
+    });
+    
+    // Extraer paths de los documentos en BD
+    const dbPaths = new Set(
+      dbDocuments.map(doc => {
+        const urlParts = doc.fileUrl.split('/storage/v1/object/public/documentos/');
+        return urlParts.length > 1 ? urlParts[1] : doc.fileUrl;
+      })
+    );
+    
+    // 2. Listar archivos en Supabase para esta institución
+    const basePath = `institucion/${institutionId}/institucionales`;
+    let orphanedFiles: string[] = [];
+    
+    try {
+      const { data: folders, error: foldersError } = await (this.storageService as any).supabase.storage
+        .from('documentos')
+        .list(basePath);
+      
+      if (foldersError) {
+        console.error('[InstitutionalDocuments] Error listing folders:', foldersError);
+      } else if (folders) {
+        // Iterar sobre cada carpeta de categoría
+        for (const folder of folders) {
+          if (folder.name) {
+            const categoryPath = `${basePath}/${folder.name}`;
+            const { data: files, error: filesError } = await (this.storageService as any).supabase.storage
+              .from('documentos')
+              .list(categoryPath);
+            
+            if (!filesError && files) {
+              for (const file of files) {
+                if (file.name && !file.name.startsWith('.')) {
+                  const fullPath = `${categoryPath}/${file.name}`;
+                  // Si el archivo no está en la BD, es huérfano
+                  if (!dbPaths.has(fullPath)) {
+                    orphanedFiles.push(fullPath);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[InstitutionalDocuments] Error scanning storage:', error);
+    }
+    
+    // 3. Eliminar archivos huérfanos
+    const deletedFiles: string[] = [];
+    for (const filePath of orphanedFiles) {
+      try {
+        const { error } = await (this.storageService as any).supabase.storage
+          .from('documentos')
+          .remove([filePath]);
+        
+        if (!error) {
+          deletedFiles.push(filePath);
+          console.log('[InstitutionalDocuments] Deleted orphaned file:', filePath);
+        }
+      } catch (error) {
+        console.error('[InstitutionalDocuments] Error deleting file:', filePath, error);
+      }
+    }
+    
+    // 4. Recalcular uso de almacenamiento basado en documentos reales
+    const totalSize = dbDocuments.reduce((sum, doc) => sum + doc.fileSize, 0);
+    
+    await this.prisma.institutionStorageUsage.upsert({
+      where: { institutionId },
+      create: {
+        institutionId,
+        documentsUsage: BigInt(totalSize),
+      },
+      update: {
+        documentsUsage: BigInt(totalSize),
+        lastCalculatedAt: new Date(),
+      },
+    });
+    
+    console.log('[InstitutionalDocuments] Cleanup complete:', {
+      deletedFiles: deletedFiles.length,
+      recalculatedUsage: totalSize,
+    });
+    
+    return {
+      deletedFiles,
+      recalculatedUsage: totalSize,
+      message: `Limpieza completada. ${deletedFiles.length} archivos huérfanos eliminados. Uso recalculado: ${(totalSize / 1024 / 1024).toFixed(2)} MB`,
+    };
+  }
+
+  /**
    * Genera una URL firmada temporal para descargar/ver un documento
    * Esto es necesario porque el bucket 'documentos' no es público
    */

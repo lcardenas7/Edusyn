@@ -122,4 +122,11 @@ export class InstitutionalDocumentsController {
   async delete(@Param('id') id: string) {
     return this.documentsService.delete(id);
   }
+
+  @Post('cleanup')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async cleanupOrphanedFiles(@Body('institutionId') institutionId: string) {
+    console.log('[DocumentsController] POST /institutional-documents/cleanup', { institutionId });
+    return this.documentsService.cleanupOrphanedFiles(institutionId);
+  }
 }

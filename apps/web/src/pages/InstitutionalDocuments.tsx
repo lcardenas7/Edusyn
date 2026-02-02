@@ -189,6 +189,19 @@ export default function InstitutionalDocuments() {
     }
   }
 
+  const handleCleanup = async () => {
+    if (!confirm('¿Limpiar archivos huérfanos y recalcular espacio? Esto eliminará archivos que se subieron pero no se registraron correctamente.')) return
+
+    try {
+      const response = await institutionalDocumentsApi.cleanup(institutionId!)
+      alert(response.data.message || 'Limpieza completada')
+      loadDocuments()
+      loadStorageUsage()
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Error al limpiar archivos')
+    }
+  }
+
   const resetForm = () => {
     setFormData({
       title: '',
@@ -258,9 +271,18 @@ export default function InstitutionalDocuments() {
       {/* Storage Usage (Admin only) */}
       {isAdmin && storageUsage && (
         <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <div className="flex items-center gap-3 mb-2">
-            <HardDrive className="w-5 h-5 text-slate-500" />
-            <span className="font-medium text-slate-700">Uso de Almacenamiento</span>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <HardDrive className="w-5 h-5 text-slate-500" />
+              <span className="font-medium text-slate-700">Uso de Almacenamiento</span>
+            </div>
+            <button
+              onClick={handleCleanup}
+              className="text-xs px-3 py-1 text-orange-600 hover:bg-orange-50 rounded-lg border border-orange-200"
+              title="Limpiar archivos huérfanos y recalcular espacio"
+            >
+              🧹 Limpiar
+            </button>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex-1">
