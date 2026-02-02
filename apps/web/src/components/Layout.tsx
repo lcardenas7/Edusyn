@@ -111,7 +111,6 @@ const institutionalNavigation: NavItem[] = [
     module: 'CONFIG',
     children: [
       { name: 'Configuración', href: '/institution', icon: Settings, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'CONFIG' },
-      { name: 'Áreas y Asignaturas', href: '/admin/areas', icon: Layers, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
     ]
   },
   

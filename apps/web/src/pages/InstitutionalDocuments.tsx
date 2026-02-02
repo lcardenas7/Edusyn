@@ -103,7 +103,9 @@ export default function InstitutionalDocuments() {
   const loadDocuments = async () => {
     try {
       setLoading(true)
+      console.log('[Documents] Loading for institution:', institutionId)
       const response = await institutionalDocumentsApi.getAll(institutionId!)
+      console.log('[Documents] Response:', response)
       setDocuments(response.data || [])
     } catch (error) {
       console.error('Error loading documents:', error)

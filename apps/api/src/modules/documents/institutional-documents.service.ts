@@ -48,6 +48,8 @@ export class InstitutionalDocumentsService {
     file: Express.Multer.File,
     uploadedById: string,
   ) {
+    console.log('[InstitutionalDocuments] Creating document:', { dto, uploadedById, fileName: file?.originalname });
+    
     // Validar archivo
     this.validateFile(file);
     
@@ -55,36 +57,53 @@ export class InstitutionalDocumentsService {
     await this.checkStorageLimit(dto.institutionId, file.size);
     
     // Subir archivo a Supabase
+    console.log('[InstitutionalDocuments] Uploading to Supabase...');
     const uploadResult = await this.uploadDocument(dto.institutionId, file, dto.category);
+    console.log('[InstitutionalDocuments] Upload result:', uploadResult);
     
     // Crear registro en BD
-    const document = await this.prisma.institutionalDocument.create({
-      data: {
-        institutionId: dto.institutionId,
-        title: dto.title,
-        description: dto.description,
-        category: dto.category,
-        fileUrl: uploadResult.url,
-        fileName: uploadResult.fileName,
-        fileSize: uploadResult.fileSize,
-        mimeType: uploadResult.mimeType,
-        visibleToRoles: dto.visibleToRoles || [],
-        uploadedById,
-      },
-      include: {
-        uploadedBy: {
-          select: { id: true, firstName: true, lastName: true, email: true },
+    try {
+      const document = await this.prisma.institutionalDocument.create({
+        data: {
+          institutionId: dto.institutionId,
+          title: dto.title,
+          description: dto.description,
+          category: dto.category,
+          fileUrl: uploadResult.url,
+          fileName: uploadResult.fileName,
+          fileSize: uploadResult.fileSize,
+          mimeType: uploadResult.mimeType,
+          visibleToRoles: dto.visibleToRoles || [],
+          uploadedById,
         },
-      },
-    });
-    
-    // Actualizar uso de almacenamiento
-    await this.updateStorageUsage(dto.institutionId, file.size);
-    
-    return document;
+        include: {
+          uploadedBy: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
+        },
+      });
+      
+      console.log('[InstitutionalDocuments] Document created:', document.id);
+      
+      // Actualizar uso de almacenamiento
+      await this.updateStorageUsage(dto.institutionId, file.size);
+      
+      return document;
+    } catch (error) {
+      console.error('[InstitutionalDocuments] Error creating document in DB:', error);
+      // Intentar eliminar el archivo subido si falla la BD
+      try {
+        await this.storageService.deleteFile('documentos', uploadResult.url);
+      } catch (deleteError) {
+        console.error('[InstitutionalDocuments] Error cleaning up file:', deleteError);
+      }
+      throw error;
+    }
   }
 
   async findAll(institutionId: string, userRoles?: string[]) {
+    console.log('[InstitutionalDocuments] findAll - institutionId:', institutionId, 'userRoles:', userRoles);
+    
     const documents = await this.prisma.institutionalDocument.findMany({
       where: {
         institutionId,
@@ -100,6 +119,8 @@ export class InstitutionalDocumentsService {
         { createdAt: 'desc' },
       ],
     });
+    
+    console.log('[InstitutionalDocuments] Found documents:', documents.length);
     
     // Filtrar por visibilidad de rol si no es admin
     if (userRoles && !userRoles.some(r => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL'].includes(r))) {
