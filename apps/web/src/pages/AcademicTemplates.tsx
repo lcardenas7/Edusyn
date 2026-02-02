@@ -300,10 +300,12 @@ export default function AcademicTemplates() {
     if (!editingTemplateArea || !areaForm.areaId) return
     setSaving(true)
     try {
+      // Excluir autoDistribute que es solo para UI, no para el backend
+      const { autoDistribute, ...dataToSend } = areaForm
       if (editingTemplateArea.templateArea) {
-        await academicTemplatesApi.updateArea(editingTemplateArea.templateArea.id, areaForm)
+        await academicTemplatesApi.updateArea(editingTemplateArea.templateArea.id, dataToSend)
       } else {
-        await academicTemplatesApi.addArea(editingTemplateArea.templateId, areaForm)
+        await academicTemplatesApi.addArea(editingTemplateArea.templateId, dataToSend)
       }
       await loadData()
       setShowAreaModal(false)
@@ -351,10 +353,12 @@ export default function AcademicTemplates() {
     if (!editingTemplateSubject || !subjectForm.subjectId) return
     setSaving(true)
     try {
+      // Excluir autoDistribute que es solo para UI, no para el backend
+      const { autoDistribute, ...dataToSend } = subjectForm
       if (editingTemplateSubject.templateSubject) {
-        await academicTemplatesApi.updateSubject(editingTemplateSubject.templateSubject.id, subjectForm)
+        await academicTemplatesApi.updateSubject(editingTemplateSubject.templateSubject.id, dataToSend)
       } else {
-        await academicTemplatesApi.addSubject(editingTemplateSubject.templateAreaId, subjectForm)
+        await academicTemplatesApi.addSubject(editingTemplateSubject.templateAreaId, dataToSend)
       }
       await loadData()
       setShowSubjectModal(false)
