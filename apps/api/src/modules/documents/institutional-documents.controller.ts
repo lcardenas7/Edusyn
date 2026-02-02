@@ -78,9 +78,10 @@ export class InstitutionalDocumentsController {
     @Query('institutionId') institutionId: string,
     @Request() req: any,
   ) {
-    console.log('[DocumentsController] findAll - req.user:', JSON.stringify(req.user, null, 2));
-    const userRoles = req.user.roles?.map((r: any) => r.role?.name || r.name) || [];
-    console.log('[DocumentsController] Extracted roles:', userRoles);
+    // roles puede ser array de strings o array de objetos
+    const userRoles = req.user.roles?.map((r: any) => 
+      typeof r === 'string' ? r : (r.role?.name || r.name)
+    ).filter(Boolean) || [];
     return this.documentsService.findAll(institutionId, userRoles);
   }
 
