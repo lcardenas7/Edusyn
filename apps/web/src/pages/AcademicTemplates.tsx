@@ -75,11 +75,19 @@ const levelLabels: Record<string, string> = {
   OTRO: 'Otro',
 }
 
+// Etiquetas con lenguaje académico claro
 const calculationTypeLabels: Record<string, string> = {
-  INFORMATIVE: 'Informativa',
-  AVERAGE: 'Promedio simple',
-  WEIGHTED: 'Ponderado',
-  DOMINANT: 'Dominante',
+  AVERAGE: 'Todas las materias valen lo mismo',
+  WEIGHTED: 'Algunas materias pesan más que otras',
+  DOMINANT: 'La materia con mejor nota tiene más impacto',
+  INFORMATIVE: 'Aparece en boletín pero no afecta el promedio',
+}
+
+const calculationTypeDescriptions: Record<string, string> = {
+  AVERAGE: 'El promedio del área se calcula sumando todas las notas y dividiendo entre el número de asignaturas.',
+  WEIGHTED: 'Cada asignatura tiene un peso diferente. Las de mayor peso influyen más en el promedio del área.',
+  DOMINANT: 'La asignatura con la nota más alta tiene mayor influencia en el promedio final del área.',
+  INFORMATIVE: 'Esta área aparecerá en el boletín pero sus notas NO afectarán el promedio general del estudiante.',
 }
 
 export default function AcademicTemplates() {
@@ -816,19 +824,20 @@ export default function AcademicTemplates() {
 
       {/* Modal de Área en Plantilla */}
       {showAreaModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
-            <div className="flex items-center justify-between p-4 border-b">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
               <h2 className="text-lg font-semibold">
-                {editingTemplateArea?.templateArea ? 'Configurar Área' : 'Agregar Área'}
+                {editingTemplateArea?.templateArea ? 'Configurar Área' : 'Agregar Área a la Plantilla'}
               </h2>
               <button onClick={() => setShowAreaModal(false)} className="p-1 hover:bg-gray-100 rounded">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-5">
+              {/* Selección de área */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Área *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Área del catálogo *</label>
                 <select
                   value={areaForm.areaId}
                   onChange={(e) => setAreaForm({ ...areaForm, areaId: e.target.value })}
@@ -841,33 +850,71 @@ export default function AcademicTemplates() {
                   ))}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Peso (%)</label>
+
+              {/* Importancia del área */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <label className="block text-sm font-semibold text-blue-800 mb-2">
+                  💡 ¿Qué tan importante es esta área para el promedio general?
+                </label>
+                <p className="text-xs text-blue-600 mb-3">
+                  Este porcentaje define cuánto pesa esta área en el promedio final del estudiante.
+                  Por ejemplo, si Matemáticas vale 40%, una mala nota en Matemáticas afectará mucho más que en un área del 10%.
+                </p>
+                <div className="flex items-center gap-3">
                   <input
                     type="number"
                     min="0"
                     max="100"
                     value={areaForm.weightPercentage}
                     onChange={(e) => setAreaForm({ ...areaForm, weightPercentage: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-center font-semibold"
                   />
+                  <span className="text-gray-600">% del promedio general</span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cálculo</label>
-                  <select
-                    value={areaForm.calculationType}
-                    onChange={(e) => setAreaForm({ ...areaForm, calculationType: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="AVERAGE">Promedio simple</option>
-                    <option value="WEIGHTED">Ponderado</option>
-                    <option value="DOMINANT">Dominante</option>
-                    <option value="INFORMATIVE">Informativa</option>
-                  </select>
+                {areaForm.calculationType === 'INFORMATIVE' && (
+                  <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    Las áreas informativas no afectan el promedio, el peso se ignora.
+                  </p>
+                )}
+              </div>
+
+              {/* Tipo de cálculo */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  ¿Cómo se calculará el promedio de esta área?
+                </label>
+                <div className="space-y-2">
+                  {Object.entries(calculationTypeLabels).map(([value, label]) => (
+                    <label 
+                      key={value}
+                      className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                        areaForm.calculationType === value 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="calculationType"
+                        value={value}
+                        checked={areaForm.calculationType === value}
+                        onChange={(e) => setAreaForm({ ...areaForm, calculationType: e.target.value })}
+                        className="mt-0.5"
+                      />
+                      <div>
+                        <span className="font-medium text-gray-800">{label}</span>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {calculationTypeDescriptions[value]}
+                        </p>
+                      </div>
+                    </label>
+                  ))}
                 </div>
               </div>
-              <div>
+
+              {/* Área obligatoria */}
+              <div className="border-t pt-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -875,11 +922,14 @@ export default function AcademicTemplates() {
                     onChange={(e) => setAreaForm({ ...areaForm, isMandatory: e.target.checked })}
                     className="w-4 h-4 text-blue-600 rounded"
                   />
-                  <span className="text-sm text-gray-700">Área obligatoria</span>
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Área obligatoria para aprobar</span>
+                    <p className="text-xs text-gray-500">Si está marcada, el estudiante debe aprobar esta área para pasar el año.</p>
+                  </div>
                 </label>
               </div>
             </div>
-            <div className="flex justify-end gap-2 p-4 border-t bg-gray-50">
+            <div className="flex justify-end gap-2 p-4 border-t bg-gray-50 sticky bottom-0">
               <button onClick={() => setShowAreaModal(false)} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
                 Cancelar
               </button>
@@ -898,19 +948,20 @@ export default function AcademicTemplates() {
 
       {/* Modal de Asignatura en Plantilla */}
       {showSubjectModal && editingTemplateSubject && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
-            <div className="flex items-center justify-between p-4 border-b">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
               <h2 className="text-lg font-semibold">
-                {editingTemplateSubject.templateSubject ? 'Configurar Asignatura' : 'Agregar Asignatura'}
+                {editingTemplateSubject.templateSubject ? 'Configurar Asignatura' : 'Agregar Asignatura al Área'}
               </h2>
               <button onClick={() => setShowSubjectModal(false)} className="p-1 hover:bg-gray-100 rounded">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-5">
+              {/* Selección de asignatura */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Asignatura *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Asignatura del catálogo *</label>
                 <select
                   value={subjectForm.subjectId}
                   onChange={(e) => setSubjectForm({ ...subjectForm, subjectId: e.target.value })}
@@ -918,7 +969,6 @@ export default function AcademicTemplates() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                 >
                   <option value="">Seleccionar asignatura...</option>
-                  {/* Buscar el área correspondiente al templateArea */}
                   {(() => {
                     const template = templates.find(t => t.templateAreas.some(ta => ta.id === editingTemplateSubject.templateAreaId))
                     const templateArea = template?.templateAreas.find(ta => ta.id === editingTemplateSubject.templateAreaId)
@@ -929,31 +979,45 @@ export default function AcademicTemplates() {
                   })()}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Horas semanales</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="40"
-                    value={subjectForm.weeklyHours}
-                    onChange={(e) => setSubjectForm({ ...subjectForm, weeklyHours: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Peso en área (%)</label>
+
+              {/* Importancia de la asignatura dentro del área */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <label className="block text-sm font-semibold text-green-800 mb-2">
+                  💡 ¿Qué tan importante es esta asignatura dentro del área?
+                </label>
+                <p className="text-xs text-green-600 mb-3">
+                  Este porcentaje define cuánto pesa esta asignatura en el promedio del área.
+                  Si el área tiene cálculo "Todas las materias valen lo mismo", este peso se ignora.
+                </p>
+                <div className="flex items-center gap-3">
                   <input
                     type="number"
                     min="0"
                     max="100"
                     value={subjectForm.weightPercentage}
                     onChange={(e) => setSubjectForm({ ...subjectForm, weightPercentage: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-center font-semibold"
                   />
+                  <span className="text-gray-600">% del promedio del área</span>
                 </div>
               </div>
+
+              {/* Horas semanales */}
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Horas semanales de clase</label>
+                <p className="text-xs text-gray-500 mb-2">Cantidad de horas que se dicta esta asignatura por semana.</p>
+                <input
+                  type="number"
+                  min="0"
+                  max="40"
+                  value={subjectForm.weeklyHours}
+                  onChange={(e) => setSubjectForm({ ...subjectForm, weeklyHours: parseInt(e.target.value) || 0 })}
+                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-center"
+                />
+              </div>
+
+              {/* Asignatura dominante */}
+              <div className="border-t pt-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -961,11 +1025,14 @@ export default function AcademicTemplates() {
                     onChange={(e) => setSubjectForm({ ...subjectForm, isDominant: e.target.checked })}
                     className="w-4 h-4 text-blue-600 rounded"
                   />
-                  <span className="text-sm text-gray-700">Asignatura dominante del área</span>
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Asignatura dominante del área</span>
+                    <p className="text-xs text-gray-500">Si el área usa cálculo "dominante", esta asignatura tendrá mayor peso cuando su nota sea la más alta.</p>
+                  </div>
                 </label>
               </div>
             </div>
-            <div className="flex justify-end gap-2 p-4 border-t bg-gray-50">
+            <div className="flex justify-end gap-2 p-4 border-t bg-gray-50 sticky bottom-0">
               <button onClick={() => setShowSubjectModal(false)} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
                 Cancelar
               </button>
