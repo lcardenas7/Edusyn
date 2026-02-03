@@ -198,6 +198,17 @@ enum GroupExceptionType {
   MODIFY          // Modificar configuración (horas, peso, etc.)
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ESTRUCTURA ACADÉMICA POR GRADO
+// Define cómo se organiza académicamente cada grado
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum AcademicStructureType {
+  DIMENSIONS      // Preescolar: Dimensiones cualitativas (sin notas numéricas)
+  SUBJECTS_ONLY   // Asignaturas simples sin áreas (primaria baja opcional)
+  AREAS_SUBJECTS  // Modelo tradicional: Áreas con asignaturas ponderadas
+}
+
 model User {
   id             String     @id @default(cuid())
   email          String     @unique
@@ -436,6 +447,10 @@ model Grade {
   stage     GradeStage
   number    Int?
   name      String
+  
+  // 🆕 Estructura académica del grado (define comportamiento del sistema)
+  academicStructure AcademicStructureType @default(AREAS_SUBJECTS)
+  
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -550,6 +565,7 @@ model AcademicTemplate {
   institution    Institution      @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   academicYear   AcademicYear     @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
   templateAreas  TemplateArea[]
+  templateDimensions TemplateDimension[]  // 🆕 Para estructura DIMENSIONS (preescolar)
   gradeTemplates GradeTemplate[]
 
   @@unique([institutionId, academicYearId, name]) // Nombre único por institución Y año
@@ -608,6 +624,44 @@ model TemplateSubject {
   @@unique([templateAreaId, subjectId])
   @@index([templateAreaId])
   @@index([subjectId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DIMENSIONES DEL DESARROLLO (PREESCOLAR)
+// Catálogo global de dimensiones pedagógicas
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Catálogo de Dimensiones (global, no institucional)
+model Dimension {
+  id          String   @id @default(cuid())
+  name        String   // "Cognitiva", "Comunicativa", "Corporal", etc.
+  code        String?  // Código corto opcional
+  description String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  templateDimensions   TemplateDimension[]
+  enrollmentDimensions EnrollmentDimension[]
+}
+
+// Dimensión dentro de una plantilla (para estructura DIMENSIONS)
+model TemplateDimension {
+  id          String   @id @default(cuid())
+  templateId  String
+  dimensionId String
+  order       Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  template    AcademicTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  dimension   Dimension        @relation(fields: [dimensionId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, dimensionId])
+  @@index([templateId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1190,8 +1244,9 @@ model StudentEnrollment {
   studentAchievements StudentAchievement[]
   
   // 🔥 SNAPSHOT de estructura académica al momento de matrícula
-  enrollmentAreas    EnrollmentArea[]
-  enrollmentSubjects EnrollmentSubject[]
+  enrollmentAreas      EnrollmentArea[]
+  enrollmentSubjects   EnrollmentSubject[]
+  enrollmentDimensions EnrollmentDimension[]  // 🆕 Para estructura DIMENSIONS (preescolar)
 
   @@unique([studentId, academicYearId])
 }
@@ -1266,6 +1321,26 @@ model EnrollmentSubject {
   @@index([enrollmentAreaId])
   @@index([subjectId])
   @@index([teacherId])
+}
+
+// Snapshot de dimensión para una matrícula específica (PREESCOLAR)
+model EnrollmentDimension {
+  id            String   @id @default(cuid())
+  enrollmentId  String
+  dimensionId   String?  // Referencia histórica (opcional si se elimina)
+  
+  // Datos copiados de Dimension al momento de matrícula (INMUTABLES)
+  dimensionName String   // Nombre de la dimensión (snapshot visible)
+  dimensionCode String?  // Código de la dimensión (snapshot)
+  order         Int      @default(0)
+  
+  createdAt     DateTime @default(now())
+
+  enrollment    StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  dimension     Dimension?        @relation(fields: [dimensionId], references: [id], onDelete: SetNull)
+
+  @@unique([enrollmentId, dimensionId])
+  @@index([enrollmentId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

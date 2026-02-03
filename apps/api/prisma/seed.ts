@@ -481,6 +481,37 @@ async function main() {
   await seedPermissions();
 
   // ============================================
+  // SEED DIMENSIONES DEL DESARROLLO (PREESCOLAR)
+  // ============================================
+  console.log('🎨 Creando dimensiones del desarrollo...');
+  
+  const dimensions = [
+    { name: 'Dimensión Cognitiva', code: 'COG', description: 'Desarrollo del pensamiento lógico, resolución de problemas y construcción de conocimiento.', order: 1 },
+    { name: 'Dimensión Comunicativa', code: 'COM', description: 'Desarrollo del lenguaje oral, escrito, gestual y expresión de ideas.', order: 2 },
+    { name: 'Dimensión Corporal', code: 'COR', description: 'Desarrollo de habilidades motrices, coordinación y conciencia corporal.', order: 3 },
+    { name: 'Dimensión Socioafectiva', code: 'SOC', description: 'Desarrollo emocional, relaciones interpersonales y autoestima.', order: 4 },
+    { name: 'Dimensión Estética', code: 'EST', description: 'Desarrollo de la sensibilidad artística, creatividad y apreciación estética.', order: 5 },
+    { name: 'Dimensión Ética', code: 'ETI', description: 'Desarrollo de valores, normas de convivencia y responsabilidad.', order: 6 },
+    { name: 'Dimensión Espiritual', code: 'ESP', description: 'Desarrollo de la trascendencia, sentido de vida y valores espirituales.', order: 7 },
+  ];
+  
+  for (const dim of dimensions) {
+    // Buscar si ya existe una dimensión con este código
+    const existing = await prisma.dimension.findFirst({ where: { code: dim.code } });
+    if (existing) {
+      await prisma.dimension.update({
+        where: { id: existing.id },
+        data: { name: dim.name, description: dim.description, order: dim.order },
+      });
+    } else {
+      await prisma.dimension.create({
+        data: { name: dim.name, code: dim.code, description: dim.description, order: dim.order },
+      });
+    }
+  }
+  console.log(`   ✅ ${dimensions.length} dimensiones creadas\n`);
+
+  // ============================================
   // RESUMEN FINAL
   // ============================================
   console.log('═══════════════════════════════════════════════════════════');
