@@ -1,7 +1,7 @@
 # 📚 GUÍA DEL SISTEMA EDUSYN
 
-> **Última actualización:** Febrero 2026  
-> **Versión:** 1.0
+> **Última actualización:** 5 Febrero 2026  
+> **Versión:** 2.0
 
 ---
 
@@ -61,7 +61,8 @@
 | Módulo | Página | Descripción |
 |--------|--------|-------------|
 | **Dashboard** | `Dashboard.tsx` | Panel principal con métricas y accesos rápidos |
-| **Institución** | `Institution.tsx` | Configuración institucional completa (SIEE, períodos, escalas) |
+| **Institución** | `InstitutionHub.tsx` | Hub de configuración institucional (perfil, estructura, usuarios) |
+| **Académico** | `AcademicHub.tsx` | Hub de gestión académica (catálogo, plantillas, SIEE) |
 | **Estudiantes** | `Students.tsx` | CRUD de estudiantes, importación Excel, documentos |
 | **Docentes** | `Teachers.tsx` | Gestión de docentes, asignación de roles |
 | **Matrículas** | `Enrollments.tsx` | Proceso de matrícula, estados, historial |
@@ -76,7 +77,7 @@
 | **Observador** | `Observer.tsx` | Observaciones de comportamiento |
 | **Recuperaciones** | `Recoveries.tsx` | Planes de recuperación por período y final |
 | **Boletines** | `ReportCards.tsx` | Generación de boletines PDF |
-| **Reportes** | `Reports.tsx` | Reportes académicos, asistencia, nota mínima |
+| **Reportes** | `ReportsHub.tsx` | Hub de reportes modulares (6 categorías) |
 | **Comunicaciones** | `Communications.tsx` | Mensajes y anuncios institucionales |
 | **Elecciones** | `Elections.tsx` | Gobierno escolar, votación electrónica |
 | **Documentos Institucionales** | `InstitutionalDocuments.tsx` | Gestión documental |
@@ -131,37 +132,80 @@ apps/api/src/modules/
 └── superadmin/        ✅ Completo
 ```
 
-### Frontend (Web)
+### Frontend (Web) - Arquitectura Modular v2.0
 
 ```
 apps/web/src/pages/
 ├── Dashboard.tsx              ✅ Completo
-├── Institution.tsx            ✅ Completo (163KB - más grande)
+│
+├── 🏫 INSTITUCIÓN (identidad y estructura)
+├── InstitutionHub.tsx         ✅ Hub principal
+├── institution/
+│   ├── Profile.tsx            ✅ Información general
+│   └── Structure.tsx          ✅ Grados y grupos
+│
+├── 📚 ACADÉMICO (configuración pedagógica)
+├── AcademicHub.tsx            ✅ Hub principal
+├── academic/config/
+│   ├── Scale.tsx              ✅ Sistema de calificación (SIEE)
+│   ├── Periods.tsx            ✅ Períodos académicos
+│   ├── Levels.tsx             ✅ Niveles académicos
+│   └── windows/
+│       ├── GradingWindows.tsx ✅ Ventanas de calificación
+│       └── RecoveryWindows.tsx✅ Ventanas de recuperación
+│
+├── 📊 REPORTES (consultas e informes)
+├── ReportsHub.tsx             ✅ Hub principal
+├── reports/
+│   ├── AdminReports.tsx       ✅ Carga docente
+│   ├── AcademicReports.tsx    ✅ Notas y promedios
+│   ├── AttendanceReports.tsx  ✅ Asistencia
+│   ├── AlertsReports.tsx      ✅ Bajo rendimiento
+│   ├── BulletinsReports.tsx   ✅ Boletines
+│   └── EvaluationReports.tsx  ✅ SIEE
+│
+├── ⚙️ ADMINISTRACIÓN
+├── admin/
+│   └── SystemConfig.tsx       ✅ Auditoría, usuarios, permisos
+│
+├── 🎓 GESTIÓN ESTUDIANTIL
 ├── Students.tsx               ✅ Completo
-├── Teachers.tsx               ✅ Completo
 ├── Enrollments.tsx            ✅ Completo
-├── AcademicCatalog.tsx        ✅ Completo
-├── AcademicTemplates.tsx      ✅ Completo
-├── AcademicLoad.tsx           ✅ Completo
 ├── Grades.tsx                 ✅ Completo
 ├── PeriodFinalGrades.tsx      ✅ Completo
-├── Performances.tsx           ✅ Completo
-├── Achievements.tsx           ✅ Completo
 ├── Attendance.tsx             ✅ Completo
 ├── Observer.tsx               ✅ Completo
 ├── Recoveries.tsx             ✅ Completo
+├── Performances.tsx           ✅ Completo
+├── Achievements.tsx           ✅ Completo
 ├── ReportCards.tsx            ✅ Completo
-├── Reports.tsx                ✅ Completo (141KB)
-├── Communications.tsx         ✅ Completo
+│
+├── 👥 PERSONAL
+├── Teachers.tsx               ✅ Completo
+├── StaffManagement.tsx        ✅ Completo
+│
+├── 📖 CATÁLOGO
+├── AcademicCatalog.tsx        ✅ Completo
+├── AcademicTemplates.tsx      ✅ Completo
+├── AcademicLoad.tsx           ✅ Completo
+│
+├── 🗳️ GOBIERNO ESCOLAR
 ├── Elections.tsx              ✅ Completo
 ├── VotingPortal.tsx           ✅ Completo
 ├── ElectionResults.tsx        ✅ Completo
+│
+├── 📄 OTROS
+├── Communications.tsx         ✅ Completo
 ├── InstitutionalDocuments.tsx ✅ Completo
 ├── ManagementTasks.tsx        🟡 Parcial
 ├── Alerts.tsx                 🟡 Parcial
 ├── Statistics.tsx             🟡 Parcial
 ├── AcademicYearClosure.tsx    🟡 Parcial
 └── SuperAdminDashboard.tsx    ✅ Completo
+│
+├── ⚠️ DEPRECADOS (mantener solo para compatibilidad)
+├── Institution.tsx            ⚠️ Usar InstitutionHub
+└── Reports.tsx                ⚠️ Usar ReportsHub
 ```
 
 ---
@@ -326,14 +370,31 @@ apps/web/src/pages/
 ---
 
 ### 2. Institución (`/institution`)
-**Propósito:** Configuración central de la institución.
+**Propósito:** Identidad y estructura organizacional.
 
-**Pestañas:**
-1. **Información General:** Nombre, DANE, NIT, logo
-2. **Sedes y Grupos:** Estructura organizacional
-3. **Año Académico:** Gestión de años y períodos
-4. **Configuración SIEE:** Escala, componentes, reglas
-5. **Usuarios:** Gestión de accesos
+**Secciones:**
+- **Información General** (`/institution/profile`): Nombre, DANE, NIT, logo, rector
+- **Estructura** (`/institution/structure`): Sedes, jornadas, grados, grupos
+- **Usuarios** (`/staff`): Gestión de usuarios y roles
+- **Administración del Sistema** (`/admin/system`): Auditoría, permisos, configuración avanzada
+
+---
+
+### 2.1 Académico (`/academic`)
+**Propósito:** Configuración pedagógica del colegio.
+
+**Secciones principales:**
+- **Catálogo Académico** (`/academic/catalog`): Áreas y asignaturas
+- **Plantillas Académicas** (`/academic/templates`): Estructura por nivel/grado
+- **Carga Docente** (`/academic/assignments`): Asignación docente-grupo-materia
+- **Año Académico** (`/academic/year/setup`): Configuración del año escolar
+
+**Configuración SIEE:**
+- **Niveles Académicos** (`/academic/config/levels`): Calendario y escalas por nivel
+- **Sistema de Calificación** (`/academic/config/scale`): Procesos evaluativos y pesos
+- **Períodos Académicos** (`/academic/config/periods`): Configuración de períodos
+- **Ventanas de Calificación** (`/academic/config/windows/grading`): Fechas para notas
+- **Ventanas de Recuperación** (`/academic/config/windows/recovery`): Fechas para recuperaciones
 
 ---
 
@@ -390,13 +451,16 @@ apps/web/src/pages/
 ### 7. Reportes (`/reports`)
 **Propósito:** Análisis y estadísticas académicas.
 
-**Reportes disponibles:**
-- Consolidado de notas
-- Ranking por grupo
-- Asistencia por período
-- Estudiantes en riesgo
-- **Nota mínima requerida** (nuevo)
-- Comparativo entre períodos
+**Categorías de reportes (arquitectura modular):**
+
+| Categoría | Ruta | Descripción |
+|-----------|------|-------------|
+| **Administración** | `/reports/admin` | Carga docente, distribución de grupos |
+| **Académico** | `/reports/academic` | Consolidado de notas, promedios, rankings |
+| **Asistencia** | `/reports/attendance` | Asistencia por grupo, estudiante, período |
+| **Alertas** | `/reports/alerts` | Bajo rendimiento, riesgo de reprobación |
+| **Boletines** | `/reports/bulletins` | Boletines parciales, finales, certificados |
+| **Evaluación** | `/reports/evaluation` | Cumplimiento SIEE, criterios, escalas |
 
 ---
 
@@ -427,6 +491,10 @@ apps/web/src/pages/
    - Distribución automática de pesos ✅
    - Preview de impacto real ✅
    - Validaciones en tiempo real
+   - **Arquitectura modular frontend** ✅ (Feb 2026)
+     - Separación Institución vs Académico
+     - Reportes modulares por categoría
+     - Hubs de navegación por dominio
 
 ### Prioridad Baja
 6. **App Móvil**
