@@ -9,7 +9,6 @@ import Attendance from './pages/Attendance'
 import Alerts from './pages/Alerts'
 import Statistics from './pages/Statistics'
 import AreasAdmin from './pages/AreasAdmin'
-import Institution from './pages/Institution'
 import Teachers from './pages/Teachers'
 import AcademicLoad from './pages/AcademicLoad'
 import Reports from './pages/Reports'
@@ -37,6 +36,27 @@ import ManagementTasks from './pages/ManagementTasks'
 import AcademicCatalog from './pages/AcademicCatalog'
 import AcademicTemplates from './pages/AcademicTemplates'
 import Layout from './components/Layout'
+
+// Nuevas páginas por dominio (Refactor UX)
+import Scale from './pages/academic/config/Scale'
+import Periods from './pages/academic/config/Periods'
+import Levels from './pages/academic/config/Levels'
+import GradingWindows from './pages/academic/config/windows/GradingWindows'
+import RecoveryWindows from './pages/academic/config/windows/RecoveryWindows'
+import Structure from './pages/institution/Structure'
+import Profile from './pages/institution/Profile'
+import InstitutionHub from './pages/InstitutionHub'
+import AcademicHub from './pages/AcademicHub'
+
+// Reportes modulares (Refactor UX)
+import ReportsHub from './pages/ReportsHub'
+import AdminReports from './pages/reports/AdminReports'
+import AcademicReports from './pages/reports/AcademicReports'
+import AttendanceReports from './pages/reports/AttendanceReports'
+import AlertsReports from './pages/reports/AlertsReports'
+import BulletinsReports from './pages/reports/BulletinsReports'
+import EvaluationReports from './pages/reports/EvaluationReports'
+import SystemConfig from './pages/admin/SystemConfig'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
@@ -150,7 +170,7 @@ function App() {
               <Layout>
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/institution" element={<Institution />} />
+                  <Route path="/institution" element={<InstitutionHub />} />
                   <Route path="/students" element={<Students />} />
                   <Route path="/grades" element={<Grades />} />
                   <Route path="/attendance" element={<Attendance />} />
@@ -159,7 +179,16 @@ function App() {
                   <Route path="/admin/areas" element={<AreasAdmin />} />
                   <Route path="/teachers" element={<Teachers />} />
                   <Route path="/academic-load" element={<AcademicLoad />} />
-                  <Route path="/reports" element={<Reports />} />
+                  <Route path="/reports" element={<ReportsHub />} />
+                  <Route path="/reports/admin" element={<AdminReports />} />
+                  <Route path="/reports/academic" element={<AcademicReports />} />
+                  <Route path="/reports/attendance" element={<AttendanceReports />} />
+                  <Route path="/reports/alerts" element={<AlertsReports />} />
+                  <Route path="/reports/bulletins" element={<BulletinsReports />} />
+                  <Route path="/reports/evaluation" element={<EvaluationReports />} />
+                  <Route path="/admin/system" element={<SystemConfig />} />
+                  {/* Legacy route - mantiene compatibilidad */}
+                  <Route path="/reports-legacy" element={<Reports />} />
                   <Route path="/observer" element={<Observer />} />
                   <Route path="/report-cards" element={<ReportCards />} />
                   <Route path="/communications" element={<Communications />} />
@@ -178,6 +207,42 @@ function App() {
                   <Route path="/management-tasks" element={<ManagementTasks />} />
                   <Route path="/academic-catalog" element={<AcademicCatalog />} />
                   <Route path="/academic-templates" element={<AcademicTemplates />} />
+                  
+                  {/* ═══════════════════════════════════════════════════════════ */}
+                  {/* NUEVAS RUTAS - Refactor UX por Dominios                     */}
+                  {/* ═══════════════════════════════════════════════════════════ */}
+                  
+                  {/* Académico - Hub principal */}
+                  <Route path="/academic" element={<AcademicHub />} />
+                  
+                  {/* Académico > Configuración SIEE */}
+                  <Route path="/academic/config/scale" element={<Scale />} />
+                  <Route path="/academic/config/periods" element={<Periods />} />
+                  <Route path="/academic/config/levels" element={<Levels />} />
+                  <Route path="/academic/config/windows/grading" element={<GradingWindows />} />
+                  <Route path="/academic/config/windows/recovery" element={<RecoveryWindows />} />
+                  
+                  {/* Institución */}
+                  <Route path="/institution/profile" element={<Profile />} />
+                  <Route path="/institution/structure" element={<Structure />} />
+                  
+                  {/* Rutas alias para nueva estructura (mantienen compatibilidad) */}
+                  <Route path="/academic/catalog" element={<AcademicCatalog />} />
+                  <Route path="/academic/templates" element={<AcademicTemplates />} />
+                  <Route path="/academic/assignments" element={<AcademicLoad />} />
+                  <Route path="/academic/year/setup" element={<AcademicYearWizard />} />
+                  <Route path="/academic/year/closure" element={<AcademicYearClosure />} />
+                  
+                  {/* Gestión Estudiantil */}
+                  <Route path="/students/enrollments" element={<Enrollments />} />
+                  <Route path="/students/grades" element={<Grades />} />
+                  <Route path="/students/attendance" element={<Attendance />} />
+                  <Route path="/students/observer" element={<Observer />} />
+                  <Route path="/students/achievements" element={<Achievements />} />
+                  <Route path="/students/performances" element={<Performances />} />
+                  <Route path="/students/alerts" element={<Alerts />} />
+                  <Route path="/students/period-closure" element={<PeriodFinalGrades />} />
+                  <Route path="/students/recoveries" element={<Recoveries />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

@@ -1,3 +1,23 @@
+/**
+ * ⚠️ ARCHIVO DEPRECADO - NO USAR
+ * 
+ * Este archivo ha sido reemplazado por páginas modulares:
+ * - /institution → InstitutionHub.tsx
+ * - /institution/profile → institution/Profile.tsx
+ * - /institution/structure → institution/Structure.tsx
+ * - /academic/config/scale → academic/config/Scale.tsx
+ * - /academic/config/periods → academic/config/Periods.tsx
+ * - /academic/config/levels → academic/config/Levels.tsx
+ * - /academic/config/windows/grading → academic/config/windows/GradingWindows.tsx
+ * - /academic/config/windows/recovery → academic/config/windows/RecoveryWindows.tsx
+ * 
+ * NO IMPORTAR este archivo. Los useEffects aquí pueden causar
+ * sincronizaciones duplicadas con la BD.
+ * 
+ * Este archivo se mantiene temporalmente como referencia.
+ * Eliminar cuando se confirme que todo funciona correctamente.
+ */
+
 import { useState, useEffect } from 'react'
 import { 
   Building2, 

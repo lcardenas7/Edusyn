@@ -1,3 +1,21 @@
+/**
+ * ⚠️ DEPRECADO - Este archivo ha sido reemplazado por componentes modulares
+ * 
+ * Nuevas páginas de reportes:
+ * - ReportsHub.tsx → /reports (página principal de navegación)
+ * - reports/AdminReports.tsx → /reports/admin
+ * - reports/AcademicReports.tsx → /reports/academic
+ * - reports/AttendanceReports.tsx → /reports/attendance
+ * - reports/AlertsReports.tsx → /reports/alerts
+ * - reports/BulletinsReports.tsx → /reports/bulletins
+ * - reports/EvaluationReports.tsx → /reports/evaluation
+ * - reports/ConfigReports.tsx → /reports/config
+ * 
+ * Este archivo se mantiene solo para compatibilidad con /reports-legacy
+ * NO IMPORTAR EN NUEVOS DESARROLLOS
+ * 
+ * @deprecated Usar los componentes modulares en /pages/reports/
+ */
 import { useState, useEffect, useMemo } from 'react'
 import { 
   FileText,
