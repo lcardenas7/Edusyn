@@ -43,7 +43,7 @@ export class FinancialReportsService {
 
   // Balance mensual
   async getMonthlyBalance(institutionId: string, year: number) {
-    const months = [];
+    const months: Array<{ month: number; income: number; expense: number; balance: number }> = [];
     for (let month = 1; month <= 12; month++) {
       const startDate = new Date(year, month - 1, 1);
       const endDate = new Date(year, month, 0, 23, 59, 59);

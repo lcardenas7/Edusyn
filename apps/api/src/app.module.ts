@@ -24,7 +24,8 @@ import { StorageModule } from './modules/storage/storage.module';
 import { AchievementsModule } from './modules/achievements/achievements.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { ManagementTasksModule } from './modules/management-tasks/management-tasks.module';
-import { FinanceModule } from './modules/finance/finance.module';
+// TODO: Habilitar FinanceModule cuando se agreguen las tablas al schema de Prisma
+// import { FinanceModule } from './modules/finance/finance.module';
 
 @Module({
   imports: [
@@ -53,7 +54,7 @@ import { FinanceModule } from './modules/finance/finance.module';
     AchievementsModule,
     DocumentsModule,
     ManagementTasksModule,
-    FinanceModule,
+    // FinanceModule, // Deshabilitado temporalmente - requiere schema de BD
   ],
   controllers: [AppController],
   providers: [AppService],

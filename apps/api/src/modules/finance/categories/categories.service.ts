@@ -138,7 +138,7 @@ export class CategoriesService {
       { name: 'Servicios', type: 'EXPENSE' as FinancialMovementType, color: '#14B8A6', icon: 'zap' },
     ];
 
-    const created = [];
+    const created: Array<{ id: string; name: string }> = [];
     for (const cat of defaults) {
       const existing = await this.prisma.financialCategory.findFirst({
         where: { institutionId, name: cat.name },
