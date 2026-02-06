@@ -347,38 +347,20 @@ const AVAILABLE_MODULES: ModuleConfig[] = [
     ]
   },
   { 
-    id: 'PAYMENTS', 
-    name: 'Gestión de Pagos', 
-    description: 'Control financiero y eventos de pago',
+    id: 'FINANCE', 
+    name: 'Gestión Financiera', 
+    description: 'Cobros, pagos, egresos y reportes financieros',
     features: [
-      { id: 'PAYMENTS_CONCEPTS', name: 'Conceptos', description: 'Configurar conceptos de pago' },
-      { id: 'PAYMENTS_EVENTS', name: 'Eventos', description: 'Crear eventos de cobro' },
-      { id: 'PAYMENTS_REGISTER', name: 'Registrar Pagos', description: 'Registrar abonos y pagos' },
-      { id: 'PAYMENTS_REPORTS', name: 'Reportes', description: 'Cartera y estadísticas' },
-    ]
-  },
-  { 
-    id: 'USERS', 
-    name: 'Gestión de Usuarios', 
-    description: 'Administración de usuarios',
-    required: true,  // Obligatorio - gestión de personas
-    features: [
-      { id: 'USERS_TEACHERS', name: 'Docentes', description: 'Gestionar docentes' },
-      { id: 'USERS_STUDENTS', name: 'Estudiantes', description: 'Gestionar estudiantes' },
-      { id: 'USERS_PARENTS', name: 'Acudientes', description: 'Gestionar acudientes' },
-      { id: 'USERS_IMPORT', name: 'Importar', description: 'Importar usuarios desde Excel' },
-    ]
-  },
-  { 
-    id: 'CONFIG', 
-    name: 'Configuración', 
-    description: 'Configuración institucional',
-    required: true,  // Obligatorio - configuración base
-    features: [
-      { id: 'CONFIG_INSTITUTION', name: 'Institución', description: 'Datos de la institución' },
-      { id: 'CONFIG_ACADEMIC', name: 'Académica', description: 'Configuración académica' },
-      { id: 'CONFIG_GRADING', name: 'Calificaciones', description: 'Escala y componentes' },
-      { id: 'CONFIG_PERIODS', name: 'Períodos', description: 'Configurar períodos' },
+      { id: 'FINANCE_DASHBOARD', name: 'Dashboard Financiero', description: 'Panel de indicadores financieros' },
+      { id: 'FINANCE_THIRD_PARTIES', name: 'Terceros', description: 'Gestionar terceros (estudiantes, proveedores, etc.)' },
+      { id: 'FINANCE_CATEGORIES', name: 'Categorías', description: 'Clasificación de ingresos y egresos' },
+      { id: 'FINANCE_CONCEPTS', name: 'Conceptos de Cobro', description: 'Configurar conceptos y tarifas' },
+      { id: 'FINANCE_OBLIGATIONS', name: 'Obligaciones', description: 'Gestión de cobros y cartera' },
+      { id: 'FINANCE_PAYMENTS', name: 'Caja / Recaudos', description: 'Registrar pagos y recibos' },
+      { id: 'FINANCE_EXPENSES', name: 'Egresos', description: 'Gastos y pagos a proveedores' },
+      { id: 'FINANCE_INVOICES', name: 'Facturas', description: 'Facturación y comprobantes' },
+      { id: 'FINANCE_REPORTS', name: 'Reportes Financieros', description: 'Cartera, morosos, balance, rentabilidad' },
+      { id: 'FINANCE_SETTINGS', name: 'Configuración', description: 'Numeración, mora, cuentas bancarias' },
     ]
   },
 ]

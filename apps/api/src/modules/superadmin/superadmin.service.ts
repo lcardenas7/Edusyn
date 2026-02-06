@@ -260,6 +260,8 @@ export class SuperadminService {
       'MEN_REPORTS': ['MEN_'],
       'USERS': ['USERS_'],
       'CONFIG': ['CONFIG_'],
+      'ELECTIONS': ['ELECTIONS_'],
+      'FINANCE': ['FINANCE_'],
     };
 
     // Eliminar módulos actuales y crear los nuevos con sus features
