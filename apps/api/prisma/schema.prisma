@@ -168,6 +168,7 @@ enum SystemModule {
   ELECTIONS          // Elecciones escolares
   PAYMENTS           // Gestión de pagos y eventos financieros
   FINANCE            // Gestión financiera (cobros, pagos, egresos, facturas)
+  TIMETABLE          // Gestión de horarios escolares
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -300,6 +301,9 @@ model User {
   invoicesCreated             FinancialInvoice[]    @relation("InvoiceCreatedBy")
   invoicesCancelled           FinancialInvoice[]    @relation("InvoiceCancelledBy")
   cashRegisterCloses          CashRegisterClose[]
+  
+  // Timetabling (Horarios)
+  teacherAvailabilities       TeacherAvailability[] @relation("TeacherScheduleAvailability")
 }
 
 model Role {
@@ -403,6 +407,13 @@ model Institution {
   financialInvoices           FinancialInvoice[]
   financialSettings           FinancialSettings?
   cashRegisterCloses          CashRegisterClose[]
+  
+  // Timetabling (Horarios)
+  timeBlocks                  TimeBlock[]
+  rooms                       Room[]
+  scheduleGradeConfigs        ScheduleGradeConfig[]
+  teacherAvailabilities       TeacherAvailability[]
+  scheduleEntries             ScheduleEntry[]
 }
 
 // Módulos habilitados por institución
@@ -446,6 +457,7 @@ model Campus {
   institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   shifts      Shift[]
   groups      Group[]
+  rooms       Room[]
 
   @@unique([institutionId, name])
 }
@@ -460,6 +472,7 @@ model Shift {
 
   campus Campus @relation(fields: [campusId], references: [id], onDelete: Cascade)
   groups Group[]
+  timeBlocks TimeBlock[]
 
   @@unique([campusId, type])
 }
@@ -479,6 +492,7 @@ model Grade {
   groups        Group[]
   elections      Election[]       // Elecciones de representante de grado
   gradeTemplates GradeTemplate[]  // Plantillas académicas por año (una por año académico)
+  scheduleGradeConfigs ScheduleGradeConfig[]
 
   @@unique([stage, name])
 }
@@ -502,6 +516,7 @@ model Group {
   studentEnrollments  StudentEnrollment[]
   elections           Election[]              // Elecciones de representante de curso
   subjectExceptions   GroupSubjectException[] // Excepciones de asignaturas para este grupo
+  scheduleEntries     ScheduleEntry[]
 
   @@unique([campusId, shiftId, gradeId, name])
 }
@@ -556,6 +571,7 @@ model Subject {
   performanceManualEdits PerformanceManualEdit[]
   groupExceptions        GroupSubjectException[]
   enrollmentSubjects     EnrollmentSubject[]     // Snapshots en matrículas
+  roomRestrictions       RoomRestriction[]
 
   @@unique([areaId, name])
   @@index([areaId])
@@ -789,6 +805,11 @@ model AcademicYear {
   gradeTemplates         GradeTemplate[]
   groupSubjectExceptions GroupSubjectException[]
 
+  // Timetabling (Horarios)
+  scheduleGradeConfigs   ScheduleGradeConfig[]
+  teacherAvailabilities  TeacherAvailability[]
+  scheduleEntries        ScheduleEntry[]
+
   @@unique([institutionId, year])
 }
 
@@ -917,6 +938,7 @@ model TeacherAssignment {
   partialGrades PartialGrade[]
   achievements Achievement[]
   attitudinalAchievements AttitudinalAchievement[]
+  scheduleEntries         ScheduleEntry[]
 
   @@unique([academicYearId, groupId, subjectId, teacherId])
 }
@@ -3218,4 +3240,201 @@ model CashRegisterClose {
   @@unique([institutionId, closeDate])
   @@index([institutionId])
   @@index([closeDate])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MÓDULO DE TIMETABLING (HORARIOS ESCOLARES)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Modo de organización del horario (configurable por grado)
+enum ScheduleMode {
+  FIXED_TEACHER      // Docente fijo (preescolar, primaria baja): mismo docente todo el día
+  ROTATING_TEACHER   // Rotación de docentes (4°-5° primaria, secundaria, media)
+}
+
+// Tipo de bloque de tiempo
+enum TimeBlockType {
+  CLASS              // Clase regular
+  BREAK              // Descanso/recreo
+  LUNCH              // Almuerzo
+  ASSEMBLY           // Formación/acto cívico
+  FREE               // Libre/disponible
+}
+
+// Día de la semana
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+// Tipo de restricción de espacio
+enum RoomRestrictionType {
+  PREFERRED          // Preferido (prioridad pero no exclusivo)
+  EXCLUSIVE          // Exclusivo (solo esta materia puede usarlo)
+}
+
+// Bloque de tiempo (estructura de la jornada, mismos bloques aplican a todos los días)
+model TimeBlock {
+  id            String        @id @default(cuid())
+  institutionId String
+  shiftId       String
+  
+  type          TimeBlockType @default(CLASS)
+  startTime     String        // "07:00" formato HH:mm
+  endTime       String        // "07:45" formato HH:mm
+  order         Int           // Orden visual (1, 2, 3...)
+  label         String?       // "Bloque 1", "Descanso", etc.
+  
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  institution     Institution     @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  shift           Shift           @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  scheduleEntries ScheduleEntry[]
+
+  @@unique([institutionId, shiftId, order])
+  @@index([institutionId])
+  @@index([shiftId])
+}
+
+// Espacio/Aula (recurso configurable, NO atado a materia por defecto)
+model Room {
+  id            String   @id @default(cuid())
+  institutionId String
+  campusId      String?
+  
+  name          String   // "Laboratorio de Ciencias", "Cancha", "Aula 201"
+  code          String?  // Código corto "LAB-1", "AUL-201"
+  capacity      Int?     // Capacidad máxima
+  description   String?
+  equipment     String[] // ["proyector", "microscopios", "computadores"]
+  isReservable  Boolean  @default(true)
+  isActive      Boolean  @default(true)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution     Institution       @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  campus          Campus?           @relation(fields: [campusId], references: [id], onDelete: SetNull)
+  scheduleEntries ScheduleEntry[]
+  restrictions    RoomRestriction[]
+
+  @@unique([institutionId, name])
+  @@index([institutionId])
+  @@index([campusId])
+}
+
+// Restricción de espacio (OPCIONAL - la institución decide si activar)
+model RoomRestriction {
+  id        String              @id @default(cuid())
+  roomId    String
+  subjectId String?             // Asignatura (null = restricción general)
+  type      RoomRestrictionType @default(PREFERRED)
+  
+  createdAt DateTime @default(now())
+  
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  subject   Subject? @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, subjectId])
+}
+
+// Configuración de horario por grado (modo configurable POR GRADO, no por nivel)
+model ScheduleGradeConfig {
+  id              String       @id @default(cuid())
+  institutionId   String
+  academicYearId  String
+  gradeId         String
+  
+  mode            ScheduleMode @default(ROTATING_TEACHER)
+  
+  // Restricciones blandas (preferencias de optimización)
+  maxConsecutiveHours   Int?     // Máximo horas seguidas de una misma materia
+  preferDistribution    Boolean  @default(true)  // Distribuir horas en la semana
+  avoidHeavyLastHours   Boolean  @default(false) // Evitar materias pesadas en última hora
+  allowDoubleBlocks     Boolean  @default(true)  // Permitir bloques dobles (lab, arte)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  institution     Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  academicYear    AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  grade           Grade        @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionId, academicYearId, gradeId])
+  @@index([institutionId])
+  @@index([academicYearId])
+}
+
+// Disponibilidad del docente (OPCIONAL - para restricciones de horario)
+model TeacherAvailability {
+  id              String    @id @default(cuid())
+  institutionId   String
+  academicYearId  String
+  teacherId       String
+  
+  dayOfWeek       DayOfWeek
+  startTime       String    // "07:00"
+  endTime         String    // "14:00"
+  isAvailable     Boolean   @default(true) // true = disponible, false = no disponible
+  reason          String?   // "Otra institución", "Permiso médico", etc.
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  institution     Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  academicYear    AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  teacher         User         @relation("TeacherScheduleAvailability", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionId, academicYearId, teacherId, dayOfWeek, startTime])
+  @@index([institutionId])
+  @@index([teacherId])
+  @@index([academicYearId])
+}
+
+// Entrada de horario (la celda en la grilla visual)
+model ScheduleEntry {
+  id                    String    @id @default(cuid())
+  institutionId         String
+  academicYearId        String
+  groupId               String
+  timeBlockId           String
+  dayOfWeek             DayOfWeek
+  
+  // Clase regular (apunta a TeacherAssignment que ya tiene docente+materia+grupo)
+  teacherAssignmentId   String?
+  
+  // Proyecto transversal (alternativa a clase regular)
+  projectName           String?   // "Proyecto PRAE", "Proyecto de Democracia"
+  projectDescription    String?
+  
+  // Espacio asignado (opcional, configurable)
+  roomId                String?
+  
+  // Metadata
+  notes                 String?
+  color                 String?   // Color personalizado para la UI
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  institution           Institution        @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  academicYear          AcademicYear       @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  group                 Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  timeBlock             TimeBlock          @relation(fields: [timeBlockId], references: [id], onDelete: Cascade)
+  teacherAssignment     TeacherAssignment? @relation(fields: [teacherAssignmentId], references: [id], onDelete: SetNull)
+  room                  Room?              @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@unique([groupId, timeBlockId, dayOfWeek]) // Un grupo: una sola entrada por bloque+día
+  @@index([institutionId])
+  @@index([academicYearId])
+  @@index([groupId])
+  @@index([timeBlockId])
+  @@index([teacherAssignmentId])
+  @@index([roomId])
+  @@index([dayOfWeek])
 }

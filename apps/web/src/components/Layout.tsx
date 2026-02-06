@@ -43,6 +43,7 @@ import {
   Percent,
   CalendarClock,
   DollarSign,
+  Clock,
 } from 'lucide-react'
 
 type Role = 'SUPER_ADMIN' | 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE' | 'SECRETARIA'
@@ -217,6 +218,9 @@ const institutionalNavigation: NavItem[] = [
       { name: 'Reportes', href: '/finance/reports', icon: BarChart3, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'FINANCE' },
     ]
   },
+
+  // Horarios
+  { name: 'Horarios', href: '/timetabling', icon: Clock, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'TIMETABLE' },
 
   // Documentos y Gestión
   { name: 'Documentos', href: '/institutional-documents', icon: FolderOpen, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'SECRETARIA'] },

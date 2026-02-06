@@ -27,6 +27,7 @@ import { AchievementsModule } from './modules/achievements/achievements.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { ManagementTasksModule } from './modules/management-tasks/management-tasks.module';
 import { FinanceModule } from './modules/finance/finance.module';
+import { TimetablingModule } from './modules/timetabling/timetabling.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { FinanceModule } from './modules/finance/finance.module';
     DocumentsModule,
     ManagementTasksModule,
     FinanceModule,
+    TimetablingModule,
   ],
   controllers: [AppController],
   providers: [

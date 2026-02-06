@@ -60,6 +60,7 @@ import EvaluationReports from './pages/reports/EvaluationReports'
 import SystemConfig from './pages/admin/SystemConfig'
 
 // Módulo Financiero
+import Timetabling from './pages/Timetabling'
 import {
   FinanceHub,
   FinanceDashboard,
@@ -275,6 +276,11 @@ function App() {
                   <Route path="/finance/invoices" element={<Invoices />} />
                   <Route path="/finance/reports" element={<FinanceReports />} />
                   <Route path="/finance/settings" element={<FinanceSettings />} />
+                  
+                  {/* ═══════════════════════════════════════════════════════════ */}
+                  {/* MÓDULO DE TIMETABLING (HORARIOS)                            */}
+                  {/* ═══════════════════════════════════════════════════════════ */}
+                  <Route path="/timetabling" element={<Timetabling />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

@@ -1116,3 +1116,72 @@ export const financeSettingsApi = {
   update: (data: { invoicePrefix?: string; receiptPrefix?: string; defaultLateFeeType?: string; defaultLateFeeValue?: number; defaultGracePeriodDays?: number; taxId?: string; taxRegime?: string; bankAccounts?: any; sendPaymentReminders?: boolean; reminderDaysBefore?: number }) => 
     api.put('/finance/settings', data),
 }
+
+// ═══════════════════════════════════════════════════════════════
+// TIMETABLING (HORARIOS)
+// ═══════════════════════════════════════════════════════════════
+
+export const timetablingTimeBlocksApi = {
+  getAll: (shiftId?: string) => api.get('/timetabling/time-blocks', { params: { shiftId } }),
+  getById: (id: string) => api.get(`/timetabling/time-blocks/${id}`),
+  create: (data: { shiftId: string; type?: string; startTime: string; endTime: string; order: number; label?: string }) =>
+    api.post('/timetabling/time-blocks', data),
+  bulkCreate: (data: { shiftId: string; blocks: Array<{ type?: string; startTime: string; endTime: string; order: number; label?: string }> }) =>
+    api.post('/timetabling/time-blocks/bulk', data),
+  update: (id: string, data: { type?: string; startTime?: string; endTime?: string; order?: number; label?: string }) =>
+    api.put(`/timetabling/time-blocks/${id}`, data),
+  delete: (id: string) => api.delete(`/timetabling/time-blocks/${id}`),
+}
+
+export const timetablingRoomsApi = {
+  getAll: (campusId?: string) => api.get('/timetabling/rooms', { params: { campusId } }),
+  getById: (id: string) => api.get(`/timetabling/rooms/${id}`),
+  create: (data: { campusId?: string; name: string; code?: string; capacity?: number; description?: string; equipment?: string[]; isReservable?: boolean }) =>
+    api.post('/timetabling/rooms', data),
+  update: (id: string, data: { campusId?: string; name?: string; code?: string; capacity?: number; description?: string; equipment?: string[]; isReservable?: boolean; isActive?: boolean }) =>
+    api.put(`/timetabling/rooms/${id}`, data),
+  delete: (id: string) => api.delete(`/timetabling/rooms/${id}`),
+  addRestriction: (roomId: string, data: { subjectId?: string; type?: string }) =>
+    api.post(`/timetabling/rooms/${roomId}/restrictions`, data),
+  removeRestriction: (restrictionId: string) =>
+    api.delete(`/timetabling/rooms/restrictions/${restrictionId}`),
+}
+
+export const timetablingConfigApi = {
+  getAll: (academicYearId: string) => api.get('/timetabling/schedule-config', { params: { academicYearId } }),
+  upsert: (data: { academicYearId: string; gradeId: string; mode?: string; maxConsecutiveHours?: number; preferDistribution?: boolean; avoidHeavyLastHours?: boolean; allowDoubleBlocks?: boolean }) =>
+    api.post('/timetabling/schedule-config', data),
+  bulkUpsert: (data: { academicYearId: string; configs: Array<{ gradeId: string; mode?: string; maxConsecutiveHours?: number; preferDistribution?: boolean; avoidHeavyLastHours?: boolean; allowDoubleBlocks?: boolean }> }) =>
+    api.post('/timetabling/schedule-config/bulk', data),
+  delete: (id: string) => api.delete(`/timetabling/schedule-config/${id}`),
+}
+
+export const timetablingAvailabilityApi = {
+  getAll: (academicYearId: string, teacherId?: string) =>
+    api.get('/timetabling/teacher-availability', { params: { academicYearId, teacherId } }),
+  upsert: (data: { academicYearId: string; teacherId: string; dayOfWeek: string; startTime: string; endTime: string; isAvailable?: boolean; reason?: string }) =>
+    api.post('/timetabling/teacher-availability', data),
+  bulkSet: (data: { academicYearId: string; teacherId: string; entries: Array<{ dayOfWeek: string; startTime: string; endTime: string; isAvailable?: boolean; reason?: string }> }) =>
+    api.post('/timetabling/teacher-availability/bulk', data),
+  delete: (id: string) => api.delete(`/timetabling/teacher-availability/${id}`),
+}
+
+export const timetablingEntriesApi = {
+  getGrid: (academicYearId: string, groupId: string) =>
+    api.get('/timetabling/schedule-entries/grid', { params: { academicYearId, groupId } }),
+  getByGroup: (academicYearId: string, groupId: string) =>
+    api.get('/timetabling/schedule-entries/by-group', { params: { academicYearId, groupId } }),
+  getByTeacher: (academicYearId: string, teacherId: string) =>
+    api.get('/timetabling/schedule-entries/by-teacher', { params: { academicYearId, teacherId } }),
+  getByRoom: (academicYearId: string, roomId: string) =>
+    api.get('/timetabling/schedule-entries/by-room', { params: { academicYearId, roomId } }),
+  getConflicts: (academicYearId: string, groupId?: string) =>
+    api.get('/timetabling/schedule-entries/conflicts', { params: { academicYearId, groupId } }),
+  create: (data: { academicYearId: string; groupId: string; timeBlockId: string; dayOfWeek: string; teacherAssignmentId?: string; projectName?: string; projectDescription?: string; roomId?: string; notes?: string; color?: string }) =>
+    api.post('/timetabling/schedule-entries', data),
+  update: (id: string, data: { teacherAssignmentId?: string | null; projectName?: string | null; projectDescription?: string | null; roomId?: string | null; notes?: string | null; color?: string | null }) =>
+    api.put(`/timetabling/schedule-entries/${id}`, data),
+  delete: (id: string) => api.delete(`/timetabling/schedule-entries/${id}`),
+  clearGroup: (groupId: string, academicYearId: string) =>
+    api.delete(`/timetabling/schedule-entries/clear/${groupId}`, { params: { academicYearId } }),
+}
