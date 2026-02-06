@@ -12,7 +12,7 @@ import {
   ArrowLeft
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useInstitution, AcademicLevel, GradingScaleType } from '../../../contexts/InstitutionContext'
+import { useAcademic, AcademicLevel, GradingScaleType } from '../../../contexts/AcademicContext'
 import { usePermissions, PERMISSIONS } from '../../../hooks/usePermissions'
 
 export default function Levels() {
@@ -20,7 +20,7 @@ export default function Levels() {
     institution, setInstitution,
     saveAcademicLevelsToAPI,
     isSaving 
-  } = useInstitution()
+  } = useAcademic()
   const { can } = usePermissions()
   
   const canEditGradingLevels = can(PERMISSIONS.CONFIG_GRADING_EDIT_LEVELS)

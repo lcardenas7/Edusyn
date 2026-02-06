@@ -12,7 +12,8 @@ import {
   Layers
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useInstitution } from '../contexts/InstitutionContext'
+import { useAcademic } from '../contexts/AcademicContext'
+import { useAuth } from '../contexts/AuthContext'
 
 interface ConfigCard {
   title: string
@@ -25,7 +26,8 @@ interface ConfigCard {
 }
 
 export default function AcademicHub() {
-  const { institution } = useInstitution()
+  const { institution: authInstitution } = useAuth()
+  const { academicYear, academicCalendar, academicLevels } = useAcademic()
 
   // Tarjetas principales - acceso frecuente
   const mainCards: ConfigCard[] = [
@@ -125,22 +127,22 @@ export default function AcademicHub() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Gestión Académica</h1>
-          <p className="text-slate-500">Configuración pedagógica de {institution.name}</p>
+          <p className="text-slate-500">Configuración pedagógica de {authInstitution?.name || 'la institución'}</p>
         </div>
       </div>
 
       {/* Resumen rápido */}
       <div className="grid grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <p className="text-2xl font-bold text-slate-900">{institution.academicYear}</p>
+          <p className="text-2xl font-bold text-slate-900">{academicYear}</p>
           <p className="text-sm text-slate-500">Año Académico</p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <p className="text-2xl font-bold text-slate-900">{institution.academicLevels.length}</p>
+          <p className="text-2xl font-bold text-slate-900">{academicLevels.length}</p>
           <p className="text-sm text-slate-500">Niveles Educativos</p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <p className="text-2xl font-bold text-slate-900">{institution.academicCalendar}</p>
+          <p className="text-2xl font-bold text-slate-900">{academicCalendar}</p>
           <p className="text-sm text-slate-500">Calendario</p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4">

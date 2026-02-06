@@ -13,7 +13,7 @@ import {
   ArrowLeft
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useInstitution } from '../../../contexts/InstitutionContext'
+import { useAcademic } from '../../../contexts/AcademicContext'
 import { usePermissions, PERMISSIONS } from '../../../hooks/usePermissions'
 
 interface EvaluationProcess {
@@ -35,7 +35,7 @@ interface Subprocess {
 }
 
 export default function Scale() {
-  const { gradingConfig, setGradingConfig, saveGradingConfigToAPI, isSaving } = useInstitution()
+  const { gradingConfig, setGradingConfig, saveGradingConfigToAPI, isSaving } = useAcademic()
   const { can } = usePermissions()
   const canEditGradingScale = can(PERMISSIONS.CONFIG_GRADING_EDIT_SCALE)
   

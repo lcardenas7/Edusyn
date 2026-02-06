@@ -9,7 +9,7 @@ import {
 import { 
   academicYearsApi, 
   groupsApi, 
-  studentsApi,
+  academicStudentsApi,
   periodFinalGradesApi 
 } from '../lib/api'
 
@@ -109,14 +109,18 @@ export default function PeriodFinalGrades() {
 
   const loadStudentsAndSubjects = async () => {
     try {
-      // Cargar estudiantes del grupo
-      const studentsRes = await studentsApi.getAll({ groupId: selectedGroupId, academicYearId: selectedYearId })
-      const studentsList = studentsRes.data.map((s: any) => ({
-        id: s.id,
-        firstName: s.firstName,
-        lastName: s.lastName,
-        enrollmentId: s.enrollments?.[0]?.id || s.enrollmentId,
-      }))
+      // Usar academicStudentsApi para mantener separación de dominios
+      const studentsRes = await academicStudentsApi.getByGroup({ groupId: selectedGroupId, academicYearId: selectedYearId })
+      // El endpoint académico retorna { id, name, enrollmentId }, adaptar al formato esperado
+      const studentsList = (studentsRes.data || []).map((s: any) => {
+        const [firstName, ...lastParts] = s.name.split(' ')
+        return {
+          id: s.id,
+          firstName,
+          lastName: lastParts.join(' '),
+          enrollmentId: s.enrollmentId,
+        }
+      })
       setStudents(studentsList)
 
       // Obtener asignaturas del grupo (desde las asignaciones de docentes)

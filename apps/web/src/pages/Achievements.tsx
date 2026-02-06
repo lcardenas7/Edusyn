@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { useInstitution } from '../contexts/InstitutionContext'
+import { useAcademic } from '../contexts/AcademicContext'
 import {
   FileText,
   Settings,
@@ -25,7 +25,7 @@ import {
   achievementConfigApi,
   achievementsApi,
   periodFinalGradesApi,
-  studentsApi,
+  academicStudentsApi,
 } from '../lib/api'
 
 type TabType = 'achievements' | 'config'
@@ -98,7 +98,7 @@ const DEFAULT_TEMPLATES: ValueJudgmentTemplate[] = [
 
 export default function Achievements() {
   const { user, institution: authInstitution } = useAuth()
-  const { periods, selectedPeriod, setSelectedPeriod } = useInstitution()
+  const { periods, selectedPeriod, setSelectedPeriod } = useAcademic()
   
   // Usar el institution del AuthContext que tiene el id real de la BD
   const institutionId = authInstitution?.id
@@ -328,26 +328,13 @@ export default function Achievements() {
     const loadStudents = async () => {
       if (!selectedAssignment?.group?.id || !selectedYearId) return
       try {
-        const response = await studentsApi.getAll({
+        // Usar academicStudentsApi para mantener separación de dominios
+        const response = await academicStudentsApi.getByGroup({
           groupId: selectedAssignment.group.id,
           academicYearId: selectedYearId,
         })
-        const data = response.data || []
-        const mappedStudents = data.map((item: any) => {
-          if (item.student) {
-            return {
-              id: item.student.id,
-              name: `${item.student.firstName} ${item.student.lastName}`,
-              enrollmentId: item.id,
-            }
-          }
-          return {
-            id: item.id,
-            name: `${item.firstName} ${item.lastName}`,
-            enrollmentId: item.enrollments?.[0]?.id || item.id,
-          }
-        })
-        setStudents(mappedStudents)
+        // El endpoint académico ya retorna el formato correcto: { id, name, enrollmentId }
+        setStudents(response.data || [])
 
         // Load grades for students
         if (selectedTermId && selectedAssignment?.subject?.id) {

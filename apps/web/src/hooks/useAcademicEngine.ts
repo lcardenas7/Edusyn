@@ -21,15 +21,31 @@
  */
 
 import { useMemo } from 'react'
-import { useInstitution } from '../contexts/InstitutionContext'
+import { useAcademic } from '../contexts/AcademicContext'
 import { AcademicRulesEngine, createAcademicEngine } from '../engines/AcademicRulesEngine'
 
 export function useAcademicEngine(): AcademicRulesEngine {
-  const { institution, gradingConfig, areaConfig, periods } = useInstitution()
+  const { academicLevels, academicYear, academicCalendar, gradingConfig, areaConfig, periods } = useAcademic()
+
+  // Crear objeto compatible con InstitutionConfig para el engine
+  const institutionCompat = useMemo(() => ({
+    id: '',
+    name: '',
+    nit: '',
+    dane: '',
+    address: '',
+    city: '',
+    phone: '',
+    email: '',
+    rector: '',
+    academicYear,
+    academicCalendar,
+    academicLevels,
+  }), [academicYear, academicCalendar, academicLevels])
 
   const engine = useMemo(() => {
-    return createAcademicEngine(institution, gradingConfig, areaConfig, periods)
-  }, [institution, gradingConfig, areaConfig, periods])
+    return createAcademicEngine(institutionCompat, gradingConfig, areaConfig, periods)
+  }, [institutionCompat, gradingConfig, areaConfig, periods])
 
   return engine
 }

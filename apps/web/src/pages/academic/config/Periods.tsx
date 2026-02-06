@@ -12,7 +12,7 @@ import {
   ArrowLeft
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useInstitution, Period } from '../../../contexts/InstitutionContext'
+import { useAcademic, AcademicPeriod } from '../../../contexts/AcademicContext'
 import { useAuth } from '../../../contexts/AuthContext'
 import { usePermissions, PERMISSIONS } from '../../../hooks/usePermissions'
 
@@ -22,7 +22,7 @@ export default function Periods() {
     gradingConfig, setGradingConfig,
     savePeriodsToAPI, saveGradingConfigToAPI,
     isSaving 
-  } = useInstitution()
+  } = useAcademic()
   const { institution: authInstitution } = useAuth()
   const { can } = usePermissions()
   
@@ -31,7 +31,7 @@ export default function Periods() {
   
   // Estados locales para el modal y guardado
   const [showPeriodModal, setShowPeriodModal] = useState(false)
-  const [editingPeriod, setEditingPeriod] = useState<Period | null>(null)
+  const [editingPeriod, setEditingPeriod] = useState<AcademicPeriod | null>(null)
   const [periodForm, setPeriodForm] = useState({ name: '', weight: 25, startDate: '', endDate: '' })
   const [savingPeriods, setSavingPeriods] = useState(false)
 
@@ -45,7 +45,7 @@ export default function Periods() {
   const isWeightValid = totalWeight === 100
 
   // Funciones para períodos
-  const openPeriodModal = (period?: Period) => {
+  const openPeriodModal = (period?: AcademicPeriod) => {
     if (period) {
       setEditingPeriod(period)
       setPeriodForm({ name: period.name, weight: period.weight, startDate: period.startDate, endDate: period.endDate })
@@ -66,7 +66,7 @@ export default function Periods() {
           : p
       ))
     } else {
-      const newPeriod: Period = {
+      const newPeriod: AcademicPeriod = {
         id: `period-${Date.now()}`,
         name: periodForm.name,
         weight: periodForm.weight,

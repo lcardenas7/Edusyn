@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BarChart3, TrendingUp, Users, Award, RefreshCw, Building2 } from 'lucide-react'
-import { useInstitution } from '../contexts/InstitutionContext'
+import { useAuth } from '../contexts/AuthContext'
 import { statisticsApi, academicYearsApi } from '../lib/api'
 
 const LEVEL_COLORS: Record<string, string> = {
@@ -48,7 +48,7 @@ interface GroupStat {
 }
 
 export default function Statistics() {
-  const { institution } = useInstitution()
+  const { institution } = useAuth()
   const [loading, setLoading] = useState(true)
   const [academicYears, setAcademicYears] = useState<any[]>([])
   const [selectedYearId, setSelectedYearId] = useState('')

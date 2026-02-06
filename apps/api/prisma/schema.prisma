@@ -289,6 +289,16 @@ model User {
   
   // Snapshot de docentes en matrículas (histórico)
   enrollmentSubjectsAsTeacher EnrollmentSubject[]   @relation("EnrollmentSubjectTeacher")
+  
+  // Módulo Financiero
+  paymentsReceivedFinancial   FinancialPayment[]    @relation("PaymentReceivedBy")
+  paymentsVoided              FinancialPayment[]    @relation("PaymentVoidedBy")
+  expensesRegistered          FinancialExpense[]    @relation("ExpenseRegisteredBy")
+  expensesApproved            FinancialExpense[]    @relation("ExpenseApprovedBy")
+  expensesVoided              FinancialExpense[]    @relation("ExpenseVoidedBy")
+  invoicesCreated             FinancialInvoice[]    @relation("InvoiceCreatedBy")
+  invoicesCancelled           FinancialInvoice[]    @relation("InvoiceCancelledBy")
+  cashRegisterCloses          CashRegisterClose[]
 }
 
 model Role {
@@ -381,6 +391,17 @@ model Institution {
   managementLeaders           ManagementLeader[]
   managementTasks             ManagementTask[]
   storageUsage                InstitutionStorageUsage?
+  
+  // Módulo Financiero
+  financialThirdParties       FinancialThirdParty[]
+  financialCategories         FinancialCategory[]
+  chargeConcepts              ChargeConcept[]
+  financialObligations        FinancialObligation[]
+  financialPayments           FinancialPayment[]
+  financialExpenses           FinancialExpense[]
+  financialInvoices           FinancialInvoice[]
+  financialSettings           FinancialSettings?
+  cashRegisterCloses          CashRegisterClose[]
 }
 
 // Módulos habilitados por institución
@@ -2747,4 +2768,453 @@ model InstitutionStorageUsage {
   updatedAt     DateTime @updatedAt
 
   institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MÓDULO FINANCIERO Y CONTABLE INSTITUCIONAL
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Tipo de tercero financiero
+enum ThirdPartyType {
+  STUDENT       // Estudiante matriculado
+  TEACHER       // Docente
+  GUARDIAN      // Acudiente
+  GROUP         // Grupo completo (cobro masivo)
+  GRADE         // Grado completo (cobro masivo)
+  EXTERNAL      // Persona externa
+  PROVIDER      // Proveedor (para egresos)
+}
+
+// Estado de obligación financiera
+enum ObligationStatus {
+  PENDING       // Pendiente de pago
+  PARTIAL       // Pago parcial
+  PAID          // Pagado completamente
+  CANCELLED     // Cancelada/Anulada
+  OVERDUE       // Vencida
+}
+
+// Método de pago
+enum PaymentMethod {
+  CASH          // Efectivo
+  TRANSFER      // Transferencia bancaria
+  CARD          // Tarjeta débito/crédito
+  CHECK         // Cheque
+  PSE           // PSE (Colombia)
+  NEQUI         // Nequi
+  DAVIPLATA     // Daviplata
+  OTHER         // Otro
+}
+
+// Tipo de movimiento financiero
+enum FinancialMovementType {
+  INCOME        // Ingreso (recaudo)
+  EXPENSE       // Egreso (gasto)
+  REFUND        // Devolución
+  ADJUSTMENT    // Ajuste contable
+}
+
+// Estado de factura
+enum InvoiceStatus {
+  DRAFT         // Borrador
+  ISSUED        // Emitida
+  PAID          // Pagada
+  CANCELLED     // Anulada
+}
+
+// Tercero financiero (cliente/proveedor)
+model FinancialThirdParty {
+  id            String          @id @default(cuid())
+  institutionId String
+  
+  type          ThirdPartyType
+  referenceId   String?         // ID del student, teacher, group, grade, guardian
+  
+  // Datos del tercero (pueden venir de referencia o ser manuales)
+  name          String
+  document      String?
+  documentType  DocumentType?
+  email         String?
+  phone         String?
+  address       String?
+  
+  // Para proveedores
+  businessName  String?         // Razón social
+  nit           String?
+  bankName      String?
+  bankAccount   String?
+  bankAccountType String?       // Ahorros, Corriente
+  
+  notes         String?         @db.Text
+  isActive      Boolean         @default(true)
+  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  institution   Institution     @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  obligations   FinancialObligation[]
+  payments      FinancialPayment[]
+  expenses      FinancialExpense[]
+  invoices      FinancialInvoice[]
+
+  @@unique([institutionId, type, referenceId])
+  @@index([institutionId])
+  @@index([type])
+  @@index([referenceId])
+  @@index([document])
+}
+
+// Categoría financiera (clasificación contable)
+model FinancialCategory {
+  id            String          @id @default(cuid())
+  institutionId String
+  
+  name          String          // Eventos, Rifas, Grados, Donaciones, etc.
+  description   String?
+  code          String?         // Código contable opcional
+  type          FinancialMovementType @default(INCOME) // Si es para ingresos o egresos
+  
+  // Presupuesto anual opcional
+  budgetAmount  Decimal?        @db.Decimal(15, 2)
+  
+  color         String?         // Color para UI
+  icon          String?         // Icono para UI
+  
+  isActive      Boolean         @default(true)
+  sortOrder     Int             @default(0)
+  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  institution   Institution     @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  concepts      ChargeConcept[]
+  expenses      FinancialExpense[]
+
+  @@unique([institutionId, name])
+  @@index([institutionId])
+  @@index([type])
+}
+
+// Concepto de cobro (plantilla reutilizable)
+model ChargeConcept {
+  id            String          @id @default(cuid())
+  institutionId String
+  
+  name          String          // Bingo institucional, Derecho de grado, etc.
+  description   String?         @db.Text
+  categoryId    String
+  
+  defaultAmount Decimal         @db.Decimal(15, 2)
+  
+  // Configuración de cobro
+  isMassive     Boolean         @default(false)  // Permite asignación masiva
+  isRecurring   Boolean         @default(false)  // Es recurrente (mensual, etc.)
+  allowPartial  Boolean         @default(true)   // Permite pagos parciales
+  allowDiscount Boolean         @default(true)   // Permite descuentos
+  
+  // Fechas de vigencia
+  validFrom     DateTime?
+  validUntil    DateTime?
+  dueDate       DateTime?       // Fecha límite de pago por defecto
+  
+  // Configuración de mora
+  lateFeeType   String?         // FIXED, PERCENTAGE
+  lateFeeValue  Decimal?        @db.Decimal(15, 2)
+  gracePeriodDays Int?          @default(0)
+  
+  isActive      Boolean         @default(true)
+  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  institution   Institution     @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  category      FinancialCategory @relation(fields: [categoryId], references: [id])
+  obligations   FinancialObligation[]
+
+  @@unique([institutionId, name])
+  @@index([institutionId])
+  @@index([categoryId])
+}
+
+// Obligación financiera (cobro asignado a tercero)
+model FinancialObligation {
+  id            String          @id @default(cuid())
+  institutionId String
+  
+  thirdPartyId  String
+  conceptId     String
+  
+  // Montos
+  originalAmount Decimal        @db.Decimal(15, 2)  // Monto original
+  discountAmount Decimal        @db.Decimal(15, 2) @default(0)  // Descuento aplicado
+  lateFeeAmount  Decimal        @db.Decimal(15, 2) @default(0)  // Mora acumulada
+  totalAmount    Decimal        @db.Decimal(15, 2)  // Total a pagar (original - descuento + mora)
+  paidAmount     Decimal        @db.Decimal(15, 2) @default(0)  // Total pagado
+  balance        Decimal        @db.Decimal(15, 2)  // Saldo pendiente
+  
+  status        ObligationStatus @default(PENDING)
+  
+  // Fechas
+  issueDate     DateTime        @default(now())
+  dueDate       DateTime?
+  paidDate      DateTime?       // Fecha de pago completo
+  
+  // Descuento
+  discountReason String?
+  discountApprovedBy String?
+  
+  // Referencia para trazabilidad
+  reference     String?         // Número de referencia único
+  notes         String?         @db.Text
+  
+  // Auditoría
+  createdById   String?
+  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  institution   Institution     @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  thirdParty    FinancialThirdParty @relation(fields: [thirdPartyId], references: [id])
+  concept       ChargeConcept   @relation(fields: [conceptId], references: [id])
+  payments      FinancialPayment[]
+  invoiceItems  FinancialInvoiceItem[]
+
+  @@index([institutionId])
+  @@index([thirdPartyId])
+  @@index([conceptId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([reference])
+}
+
+// Pago/Recaudo (caja)
+model FinancialPayment {
+  id            String          @id @default(cuid())
+  institutionId String
+  
+  obligationId  String?         // Puede ser pago a obligación específica
+  thirdPartyId  String          // Quién paga
+  
+  amount        Decimal         @db.Decimal(15, 2)
+  paymentMethod PaymentMethod
+  
+  // Detalles del pago
+  receiptNumber String?         // Número de recibo
+  transactionRef String?        // Referencia de transacción (transferencia, PSE, etc.)
+  
+  paymentDate   DateTime        @default(now())
+  
+  notes         String?         @db.Text
+  
+  // Auditoría
+  receivedById  String          // Quién recibió el pago
+  voidedAt      DateTime?       // Si fue anulado
+  voidedById    String?
+  voidReason    String?
+  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  institution   Institution     @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  obligation    FinancialObligation? @relation(fields: [obligationId], references: [id])
+  thirdParty    FinancialThirdParty @relation(fields: [thirdPartyId], references: [id])
+  receivedBy    User            @relation("PaymentReceivedBy", fields: [receivedById], references: [id])
+  voidedBy      User?           @relation("PaymentVoidedBy", fields: [voidedById], references: [id])
+
+  @@index([institutionId])
+  @@index([obligationId])
+  @@index([thirdPartyId])
+  @@index([paymentDate])
+  @@index([receiptNumber])
+}
+
+// Egreso/Gasto
+model FinancialExpense {
+  id            String          @id @default(cuid())
+  institutionId String
+  
+  categoryId    String
+  providerId    String?         // Tercero proveedor (opcional)
+  
+  description   String
+  amount        Decimal         @db.Decimal(15, 2)
+  
+  // Detalles
+  expenseDate   DateTime        @default(now())
+  invoiceNumber String?         // Número de factura del proveedor
+  invoiceDate   DateTime?
+  
+  paymentMethod PaymentMethod?
+  transactionRef String?
+  
+  // Documentos soporte
+  attachmentUrl String?
+  attachmentName String?
+  
+  notes         String?         @db.Text
+  
+  // Auditoría
+  registeredById String
+  approvedById   String?
+  approvedAt     DateTime?
+  
+  // Anulación
+  voidedAt      DateTime?
+  voidedById    String?
+  voidReason    String?
+  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  institution   Institution     @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  category      FinancialCategory @relation(fields: [categoryId], references: [id])
+  provider      FinancialThirdParty? @relation(fields: [providerId], references: [id])
+  registeredBy  User            @relation("ExpenseRegisteredBy", fields: [registeredById], references: [id])
+  approvedBy    User?           @relation("ExpenseApprovedBy", fields: [approvedById], references: [id])
+  voidedBy      User?           @relation("ExpenseVoidedBy", fields: [voidedById], references: [id])
+
+  @@index([institutionId])
+  @@index([categoryId])
+  @@index([providerId])
+  @@index([expenseDate])
+}
+
+// Factura/Comprobante
+model FinancialInvoice {
+  id            String          @id @default(cuid())
+  institutionId String
+  
+  thirdPartyId  String
+  
+  invoiceNumber String          // Número de factura
+  type          FinancialMovementType // INCOME o EXPENSE
+  status        InvoiceStatus   @default(DRAFT)
+  
+  // Montos
+  subtotal      Decimal         @db.Decimal(15, 2)
+  discountTotal Decimal         @db.Decimal(15, 2) @default(0)
+  taxTotal      Decimal         @db.Decimal(15, 2) @default(0)
+  total         Decimal         @db.Decimal(15, 2)
+  
+  // Fechas
+  issueDate     DateTime        @default(now())
+  dueDate       DateTime?
+  paidDate      DateTime?
+  
+  // PDF generado
+  pdfUrl        String?
+  pdfGeneratedAt DateTime?
+  
+  notes         String?         @db.Text
+  
+  // Auditoría
+  createdById   String
+  cancelledById String?
+  cancelledAt   DateTime?
+  cancelReason  String?
+  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  institution   Institution     @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  thirdParty    FinancialThirdParty @relation(fields: [thirdPartyId], references: [id])
+  createdBy     User            @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
+  cancelledBy   User?           @relation("InvoiceCancelledBy", fields: [cancelledById], references: [id])
+  items         FinancialInvoiceItem[]
+
+  @@unique([institutionId, invoiceNumber])
+  @@index([institutionId])
+  @@index([thirdPartyId])
+  @@index([status])
+  @@index([issueDate])
+}
+
+// Ítem de factura
+model FinancialInvoiceItem {
+  id            String          @id @default(cuid())
+  invoiceId     String
+  obligationId  String?         // Referencia a obligación si aplica
+  
+  description   String
+  quantity      Int             @default(1)
+  unitPrice     Decimal         @db.Decimal(15, 2)
+  discount      Decimal         @db.Decimal(15, 2) @default(0)
+  tax           Decimal         @db.Decimal(15, 2) @default(0)
+  total         Decimal         @db.Decimal(15, 2)
+  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  invoice       FinancialInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  obligation    FinancialObligation? @relation(fields: [obligationId], references: [id])
+
+  @@index([invoiceId])
+  @@index([obligationId])
+}
+
+// Configuración financiera de la institución
+model FinancialSettings {
+  id            String          @id @default(cuid())
+  institutionId String          @unique
+  
+  // Numeración
+  invoicePrefix String          @default("FAC")
+  invoiceNextNumber Int         @default(1)
+  receiptPrefix String          @default("REC")
+  receiptNextNumber Int         @default(1)
+  
+  // Configuración de mora
+  defaultLateFeeType String?    // FIXED, PERCENTAGE
+  defaultLateFeeValue Decimal?  @db.Decimal(15, 2)
+  defaultGracePeriodDays Int    @default(5)
+  
+  // Datos fiscales
+  taxId         String?         // NIT para facturación
+  taxRegime     String?         // Régimen tributario
+  
+  // Cuentas bancarias
+  bankAccounts  Json?           // Array de cuentas bancarias
+  
+  // Notificaciones
+  sendPaymentReminders Boolean  @default(true)
+  reminderDaysBefore Int        @default(3)
+  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  institution   Institution     @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+}
+
+// Cierre de caja diario
+model CashRegisterClose {
+  id            String          @id @default(cuid())
+  institutionId String
+  
+  closeDate     DateTime        @db.Date
+  
+  // Totales del día
+  cashTotal     Decimal         @db.Decimal(15, 2) @default(0)
+  transferTotal Decimal         @db.Decimal(15, 2) @default(0)
+  cardTotal     Decimal         @db.Decimal(15, 2) @default(0)
+  otherTotal    Decimal         @db.Decimal(15, 2) @default(0)
+  grandTotal    Decimal         @db.Decimal(15, 2) @default(0)
+  
+  // Conteo físico (para arqueo)
+  physicalCash  Decimal?        @db.Decimal(15, 2)
+  difference    Decimal?        @db.Decimal(15, 2)
+  
+  notes         String?         @db.Text
+  
+  closedById    String
+  closedAt      DateTime        @default(now())
+  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  institution   Institution     @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  closedBy      User            @relation(fields: [closedById], references: [id])
+
+  @@unique([institutionId, closeDate])
+  @@index([institutionId])
+  @@index([closeDate])
 }

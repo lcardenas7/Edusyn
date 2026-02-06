@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Calendar, Check, X, Clock, FileText, ChevronDown, AlertTriangle, Save } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { teacherAssignmentsApi, studentsApi, attendanceApi } from '../lib/api'
+import { teacherAssignmentsApi, academicStudentsApi, attendanceApi } from '../lib/api'
 
 interface TeacherAssignment {
   id: string
@@ -125,34 +125,16 @@ export default function Attendance() {
       }
       setLoadingStudents(true)
       try {
-        const response = await studentsApi.getAll({
+        // Usar academicStudentsApi para mantener separación de dominios
+        const response = await academicStudentsApi.getByGroup({
           groupId: selectedAssignment.group.id,
           academicYearId: selectedAssignment.academicYear.id,
         })
-        const data = response.data || []
-        // El backend devuelve StudentEnrollment cuando se filtra por groupId
-        const mappedStudents = data.map((item: any) => {
-          // Si viene como enrollment (tiene student anidado)
-          if (item.student) {
-            return {
-              id: item.student.id,
-              name: `${item.student.firstName} ${item.student.lastName}`,
-              enrollmentId: item.id,
-              status: 'PRESENT',
-            }
-          }
-          // Si viene como student directo
-          const enrollment = item.enrollments?.find((e: any) => 
-            e.groupId === selectedAssignment.group.id && 
-            e.academicYearId === selectedAssignment.academicYear.id
-          )
-          return {
-            id: item.id,
-            name: `${item.firstName} ${item.lastName}`,
-            enrollmentId: enrollment?.id || item.id,
-            status: 'PRESENT',
-          }
-        })
+        // El endpoint académico ya retorna el formato correcto, solo agregar status
+        const mappedStudents = (response.data || []).map((s: any) => ({
+          ...s,
+          status: 'PRESENT',
+        }))
         setStudents(mappedStudents)
       } catch (err) {
         console.error('Error loading students:', err)

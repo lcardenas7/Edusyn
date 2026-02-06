@@ -1,6 +1,14 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { EnrollmentStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateStudentDto, UpdateStudentDto, EnrollStudentDto, UpdateEnrollmentStatusDto } from './dto/create-student.dto';
+import {
+  EnrollmentForReport,
+  EnrollmentForGroupList,
+  EnrollmentForMenReport,
+  EnrollmentAreaSnapshot,
+  StudentObservationForReport,
+} from './dto/domain-reports.dto';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -677,5 +685,363 @@ export class StudentsService {
       skipped: studentsWithRecords.length,
       message: `Eliminados ${result.count} estudiantes sin registros`,
     };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MÉTODOS PARA DOMINIO ACADÉMICO
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Estos métodos son usados por el módulo académico para obtener estudiantes
+  // sin conocer los detalles de implementación de gestión estudiantil.
+
+  /**
+   * Obtiene estudiantes para un grupo en un año académico.
+   * Retorna solo los datos necesarios para el contexto académico.
+   * 
+   * Este método es la interfaz que el dominio académico usa para obtener estudiantes.
+   * Si cambia la lógica de matrículas, filtros, etc., solo se modifica aquí.
+   */
+  async getStudentsForAcademicContext(params: {
+    groupId: string;
+    academicYearId: string;
+    institutionId: string;
+  }): Promise<Array<{ id: string; name: string; enrollmentId: string; documentNumber?: string }>> {
+    const { groupId, academicYearId, institutionId } = params;
+
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: {
+        groupId,
+        academicYearId,
+        status: 'ACTIVE',
+        student: {
+          institutionId,
+          isActive: true,
+        },
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            documentNumber: true,
+          },
+        },
+      },
+      orderBy: {
+        student: {
+          lastName: 'asc',
+        },
+      },
+    });
+
+    // Mapear a formato académico simple
+    return enrollments.map((enrollment) => ({
+      id: enrollment.student.id,
+      name: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
+      enrollmentId: enrollment.id,
+      documentNumber: enrollment.student.documentNumber || undefined,
+    }));
+  }
+
+  /**
+   * Obtiene estudiantes para múltiples grupos (útil para reportes académicos)
+   */
+  async getStudentsForMultipleGroups(params: {
+    groupIds: string[];
+    academicYearId: string;
+    institutionId: string;
+  }): Promise<Record<string, Array<{ id: string; name: string; enrollmentId: string; documentNumber?: string }>>> {
+    const { groupIds, academicYearId, institutionId } = params;
+
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: {
+        groupId: { in: groupIds },
+        academicYearId,
+        status: 'ACTIVE',
+        student: {
+          institutionId,
+          isActive: true,
+        },
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            documentNumber: true,
+          },
+        },
+      },
+      orderBy: {
+        student: {
+          lastName: 'asc',
+        },
+      },
+    });
+
+    // Agrupar por groupId
+    const result: Record<string, Array<{ id: string; name: string; enrollmentId: string; documentNumber?: string }>> = {};
+    for (const enrollment of enrollments) {
+      if (!result[enrollment.groupId]) {
+        result[enrollment.groupId] = [];
+      }
+      result[enrollment.groupId].push({
+        id: enrollment.student.id,
+        name: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
+        enrollmentId: enrollment.id,
+        documentNumber: enrollment.student.documentNumber || undefined,
+      });
+    }
+
+    return result;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MÉTODOS PARA DOMINIO DE REPORTES
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Estos métodos son usados por el módulo de Reportes para obtener datos
+  // sin conocer los detalles de implementación de gestión estudiantil.
+
+  /**
+   * Obtiene una matrícula con todos los detalles necesarios para reportes.
+   * Retorna DTO de dominio, NO modelo Prisma.
+   */
+  async getEnrollmentForReport(enrollmentId: string): Promise<EnrollmentForReport | null> {
+    const enrollment = await this.prisma.studentEnrollment.findUnique({
+      where: { id: enrollmentId },
+      include: {
+        student: true,
+        group: {
+          include: {
+            grade: true,
+            campus: true,
+          },
+        },
+        academicYear: {
+          include: {
+            institution: true,
+          },
+        },
+      },
+    });
+
+    if (!enrollment) return null;
+
+    // Mapear a DTO de dominio
+    return {
+      id: enrollment.id,
+      status: enrollment.status,
+      enrollmentType: enrollment.enrollmentType,
+      student: {
+        id: enrollment.student.id,
+        firstName: enrollment.student.firstName,
+        lastName: enrollment.student.lastName,
+        documentType: enrollment.student.documentType,
+        documentNumber: enrollment.student.documentNumber,
+        birthDate: enrollment.student.birthDate,
+        gender: enrollment.student.gender,
+      },
+      group: {
+        id: enrollment.group.id,
+        name: enrollment.group.name,
+        gradeName: enrollment.group.grade.name,
+        gradeId: enrollment.group.gradeId,
+        campusName: enrollment.group.campus?.name ?? null,
+        campusId: enrollment.group.campusId,
+      },
+      academicYear: {
+        id: enrollment.academicYear.id,
+        year: enrollment.academicYear.year,
+        name: enrollment.academicYear.name,
+        institutionId: enrollment.academicYear.institutionId,
+        institutionName: enrollment.academicYear.institution.name,
+        institutionNit: enrollment.academicYear.institution.nit,
+      },
+    };
+  }
+
+  /**
+   * Obtiene matrículas de un grupo para reportes masivos.
+   * Retorna DTO de dominio, NO modelo Prisma.
+   */
+  async getEnrollmentsForGroupReport(params: {
+    groupId: string;
+    academicYearId: string;
+    status?: EnrollmentStatus;
+  }): Promise<EnrollmentForGroupList[]> {
+    const { groupId, academicYearId, status = EnrollmentStatus.ACTIVE } = params;
+
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: {
+        groupId,
+        academicYearId,
+        status,
+      },
+      include: {
+        student: true,
+        group: {
+          include: {
+            grade: true,
+          },
+        },
+      },
+      orderBy: {
+        student: {
+          lastName: 'asc',
+        },
+      },
+    });
+
+    // Mapear a DTOs de dominio
+    return enrollments.map(e => ({
+      id: e.id,
+      studentId: e.student.id,
+      studentName: `${e.student.firstName} ${e.student.lastName}`,
+      studentFirstName: e.student.firstName,
+      studentLastName: e.student.lastName,
+      documentNumber: e.student.documentNumber,
+      status: e.status,
+      groupId: e.group.id,
+      groupName: e.group.name,
+      gradeName: e.group.grade.name,
+    }));
+  }
+
+  /**
+   * Obtiene matrículas para reportes MEN (SIMAT, estadísticas).
+   * Retorna DTO de dominio, NO modelo Prisma.
+   */
+  async getEnrollmentsForMenReport(params: {
+    academicYearId: string;
+    gradeId?: string;
+    campusId?: string;
+    status?: EnrollmentStatus;
+  }): Promise<EnrollmentForMenReport[]> {
+    const { academicYearId, gradeId, campusId, status } = params;
+
+    // Construir filtro de grupo dinámicamente
+    const groupFilter: { gradeId?: string; campusId?: string } = {};
+    if (gradeId) groupFilter.gradeId = gradeId;
+    if (campusId) groupFilter.campusId = campusId;
+
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: {
+        academicYearId,
+        ...(Object.keys(groupFilter).length > 0 && { group: groupFilter }),
+        ...(status && { status }),
+      },
+      include: {
+        student: true,
+        group: {
+          include: {
+            grade: true,
+            campus: true,
+          },
+        },
+      },
+      orderBy: {
+        student: {
+          lastName: 'asc',
+        },
+      },
+    });
+
+    // Mapear a DTOs de dominio
+    return enrollments.map(e => ({
+      id: e.id,
+      status: e.status,
+      studentId: e.student.id,
+      student: {
+        firstName: e.student.firstName,
+        lastName: e.student.lastName,
+        documentType: e.student.documentType,
+        documentNumber: e.student.documentNumber,
+        birthDate: e.student.birthDate,
+        gender: e.student.gender,
+      },
+      group: {
+        id: e.group.id,
+        name: e.group.name,
+        gradeName: e.group.grade.name,
+        campusName: e.group.campus?.name ?? null,
+      },
+    }));
+  }
+
+  /**
+   * Obtiene el snapshot de estructura académica de una matrícula.
+   * Retorna DTO de dominio, NO modelo Prisma.
+   */
+  async getEnrollmentAcademicStructure(enrollmentId: string): Promise<EnrollmentAreaSnapshot[]> {
+    const areas = await this.prisma.enrollmentArea.findMany({
+      where: { enrollmentId },
+      include: {
+        enrollmentSubjects: {
+          include: { subject: true },
+          orderBy: { order: 'asc' },
+        },
+      },
+      orderBy: { order: 'asc' },
+    });
+
+    // Mapear a DTOs de dominio
+    return areas.map(area => ({
+      id: area.id,
+      areaName: area.areaName,
+      areaCode: area.areaCode,
+      weightPercentage: area.weightPercentage,
+      calculationType: area.calculationType,
+      subjects: area.enrollmentSubjects.map(es => ({
+        id: es.id,
+        subjectId: es.subjectId,
+        subjectName: es.subjectName,
+        subjectCode: es.subjectCode,
+        weightPercentage: es.weightPercentage,
+        teacherName: es.teacherName,
+      })),
+    }));
+  }
+
+  /**
+   * Obtiene observaciones de un estudiante en un rango de fechas.
+   * Retorna DTO de dominio, NO modelo Prisma.
+   */
+  async getStudentObservationsForReport(params: {
+    studentEnrollmentId: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+  }): Promise<StudentObservationForReport[]> {
+    const { studentEnrollmentId, startDate, endDate, limit = 10 } = params;
+
+    const observations = await this.prisma.studentObservation.findMany({
+      where: {
+        studentEnrollmentId,
+        ...(startDate || endDate ? {
+          date: {
+            ...(startDate && { gte: startDate }),
+            ...(endDate && { lte: endDate }),
+          },
+        } : {}),
+      },
+      include: {
+        author: {
+          select: { firstName: true, lastName: true },
+        },
+      },
+      orderBy: { date: 'desc' },
+      take: limit,
+    });
+
+    // Mapear a DTOs de dominio
+    return observations.map(o => ({
+      id: o.id,
+      date: o.date,
+      type: o.type,
+      category: o.category,
+      description: o.description,
+      authorName: `${o.author.firstName} ${o.author.lastName}`,
+    }));
   }
 }

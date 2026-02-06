@@ -9,12 +9,16 @@ import {
   UsersRound,
   Eye,
   ArrowLeft,
-  X
+  X,
+  Building2
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useInstitution, AcademicLevel } from '../../contexts/InstitutionContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { usePermissions, PERMISSIONS } from '../../hooks/usePermissions'
+
+// Etapas del MEN (clasificación oficial del sistema educativo colombiano)
+// Esto es INSTITUCIONAL, no académico - existe aunque no haya estudiantes
+type GradeStage = 'PREESCOLAR' | 'PRIMARIA' | 'SECUNDARIA' | 'MEDIA'
 
 interface Group {
   id: string
@@ -27,39 +31,25 @@ interface Group {
 interface Grade {
   id: string
   name: string
-  level: string
+  stage: GradeStage  // Etapa MEN, no nivel académico
   order: number
   groups: Group[]
 }
 
-// Colores por defecto para niveles
-const defaultLevelColors: Record<string, string> = {
-  'PREESCOLAR': 'bg-amber-100 text-amber-700 border-amber-200',
-  'PRIMARIA': 'bg-blue-100 text-blue-700 border-blue-200',
-  'SECUNDARIA': 'bg-green-100 text-green-700 border-green-200',
-  'MEDIA': 'bg-purple-100 text-purple-700 border-purple-200',
-}
-
-const extraLevelColors = [
-  'bg-pink-100 text-pink-700 border-pink-200',
-  'bg-cyan-100 text-cyan-700 border-cyan-200',
-  'bg-orange-100 text-orange-700 border-orange-200',
-  'bg-indigo-100 text-indigo-700 border-indigo-200',
+// Etapas MEN con sus colores (esto es fijo, definido por el MEN)
+const MEN_STAGES: { code: GradeStage; name: string; color: string }[] = [
+  { code: 'PREESCOLAR', name: 'Preescolar', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+  { code: 'PRIMARIA', name: 'Básica Primaria', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+  { code: 'SECUNDARIA', name: 'Básica Secundaria', color: 'bg-green-100 text-green-700 border-green-200' },
+  { code: 'MEDIA', name: 'Media', color: 'bg-purple-100 text-purple-700 border-purple-200' },
 ]
 
-function getLevelColor(levelCode: string, academicLevels: AcademicLevel[]): string {
-  if (defaultLevelColors[levelCode]) {
-    return defaultLevelColors[levelCode]
-  }
-  const levelIndex = academicLevels.findIndex(l => l.code === levelCode)
-  if (levelIndex >= 0) {
-    return extraLevelColors[levelIndex % extraLevelColors.length]
-  }
-  return 'bg-slate-100 text-slate-700 border-slate-200'
+function getStageColor(stageCode: GradeStage): string {
+  const stage = MEN_STAGES.find(s => s.code === stageCode)
+  return stage?.color || 'bg-slate-100 text-slate-700 border-slate-200'
 }
 
 export default function Structure() {
-  const { institution } = useInstitution()
   const { institution: authInstitution } = useAuth()
   const { can } = usePermissions()
   
@@ -68,7 +58,7 @@ export default function Structure() {
   // Estados para grados y grupos
   const [grades, setGrades] = useState<Grade[]>(() => {
     const institutionId = authInstitution?.id || 'default'
-    const saved = localStorage.getItem(`edusyn_grades_${institutionId}`)
+    const saved = localStorage.getItem(`edusyn_institutional_grades_${institutionId}`)
     if (saved) {
       try {
         return JSON.parse(saved)
@@ -82,7 +72,7 @@ export default function Structure() {
   const [expandedGrades, setExpandedGrades] = useState<string[]>([])
   const [showGradeModal, setShowGradeModal] = useState(false)
   const [editingGrade, setEditingGrade] = useState<Grade | null>(null)
-  const [gradeForm, setGradeForm] = useState({ name: '', level: '', order: 0 })
+  const [gradeForm, setGradeForm] = useState({ name: '', stage: 'PRIMARIA' as GradeStage, order: 0 })
   const [showGroupModal, setShowGroupModal] = useState(false)
   const [editingGroup, setEditingGroup] = useState<{ gradeId: string; group: Group | null } | null>(null)
   const [groupForm, setGroupForm] = useState({ name: '', shift: 'MAÑANA' as Group['shift'], capacity: 35, director: '' })
@@ -90,7 +80,7 @@ export default function Structure() {
   // Guardar grados en localStorage y sincronizar con BD
   useEffect(() => {
     if (authInstitution?.id) {
-      localStorage.setItem(`edusyn_grades_${authInstitution.id}`, JSON.stringify(grades))
+      localStorage.setItem(`edusyn_institutional_grades_${authInstitution.id}`, JSON.stringify(grades))
       
       // Sincronizar con la BD (debounced para evitar muchas llamadas)
       const syncTimeout = setTimeout(async () => {
@@ -103,7 +93,7 @@ export default function Structure() {
             console.error('[Structure] Error sincronizando grados:', err)
           }
         }
-      }, 2000) // Esperar 2 segundos después del último cambio
+      }, 2000)
       
       return () => clearTimeout(syncTimeout)
     }
@@ -118,28 +108,28 @@ export default function Structure() {
   const openGradeModal = (grade?: Grade) => {
     if (grade) {
       setEditingGrade(grade)
-      setGradeForm({ name: grade.name, level: grade.level, order: grade.order })
+      setGradeForm({ name: grade.name, stage: grade.stage, order: grade.order })
     } else {
       setEditingGrade(null)
-      setGradeForm({ name: '', level: institution.academicLevels[0]?.code || '', order: grades.length })
+      setGradeForm({ name: '', stage: 'PRIMARIA', order: grades.length })
     }
     setShowGradeModal(true)
   }
 
   const saveGrade = () => {
-    if (!gradeForm.name.trim() || !gradeForm.level) return
+    if (!gradeForm.name.trim() || !gradeForm.stage) return
     
     if (editingGrade) {
       setGrades(grades.map(g => 
         g.id === editingGrade.id 
-          ? { ...g, name: gradeForm.name, level: gradeForm.level, order: gradeForm.order }
+          ? { ...g, name: gradeForm.name, stage: gradeForm.stage, order: gradeForm.order }
           : g
       ))
     } else {
       const newGrade: Grade = {
         id: `grade-${Date.now()}`,
         name: gradeForm.name,
-        level: gradeForm.level,
+        stage: gradeForm.stage,
         order: gradeForm.order,
         groups: []
       }
@@ -211,8 +201,8 @@ export default function Structure() {
               <GraduationCap className="w-6 h-6 text-teal-600" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-slate-900">Grados y Grupos</h1>
-              <p className="text-sm text-slate-500">Configura los grados académicos y sus grupos</p>
+              <h1 className="text-xl font-semibold text-slate-900">Estructura Organizacional</h1>
+              <p className="text-sm text-slate-500">Grados y grupos de la institución</p>
             </div>
           </div>
         </div>
@@ -252,27 +242,27 @@ export default function Structure() {
               <p className="text-xs text-slate-500">Capacidad Total</p>
             </div>
             <div className="bg-slate-50 rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold text-slate-900">{institution.academicLevels.length}</p>
-              <p className="text-xs text-slate-500">Niveles</p>
+              <p className="text-2xl font-bold text-slate-900">{MEN_STAGES.length}</p>
+              <p className="text-xs text-slate-500">Etapas MEN</p>
             </div>
           </div>
 
-          {/* Lista por nivel */}
+          {/* Lista por etapa MEN */}
           <div className="space-y-6">
-            {institution.academicLevels.map((level) => {
-              const levelGrades = grades.filter(g => g.level === level.code)
-              const colorClass = getLevelColor(level.code, institution.academicLevels)
+            {MEN_STAGES.map((stage) => {
+              const stageGrades = grades.filter(g => g.stage === stage.code)
+              const colorClass = stage.color
               return (
-                <div key={level.id} className={`border rounded-lg overflow-hidden ${colorClass.split(' ')[2] || 'border-slate-200'}`}>
+                <div key={stage.code} className={`border rounded-lg overflow-hidden ${colorClass.split(' ')[2] || 'border-slate-200'}`}>
                   <div className={`px-4 py-3 ${colorClass} flex items-center justify-between`}>
-                    <h3 className="font-semibold">{level.name}</h3>
-                    <span className="text-sm">{levelGrades.length} grado(s)</span>
+                    <h3 className="font-semibold">{stage.name}</h3>
+                    <span className="text-sm">{stageGrades.length} grado(s)</span>
                   </div>
                   <div className="bg-white divide-y divide-slate-100">
-                    {levelGrades.length === 0 ? (
-                      <p className="px-4 py-6 text-center text-slate-400 text-sm">No hay grados en este nivel</p>
+                    {stageGrades.length === 0 ? (
+                      <p className="px-4 py-6 text-center text-slate-400 text-sm">No hay grados en esta etapa</p>
                     ) : (
-                      levelGrades.sort((a, b) => a.order - b.order).map((grade) => (
+                      stageGrades.sort((a, b) => a.order - b.order).map((grade) => (
                         <div key={grade.id}>
                           <div 
                             className="px-4 py-3 flex items-center gap-3 hover:bg-slate-50 cursor-pointer"
@@ -352,17 +342,20 @@ export default function Structure() {
               )
             })}
 
-            {institution.academicLevels.length === 0 && (
+            {grades.length === 0 && (
               <div className="text-center py-12 text-slate-500 border-2 border-dashed border-slate-200 rounded-lg">
-                <GraduationCap className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-                <p className="mb-2">No hay niveles académicos configurados</p>
-                <p className="text-sm mb-4">Primero configura los niveles académicos para poder crear grados.</p>
-                <Link
-                  to="/academic/config/levels"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  Ir a Niveles Académicos
-                </Link>
+                <Building2 className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                <p className="mb-2">No hay grados configurados</p>
+                <p className="text-sm mb-4">Agrega los grados de tu institución para organizar los grupos.</p>
+                {canEditGrades && (
+                  <button
+                    onClick={() => openGradeModal()}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Agregar Primer Grado
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -394,15 +387,14 @@ export default function Structure() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nivel académico</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Etapa MEN</label>
                 <select
-                  value={gradeForm.level}
-                  onChange={(e) => setGradeForm({ ...gradeForm, level: e.target.value })}
+                  value={gradeForm.stage}
+                  onChange={(e) => setGradeForm({ ...gradeForm, stage: e.target.value as GradeStage })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
                 >
-                  <option value="">Seleccionar nivel</option>
-                  {institution.academicLevels.map(level => (
-                    <option key={level.id} value={level.code}>{level.name}</option>
+                  {MEN_STAGES.map(stage => (
+                    <option key={stage.code} value={stage.code}>{stage.name}</option>
                   ))}
                 </select>
               </div>
@@ -427,7 +419,7 @@ export default function Structure() {
               </button>
               <button
                 onClick={saveGrade}
-                disabled={!gradeForm.name.trim() || !gradeForm.level}
+                disabled={!gradeForm.name.trim() || !gradeForm.stage}
                 className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
               >
                 {editingGrade ? 'Guardar Cambios' : 'Crear Grado'}

@@ -1,29 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
+import { EnrollmentStatus } from '@prisma/client';
 
 import { PrismaService } from '../../prisma/prisma.service';
+import { StudentsService } from '../academic/students.service';
 import { GenerateReportDto, PromotionReportDto } from './dto/men-reports.dto';
 
 @Injectable()
 export class MenReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService, // Solo para consultas que aún no tienen servicio
+    private readonly studentsService: StudentsService,
+  ) {}
 
   async generateSimatExport(dto: GenerateReportDto) {
-    const students = await this.prisma.studentEnrollment.findMany({
-      where: {
-        academicYearId: dto.academicYearId,
-        ...(dto.gradeId ? { group: { gradeId: dto.gradeId } } : {}),
-        ...(dto.campusId ? { group: { campusId: dto.campusId } } : {}),
-      },
-      include: {
-        student: true,
-        group: {
-          include: {
-            grade: true,
-            campus: true,
-          },
-        },
-      },
+    // Delegar a StudentsService para obtener matrículas
+    const students = await this.studentsService.getEnrollmentsForMenReport({
+      academicYearId: dto.academicYearId,
+      gradeId: dto.gradeId,
+      campusId: dto.campusId,
     });
 
     const workbook = new ExcelJS.Workbook();
@@ -45,6 +40,7 @@ export class MenReportsService {
     ];
 
     for (const enrollment of students) {
+      // Usar propiedades del DTO EnrollmentForMenReport
       const s = enrollment.student;
       const g = enrollment.group;
       const names = s.firstName.split(' ');
@@ -59,9 +55,9 @@ export class MenReportsService {
         apellido2: lastNames[1] || '',
         fechaNac: s.birthDate?.toISOString().split('T')[0] || '',
         genero: s.gender || '',
-        grado: g.grade.name,
+        grado: g.gradeName,
         grupo: g.name,
-        sede: g.campus?.name || '',
+        sede: g.campusName || '',
         estado: enrollment.status,
       });
     }
@@ -70,11 +66,9 @@ export class MenReportsService {
   }
 
   async generateEnrollmentStats(dto: GenerateReportDto) {
-    const enrollments = await this.prisma.studentEnrollment.findMany({
-      where: { academicYearId: dto.academicYearId },
-      include: {
-        group: { include: { grade: true, campus: true } },
-      },
+    // Delegar a StudentsService para obtener matrículas
+    const enrollments = await this.studentsService.getEnrollmentsForMenReport({
+      academicYearId: dto.academicYearId,
     });
 
     const byStatus: Record<string, number> = {};
@@ -83,12 +77,13 @@ export class MenReportsService {
     for (const e of enrollments) {
       byStatus[e.status] = (byStatus[e.status] || 0) + 1;
       
-      const key = e.groupId;
+      // Usar propiedades del DTO EnrollmentForMenReport
+      const key = e.group.id;
       if (!byGrade[key]) {
         byGrade[key] = {
-          gradeName: e.group.grade.name,
+          gradeName: e.group.gradeName,
           groupName: e.group.name,
-          campusName: e.group.campus?.name || '',
+          campusName: e.group.campusName || '',
           count: 0,
         };
       }
@@ -107,15 +102,10 @@ export class MenReportsService {
   }
 
   async generatePromotionReport(dto: PromotionReportDto) {
-    const enrollments = await this.prisma.studentEnrollment.findMany({
-      where: {
-        academicYearId: dto.academicYearId,
-        status: 'ACTIVE',
-      },
-      include: {
-        student: true,
-        group: { include: { grade: true } },
-      },
+    // Delegar a StudentsService para obtener matrículas activas
+    const enrollments = await this.studentsService.getEnrollmentsForMenReport({
+      academicYearId: dto.academicYearId,
+      status: EnrollmentStatus.ACTIVE,
     });
 
     const allGrades = await this.prisma.studentGrade.findMany({
@@ -145,11 +135,12 @@ export class MenReportsService {
         promotionStatus = failedSubjects <= 2 ? 'PROMOTED' : 'FAILED';
       }
 
+      // Usar propiedades del DTO EnrollmentForMenReport
       return {
         studentId: enrollment.studentId,
         studentName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
         documentNumber: enrollment.student.documentNumber,
-        gradeName: enrollment.group.grade.name,
+        gradeName: enrollment.group.gradeName,
         groupName: enrollment.group.name,
         finalAverage: avgFinal,
         failedSubjects,
@@ -233,12 +224,10 @@ export class MenReportsService {
       else if (a.status === 'EXCUSED') stats.excused++;
     }
 
-    const enrollments = await this.prisma.studentEnrollment.findMany({
-      where: { academicYearId: dto.academicYearId, status: 'ACTIVE' },
-      include: {
-        student: true,
-        group: { include: { grade: true } },
-      },
+    // Delegar a StudentsService para obtener matrículas activas
+    const enrollments = await this.studentsService.getEnrollmentsForMenReport({
+      academicYearId: dto.academicYearId,
+      status: EnrollmentStatus.ACTIVE,
     });
 
     const results = enrollments.map((e) => {
@@ -246,10 +235,11 @@ export class MenReportsService {
       const total = stats.present + stats.absent + stats.late + stats.excused;
       const attendanceRate = total > 0 ? Math.round((stats.present / total) * 100) : 100;
 
+      // Usar propiedades del DTO EnrollmentForMenReport
       return {
         studentName: `${e.student.firstName} ${e.student.lastName}`,
         documentNumber: e.student.documentNumber,
-        gradeName: e.group.grade.name,
+        gradeName: e.group.gradeName,
         groupName: e.group.name,
         ...stats,
         total,

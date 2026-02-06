@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { InstitutionProvider } from './contexts/InstitutionContext'
+import { AcademicProvider } from './contexts/AcademicContext'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Students from './pages/Students'
@@ -58,6 +59,17 @@ import BulletinsReports from './pages/reports/BulletinsReports'
 import EvaluationReports from './pages/reports/EvaluationReports'
 import SystemConfig from './pages/admin/SystemConfig'
 
+// Módulo Financiero
+import {
+  FinanceHub,
+  FinanceDashboard,
+  ThirdParties,
+  Concepts,
+  Obligations,
+  Payments,
+  Expenses,
+} from './pages/finance'
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
   
@@ -113,6 +125,7 @@ function App() {
   return (
     <AuthProvider>
       <InstitutionProvider>
+      <AcademicProvider>
       <Routes>
         {/* Landing Page - Página principal pública */}
         <Route path="/" element={<LandingPage />} />
@@ -243,12 +256,24 @@ function App() {
                   <Route path="/students/alerts" element={<Alerts />} />
                   <Route path="/students/period-closure" element={<PeriodFinalGrades />} />
                   <Route path="/students/recoveries" element={<Recoveries />} />
+                  
+                  {/* ═══════════════════════════════════════════════════════════ */}
+                  {/* MÓDULO FINANCIERO                                            */}
+                  {/* ═══════════════════════════════════════════════════════════ */}
+                  <Route path="/finance" element={<FinanceHub />} />
+                  <Route path="/finance/dashboard" element={<FinanceDashboard />} />
+                  <Route path="/finance/third-parties" element={<ThirdParties />} />
+                  <Route path="/finance/concepts" element={<Concepts />} />
+                  <Route path="/finance/obligations" element={<Obligations />} />
+                  <Route path="/finance/payments" element={<Payments />} />
+                  <Route path="/finance/expenses" element={<Expenses />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>
           }
         />
       </Routes>
+      </AcademicProvider>
       </InstitutionProvider>
     </AuthProvider>
   )

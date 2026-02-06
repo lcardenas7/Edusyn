@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, BookOpen, Settings, Star, Lock, Save, AlertTriangle, Loader2 } from 'lucide-react'
-import { useInstitution, AreaType, AreaCalculationMethod, AreaApprovalCriteria, AreaRecoveryType, AcademicLevel } from '../contexts/InstitutionContext'
+import { useAcademic, AreaType, AreaCalculationMethod, AreaApprovalCriteria, AreaRecoveryType, AcademicLevel } from '../contexts/AcademicContext'
 import { useAuth } from '../contexts/AuthContext'
 import { areasApi, academicGradesApi } from '../lib/api'
 
@@ -106,17 +106,17 @@ const mapBackendAreaToFrontend = (backendArea: any): Area => ({
 })
 
 export default function AreasAdmin() {
-  const { areaConfig, setAreaConfig, saveAreaConfigToAPI, isSaving, institution: institutionConfig } = useInstitution()
+  const { areaConfig, setAreaConfig, saveAreaConfigToAPI, isSaving, institution: academicConfig } = useAcademic()
   const { user, institution } = useAuth()
   
   // Obtener niveles académicos configurados en la institución
   const academicLevels = useMemo(() => {
-    const levels = institutionConfig?.academicLevels || []
+    const levels = academicConfig?.academicLevels || []
     return [
       { code: 'TODOS', name: 'Todos los niveles' },
       ...levels.map(l => ({ code: l.code, name: l.name }))
     ]
-  }, [institutionConfig?.academicLevels])
+  }, [academicConfig?.academicLevels])
   
   // Solo admin y rector pueden editar la configuración global
   const canEditGlobalConfig = user?.roles?.some(r => {

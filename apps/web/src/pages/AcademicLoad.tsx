@@ -12,7 +12,7 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import { teachersApi, groupsApi, subjectsApi, teacherAssignmentsApi, academicYearsApi } from '../lib/api'
-import { useInstitution } from '../contexts/InstitutionContext'
+import { useAuth } from '../contexts/AuthContext'
 
 interface Teacher {
   id: string
@@ -53,7 +53,7 @@ interface AcademicLoad {
 
 
 export default function AcademicLoad() {
-  const { institution } = useInstitution()
+  const { institution } = useAuth()
   
   // Data from API
   const [teachers, setTeachers] = useState<Teacher[]>([])
@@ -97,7 +97,7 @@ export default function AcademicLoad() {
         setTeachers(teachersData)
 
         // Cargar grupos (filtrar por institución)
-        const groupsRes = await groupsApi.getAll({ institutionId: institution.id })
+        const groupsRes = await groupsApi.getAll({ institutionId: institution?.id })
         const groupsData = (groupsRes.data || []).map((g: any) => ({
           id: g.id,
           name: g.name,
@@ -145,7 +145,7 @@ export default function AcademicLoad() {
       }
     }
     fetchData()
-  }, [institution.id])
+  }, [institution?.id])
 
   const [form, setForm] = useState({
     teacherId: '',

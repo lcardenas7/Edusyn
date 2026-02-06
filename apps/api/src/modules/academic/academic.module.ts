@@ -38,6 +38,7 @@ import { GradeChangeController } from './grade-change.controller';
 import { GradeChangeService } from './grade-change.service';
 import { TemplatesController } from './templates.controller';
 import { TemplatesService } from './templates.service';
+import { AcademicStudentsController } from './academic-students.controller';
 
 @Module({
   controllers: [
@@ -60,6 +61,7 @@ import { TemplatesService } from './templates.service';
     EnrollmentReportsController,
     GradeChangeController,
     TemplatesController,
+    AcademicStudentsController,
   ],
   providers: [
     InstitutionsService,
@@ -82,6 +84,6 @@ import { TemplatesService } from './templates.service';
     GradeChangeService,
     TemplatesService,
   ],
-  exports: [GradingPeriodConfigService, RecoveryPeriodConfigService, AcademicYearLifecycleService, EnrollmentService, GuardiansService, StudentDocumentsService, EnrollmentReportsService, GradeChangeService],
+  exports: [GradingPeriodConfigService, RecoveryPeriodConfigService, AcademicYearLifecycleService, EnrollmentService, GuardiansService, StudentDocumentsService, EnrollmentReportsService, GradeChangeService, StudentsService],
 })
 export class AcademicModule {}

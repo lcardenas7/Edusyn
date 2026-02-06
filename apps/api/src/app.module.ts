@@ -24,6 +24,7 @@ import { StorageModule } from './modules/storage/storage.module';
 import { AchievementsModule } from './modules/achievements/achievements.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { ManagementTasksModule } from './modules/management-tasks/management-tasks.module';
+import { FinanceModule } from './modules/finance/finance.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { ManagementTasksModule } from './modules/management-tasks/management-tas
     AchievementsModule,
     DocumentsModule,
     ManagementTasksModule,
+    FinanceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

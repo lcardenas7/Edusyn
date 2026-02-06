@@ -1,6 +1,12 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AcademicYearStatus, EnrollmentStatus, EnrollmentEventType } from '@prisma/client';
+import {
+  AcademicTermForReport,
+  PerformanceScaleForReport,
+  TeacherAssignmentForReport,
+  TeacherAssignmentSimple,
+} from './dto/domain-reports.dto';
 
 // DTOs
 export interface CreateAcademicYearDto {
@@ -629,5 +635,147 @@ export class AcademicYearLifecycleService {
     return this.prisma.academicYear.delete({
       where: { id: yearId },
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MÉTODOS PARA DOMINIO DE REPORTES
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Estos métodos son usados por el módulo de Reportes para obtener datos
+  // sin conocer los detalles de implementación académica.
+
+  /**
+   * Obtiene un término académico por ID.
+   * Retorna DTO de dominio, NO modelo Prisma.
+   */
+  async getTermById(termId: string): Promise<AcademicTermForReport | null> {
+    const term = await this.prisma.academicTerm.findUnique({
+      where: { id: termId },
+    });
+
+    if (!term) return null;
+
+    return {
+      id: term.id,
+      name: term.name,
+      type: term.type,
+      order: term.order,
+      weightPercentage: term.weightPercentage,
+      startDate: term.startDate,
+      endDate: term.endDate,
+    };
+  }
+
+  /**
+   * Obtiene todos los términos de un año académico.
+   * Retorna DTOs de dominio, NO modelos Prisma.
+   */
+  async getTermsByAcademicYear(academicYearId: string): Promise<AcademicTermForReport[]> {
+    const terms = await this.prisma.academicTerm.findMany({
+      where: { academicYearId },
+      orderBy: { order: 'asc' },
+    });
+
+    return terms.map(t => ({
+      id: t.id,
+      name: t.name,
+      type: t.type,
+      order: t.order,
+      weightPercentage: t.weightPercentage,
+      startDate: t.startDate,
+      endDate: t.endDate,
+    }));
+  }
+
+  /**
+   * Obtiene la escala de desempeño de una institución.
+   * Retorna DTOs de dominio, NO modelos Prisma.
+   */
+  async getPerformanceScale(institutionId: string): Promise<PerformanceScaleForReport[]> {
+    const scales = await this.prisma.performanceScale.findMany({
+      where: { institutionId },
+      orderBy: { minScore: 'asc' },
+    });
+
+    return scales.map(s => ({
+      id: s.id,
+      level: s.level,
+      minScore: Number(s.minScore),
+      maxScore: Number(s.maxScore),
+      description: null, // PerformanceScale no tiene description en el schema actual
+    }));
+  }
+
+  /**
+   * Obtiene la nota mínima aprobatoria de una institución.
+   * Busca el nivel BASICO que es el mínimo aprobatorio.
+   */
+  async getPassingGrade(institutionId: string): Promise<number> {
+    const passingScale = await this.prisma.performanceScale.findFirst({
+      where: {
+        institutionId,
+        level: 'BASICO',
+      },
+      orderBy: { minScore: 'asc' },
+    });
+
+    // Si no encuentra escala, usar 3.0 como default (común en Colombia)
+    return passingScale ? Number(passingScale.minScore) : 3.0;
+  }
+
+  /**
+   * Obtiene asignaciones de docentes para un grupo y año.
+   * Retorna DTOs de dominio, NO modelos Prisma.
+   */
+  async getTeacherAssignmentsForGroup(groupId: string, academicYearId: string): Promise<TeacherAssignmentForReport[]> {
+    const assignments = await this.prisma.teacherAssignment.findMany({
+      where: { groupId, academicYearId },
+      include: {
+        subject: { include: { area: true } },
+        teacher: { select: { firstName: true, lastName: true } },
+      },
+    });
+
+    return assignments.map(a => ({
+      id: a.id,
+      subjectId: a.subjectId,
+      subjectName: a.subject.name,
+      subjectCode: a.subject.code,
+      areaId: a.subject.areaId,
+      areaName: a.subject.area.name,
+      areaCode: a.subject.area.code,
+      teacherName: `${a.teacher.firstName} ${a.teacher.lastName}`,
+    }));
+  }
+
+  /**
+   * Obtiene asignaciones de docentes para asignaturas específicas.
+   * Retorna DTOs de dominio, NO modelos Prisma.
+   */
+  async getTeacherAssignmentsForSubjects(
+    groupId: string,
+    academicYearId: string,
+    subjectIds: string[],
+  ): Promise<TeacherAssignmentSimple[]> {
+    if (subjectIds.length === 0) return [];
+
+    const assignments = await this.prisma.teacherAssignment.findMany({
+      where: {
+        groupId,
+        academicYearId,
+        subjectId: { in: subjectIds },
+      },
+      include: {
+        subject: true,
+        teacher: { select: { firstName: true, lastName: true } },
+      },
+    });
+
+    return assignments.map(a => ({
+      id: a.id,
+      subjectId: a.subjectId,
+      subjectName: a.subject.name,
+      subjectCode: a.subject.code,
+      teacherName: `${a.teacher.firstName} ${a.teacher.lastName}`,
+    }));
   }
 }

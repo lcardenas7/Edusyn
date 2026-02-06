@@ -134,45 +134,20 @@ export default function Profile() {
                 disabled={!canEditInfo}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Año Académico Actual</label>
-              <input
-                type="number"
-                value={institution.academicYear}
-                onChange={(e) => canEditInfo && setInstitution({ ...institution, academicYear: parseInt(e.target.value) || institution.academicYear })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                readOnly={!canEditInfo}
-                disabled={!canEditInfo}
-              />
-            </div>
           </div>
 
-          {/* Enlaces rápidos a otras configuraciones */}
+          {/* Enlace a estructura organizacional */}
           <div className="mt-8 pt-6 border-t border-slate-200">
-            <h3 className="text-sm font-semibold text-slate-800 mb-4">Configuración Adicional</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <Link
-                to="/institution/structure"
-                className="p-4 bg-teal-50 rounded-lg border border-teal-200 hover:bg-teal-100 transition-colors"
-              >
-                <div className="font-medium text-teal-700">Grados y Grupos</div>
-                <p className="text-xs text-teal-600 mt-1">Estructura organizacional</p>
-              </Link>
-              <Link
-                to="/academic/config/levels"
-                className="p-4 bg-purple-50 rounded-lg border border-purple-200 hover:bg-purple-100 transition-colors"
-              >
-                <div className="font-medium text-purple-700">Niveles Académicos</div>
-                <p className="text-xs text-purple-600 mt-1">Calendario y escalas</p>
-              </Link>
-              <Link
-                to="/academic/config/scale"
-                className="p-4 bg-green-50 rounded-lg border border-green-200 hover:bg-green-100 transition-colors"
-              >
-                <div className="font-medium text-green-700">Sistema de Calificación</div>
-                <p className="text-xs text-green-600 mt-1">Procesos evaluativos</p>
-              </Link>
-            </div>
+            <h3 className="text-sm font-semibold text-slate-800 mb-4">Estructura Organizacional</h3>
+            <Link
+              to="/institution/structure"
+              className="inline-flex items-center gap-2 p-4 bg-teal-50 rounded-lg border border-teal-200 hover:bg-teal-100 transition-colors"
+            >
+              <div>
+                <div className="font-medium text-teal-700">Sedes, Grados y Grupos</div>
+                <p className="text-xs text-teal-600 mt-1">Configurar la estructura física y organizacional</p>
+              </div>
+            </Link>
           </div>
         </div>
       </div>

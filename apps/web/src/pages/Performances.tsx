@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { useInstitution } from '../contexts/InstitutionContext'
+import { useAcademic } from '../contexts/AcademicContext'
 import {
   FileText,
   Settings,
@@ -69,8 +69,9 @@ const DEFAULT_COMPLEMENTS: LevelComplement[] = [
 ]
 
 export default function Performances() {
-  const { user } = useAuth()
-  const { institution } = useInstitution()
+  const { user, institution: authInstitution } = useAuth()
+  // institutionId viene de Auth (dato institucional), no de Academic
+  const institutionId = authInstitution?.id
   const [activeTab, setActiveTab] = useState<TabType>('register')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -111,12 +112,12 @@ export default function Performances() {
       const year = academicYears.find(y => y.id === selectedYearId)
       setTerms(year?.terms || [])
       loadGroups()
-      if (institution?.id) {
+      if (institutionId) {
         loadConfig()
         loadComplements()
       }
     }
-  }, [selectedYearId, institution])
+  }, [selectedYearId, institutionId])
 
   useEffect(() => {
     if (selectedGroupId && selectedYearId) {
@@ -164,9 +165,9 @@ export default function Performances() {
   }
 
   const loadConfig = async () => {
-    if (!institution?.id) return
+    if (!institutionId) return
     try {
-      const response = await performanceConfigApi.get(institution.id)
+      const response = await performanceConfigApi.get(institutionId)
       if (response.data) {
         setConfig(response.data)
       }
@@ -176,9 +177,9 @@ export default function Performances() {
   }
 
   const loadComplements = async () => {
-    if (!institution?.id) return
+    if (!institutionId) return
     try {
-      const response = await performanceConfigApi.getComplements(institution.id)
+      const response = await performanceConfigApi.getComplements(institutionId)
       if (response.data && response.data.length > 0) {
         setComplements(response.data)
       }
@@ -218,11 +219,11 @@ export default function Performances() {
   }
 
   const handleSaveConfig = async () => {
-    if (!institution?.id) return
+    if (!institutionId) return
     setSaving(true)
     try {
       await performanceConfigApi.upsert({
-        institutionId: institution.id,
+        institutionId: institutionId,
         ...config,
       })
       setMessage({ type: 'success', text: 'Configuración guardada correctamente' })
@@ -236,11 +237,11 @@ export default function Performances() {
   }
 
   const handleSaveComplements = async () => {
-    if (!institution?.id) return
+    if (!institutionId) return
     setSaving(true)
     try {
       await performanceConfigApi.bulkUpsertComplements({
-        institutionId: institution.id,
+        institutionId: institutionId,
         complements,
       })
       setMessage({ type: 'success', text: 'Complementos guardados correctamente' })
@@ -254,10 +255,10 @@ export default function Performances() {
   }
 
   const handleCreateDefaultComplements = async () => {
-    if (!institution?.id) return
+    if (!institutionId) return
     setSaving(true)
     try {
-      await performanceConfigApi.createDefaultComplements(institution.id)
+      await performanceConfigApi.createDefaultComplements(institutionId)
       await loadComplements()
       setMessage({ type: 'success', text: 'Complementos por defecto creados' })
     } catch (err) {

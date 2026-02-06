@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Plus, Edit2, Trash2, X, GraduationCap, Calendar, ChevronDown, ChevronRight, BookOpen } from 'lucide-react'
-import { useInstitution, AcademicLevel, GradingScaleType, QualitativeLevel } from '../contexts/InstitutionContext'
+import { useAcademic, AcademicLevel, GradingScaleType, QualitativeLevel } from '../contexts/AcademicContext'
 import { useAuth } from '../contexts/AuthContext'
 
 const gradingScaleLabels: Record<GradingScaleType, string> = {
@@ -19,7 +19,7 @@ const defaultQualitativeLevels: QualitativeLevel[] = [
 ]
 
 export default function AcademicLevelsAdmin() {
-  const { institution, setInstitution } = useInstitution()
+  const { institution, setInstitution } = useAcademic()
   const { user } = useAuth()
   
   const canEdit = user?.roles?.some(r => {

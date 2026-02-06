@@ -1,17 +1,22 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Response } from 'express';
 import PDFDocument from 'pdfkit';
+import { EnrollmentStatus } from '@prisma/client';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { StudentGradesService } from '../evaluation/student-grades.service';
 import { AttendanceService } from '../attendance/attendance.service';
+import { StudentsService } from '../academic/students.service';
+import { AcademicYearLifecycleService } from '../academic/academic-year-lifecycle.service';
 
 @Injectable()
 export class ReportsService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly prisma: PrismaService, // Solo para consultas que aún no tienen servicio
     private readonly studentGradesService: StudentGradesService,
     private readonly attendanceService: AttendanceService,
+    private readonly studentsService: StudentsService,
+    private readonly academicYearService: AcademicYearLifecycleService,
   ) {}
 
   /**
@@ -20,37 +25,21 @@ export class ReportsService {
    * Esto protege contra cambios en plantillas que afectarían históricos.
    */
   private async getEnrollmentSubjects(enrollmentId: string, groupId: string, academicYearId: string) {
-    // Intentar obtener snapshot de la matrícula
-    const enrollmentAreas = await this.prisma.enrollmentArea.findMany({
-      where: { enrollmentId },
-      include: {
-        enrollmentSubjects: {
-          include: { subject: true },
-          orderBy: { order: 'asc' },
-        },
-      },
-      orderBy: { order: 'asc' },
-    });
+    // Intentar obtener snapshot de la matrícula - delegar a StudentsService
+    const enrollmentAreas = await this.studentsService.getEnrollmentAcademicStructure(enrollmentId);
 
     if (enrollmentAreas.length > 0) {
       // Usar snapshot: obtener TeacherAssignments solo para las asignaturas del snapshot
       const subjectIds = enrollmentAreas
-        .flatMap(a => a.enrollmentSubjects.map(s => s.subjectId))
+        .flatMap(a => a.subjects.map(s => s.subjectId))
         .filter((id): id is string => id !== null);
       
-      const teacherAssignments = subjectIds.length > 0 
-        ? await this.prisma.teacherAssignment.findMany({
-            where: {
-              groupId,
-              academicYearId,
-              subjectId: { in: subjectIds },
-            },
-            include: {
-              subject: true,
-              teacher: { select: { firstName: true, lastName: true } },
-            },
-          })
-        : [];
+      // Delegar a AcademicYearService - retorna DTOs
+      const teacherAssignments = await this.academicYearService.getTeacherAssignmentsForSubjects(
+        groupId,
+        academicYearId,
+        subjectIds,
+      );
 
       // Mapear asignaturas del snapshot con sus asignaciones de docente
       return {
@@ -61,7 +50,7 @@ export class ReportsService {
           code: area.areaCode,
           weightPercentage: area.weightPercentage,
           calculationType: area.calculationType,
-          subjects: area.enrollmentSubjects.map(es => {
+          subjects: area.subjects.map(es => {
             const assignment = es.subjectId 
               ? teacherAssignments.find(ta => ta.subjectId === es.subjectId)
               : null;
@@ -71,8 +60,8 @@ export class ReportsService {
               code: es.subjectCode,
               weightPercentage: es.weightPercentage,
               teacherAssignmentId: assignment?.id ?? null,
-              // 🔥 Usar nombre del docente del snapshot si existe, sino del assignment actual
-              teacher: es.teacherName ?? (assignment ? `${assignment.teacher.firstName} ${assignment.teacher.lastName}` : null),
+              // Usar nombre del docente del snapshot si existe, sino del DTO de assignment
+              teacher: es.teacherName ?? (assignment?.teacherName ?? null),
             };
           }),
         })),
@@ -80,40 +69,36 @@ export class ReportsService {
     }
 
     // Fallback: usar TeacherAssignments actuales (para matrículas sin snapshot)
-    const teacherAssignments = await this.prisma.teacherAssignment.findMany({
-      where: { groupId, academicYearId },
-      include: {
-        subject: { include: { area: true } },
-        teacher: { select: { firstName: true, lastName: true } },
-      },
-    });
+    // Delegar a AcademicYearService - retorna DTOs
+    const teacherAssignments = await this.academicYearService.getTeacherAssignmentsForGroup(groupId, academicYearId);
 
-    // Agrupar por área
-    const areaMap = new Map<string, { area: any; subjects: any[] }>();
+    // Agrupar por área usando DTOs
+    const areaMap = new Map<string, { areaId: string; areaName: string; areaCode: string | null; subjects: any[] }>();
     for (const ta of teacherAssignments) {
-      const areaId = ta.subject.areaId;
-      if (!areaMap.has(areaId)) {
-        areaMap.set(areaId, {
-          area: ta.subject.area,
+      if (!areaMap.has(ta.areaId)) {
+        areaMap.set(ta.areaId, {
+          areaId: ta.areaId,
+          areaName: ta.areaName,
+          areaCode: ta.areaCode,
           subjects: [],
         });
       }
-      areaMap.get(areaId)!.subjects.push({
+      areaMap.get(ta.areaId)!.subjects.push({
         id: ta.subjectId,
-        name: ta.subject.name,
-        code: ta.subject.code,
-        weightPercentage: 100 / teacherAssignments.filter(t => t.subject.areaId === areaId).length,
+        name: ta.subjectName,
+        code: ta.subjectCode,
+        weightPercentage: 100 / teacherAssignments.filter(t => t.areaId === ta.areaId).length,
         teacherAssignmentId: ta.id,
-        teacher: `${ta.teacher.firstName} ${ta.teacher.lastName}`,
+        teacher: ta.teacherName,
       });
     }
 
     return {
       source: 'calculated' as const,
-      areas: Array.from(areaMap.values()).map(({ area, subjects }) => ({
-        id: area.id,
-        name: area.name,
-        code: area.code,
+      areas: Array.from(areaMap.values()).map(({ areaId, areaName, areaCode, subjects }) => ({
+        id: areaId,
+        name: areaName,
+        code: areaCode,
         weightPercentage: 100 / areaMap.size,
         calculationType: 'AVERAGE',
         subjects,
@@ -122,41 +107,26 @@ export class ReportsService {
   }
 
   async getReportCardData(studentEnrollmentId: string, academicTermId: string) {
-    const enrollment = await this.prisma.studentEnrollment.findUnique({
-      where: { id: studentEnrollmentId },
-      include: {
-        student: true,
-        group: {
-          include: {
-            grade: true,
-          },
-        },
-        academicYear: {
-          include: {
-            institution: true,
-          },
-        },
-      },
-    });
+    // Delegar a StudentsService para obtener matrícula
+    const enrollment = await this.studentsService.getEnrollmentForReport(studentEnrollmentId);
 
     if (!enrollment) {
       throw new NotFoundException('Student enrollment not found');
     }
 
-    const term = await this.prisma.academicTerm.findUnique({
-      where: { id: academicTermId },
-    });
+    // Delegar a AcademicYearService para obtener término
+    const term = await this.academicYearService.getTermById(academicTermId);
 
     if (!term) {
       throw new NotFoundException('Academic term not found');
     }
 
-    // 🔥 Usar snapshot de matrícula para obtener asignaturas
+    // Usar snapshot de matrícula para obtener asignaturas
     // Esto protege contra cambios en plantillas después de la matrícula
     const enrollmentStructure = await this.getEnrollmentSubjects(
       studentEnrollmentId,
-      enrollment.groupId,
-      enrollment.academicYearId,
+      enrollment.group.id,
+      enrollment.academicYear.id,
     );
 
     // Calcular notas por área y asignatura
@@ -176,7 +146,7 @@ export class ReportsService {
 
             const performanceResult = termGrade.grade
               ? await this.studentGradesService.getPerformanceLevel(
-                  enrollment.academicYear.institution.id,
+                  enrollment.academicYear.institutionId,
                   termGrade.grade,
                 )
               : null;
@@ -210,7 +180,7 @@ export class ReportsService {
 
         const areaPerformance = areaAverage
           ? await this.studentGradesService.getPerformanceLevel(
-              enrollment.academicYear.institution.id,
+              enrollment.academicYear.institutionId,
               areaAverage,
             )
           : null;
@@ -235,26 +205,25 @@ export class ReportsService {
       academicTermId,
     );
 
-    const observations = await this.prisma.studentObservation.findMany({
-      where: {
-        studentEnrollmentId,
-        date: {
-          gte: term.startDate ?? undefined,
-          lte: term.endDate ?? undefined,
-        },
-      },
-      include: {
-        author: {
-          select: { firstName: true, lastName: true },
-        },
-      },
-      orderBy: { date: 'desc' },
-      take: 10,
+    // Delegar a StudentsService para obtener observaciones
+    const observations = await this.studentsService.getStudentObservationsForReport({
+      studentEnrollmentId,
+      startDate: term.startDate ?? undefined,
+      endDate: term.endDate ?? undefined,
+      limit: 10,
     });
 
     return {
-      institution: enrollment.academicYear.institution,
-      academicYear: enrollment.academicYear,
+      institution: {
+        id: enrollment.academicYear.institutionId,
+        name: enrollment.academicYear.institutionName,
+        nit: enrollment.academicYear.institutionNit,
+      },
+      academicYear: {
+        id: enrollment.academicYear.id,
+        year: enrollment.academicYear.year,
+        name: enrollment.academicYear.name,
+      },
       term: {
         id: term.id,
         name: term.name,
@@ -270,21 +239,22 @@ export class ReportsService {
       group: {
         id: enrollment.group.id,
         name: enrollment.group.name,
-        gradeLevel: enrollment.group.grade.name,
+        gradeLevel: enrollment.group.gradeName,
       },
-      // 🔥 Estructura por áreas (nuevo formato con snapshot)
+      // Estructura por áreas (nuevo formato con snapshot)
       areaGrades,
       // Compatibilidad: lista plana de asignaturas
       subjectGrades,
       // Fuente de datos: 'snapshot' o 'calculated'
       structureSource: enrollmentStructure.source,
       attendance: attendanceSummary,
+      // Observaciones ya vienen como DTOs con authorName
       observations: observations.map((o) => ({
         date: o.date,
         type: o.type,
         category: o.category,
         description: o.description,
-        author: `${o.author.firstName} ${o.author.lastName}`,
+        author: o.authorName,
       })),
       generatedAt: new Date(),
     };
@@ -392,20 +362,11 @@ export class ReportsService {
   }
 
   async generateBulkReportCards(groupId: string, academicTermId: string, academicYearId: string) {
-    const enrollments = await this.prisma.studentEnrollment.findMany({
-      where: {
-        groupId,
-        academicYearId,
-        status: 'ACTIVE',
-      },
-      include: {
-        student: true,
-      },
-      orderBy: {
-        student: {
-          lastName: 'asc',
-        },
-      },
+    // Delegar a StudentsService para obtener matrículas del grupo
+    const enrollments = await this.studentsService.getEnrollmentsForGroupReport({
+      groupId,
+      academicYearId,
+      status: EnrollmentStatus.ACTIVE,
     });
 
     const results: Array<{
@@ -419,16 +380,17 @@ export class ReportsService {
     for (const enrollment of enrollments) {
       try {
         const pdf = await this.generateReportCardPdf(enrollment.id, academicTermId);
+        // Usar propiedades del DTO EnrollmentForGroupList
         results.push({
-          studentId: enrollment.student.id,
-          studentName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
+          studentId: enrollment.studentId,
+          studentName: enrollment.studentName,
           status: 'success',
           pdf: pdf.toString('base64'),
         });
       } catch (error) {
         results.push({
-          studentId: enrollment.student.id,
-          studentName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
+          studentId: enrollment.studentId,
+          studentName: enrollment.studentName,
           status: 'error',
           error: error.message,
         });
@@ -477,42 +439,23 @@ export class ReportsService {
     };
   }> {
     // 1. Obtener datos del estudiante y matrícula
-    const enrollment = await this.prisma.studentEnrollment.findUnique({
-      where: { id: studentEnrollmentId },
-      include: {
-        student: true,
-        group: { include: { grade: true } },
-        academicYear: { include: { institution: true } },
-      },
-    });
+    // 1. Delegar a StudentsService para obtener matrícula
+    const enrollment = await this.studentsService.getEnrollmentForReport(studentEnrollmentId);
 
     if (!enrollment) {
       throw new NotFoundException('Matrícula no encontrada');
     }
 
-    // 2. Obtener nota mínima aprobatoria de la escala institucional
-    // Buscar el nivel BASICO que es el mínimo aprobatorio
-    const passingScale = await this.prisma.performanceScale.findFirst({
-      where: {
-        institutionId: enrollment.academicYear.institutionId,
-        level: 'BASICO',
-      },
-      orderBy: { minScore: 'asc' },
-    });
+    // 2. Delegar a AcademicYearService para obtener nota mínima aprobatoria
+    const passingGrade = await this.academicYearService.getPassingGrade(enrollment.academicYear.institutionId);
 
-    // Si no encuentra escala, usar 3.0 como default (común en Colombia)
-    const passingGrade = passingScale ? Number(passingScale.minScore) : 3.0;
-
-    // 3. Obtener períodos académicos con sus pesos
-    const terms = await this.prisma.academicTerm.findMany({
-      where: { academicYearId },
-      orderBy: { order: 'asc' },
-    });
+    // 3. Delegar a AcademicYearService para obtener períodos
+    const terms = await this.academicYearService.getTermsByAcademicYear(academicYearId);
 
     // 4. Obtener estructura de asignaturas del estudiante
     const enrollmentStructure = await this.getEnrollmentSubjects(
       studentEnrollmentId,
-      enrollment.groupId,
+      enrollment.group.id,
       academicYearId,
     );
 
@@ -659,7 +602,7 @@ export class ReportsService {
       group: {
         id: enrollment.group.id,
         name: enrollment.group.name,
-        gradeName: enrollment.group.grade.name,
+        gradeName: enrollment.group.gradeName,
       },
       passingGrade,
       subjects: subjectResults,
@@ -695,18 +638,11 @@ export class ReportsService {
       minimumRequired: number | null;
     }>;
   }>> {
-    const enrollments = await this.prisma.studentEnrollment.findMany({
-      where: {
-        groupId,
-        academicYearId,
-        status: 'ACTIVE',
-      },
-      include: {
-        student: true,
-      },
-      orderBy: {
-        student: { lastName: 'asc' },
-      },
+    // Delegar a StudentsService para obtener matrículas del grupo
+    const enrollments = await this.studentsService.getEnrollmentsForGroupReport({
+      groupId,
+      academicYearId,
+      status: EnrollmentStatus.ACTIVE,
     });
 
     const results: Array<{
@@ -739,16 +675,17 @@ export class ReportsService {
             minimumRequired: s.minimumRequired,
           }));
 
+        // Usar propiedades del DTO EnrollmentForGroupList
         results.push({
-          studentId: enrollment.student.id,
-          studentName: `${enrollment.student.lastName} ${enrollment.student.firstName}`,
+          studentId: enrollment.studentId,
+          studentName: `${enrollment.studentLastName} ${enrollment.studentFirstName}`,
           summary: data.summary,
           criticalSubjects,
         });
       } catch (error) {
         results.push({
-          studentId: enrollment.student.id,
-          studentName: `${enrollment.student.lastName} ${enrollment.student.firstName}`,
+          studentId: enrollment.studentId,
+          studentName: `${enrollment.studentLastName} ${enrollment.studentFirstName}`,
           summary: { totalSubjects: 0, approved: 0, atRisk: 0, impossible: 0, pending: 0 },
           criticalSubjects: [],
         });

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronRight, ChevronLeft, Check, AlertCircle, Calendar, Users, Settings, Play, Square, Trash2, Plus } from 'lucide-react'
 import { academicYearLifecycleApi, academicTermsApi, enrollmentsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
-import { useInstitution } from '../contexts/InstitutionContext'
+import { useAcademic } from '../contexts/AcademicContext'
 
 interface AcademicYear {
   id: string
@@ -39,7 +39,7 @@ interface ValidationErrors {
 const AcademicYearWizard: React.FC = () => {
   const navigate = useNavigate()
   const { user, institution } = useAuth()
-  const { loadPeriodsFromActiveYear } = useInstitution()
+  const { loadPeriodsFromActiveYear } = useAcademic()
   
   // Estado del wizard
   const [currentStep, setCurrentStep] = useState(0)

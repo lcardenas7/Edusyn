@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { useInstitution } from '../contexts/InstitutionContext'
+import { useAcademic } from '../contexts/AcademicContext'
 import {
   RefreshCw,
   Settings,
@@ -69,8 +69,9 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 export default function Recoveries() {
-  const { user } = useAuth()
-  const { institution } = useInstitution()
+  const { user, institution: authInstitution } = useAuth()
+  // institutionId viene de Auth (dato institucional), no de Academic
+  const institutionId = authInstitution?.id
   const [activeTab, setActiveTab] = useState<TabType>('period')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -155,13 +156,13 @@ export default function Recoveries() {
       }
       loadTerms()
       
-      if (institution?.id) {
+      if (institutionId) {
         loadConfig()
         loadFinalRecoveries()
         loadActs()
       }
     }
-  }, [selectedYearId, institution])
+  }, [selectedYearId, institutionId])
 
   useEffect(() => {
     if (selectedTermId) {
@@ -388,9 +389,9 @@ export default function Recoveries() {
   }
 
   const loadConfig = async () => {
-    if (!institution?.id || !selectedYearId) return
+    if (!institutionId || !selectedYearId) return
     try {
-      const response = await recoveryConfigApi.get(institution.id, selectedYearId)
+      const response = await recoveryConfigApi.get(institutionId, selectedYearId)
       if (response.data) {
         setConfig({
           ...response.data,
@@ -433,9 +434,9 @@ export default function Recoveries() {
   }
 
   const loadActs = async () => {
-    if (!institution?.id || !selectedYearId) return
+    if (!institutionId || !selectedYearId) return
     try {
-      const response = await academicActsApi.getAll(institution.id, selectedYearId)
+      const response = await academicActsApi.getAll(institutionId, selectedYearId)
       setActs(response.data)
     } catch (err) {
       console.error('Error loading acts:', err)
@@ -443,11 +444,11 @@ export default function Recoveries() {
   }
 
   const handleSaveConfig = async () => {
-    if (!institution?.id || !selectedYearId) return
+    if (!institutionId || !selectedYearId) return
     setSaving(true)
     try {
       await recoveryConfigApi.upsert({
-        institutionId: institution.id,
+        institutionId: institutionId,
         academicYearId: selectedYearId,
         ...config,
       })

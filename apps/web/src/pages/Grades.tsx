@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { BookOpen, ChevronDown, Save, Plus, Trash2, X, Settings, AlertTriangle, Lock } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { useInstitution } from '../contexts/InstitutionContext'
-import { teacherAssignmentsApi, studentsApi, gradingPeriodConfigApi, periodFinalGradesApi, partialGradesApi, achievementsApi, achievementConfigApi } from '../lib/api'
+import { useAcademic } from '../contexts/AcademicContext'
+import { teacherAssignmentsApi, academicStudentsApi, gradingPeriodConfigApi, periodFinalGradesApi, partialGradesApi, achievementsApi, achievementConfigApi } from '../lib/api'
 
 interface TeacherAssignment {
   id: string
@@ -65,8 +65,10 @@ interface ProcessConfig {
 }
 
 export default function Grades() {
-  const { user } = useAuth()
-  const { gradingConfig, setGradingConfig, periods, selectedPeriod, setSelectedPeriod, institution } = useInstitution()
+  const { user, institution: authInstitution } = useAuth()
+  const { gradingConfig, setGradingConfig, periods, selectedPeriod, setSelectedPeriod } = useAcademic()
+  // institutionId viene de Auth (dato institucional)
+  const institutionId = authInstitution?.id
   
   const userRoles = useMemo(() => {
     if (!user?.roles) return []
@@ -309,30 +311,13 @@ export default function Grades() {
       }
       setLoadingStudents(true)
       try {
-        const response = await studentsApi.getAll({
+        // Usar academicStudentsApi para mantener separación de dominios
+        const response = await academicStudentsApi.getByGroup({
           groupId: selectedAssignment.group.id,
           academicYearId: selectedAssignment.academicYear.id,
         })
-        const data = response.data || []
-        const mappedStudents = data.map((item: any) => {
-          if (item.student) {
-            return {
-              id: item.student.id,
-              name: `${item.student.firstName} ${item.student.lastName}`,
-              enrollmentId: item.id,
-            }
-          }
-          const enrollment = item.enrollments?.find((e: any) => 
-            e.groupId === selectedAssignment.group.id && 
-            e.academicYearId === selectedAssignment.academicYear.id
-          )
-          return {
-            id: item.id,
-            name: `${item.firstName} ${item.lastName}`,
-            enrollmentId: enrollment?.id || item.id,
-          }
-        })
-        setStudents(mappedStudents)
+        // El endpoint académico ya retorna el formato correcto: { id, name, enrollmentId }
+        setStudents(response.data || [])
       } catch (err) {
         console.error('Error loading students:', err)
         setStudents([])
@@ -532,11 +517,11 @@ export default function Grades() {
   // Cargar logros cuando se cambia a la pestaña de logros
   useEffect(() => {
     const loadAchievements = async () => {
-      if (viewMode !== 'achievements' || !selectedAssignment?.id || !academicTermId || !institution?.id) return
+      if (viewMode !== 'achievements' || !selectedAssignment?.id || !academicTermId || !institutionId) return
       try {
         const [achievementsRes, configRes] = await Promise.all([
           achievementsApi.getByAssignment(selectedAssignment.id, academicTermId),
-          achievementConfigApi.get(institution.id)
+          achievementConfigApi.get(institutionId!)
         ])
         setAchievements(achievementsRes.data || [])
         if (configRes.data) {
@@ -550,7 +535,7 @@ export default function Grades() {
       }
     }
     loadAchievements()
-  }, [viewMode, selectedAssignment?.id, academicTermId, institution?.id])
+  }, [viewMode, selectedAssignment?.id, academicTermId, institutionId])
 
   // Todas las columnas para navegación
   const allActivityColumns = useMemo(() => {

@@ -313,7 +313,32 @@ export const communicationsApi = {
   getById: (id: string) => api.get(`/communications/${id}`),
 }
 
-// Students
+// ═══════════════════════════════════════════════════════════════════════════
+// ACADEMIC STUDENTS API - Para uso exclusivo de páginas académicas
+// ═══════════════════════════════════════════════════════════════════════════
+// Las páginas académicas (Grades, Attendance, Observer, Achievements, etc.)
+// deben usar esta API en lugar de studentsApi para mantener la separación de dominios.
+
+export const academicStudentsApi = {
+  /**
+   * Obtiene estudiantes para un grupo en un año académico.
+   * Retorna solo datos necesarios para el contexto académico: id, name, enrollmentId
+   */
+  getByGroup: (params: { groupId: string; academicYearId: string; institutionId?: string }) => 
+    api.get('/academic/students/by-group', { params }),
+  
+  /**
+   * Obtiene estudiantes para múltiples grupos (útil para reportes)
+   */
+  getByGroups: (params: { groupIds: string[]; academicYearId: string; institutionId?: string }) => 
+    api.get('/academic/students/by-groups', { params: { ...params, groupIds: params.groupIds.join(',') } }),
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STUDENTS API - Para gestión estudiantil (matrícula, estados, documentos)
+// ═══════════════════════════════════════════════════════════════════════════
+// Esta API es para el dominio de Gestión Estudiantil, NO para páginas académicas.
+
 export const studentsApi = {
   getAll: (params?: { institutionId?: string; groupId?: string; academicYearId?: string }) => api.get('/students', { params }),
   getById: (id: string) => api.get(`/students/${id}`),
