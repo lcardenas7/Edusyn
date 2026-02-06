@@ -52,6 +52,13 @@ export const institutionsApi = {
   create: (data: { name: string; daneCode?: string; nit?: string }) => api.post('/institutions', data),
 }
 
+// Institution Profile (identidad institucional - para admin institucional)
+export const institutionProfileApi = {
+  get: () => api.get('/institution-config/profile'),
+  update: (data: { name?: string; nit?: string; daneCode?: string; address?: string; phone?: string; email?: string; website?: string; logo?: string }) => 
+    api.put('/institution-config/profile', data),
+}
+
 // Campuses (Sedes)
 export const campusesApi = {
   getAll: (institutionId?: string) => api.get('/campuses', { params: { institutionId } }),
@@ -353,6 +360,9 @@ export const studentsApi = {
   activateAccess: (studentId: string) => api.post(`/students/${studentId}/activate-access`),
   deactivateAccess: (studentId: string) => api.post(`/students/${studentId}/deactivate-access`),
   bulkActivateAccess: (studentIds: string[]) => api.post('/students/bulk-activate-access', { studentIds }),
+  resetPassword: (studentId: string) => api.post(`/students/${studentId}/reset-password`),
+  bulkResetPassword: (studentIds: string[]) => api.post('/students/bulk-reset-password', { studentIds }),
+  getCredentials: (institutionId: string) => api.get('/students/credentials/list', { params: { institutionId } }),
   bulkDeleteWithoutRecords: (institutionId: string) => api.post('/students/bulk-delete-without-records', { institutionId }),
 }
 
@@ -994,4 +1004,115 @@ export const academicTemplatesApi = {
     api.get(`/academic-templates/groups/${groupId}/exceptions`, { params: { academicYearId } }),
   getEffectiveStructure: (groupId: string, academicYearId: string) => 
     api.get(`/academic-templates/groups/${groupId}/effective-structure`, { params: { academicYearId } }),
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MÓDULO FINANCIERO
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const financeDashboardApi = {
+  get: () => api.get('/finance/dashboard'),
+}
+
+export const financeThirdPartiesApi = {
+  getAll: (params?: { type?: string; search?: string; isActive?: string }) => 
+    api.get('/finance/third-parties', { params }),
+  getById: (id: string) => api.get(`/finance/third-parties/${id}`),
+  getByType: (type: string) => api.get(`/finance/third-parties/by-type/${type}`),
+  getSummary: (id: string) => api.get(`/finance/third-parties/${id}/summary`),
+  create: (data: { type: string; name: string; document?: string; documentType?: string; email?: string; phone?: string; address?: string; businessName?: string; nit?: string; bankName?: string; bankAccount?: string; bankAccountType?: string; notes?: string; referenceId?: string }) => 
+    api.post('/finance/third-parties', data),
+  update: (id: string, data: any) => api.put(`/finance/third-parties/${id}`, data),
+  delete: (id: string) => api.delete(`/finance/third-parties/${id}`),
+  syncFromAcademic: (data: { syncStudents?: boolean; syncTeachers?: boolean; syncGuardians?: boolean }) => 
+    api.post('/finance/third-parties/sync', data),
+}
+
+export const financeCategoriesApi = {
+  getAll: (type?: string) => api.get('/finance/categories', { params: { type } }),
+  getById: (id: string) => api.get(`/finance/categories/${id}`),
+  create: (data: { name: string; description?: string; code?: string; type?: string; budgetAmount?: number; color?: string; icon?: string }) => 
+    api.post('/finance/categories', data),
+  update: (id: string, data: any) => api.put(`/finance/categories/${id}`, data),
+  delete: (id: string) => api.delete(`/finance/categories/${id}`),
+  seedDefaults: () => api.post('/finance/categories/seed-defaults'),
+}
+
+export const financeConceptsApi = {
+  getAll: (params?: { categoryId?: string; isActive?: string; isMassive?: string }) => 
+    api.get('/finance/concepts', { params }),
+  getById: (id: string) => api.get(`/finance/concepts/${id}`),
+  create: (data: { name: string; description?: string; categoryId: string; defaultAmount: number; isMassive?: boolean; isRecurring?: boolean; allowPartial?: boolean; allowDiscount?: boolean; validFrom?: string; validUntil?: string; dueDate?: string; lateFeeType?: string; lateFeeValue?: number; gracePeriodDays?: number }) => 
+    api.post('/finance/concepts', data),
+  update: (id: string, data: any) => api.put(`/finance/concepts/${id}`, data),
+  delete: (id: string) => api.delete(`/finance/concepts/${id}`),
+}
+
+export const financeObligationsApi = {
+  getAll: (params?: { thirdPartyId?: string; conceptId?: string; status?: string }) => 
+    api.get('/finance/obligations', { params }),
+  getById: (id: string) => api.get(`/finance/obligations/${id}`),
+  getStats: () => api.get('/finance/obligations/stats'),
+  create: (data: { thirdPartyId: string; conceptId: string; amount?: number; discountAmount?: number; discountReason?: string; dueDate?: string; notes?: string }) => 
+    api.post('/finance/obligations', data),
+  createMassive: (data: { conceptId: string; targetType: 'GRADE' | 'GROUP' | 'STUDENTS'; targetIds: string[]; amount?: number; discountAmount?: number; discountReason?: string; dueDate?: string }) => 
+    api.post('/finance/obligations/massive', data),
+  applyDiscount: (id: string, data: { discountAmount: number; discountReason: string }) => 
+    api.put(`/finance/obligations/${id}/discount`, data),
+  cancel: (id: string, reason: string) => 
+    api.put(`/finance/obligations/${id}/cancel`, { reason }),
+}
+
+export const financePaymentsApi = {
+  getAll: (params?: { thirdPartyId?: string; obligationId?: string; paymentMethod?: string }) => 
+    api.get('/finance/payments', { params }),
+  getById: (id: string) => api.get(`/finance/payments/${id}`),
+  getStats: (params?: { dateFrom?: string; dateTo?: string }) => 
+    api.get('/finance/payments/stats', { params }),
+  create: (data: { thirdPartyId: string; obligationId?: string; amount: number; paymentMethod: string; transactionRef?: string; notes?: string }) => 
+    api.post('/finance/payments', data),
+  void: (id: string, reason: string) => 
+    api.put(`/finance/payments/${id}/void`, { reason }),
+  closeRegister: (data: { closeDate: string; physicalCash?: number; notes?: string }) => 
+    api.post('/finance/payments/close-register', data),
+  downloadReceipt: (id: string) => 
+    api.get(`/finance/payments/${id}/receipt`, { responseType: 'blob' }),
+}
+
+export const financeExpensesApi = {
+  getAll: (params?: { categoryId?: string; providerId?: string; dateFrom?: string; dateTo?: string }) => 
+    api.get('/finance/expenses', { params }),
+  getById: (id: string) => api.get(`/finance/expenses/${id}`),
+  create: (data: { categoryId: string; providerId?: string; description: string; amount: number; expenseDate?: string; invoiceNumber?: string; invoiceDate?: string; paymentMethod?: string; transactionRef?: string; notes?: string }) => 
+    api.post('/finance/expenses', data),
+  approve: (id: string) => api.put(`/finance/expenses/${id}/approve`),
+  void: (id: string, reason: string) => 
+    api.put(`/finance/expenses/${id}/void`, { reason }),
+}
+
+export const financeInvoicesApi = {
+  getAll: (params?: { thirdPartyId?: string; status?: string; type?: string }) => 
+    api.get('/finance/invoices', { params }),
+  getById: (id: string) => api.get(`/finance/invoices/${id}`),
+  create: (data: { thirdPartyId: string; type: 'INCOME' | 'EXPENSE'; items: Array<{ description: string; quantity: number; unitPrice: number; obligationId?: string }>; dueDate?: string; notes?: string }) => 
+    api.post('/finance/invoices', data),
+  issue: (id: string) => api.put(`/finance/invoices/${id}/issue`),
+  cancel: (id: string, reason: string) => 
+    api.put(`/finance/invoices/${id}/cancel`, { reason }),
+  downloadPdf: (id: string) => 
+    api.get(`/finance/invoices/${id}/pdf`, { responseType: 'blob' }),
+}
+
+export const financeReportsApi = {
+  getPortfolioByGrade: () => api.get('/finance/reports/portfolio-by-grade'),
+  getTopDebtors: (limit?: number) => api.get('/finance/reports/top-debtors', { params: { limit } }),
+  getMonthlyBalance: (year: number) => api.get('/finance/reports/monthly-balance', { params: { year } }),
+  getProfitabilityByConcept: () => api.get('/finance/reports/profitability'),
+  getStudentHistory: (studentId: string) => api.get(`/finance/reports/student/${studentId}`),
+}
+
+export const financeSettingsApi = {
+  get: () => api.get('/finance/settings'),
+  update: (data: { invoicePrefix?: string; receiptPrefix?: string; defaultLateFeeType?: string; defaultLateFeeValue?: number; defaultGracePeriodDays?: number; taxId?: string; taxRegime?: string; bankAccounts?: any; sendPaymentReminders?: boolean; reminderDaysBefore?: number }) => 
+    api.put('/finance/settings', data),
 }

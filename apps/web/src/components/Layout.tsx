@@ -39,7 +39,10 @@ import {
   EyeOff,
   Vote,
   FolderOpen,
-  ListTodo
+  ListTodo,
+  Percent,
+  CalendarClock,
+  DollarSign,
 } from 'lucide-react'
 
 type Role = 'SUPER_ADMIN' | 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE' | 'SECRETARIA'
@@ -111,6 +114,7 @@ const institutionalNavigation: NavItem[] = [
     module: 'CONFIG',
     children: [
       { name: 'Configuración', href: '/institution', icon: Settings, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'CONFIG' },
+      { name: 'Configuración SIEE', href: '/academic', icon: Percent, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
       { name: 'Catálogo Académico', href: '/academic-catalog', icon: Layers, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
       { name: 'Plantillas Académicas', href: '/academic-templates', icon: BookOpen, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
     ]
@@ -198,6 +202,22 @@ const institutionalNavigation: NavItem[] = [
     ]
   },
   
+  // Gestión Financiera
+  { 
+    name: 'Gestión Financiera', 
+    icon: DollarSign, 
+    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA'],
+    module: 'FINANCE',
+    children: [
+      { name: 'Panel Financiero', href: '/finance', icon: LayoutDashboard, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA'], module: 'FINANCE' },
+      { name: 'Terceros', href: '/finance/third-parties', icon: Users, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA'], module: 'FINANCE' },
+      { name: 'Obligaciones', href: '/finance/obligations', icon: FileText, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA'], module: 'FINANCE' },
+      { name: 'Caja / Recaudos', href: '/finance/payments', icon: Briefcase, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA'], module: 'FINANCE' },
+      { name: 'Egresos', href: '/finance/expenses', icon: TrendingUp, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'FINANCE' },
+      { name: 'Reportes', href: '/finance/reports', icon: BarChart3, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'FINANCE' },
+    ]
+  },
+
   // Documentos y Gestión
   { name: 'Documentos', href: '/institutional-documents', icon: FolderOpen, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'SECRETARIA'] },
   { name: 'Gestión de Tareas', href: '/management-tasks', icon: ListTodo, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'] },

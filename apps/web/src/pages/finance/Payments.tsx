@@ -12,6 +12,7 @@ import {
   Smartphone,
   Building,
 } from 'lucide-react'
+import { financePaymentsApi } from '../../lib/api'
 
 type PaymentMethod = 'CASH' | 'TRANSFER' | 'CARD' | 'PSE' | 'NEQUI' | 'DAVIPLATA' | 'OTHER'
 
@@ -45,7 +46,6 @@ const formatCurrency = (value: number) => {
 }
 
 export default function Payments() {
-  const token = localStorage.getItem('token')
   const [payments, setPayments] = useState<Payment[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -55,16 +55,10 @@ export default function Payments() {
   const fetchPayments = async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams()
-      if (methodFilter) params.append('paymentMethod', methodFilter)
-      
-      const response = await fetch(`/api/finance/payments?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setPayments(data)
-      }
+      const params: any = {}
+      if (methodFilter) params.paymentMethod = methodFilter
+      const response = await financePaymentsApi.getAll(params)
+      setPayments(response.data)
     } catch (err) {
       console.error('Error fetching payments:', err)
     } finally {
@@ -74,7 +68,7 @@ export default function Payments() {
 
   useEffect(() => {
     fetchPayments()
-  }, [token, methodFilter])
+  }, [methodFilter])
 
   const filteredPayments = payments.filter(p => {
     if (!search) return true

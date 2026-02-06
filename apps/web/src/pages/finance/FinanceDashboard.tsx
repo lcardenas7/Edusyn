@@ -10,6 +10,7 @@ import {
   CheckCircle,
   RefreshCw,
 } from 'lucide-react'
+import { financeDashboardApi } from '../../lib/api'
 
 interface DashboardData {
   summary: {
@@ -44,7 +45,6 @@ const formatCurrency = (value: number) => {
 }
 
 export default function FinanceDashboard() {
-  const token = localStorage.getItem('token')
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -52,14 +52,10 @@ export default function FinanceDashboard() {
   const fetchDashboard = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/finance/dashboard', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!response.ok) throw new Error('Error al cargar dashboard')
-      const result = await response.json()
-      setData(result)
+      const response = await financeDashboardApi.get()
+      setData(response.data)
     } catch (err: any) {
-      setError(err.message)
+      setError(err.response?.data?.message || err.message || 'Error al cargar dashboard')
     } finally {
       setLoading(false)
     }
@@ -67,7 +63,7 @@ export default function FinanceDashboard() {
 
   useEffect(() => {
     fetchDashboard()
-  }, [token])
+  }, [])
 
   if (loading) {
     return (

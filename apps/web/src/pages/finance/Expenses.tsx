@@ -10,6 +10,7 @@ import {
   CheckCircle,
   XCircle,
 } from 'lucide-react'
+import { financeExpensesApi } from '../../lib/api'
 
 interface Expense {
   id: string
@@ -34,7 +35,6 @@ const formatCurrency = (value: number) => {
 }
 
 export default function Expenses() {
-  const token = localStorage.getItem('token')
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -43,13 +43,8 @@ export default function Expenses() {
   const fetchExpenses = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/finance/expenses', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setExpenses(data)
-      }
+      const response = await financeExpensesApi.getAll()
+      setExpenses(response.data)
     } catch (err) {
       console.error('Error fetching expenses:', err)
     } finally {
@@ -59,7 +54,7 @@ export default function Expenses() {
 
   useEffect(() => {
     fetchExpenses()
-  }, [token])
+  }, [])
 
   const filteredExpenses = expenses.filter(e => {
     if (!search) return true

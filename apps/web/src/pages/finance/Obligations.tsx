@@ -13,6 +13,7 @@ import {
   XCircle,
   Users,
 } from 'lucide-react'
+import { financeObligationsApi } from '../../lib/api'
 
 type ObligationStatus = 'PENDING' | 'PARTIAL' | 'PAID' | 'CANCELLED' | 'OVERDUE'
 
@@ -47,7 +48,6 @@ const formatCurrency = (value: number) => {
 }
 
 export default function Obligations() {
-  const token = localStorage.getItem('token')
   const [searchParams, setSearchParams] = useSearchParams()
   const [obligations, setObligations] = useState<Obligation[]>([])
   const [loading, setLoading] = useState(true)
@@ -60,16 +60,10 @@ export default function Obligations() {
   const fetchObligations = async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams()
-      if (statusFilter) params.append('status', statusFilter)
-      
-      const response = await fetch(`/api/finance/obligations?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setObligations(data)
-      }
+      const params: any = {}
+      if (statusFilter) params.status = statusFilter
+      const response = await financeObligationsApi.getAll(params)
+      setObligations(response.data)
     } catch (err) {
       console.error('Error fetching obligations:', err)
     } finally {
@@ -79,7 +73,7 @@ export default function Obligations() {
 
   useEffect(() => {
     fetchObligations()
-  }, [token, statusFilter])
+  }, [statusFilter])
 
   const filteredObligations = obligations.filter(obl => {
     if (!search) return true

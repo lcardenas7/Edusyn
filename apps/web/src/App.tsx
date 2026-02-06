@@ -68,6 +68,10 @@ import {
   Obligations,
   Payments,
   Expenses,
+  Categories,
+  Invoices,
+  FinanceReports,
+  FinanceSettings,
 } from './pages/finance'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -267,6 +271,10 @@ function App() {
                   <Route path="/finance/obligations" element={<Obligations />} />
                   <Route path="/finance/payments" element={<Payments />} />
                   <Route path="/finance/expenses" element={<Expenses />} />
+                  <Route path="/finance/categories" element={<Categories />} />
+                  <Route path="/finance/invoices" element={<Invoices />} />
+                  <Route path="/finance/reports" element={<FinanceReports />} />
+                  <Route path="/finance/settings" element={<FinanceSettings />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

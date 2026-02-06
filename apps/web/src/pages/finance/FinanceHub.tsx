@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   DollarSign,
@@ -12,6 +13,10 @@ import {
   Wallet,
   ArrowLeft,
 } from 'lucide-react'
+import { financeDashboardApi } from '../../lib/api'
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value)
 
 interface FinanceCard {
   title: string
@@ -96,6 +101,19 @@ const financeCards: FinanceCard[] = [
 ]
 
 export default function FinanceHub() {
+  const [stats, setStats] = useState<any>(null)
+
+  useEffect(() => {
+    financeDashboardApi.get()
+      .then(res => setStats(res.data))
+      .catch(() => {})
+  }, [])
+
+  const pendingCount = stats?.portfolio?.pending?.count ?? '--'
+  const overdueCount = stats?.portfolio?.overdue?.count ?? '--'
+  const monthlyIncome = stats?.summary?.monthlyIncome
+  const monthlyExpenses = stats?.summary?.monthlyExpenses
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -166,28 +184,32 @@ export default function FinanceHub() {
               className="p-4 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors"
             >
               <p className="text-sm text-yellow-600 font-medium">Pendientes</p>
-              <p className="text-2xl font-bold text-yellow-700">--</p>
+              <p className="text-2xl font-bold text-yellow-700">{pendingCount}</p>
             </Link>
             <Link
               to="/finance/obligations?status=OVERDUE"
               className="p-4 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
             >
               <p className="text-sm text-red-600 font-medium">Vencidas</p>
-              <p className="text-2xl font-bold text-red-700">--</p>
+              <p className="text-2xl font-bold text-red-700">{overdueCount}</p>
             </Link>
             <Link
               to="/finance/payments"
               className="p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
             >
-              <p className="text-sm text-green-600 font-medium">Recaudo Hoy</p>
-              <p className="text-2xl font-bold text-green-700">$--</p>
+              <p className="text-sm text-green-600 font-medium">Ingresos Mes</p>
+              <p className="text-2xl font-bold text-green-700">
+                {monthlyIncome != null ? formatCurrency(Number(monthlyIncome)) : '$--'}
+              </p>
             </Link>
             <Link
               to="/finance/expenses"
               className="p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
             >
               <p className="text-sm text-blue-600 font-medium">Egresos Mes</p>
-              <p className="text-2xl font-bold text-blue-700">$--</p>
+              <p className="text-2xl font-bold text-blue-700">
+                {monthlyExpenses != null ? formatCurrency(Number(monthlyExpenses)) : '$--'}
+              </p>
             </Link>
           </div>
         </div>

@@ -12,6 +12,7 @@ import {
   UserCheck,
   Filter,
 } from 'lucide-react'
+import { financeThirdPartiesApi } from '../../lib/api'
 type ThirdPartyType = 'STUDENT' | 'TEACHER' | 'GUARDIAN' | 'PROVIDER' | 'EXTERNAL'
 
 interface ThirdParty {
@@ -34,7 +35,6 @@ const typeLabels: Record<ThirdPartyType, { label: string; icon: React.ReactNode;
 }
 
 export default function ThirdParties() {
-  const token = localStorage.getItem('token')
   const [thirdParties, setThirdParties] = useState<ThirdParty[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -44,17 +44,11 @@ export default function ThirdParties() {
   const fetchThirdParties = async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams()
-      if (search) params.append('search', search)
-      if (typeFilter) params.append('type', typeFilter)
-      
-      const response = await fetch(`/api/finance/third-parties?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setThirdParties(data)
-      }
+      const params: any = {}
+      if (search) params.search = search
+      if (typeFilter) params.type = typeFilter
+      const response = await financeThirdPartiesApi.getAll(params)
+      setThirdParties(response.data)
     } catch (err) {
       console.error('Error fetching third parties:', err)
     } finally {
@@ -65,23 +59,14 @@ export default function ThirdParties() {
   const syncFromAcademic = async () => {
     setSyncing(true)
     try {
-      const response = await fetch('/api/finance/third-parties/sync', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          syncStudents: true,
-          syncTeachers: true,
-          syncGuardians: true,
-        }),
+      const response = await financeThirdPartiesApi.syncFromAcademic({
+        syncStudents: true,
+        syncTeachers: true,
+        syncGuardians: true,
       })
-      if (response.ok) {
-        const result = await response.json()
-        alert(`Sincronización completada: ${result.created} creados, ${result.updated} actualizados`)
-        fetchThirdParties()
-      }
+      const result = response.data
+      alert(`Sincronización completada: ${result.created} creados, ${result.updated} actualizados`)
+      fetchThirdParties()
     } catch (err) {
       console.error('Error syncing:', err)
     } finally {
@@ -91,7 +76,7 @@ export default function ThirdParties() {
 
   useEffect(() => {
     fetchThirdParties()
-  }, [token, typeFilter])
+  }, [typeFilter])
 
   useEffect(() => {
     const timer = setTimeout(() => {

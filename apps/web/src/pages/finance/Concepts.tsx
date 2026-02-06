@@ -11,6 +11,7 @@ import {
   ToggleLeft,
   ToggleRight,
 } from 'lucide-react'
+import { financeConceptsApi } from '../../lib/api'
 
 interface Concept {
   id: string
@@ -34,7 +35,6 @@ const formatCurrency = (value: number) => {
 }
 
 export default function Concepts() {
-  const token = localStorage.getItem('token')
   const [concepts, setConcepts] = useState<Concept[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -42,13 +42,8 @@ export default function Concepts() {
   const fetchConcepts = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/finance/concepts', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setConcepts(data)
-      }
+      const response = await financeConceptsApi.getAll()
+      setConcepts(response.data)
     } catch (err) {
       console.error('Error fetching concepts:', err)
     } finally {
@@ -58,7 +53,7 @@ export default function Concepts() {
 
   useEffect(() => {
     fetchConcepts()
-  }, [token])
+  }, [])
 
   const filteredConcepts = concepts.filter(c => {
     if (!search) return true
