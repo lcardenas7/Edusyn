@@ -8,6 +8,7 @@ import {
   Post,
   Query,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -15,16 +16,22 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { AcademicTermsService } from './academic-terms.service';
 import { CreateAcademicTermDto } from './dto/create-academic-term.dto';
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('academic-terms')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AcademicTermsController {
-  constructor(private readonly academicTermsService: AcademicTermsService) {}
+  constructor(
+    private readonly academicTermsService: AcademicTermsService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get('years')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async listYears(@Query('institutionId') institutionId?: string) {
-    return this.academicTermsService.listYears(institutionId);
+  async listYears(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.academicTermsService.listYears(instId);
   }
 
   @Post('years')

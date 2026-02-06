@@ -8,6 +8,7 @@ import {
   Post,
   Query,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -15,12 +16,15 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { CreateEvaluationComponentDto } from './dto/create-evaluation-component.dto';
 import { EvaluationComponentsService } from './evaluation-components.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('evaluation-components')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class EvaluationComponentsController {
   constructor(
     private readonly evaluationComponentsService: EvaluationComponentsService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Post()
@@ -31,14 +35,16 @@ export class EvaluationComponentsController {
 
   @Get()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async list(@Query('institutionId') institutionId: string) {
-    return this.evaluationComponentsService.list(institutionId);
+  async list(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.evaluationComponentsService.list(instId);
   }
 
   @Get('hierarchy')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async getHierarchy(@Query('institutionId') institutionId: string) {
-    return this.evaluationComponentsService.getHierarchy(institutionId);
+  async getHierarchy(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.evaluationComponentsService.getHierarchy(instId);
   }
 
   @Patch(':id')

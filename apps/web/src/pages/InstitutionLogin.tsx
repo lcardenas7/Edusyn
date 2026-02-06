@@ -187,10 +187,8 @@ export default function InstitutionLogin() {
         throw new Error(data.message || 'Credenciales incorrectas')
       }
 
-      // Guardar token y datos de institución
+      // Guardar token (AuthContext carga institución automáticamente desde /auth/me)
       localStorage.setItem('token', data.access_token)
-      localStorage.setItem('institutionId', institution.id)
-      localStorage.setItem('institutionName', institution.name)
       
       // Recargar la página para que AuthContext cargue el perfil con el nuevo token
       window.location.href = '/dashboard'

@@ -3,7 +3,10 @@ import {
   UsersRound,
   Users,
   ChevronRight,
-  Settings
+  Settings,
+  Percent,
+  BookOpen,
+  Calendar
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useInstitution } from '../contexts/InstitutionContext'
@@ -21,7 +24,7 @@ interface ConfigCard {
 export default function InstitutionHub() {
   const { institution } = useInstitution()
 
-  // Solo lo que corresponde a INSTITUCIÓN (identidad y estructura)
+  // Configuración de la institución
   const configCards: ConfigCard[] = [
     {
       title: 'Información General',
@@ -40,6 +43,33 @@ export default function InstitutionHub() {
       color: 'text-teal-600',
       bgColor: 'bg-teal-50',
       borderColor: 'border-teal-200'
+    },
+    {
+      title: 'Configuración Académica (SIEE)',
+      description: 'Períodos, escala, niveles, áreas y ventanas',
+      icon: Percent,
+      href: '/academic',
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+      borderColor: 'border-green-200'
+    },
+    {
+      title: 'Catálogo Académico',
+      description: 'Áreas, asignaturas y plan de estudios',
+      icon: BookOpen,
+      href: '/academic-catalog',
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50',
+      borderColor: 'border-orange-200'
+    },
+    {
+      title: 'Año Académico',
+      description: 'Configuración y asistente del año escolar',
+      icon: Calendar,
+      href: '/academic-year-wizard',
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-50',
+      borderColor: 'border-amber-200'
     },
     {
       title: 'Usuarios',

@@ -15,6 +15,7 @@ import {
 import { Link } from 'react-router-dom'
 import { useAcademic } from '../../../contexts/AcademicContext'
 import { usePermissions, PERMISSIONS } from '../../../hooks/usePermissions'
+import AcademicYearBanner, { useAcademicYearStatus } from '../../../components/AcademicYearBanner'
 
 interface EvaluationProcess {
   id: string
@@ -37,7 +38,8 @@ interface Subprocess {
 export default function Scale() {
   const { gradingConfig, setGradingConfig, saveGradingConfigToAPI, isSaving } = useAcademic()
   const { can } = usePermissions()
-  const canEditGradingScale = can(PERMISSIONS.CONFIG_GRADING_EDIT_SCALE)
+  const { yearStatus, isReadOnly } = useAcademicYearStatus()
+  const canEditGradingScale = can(PERMISSIONS.CONFIG_GRADING_EDIT_SCALE) && !isReadOnly
   
   const [expandedProcesses, setExpandedProcesses] = useState<string[]>([])
   const [hasChanges, setHasChanges] = useState(false)
@@ -138,6 +140,8 @@ export default function Scale() {
 
   return (
     <div className="p-6">
+      <AcademicYearBanner yearStatus={yearStatus} />
+
       {/* Header con navegación */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">

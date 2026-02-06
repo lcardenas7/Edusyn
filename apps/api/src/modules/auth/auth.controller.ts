@@ -1,9 +1,12 @@
 import { Body, Controller, Post, Get, Param, Query, UseGuards, Request, NotFoundException } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
+import { Roles } from './decorators/roles.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Controller('auth')
@@ -14,11 +17,15 @@ export class AuthController {
   ) {}
 
   @Post('register')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
   @Post('login')
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }

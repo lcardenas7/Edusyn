@@ -27,25 +27,14 @@ import { AcademicRulesEngine, createAcademicEngine } from '../engines/AcademicRu
 export function useAcademicEngine(): AcademicRulesEngine {
   const { academicLevels, academicYear, academicCalendar, gradingConfig, areaConfig, periods } = useAcademic()
 
-  // Crear objeto compatible con InstitutionConfig para el engine
-  const institutionCompat = useMemo(() => ({
-    id: '',
-    name: '',
-    nit: '',
-    dane: '',
-    address: '',
-    city: '',
-    phone: '',
-    email: '',
-    rector: '',
-    academicYear,
-    academicCalendar,
+  // Construir config del engine con solo los datos académicos que necesita
+  const engineConfig = useMemo(() => ({
     academicLevels,
-  }), [academicYear, academicCalendar, academicLevels])
+  }), [academicLevels])
 
   const engine = useMemo(() => {
-    return createAcademicEngine(institutionCompat, gradingConfig, areaConfig, periods)
-  }, [institutionCompat, gradingConfig, areaConfig, periods])
+    return createAcademicEngine(engineConfig, gradingConfig, areaConfig, periods)
+  }, [engineConfig, gradingConfig, areaConfig, periods])
 
   return engine
 }

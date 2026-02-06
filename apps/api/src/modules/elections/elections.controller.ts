@@ -16,6 +16,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ElectionsService } from './elections.service';
 import { ElectionsReportsService } from './elections-reports.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('elections')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -23,6 +25,7 @@ export class ElectionsController {
   constructor(
     private readonly electionsService: ElectionsService,
     private readonly reportsService: ElectionsReportsService,
+    private readonly prisma: PrismaService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -40,14 +43,16 @@ export class ElectionsController {
 
   @Get('process')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async getProcesses(@Query('institutionId') institutionId: string) {
-    return this.electionsService.getProcessByInstitution(institutionId);
+  async getProcesses(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.electionsService.getProcessByInstitution(instId);
   }
 
   @Get('process/current')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
-  async getCurrentProcess(@Query('institutionId') institutionId: string) {
-    return this.electionsService.getCurrentProcess(institutionId);
+  async getCurrentProcess(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.electionsService.getCurrentProcess(instId);
   }
 
   @Get('process/:id')
@@ -123,14 +128,14 @@ export class ElectionsController {
   @Roles('ESTUDIANTE')
   async getPendingElections(
     @Request() req: any,
-    @Query('institutionId') institutionId: string,
+    @Query('institutionId') institutionId?: string,
   ) {
-    // Obtener studentId del usuario
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
     const student = await this.getStudentFromUser(req.user.id);
     if (!student) {
       return [];
     }
-    return this.electionsService.getPendingElectionsForStudent(student.id, institutionId);
+    return this.electionsService.getPendingElectionsForStudent(student.id, instId);
   }
 
   @Post('vote')
@@ -151,13 +156,14 @@ export class ElectionsController {
   @Roles('ESTUDIANTE')
   async hasCompletedVoting(
     @Request() req: any,
-    @Query('institutionId') institutionId: string,
+    @Query('institutionId') institutionId?: string,
   ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
     const student = await this.getStudentFromUser(req.user.id);
     if (!student) {
       return { completed: true };
     }
-    const completed = await this.electionsService.hasCompletedVoting(student.id, institutionId);
+    const completed = await this.electionsService.hasCompletedVoting(student.id, instId);
     return { completed };
   }
 
@@ -240,14 +246,8 @@ export class ElectionsController {
 
   // Helper para obtener estudiante del usuario
   private async getStudentFromUser(userId: string) {
-    const { PrismaClient } = require('@prisma/client');
-    const prisma = new PrismaClient();
-    try {
-      return await prisma.student.findFirst({
-        where: { userId },
-      });
-    } finally {
-      await prisma.$disconnect();
-    }
+    return this.prisma.student.findFirst({
+      where: { userId },
+    });
   }
 }

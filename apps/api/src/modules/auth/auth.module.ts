@@ -15,7 +15,7 @@ import { JwtStrategy } from './jwt.strategy';
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET') || 'edusyn-default-jwt-secret-2026',
+        secret: config.getOrThrow<string>('JWT_SECRET'),
         signOptions: { expiresIn: '8h' },
       }),
     }),

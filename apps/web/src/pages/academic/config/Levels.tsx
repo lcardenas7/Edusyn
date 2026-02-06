@@ -14,6 +14,7 @@ import {
 import { Link } from 'react-router-dom'
 import { useAcademic, AcademicLevel, GradingScaleType } from '../../../contexts/AcademicContext'
 import { usePermissions, PERMISSIONS } from '../../../hooks/usePermissions'
+import AcademicYearBanner, { useAcademicYearStatus } from '../../../components/AcademicYearBanner'
 
 export default function Levels() {
   const { 
@@ -22,8 +23,9 @@ export default function Levels() {
     isSaving 
   } = useAcademic()
   const { can } = usePermissions()
+  const { yearStatus, isReadOnly } = useAcademicYearStatus()
   
-  const canEditGradingLevels = can(PERMISSIONS.CONFIG_GRADING_EDIT_LEVELS)
+  const canEditGradingLevels = can(PERMISSIONS.CONFIG_GRADING_EDIT_LEVELS) && !isReadOnly
   
   const [expandedLevels, setExpandedLevels] = useState<string[]>([])
 
@@ -197,6 +199,8 @@ export default function Levels() {
 
   return (
     <div className="p-6">
+      <AcademicYearBanner yearStatus={yearStatus} />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">

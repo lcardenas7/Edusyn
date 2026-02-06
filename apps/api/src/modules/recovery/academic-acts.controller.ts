@@ -3,11 +3,16 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { AcademicActsService } from './academic-acts.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('academic-acts')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AcademicActsController {
-  constructor(private readonly academicActsService: AcademicActsService) {}
+  constructor(
+    private readonly academicActsService: AcademicActsService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
@@ -21,11 +26,13 @@ export class AcademicActsController {
   @Get()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async findByInstitution(
-    @Query('institutionId') institutionId: string,
+    @Req() req: any,
+    @Query('institutionId') institutionId?: string,
     @Query('academicYearId') academicYearId?: string,
     @Query('actType') actType?: string,
   ) {
-    return this.academicActsService.findByInstitution(institutionId, academicYearId, actType as any);
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.academicActsService.findByInstitution(instId, academicYearId, actType as any);
   }
 
   @Get('by-student/:studentEnrollmentId')

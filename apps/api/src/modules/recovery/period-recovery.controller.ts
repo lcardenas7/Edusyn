@@ -3,19 +3,26 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { PeriodRecoveryService } from './period-recovery.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('period-recovery')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class PeriodRecoveryController {
-  constructor(private readonly periodRecoveryService: PeriodRecoveryService) {}
+  constructor(
+    private readonly periodRecoveryService: PeriodRecoveryService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get('detect')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async detectStudentsNeedingRecovery(
+    @Req() req: any,
     @Query('academicTermId') academicTermId: string,
-    @Query('institutionId') institutionId: string,
+    @Query('institutionId') institutionId?: string,
   ) {
-    return this.periodRecoveryService.detectStudentsNeedingRecovery(academicTermId, institutionId);
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.periodRecoveryService.detectStudentsNeedingRecovery(academicTermId, instId);
   }
 
   @Post()
@@ -53,13 +60,14 @@ export class PeriodRecoveryController {
   async registerResult(
     @Param('id') id: string,
     @Body() data: any,
-    @Query('institutionId') institutionId: string,
     @Req() req: any,
+    @Query('institutionId') institutionId?: string,
   ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
     return this.periodRecoveryService.registerResult(
       id,
       { ...data, evaluatedById: req.user.id },
-      institutionId,
+      instId,
     );
   }
 

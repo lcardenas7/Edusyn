@@ -34,6 +34,61 @@ export class StudentsController {
     return this.studentsService.list({ institutionId: instId, groupId, academicYearId });
   }
 
+  /**
+   * Obtiene las credenciales de estudiantes con acceso al sistema
+   * MUST be before :id routes to avoid 'credentials' being treated as an id
+   */
+  @Get('credentials/list')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async getCredentials(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
+    if (!instId) throw new Error('No se pudo determinar la institución');
+    return this.studentsService.getCredentials(instId);
+  }
+
+  @Post('enroll')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async enroll(@Body() dto: EnrollStudentDto) {
+    return this.studentsService.enroll(dto);
+  }
+
+  @Post('bulk-import')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async bulkImport(@Body() data: {
+    institutionId: string;
+    academicYearId: string;
+    students: any[];
+  }) {
+    return this.studentsService.bulkImport(data);
+  }
+
+  @Post('bulk-activate-access')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async bulkActivateAccess(@Body() data: { studentIds: string[] }) {
+    return this.studentsService.bulkActivateAccess(data.studentIds);
+  }
+
+  @Post('bulk-reset-password')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async bulkResetPassword(@Body() data: { studentIds: string[] }) {
+    return this.studentsService.bulkResetPassword(data.studentIds);
+  }
+
+  @Post('bulk-delete-without-records')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async bulkDeleteWithoutRecords(@Body() data: { institutionId: string }) {
+    return this.studentsService.bulkDeleteWithoutRecords(data.institutionId);
+  }
+
+  @Put('enrollment/:enrollmentId/status')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async updateEnrollmentStatus(
+    @Param('enrollmentId') enrollmentId: string,
+    @Body() dto: UpdateEnrollmentStatusDto,
+  ) {
+    return this.studentsService.updateEnrollmentStatus(enrollmentId, dto);
+  }
+
   @Get(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async findById(@Param('id') id: string) {
@@ -52,70 +107,27 @@ export class StudentsController {
     return this.studentsService.delete(id);
   }
 
-  @Post('enroll')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async enroll(@Body() dto: EnrollStudentDto) {
-    return this.studentsService.enroll(dto);
-  }
-
-  @Put('enrollment/:enrollmentId/status')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async updateEnrollmentStatus(
-    @Param('enrollmentId') enrollmentId: string,
-    @Body() dto: UpdateEnrollmentStatusDto,
-  ) {
-    return this.studentsService.updateEnrollmentStatus(enrollmentId, dto);
-  }
-
   @Get(':studentId/enrollments')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getEnrollments(@Param('studentId') studentId: string) {
     return this.studentsService.getEnrollmentsByStudent(studentId);
   }
 
-  @Post('bulk-import')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async bulkImport(@Body() data: {
-    institutionId: string;
-    academicYearId: string;
-    students: any[];
-  }) {
-    return this.studentsService.bulkImport(data);
-  }
-
-  /**
-   * Activa acceso al sistema para un estudiante
-   */
   @Post(':id/activate-access')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async activateAccess(@Param('id') id: string) {
     return this.studentsService.activateAccess(id);
   }
 
-  /**
-   * Desactiva acceso al sistema para un estudiante
-   */
   @Post(':id/deactivate-access')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async deactivateAccess(@Param('id') id: string) {
     return this.studentsService.deactivateAccess(id);
   }
 
-  /**
-   * Activa acceso masivo para múltiples estudiantes
-   */
-  @Post('bulk-activate-access')
+  @Post(':id/reset-password')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async bulkActivateAccess(@Body() data: { studentIds: string[] }) {
-    return this.studentsService.bulkActivateAccess(data.studentIds);
-  }
-
-  /**
-   * Elimina estudiantes sin registros académicos (notas, asistencias, observaciones)
-   */
-  @Post('bulk-delete-without-records')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async bulkDeleteWithoutRecords(@Body() data: { institutionId: string }) {
-    return this.studentsService.bulkDeleteWithoutRecords(data.institutionId);
+  async resetPassword(@Param('id') id: string) {
+    return this.studentsService.resetPassword(id);
   }
 }

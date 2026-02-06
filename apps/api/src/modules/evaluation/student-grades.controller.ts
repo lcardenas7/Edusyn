@@ -5,6 +5,7 @@ import {
   Post,
   Query,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -12,11 +13,16 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { BulkUpsertGradesDto, UpsertStudentGradeDto } from './dto/upsert-student-grade.dto';
 import { StudentGradesService } from './student-grades.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('student-grades')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class StudentGradesController {
-  constructor(private readonly studentGradesService: StudentGradesService) {}
+  constructor(
+    private readonly studentGradesService: StudentGradesService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
@@ -88,9 +94,11 @@ export class StudentGradesController {
   @Get('performance-level')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'ACUDIENTE')
   async getPerformanceLevel(
-    @Query('institutionId') institutionId: string,
+    @Request() req: any,
     @Query('score') score: string,
+    @Query('institutionId') institutionId?: string,
   ) {
-    return this.studentGradesService.getPerformanceLevel(institutionId, parseFloat(score));
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.studentGradesService.getPerformanceLevel(instId, parseFloat(score));
   }
 }

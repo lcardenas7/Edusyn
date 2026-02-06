@@ -17,6 +17,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ManagementTasksService } from './management-tasks.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 import type {
   CreateLeaderDto,
   CreateTaskDto,
@@ -29,7 +31,10 @@ import { TaskPriority, TaskCategory, TaskAssignmentStatus } from '@prisma/client
 @Controller('management-tasks')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ManagementTasksController {
-  constructor(private readonly tasksService: ManagementTasksService) {}
+  constructor(
+    private readonly tasksService: ManagementTasksService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // LÍDERES DE GESTIÓN
@@ -46,8 +51,9 @@ export class ManagementTasksController {
 
   @Get('leaders')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async getLeaders(@Query('institutionId') institutionId: string) {
-    return this.tasksService.getLeaders(institutionId);
+  async getLeaders(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.tasksService.getLeaders(instId);
   }
 
   @Delete('leaders/:id')
@@ -83,13 +89,15 @@ export class ManagementTasksController {
   @Get()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getTasks(
-    @Query('institutionId') institutionId: string,
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
     @Query('status') status?: TaskAssignmentStatus,
     @Query('priority') priority?: TaskPriority,
     @Query('category') category?: TaskCategory,
     @Query('createdById') createdById?: string,
   ) {
-    return this.tasksService.getTasks(institutionId, { status, priority, category, createdById });
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.tasksService.getTasks(instId, { status, priority, category, createdById });
   }
 
   @Get('my-tasks')
@@ -111,10 +119,11 @@ export class ManagementTasksController {
   @Get('pending-verifications')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getPendingVerifications(
-    @Query('institutionId') institutionId: string,
     @Request() req: any,
+    @Query('institutionId') institutionId?: string,
   ) {
-    return this.tasksService.getPendingVerifications(institutionId, req.user.id);
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.tasksService.getPendingVerifications(instId, req.user.id);
   }
 
   @Get('enums')

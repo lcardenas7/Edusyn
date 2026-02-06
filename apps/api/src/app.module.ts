@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -24,14 +26,17 @@ import { StorageModule } from './modules/storage/storage.module';
 import { AchievementsModule } from './modules/achievements/achievements.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { ManagementTasksModule } from './modules/management-tasks/management-tasks.module';
-// TODO: Habilitar FinanceModule cuando se agreguen las tablas al schema de Prisma
-// import { FinanceModule } from './modules/finance/finance.module';
+import { FinanceModule } from './modules/finance/finance.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 100,
+    }]),
     PrismaModule,
     IamModule,
     AuthModule,
@@ -54,9 +59,15 @@ import { ManagementTasksModule } from './modules/management-tasks/management-tas
     AchievementsModule,
     DocumentsModule,
     ManagementTasksModule,
-    // FinanceModule, // Deshabilitado temporalmente - requiere schema de BD
+    FinanceModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

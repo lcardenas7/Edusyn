@@ -1,18 +1,24 @@
-import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, Request } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { PerformanceConfigService } from './performance-config.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('performance-config')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class PerformanceConfigController {
-  constructor(private readonly configService: PerformanceConfigService) {}
+  constructor(
+    private readonly configService: PerformanceConfigService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async getConfig(@Query('institutionId') institutionId: string) {
-    return this.configService.getConfig(institutionId);
+  async getConfig(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.configService.getConfig(instId);
   }
 
   @Post()
@@ -31,8 +37,9 @@ export class PerformanceConfigController {
 
   @Get('complements')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  async getLevelComplements(@Query('institutionId') institutionId: string) {
-    return this.configService.getLevelComplements(institutionId);
+  async getLevelComplements(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.configService.getLevelComplements(instId);
   }
 
   @Post('complements')

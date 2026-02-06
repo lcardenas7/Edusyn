@@ -2,6 +2,19 @@ import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 
 // DTOs para la configuración
+export interface ProfileDto {
+  name?: string
+  nit?: string
+  daneCode?: string
+  address?: string
+  phone?: string
+  email?: string
+  website?: string
+  logo?: string
+  city?: string
+  rector?: string
+}
+
 export interface AreaConfigDto {
   calculationType: string
   approvalRule: string
@@ -386,6 +399,71 @@ export class InstitutionConfigService {
       console.error('Error syncing periods to academic terms:', error)
       // No lanzar error para no interrumpir el guardado de períodos
     }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PERFIL INSTITUCIONAL
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async getProfile(institutionId: string) {
+    const institution = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: {
+        id: true,
+        name: true,
+        daneCode: true,
+        nit: true,
+        address: true,
+        phone: true,
+        email: true,
+        website: true,
+        logo: true,
+        slug: true,
+        status: true,
+      },
+    })
+
+    if (!institution) {
+      throw new NotFoundException('Institución no encontrada')
+    }
+
+    return institution
+  }
+
+  async updateProfile(institutionId: string, dto: ProfileDto) {
+    const exists = await this.prisma.institution.findUnique({ where: { id: institutionId } })
+    if (!exists) {
+      throw new NotFoundException('Institución no encontrada')
+    }
+
+    const updated = await this.prisma.institution.update({
+      where: { id: institutionId },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.nit !== undefined && { nit: dto.nit }),
+        ...(dto.daneCode !== undefined && { daneCode: dto.daneCode }),
+        ...(dto.address !== undefined && { address: dto.address }),
+        ...(dto.phone !== undefined && { phone: dto.phone }),
+        ...(dto.email !== undefined && { email: dto.email }),
+        ...(dto.website !== undefined && { website: dto.website }),
+        ...(dto.logo !== undefined && { logo: dto.logo }),
+      },
+      select: {
+        id: true,
+        name: true,
+        daneCode: true,
+        nit: true,
+        address: true,
+        phone: true,
+        email: true,
+        website: true,
+        logo: true,
+        slug: true,
+        status: true,
+      },
+    })
+
+    return updated
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

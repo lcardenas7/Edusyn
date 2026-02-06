@@ -13,6 +13,8 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 import {
   PaymentsService,
   CreatePaymentConceptDto,
@@ -24,7 +26,10 @@ import {
 @Controller('payments')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(
+    private readonly paymentsService: PaymentsService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CONCEPTOS DE PAGO
@@ -38,8 +43,9 @@ export class PaymentsController {
 
   @Get('concepts')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'SECRETARIA')
-  async getConcepts(@Query('institutionId') institutionId: string) {
-    return this.paymentsService.getConcepts(institutionId);
+  async getConcepts(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.paymentsService.getConcepts(instId);
   }
 
   @Put('concepts/:id')
@@ -76,10 +82,12 @@ export class PaymentsController {
   @Get('events')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'SECRETARIA')
   async getEvents(
-    @Query('institutionId') institutionId: string,
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
     @Query('academicYearId') academicYearId?: string,
   ) {
-    return this.paymentsService.getEvents(institutionId, academicYearId);
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.paymentsService.getEvents(instId, academicYearId);
   }
 
   @Get('events/:id')
@@ -161,9 +169,11 @@ export class PaymentsController {
   @Get('stats/institution')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR')
   async getInstitutionStats(
-    @Query('institutionId') institutionId: string,
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
     @Query('academicYearId') academicYearId?: string,
   ) {
-    return this.paymentsService.getInstitutionStats(institutionId, academicYearId);
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.paymentsService.getInstitutionStats(instId, academicYearId);
   }
 }

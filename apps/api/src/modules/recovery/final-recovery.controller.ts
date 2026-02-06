@@ -3,19 +3,26 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { FinalRecoveryService } from './final-recovery.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('final-recovery')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class FinalRecoveryController {
-  constructor(private readonly finalRecoveryService: FinalRecoveryService) {}
+  constructor(
+    private readonly finalRecoveryService: FinalRecoveryService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get('detect')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async detectAreasNeedingRecovery(
+    @Req() req: any,
     @Query('academicYearId') academicYearId: string,
-    @Query('institutionId') institutionId: string,
+    @Query('institutionId') institutionId?: string,
   ) {
-    return this.finalRecoveryService.detectAreasNeedingRecovery(academicYearId, institutionId);
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.finalRecoveryService.detectAreasNeedingRecovery(academicYearId, instId);
   }
 
   @Post()
@@ -50,9 +57,11 @@ export class FinalRecoveryController {
   async registerResult(
     @Param('id') id: string,
     @Body() data: any,
-    @Query('institutionId') institutionId: string,
+    @Req() req: any,
+    @Query('institutionId') institutionId?: string,
   ) {
-    return this.finalRecoveryService.registerResult(id, data, institutionId);
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.finalRecoveryService.registerResult(id, data, instId);
   }
 
   @Patch(':id/approve')
@@ -60,13 +69,14 @@ export class FinalRecoveryController {
   async approveRecovery(
     @Param('id') id: string,
     @Body() data: any,
-    @Query('institutionId') institutionId: string,
     @Req() req: any,
+    @Query('institutionId') institutionId?: string,
   ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
     return this.finalRecoveryService.approveRecovery(
       id,
       { ...data, approvedById: req.user.id },
-      institutionId,
+      instId,
     );
   }
 

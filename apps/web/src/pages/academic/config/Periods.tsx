@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom'
 import { useAcademic, AcademicPeriod } from '../../../contexts/AcademicContext'
 import { useAuth } from '../../../contexts/AuthContext'
 import { usePermissions, PERMISSIONS } from '../../../hooks/usePermissions'
+import AcademicYearBanner, { useAcademicYearStatus } from '../../../components/AcademicYearBanner'
 
 export default function Periods() {
   const { 
@@ -25,9 +26,10 @@ export default function Periods() {
   } = useAcademic()
   const { institution: authInstitution } = useAuth()
   const { can } = usePermissions()
+  const { yearStatus, isReadOnly } = useAcademicYearStatus()
   
-  const canEditPeriods = can(PERMISSIONS.CONFIG_PERIODS_EDIT)
-  const canEditGradingScale = can(PERMISSIONS.CONFIG_GRADING_EDIT_SCALE)
+  const canEditPeriods = can(PERMISSIONS.CONFIG_PERIODS_EDIT) && !isReadOnly
+  const canEditGradingScale = can(PERMISSIONS.CONFIG_GRADING_EDIT_SCALE) && !isReadOnly
   
   // Estados locales para el modal y guardado
   const [showPeriodModal, setShowPeriodModal] = useState(false)
@@ -111,11 +113,13 @@ export default function Periods() {
 
   return (
     <div className="p-6">
+      <AcademicYearBanner yearStatus={yearStatus} />
+
       {/* Header con navegación */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <Link 
-            to="/academic/config/scale" 
+            to="/academic" 
             className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-slate-600" />

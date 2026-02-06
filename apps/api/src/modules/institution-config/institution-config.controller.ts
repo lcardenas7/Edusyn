@@ -1,6 +1,6 @@
 import { Controller, Get, Put, Body, UseGuards, Request } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
-import type { AreaConfigDto, GradingConfigDto, AcademicLevelConfig, PeriodConfig } from './institution-config.service'
+import type { ProfileDto, AreaConfigDto, GradingConfigDto, AcademicLevelConfig, PeriodConfig } from './institution-config.service'
 import { InstitutionConfigService } from './institution-config.service'
 import { PrismaService } from '../../prisma/prisma.service'
 
@@ -49,6 +49,22 @@ export class InstitutionConfigController {
   async getFullConfig(@Request() req) {
     const institutionId = await this.getInstitutionId(req.user.id)
     return this.configService.getFullConfig(institutionId)
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PERFIL INSTITUCIONAL
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('profile')
+  async getProfile(@Request() req) {
+    const institutionId = await this.getInstitutionId(req.user.id)
+    return this.configService.getProfile(institutionId)
+  }
+
+  @Put('profile')
+  async updateProfile(@Request() req, @Body() dto: ProfileDto) {
+    const institutionId = await this.getInstitutionId(req.user.id)
+    return this.configService.updateProfile(institutionId, dto)
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

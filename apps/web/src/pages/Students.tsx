@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, GraduationCap, FileText, AlertTriangle, Phone, Mail, MapPin, Users, CheckCircle2, XCircle, FileSpreadsheet, Heart, UserPlus, Loader2 } from 'lucide-react'
+import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, GraduationCap, FileText, AlertTriangle, Phone, Mail, MapPin, Users, CheckCircle2, XCircle, FileSpreadsheet, Heart, UserPlus, Loader2, Key, Shield, Printer, RefreshCw, EyeOff, Lock, Unlock } from 'lucide-react'
 import { generateTemplate, parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
 import api, { studentsApi, guardiansApi, academicYearLifecycleApi, groupsApi, enrollmentsApi, observerApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -150,6 +150,16 @@ export default function Students() {
   // Estados para crear acceso masivo
   const [creatingAccess, setCreatingAccess] = useState(false)
   const [showAccessModal, setShowAccessModal] = useState(false)
+  
+  // Estados para gestión de credenciales
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false)
+  const [credentialStudents, setCredentialStudents] = useState<any[]>([])
+  const [loadingCredentials, setLoadingCredentials] = useState(false)
+  const [credentialsSearch, setCredentialsSearch] = useState('')
+  const [credentialsGroupFilter, setCredentialsGroupFilter] = useState('ALL')
+  const [credentialsAccessFilter, setCredentialsAccessFilter] = useState<'ALL' | 'WITH_ACCESS' | 'WITHOUT_ACCESS'>('ALL')
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
+  const [processingCredentials, setProcessingCredentials] = useState(false)
 
   // Cargar año académico actual y grupos disponibles
   useEffect(() => {
@@ -435,6 +445,230 @@ export default function Students() {
       alert(err.response?.data?.message || 'Error al crear acceso')
     } finally {
       setCreatingAccess(false)
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // GESTIÓN DE CREDENCIALES
+  // ═══════════════════════════════════════════════════════════════
+
+  const loadCredentialStudents = async () => {
+    if (!institution?.id) return
+    setLoadingCredentials(true)
+    try {
+      const response = await studentsApi.getAll({ institutionId: institution.id })
+      const mapped = (response.data || []).map((s: any) => ({
+        id: s.id,
+        firstName: s.firstName || '',
+        lastName: `${s.lastName || ''} ${s.secondLastName || ''}`.trim(),
+        documentNumber: s.documentNumber || '',
+        group: s.enrollments?.[0]?.group ? `${s.enrollments[0].group.grade?.name || ''} ${s.enrollments[0].group.name}`.trim() : '',
+        userId: s.userId || null,
+        username: s.user?.username || null,
+        userEmail: s.user?.email || null,
+        userIsActive: s.user?.isActive ?? null,
+        mustChangePassword: s.user?.mustChangePassword ?? null,
+        hasAccess: !!s.userId,
+        initialPassword: s.documentNumber || '',
+      }))
+      setCredentialStudents(mapped)
+    } catch (err: any) {
+      console.error('Error loading credential students:', err)
+      alert('Error al cargar datos de credenciales')
+    } finally {
+      setLoadingCredentials(false)
+    }
+  }
+
+  const handleOpenCredentials = () => {
+    setShowCredentialsModal(true)
+    setCredentialsSearch('')
+    setCredentialsGroupFilter('ALL')
+    setCredentialsAccessFilter('ALL')
+    setShowPasswords({})
+    loadCredentialStudents()
+  }
+
+  const handleActivateAccess = async (studentId: string) => {
+    try {
+      setProcessingCredentials(true)
+      await studentsApi.activateAccess(studentId)
+      await loadCredentialStudents()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al activar acceso')
+    } finally {
+      setProcessingCredentials(false)
+    }
+  }
+
+  const handleDeactivateAccess = async (studentId: string) => {
+    if (!confirm('¿Desactivar acceso al sistema para este estudiante? Se eliminará su usuario.')) return
+    try {
+      setProcessingCredentials(true)
+      await studentsApi.deactivateAccess(studentId)
+      await loadCredentialStudents()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al desactivar acceso')
+    } finally {
+      setProcessingCredentials(false)
+    }
+  }
+
+  const handleResetPassword = async (studentId: string) => {
+    if (!confirm('¿Resetear la contraseña de este estudiante a su número de documento?')) return
+    try {
+      setProcessingCredentials(true)
+      await studentsApi.resetPassword(studentId)
+      await loadCredentialStudents()
+      alert('Contraseña reseteada correctamente')
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al resetear contraseña')
+    } finally {
+      setProcessingCredentials(false)
+    }
+  }
+
+  // Filtrar estudiantes de credenciales
+  const filteredCredentialStudents = credentialStudents.filter(s => {
+    const matchesSearch = `${s.firstName} ${s.lastName} ${s.documentNumber} ${s.username || ''}`.toLowerCase().includes(credentialsSearch.toLowerCase())
+    const matchesGroup = credentialsGroupFilter === 'ALL' || s.group === credentialsGroupFilter
+    const matchesAccess = credentialsAccessFilter === 'ALL' || 
+      (credentialsAccessFilter === 'WITH_ACCESS' && s.hasAccess) ||
+      (credentialsAccessFilter === 'WITHOUT_ACCESS' && !s.hasAccess)
+    return matchesSearch && matchesGroup && matchesAccess
+  })
+
+  // Grupos únicos de los estudiantes de credenciales
+  const credentialGroups = useMemo(() => {
+    const uniqueGroups = new Set(credentialStudents.map(s => s.group).filter(Boolean))
+    return Array.from(uniqueGroups).sort((a, b) => a.localeCompare(b))
+  }, [credentialStudents])
+
+  const handleBulkActivateFiltered = async () => {
+    const studentsWithoutAccess = filteredCredentialStudents.filter(s => !s.hasAccess)
+    if (studentsWithoutAccess.length === 0) {
+      alert('Todos los estudiantes filtrados ya tienen acceso')
+      return
+    }
+    const msg = `¿Crear acceso al sistema para ${studentsWithoutAccess.length} estudiantes?\n\n` +
+      `Se creará un usuario con:\n- Usuario: inicial+apellido+doc\n- Contraseña inicial: número de documento\n- Rol: ESTUDIANTE`
+    if (!confirm(msg)) return
+    
+    setProcessingCredentials(true)
+    try {
+      const result = await studentsApi.bulkActivateAccess(studentsWithoutAccess.map(s => s.id))
+      alert(`Acceso creado para ${result.data.activated} estudiantes${result.data.errors?.length > 0 ? `\n${result.data.errors.length} errores` : ''}`)
+      await loadCredentialStudents()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al crear acceso masivo')
+    } finally {
+      setProcessingCredentials(false)
+    }
+  }
+
+  const handleBulkResetFiltered = async () => {
+    const studentsWithAccess = filteredCredentialStudents.filter(s => s.hasAccess)
+    if (studentsWithAccess.length === 0) {
+      alert('No hay estudiantes con acceso para resetear')
+      return
+    }
+    if (!confirm(`¿Resetear contraseña a ${studentsWithAccess.length} estudiantes?\nLa contraseña será su número de documento.`)) return
+    
+    setProcessingCredentials(true)
+    try {
+      const result = await studentsApi.bulkResetPassword(studentsWithAccess.map(s => s.id))
+      alert(`Contraseñas reseteadas: ${result.data.reset}${result.data.errors?.length > 0 ? `\n${result.data.errors.length} errores` : ''}`)
+      await loadCredentialStudents()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al resetear contraseñas')
+    } finally {
+      setProcessingCredentials(false)
+    }
+  }
+
+  const handleExportCredentials = () => {
+    const studentsWithAccess = filteredCredentialStudents.filter(s => s.hasAccess)
+    if (studentsWithAccess.length === 0) {
+      alert('No hay estudiantes con credenciales para exportar')
+      return
+    }
+    const columns = [
+      { header: 'Nombre', key: 'fullName' },
+      { header: 'Documento', key: 'documentNumber' },
+      { header: 'Grupo', key: 'group' },
+      { header: 'Usuario', key: 'username' },
+      { header: 'Contraseña Inicial', key: 'initialPassword' },
+    ]
+    const data = studentsWithAccess.map(u => ({
+      fullName: `${u.firstName} ${u.lastName}`,
+      documentNumber: u.documentNumber,
+      group: u.group,
+      username: u.username,
+      initialPassword: u.initialPassword,
+    }))
+    exportToExcel(data, columns, `Credenciales_Estudiantes_${credentialsGroupFilter !== 'ALL' ? credentialsGroupFilter.replace(/\s+/g, '_') : 'Todos'}.xlsx`)
+  }
+
+  const handlePrintCredentials = () => {
+    const studentsWithAccess = filteredCredentialStudents.filter(s => s.hasAccess)
+    if (studentsWithAccess.length === 0) {
+      alert('No hay estudiantes con credenciales para imprimir')
+      return
+    }
+    const printContent = `
+      <html>
+        <head>
+          <title>Credenciales Estudiantes</title>
+          <style>
+            body { font-family: Arial, sans-serif; font-size: 12px; padding: 20px; }
+            h2 { color: #1e293b; margin-bottom: 4px; }
+            h3 { color: #64748b; margin-top: 0; font-weight: normal; }
+            table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+            th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; }
+            th { background-color: #f1f5f9; font-weight: bold; }
+            tr:nth-child(even) { background-color: #f8fafc; }
+            .password { font-family: monospace; background: #fef3c7; padding: 2px 6px; border-radius: 4px; }
+            .username { font-family: monospace; background: #dbeafe; padding: 2px 6px; border-radius: 4px; }
+            .footer { margin-top: 20px; font-size: 10px; color: #94a3b8; text-align: center; }
+            @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+          </style>
+        </head>
+        <body>
+          <h2>Credenciales de Acceso - Estudiantes</h2>
+          <h3>${credentialsGroupFilter !== 'ALL' ? `Grupo: ${credentialsGroupFilter}` : 'Todos los grupos'} | ${studentsWithAccess.length} estudiantes</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nombre</th>
+                <th>Documento</th>
+                <th>Grupo</th>
+                <th>Usuario</th>
+                <th>Contraseña</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${studentsWithAccess.map((u, i) => `
+                <tr>
+                  <td>${i + 1}</td>
+                  <td>${u.firstName} ${u.lastName}</td>
+                  <td>${u.documentNumber}</td>
+                  <td>${u.group}</td>
+                  <td><span class="username">${u.username}</span></td>
+                  <td><span class="password">${u.initialPassword}</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <p class="footer">Generado por EduSyn - ${new Date().toLocaleDateString('es-CO')} | La contraseña inicial es el número de documento</p>
+        </body>
+      </html>
+    `
+    const printWindow = window.open('', '_blank')
+    if (printWindow) {
+      printWindow.document.write(printContent)
+      printWindow.document.close()
+      printWindow.print()
     }
   }
 
@@ -873,17 +1107,14 @@ export default function Students() {
               <p className="text-slate-500 mt-1">Gestion de estudiantes matriculados</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {/* Botón Crear Acceso - Solo visible cuando hay filtro de grupo */}
-              {filterGroup !== 'ALL' && (
-                <button 
-                  onClick={handleBulkCreateAccess} 
-                  disabled={creatingAccess || filteredStudents.length === 0}
-                  className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm disabled:opacity-50"
-                >
-                  {creatingAccess ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                  Crear Acceso ({filteredStudents.length})
-                </button>
-              )}
+              <button
+                onClick={handleOpenCredentials}
+                className="flex items-center gap-2 px-3 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 text-sm"
+                title="Gestionar credenciales de acceso de estudiantes"
+              >
+                <Key className="w-4 h-4" />
+                Credenciales
+              </button>
               {/* Botón temporal para borrar estudiantes sin registros - Solo admin */}
               <button 
                 onClick={handleBulkDeleteWithoutRecords}
@@ -1464,6 +1695,230 @@ export default function Students() {
                   ) : 'Guardar'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Credenciales */}
+      {showCredentialsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center">
+                  <Key className="w-5 h-5 text-violet-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Credenciales de Estudiantes</h3>
+                  <p className="text-sm text-slate-500">Gestionar acceso al sistema para estudiantes</p>
+                </div>
+              </div>
+              <button onClick={() => setShowCredentialsModal(false)} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+
+            {/* Stats bar */}
+            <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center gap-4 text-sm flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-slate-500" />
+                <span className="text-slate-600">Total: <strong>{credentialStudents.length}</strong></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-green-500" />
+                <span className="text-slate-600">Con acceso: <strong className="text-green-600">{credentialStudents.filter(s => s.hasAccess).length}</strong></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Lock className="w-4 h-4 text-slate-400" />
+                <span className="text-slate-600">Sin acceso: <strong className="text-slate-500">{credentialStudents.filter(s => !s.hasAccess).length}</strong></span>
+              </div>
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  onClick={handleExportCredentials}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 rounded-lg hover:bg-white text-sm"
+                  title="Exportar credenciales a Excel"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Exportar
+                </button>
+                <button
+                  onClick={handlePrintCredentials}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 rounded-lg hover:bg-white text-sm"
+                  title="Imprimir credenciales"
+                >
+                  <Printer className="w-4 h-4" />
+                  Imprimir
+                </button>
+              </div>
+            </div>
+
+            {/* Filters */}
+            <div className="px-6 py-3 border-b border-slate-200 flex flex-wrap items-center gap-3 flex-shrink-0">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre, documento o usuario..."
+                  value={credentialsSearch}
+                  onChange={(e) => setCredentialsSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none text-sm"
+                />
+              </div>
+              <select
+                value={credentialsGroupFilter}
+                onChange={(e) => setCredentialsGroupFilter(e.target.value)}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm min-w-[160px]"
+              >
+                <option value="ALL">Todos los grupos</option>
+                {credentialGroups.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+              <select
+                value={credentialsAccessFilter}
+                onChange={(e) => setCredentialsAccessFilter(e.target.value as any)}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm min-w-[160px]"
+              >
+                <option value="ALL">Todos</option>
+                <option value="WITH_ACCESS">Con acceso</option>
+                <option value="WITHOUT_ACCESS">Sin acceso</option>
+              </select>
+              {/* Bulk actions */}
+              <div className="flex items-center gap-2 ml-auto">
+                <button
+                  onClick={handleBulkActivateFiltered}
+                  disabled={processingCredentials}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm disabled:opacity-50"
+                  title="Activar acceso para los estudiantes filtrados que no tengan"
+                >
+                  {processingCredentials ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlock className="w-4 h-4" />}
+                  Activar Masivo ({filteredCredentialStudents.filter(s => !s.hasAccess).length})
+                </button>
+                <button
+                  onClick={handleBulkResetFiltered}
+                  disabled={processingCredentials}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm disabled:opacity-50"
+                  title="Resetear contraseñas para los estudiantes filtrados"
+                >
+                  {processingCredentials ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  Reset Masivo ({filteredCredentialStudents.filter(s => s.hasAccess).length})
+                </button>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="flex-1 overflow-y-auto">
+              {loadingCredentials ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
+                  <span className="ml-3 text-slate-500">Cargando estudiantes...</span>
+                </div>
+              ) : filteredCredentialStudents.length === 0 ? (
+                <div className="text-center py-16 text-slate-500">
+                  <Key className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                  <p>No hay estudiantes que coincidan con los filtros</p>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-slate-50 sticky top-0">
+                    <tr>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Estudiante</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Documento</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Grupo</th>
+                      <th className="text-center px-4 py-3 text-xs font-medium text-slate-500 uppercase">Estado</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Usuario</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Contraseña</th>
+                      <th className="text-center px-4 py-3 text-xs font-medium text-slate-500 uppercase">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredCredentialStudents.map((student) => (
+                      <tr key={student.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3">
+                          <p className="font-medium text-slate-900 text-sm">{student.firstName} {student.lastName}</p>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-600">{student.documentNumber}</td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">{student.group || 'Sin grupo'}</span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {student.hasAccess ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                              <Shield className="w-3 h-3" /> Activo
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-medium">
+                              <Lock className="w-3 h-3" /> Sin acceso
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {student.hasAccess ? (
+                            <code className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-mono">{student.username}</code>
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {student.hasAccess ? (
+                            <div className="flex items-center gap-1">
+                              <code className="px-2 py-1 bg-amber-50 text-amber-700 rounded text-xs font-mono">
+                                {showPasswords[student.id] ? student.initialPassword : '••••••••'}
+                              </code>
+                              <button
+                                onClick={() => setShowPasswords(prev => ({ ...prev, [student.id]: !prev[student.id] }))}
+                                className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600"
+                                title={showPasswords[student.id] ? 'Ocultar' : 'Mostrar'}
+                              >
+                                {showPasswords[student.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-center gap-1">
+                            {student.hasAccess ? (
+                              <>
+                                <button
+                                  onClick={() => handleResetPassword(student.id)}
+                                  disabled={processingCredentials}
+                                  className="p-1.5 hover:bg-amber-50 rounded text-slate-400 hover:text-amber-600 disabled:opacity-50"
+                                  title="Resetear contraseña"
+                                >
+                                  <RefreshCw className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeactivateAccess(student.id)}
+                                  disabled={processingCredentials}
+                                  className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 disabled:opacity-50"
+                                  title="Desactivar acceso"
+                                >
+                                  <Lock className="w-4 h-4" />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => handleActivateAccess(student.id)}
+                                disabled={processingCredentials}
+                                className="p-1.5 hover:bg-green-50 rounded text-slate-400 hover:text-green-600 disabled:opacity-50"
+                                title="Activar acceso"
+                              >
+                                <Unlock className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3 border-t border-slate-200 flex items-center justify-between text-sm text-slate-500 flex-shrink-0">
+              <p>Mostrando {filteredCredentialStudents.length} de {credentialStudents.length} estudiantes</p>
+              <p className="text-xs text-slate-400">La contraseña inicial es el número de documento del estudiante</p>
             </div>
           </div>
         </div>

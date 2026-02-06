@@ -69,7 +69,11 @@ export class StudentsService {
           ...(!includeInactive && { student: { isActive: true } }),
         },
         include: {
-          student: true,
+          student: {
+            include: {
+              user: { select: { id: true, username: true, email: true, isActive: true, mustChangePassword: true } },
+            },
+          },
           group: {
             include: {
               grade: true,
@@ -91,6 +95,7 @@ export class StudentsService {
         ...(!includeInactive && { isActive: true }),
       },
       include: {
+        user: { select: { id: true, username: true, email: true, isActive: true, mustChangePassword: true } },
         enrollments: {
           include: {
             group: {
@@ -601,6 +606,106 @@ export class StudentsService {
     }
 
     return results;
+  }
+
+  /**
+   * Resetea la contraseña de un estudiante a su número de documento
+   */
+  async resetPassword(studentId: string) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      include: { user: true },
+    });
+
+    if (!student) {
+      throw new BadRequestException('Estudiante no encontrado');
+    }
+
+    if (!student.userId) {
+      throw new BadRequestException('El estudiante no tiene acceso al sistema');
+    }
+
+    const newPassword = student.documentNumber;
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: student.userId },
+      data: {
+        passwordHash,
+        mustChangePassword: true,
+      },
+    });
+
+    return {
+      studentId,
+      username: student.user?.username,
+      newPassword,
+      message: 'Contraseña reseteada correctamente',
+    };
+  }
+
+  /**
+   * Resetea contraseñas masivamente para múltiples estudiantes
+   */
+  async bulkResetPassword(studentIds: string[]) {
+    const results = {
+      reset: 0,
+      errors: [] as { studentId: string; error: string }[],
+    };
+
+    for (const studentId of studentIds) {
+      try {
+        await this.resetPassword(studentId);
+        results.reset++;
+      } catch (error: any) {
+        results.errors.push({
+          studentId,
+          error: error.message || 'Error desconocido',
+        });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Obtiene las credenciales de estudiantes de una institución
+   * Retorna solo estudiantes que tienen acceso al sistema (userId != null)
+   */
+  async getCredentials(institutionId: string) {
+    const students = await this.prisma.student.findMany({
+      where: {
+        institutionId,
+        isActive: true,
+        userId: { not: null },
+      },
+      include: {
+        user: { select: { id: true, username: true, email: true, isActive: true, mustChangePassword: true } },
+        enrollments: {
+          include: {
+            group: { include: { grade: true } },
+            academicYear: true,
+          },
+          orderBy: { academicYear: { year: 'desc' } },
+          take: 1,
+        },
+      },
+      orderBy: { lastName: 'asc' },
+    });
+
+    return students.map(s => ({
+      id: s.id,
+      firstName: s.firstName,
+      lastName: s.lastName,
+      documentNumber: s.documentNumber,
+      userId: s.userId,
+      username: s.user?.username,
+      email: s.user?.email,
+      userIsActive: s.user?.isActive,
+      mustChangePassword: s.user?.mustChangePassword,
+      group: s.enrollments?.[0]?.group ? `${s.enrollments[0].group.grade?.name || ''} ${s.enrollments[0].group.name}`.trim() : '',
+      initialPassword: s.documentNumber,
+    }));
   }
 
   // Generar username para estudiante: primeraLetra + apellido + 4digitos + e

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { 
   GraduationCap,
   Plus,
@@ -11,12 +11,14 @@ import {
   ArrowLeft,
   X,
   Building2,
-  Layers
+  Layers,
+  Loader2
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAcademic } from '../../contexts/AcademicContext'
 import { usePermissions, PERMISSIONS } from '../../hooks/usePermissions'
+import { academicGradesApi } from '../../lib/api'
 
 // Nivel educativo para visualización (derivado de AcademicLevel)
 interface EducationLevel {
@@ -83,22 +85,45 @@ export default function Structure() {
     order: al.order,
   }))
   
-  // Estados para grados y grupos
-  const [grades, setGrades] = useState<Grade[]>(() => {
-    const institutionId = authInstitution?.id || 'default'
-    const saved = localStorage.getItem(`edusyn_institutional_grades_${institutionId}`)
-    if (saved) {
-      try {
-        return JSON.parse(saved)
-      } catch {
-        return []
-      }
+  // Mapeo de GradeStage (BD) a códigos de nivel académico
+  const stageToLevelCode: Record<string, string[]> = {
+    'PREESCOLAR': ['PREESCOLAR'],
+    'BASICA_PRIMARIA': ['PRIMARIA', 'BASICA_PRIMARIA'],
+    'BASICA_SECUNDARIA': ['SECUNDARIA', 'BASICA_SECUNDARIA'],
+    'MEDIA': ['MEDIA'],
+  }
+
+  // Buscar el levelId del contexto académico que corresponde a un GradeStage
+  const findLevelIdForStage = useCallback((stage: string): string => {
+    const possibleCodes = stageToLevelCode[stage] || []
+    for (const code of possibleCodes) {
+      const level = academicLevels.find(al => 
+        al.code.toUpperCase() === code.toUpperCase() || 
+        al.name.toUpperCase().includes(code.toUpperCase())
+      )
+      if (level) return level.id
     }
-    return []
-  })
+    // Fallback: buscar por coincidencia parcial en el nombre
+    const level = academicLevels.find(al => 
+      al.code.toUpperCase().includes(stage.toUpperCase().replace('BASICA_', '')) ||
+      al.name.toUpperCase().includes(stage.toUpperCase().replace('BASICA_', '').replace('_', ' '))
+    )
+    return level?.id || ''
+  }, [academicLevels])
+
+  // Estados para grados y grupos (cargados desde API)
+  const [grades, setGrades] = useState<Grade[]>([])
+  const [loadingGrades, setLoadingGrades] = useState(true)
   
   const [expandedGrades, setExpandedGrades] = useState<string[]>([])
-  const [expandedLevels, setExpandedLevels] = useState<string[]>(levels.map(l => l.id))
+  const [expandedLevels, setExpandedLevels] = useState<string[]>([])
+  
+  // Auto-expandir niveles cuando se cargan
+  useEffect(() => {
+    if (levels.length > 0 && expandedLevels.length === 0) {
+      setExpandedLevels(levels.map(l => l.id))
+    }
+  }, [levels.length])
   
   // Modal states para niveles
   const [showLevelModal, setShowLevelModal] = useState(false)
@@ -115,27 +140,49 @@ export default function Structure() {
   const [editingGroup, setEditingGroup] = useState<{ gradeId: string; group: Group | null } | null>(null)
   const [groupForm, setGroupForm] = useState({ name: '', shift: 'MAÑANA' as Group['shift'], capacity: 35, director: '' })
 
-  // Guardar grados en localStorage y sincronizar con BD
-  useEffect(() => {
-    if (authInstitution?.id) {
-      localStorage.setItem(`edusyn_institutional_grades_${authInstitution.id}`, JSON.stringify(grades))
+  // Cargar grados y grupos desde la API (base de datos real)
+  const loadGradesFromAPI = useCallback(async () => {
+    try {
+      setLoadingGrades(true)
+      const res = await academicGradesApi.getAll(authInstitution?.id)
+      const dbGrades: any[] = res.data || []
       
-      // Sincronizar con la BD (debounced para evitar muchas llamadas)
-      const syncTimeout = setTimeout(async () => {
-        if (grades.length > 0) {
-          try {
-            const { academicGradesApi } = await import('../../lib/api')
-            await academicGradesApi.sync(grades)
-            console.log('[Structure] Grados sincronizados con BD')
-          } catch (err) {
-            console.error('[Structure] Error sincronizando grados:', err)
-          }
-        }
-      }, 2000)
-      
-      return () => clearTimeout(syncTimeout)
+      // Mapear datos de BD al formato local
+      // Solo mostrar grados que tienen grupos en esta institución
+      // (Grade es global, Group es por institución via Campus)
+      const mappedGrades: Grade[] = dbGrades
+        .filter((g: any) => g.groups && g.groups.length > 0)
+        .map((g: any) => ({
+          id: g.id,
+          name: g.name,
+          levelId: findLevelIdForStage(g.stage),
+          order: g.number || 0,
+          groups: (g.groups || []).map((gr: any) => ({
+            id: gr.id,
+            name: gr.name,
+            shift: gr.shift?.type === 'MORNING' ? 'MAÑANA' 
+                 : gr.shift?.type === 'AFTERNOON' ? 'TARDE'
+                 : gr.shift?.type === 'NIGHT' ? 'NOCHE'
+                 : 'ÚNICA',
+            capacity: gr.maxCapacity || 35,
+            director: undefined,
+          })),
+        }))
+
+      setGrades(mappedGrades)
+      console.log(`[Structure] Cargados ${mappedGrades.length} grados con grupos desde API`)  
+    } catch (err) {
+      console.error('[Structure] Error cargando grados desde API:', err)
+    } finally {
+      setLoadingGrades(false)
     }
-  }, [grades, authInstitution?.id])
+  }, [authInstitution?.id, findLevelIdForStage])
+
+  useEffect(() => {
+    if (authInstitution?.id && academicLevels.length > 0) {
+      loadGradesFromAPI()
+    }
+  }, [authInstitution?.id, academicLevels.length, loadGradesFromAPI])
 
   // === FUNCIONES PARA NIVELES ===
   const toggleLevelExpand = (levelId: string) => {
@@ -508,7 +555,14 @@ export default function Structure() {
               )
             })}
 
-            {grades.length === 0 && (
+            {loadingGrades && (
+              <div className="text-center py-12 text-slate-500">
+                <Loader2 className="w-8 h-8 mx-auto mb-3 text-teal-500 animate-spin" />
+                <p className="text-sm">Cargando estructura organizacional...</p>
+              </div>
+            )}
+
+            {!loadingGrades && grades.length === 0 && (
               <div className="text-center py-12 text-slate-500 border-2 border-dashed border-slate-200 rounded-lg">
                 <Building2 className="w-12 h-12 mx-auto mb-4 text-slate-300" />
                 <p className="mb-2">No hay grados configurados</p>

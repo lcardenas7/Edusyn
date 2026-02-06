@@ -14,13 +14,18 @@
  */
 
 import type { 
-  InstitutionConfig, 
   GradingConfig, 
   AreaConfig,
   Period,
   PerformanceLevel,
-  QualitativeLevel
+  QualitativeLevel,
+  AcademicLevel
 } from '../contexts/InstitutionContext'
+
+// Tipo propio del engine: solo los datos académicos que necesita
+export interface AcademicEngineConfig {
+  academicLevels: AcademicLevel[]
+}
 
 // ============================================================================
 // TIPOS DE ENTRADA (Eventos Académicos)
@@ -223,13 +228,13 @@ export interface BlockRule {
 
 export interface ImpactRules {
   // ¿Afecta al boletín?
-  affectsReport: (result: GradeResult, config: InstitutionConfig) => boolean
+  affectsReport: (result: GradeResult, config: AcademicEngineConfig) => boolean
   
   // ¿Afecta la promoción?
   affectsPromotion: (subjectResult: SubjectResult, areaConfig: AreaConfig) => boolean
   
   // ¿Genera alertas?
-  generateAlerts: (studentResult: StudentAcademicResult, config: InstitutionConfig) => Alert[]
+  generateAlerts: (studentResult: StudentAcademicResult, config: AcademicEngineConfig) => Alert[]
   
   // ¿Requiere recuperación?
   requiresRecovery: (subjectResult: SubjectResult, areaConfig: AreaConfig) => boolean
@@ -240,13 +245,13 @@ export interface ImpactRules {
 // ============================================================================
 
 export class AcademicRulesEngine {
-  private config: InstitutionConfig
+  private config: AcademicEngineConfig
   private gradingConfig: GradingConfig
   private areaConfig: AreaConfig
   private periods: Period[]
 
   constructor(
-    config: InstitutionConfig,
+    config: AcademicEngineConfig,
     gradingConfig: GradingConfig,
     areaConfig: AreaConfig,
     periods: Period[]
@@ -767,7 +772,7 @@ export class AcademicRulesEngine {
 // ============================================================================
 
 export function createAcademicEngine(
-  config: InstitutionConfig,
+  config: AcademicEngineConfig,
   gradingConfig: GradingConfig,
   areaConfig: AreaConfig,
   periods: Period[]
