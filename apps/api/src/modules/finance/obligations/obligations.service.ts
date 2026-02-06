@@ -139,7 +139,7 @@ export class ObligationsService {
       // Obtener o crear terceros para estos estudiantes
       for (const studentId of studentIds) {
         const thirdParty = await this.getOrCreateThirdParty(institutionId, 'STUDENT', studentId);
-        thirdPartyIds.push(thirdParty.id);
+        if (thirdParty) thirdPartyIds.push(thirdParty.id);
       }
     } else if (data.targetType === 'GROUP') {
       // Obtener estudiantes de los grupos seleccionados
@@ -155,7 +155,7 @@ export class ObligationsService {
 
       for (const studentId of studentIds) {
         const thirdParty = await this.getOrCreateThirdParty(institutionId, 'STUDENT', studentId);
-        thirdPartyIds.push(thirdParty.id);
+        if (thirdParty) thirdPartyIds.push(thirdParty.id);
       }
     } else if (data.targetType === 'STUDENTS') {
       // Terceros específicos ya seleccionados

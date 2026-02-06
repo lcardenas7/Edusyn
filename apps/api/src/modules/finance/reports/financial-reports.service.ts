@@ -61,8 +61,8 @@ export class FinancialReportsService {
 
       months.push({
         month,
-        income: income._sum.amount || 0,
-        expense: expense._sum.amount || 0,
+        income: Number(income._sum.amount || 0),
+        expense: Number(expense._sum.amount || 0),
         balance: Number(income._sum.amount || 0) - Number(expense._sum.amount || 0),
       });
     }
@@ -77,7 +77,7 @@ export class FinancialReportsService {
       include: { category: true },
     });
 
-    const result = [];
+    const result: { conceptId: string; conceptName: string; categoryName: string; totalCharged: number; totalCollected: number; totalExpenses: number; profit: number; obligationCount: number }[] = [];
     for (const concept of concepts) {
       const [obligations, expenses] = await Promise.all([
         this.prisma.financialObligation.aggregate({
@@ -95,9 +95,9 @@ export class FinancialReportsService {
         conceptId: concept.id,
         conceptName: concept.name,
         categoryName: concept.category.name,
-        totalCharged: obligations._sum.totalAmount || 0,
-        totalCollected: obligations._sum.paidAmount || 0,
-        totalExpenses: expenses._sum.amount || 0,
+        totalCharged: Number(obligations._sum.totalAmount || 0),
+        totalCollected: Number(obligations._sum.paidAmount || 0),
+        totalExpenses: Number(expenses._sum.amount || 0),
         profit: Number(obligations._sum.paidAmount || 0) - Number(expenses._sum.amount || 0),
         obligationCount: obligations._count,
       });

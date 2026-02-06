@@ -259,7 +259,7 @@ export class ThirdPartiesService {
             data: {
               name: `${guardian.firstName} ${guardian.lastName}`,
               document: guardian.documentNumber,
-              documentType: guardian.documentType,
+              documentType: guardian.documentType as any,
               email: guardian.email,
               phone: guardian.phone,
             },
@@ -273,7 +273,7 @@ export class ThirdPartiesService {
               referenceId: guardian.id,
               name: `${guardian.firstName} ${guardian.lastName}`,
               document: guardian.documentNumber,
-              documentType: guardian.documentType,
+              documentType: guardian.documentType as any,
               email: guardian.email,
               phone: guardian.phone,
             },
