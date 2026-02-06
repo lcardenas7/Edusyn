@@ -167,6 +167,7 @@ enum SystemModule {
   CONFIG             // Configuración institucional
   ELECTIONS          // Elecciones escolares
   PAYMENTS           // Gestión de pagos y eventos financieros
+  FINANCE            // Gestión financiera (cobros, pagos, egresos, facturas)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
