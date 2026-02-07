@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Search, Plus, X, Send, Mail, Bell, Users, Calendar, Eye, Trash2, FileText, MessageSquare, Megaphone, Loader2 } from 'lucide-react'
-import { communicationsApi } from '../lib/api'
+import { Search, Plus, X, Send, Mail, Bell, Users, Calendar, Eye, Trash2, FileText, MessageSquare, Megaphone, Loader2, Inbox, CheckCheck } from 'lucide-react'
+import { communicationsApi, groupsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
 type CommunicationType = 'CIRCULAR' | 'NOTIFICATION' | 'MESSAGE' | 'ANNOUNCEMENT'
 type RecipientType = 'ALL' | 'TEACHERS' | 'STUDENTS' | 'PARENTS' | 'GROUP' | 'INDIVIDUAL'
 type CommunicationStatus = 'DRAFT' | 'SENT' | 'SCHEDULED'
+type TabType = 'sent' | 'inbox'
 
 interface Communication {
   id: string
@@ -58,6 +59,9 @@ export default function Communications() {
   const [showViewModal, setShowViewModal] = useState(false)
   const [selectedCommunication, setSelectedCommunication] = useState<Communication | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<Communication | null>(null)
+  const [activeTab, setActiveTab] = useState<TabType>('sent')
+  const [inboxMessages, setInboxMessages] = useState<any[]>([])
+  const [loadingInbox, setLoadingInbox] = useState(false)
 
   const [form, setForm] = useState({
     type: 'CIRCULAR' as CommunicationType,
@@ -67,6 +71,22 @@ export default function Communications() {
     scheduledAt: '',
   })
   const [saving, setSaving] = useState(false)
+  const [groups, setGroups] = useState<Array<{ id: string; name: string; grade?: any }>>([])
+  const [selectedGroupId, setSelectedGroupId] = useState('')
+
+  // Cargar grupos al montar
+  useEffect(() => {
+    if (institution?.id) {
+      groupsApi.getAll({ institutionId: institution.id }).then(res => {
+        const grps = (res.data || []).map((g: any) => ({
+          id: g.id,
+          name: g.grade ? `${g.grade.name} - ${g.name}` : g.name,
+          grade: g.grade,
+        }))
+        setGroups(grps.sort((a: any, b: any) => a.name.localeCompare(b.name)))
+      }).catch(() => {})
+    }
+  }, [institution?.id])
 
   // Cargar comunicaciones desde la API
   useEffect(() => {
@@ -103,6 +123,36 @@ export default function Communications() {
     }
     loadCommunications()
   }, [institution?.id])
+
+  // Cargar bandeja de entrada
+  useEffect(() => {
+    if (activeTab === 'inbox') {
+      loadInbox()
+    }
+  }, [activeTab])
+
+  const loadInbox = async () => {
+    setLoadingInbox(true)
+    try {
+      const response = await communicationsApi.getInbox()
+      setInboxMessages(response.data || [])
+    } catch (err) {
+      console.error('Error loading inbox:', err)
+    } finally {
+      setLoadingInbox(false)
+    }
+  }
+
+  const handleMarkAsRead = async (messageId: string) => {
+    try {
+      await communicationsApi.markAsRead(messageId)
+      setInboxMessages(prev => prev.map(m =>
+        m.messageId === messageId ? { ...m, readAt: new Date().toISOString() } : m
+      ))
+    } catch (err) {
+      console.error('Error marking as read:', err)
+    }
+  }
 
   // Mapear tipo de destinatario desde recipients
   const mapRecipientType = (recipients: any[]): RecipientType => {
@@ -146,6 +196,7 @@ export default function Communications() {
       case 'TEACHERS': return [{ type: 'ALL_TEACHERS' }]
       case 'STUDENTS': return [{ type: 'ALL_STUDENTS' }]
       case 'PARENTS': return [{ type: 'ALL_PARENTS' }]
+      case 'GROUP': return selectedGroupId ? [{ type: 'GROUP', recipientId: selectedGroupId }] : []
       default: return []
     }
   }
@@ -269,127 +320,254 @@ export default function Communications() {
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Mail className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
-              <p className="text-xs text-slate-500">Total</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <Send className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-green-600">{stats.sent}</p>
-              <p className="text-xs text-slate-500">Enviados</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-              <FileText className="w-5 h-5 text-slate-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-600">{stats.drafts}</p>
-              <p className="text-xs text-slate-500">Borradores</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-amber-600">{stats.scheduled}</p>
-              <p className="text-xs text-slate-500">Programados</p>
-            </div>
-          </div>
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 bg-slate-100 rounded-lg p-1 w-fit">
+        <button
+          onClick={() => setActiveTab('sent')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'sent' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Send className="w-4 h-4" />
+          Enviados
+        </button>
+        <button
+          onClick={() => setActiveTab('inbox')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'inbox' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Inbox className="w-4 h-4" />
+          Bandeja de entrada
+          {inboxMessages.filter(m => !m.readAt).length > 0 && (
+            <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+              {inboxMessages.filter(m => !m.readAt).length}
+            </span>
+          )}
+        </button>
       </div>
 
-      {/* Filters & List */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-        <div className="p-4 border-b border-slate-200">
-          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input type="text" placeholder="Buscar por asunto o contenido..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <select value={filterType} onChange={(e) => setFilterType(e.target.value as any)} className="flex-1 min-w-[140px] px-3 py-2 border border-slate-300 rounded-lg">
-                <option value="ALL">Todos los tipos</option>
-                <option value="CIRCULAR">Circulares</option>
-                <option value="NOTIFICATION">Notificaciones</option>
-                <option value="MESSAGE">Mensajes</option>
-                <option value="ANNOUNCEMENT">Anuncios</option>
-              </select>
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)} className="flex-1 min-w-[140px] px-3 py-2 border border-slate-300 rounded-lg">
-                <option value="ALL">Todos los estados</option>
-                <option value="SENT">Enviados</option>
-                <option value="DRAFT">Borradores</option>
-                <option value="SCHEDULED">Programados</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div className="divide-y divide-slate-100">
-          {filteredCommunications.map((comm) => {
-            const TypeIcon = typeLabels[comm.type].icon
-            return (
-              <div key={comm.id} className="p-4 hover:bg-slate-50 transition-colors">
-                <div className="flex items-start gap-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${typeLabels[comm.type].color}`}>
-                    <TypeIcon className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-slate-900 truncate">{comm.subject}</h3>
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusLabels[comm.status].color}`}>{statusLabels[comm.status].label}</span>
-                    </div>
-                    <p className="text-sm text-slate-500 line-clamp-1 mb-2">{comm.content}</p>
-                    <div className="flex items-center gap-4 text-xs text-slate-400">
-                      <span className="flex items-center gap-1"><Users className="w-3 h-3" />{recipientLabels[comm.recipientType]}</span>
-                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{comm.sentAt || comm.scheduledAt || comm.createdAt}</span>
-                      {comm.status === 'SENT' && comm.readCount !== undefined && (
-                        <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{comm.readCount}/{comm.totalRecipients} leidos</span>
-                      )}
-                      <span>Por: {comm.author}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => handleView(comm)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-blue-600" title="Ver"><Eye className="w-4 h-4" /></button>
-                    {comm.status === 'DRAFT' && (
-                      <button onClick={() => setDeleteConfirm(comm)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-red-600" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
-                    )}
-                  </div>
+      {activeTab === 'sent' && (
+        <>
+          {/* Stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Mail className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
+                  <p className="text-xs text-slate-500">Total</p>
                 </div>
               </div>
-            )
-          })}
-        </div>
-
-        {filteredCommunications.length === 0 && (
-          <div className="p-12 text-center text-slate-500">
-            <Mail className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-            <p>No se encontraron comunicaciones</p>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Send className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-green-600">{stats.sent}</p>
+                  <p className="text-xs text-slate-500">Enviados</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-slate-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-600">{stats.drafts}</p>
+                  <p className="text-xs text-slate-500">Borradores</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-amber-600">{stats.scheduled}</p>
+                  <p className="text-xs text-slate-500">Programados</p>
+                </div>
+              </div>
+            </div>
           </div>
-        )}
 
-        <div className="px-6 py-4 border-t border-slate-200">
-          <p className="text-sm text-slate-500">Mostrando {filteredCommunications.length} de {communications.length} comunicaciones</p>
+          {/* Filters & List */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+            <div className="p-4 border-b border-slate-200">
+              <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input type="text" placeholder="Buscar por asunto o contenido..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <select value={filterType} onChange={(e) => setFilterType(e.target.value as any)} className="flex-1 min-w-[140px] px-3 py-2 border border-slate-300 rounded-lg">
+                    <option value="ALL">Todos los tipos</option>
+                    <option value="CIRCULAR">Circulares</option>
+                    <option value="NOTIFICATION">Notificaciones</option>
+                    <option value="MESSAGE">Mensajes</option>
+                    <option value="ANNOUNCEMENT">Anuncios</option>
+                  </select>
+                  <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)} className="flex-1 min-w-[140px] px-3 py-2 border border-slate-300 rounded-lg">
+                    <option value="ALL">Todos los estados</option>
+                    <option value="SENT">Enviados</option>
+                    <option value="DRAFT">Borradores</option>
+                    <option value="SCHEDULED">Programados</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="divide-y divide-slate-100">
+              {filteredCommunications.map((comm) => {
+                const TypeIcon = typeLabels[comm.type].icon
+                return (
+                  <div key={comm.id} className="p-4 hover:bg-slate-50 transition-colors">
+                    <div className="flex items-start gap-4">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${typeLabels[comm.type].color}`}>
+                        <TypeIcon className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-medium text-slate-900 truncate">{comm.subject}</h3>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusLabels[comm.status].color}`}>{statusLabels[comm.status].label}</span>
+                        </div>
+                        <p className="text-sm text-slate-500 line-clamp-1 mb-2">{comm.content}</p>
+                        <div className="flex items-center gap-4 text-xs text-slate-400">
+                          <span className="flex items-center gap-1"><Users className="w-3 h-3" />{recipientLabels[comm.recipientType]}</span>
+                          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{comm.sentAt || comm.scheduledAt || comm.createdAt}</span>
+                          {comm.status === 'SENT' && comm.readCount !== undefined && (
+                            <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{comm.readCount}/{comm.totalRecipients} leidos</span>
+                          )}
+                          <span>Por: {comm.author}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => handleView(comm)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-blue-600" title="Ver"><Eye className="w-4 h-4" /></button>
+                        {comm.status === 'DRAFT' && (
+                          <button onClick={() => setDeleteConfirm(comm)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-red-600" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {filteredCommunications.length === 0 && (
+              <div className="p-12 text-center text-slate-500">
+                <Mail className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                <p>No se encontraron comunicaciones</p>
+              </div>
+            )}
+
+            <div className="px-6 py-4 border-t border-slate-200">
+              <p className="text-sm text-slate-500">Mostrando {filteredCommunications.length} de {communications.length} comunicaciones</p>
+            </div>
+          </div>
+        </>
+      )}
+
+      {activeTab === 'inbox' && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Inbox className="w-5 h-5 text-slate-600" />
+              <h3 className="font-medium text-slate-900">Mensajes recibidos</h3>
+              <span className="text-sm text-slate-500">({inboxMessages.length})</span>
+            </div>
+            {inboxMessages.filter(m => !m.readAt).length > 0 && (
+              <span className="text-sm text-blue-600 font-medium">
+                {inboxMessages.filter(m => !m.readAt).length} sin leer
+              </span>
+            )}
+          </div>
+
+          {loadingInbox ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+            </div>
+          ) : inboxMessages.length === 0 ? (
+            <div className="p-12 text-center text-slate-500">
+              <Inbox className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+              <p>No tienes mensajes</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {inboxMessages.map((item: any) => {
+                const msg = item.message
+                if (!msg) return null
+                const isRead = !!item.readAt
+                const msgType = (msg.type || 'CIRCULAR') as CommunicationType
+                const typeInfo = typeLabels[msgType] || typeLabels.CIRCULAR
+                const TypeIcon = typeInfo.icon
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer ${!isRead ? 'bg-blue-50/50' : ''}`}
+                    onClick={() => {
+                      if (!isRead) handleMarkAsRead(msg.id)
+                      setSelectedCommunication({
+                        id: msg.id,
+                        type: msgType,
+                        subject: msg.subject || '',
+                        content: msg.content || '',
+                        recipientType: 'ALL',
+                        status: (msg.status || 'SENT') as CommunicationStatus,
+                        createdAt: msg.createdAt ? new Date(msg.createdAt).toISOString().split('T')[0] : '',
+                        sentAt: msg.sentAt ? new Date(msg.sentAt).toISOString().split('T')[0] : undefined,
+                        author: msg.author ? `${msg.author.firstName} ${msg.author.lastName}` : 'Sistema',
+                      })
+                      setShowViewModal(true)
+                    }}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${typeInfo.color}`}>
+                        <TypeIcon className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className={`truncate ${!isRead ? 'font-bold text-slate-900' : 'font-medium text-slate-700'}`}>
+                            {msg.subject || '(Sin asunto)'}
+                          </h3>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${typeInfo.color}`}>
+                            {typeInfo.label}
+                          </span>
+                          {!isRead && (
+                            <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>
+                          )}
+                        </div>
+                        <p className={`text-sm line-clamp-1 mb-2 ${!isRead ? 'text-slate-700' : 'text-slate-500'}`}>
+                          {msg.content || ''}
+                        </p>
+                        <div className="flex items-center gap-4 text-xs text-slate-400">
+                          <span>De: {msg.author ? `${msg.author.firstName} ${msg.author.lastName}` : 'Sistema'}</span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {msg.sentAt ? new Date(msg.sentAt).toLocaleDateString('es-CO') : new Date(msg.createdAt).toLocaleDateString('es-CO')}
+                          </span>
+                          {isRead && (
+                            <span className="flex items-center gap-1 text-green-500">
+                              <CheckCheck className="w-3 h-3" />
+                              Leido
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* Modal Nueva Comunicacion */}
       {showModal && (
@@ -412,7 +590,7 @@ export default function Communications() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Destinatarios</label>
-                  <select value={form.recipientType} onChange={(e) => setForm({ ...form, recipientType: e.target.value as RecipientType })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
+                  <select value={form.recipientType} onChange={(e) => { setForm({ ...form, recipientType: e.target.value as RecipientType }); setSelectedGroupId('') }} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
                     <option value="ALL">Toda la comunidad</option>
                     <option value="TEACHERS">Solo Docentes</option>
                     <option value="STUDENTS">Solo Estudiantes</option>
@@ -421,6 +599,21 @@ export default function Communications() {
                   </select>
                 </div>
               </div>
+              {form.recipientType === 'GROUP' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Seleccionar grupo *</label>
+                  <select
+                    value={selectedGroupId}
+                    onChange={(e) => setSelectedGroupId(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                  >
+                    <option value="">-- Seleccione un grupo --</option>
+                    {groups.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Asunto *</label>
                 <input type="text" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" placeholder="Ingrese el asunto de la comunicacion" />
