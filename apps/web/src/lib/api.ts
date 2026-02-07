@@ -315,9 +315,14 @@ export const reportsApi = {
 
 // Communications
 export const communicationsApi = {
-  getAll: (params?: { institutionId?: string; type?: string }) => api.get('/communications', { params }),
-  create: (data: { institutionId: string; type: string; subject: string; content: string; recipients?: string[] }) => api.post('/communications', data),
+  getAll: (params?: { institutionId?: string; type?: string; status?: string }) => api.get('/communications', { params }),
+  create: (data: { institutionId: string; type: string; subject: string; content: string; recipients?: Array<{ type: string; recipientId?: string }> }) => api.post('/communications', data),
   getById: (id: string) => api.get(`/communications/${id}`),
+  update: (id: string, data: { type?: string; subject?: string; content?: string; scheduledAt?: string }) => api.put(`/communications/${id}`, data),
+  send: (id: string) => api.post(`/communications/${id}/send`),
+  delete: (id: string) => api.delete(`/communications/${id}`),
+  getInbox: () => api.get('/communications/inbox'),
+  markAsRead: (id: string) => api.post(`/communications/${id}/read`),
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

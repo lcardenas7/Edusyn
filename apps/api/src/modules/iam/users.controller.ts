@@ -1,10 +1,25 @@
-import { Controller, Get, Post, Delete, Param, Body, UseGuards, Request, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Request, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 
+// Lista blanca de roles válidos del sistema
+const VALID_ROLES = [
+  'ADMIN_INSTITUTIONAL',
+  'COORDINADOR',
+  'DOCENTE',
+  'SECRETARIA',
+  'ORIENTADOR',
+  'BIBLIOTECARIO',
+  'AUXILIAR',
+  'ESTUDIANTE',
+  'ACUDIENTE',
+];
+
 @Controller('iam')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
   constructor(private readonly prisma: PrismaService) {}
 
@@ -12,6 +27,7 @@ export class UsersController {
    * Obtiene todos los usuarios de la institución del usuario actual
    */
   @Get('users')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA')
   async getUsers(@Request() req: any) {
     // Obtener la institución del usuario actual
     const institutionUser = await this.prisma.institutionUser.findFirst({
@@ -50,9 +66,26 @@ export class UsersController {
 
   /**
    * Obtiene un usuario específico con sus permisos
+   * Valida que el usuario pertenezca a la misma institución
    */
   @Get('users/:id')
-  async getUser(@Param('id') id: string) {
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA')
+  async getUser(@Request() req: any, @Param('id') id: string) {
+    // Validar cross-institution
+    const reqInstitution = await this.prisma.institutionUser.findFirst({
+      where: { userId: req.user.id },
+    });
+    if (!reqInstitution) {
+      throw new BadRequestException('Usuario no asociado a ninguna institución');
+    }
+
+    const targetInstitution = await this.prisma.institutionUser.findFirst({
+      where: { userId: id, institutionId: reqInstitution.institutionId },
+    });
+    if (!targetInstitution) {
+      throw new ForbiddenException('No tiene acceso a este usuario');
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
@@ -78,6 +111,7 @@ export class UsersController {
    * Crea un nuevo usuario de staff (coordinador, secretaria, etc.)
    */
   @Post('staff')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async createStaff(
     @Request() req: any,
     @Body() body: {
@@ -110,6 +144,25 @@ export class UsersController {
     });
     if (existing) {
       throw new BadRequestException('El correo ya está registrado');
+    }
+
+    // Validar que el rol esté en la lista blanca
+    if (!VALID_ROLES.includes(body.role)) {
+      throw new BadRequestException(
+        `Rol inválido: ${body.role}. Roles permitidos: ${VALID_ROLES.join(', ')}`
+      );
+    }
+
+    // Proteger roles sensibles: solo ADMIN_INSTITUTIONAL puede crear otros ADMIN_INSTITUTIONAL
+    if (body.role === 'ADMIN_INSTITUTIONAL') {
+      const reqRoles = await this.prisma.userRole.findMany({
+        where: { userId: req.user.id },
+        include: { role: true },
+      });
+      const isAdmin = reqRoles.some(r => r.role.name === 'ADMIN_INSTITUTIONAL');
+      if (!isAdmin) {
+        throw new ForbiddenException('Solo un administrador institucional puede crear otros administradores');
+      }
     }
 
     // Obtener o crear el rol
@@ -169,9 +222,127 @@ export class UsersController {
   }
 
   /**
+   * Actualiza un usuario de staff (datos personales y/o rol)
+   */
+  @Put('staff/:id')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async updateStaff(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() body: {
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      role?: string;
+      documentType?: string;
+      documentNumber?: string;
+      phone?: string;
+    }
+  ) {
+    // Verificar que pertenece a la misma institución
+    const institutionUser = await this.prisma.institutionUser.findFirst({
+      where: { userId: req.user.id },
+    });
+    if (!institutionUser) {
+      throw new BadRequestException('Usuario no asociado a ninguna institución');
+    }
+
+    const targetUser = await this.prisma.institutionUser.findFirst({
+      where: { userId: id, institutionId: institutionUser.institutionId },
+    });
+    if (!targetUser) {
+      throw new BadRequestException('Usuario no encontrado en esta institución');
+    }
+
+    // Validar rol si se envía
+    if (body.role) {
+      if (!VALID_ROLES.includes(body.role)) {
+        throw new BadRequestException(
+          `Rol inválido: ${body.role}. Roles permitidos: ${VALID_ROLES.join(', ')}`
+        );
+      }
+
+      // Proteger escalamiento a ADMIN_INSTITUTIONAL
+      if (body.role === 'ADMIN_INSTITUTIONAL') {
+        const reqRoles = await this.prisma.userRole.findMany({
+          where: { userId: req.user.id },
+          include: { role: true },
+        });
+        const isAdmin = reqRoles.some(r => r.role.name === 'ADMIN_INSTITUTIONAL');
+        if (!isAdmin) {
+          throw new ForbiddenException('Solo un administrador institucional puede asignar el rol de administrador');
+        }
+      }
+    }
+
+    // Validar email único si cambia
+    if (body.email) {
+      const existing = await this.prisma.user.findFirst({
+        where: { email: body.email.toLowerCase(), NOT: { id } },
+      });
+      if (existing) {
+        throw new BadRequestException('El correo ya está registrado por otro usuario');
+      }
+    }
+
+    // Actualizar datos del usuario
+    const updateData: any = {};
+    if (body.firstName) updateData.firstName = body.firstName;
+    if (body.lastName) updateData.lastName = body.lastName;
+    if (body.email) updateData.email = body.email.toLowerCase();
+    if (body.documentType) updateData.documentType = body.documentType;
+    if (body.documentNumber !== undefined) updateData.documentNumber = body.documentNumber;
+    if (body.phone !== undefined) updateData.phone = body.phone;
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id },
+      data: updateData,
+      include: { roles: { include: { role: true } } },
+    });
+
+    // Cambiar rol si se especifica y es diferente
+    if (body.role) {
+      const currentRoles = updatedUser.roles.map(r => r.role.name);
+      if (!currentRoles.includes(body.role)) {
+        // Eliminar roles actuales de staff (no tocar DOCENTE ni ESTUDIANTE si existen)
+        const staffRoles = ['COORDINADOR', 'SECRETARIA', 'ORIENTADOR', 'BIBLIOTECARIO', 'AUXILIAR', 'ADMIN_INSTITUTIONAL'];
+        await this.prisma.userRole.deleteMany({
+          where: {
+            userId: id,
+            role: { name: { in: staffRoles } },
+          },
+        });
+
+        // Asignar nuevo rol
+        const newRole = await this.prisma.role.findUnique({ where: { name: body.role } });
+        if (newRole) {
+          await this.prisma.userRole.create({
+            data: { userId: id, roleId: newRole.id },
+          });
+        }
+      }
+    }
+
+    // Devolver usuario actualizado
+    const result = await this.prisma.user.findUnique({
+      where: { id },
+      include: { roles: { include: { role: true } } },
+    });
+
+    return {
+      id: result!.id,
+      firstName: result!.firstName,
+      lastName: result!.lastName,
+      email: result!.email,
+      roles: result!.roles,
+    };
+  }
+
+  /**
    * Elimina un usuario de staff
    */
   @Delete('staff/:id')
+  @Roles('ADMIN_INSTITUTIONAL')
   async deleteStaff(@Request() req: any, @Param('id') id: string) {
     // Verificar que el usuario pertenece a la misma institución
     const institutionUser = await this.prisma.institutionUser.findFirst({
@@ -243,6 +414,7 @@ export class UsersController {
    * Útil para reparar docentes creados sin vínculo
    */
   @Post('users/:id/link-institution')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async linkUserToInstitution(@Request() req: any, @Param('id') userId: string) {
     // Obtener institución del usuario actual
     const institutionUser = await this.prisma.institutionUser.findFirst({
@@ -291,6 +463,7 @@ export class UsersController {
    * Obtener usuarios sin vínculo a institución (para diagnóstico)
    */
   @Get('users-without-institution')
+  @Roles('ADMIN_INSTITUTIONAL')
   async getUsersWithoutInstitution(@Request() req: any) {
     // Solo para admins
     const institutionUser = await this.prisma.institutionUser.findFirst({

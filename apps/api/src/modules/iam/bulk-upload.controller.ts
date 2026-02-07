@@ -13,11 +13,14 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { BulkUploadService, UploadResult } from './bulk-upload.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Controller('iam/bulk')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
 export class BulkUploadController {
   constructor(
     private readonly bulkUploadService: BulkUploadService,

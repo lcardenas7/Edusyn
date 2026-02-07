@@ -10,10 +10,12 @@ import {
   Request,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { PermissionsService } from './permissions.service';
 
 @Controller('permissions')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class PermissionsController {
   constructor(private readonly permissionsService: PermissionsService) {}
 
@@ -55,6 +57,7 @@ export class PermissionsController {
    * Obtiene los permisos de un usuario específico
    */
   @Get('users/:userId')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async getUserPermissions(@Param('userId') userId: string) {
     return this.permissionsService.getUserPermissions(userId);
   }
@@ -63,6 +66,7 @@ export class PermissionsController {
    * Otorga un permiso extra a un usuario
    */
   @Post('grant')
+  @Roles('ADMIN_INSTITUTIONAL')
   async grantPermission(
     @Request() req: any,
     @Body() body: {
@@ -90,6 +94,7 @@ export class PermissionsController {
    * Revoca un permiso extra de un usuario
    */
   @Delete('revoke')
+  @Roles('ADMIN_INSTITUTIONAL')
   async revokePermission(
     @Request() req: any,
     @Body() body: {
@@ -113,6 +118,7 @@ export class PermissionsController {
    * Obtiene el historial de auditoría de permisos
    */
   @Get('audit')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async getAuditLog(
     @Request() req: any,
     @Query('userId') userId?: string,

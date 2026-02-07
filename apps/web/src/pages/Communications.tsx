@@ -139,14 +139,39 @@ export default function Communications() {
     setShowViewModal(true)
   }
 
-  // Mapear recipientType a formato de API
-  const getRecipientsForApi = (recipientType: RecipientType): string[] => {
+  // Mapear recipientType a formato de API (backend espera {type, recipientId?})
+  const getRecipientsForApi = (recipientType: RecipientType): Array<{ type: string; recipientId?: string }> => {
     switch (recipientType) {
-      case 'ALL': return ['ALL_TEACHERS', 'ALL_STUDENTS', 'ALL_PARENTS']
-      case 'TEACHERS': return ['ALL_TEACHERS']
-      case 'STUDENTS': return ['ALL_STUDENTS']
-      case 'PARENTS': return ['ALL_PARENTS']
+      case 'ALL': return [{ type: 'ALL_TEACHERS' }, { type: 'ALL_STUDENTS' }, { type: 'ALL_PARENTS' }]
+      case 'TEACHERS': return [{ type: 'ALL_TEACHERS' }]
+      case 'STUDENTS': return [{ type: 'ALL_STUDENTS' }]
+      case 'PARENTS': return [{ type: 'ALL_PARENTS' }]
       default: return []
+    }
+  }
+
+  // Recargar comunicaciones
+  const reloadCommunications = async () => {
+    if (!institution?.id) return
+    try {
+      const response = await communicationsApi.getAll({ institutionId: institution.id })
+      const apiComms: Communication[] = (response.data || []).map((c: any) => ({
+        id: c.id,
+        type: (c.type || 'CIRCULAR') as CommunicationType,
+        subject: c.subject || '',
+        content: c.content || '',
+        recipientType: mapRecipientType(c.recipients),
+        status: (c.status || 'DRAFT') as CommunicationStatus,
+        createdAt: c.createdAt ? new Date(c.createdAt).toISOString().split('T')[0] : '',
+        sentAt: c.sentAt ? new Date(c.sentAt).toISOString().split('T')[0] : undefined,
+        scheduledAt: c.scheduledAt ? new Date(c.scheduledAt).toISOString().split('T')[0] : undefined,
+        author: c.author ? `${c.author.firstName} ${c.author.lastName}` : 'Sistema',
+        readCount: c.readCount || 0,
+        totalRecipients: c.recipients?.length || 0,
+      }))
+      setCommunications(apiComms)
+    } catch (err) {
+      console.error('Error reloading communications:', err)
     }
   }
 
@@ -154,27 +179,15 @@ export default function Communications() {
     if (!form.subject.trim() || !institution?.id) return
     setSaving(true)
     try {
-      const response = await communicationsApi.create({
+      await communicationsApi.create({
         institutionId: institution.id,
         type: form.type,
         subject: form.subject,
         content: form.content,
         recipients: getRecipientsForApi(form.recipientType)
       })
-      
-      const newComm: Communication = {
-        id: response.data.id,
-        type: form.type,
-        subject: form.subject,
-        content: form.content,
-        recipientType: form.recipientType,
-        status: 'DRAFT',
-        createdAt: new Date().toISOString().split('T')[0],
-        author: 'Usuario Actual',
-        totalRecipients: 0,
-      }
-      setCommunications([newComm, ...communications])
       setShowModal(false)
+      await reloadCommunications()
     } catch (err: any) {
       console.error('Error saving draft:', err)
       alert(err.response?.data?.message || 'Error al guardar borrador')
@@ -187,6 +200,7 @@ export default function Communications() {
     if (!form.subject.trim() || !institution?.id) return
     setSaving(true)
     try {
+      // 1. Crear el mensaje
       const response = await communicationsApi.create({
         institutionId: institution.id,
         type: form.type,
@@ -194,23 +208,10 @@ export default function Communications() {
         content: form.content,
         recipients: getRecipientsForApi(form.recipientType)
       })
-      
-      const newComm: Communication = {
-        id: response.data.id,
-        type: form.type,
-        subject: form.subject,
-        content: form.content,
-        recipientType: form.recipientType,
-        status: form.scheduledAt ? 'SCHEDULED' : 'SENT',
-        createdAt: new Date().toISOString().split('T')[0],
-        sentAt: form.scheduledAt ? undefined : new Date().toISOString().split('T')[0],
-        scheduledAt: form.scheduledAt || undefined,
-        author: 'Usuario Actual',
-        totalRecipients: 0,
-        readCount: 0,
-      }
-      setCommunications([newComm, ...communications])
+      // 2. Enviarlo (cambia status a SENT)
+      await communicationsApi.send(response.data.id)
       setShowModal(false)
+      await reloadCommunications()
     } catch (err: any) {
       console.error('Error sending:', err)
       alert(err.response?.data?.message || 'Error al enviar comunicación')
@@ -219,10 +220,17 @@ export default function Communications() {
     }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteConfirm) return
-    setCommunications(communications.filter(c => c.id !== deleteConfirm.id))
-    setDeleteConfirm(null)
+    try {
+      await communicationsApi.delete(deleteConfirm.id)
+      setDeleteConfirm(null)
+      await reloadCommunications()
+    } catch (err: any) {
+      console.error('Error deleting:', err)
+      alert(err.response?.data?.message || 'Error al eliminar')
+      setDeleteConfirm(null)
+    }
   }
 
   if (loading) {
