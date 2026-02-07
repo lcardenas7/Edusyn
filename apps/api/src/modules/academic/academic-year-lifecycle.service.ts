@@ -114,6 +114,12 @@ export class AcademicYearLifecycleService {
         terms: {
           orderBy: { order: 'asc' },
         },
+        _count: {
+          select: {
+            studentEnrollments: true,
+            teacherAssignments: true,
+          },
+        },
       },
     });
   }

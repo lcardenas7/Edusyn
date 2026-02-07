@@ -14,32 +14,25 @@ export class GalleryService {
     uploadedById: string;
     visibleToRoles?: string[];
   }) {
-    console.log('[GalleryService] Creating image with data:', data)
-    try {
-      const result = await this.prisma.galleryImage.create({
-        data: {
-          ...data,
-          visibleToRoles: data.visibleToRoles || [],
-        },
-        include: { uploadedBy: true },
-      });
-      console.log('[GalleryService] Image created successfully:', result.id)
-      return result
-    } catch (error) {
-      console.error('[GalleryService] Error creating image:', error)
-      throw error
-    }
+    return this.prisma.galleryImage.create({
+      data: {
+        ...data,
+        visibleToRoles: data.visibleToRoles || [],
+      },
+      include: { uploadedBy: { select: { id: true, firstName: true, lastName: true, email: true } } },
+    });
   }
 
-  async list(institutionId?: string, category?: string, onlyActive = true) {
+  async list(institutionId?: string, category?: string, onlyActive = true, limit?: number) {
     return this.prisma.galleryImage.findMany({
       where: {
         institutionId,
         category,
         ...(onlyActive && { isActive: true }),
       },
-      include: { uploadedBy: true },
+      include: { uploadedBy: { select: { id: true, firstName: true, lastName: true, email: true } } },
       orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+      ...(limit && { take: limit }),
     });
   }
 
@@ -53,22 +46,14 @@ export class GalleryService {
     visibleToRoles: string[];
     institutionId: string;
   }>) {
-    console.log('[GalleryService] Updating image:', { id, data });
-    try {
-      // Remove institutionId from update data - it should not be changed
-      const { institutionId, ...updateData } = data as any;
-      
-      const result = await this.prisma.galleryImage.update({
-        where: { id },
-        data: updateData,
-        include: { uploadedBy: true },
-      });
-      console.log('[GalleryService] Image updated successfully:', result.id);
-      return result;
-    } catch (error) {
-      console.error('[GalleryService] Error updating image:', error);
-      throw error;
-    }
+    // Remove institutionId from update data - it should not be changed
+    const { institutionId, ...updateData } = data as any;
+    
+    return this.prisma.galleryImage.update({
+      where: { id },
+      data: updateData,
+      include: { uploadedBy: { select: { id: true, firstName: true, lastName: true, email: true } } },
+    });
   }
 
   async listForUser(institutionId: string, userRoles: string[], category?: string) {
@@ -78,7 +63,7 @@ export class GalleryService {
         category,
         isActive: true,
       },
-      include: { uploadedBy: true },
+      include: { uploadedBy: { select: { id: true, firstName: true, lastName: true, email: true } } },
       orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
     });
 

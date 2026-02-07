@@ -62,13 +62,13 @@ export class AuthService {
       }
     }
 
-    const roles = user.roles.map((r) => r.role.name);
+    const roleNames = user.roles.map((r) => r.role.name);
 
     // Incluir institutionId en el token JWT
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
-      roles,
+      roles: roleNames,
       institutionId: userInstitution?.id || null,
     });
 
@@ -80,7 +80,9 @@ export class AuthService {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        roles,
+        roles: user.roles,
+        institution: userInstitution || undefined,
+        isSuperAdmin: (user as any).isSuperAdmin === true,
       },
     };
   }
@@ -93,9 +95,6 @@ export class AuthService {
 
     // Obtener institución del usuario a través de sus asignaciones o buscar la primera disponible
     const institution = await this.usersService.findUserInstitution(userId);
-
-    // Log para debug - verificar valor de isSuperAdmin
-    console.log(`[AUTH] getProfile for user ${user.email}: isSuperAdmin=${user.isSuperAdmin}`);
 
     return {
       id: user.id,

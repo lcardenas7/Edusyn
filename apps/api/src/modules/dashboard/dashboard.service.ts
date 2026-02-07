@@ -13,16 +13,16 @@ export class DashboardService {
 
   async getDashboardData(institutionId?: string) {
     const [announcements, events, gallery, birthdays] = await Promise.all([
-      this.announcementsService.list(institutionId, true),
-      this.eventsService.list(institutionId, true, true),
-      this.galleryService.list(institutionId, undefined, true),
+      this.announcementsService.list(institutionId, true, 5),
+      this.eventsService.list(institutionId, true, true, 5),
+      this.galleryService.list(institutionId, undefined, true, 8),
       this.eventsService.getBirthdays(institutionId),
     ]);
 
     return {
-      announcements: announcements.slice(0, 5),
-      upcomingEvents: events.slice(0, 5),
-      gallery: gallery.slice(0, 8),
+      announcements,
+      upcomingEvents: events,
+      gallery,
       birthdays: birthdays.slice(0, 10),
     };
   }

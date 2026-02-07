@@ -73,8 +73,13 @@ export default function Communications() {
   const [saving, setSaving] = useState(false)
   const [groups, setGroups] = useState<Array<{ id: string; name: string; grade?: any }>>([])
   const [selectedGroupId, setSelectedGroupId] = useState('')
+  const [allowedCategories, setAllowedCategories] = useState<string[]>(['ALL', 'TEACHERS', 'STUDENTS', 'PARENTS', 'GROUP', 'INDIVIDUAL'])
+  const [recipientSearch, setRecipientSearch] = useState('')
+  const [recipientResults, setRecipientResults] = useState<Array<{ id: string; firstName: string; lastName: string; email: string; roles: string[] }>>([])
+  const [selectedRecipients, setSelectedRecipients] = useState<Array<{ id: string; firstName: string; lastName: string; roles: string[] }>>([])
+  const [searchingRecipients, setSearchingRecipients] = useState(false)
 
-  // Cargar grupos al montar
+  // Cargar grupos y categorías permitidas al montar
   useEffect(() => {
     if (institution?.id) {
       groupsApi.getAll({ institutionId: institution.id }).then(res => {
@@ -85,8 +90,29 @@ export default function Communications() {
         }))
         setGroups(grps.sort((a: any, b: any) => a.name.localeCompare(b.name)))
       }).catch(() => {})
+
+      communicationsApi.getAllowedCategories().then(res => {
+        if (Array.isArray(res.data)) setAllowedCategories(res.data)
+      }).catch(() => {})
     }
   }, [institution?.id])
+
+  // Buscar destinatarios con debounce
+  useEffect(() => {
+    if (form.recipientType !== 'INDIVIDUAL' || recipientSearch.trim().length < 2) {
+      setRecipientResults([])
+      return
+    }
+    const timer = setTimeout(async () => {
+      setSearchingRecipients(true)
+      try {
+        const res = await communicationsApi.getAvailableRecipients(recipientSearch.trim())
+        setRecipientResults(res.data || [])
+      } catch { setRecipientResults([]) }
+      finally { setSearchingRecipients(false) }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [recipientSearch, form.recipientType])
 
   // Cargar comunicaciones desde la API
   useEffect(() => {
@@ -180,7 +206,12 @@ export default function Communications() {
   }
 
   const handleOpenNew = () => {
-    setForm({ type: 'CIRCULAR', subject: '', content: '', recipientType: 'ALL', scheduledAt: '' })
+    const defaultRecipient = (allowedCategories[0] || 'INDIVIDUAL') as RecipientType
+    setForm({ type: 'CIRCULAR', subject: '', content: '', recipientType: defaultRecipient, scheduledAt: '' })
+    setSelectedGroupId('')
+    setSelectedRecipients([])
+    setRecipientSearch('')
+    setRecipientResults([])
     setShowModal(true)
   }
 
@@ -197,6 +228,7 @@ export default function Communications() {
       case 'STUDENTS': return [{ type: 'ALL_STUDENTS' }]
       case 'PARENTS': return [{ type: 'ALL_PARENTS' }]
       case 'GROUP': return selectedGroupId ? [{ type: 'GROUP', recipientId: selectedGroupId }] : []
+      case 'INDIVIDUAL': return selectedRecipients.map(r => ({ type: 'USER', recipientId: r.id }))
       default: return []
     }
   }
@@ -590,12 +622,13 @@ export default function Communications() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Destinatarios</label>
-                  <select value={form.recipientType} onChange={(e) => { setForm({ ...form, recipientType: e.target.value as RecipientType }); setSelectedGroupId('') }} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
-                    <option value="ALL">Toda la comunidad</option>
-                    <option value="TEACHERS">Solo Docentes</option>
-                    <option value="STUDENTS">Solo Estudiantes</option>
-                    <option value="PARENTS">Solo Acudientes</option>
-                    <option value="GROUP">Grupo especifico</option>
+                  <select value={form.recipientType} onChange={(e) => { setForm({ ...form, recipientType: e.target.value as RecipientType }); setSelectedGroupId(''); setSelectedRecipients([]); setRecipientSearch(''); setRecipientResults([]) }} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
+                    {allowedCategories.includes('ALL') && <option value="ALL">Toda la comunidad</option>}
+                    {allowedCategories.includes('TEACHERS') && <option value="TEACHERS">Solo Docentes</option>}
+                    {allowedCategories.includes('STUDENTS') && <option value="STUDENTS">Solo Estudiantes</option>}
+                    {allowedCategories.includes('PARENTS') && <option value="PARENTS">Solo Acudientes</option>}
+                    {allowedCategories.includes('GROUP') && <option value="GROUP">Grupo especifico</option>}
+                    {allowedCategories.includes('INDIVIDUAL') && <option value="INDIVIDUAL">Persona especifica</option>}
                   </select>
                 </div>
               </div>
@@ -612,6 +645,65 @@ export default function Communications() {
                       <option key={g.id} value={g.id}>{g.name}</option>
                     ))}
                   </select>
+                </div>
+              )}
+              {form.recipientType === 'INDIVIDUAL' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Buscar destinatario *</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      value={recipientSearch}
+                      onChange={(e) => setRecipientSearch(e.target.value)}
+                      placeholder="Escriba nombre, apellido o correo..."
+                      className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                    {searchingRecipients && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500 animate-spin" />}
+                  </div>
+                  {recipientResults.length > 0 && (
+                    <div className="mt-1 border border-slate-200 rounded-lg max-h-40 overflow-y-auto bg-white shadow-lg">
+                      {recipientResults
+                        .filter(r => !selectedRecipients.some(s => s.id === r.id))
+                        .map(r => (
+                          <button
+                            key={r.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedRecipients(prev => [...prev, { id: r.id, firstName: r.firstName, lastName: r.lastName, roles: r.roles }])
+                              setRecipientSearch('')
+                              setRecipientResults([])
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-blue-50 flex items-center justify-between border-b border-slate-100 last:border-0"
+                          >
+                            <div>
+                              <span className="font-medium text-slate-900">{r.firstName} {r.lastName}</span>
+                              <span className="text-xs text-slate-400 ml-2">{r.email}</span>
+                            </div>
+                            <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">{r.roles[0] || ''}</span>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                  {selectedRecipients.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {selectedRecipients.map(r => (
+                        <span key={r.id} className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                          {r.firstName} {r.lastName}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedRecipients(prev => prev.filter(p => p.id !== r.id))}
+                            className="hover:bg-blue-200 rounded-full p-0.5"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {recipientSearch.length > 0 && recipientSearch.length < 2 && (
+                    <p className="text-xs text-slate-400 mt-1">Escriba al menos 2 caracteres para buscar</p>
+                  )}
                 </div>
               )}
               <div>

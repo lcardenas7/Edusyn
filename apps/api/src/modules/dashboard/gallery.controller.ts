@@ -13,11 +13,6 @@ export class GalleryController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async create(@Body() data: any, @Req() req: any) {
     const institutionId = req.user.institutionId || data.institutionId;
-    console.log('[GalleryController] Creating image:', { 
-      userInstitutionId: req.user.institutionId, 
-      bodyInstitutionId: data.institutionId,
-      finalInstitutionId: institutionId 
-    });
     
     return this.galleryService.create({
       ...data,

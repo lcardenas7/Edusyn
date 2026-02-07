@@ -323,6 +323,8 @@ export const communicationsApi = {
   delete: (id: string) => api.delete(`/communications/${id}`),
   getInbox: () => api.get('/communications/inbox'),
   markAsRead: (id: string) => api.post(`/communications/${id}/read`),
+  getAvailableRecipients: (search?: string) => api.get('/communications/available-recipients', { params: { search } }),
+  getAllowedCategories: () => api.get('/communications/allowed-categories'),
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

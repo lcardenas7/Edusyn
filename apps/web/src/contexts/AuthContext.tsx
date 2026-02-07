@@ -66,10 +66,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     const res = await authApi.login(email, password)
     localStorage.setItem('token', res.data.access_token)
-    const meRes = await authApi.me()
-    setUser(meRes.data)
-    if (meRes.data.institution) {
-      setInstitution(meRes.data.institution)
+    const userData = res.data.user
+    setUser(userData)
+    if (userData?.institution) {
+      setInstitution(userData.institution)
     }
   }
 

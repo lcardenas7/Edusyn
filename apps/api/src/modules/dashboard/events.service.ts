@@ -16,24 +16,16 @@ export class EventsService {
     authorId: string;
     visibleToRoles?: string[];
   }) {
-    console.log('[EventsService] Creating event with data:', data)
-    try {
-      const result = await this.prisma.event.create({
-        data: {
-          ...data,
-          visibleToRoles: data.visibleToRoles || [],
-        },
-        include: { author: true },
-      });
-      console.log('[EventsService] Event created successfully:', result.id)
-      return result
-    } catch (error) {
-      console.error('[EventsService] Error creating event:', error)
-      throw error
-    }
+    return this.prisma.event.create({
+      data: {
+        ...data,
+        visibleToRoles: data.visibleToRoles || [],
+      },
+      include: { author: { select: { id: true, firstName: true, lastName: true, email: true } } },
+    });
   }
 
-  async list(institutionId?: string, onlyActive = true, upcoming = false) {
+  async list(institutionId?: string, onlyActive = true, upcoming = false, limit?: number) {
     const now = new Date();
     return this.prisma.event.findMany({
       where: {
@@ -41,8 +33,9 @@ export class EventsService {
         ...(onlyActive && { isActive: true }),
         ...(upcoming && { eventDate: { gte: now } }),
       },
-      include: { author: true },
+      include: { author: { select: { id: true, firstName: true, lastName: true, email: true } } },
       orderBy: { eventDate: 'asc' },
+      ...(limit && { take: limit }),
     });
   }
 
@@ -54,7 +47,7 @@ export class EventsService {
         isActive: true,
         ...(upcoming && { eventDate: { gte: now } }),
       },
-      include: { author: true },
+      include: { author: { select: { id: true, firstName: true, lastName: true, email: true } } },
       orderBy: { eventDate: 'asc' },
     });
 
@@ -75,22 +68,14 @@ export class EventsService {
     visibleToRoles: string[];
     institutionId: string;
   }>) {
-    console.log('[EventsService] Updating event:', { id, data });
-    try {
-      // Remove institutionId from update data - it should not be changed
-      const { institutionId, ...updateData } = data as any;
-      
-      const result = await this.prisma.event.update({
-        where: { id },
-        data: updateData,
-        include: { author: true },
-      });
-      console.log('[EventsService] Event updated successfully:', result.id);
-      return result;
-    } catch (error) {
-      console.error('[EventsService] Error updating event:', error);
-      throw error;
-    }
+    // Remove institutionId from update data - it should not be changed
+    const { institutionId, ...updateData } = data as any;
+    
+    return this.prisma.event.update({
+      where: { id },
+      data: updateData,
+      include: { author: { select: { id: true, firstName: true, lastName: true, email: true } } },
+    });
   }
 
   async delete(id: string) {
@@ -133,18 +118,20 @@ export class EventsService {
       },
     });
 
-    // Obtener docentes con cumpleaños (usuarios con rol DOCENTE)
-    const teachers = await this.prisma.user.findMany({
-      where: {
-        birthDate: { not: null },
-        roles: {
-          some: {
-            role: {
-              name: 'DOCENTE',
-            },
-          },
+    // Obtener docentes con cumpleaños (usuarios con rol DOCENTE de esta institución)
+    const teacherWhere: any = {
+      birthDate: { not: null },
+      roles: {
+        some: {
+          role: { name: 'DOCENTE' },
         },
       },
+    };
+    if (institutionId) {
+      teacherWhere.institutionUsers = { some: { institutionId } };
+    }
+    const teachers = await this.prisma.user.findMany({
+      where: teacherWhere,
       select: {
         id: true,
         firstName: true,

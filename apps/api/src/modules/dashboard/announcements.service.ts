@@ -15,30 +15,22 @@ export class AnnouncementsService {
     authorId: string;
     visibleToRoles?: string[];
   }) {
-    console.log('[AnnouncementsService] Creating announcement with data:', data)
-    try {
-      const result = await this.prisma.announcement.create({
-        data: {
-          institutionId: data.institutionId,
-          title: data.title,
-          content: data.content,
-          imageUrl: data.imageUrl,
-          priority: data.priority ?? 0,
-          expiresAt: data.expiresAt,
-          authorId: data.authorId,
-          visibleToRoles: data.visibleToRoles || [],
-        },
-        include: { author: true },
-      });
-      console.log('[AnnouncementsService] Announcement created successfully:', result.id)
-      return result
-    } catch (error) {
-      console.error('[AnnouncementsService] Error creating announcement:', error)
-      throw error
-    }
+    return this.prisma.announcement.create({
+      data: {
+        institutionId: data.institutionId,
+        title: data.title,
+        content: data.content,
+        imageUrl: data.imageUrl,
+        priority: data.priority ?? 0,
+        expiresAt: data.expiresAt,
+        authorId: data.authorId,
+        visibleToRoles: data.visibleToRoles || [],
+      },
+      include: { author: { select: { id: true, firstName: true, lastName: true, email: true } } },
+    });
   }
 
-  async list(institutionId?: string, onlyActive = true) {
+  async list(institutionId?: string, onlyActive = true, limit?: number) {
     const now = new Date();
     return this.prisma.announcement.findMany({
       where: {
@@ -48,8 +40,9 @@ export class AnnouncementsService {
           OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
         }),
       },
-      include: { author: true },
+      include: { author: { select: { id: true, firstName: true, lastName: true, email: true } } },
       orderBy: [{ priority: 'desc' }, { publishedAt: 'desc' }],
+      ...(limit && { take: limit }),
     });
   }
 
@@ -63,22 +56,14 @@ export class AnnouncementsService {
     visibleToRoles: string[];
     institutionId: string;
   }>) {
-    console.log('[AnnouncementsService] Updating announcement:', { id, data });
-    try {
-      // Remove institutionId from update data - it should not be changed
-      const { institutionId, ...updateData } = data as any;
-      
-      const result = await this.prisma.announcement.update({
-        where: { id },
-        data: updateData,
-        include: { author: true },
-      });
-      console.log('[AnnouncementsService] Announcement updated successfully:', result.id);
-      return result;
-    } catch (error) {
-      console.error('[AnnouncementsService] Error updating announcement:', error);
-      throw error;
-    }
+    // Remove institutionId from update data - it should not be changed
+    const { institutionId, ...updateData } = data as any;
+    
+    return this.prisma.announcement.update({
+      where: { id },
+      data: updateData,
+      include: { author: { select: { id: true, firstName: true, lastName: true, email: true } } },
+    });
   }
 
   async listForUser(institutionId: string, userRoles: string[]) {
@@ -89,7 +74,7 @@ export class AnnouncementsService {
         isActive: true,
         OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
       },
-      include: { author: true },
+      include: { author: { select: { id: true, firstName: true, lastName: true, email: true } } },
       orderBy: [{ priority: 'desc' }, { publishedAt: 'desc' }],
     });
 

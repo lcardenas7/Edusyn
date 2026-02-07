@@ -66,8 +66,6 @@ export class UsersService {
   }
 
   async findUserInstitution(userId: string) {
-    console.log(`[findUserInstitution] Buscando institución para usuario: ${userId}`);
-    
     // Buscar institución a través de InstitutionUser primero
     const institutionUser = await this.prisma.institutionUser.findFirst({
       where: { userId },
@@ -81,7 +79,6 @@ export class UsersService {
     });
 
     if (institutionUser?.institution) {
-      console.log(`[findUserInstitution] Encontrado via InstitutionUser: ${institutionUser.institution.name}`);
       return institutionUser.institution;
     }
 
@@ -106,11 +103,9 @@ export class UsersService {
     });
 
     if (assignment?.group?.campus?.institution) {
-      console.log(`[findUserInstitution] Encontrado via TeacherAssignment: ${assignment.group.campus.institution.name}`);
       return assignment.group.campus.institution;
     }
 
-    console.log(`[findUserInstitution] NO se encontró institución para usuario: ${userId}`);
     // Si no tiene asignaciones, NO asignar ninguna institución
     // Esto previene que usuarios accedan a instituciones a las que no pertenecen
     return null;

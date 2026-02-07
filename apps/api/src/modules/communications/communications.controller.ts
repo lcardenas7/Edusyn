@@ -12,7 +12,7 @@ export class CommunicationsController {
   constructor(private readonly communicationsService: CommunicationsService) {}
 
   @Post()
-  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'ACUDIENTE', 'SECRETARIA', 'ORIENTADOR')
   create(@Request() req, @Body() dto: CreateMessageDto) {
     // Usar institutionId del JWT si no viene en el DTO
     if (!dto.institutionId && req.user.institutionId) {
@@ -22,13 +22,13 @@ export class CommunicationsController {
   }
 
   @Put(':id')
-  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'ACUDIENTE', 'SECRETARIA', 'ORIENTADOR')
   update(@Param('id') id: string, @Body() dto: UpdateMessageDto) {
     return this.communicationsService.update(id, dto);
   }
 
   @Post(':id/send')
-  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'ACUDIENTE', 'SECRETARIA', 'ORIENTADOR')
   send(@Param('id') id: string) {
     return this.communicationsService.send(id);
   }
@@ -41,7 +41,7 @@ export class CommunicationsController {
 
   // Listar mensajes por institución (query param o JWT)
   @Get()
-  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'ACUDIENTE', 'SECRETARIA', 'ORIENTADOR')
   getAll(
     @Request() req,
     @Query('institutionId') institutionId?: string,
@@ -58,6 +58,27 @@ export class CommunicationsController {
     @Query('status') status?: string,
   ) {
     return this.communicationsService.getByInstitution(institutionId, status);
+  }
+
+  @Get('available-recipients')
+  getAvailableRecipients(
+    @Request() req,
+    @Query('search') search?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    const userRoles = (req.user.roles || []).map((r: any) => r.role?.name || r.name || r);
+    return this.communicationsService.getAvailableRecipients(
+      req.user.id,
+      institutionId,
+      userRoles,
+      search,
+    );
+  }
+
+  @Get('allowed-categories')
+  getAllowedCategories(@Request() req) {
+    const userRoles = (req.user.roles || []).map((r: any) => r.role?.name || r.name || r);
+    return this.communicationsService.getAllowedCategories(userRoles);
   }
 
   @Get('inbox')

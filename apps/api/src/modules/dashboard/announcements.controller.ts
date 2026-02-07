@@ -14,12 +14,6 @@ export class AnnouncementsController {
   async create(@Body() data: any, @Req() req: any) {
     // Use institutionId from authenticated user if available, otherwise from body
     const institutionId = req.user.institutionId || data.institutionId;
-    console.log('[AnnouncementsController] Creating announcement:', { 
-      userInstitutionId: req.user.institutionId, 
-      bodyInstitutionId: data.institutionId,
-      finalInstitutionId: institutionId,
-      userId: req.user.id 
-    });
     
     return this.announcementsService.create({
       ...data,
