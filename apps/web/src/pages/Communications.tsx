@@ -73,7 +73,7 @@ export default function Communications() {
   const [saving, setSaving] = useState(false)
   const [groups, setGroups] = useState<Array<{ id: string; name: string; grade?: any }>>([])
   const [selectedGroupId, setSelectedGroupId] = useState('')
-  const [allowedCategories, setAllowedCategories] = useState<string[]>(['ALL', 'TEACHERS', 'STUDENTS', 'PARENTS', 'GROUP', 'INDIVIDUAL'])
+  const [allowedCategories, setAllowedCategories] = useState<string[]>([])
   const [recipientSearch, setRecipientSearch] = useState('')
   const [recipientResults, setRecipientResults] = useState<Array<{ id: string; firstName: string; lastName: string; email: string; roles: string[] }>>([])
   const [selectedRecipients, setSelectedRecipients] = useState<Array<{ id: string; firstName: string; lastName: string; roles: string[] }>>([])
