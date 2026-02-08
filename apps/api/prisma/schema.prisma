@@ -3275,6 +3275,7 @@ enum TimeBlockType {
   LUNCH              // Almuerzo
   ASSEMBLY           // Formación/acto cívico
   FREE               // Libre/disponible
+  TUTORING           // Tutoría/dirección de grupo
 }
 
 // Día de la semana

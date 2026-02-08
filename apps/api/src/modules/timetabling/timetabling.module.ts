@@ -6,6 +6,7 @@ import { RoomsModule } from './rooms/rooms.module';
 import { ScheduleConfigModule } from './schedule-config/schedule-config.module';
 import { TeacherAvailabilityModule } from './teacher-availability/teacher-availability.module';
 import { ScheduleEntriesModule } from './schedule-entries/schedule-entries.module';
+import { ScheduleGeneratorModule } from './schedule-generator/schedule-generator.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ScheduleEntriesModule } from './schedule-entries/schedule-entries.modul
     ScheduleConfigModule,
     TeacherAvailabilityModule,
     ScheduleEntriesModule,
+    ScheduleGeneratorModule,
   ],
   exports: [
     TimeBlocksModule,
@@ -22,6 +24,7 @@ import { ScheduleEntriesModule } from './schedule-entries/schedule-entries.modul
     ScheduleConfigModule,
     TeacherAvailabilityModule,
     ScheduleEntriesModule,
+    ScheduleGeneratorModule,
   ],
 })
 export class TimetablingModule {}

@@ -1206,3 +1206,38 @@ export const timetablingEntriesApi = {
   clearGroup: (groupId: string, academicYearId: string) =>
     api.delete(`/timetabling/schedule-entries/clear/${groupId}`, { params: { academicYearId } }),
 }
+
+// ═══════════════════════════════════════════════════════════════
+// TIMETABLING - GENERADOR DE HORARIOS
+// ═══════════════════════════════════════════════════════════════
+
+export const timetablingGeneratorApi = {
+  downloadTemplate: (academicYearId: string) =>
+    api.get('/timetabling/generator/template', {
+      params: { academicYearId },
+      responseType: 'blob',
+    }),
+  importTeachingLoad: (academicYearId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('academicYearId', academicYearId);
+    return api.post('/timetabling/generator/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  generateSchedule: (data: {
+    academicYearId: string;
+    groupIds?: string[];
+    clearExisting?: boolean;
+    respectAvailability?: boolean;
+  }) => api.post('/timetabling/generator/generate', data),
+  exportSchedule: (academicYearId: string, viewType: 'by-group' | 'by-teacher' = 'by-group') =>
+    api.get('/timetabling/generator/export', {
+      params: { academicYearId, viewType },
+      responseType: 'blob',
+    }),
+  getTeachingLoad: (academicYearId: string) =>
+    api.get('/timetabling/generator/teaching-load', { params: { academicYearId } }),
+  getScheduleViews: (academicYearId: string, view: 'total' | 'by-grade' | 'by-teacher' | 'by-subject' | 'by-area' = 'total', filterId?: string) =>
+    api.get('/timetabling/generator/schedule-views', { params: { academicYearId, view, filterId } }),
+}

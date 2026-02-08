@@ -461,6 +461,7 @@ export class PermissionsService {
       'COMMUNICATIONS': ['COMMUNICATIONS'],
       'EVALUATION': ['ACADEMIC'],
       'RECOVERY': ['ACADEMIC'],
+      'TIMETABLE': ['TIMETABLE'],
     };
 
     const allowedModules = moduleMapping[systemModule] || [systemModule];
