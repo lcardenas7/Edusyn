@@ -1240,4 +1240,9 @@ export const timetablingGeneratorApi = {
     api.get('/timetabling/generator/teaching-load', { params: { academicYearId } }),
   getScheduleViews: (academicYearId: string, view: 'total' | 'by-grade' | 'by-teacher' | 'by-subject' | 'by-area' = 'total', filterId?: string) =>
     api.get('/timetabling/generator/schedule-views', { params: { academicYearId, view, filterId } }),
+  exportSchedulePdf: (academicYearId: string, viewType: 'by-group' | 'by-teacher' = 'by-group') =>
+    api.get('/timetabling/generator/export-pdf', {
+      params: { academicYearId, viewType },
+      responseType: 'blob',
+    }),
 }

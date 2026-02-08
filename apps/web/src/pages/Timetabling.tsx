@@ -1117,6 +1117,26 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
     }
   }
 
+  // Exportar horario a PDF
+  const handleExportPdf = async (viewType: 'by-group' | 'by-teacher') => {
+    if (!academicYearId) return
+    setLoading(true)
+    try {
+      const res = await timetablingGeneratorApi.exportSchedulePdf(academicYearId, viewType)
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = viewType === 'by-teacher' ? 'horario-por-docente.pdf' : 'horario-por-grupo.pdf'
+      link.click()
+      window.URL.revokeObjectURL(url)
+      showMessage('Horario exportado en PDF', 'success')
+    } catch (err: any) {
+      showMessage('Error al exportar PDF', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Exportar horario a Excel
   const handleExport = async (viewType: 'by-group' | 'by-teacher') => {
     if (!academicYearId) return
@@ -1543,28 +1563,37 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
               <Download className="w-5 h-5 text-green-600" />
               Exportar Horario
             </h3>
-            <div className="grid grid-cols-2 gap-4">
+            <p className="text-sm text-gray-500 mb-3">PDF listo para imprimir — una página por grupo o por docente</p>
+            <div className="grid grid-cols-2 gap-4 mb-4">
               <button
-                onClick={() => handleExport('by-group')}
+                onClick={() => handleExportPdf('by-group')}
                 disabled={loading}
                 className="flex items-center gap-3 p-4 border-2 border-green-300 rounded-xl hover:bg-green-50 transition-colors"
               >
                 <Users className="w-8 h-8 text-green-600" />
                 <div className="text-left">
-                  <p className="font-medium text-gray-800">Por Grupo</p>
-                  <p className="text-xs text-gray-500">Una hoja por cada grupo</p>
+                  <p className="font-medium text-gray-800">PDF por Grupo</p>
+                  <p className="text-xs text-gray-500">Una página por grupo — para pegar en el salón</p>
                 </div>
               </button>
               <button
-                onClick={() => handleExport('by-teacher')}
+                onClick={() => handleExportPdf('by-teacher')}
                 disabled={loading}
                 className="flex items-center gap-3 p-4 border-2 border-blue-300 rounded-xl hover:bg-blue-50 transition-colors"
               >
                 <Building2 className="w-8 h-8 text-blue-600" />
                 <div className="text-left">
-                  <p className="font-medium text-gray-800">Por Docente</p>
-                  <p className="text-xs text-gray-500">Una hoja por cada docente</p>
+                  <p className="font-medium text-gray-800">PDF por Docente</p>
+                  <p className="text-xs text-gray-500">Una página por docente</p>
                 </div>
+              </button>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => handleExport('by-group')} disabled={loading} className="text-xs text-gray-400 hover:text-gray-600 underline">
+                Excel por grupo
+              </button>
+              <button onClick={() => handleExport('by-teacher')} disabled={loading} className="text-xs text-gray-400 hover:text-gray-600 underline">
+                Excel por docente
               </button>
             </div>
           </div>

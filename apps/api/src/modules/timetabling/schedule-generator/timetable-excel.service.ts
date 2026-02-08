@@ -6,7 +6,7 @@ import { DayOfWeek, GradeStage, SchoolShift } from '@prisma/client';
 
 export interface TeachingLoadRow {
   teacherName: string;
-  teacherEmail: string;
+  teacherEmail?: string;
   teacherDocument?: string;
   areaName: string;
   subjectName: string;
@@ -143,7 +143,7 @@ export class TimetableExcelService {
 
     loadSheet.columns = [
       { header: 'Nombre Docente *', key: 'teacherName', width: 30 },
-      { header: 'Email Docente *', key: 'teacherEmail', width: 30 },
+      { header: 'Email Docente', key: 'teacherEmail', width: 30 },
       { header: 'Documento Docente', key: 'teacherDocument', width: 18 },
       { header: 'Área Académica *', key: 'areaName', width: 22 },
       { header: 'Asignatura *', key: 'subjectName', width: 22 },
@@ -353,7 +353,7 @@ export class TimetableExcelService {
       '',
       'COLUMNAS OBLIGATORIAS (marcadas con *):', '',
       '  • Nombre Docente: Nombre completo del docente.',
-      '  • Email Docente: Correo electrónico. Si no existe, se creará el docente automáticamente.',
+      '  • Email Docente (opcional): Correo electrónico. Si se omite, se busca por nombre o se genera automáticamente.',
       '  • Área Académica: Nombre del área (ej: Matemáticas, Lenguaje). Se crea si no existe.',
       '  • Asignatura: Nombre de la materia (ej: Álgebra, Español). Se crea si no existe.',
       '  • Grado: Nombre o número del grado (ej: Séptimo, 7°, 7). Se crea si no existe.',
@@ -427,10 +427,6 @@ export class TimetableExcelService {
       // Ignorar filas vacías
       if (!teacherName && !teacherEmail && !subjectName && !groupName) return;
 
-      if (!teacherEmail) {
-        errors.push(`Fila ${rowNumber}: Email del docente es obligatorio`);
-        return;
-      }
       if (!teacherName) {
         errors.push(`Fila ${rowNumber}: Nombre del docente es obligatorio`);
         return;
@@ -462,7 +458,7 @@ export class TimetableExcelService {
       }
 
       rows.push({
-        teacherName, teacherEmail: teacherEmail.toLowerCase(), teacherDocument,
+        teacherName, teacherEmail: teacherEmail ? teacherEmail.toLowerCase() : undefined, teacherDocument,
         areaName, subjectName, gradeName, groupName,
         shiftName, campusName, weeklyHours, restrictions, rowNumber,
       });
@@ -604,6 +600,64 @@ export class TimetableExcelService {
       groupCache.set(groupKey, group.id);
     }
 
+    // ── FASE 3.5: Auto-crear Rooms por grupo si no existen ──
+    const roomCache = new Map<string, string>();
+    for (const row of rows) {
+      const gradeId = gradeCache.get(row.gradeName.toLowerCase());
+      if (!gradeId) continue;
+      const campusKey = (row.campusName || '').toLowerCase() || '__default__';
+      const campusId = campusCache.get(campusKey);
+      if (!campusId) continue;
+      const shiftType = row.shiftName ? (SHIFT_MAPPING[row.shiftName.toLowerCase()] || 'MORNING') : 'MORNING';
+      const shiftId = shiftCache.get(`${campusId}|${shiftType}`);
+      if (!shiftId) continue;
+
+      const groupKey = `${row.groupName.toLowerCase()}|${gradeId}|${shiftId}|${campusId}`;
+      const groupId = groupCache.get(groupKey);
+      if (!groupId || roomCache.has(groupKey)) continue;
+
+      const roomName = `Salón ${row.groupName}`;
+      let room = await this.prisma.room.findFirst({
+        where: { institutionId, name: { equals: roomName, mode: 'insensitive' } },
+      });
+      if (!room) {
+        room = await this.prisma.room.create({
+          data: { institutionId, name: roomName, capacity: 40, isActive: true },
+        });
+        warnings.push(`Salón "${roomName}" creado automáticamente`);
+      }
+      roomCache.set(groupKey, room.id);
+    }
+
+    // ── FASE 3.9: Auto-crear bloques de tiempo por defecto si no existen ──
+    for (const [shiftKey, shiftId] of shiftCache.entries()) {
+      const existingBlocks = await this.prisma.timeBlock.findMany({
+        where: { institutionId, shiftId },
+      });
+      if (existingBlocks.length === 0) {
+        // Crear bloques por defecto: 7 clases de 55min, 2 recesos de 15min, 1 almuerzo de 30min
+        const defaultBlocks = [
+          { order: 1, type: 'CLASS' as const, startTime: '06:30', endTime: '07:25', label: '1° Hora' },
+          { order: 2, type: 'CLASS' as const, startTime: '07:25', endTime: '08:20', label: '2° Hora' },
+          { order: 3, type: 'BREAK' as const, startTime: '08:20', endTime: '08:35', label: 'Receso' },
+          { order: 4, type: 'CLASS' as const, startTime: '08:35', endTime: '09:30', label: '3° Hora' },
+          { order: 5, type: 'CLASS' as const, startTime: '09:30', endTime: '10:25', label: '4° Hora' },
+          { order: 6, type: 'BREAK' as const, startTime: '10:25', endTime: '10:40', label: 'Receso' },
+          { order: 7, type: 'CLASS' as const, startTime: '10:40', endTime: '11:35', label: '5° Hora' },
+          { order: 8, type: 'CLASS' as const, startTime: '11:35', endTime: '12:30', label: '6° Hora' },
+          { order: 9, type: 'LUNCH' as const, startTime: '12:30', endTime: '13:00', label: 'Almuerzo' },
+          { order: 10, type: 'CLASS' as const, startTime: '13:00', endTime: '13:55', label: '7° Hora' },
+        ];
+
+        for (const block of defaultBlocks) {
+          await this.prisma.timeBlock.create({
+            data: { institutionId, shiftId, ...block },
+          });
+        }
+        warnings.push(`Bloques de tiempo por defecto creados (7 horas clase, 2 recesos, almuerzo). Puede editarlos en la pestaña "Bloques de tiempo".`);
+      }
+    }
+
     // ── FASE 4: Resolver o crear Areas y Subjects ──
     const areaCache = new Map<string, string>();
     const subjectCache = new Map<string, string>();
@@ -642,29 +696,63 @@ export class TimetableExcelService {
     }
 
     // ── FASE 5: Resolver o crear Teachers (Users) ──
-    const teacherCache = new Map<string, string>();
+    const teacherCache = new Map<string, string>(); // key: normalizedName or email
 
     let docenteRole = await this.prisma.role.findUnique({ where: { name: 'DOCENTE' } });
     if (!docenteRole) {
       docenteRole = await this.prisma.role.create({ data: { name: 'DOCENTE' } });
     }
 
+    // Helper: normalizar nombre para cache key
+    const normalizeNameKey = (name: string) => name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+
     for (const row of rows) {
-      const emailKey = row.teacherEmail;
-      if (teacherCache.has(emailKey)) continue;
+      const cacheKey = row.teacherEmail || normalizeNameKey(row.teacherName);
+      if (teacherCache.has(cacheKey)) continue;
 
-      let user = await this.prisma.user.findUnique({
-        where: { email: emailKey },
-        select: { id: true },
-      });
+      let user: { id: string } | null = null;
 
+      // 1) Buscar por email si lo tiene
+      if (row.teacherEmail) {
+        user = await this.prisma.user.findUnique({
+          where: { email: row.teacherEmail },
+          select: { id: true },
+        });
+      }
+
+      // 2) Si no encontró por email, buscar por nombre dentro de la institución
       if (!user) {
-        // Parse nombre: "Juan Pérez García" → firstName="Juan", lastName="Pérez García"
+        const nameParts = row.teacherName.split(/\s+/);
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        const institutionUsers = await this.prisma.institutionUser.findMany({
+          where: {
+            institutionId,
+            isActive: true,
+            user: {
+              firstName: { equals: firstName, mode: 'insensitive' },
+              lastName: { equals: lastName, mode: 'insensitive' },
+            },
+          },
+          select: { user: { select: { id: true } } },
+          take: 1,
+        });
+        if (institutionUsers.length > 0) {
+          user = institutionUsers[0].user;
+        }
+      }
+
+      // 3) Si no existe, crear usuario nuevo
+      if (!user) {
         const nameParts = row.teacherName.split(/\s+/);
         const firstName = nameParts[0] || 'Docente';
         const lastName = nameParts.slice(1).join(' ') || 'Sin Apellido';
         const initialPassword = row.teacherDocument || 'temporal123';
         const passwordHash = await bcrypt.hash(initialPassword, 10);
+
+        // Generar email si no se proveyó
+        const autoEmail = row.teacherEmail || `${firstName.charAt(0).toLowerCase()}${lastName.replace(/\s+/g, '').toLowerCase()}.${Date.now().toString(36)}@edusyn.temp`.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
         // Generar username simple
         const baseUsername = `${firstName.charAt(0)}${lastName.replace(/\s+/g, '')}`.toLowerCase()
@@ -680,7 +768,7 @@ export class TimetableExcelService {
         try {
           user = await this.prisma.user.create({
             data: {
-              email: emailKey,
+              email: autoEmail,
               username,
               firstName,
               lastName,
@@ -693,7 +781,8 @@ export class TimetableExcelService {
             } as any,
           });
           entitiesCreated.teachers++;
-          warnings.push(`Docente "${row.teacherName}" (${emailKey}) creado automáticamente`);
+          const emailNote = row.teacherEmail ? row.teacherEmail : `email auto-generado: ${autoEmail}`;
+          warnings.push(`Docente "${row.teacherName}" (${emailNote}) creado automáticamente`);
         } catch (e: any) {
           errors.push(`Fila ${row.rowNumber}: Error al crear docente "${row.teacherName}" — ${e.message}`);
           continue;
@@ -710,7 +799,7 @@ export class TimetableExcelService {
         }
       }
 
-      teacherCache.set(emailKey, user.id);
+      teacherCache.set(cacheKey, user.id);
     }
 
     // ── FASE 6: Crear/Actualizar TeacherAssignments ──
@@ -719,7 +808,8 @@ export class TimetableExcelService {
     let skipped = 0;
 
     for (const row of rows) {
-      const teacherId = teacherCache.get(row.teacherEmail);
+      const teacherCacheKey = row.teacherEmail || normalizeNameKey(row.teacherName);
+      const teacherId = teacherCache.get(teacherCacheKey);
       if (!teacherId) { skipped++; continue; }
 
       const areaId = areaCache.get(row.areaName.toLowerCase());
@@ -1055,5 +1145,197 @@ export class TimetableExcelService {
   private getDaysWithEntries(entries: any[]): DayOfWeek[] {
     const daysSet = new Set(entries.map(e => e.dayOfWeek));
     return DAYS_ORDER.filter(d => daysSet.has(d) || d !== 'SATURDAY');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EXPORTAR HORARIO A PDF
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async exportSchedulePdf(
+    institutionId: string,
+    academicYearId: string,
+    viewType: 'by-group' | 'by-teacher' = 'by-group',
+  ): Promise<Buffer> {
+    const PDFDocument = (await import('pdfkit')).default;
+
+    const [entries, institution] = await Promise.all([
+      this.prisma.scheduleEntry.findMany({
+        where: { institutionId, academicYearId },
+        include: {
+          group: {
+            select: {
+              id: true, name: true,
+              grade: { select: { name: true } },
+              shift: { select: { name: true } },
+              campus: { select: { name: true } },
+            },
+          },
+          timeBlock: { select: { id: true, startTime: true, endTime: true, order: true, label: true, type: true } },
+          teacherAssignment: {
+            include: {
+              teacher: { select: { id: true, firstName: true, lastName: true } },
+              subject: { select: { id: true, name: true } },
+            },
+          },
+          room: { select: { name: true } },
+        },
+        orderBy: [{ timeBlock: { order: 'asc' } }, { dayOfWeek: 'asc' }],
+      }),
+      this.prisma.institution.findUnique({
+        where: { id: institutionId },
+        select: { name: true },
+      }),
+    ]);
+
+    const instName = institution?.name || 'Institución';
+
+    // Agrupar según viewType
+    const groupedData = new Map<string, { title: string; subtitle: string; entries: any[] }>();
+
+    if (viewType === 'by-group') {
+      for (const e of entries) {
+        const key = e.groupId;
+        if (!groupedData.has(key)) {
+          const gradeName = e.group?.grade?.name || '';
+          const shiftName = e.group?.shift?.name || '';
+          groupedData.set(key, {
+            title: `Horario ${e.group?.name || 'Grupo'}`,
+            subtitle: `${gradeName} — ${shiftName}`,
+            entries: [],
+          });
+        }
+        groupedData.get(key)!.entries.push(e);
+      }
+    } else {
+      for (const e of entries) {
+        if (!e.teacherAssignment?.teacher) continue;
+        const t = e.teacherAssignment.teacher;
+        const key = t.id;
+        if (!groupedData.has(key)) {
+          const name = `${t.firstName || ''} ${t.lastName || ''}`.trim();
+          groupedData.set(key, { title: name, subtitle: 'Docente', entries: [] });
+        }
+        groupedData.get(key)!.entries.push(e);
+      }
+    }
+
+    // Crear PDF
+    const doc = new PDFDocument({ size: 'LETTER', layout: 'landscape', margin: 30 });
+    const chunks: Buffer[] = [];
+
+    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+
+    let isFirstPage = true;
+
+    for (const [, data] of groupedData) {
+      if (!isFirstPage) doc.addPage();
+      isFirstPage = false;
+
+      // Obtener bloques y días
+      const blocksMap = new Map<string, any>();
+      const daysSet = new Set<DayOfWeek>();
+      for (const e of data.entries) {
+        if (e.timeBlock && !blocksMap.has(e.timeBlock.id)) blocksMap.set(e.timeBlock.id, e.timeBlock);
+        if (e.dayOfWeek) daysSet.add(e.dayOfWeek);
+      }
+      const sortedBlocks = Array.from(blocksMap.values()).sort((a, b) => a.order - b.order);
+      const activeDays = DAYS_ORDER.filter(d => daysSet.has(d) || d !== 'SATURDAY');
+
+      // Lookup
+      const lookup = new Map<string, any>();
+      for (const e of data.entries) {
+        const key = `${e.timeBlock?.id}|${e.dayOfWeek}`;
+        lookup.set(key, e);
+      }
+
+      // Header
+      doc.fontSize(8).fillColor('#6B7280').text(instName, 30, 30, { align: 'left' });
+      doc.fontSize(16).fillColor('#1E3A5F').text(data.title, 30, 45, { align: 'center', width: 712 });
+      doc.fontSize(10).fillColor('#6B7280').text(data.subtitle, 30, 65, { align: 'center', width: 712 });
+
+      // Table dimensions
+      const tableTop = 85;
+      const colWidth0 = 75; // hora column
+      const colWidthDay = (712 - colWidth0) / activeDays.length;
+      const rowHeight = sortedBlocks.length > 8 ? 38 : 45;
+
+      // Header row
+      doc.rect(30, tableTop, colWidth0, 22).fill('#2563EB');
+      doc.fontSize(8).fillColor('#FFFFFF').text('HORA', 30, tableTop + 7, { width: colWidth0, align: 'center' });
+
+      activeDays.forEach((day, i) => {
+        const x = 30 + colWidth0 + i * colWidthDay;
+        doc.rect(x, tableTop, colWidthDay, 22).fill('#2563EB');
+        doc.fontSize(8).fillColor('#FFFFFF').text(DAY_LABELS[day] || day, x, tableTop + 7, { width: colWidthDay, align: 'center' });
+      });
+
+      // Data rows
+      let y = tableTop + 22;
+      for (const block of sortedBlocks) {
+        if (y + rowHeight > 580) break; // prevent overflow
+
+        const isBreak = block.type === 'BREAK' || block.type === 'LUNCH';
+        const bgColor = isBreak ? '#F3F4F6' : '#FFFFFF';
+
+        // Hora cell
+        doc.rect(30, y, colWidth0, rowHeight).fill(bgColor).stroke('#D1D5DB');
+        doc.fontSize(7).fillColor('#374151')
+          .text(block.label || `Bloque ${block.order}`, 32, y + 4, { width: colWidth0 - 4, align: 'center' });
+        doc.fontSize(6).fillColor('#9CA3AF')
+          .text(`${block.startTime}-${block.endTime}`, 32, y + 14, { width: colWidth0 - 4, align: 'center' });
+
+        // Day cells
+        activeDays.forEach((day, i) => {
+          const x = 30 + colWidth0 + i * colWidthDay;
+          doc.rect(x, y, colWidthDay, rowHeight).fill(bgColor).stroke('#D1D5DB');
+
+          if (isBreak) {
+            doc.fontSize(7).fillColor('#9CA3AF')
+              .text(block.type === 'LUNCH' ? 'ALMUERZO' : 'RECESO', x + 2, y + rowHeight / 2 - 5, { width: colWidthDay - 4, align: 'center' });
+            return;
+          }
+
+          const entry = lookup.get(`${block.id}|${day}`);
+          if (!entry) return;
+
+          const subjectName = entry.teacherAssignment?.subject?.name || entry.projectName || '';
+          const teacher = entry.teacherAssignment?.teacher;
+          const teacherShort = teacher ? `${teacher.firstName || ''} ${(teacher.lastName || '').charAt(0)}.`.trim() : '';
+          const roomName = entry.room?.name || '';
+          const groupName = viewType === 'by-teacher' ? (entry.group?.name || '') : '';
+
+          // Subject
+          doc.fontSize(7).fillColor('#1E40AF')
+            .text(subjectName, x + 2, y + 3, { width: colWidthDay - 4, align: 'center' });
+
+          // Teacher or group
+          if (viewType === 'by-group' && teacherShort) {
+            doc.fontSize(6).fillColor('#374151')
+              .text(teacherShort, x + 2, y + 14, { width: colWidthDay - 4, align: 'center' });
+          } else if (groupName) {
+            doc.fontSize(6).fillColor('#374151')
+              .text(groupName, x + 2, y + 14, { width: colWidthDay - 4, align: 'center' });
+          }
+
+          // Room
+          if (roomName) {
+            doc.fontSize(5).fillColor('#9CA3AF')
+              .text(roomName, x + 2, y + 24, { width: colWidthDay - 4, align: 'center' });
+          }
+        });
+
+        y += rowHeight;
+      }
+
+      // Footer
+      doc.fontSize(6).fillColor('#9CA3AF')
+        .text(`Generado por Edusyn — ${new Date().toLocaleDateString('es-CO')}`, 30, 575, { align: 'center', width: 712 });
+    }
+
+    return new Promise<Buffer>((resolve, reject) => {
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+      doc.end();
+    });
   }
 }

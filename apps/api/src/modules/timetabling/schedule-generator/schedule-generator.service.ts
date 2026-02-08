@@ -91,6 +91,9 @@ export class ScheduleGeneratorService {
     // 5. Obtener configuración de horario por grado
     const gradeConfigs = await this.getGradeConfigs(institutionId, academicYearId);
 
+    // 5.5 Obtener rooms disponibles para auto-asignación
+    const groupRoomMap = await this.getGroupRoomMap(institutionId, groups);
+
     // 6. Limpiar horario existente si se indica
     if (clearExisting) {
       await this.prisma.scheduleEntry.deleteMany({
@@ -111,6 +114,7 @@ export class ScheduleGeneratorService {
       groupTimeBlocks,
       teacherAvailability,
       gradeConfigs,
+      groupRoomMap,
     );
 
     return result;
@@ -209,6 +213,27 @@ export class ScheduleGeneratorService {
    * 3. Evita choques de docentes y grupos
    * 4. Respeta disponibilidad y configuraciones
    */
+  private async getGroupRoomMap(institutionId: string, groups: any[]): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    const rooms = await this.prisma.room.findMany({
+      where: { institutionId, isActive: true },
+      select: { id: true, name: true },
+    });
+
+    for (const group of groups) {
+      // Buscar room cuyo nombre contenga el nombre del grupo (ej: "Salón 6A" para grupo "6A")
+      const match = rooms.find(r =>
+        r.name.toLowerCase().includes(group.name.toLowerCase()) ||
+        r.name.toLowerCase() === `salón ${group.name}`.toLowerCase() ||
+        r.name.toLowerCase() === `salon ${group.name}`.toLowerCase()
+      );
+      if (match) {
+        map.set(group.id, match.id);
+      }
+    }
+    return map;
+  }
+
   private async runGenerator(
     institutionId: string,
     academicYearId: string,
@@ -217,6 +242,7 @@ export class ScheduleGeneratorService {
     groupTimeBlocks: Map<string, any[]>,
     teacherAvailability: Map<string, any[]>,
     gradeConfigs: Map<string, any>,
+    groupRoomMap: Map<string, string>,
   ): Promise<GenerationResult> {
     // Estado: slots ocupados
     // teacherSlots: teacherId -> Set<"DAY|timeBlockId">
@@ -324,6 +350,7 @@ export class ScheduleGeneratorService {
             timeBlockId: slot.id,
             dayOfWeek: day,
             teacherAssignmentId: assignment.id,
+            roomId: groupRoomMap.get(assignment.groupId) || null,
           });
 
           hoursPlaced++;

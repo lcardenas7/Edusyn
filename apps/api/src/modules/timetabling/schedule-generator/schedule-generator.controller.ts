@@ -138,6 +138,36 @@ export class ScheduleGeneratorController {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // EXPORTAR HORARIO A PDF
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('export-pdf')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async exportSchedulePdf(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('viewType') viewType: 'by-group' | 'by-teacher' = 'by-group',
+    @Res() res: Response,
+  ) {
+    const buffer = await this.excelService.exportSchedulePdf(
+      req.user.institutionId,
+      academicYearId,
+      viewType,
+    );
+
+    const filename = viewType === 'by-teacher'
+      ? 'horario-por-docente.pdf'
+      : 'horario-por-grupo.pdf';
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // PREVIEW: Vista previa de la carga académica actual
   // ═══════════════════════════════════════════════════════════════════════════
 
