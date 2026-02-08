@@ -18,11 +18,16 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { InstitutionalDocumentsService } from './institutional-documents.service';
 import type { CreateDocumentDto, UpdateDocumentDto } from './institutional-documents.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('institutional-documents')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class InstitutionalDocumentsController {
-  constructor(private readonly documentsService: InstitutionalDocumentsService) {}
+  constructor(
+    private readonly documentsService: InstitutionalDocumentsService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
@@ -78,11 +83,11 @@ export class InstitutionalDocumentsController {
     @Query('institutionId') institutionId: string,
     @Request() req: any,
   ) {
-    // roles puede ser array de strings o array de objetos
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
     const userRoles = req.user.roles?.map((r: any) => 
       typeof r === 'string' ? r : (r.role?.name || r.name)
     ).filter(Boolean) || [];
-    return this.documentsService.findAll(institutionId, userRoles);
+    return this.documentsService.findAll(instId, userRoles);
   }
 
   @Get('categories')
@@ -93,8 +98,9 @@ export class InstitutionalDocumentsController {
 
   @Get('storage-usage')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async getStorageUsage(@Query('institutionId') institutionId: string) {
-    return this.documentsService.getStorageUsage(institutionId);
+  async getStorageUsage(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.documentsService.getStorageUsage(instId);
   }
 
   @Get(':id')
@@ -126,8 +132,9 @@ export class InstitutionalDocumentsController {
 
   @Post('cleanup')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async cleanupOrphanedFiles(@Body('institutionId') institutionId: string) {
-    console.log('[DocumentsController] POST /institutional-documents/cleanup', { institutionId });
-    return this.documentsService.cleanupOrphanedFiles(institutionId);
+  async cleanupOrphanedFiles(@Request() req: any, @Body('institutionId') institutionId?: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    console.log('[DocumentsController] POST /institutional-documents/cleanup', { institutionId: instId });
+    return this.documentsService.cleanupOrphanedFiles(instId);
   }
 }

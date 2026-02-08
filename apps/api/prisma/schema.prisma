@@ -414,6 +414,7 @@ model Institution {
   scheduleGradeConfigs        ScheduleGradeConfig[]
   teacherAvailabilities       TeacherAvailability[]
   scheduleEntries             ScheduleEntry[]
+  reportCardConfig            ReportCardConfig?
 }
 
 // Módulos habilitados por institución
@@ -1621,6 +1622,7 @@ model Message {
   institution Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   author      User           @relation(fields: [authorId], references: [id], onDelete: Restrict)
   recipients  MessageRecipient[]
+  attachments MessageAttachment[]
 
   @@index([institutionId])
   @@index([authorId])
@@ -1648,6 +1650,20 @@ model MessageRecipient {
 
   @@index([messageId])
   @@index([recipientId])
+}
+
+model MessageAttachment {
+  id          String   @id @default(cuid())
+  messageId   String
+  fileName    String
+  fileSize    Int
+  mimeType    String
+  storagePath String
+  createdAt   DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
 }
 
 // ============================================
@@ -3437,4 +3453,53 @@ model ScheduleEntry {
   @@index([teacherAssignmentId])
   @@index([roomId])
   @@index([dayOfWeek])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONFIGURACIÓN DE BOLETINES ACADÉMICOS
+// ═══════════════════════════════════════════════════════════════════════════
+
+model ReportCardConfig {
+  id            String   @id @default(cuid())
+  institutionId String   @unique
+
+  // Encabezado
+  showLogo              Boolean @default(true)
+  showShield            Boolean @default(false)
+  headerResolution      String?
+  headerMunicipality    String?
+  headerDepartment      String?
+
+  // Tipo de evaluación
+  evaluationType        String  @default("NUMERIC")   // NUMERIC, QUALITATIVE, MIXED
+  showNumericGrade      Boolean @default(true)
+  showPerformanceLevel  Boolean @default(true)
+  showAchievements      Boolean @default(true)
+  showRecommendations   Boolean @default(true)
+
+  // Mensaje motivacional
+  showMotivationalMsg   Boolean @default(true)
+  motivationalMsgType   String  @default("AUTO")      // AUTO, CUSTOM, NONE
+  customMotivationalTpl String?
+
+  // Contenido
+  showAttendance        Boolean @default(true)
+  showRanking           Boolean @default(true)
+  showObservations      Boolean @default(true)
+  showAreaAverages      Boolean @default(true)
+  showGeneralAverage    Boolean @default(true)
+  showScale             Boolean @default(true)
+  showRecoveryGrades    Boolean @default(true)
+  showComponents        Boolean @default(false)        // Desglose por componentes (Saber, Hacer, Ser)
+
+  // Firmas configurables — JSON array
+  // [{"role":"RECTOR","label":"Rector(a)","name":"NOMBRE","enabled":true}, ...]
+  signatureConfig       Json    @default("[]")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
 }

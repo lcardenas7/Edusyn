@@ -1,4 +1,5 @@
-import { Controller, Post, Put, Get, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Put, Get, Delete, Body, Param, Query, UseGuards, Request, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -44,20 +45,22 @@ export class CommunicationsController {
   @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'ACUDIENTE', 'SECRETARIA', 'ORIENTADOR')
   getAll(
     @Request() req,
-    @Query('institutionId') institutionId?: string,
     @Query('status') status?: string,
   ) {
-    const instId = institutionId || req.user.institutionId;
+    const instId = req.user.institutionId;
     return this.communicationsService.getByInstitution(instId, status, req.user.id);
   }
 
   @Get('institution/:institutionId')
   @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   getByInstitution(
+    @Request() req,
     @Param('institutionId') institutionId: string,
     @Query('status') status?: string,
   ) {
-    return this.communicationsService.getByInstitution(institutionId, status);
+    // Seguridad: ignorar param y usar JWT para usuarios no-superadmin
+    const instId = req.user.institutionId || institutionId;
+    return this.communicationsService.getByInstitution(instId, status);
   }
 
   @Get('available-recipients')
@@ -86,6 +89,13 @@ export class CommunicationsController {
     return this.communicationsService.getInbox(req.user.id);
   }
 
+  @Get('storage-usage')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  getStorageUsage(@Request() req) {
+    const institutionId = req.user.institutionId;
+    return this.communicationsService.getStorageUsage(institutionId);
+  }
+
   @Get(':id')
   getById(@Param('id') id: string) {
     return this.communicationsService.getById(id);
@@ -94,5 +104,27 @@ export class CommunicationsController {
   @Post(':id/read')
   markAsRead(@Param('id') id: string, @Request() req) {
     return this.communicationsService.markAsRead(id, req.user.id);
+  }
+
+  @Post(':id/attachments')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'ACUDIENTE', 'SECRETARIA', 'ORIENTADOR')
+  @UseInterceptors(FileInterceptor('file'))
+  uploadAttachment(
+    @Param('id') id: string,
+    @Request() req,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.communicationsService.uploadAttachment(id, req.user.id, file);
+  }
+
+  @Delete('attachments/:attachmentId')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'ACUDIENTE', 'SECRETARIA', 'ORIENTADOR')
+  removeAttachment(@Param('attachmentId') attachmentId: string, @Request() req) {
+    return this.communicationsService.removeAttachment(attachmentId, req.user.id);
+  }
+
+  @Get('attachments/:attachmentId/download')
+  getAttachmentDownloadUrl(@Param('attachmentId') attachmentId: string, @Request() req) {
+    return this.communicationsService.getAttachmentDownloadUrl(attachmentId, req.user.id);
   }
 }

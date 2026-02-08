@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, Plus, X, Send, Mail, Bell, Users, Calendar, Eye, Trash2, FileText, MessageSquare, Megaphone, Loader2, Inbox, CheckCheck } from 'lucide-react'
+import { Search, Plus, X, Send, Mail, Bell, Users, Calendar, Eye, Trash2, FileText, MessageSquare, Megaphone, Loader2, Inbox, CheckCheck, Paperclip, Download, AlertTriangle } from 'lucide-react'
 import { communicationsApi, groupsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -78,6 +78,13 @@ export default function Communications() {
   const [recipientResults, setRecipientResults] = useState<Array<{ id: string; firstName: string; lastName: string; email: string; roles: string[] }>>([])
   const [selectedRecipients, setSelectedRecipients] = useState<Array<{ id: string; firstName: string; lastName: string; roles: string[] }>>([])
   const [searchingRecipients, setSearchingRecipients] = useState(false)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [uploadingFiles, setUploadingFiles] = useState(false)
+
+  const MAX_FILE_SIZE_MB = 5
+  const MAX_ATTACHMENTS = 3
+  const ALLOWED_EXTENSIONS = '.pdf,.doc,.docx,.jpg,.jpeg,.png,.webp'
+  const ALLOWED_TYPES_LABEL = 'PDF, Word, JPG, PNG, WebP'
 
   // Cargar grupos y categorías permitidas al montar
   useEffect(() => {
@@ -212,7 +219,63 @@ export default function Communications() {
     setSelectedRecipients([])
     setRecipientSearch('')
     setRecipientResults([])
+    setSelectedFiles([])
     setShowModal(true)
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    const remaining = MAX_ATTACHMENTS - selectedFiles.length
+    const toAdd = files.slice(0, remaining)
+
+    const invalid = toAdd.filter(f => f.size > MAX_FILE_SIZE_MB * 1024 * 1024)
+    if (invalid.length > 0) {
+      alert(`Archivos exceden el limite de ${MAX_FILE_SIZE_MB}MB: ${invalid.map(f => f.name).join(', ')}`)
+      return
+    }
+    setSelectedFiles(prev => [...prev, ...toAdd.filter(f => f.size <= MAX_FILE_SIZE_MB * 1024 * 1024)])
+    e.target.value = ''
+  }
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  const uploadAttachments = async (messageId: string) => {
+    if (selectedFiles.length === 0) return
+    setUploadingFiles(true)
+    try {
+      for (const file of selectedFiles) {
+        await communicationsApi.uploadAttachment(messageId, file)
+      }
+    } catch (err: any) {
+      console.error('Error uploading attachments:', err)
+      alert(err.response?.data?.message || 'Error al subir adjuntos')
+    } finally {
+      setUploadingFiles(false)
+    }
+  }
+
+  const handleDownloadAttachment = async (attachmentId: string) => {
+    try {
+      const res = await communicationsApi.getAttachmentDownloadUrl(attachmentId)
+      const { url, fileName } = res.data
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      link.target = '_blank'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al descargar adjunto')
+    }
   }
 
   const handleView = (comm: Communication) => {
@@ -291,7 +354,11 @@ export default function Communications() {
         content: form.content,
         recipients: getRecipientsForApi(form.recipientType)
       })
-      // 2. Enviarlo (cambia status a SENT)
+      // 2. Subir adjuntos si hay
+      if (selectedFiles.length > 0) {
+        await uploadAttachments(response.data.id)
+      }
+      // 3. Enviarlo (cambia status a SENT)
       await communicationsApi.send(response.data.id)
       setShowModal(false)
       await reloadCommunications()
@@ -467,6 +534,9 @@ export default function Communications() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-medium text-slate-900 truncate">{comm.subject}</h3>
+                          {(comm as any).attachments?.length > 0 && (
+                            <span className="text-slate-400" title={`${(comm as any).attachments.length} adjunto(s)`}><Paperclip className="w-3.5 h-3.5" /></span>
+                          )}
                           <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusLabels[comm.status].color}`}>{statusLabels[comm.status].label}</span>
                         </div>
                         <p className="text-sm text-slate-500 line-clamp-1 mb-2">{comm.content}</p>
@@ -545,7 +615,7 @@ export default function Communications() {
                     className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer ${!isRead ? 'bg-blue-50/50' : ''}`}
                     onClick={() => {
                       if (!isRead) handleMarkAsRead(msg.id)
-                      setSelectedCommunication({
+                      const commData: any = {
                         id: msg.id,
                         type: msgType,
                         subject: msg.subject || '',
@@ -555,7 +625,9 @@ export default function Communications() {
                         createdAt: msg.createdAt ? new Date(msg.createdAt).toISOString().split('T')[0] : '',
                         sentAt: msg.sentAt ? new Date(msg.sentAt).toISOString().split('T')[0] : undefined,
                         author: msg.author ? `${msg.author.firstName} ${msg.author.lastName}` : 'Sistema',
-                      })
+                        attachments: msg.attachments || [],
+                      }
+                      setSelectedCommunication(commData)
                       setShowViewModal(true)
                     }}
                   >
@@ -571,6 +643,9 @@ export default function Communications() {
                           <span className={`px-2 py-0.5 rounded text-xs font-medium ${typeInfo.color}`}>
                             {typeInfo.label}
                           </span>
+                          {msg.attachments?.length > 0 && (
+                            <span className="text-slate-400" title={`${msg.attachments.length} adjunto(s)`}><Paperclip className="w-3.5 h-3.5" /></span>
+                          )}
                           {!isRead && (
                             <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>
                           )}
@@ -712,7 +787,42 @@ export default function Communications() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Contenido *</label>
-                <textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={8} className="w-full px-3 py-2 border border-slate-300 rounded-lg resize-none" placeholder="Escriba el contenido de la comunicacion..." />
+                <textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={6} className="w-full px-3 py-2 border border-slate-300 rounded-lg resize-none" placeholder="Escriba el contenido de la comunicacion..." />
+              </div>
+              {/* Adjuntos */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <Paperclip className="w-4 h-4 inline mr-1" />Adjuntos (opcional)
+                </label>
+                {selectedFiles.length < MAX_ATTACHMENTS && (
+                  <label className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                    <Plus className="w-4 h-4 text-slate-400" />
+                    <span className="text-sm text-slate-500">Agregar archivo</span>
+                    <input
+                      type="file"
+                      accept={ALLOWED_EXTENSIONS}
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+                <p className="text-xs text-slate-400 mt-1">
+                  Max {MAX_ATTACHMENTS} archivos, {MAX_FILE_SIZE_MB}MB c/u. Formatos: {ALLOWED_TYPES_LABEL}
+                </p>
+                {selectedFiles.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {selectedFiles.map((file, idx) => (
+                      <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg text-sm">
+                        <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                        <span className="truncate flex-1 text-slate-700">{file.name}</span>
+                        <span className="text-xs text-slate-400 flex-shrink-0">{formatFileSize(file.size)}</span>
+                        <button type="button" onClick={() => removeFile(idx)} className="text-slate-400 hover:text-red-500 flex-shrink-0">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Programar envio (opcional)</label>
@@ -761,6 +871,25 @@ export default function Communications() {
               <div className="prose prose-slate max-w-none">
                 <p className="whitespace-pre-wrap">{selectedCommunication.content}</p>
               </div>
+              {(selectedCommunication as any).attachments?.length > 0 && (
+                <div className="mt-4 p-3 bg-slate-50 rounded-lg">
+                  <p className="text-sm font-medium text-slate-700 mb-2 flex items-center gap-1"><Paperclip className="w-4 h-4" /> Adjuntos</p>
+                  <div className="space-y-1">
+                    {(selectedCommunication as any).attachments.map((att: any) => (
+                      <button
+                        key={att.id}
+                        onClick={() => handleDownloadAttachment(att.id)}
+                        className="flex items-center gap-2 w-full px-3 py-2 bg-white rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
+                      >
+                        <FileText className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                        <span className="text-sm text-slate-700 truncate flex-1">{att.fileName}</span>
+                        <span className="text-xs text-slate-400 flex-shrink-0">{formatFileSize(att.fileSize)}</span>
+                        <Download className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {selectedCommunication.status === 'SENT' && selectedCommunication.readCount !== undefined && (
                 <div className="mt-6 p-4 bg-slate-50 rounded-lg">
                   <p className="text-sm font-medium text-slate-700">Estadisticas de lectura</p>

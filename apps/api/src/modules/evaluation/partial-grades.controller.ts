@@ -1,13 +1,18 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { PartialGradesService } from './partial-grades.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('partial-grades')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class PartialGradesController {
-  constructor(private readonly partialGradesService: PartialGradesService) {}
+  constructor(
+    private readonly partialGradesService: PartialGradesService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
@@ -41,8 +46,9 @@ export class PartialGradesController {
 
   @Get('count')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async count() {
-    return this.partialGradesService.count();
+  async count(@Request() req: any) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.partialGradesService.count(instId);
   }
 
   @Delete(':id')

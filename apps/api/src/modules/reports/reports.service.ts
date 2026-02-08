@@ -694,4 +694,138 @@ export class ReportsService {
 
     return results;
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CONFIGURACIÓN DE BOLETINES
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async getReportCardConfig(institutionId: string) {
+    let config = await this.prisma.reportCardConfig.findUnique({
+      where: { institutionId },
+    });
+
+    if (!config) {
+      // Crear configuración por defecto
+      const institution = await this.prisma.institution.findUnique({
+        where: { id: institutionId },
+        select: { name: true, address: true, phone: true, email: true, nit: true, daneCode: true },
+      });
+
+      config = await this.prisma.reportCardConfig.create({
+        data: {
+          institutionId,
+          headerResolution: '',
+          headerMunicipality: '',
+          headerDepartment: '',
+          signatureConfig: [
+            { role: 'RECTOR', label: 'Rector(a)', name: '', enabled: true },
+            { role: 'COORDINATOR', label: 'Coordinador(a)', name: '', enabled: true },
+            { role: 'TEACHER', label: 'Director(a) de Grupo', name: '', enabled: true },
+          ],
+        },
+      });
+    }
+
+    return config;
+  }
+
+  async updateReportCardConfig(institutionId: string, data: any) {
+    // Verificar que existe o crear
+    await this.getReportCardConfig(institutionId);
+
+    return this.prisma.reportCardConfig.update({
+      where: { institutionId },
+      data: {
+        showLogo: data.showLogo,
+        showShield: data.showShield,
+        headerResolution: data.headerResolution,
+        headerMunicipality: data.headerMunicipality,
+        headerDepartment: data.headerDepartment,
+        evaluationType: data.evaluationType,
+        showNumericGrade: data.showNumericGrade,
+        showPerformanceLevel: data.showPerformanceLevel,
+        showAchievements: data.showAchievements,
+        showRecommendations: data.showRecommendations,
+        showMotivationalMsg: data.showMotivationalMsg,
+        motivationalMsgType: data.motivationalMsgType,
+        customMotivationalTpl: data.customMotivationalTpl,
+        showAttendance: data.showAttendance,
+        showRanking: data.showRanking,
+        showObservations: data.showObservations,
+        showAreaAverages: data.showAreaAverages,
+        showGeneralAverage: data.showGeneralAverage,
+        showScale: data.showScale,
+        showRecoveryGrades: data.showRecoveryGrades,
+        showComponents: data.showComponents,
+        signatureConfig: data.signatureConfig,
+      },
+    });
+  }
+
+  /**
+   * Lista de estudiantes de un grupo con resumen de notas para la tabla de boletines
+   */
+  async getGroupReportCardList(groupId: string, academicTermId: string, academicYearId: string) {
+    const enrollments = await this.studentsService.getEnrollmentsForGroupReport({
+      groupId,
+      academicYearId,
+    });
+
+    const term = await this.academicYearService.getTermById(academicTermId);
+    if (!term) throw new NotFoundException('Período académico no encontrado');
+
+    const results = await Promise.all(
+      enrollments.map(async (enrollment) => {
+        try {
+          const data = await this.getReportCardData(enrollment.id, academicTermId);
+
+          // Calcular promedio general
+          const allGrades = data.subjectGrades.filter(s => s.grade !== null);
+          const generalAvg = allGrades.length > 0
+            ? Math.round((allGrades.reduce((sum, s) => sum + s.grade!, 0) / allGrades.length) * 10) / 10
+            : null;
+
+          const approved = allGrades.filter(s => (s.grade ?? 0) >= 3.0).length;
+          const failed = allGrades.filter(s => (s.grade ?? 0) < 3.0).length;
+
+          return {
+            enrollmentId: enrollment.id,
+            studentId: enrollment.studentId,
+            studentName: `${enrollment.studentLastName} ${enrollment.studentFirstName}`,
+            documentNumber: enrollment.documentNumber || '',
+            groupName: enrollment.groupName || '',
+            average: generalAvg,
+            approvedSubjects: approved,
+            failedSubjects: failed,
+            totalSubjects: allGrades.length,
+            attendance: data.attendance,
+          };
+        } catch {
+          return {
+            enrollmentId: enrollment.id,
+            studentId: enrollment.studentId,
+            studentName: `${enrollment.studentLastName} ${enrollment.studentFirstName}`,
+            documentNumber: enrollment.documentNumber || '',
+            groupName: enrollment.groupName || '',
+            average: null,
+            approvedSubjects: 0,
+            failedSubjects: 0,
+            totalSubjects: 0,
+            attendance: null,
+          };
+        }
+      }),
+    );
+
+    // Calcular ranking
+    const sorted = [...results]
+      .filter(r => r.average !== null)
+      .sort((a, b) => (b.average ?? 0) - (a.average ?? 0));
+
+    return results.map(r => ({
+      ...r,
+      rank: r.average !== null ? sorted.findIndex(s => s.enrollmentId === r.enrollmentId) + 1 : null,
+      totalStudents: sorted.length,
+    }));
+  }
 }

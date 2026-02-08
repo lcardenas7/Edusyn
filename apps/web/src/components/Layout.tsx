@@ -1,7 +1,7 @@
-import { ReactNode, useMemo, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { ReactNode, useMemo, useState, useEffect, useCallback } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { authApi } from '../lib/api'
+import { authApi, communicationsApi } from '../lib/api'
 import { 
   LayoutDashboard, 
   Users, 
@@ -240,6 +240,25 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const navigate = useNavigate()
+
+  // Fetch unread message count
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const res = await communicationsApi.getInbox()
+      const unread = (res.data || []).filter((item: any) => !item.readAt).length
+      setUnreadCount(unread)
+    } catch {
+      // Silently fail - user might not have communications module
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchUnreadCount()
+    const interval = setInterval(fetchUnreadCount, 60000) // cada 60 segundos
+    return () => clearInterval(interval)
+  }, [fetchUnreadCount])
 
   const userRoles = useMemo(() => {
     if (!user?.roles) return []
@@ -352,12 +371,26 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
           <h1 className="text-lg font-bold text-slate-900">Edusyn</h1>
         </div>
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 rounded-lg hover:bg-slate-100"
-        >
-          {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate('/communications')}
+            className="p-2 rounded-lg hover:bg-slate-100 relative"
+            title="Mensajes"
+          >
+            <Bell className="w-5 h-5 text-slate-600" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 rounded-lg hover:bg-slate-100"
+          >
+            {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </header>
 
       {/* Mobile overlay */}
@@ -376,14 +409,28 @@ export default function Layout({ children }: { children: ReactNode }) {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:top-0 top-14
       `}>
-        <div className="hidden lg:flex items-center gap-3 px-6 py-5 border-b border-slate-200">
-          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-            <GraduationCap className="w-6 h-6 text-white" />
+        <div className="hidden lg:flex items-center justify-between px-6 py-5 border-b border-slate-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <GraduationCap className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-slate-900">Edusyn</h1>
+              <p className="text-xs text-slate-500">Sistema Académico</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">Edusyn</h1>
-            <p className="text-xs text-slate-500">Sistema Académico</p>
-          </div>
+          <button
+            onClick={() => navigate('/communications')}
+            className="p-2 rounded-lg hover:bg-blue-50 relative transition-colors"
+            title="Mensajes"
+          >
+            <Bell className="w-5 h-5 text-slate-500" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
         </div>
 
         <nav className="px-3 py-4 space-y-1 overflow-y-auto max-h-[calc(100vh-200px)] lg:max-h-[calc(100vh-200px)]">

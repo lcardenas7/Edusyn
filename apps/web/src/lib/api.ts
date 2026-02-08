@@ -303,7 +303,7 @@ export const preventiveAlertsApi = {
 // Reports
 export const reportsApi = {
   getReportCard: (studentEnrollmentId: string, academicTermId: string) =>
-    api.get('/reports/report-card', { params: { studentEnrollmentId, academicTermId } }),
+    api.get(`/reports/report-card/${studentEnrollmentId}`, { params: { academicTermId } }),
   getGroupReport: (groupId: string, academicTermId: string) =>
     api.get('/reports/group', { params: { groupId, academicTermId } }),
   // Reportes predictivos - Nota mínima requerida
@@ -311,6 +311,12 @@ export const reportsApi = {
     api.get(`/reports/minimum-grade/${studentEnrollmentId}`, { params: { academicYearId } }),
   getMinimumGradeForGroup: (groupId: string, academicYearId: string) =>
     api.get(`/reports/minimum-grade/group/${groupId}`, { params: { academicYearId } }),
+  // Configuración de boletines
+  getReportCardConfig: () => api.get('/reports/report-card-config'),
+  updateReportCardConfig: (data: any) => api.put('/reports/report-card-config', data),
+  // Lista de boletines por grupo
+  getGroupReportCardList: (groupId: string, academicTermId: string, academicYearId: string) =>
+    api.get(`/reports/report-cards/group/${groupId}`, { params: { academicTermId, academicYearId } }),
 }
 
 // Communications
@@ -325,6 +331,14 @@ export const communicationsApi = {
   markAsRead: (id: string) => api.post(`/communications/${id}/read`),
   getAvailableRecipients: (search?: string) => api.get('/communications/available-recipients', { params: { search } }),
   getAllowedCategories: () => api.get('/communications/allowed-categories'),
+  uploadAttachment: (messageId: string, file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post(`/communications/${messageId}/attachments`, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+  },
+  removeAttachment: (attachmentId: string) => api.delete(`/communications/attachments/${attachmentId}`),
+  getAttachmentDownloadUrl: (attachmentId: string) => api.get(`/communications/attachments/${attachmentId}/download`),
+  getStorageUsage: () => api.get('/communications/storage-usage'),
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

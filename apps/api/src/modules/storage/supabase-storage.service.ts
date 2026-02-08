@@ -36,6 +36,7 @@ export class SupabaseStorageService {
     perfiles: 'perfiles',             // Fotos de perfil (estudiantes, docentes)
     documentos: 'documentos',         // Documentos de estudiantes (RC, EPS, etc.)
     galeria: 'galeria',               // Imágenes del dashboard institucional
+    mensajes: 'mensajes',               // Adjuntos de mensajes/comunicaciones
   };
 
   // Tiempos de expiración para URLs firmadas (en segundos)
@@ -48,6 +49,7 @@ export class SupabaseStorageService {
     exportaciones: 60 * 60, // 1 hora (descargas)
     perfiles: 0,            // Público - no necesita firma
     galeria: 0,             // Público - no necesita firma
+    mensajes: 15 * 60,       // 15 minutos - adjuntos de mensajes
   };
 
   constructor() {
@@ -112,6 +114,60 @@ export class SupabaseStorageService {
     const path = `institucion/${institutionId}/gallery/${categoryPath}${fileName}`;
 
     return this.uploadFile(this.buckets.galeria, path, file);
+  }
+
+  /**
+   * Sube un adjunto de mensaje/comunicación
+   * Ruta: institucion/{institutionId}/mensajes/{messageId}/{fileName}
+   * Tipos: PDF, Word, imágenes. Máximo 5MB
+   */
+  static readonly MESSAGE_ALLOWED_TYPES = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+  ];
+  static readonly MESSAGE_MAX_SIZE_MB = 5;
+  static readonly MESSAGE_MAX_ATTACHMENTS = 3;
+
+  async uploadMessageAttachment(
+    institutionId: string,
+    messageId: string,
+    file: Express.Multer.File,
+  ): Promise<UploadResult> {
+    if (!this.isConfigured()) {
+      throw new BadRequestException('Storage no configurado');
+    }
+
+    this.validateFile(
+      file,
+      SupabaseStorageService.MESSAGE_ALLOWED_TYPES,
+      SupabaseStorageService.MESSAGE_MAX_SIZE_MB,
+    );
+
+    const ext = this.getFileExtension(file.originalname);
+    const safeName = this.slugify(file.originalname.replace(/\.[^.]+$/, ''));
+    const fileName = `${safeName}_${Date.now()}.${ext}`;
+    const path = `institucion/${institutionId}/mensajes/${messageId}/${fileName}`;
+
+    return this.uploadFile(this.buckets.mensajes, path, file);
+  }
+
+  /**
+   * Elimina todos los adjuntos de un mensaje
+   */
+  async deleteMessageAttachments(institutionId: string, messageId: string): Promise<void> {
+    if (!this.isConfigured()) return;
+
+    const folderPath = `institucion/${institutionId}/mensajes/${messageId}`;
+    const files = await this.listFiles(this.buckets.mensajes, folderPath);
+    
+    if (files.length > 0) {
+      const paths = files.map(f => `${folderPath}/${f.name}`);
+      await this.supabase.storage.from(this.buckets.mensajes).remove(paths);
+    }
   }
 
   /**

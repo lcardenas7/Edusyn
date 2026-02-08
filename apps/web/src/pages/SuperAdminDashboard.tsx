@@ -347,6 +347,19 @@ const AVAILABLE_MODULES: ModuleConfig[] = [
     ]
   },
   { 
+    id: 'TIMETABLE', 
+    name: 'Horarios', 
+    description: 'Gestión de horarios escolares',
+    features: [
+      { id: 'TIMETABLE_VIEW', name: 'Ver Horarios', description: 'Consultar horarios por grupo, docente o salón' },
+      { id: 'TIMETABLE_MANAGE', name: 'Gestionar Horarios', description: 'Crear y editar entradas del horario' },
+      { id: 'TIMETABLE_TIME_BLOCKS', name: 'Bloques de Tiempo', description: 'Configurar bloques horarios por jornada' },
+      { id: 'TIMETABLE_ROOMS', name: 'Salones', description: 'Gestionar salones y restricciones' },
+      { id: 'TIMETABLE_AVAILABILITY', name: 'Disponibilidad Docente', description: 'Configurar disponibilidad de docentes' },
+      { id: 'TIMETABLE_CONFIG', name: 'Configuración', description: 'Reglas de horario por grado' },
+    ]
+  },
+  { 
     id: 'FINANCE', 
     name: 'Gestión Financiera', 
     description: 'Cobros, pagos, egresos y reportes financieros',

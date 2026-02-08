@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, Query, Res, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Put, Body, Param, Query, Res, Request, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,7 +13,7 @@ export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Get('report-card/:studentEnrollmentId')
-  @Roles('ADMIN', 'COORDINATOR', 'TEACHER', 'STUDENT')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
   async getReportCardData(
     @Param('studentEnrollmentId') studentEnrollmentId: string,
     @Query('academicTermId') academicTermId: string,
@@ -22,7 +22,7 @@ export class ReportsController {
   }
 
   @Get('report-card/:studentEnrollmentId/pdf')
-  @Roles('ADMIN', 'COORDINATOR', 'TEACHER', 'STUDENT')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
   async downloadReportCardPdf(
     @Param('studentEnrollmentId') studentEnrollmentId: string,
     @Query('academicTermId') academicTermId: string,
@@ -43,7 +43,7 @@ export class ReportsController {
   }
 
   @Post('report-cards/bulk')
-  @Roles('ADMIN', 'COORDINATOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async generateBulkReportCards(@Body() dto: GenerateBulkReportCardsDto) {
     return this.reportsService.generateBulkReportCards(
       dto.groupId,
@@ -86,5 +86,33 @@ export class ReportsController {
       groupId,
       academicYearId,
     );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CONFIGURACIÓN DE BOLETINES
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('report-card-config')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async getReportCardConfig(@Request() req) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getReportCardConfig(institutionId);
+  }
+
+  @Put('report-card-config')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async updateReportCardConfig(@Request() req, @Body() data: any) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.updateReportCardConfig(institutionId, data);
+  }
+
+  @Get('report-cards/group/:groupId')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getGroupReportCardList(
+    @Param('groupId') groupId: string,
+    @Query('academicTermId') academicTermId: string,
+    @Query('academicYearId') academicYearId: string,
+  ) {
+    return this.reportsService.getGroupReportCardList(groupId, academicTermId, academicYearId);
   }
 }

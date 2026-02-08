@@ -21,6 +21,7 @@ import {
 } from './enrollment.service';
 import { EnrollmentStatus, EnrollmentMovementType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('enrollments')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -83,10 +84,12 @@ export class EnrollmentController {
   @Get('find-student')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'SECRETARIA')
   async findStudentByDocument(
+    @Request() req: any,
     @Query('institutionId') institutionId: string,
     @Query('documentNumber') documentNumber: string,
   ) {
-    return this.enrollmentService.findStudentByDocument(institutionId, documentNumber);
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.enrollmentService.findStudentByDocument(instId, documentNumber);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -243,10 +246,12 @@ export class EnrollmentController {
   @Get('capacity/:academicYearId')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'SECRETARIA')
   async getCapacityByAcademicYear(
+    @Request() req: any,
     @Param('academicYearId') academicYearId: string,
     @Query('institutionId') institutionId: string,
   ) {
-    return this.enrollmentService.getCapacityByAcademicYear(academicYearId, institutionId);
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.enrollmentService.getCapacityByAcademicYear(academicYearId, instId);
   }
 
   @Get('capacity/:academicYearId/group/:groupId')

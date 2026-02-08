@@ -1,11 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
+import { SupabaseStorageService } from '../storage/supabase-storage.service';
 import { CreateMessageDto, UpdateMessageDto } from './dto/create-message.dto';
 
 @Injectable()
 export class CommunicationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: SupabaseStorageService,
+  ) {}
 
   async create(authorId: string, dto: CreateMessageDto) {
     return this.prisma.message.create({
@@ -82,6 +86,9 @@ export class CommunicationsService {
           select: { id: true, firstName: true, lastName: true },
         },
         recipients: true,
+        attachments: {
+          select: { id: true, fileName: true, fileSize: true, mimeType: true, createdAt: true },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -95,6 +102,9 @@ export class CommunicationsService {
           select: { id: true, firstName: true, lastName: true },
         },
         recipients: true,
+        attachments: {
+          select: { id: true, fileName: true, fileSize: true, mimeType: true, createdAt: true },
+        },
       },
     });
 
@@ -342,10 +352,121 @@ export class CommunicationsService {
             author: {
               select: { id: true, firstName: true, lastName: true },
             },
+            attachments: {
+              select: { id: true, fileName: true, fileSize: true, mimeType: true },
+            },
           },
         },
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ADJUNTOS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async uploadAttachment(messageId: string, userId: string, file: Express.Multer.File) {
+    const message = await this.prisma.message.findUnique({ where: { id: messageId } });
+    if (!message) throw new NotFoundException('Mensaje no encontrado');
+    if (message.authorId !== userId) {
+      throw new BadRequestException('Solo el autor puede agregar adjuntos');
+    }
+    if (message.status === 'SENT') {
+      throw new BadRequestException('No se pueden agregar adjuntos a mensajes ya enviados');
+    }
+
+    // Verificar límite de adjuntos por mensaje
+    const currentCount = await this.prisma.messageAttachment.count({ where: { messageId } });
+    if (currentCount >= SupabaseStorageService.MESSAGE_MAX_ATTACHMENTS) {
+      throw new BadRequestException(
+        `Máximo ${SupabaseStorageService.MESSAGE_MAX_ATTACHMENTS} adjuntos por mensaje`,
+      );
+    }
+
+    // Subir a Supabase
+    const result = await this.storage.uploadMessageAttachment(
+      message.institutionId,
+      messageId,
+      file,
+    );
+
+    // Guardar referencia en BD
+    return this.prisma.messageAttachment.create({
+      data: {
+        messageId,
+        fileName: file.originalname,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        storagePath: result.path,
+      },
+    });
+  }
+
+  async removeAttachment(attachmentId: string, userId: string) {
+    const attachment = await this.prisma.messageAttachment.findUnique({
+      where: { id: attachmentId },
+      include: { message: true },
+    });
+    if (!attachment) throw new NotFoundException('Adjunto no encontrado');
+    if (attachment.message.authorId !== userId) {
+      throw new BadRequestException('Solo el autor puede eliminar adjuntos');
+    }
+    if (attachment.message.status === 'SENT') {
+      throw new BadRequestException('No se pueden eliminar adjuntos de mensajes ya enviados');
+    }
+
+    // Eliminar de Supabase
+    await this.storage.deleteFile(this.storage.buckets.mensajes, attachment.storagePath);
+
+    // Eliminar de BD
+    return this.prisma.messageAttachment.delete({ where: { id: attachmentId } });
+  }
+
+  async getAttachmentDownloadUrl(attachmentId: string, userId: string) {
+    const attachment = await this.prisma.messageAttachment.findUnique({
+      where: { id: attachmentId },
+      include: { message: { include: { recipients: true } } },
+    });
+    if (!attachment) throw new NotFoundException('Adjunto no encontrado');
+
+    // Verificar acceso: autor o destinatario
+    const isAuthor = attachment.message.authorId === userId;
+    const isRecipient = attachment.message.recipients.some(
+      r => r.recipientId === userId || r.recipientType === 'ALL_TEACHERS' || r.recipientType === 'ALL_STUDENTS',
+    );
+    if (!isAuthor && !isRecipient) {
+      throw new BadRequestException('No tienes acceso a este adjunto');
+    }
+
+    const url = await this.storage.getSignedUrlForBucket(
+      this.storage.buckets.mensajes,
+      attachment.storagePath,
+    );
+
+    return { url, fileName: attachment.fileName, mimeType: attachment.mimeType };
+  }
+
+  /**
+   * Devuelve el uso de almacenamiento de adjuntos para una institución
+   */
+  async getStorageUsage(institutionId: string) {
+    const result = await this.prisma.messageAttachment.aggregate({
+      where: { message: { institutionId } },
+      _sum: { fileSize: true },
+      _count: true,
+    });
+
+    const usedBytes = result._sum.fileSize || 0;
+    const totalFiles = result._count;
+    const limitBytes = 500 * 1024 * 1024; // 500 MB por institución
+
+    return {
+      usedBytes,
+      usedMB: Math.round((usedBytes / (1024 * 1024)) * 100) / 100,
+      totalFiles,
+      limitMB: 500,
+      percentUsed: Math.round((usedBytes / limitBytes) * 10000) / 100,
+    };
   }
 }

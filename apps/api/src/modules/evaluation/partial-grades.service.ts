@@ -74,8 +74,14 @@ export class PartialGradesService {
     return results;
   }
 
-  async count() {
-    const count = await this.prisma.partialGrade.count();
+  async count(institutionId?: string) {
+    const count = await this.prisma.partialGrade.count({
+      where: institutionId ? {
+        studentEnrollment: {
+          academicYear: { institutionId },
+        },
+      } : undefined,
+    });
     return { count };
   }
 

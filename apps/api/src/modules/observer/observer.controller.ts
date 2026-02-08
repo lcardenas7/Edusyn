@@ -12,31 +12,31 @@ export class ObserverController {
   constructor(private readonly observerService: ObserverService) {}
 
   @Post()
-  @Roles('ADMIN', 'COORDINATOR', 'TEACHER')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   create(@Request() req, @Body() dto: CreateObservationDto) {
     return this.observerService.create(req.user.id, dto);
   }
 
   @Put(':id')
-  @Roles('ADMIN', 'COORDINATOR', 'TEACHER')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   update(@Param('id') id: string, @Body() dto: UpdateObservationDto) {
     return this.observerService.update(id, dto);
   }
 
   @Delete(':id')
-  @Roles('ADMIN', 'COORDINATOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   delete(@Param('id') id: string) {
     return this.observerService.delete(id);
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'COORDINATOR', 'TEACHER', 'STUDENT')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
   getById(@Param('id') id: string) {
     return this.observerService.getById(id);
   }
 
   @Get('by-student/:studentEnrollmentId')
-  @Roles('ADMIN', 'COORDINATOR', 'TEACHER', 'STUDENT')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
   getByStudent(
     @Param('studentEnrollmentId') studentEnrollmentId: string,
     @Query('startDate') startDate?: string,
@@ -46,20 +46,20 @@ export class ObserverController {
   }
 
   @Get('summary/:studentEnrollmentId')
-  @Roles('ADMIN', 'COORDINATOR', 'TEACHER', 'STUDENT')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
   getStudentSummary(@Param('studentEnrollmentId') studentEnrollmentId: string) {
     return this.observerService.getStudentSummary(studentEnrollmentId);
   }
 
   @Get('pending-followups')
-  @Roles('ADMIN', 'COORDINATOR', 'TEACHER')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   getPendingFollowUps(@Request() req, @Query('all') all?: string) {
     const authorId = all === 'true' ? undefined : req.user.id;
     return this.observerService.getPendingFollowUps(authorId);
   }
 
   @Put(':id/notify-parent')
-  @Roles('ADMIN', 'COORDINATOR', 'TEACHER')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   markParentNotified(@Param('id') id: string) {
     return this.observerService.markParentNotified(id);
   }
