@@ -1020,7 +1020,7 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
   showMessage: (msg: string, type: 'success' | 'error') => void
   onScheduleGenerated: () => void
 }) {
-  const [step, setStep] = useState<'load' | 'preview' | 'generate' | 'result'>('load')
+  const [step, setStep] = useState<'load' | 'preview' | 'configure' | 'generate' | 'result'>('load')
   const [loading, setLoading] = useState(false)
   const [teachingLoad, setTeachingLoad] = useState<any>(null)
   const [importResult, setImportResult] = useState<any>(null)
@@ -1030,6 +1030,21 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
     clearExisting: true,
     respectAvailability: true,
   })
+  const [scheduleConfig, setScheduleConfig] = useState({
+    startTime: '06:30',
+    classesPerDay: 7,
+    classDuration: 55,
+    breakDuration: 15,
+    breakAfterBlock: 2,
+    secondBreakAfterBlock: 4,
+    includeLunch: true,
+    lunchDuration: 30,
+    lunchAfterBlock: 6,
+    activeDays: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'] as string[],
+  })
+  const [configSaved, setConfigSaved] = useState(false)
+  const [configPreview, setConfigPreview] = useState<any[]>([])
+  const [configLoaded, setConfigLoaded] = useState(false)
 
   const allGroups = grades.flatMap(g => g.groups.map(gr => ({ ...gr, gradeName: g.name })))
 
@@ -1048,6 +1063,109 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
   }
 
   useEffect(() => { loadTeachingLoad() }, [academicYearId])
+
+  // Cargar configuración actual de bloques
+  const loadScheduleConfig = async () => {
+    if (configLoaded) return
+    try {
+      const res = await timetablingGeneratorApi.getScheduleConfig()
+      const d = res.data
+      setScheduleConfig(prev => ({
+        ...prev,
+        startTime: d.startTime || '06:30',
+        classesPerDay: d.classesPerDay || 7,
+        classDuration: d.classDurationMinutes || 55,
+        breakDuration: d.breakDurationMinutes || 15,
+        breakAfterBlock: d.breakAfterBlock > 0 ? d.breakAfterBlock : 2,
+        includeLunch: d.includeLunch ?? true,
+        lunchDuration: d.lunchDurationMinutes || 30,
+        lunchAfterBlock: d.lunchAfterBlock || 6,
+        activeDays: d.activeDays || ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'],
+      }))
+      setConfigLoaded(true)
+      if (d.existingBlocks?.length > 0) {
+        setConfigSaved(true)
+      }
+    } catch (err) {
+      console.error('Error loading config:', err)
+    }
+  }
+
+  // Calcular vista previa de bloques basado en config
+  const computePreview = useCallback(() => {
+    const blocks: { label: string; type: string; start: string; end: string }[] = []
+    const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+    const toTime = (mins: number) => `${Math.floor(mins / 60).toString().padStart(2, '0')}:${(mins % 60).toString().padStart(2, '0')}`
+
+    let cur = toMin(scheduleConfig.startTime)
+    let classNum = 0
+
+    for (let i = 0; i < scheduleConfig.classesPerDay; i++) {
+      classNum++
+      const s = toTime(cur)
+      cur += scheduleConfig.classDuration
+      const e = toTime(cur)
+      blocks.push({ label: `${classNum}° Hora`, type: 'CLASS', start: s, end: e })
+
+      if (classNum === scheduleConfig.breakAfterBlock && i < scheduleConfig.classesPerDay - 1) {
+        const bs = toTime(cur)
+        cur += scheduleConfig.breakDuration
+        blocks.push({ label: 'Receso', type: 'BREAK', start: bs, end: toTime(cur) })
+      }
+      if (scheduleConfig.secondBreakAfterBlock && classNum === scheduleConfig.secondBreakAfterBlock && i < scheduleConfig.classesPerDay - 1) {
+        const bs = toTime(cur)
+        cur += scheduleConfig.breakDuration
+        blocks.push({ label: 'Receso', type: 'BREAK', start: bs, end: toTime(cur) })
+      }
+      if (scheduleConfig.includeLunch && classNum === scheduleConfig.lunchAfterBlock && i < scheduleConfig.classesPerDay - 1) {
+        const ls = toTime(cur)
+        cur += scheduleConfig.lunchDuration
+        blocks.push({ label: 'Almuerzo', type: 'LUNCH', start: ls, end: toTime(cur) })
+      }
+    }
+    setConfigPreview(blocks)
+  }, [scheduleConfig])
+
+  useEffect(() => { computePreview() }, [computePreview])
+
+  // Guardar configuración
+  const handleSaveConfig = async () => {
+    setLoading(true)
+    try {
+      const res = await timetablingGeneratorApi.configureSchedule(scheduleConfig)
+      if (res.data.success) {
+        showMessage(`Configuración guardada: ${res.data.classBlocks} bloques de clase, ${res.data.startTime} a ${res.data.endTime}`, 'success')
+        setConfigSaved(true)
+      } else {
+        showMessage(res.data.error || 'Error al guardar configuración', 'error')
+      }
+    } catch (err: any) {
+      showMessage(err.response?.data?.message || 'Error al guardar configuración', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Eliminar carga académica
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const handleDeleteTeachingLoad = async () => {
+    if (!academicYearId) return
+    setLoading(true)
+    try {
+      const res = await timetablingGeneratorApi.deleteTeachingLoad(academicYearId)
+      showMessage(res.data.message || 'Carga eliminada', 'success')
+      setTeachingLoad(null)
+      setImportResult(null)
+      setGenerateResult(null)
+      setConfigSaved(false)
+      setShowDeleteConfirm(false)
+      setStep('load')
+    } catch (err: any) {
+      showMessage(err.response?.data?.message || 'Error al eliminar', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Descargar plantilla Excel
   const handleDownloadTemplate = async () => {
@@ -1101,6 +1219,7 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
         groupIds: selectedGroupIds.length > 0 ? selectedGroupIds : undefined,
         clearExisting: genOptions.clearExisting,
         respectAvailability: genOptions.respectAvailability,
+        activeDays: scheduleConfig.activeDays,
       })
       setGenerateResult(res.data)
       setStep('result')
@@ -1166,23 +1285,24 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
   return (
     <div className="space-y-6">
       {/* Step indicators */}
-      <div className="flex items-center gap-2 text-sm">
+      <div className="flex items-center gap-2 text-sm flex-wrap">
         {[
-          { key: 'load', label: '1. Carga Académica', icon: FileSpreadsheet },
+          { key: 'load', label: '1. Carga', icon: FileSpreadsheet },
           { key: 'preview', label: '2. Revisar', icon: Eye },
-          { key: 'generate', label: '3. Generar', icon: Wand2 },
-          { key: 'result', label: '4. Resultado', icon: CheckCircle2 },
+          { key: 'configure', label: '3. Configurar', icon: Settings },
+          { key: 'generate', label: '4. Generar', icon: Wand2 },
+          { key: 'result', label: '5. Resultado', icon: CheckCircle2 },
         ].map((s, i) => {
           const Icon = s.icon
           const isActive = step === s.key
-          const stepOrder = ['load', 'preview', 'generate', 'result']
+          const stepOrder = ['load', 'preview', 'configure', 'generate', 'result']
           const currentIdx = stepOrder.indexOf(step)
           const isPast = currentIdx > i
-          // Determine which steps are reachable
           const canReach = (key: string) => {
             if (key === 'load') return true
             if (key === 'preview') return teachingLoad?.assignments?.length > 0 || (importResult && importResult.created > 0)
-            if (key === 'generate') return teachingLoad?.assignments?.length > 0
+            if (key === 'configure') return teachingLoad?.assignments?.length > 0
+            if (key === 'generate') return teachingLoad?.assignments?.length > 0 && configSaved
             if (key === 'result') return !!generateResult
             return false
           }
@@ -1190,7 +1310,11 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
           return (
             <button
               key={s.key}
-              onClick={() => isReachable ? setStep(s.key as any) : null}
+              onClick={() => {
+                if (!isReachable) return
+                if (s.key === 'configure') loadScheduleConfig()
+                setStep(s.key as any)
+              }}
               disabled={!isReachable}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
                 isActive ? 'bg-indigo-100 text-indigo-700 font-medium'
@@ -1201,7 +1325,7 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
             >
               <Icon className="w-4 h-4" />
               {s.label}
-              {i < 3 && <ChevronDown className="w-3 h-3 -rotate-90 ml-1" />}
+              {i < 4 && <ChevronDown className="w-3 h-3 -rotate-90 ml-1" />}
             </button>
           )
         })}
@@ -1307,10 +1431,36 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
             <div className="bg-white border rounded-xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-800">Carga Académica Actual</h3>
-                <button onClick={loadTeachingLoad} className="text-gray-400 hover:text-gray-600">
-                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={loadTeachingLoad} className="text-gray-400 hover:text-gray-600" title="Refrescar">
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                  </button>
+                  <button onClick={() => setShowDeleteConfirm(true)} className="text-red-400 hover:text-red-600" title="Eliminar carga">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
+              {showDeleteConfirm && (
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-800 font-medium mb-2">¿Eliminar toda la carga académica?</p>
+                  <p className="text-xs text-red-600 mb-3">Se eliminarán todas las asignaciones docente-materia-grupo y las entradas de horario asociadas. Esta acción no se puede deshacer.</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleDeleteTeachingLoad}
+                      disabled={loading}
+                      className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {loading ? 'Eliminando...' : 'Sí, eliminar todo'}
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-4 gap-3 mb-4">
                 <div className="bg-blue-50 rounded-lg p-3 text-center">
@@ -1360,11 +1510,11 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
 
               {(teachingLoad.summary?.totalAssignments || 0) > 0 && (
                 <button
-                  onClick={() => setStep('generate')}
+                  onClick={() => { loadScheduleConfig(); setStep('configure') }}
                   className="mt-4 w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
                 >
-                  <Wand2 className="w-5 h-5" />
-                  Continuar a Generar Horario
+                  <Settings className="w-5 h-5" />
+                  Continuar a Configurar Horario
                 </button>
               )}
             </div>
@@ -1402,13 +1552,223 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
               </tbody>
             </table>
           </div>
-          <button onClick={() => setStep('generate')} className="mt-4 w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2">
-            <Wand2 className="w-5 h-5" /> Continuar a Generar
+          <button onClick={() => { loadScheduleConfig(); setStep('configure') }} className="mt-4 w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2">
+            <Settings className="w-5 h-5" /> Continuar a Configurar
           </button>
         </div>
       )}
 
-      {/* PASO 3: Configurar y Generar */}
+      {/* PASO 3: Configurar Parámetros */}
+      {step === 'configure' && (
+        <div className="space-y-4">
+          <div className="bg-white border rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
+              <Settings className="w-5 h-5 text-indigo-600" />
+              Configurar Jornada Escolar
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">Defina los parámetros de la jornada. Los bloques de tiempo se generarán automáticamente.</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left column: parameters */}
+              <div className="space-y-4">
+                {/* Días activos */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Días de clase</label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { key: 'MONDAY', label: 'Lun' },
+                      { key: 'TUESDAY', label: 'Mar' },
+                      { key: 'WEDNESDAY', label: 'Mié' },
+                      { key: 'THURSDAY', label: 'Jue' },
+                      { key: 'FRIDAY', label: 'Vie' },
+                      { key: 'SATURDAY', label: 'Sáb' },
+                    ].map(d => (
+                      <button
+                        key={d.key}
+                        onClick={() => {
+                          setScheduleConfig(prev => ({
+                            ...prev,
+                            activeDays: prev.activeDays.includes(d.key)
+                              ? prev.activeDays.filter(x => x !== d.key)
+                              : [...prev.activeDays, d.key],
+                          }))
+                          setConfigSaved(false)
+                        }}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          scheduleConfig.activeDays.includes(d.key)
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Hora de inicio */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Hora de inicio de la jornada</label>
+                  <input
+                    type="time"
+                    value={scheduleConfig.startTime}
+                    onChange={e => { setScheduleConfig(prev => ({ ...prev, startTime: e.target.value })); setConfigSaved(false) }}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+
+                {/* Clases por día y duración */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Clases por día</label>
+                    <input
+                      type="number" min={1} max={12}
+                      value={scheduleConfig.classesPerDay}
+                      onChange={e => { setScheduleConfig(prev => ({ ...prev, classesPerDay: Number(e.target.value) })); setConfigSaved(false) }}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Duración clase (min)</label>
+                    <input
+                      type="number" min={20} max={120} step={5}
+                      value={scheduleConfig.classDuration}
+                      onChange={e => { setScheduleConfig(prev => ({ ...prev, classDuration: Number(e.target.value) })); setConfigSaved(false) }}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Recesos */}
+                <div className="bg-amber-50 rounded-lg p-4 space-y-3">
+                  <p className="text-sm font-medium text-amber-800">Recesos</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Duración receso (min)</label>
+                      <input
+                        type="number" min={5} max={30} step={5}
+                        value={scheduleConfig.breakDuration}
+                        onChange={e => { setScheduleConfig(prev => ({ ...prev, breakDuration: Number(e.target.value) })); setConfigSaved(false) }}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">1er receso después de clase #</label>
+                      <input
+                        type="number" min={1} max={scheduleConfig.classesPerDay}
+                        value={scheduleConfig.breakAfterBlock}
+                        onChange={e => { setScheduleConfig(prev => ({ ...prev, breakAfterBlock: Number(e.target.value) })); setConfigSaved(false) }}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">2do receso después de clase # (0 = sin 2do receso)</label>
+                    <input
+                      type="number" min={0} max={scheduleConfig.classesPerDay}
+                      value={scheduleConfig.secondBreakAfterBlock || 0}
+                      onChange={e => { setScheduleConfig(prev => ({ ...prev, secondBreakAfterBlock: Number(e.target.value) || 0 })); setConfigSaved(false) }}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Almuerzo */}
+                <div className="bg-green-50 rounded-lg p-4 space-y-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={scheduleConfig.includeLunch}
+                      onChange={e => { setScheduleConfig(prev => ({ ...prev, includeLunch: e.target.checked })); setConfigSaved(false) }}
+                      className="w-4 h-4 text-green-600 rounded"
+                    />
+                    <span className="text-sm font-medium text-green-800">Incluir almuerzo</span>
+                  </label>
+                  {scheduleConfig.includeLunch && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Duración almuerzo (min)</label>
+                        <input
+                          type="number" min={15} max={60} step={5}
+                          value={scheduleConfig.lunchDuration}
+                          onChange={e => { setScheduleConfig(prev => ({ ...prev, lunchDuration: Number(e.target.value) })); setConfigSaved(false) }}
+                          className="w-full border rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Almuerzo después de clase #</label>
+                        <input
+                          type="number" min={1} max={scheduleConfig.classesPerDay}
+                          value={scheduleConfig.lunchAfterBlock}
+                          onChange={e => { setScheduleConfig(prev => ({ ...prev, lunchAfterBlock: Number(e.target.value) })); setConfigSaved(false) }}
+                          className="w-full border rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right column: live preview */}
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Vista previa de la jornada</p>
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="bg-indigo-600 text-white text-xs font-medium px-3 py-2 flex justify-between">
+                    <span>Bloque</span>
+                    <span>Horario</span>
+                  </div>
+                  <div className="divide-y max-h-[400px] overflow-y-auto">
+                    {configPreview.map((b, i) => (
+                      <div
+                        key={i}
+                        className={`flex items-center justify-between px-3 py-2.5 text-sm ${
+                          b.type === 'BREAK' ? 'bg-amber-50 text-amber-700'
+                          : b.type === 'LUNCH' ? 'bg-green-50 text-green-700'
+                          : 'bg-white text-gray-800'
+                        }`}
+                      >
+                        <span className="font-medium">{b.label}</span>
+                        <span className="text-xs text-gray-500">{b.start} — {b.end}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {configPreview.length > 0 && (
+                    <div className="bg-gray-50 px-3 py-2 text-xs text-gray-500 flex justify-between">
+                      <span>{configPreview.filter(b => b.type === 'CLASS').length} clases · {scheduleConfig.activeDays.length} días</span>
+                      <span>Termina: {configPreview[configPreview.length - 1]?.end}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Save button */}
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={handleSaveConfig}
+                disabled={loading}
+                className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {loading ? (
+                  <><RefreshCw className="w-5 h-5 animate-spin" /> Guardando...</>
+                ) : (
+                  <><Save className="w-5 h-5" /> Guardar Configuración</>
+                )}
+              </button>
+              {configSaved && (
+                <button
+                  onClick={() => setStep('generate')}
+                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Wand2 className="w-5 h-5" /> Continuar a Generar
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PASO 4: Generar */}
       {step === 'generate' && (
         <div className="space-y-4">
           <div className="bg-white border rounded-xl p-6">

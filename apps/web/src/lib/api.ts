@@ -1230,6 +1230,7 @@ export const timetablingGeneratorApi = {
     groupIds?: string[];
     clearExisting?: boolean;
     respectAvailability?: boolean;
+    activeDays?: string[];
   }) => api.post('/timetabling/generator/generate', data),
   exportSchedule: (academicYearId: string, viewType: 'by-group' | 'by-teacher' = 'by-group') =>
     api.get('/timetabling/generator/export', {
@@ -1240,6 +1241,22 @@ export const timetablingGeneratorApi = {
     api.get('/timetabling/generator/teaching-load', { params: { academicYearId } }),
   getScheduleViews: (academicYearId: string, view: 'total' | 'by-grade' | 'by-teacher' | 'by-subject' | 'by-area' = 'total', filterId?: string) =>
     api.get('/timetabling/generator/schedule-views', { params: { academicYearId, view, filterId } }),
+  deleteTeachingLoad: (academicYearId: string) =>
+    api.post('/timetabling/generator/delete-teaching-load', { academicYearId }),
+  getScheduleConfig: () =>
+    api.get('/timetabling/generator/schedule-config'),
+  configureSchedule: (data: {
+    startTime: string;
+    classesPerDay: number;
+    classDuration: number;
+    breakDuration: number;
+    breakAfterBlock: number;
+    secondBreakAfterBlock?: number;
+    includeLunch: boolean;
+    lunchDuration: number;
+    lunchAfterBlock: number;
+    activeDays: string[];
+  }) => api.post('/timetabling/generator/configure-schedule', data),
   exportSchedulePdf: (academicYearId: string, viewType: 'by-group' | 'by-teacher' = 'by-group') =>
     api.get('/timetabling/generator/export-pdf', {
       params: { academicYearId, viewType },

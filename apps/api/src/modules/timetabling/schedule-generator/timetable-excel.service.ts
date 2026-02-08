@@ -16,6 +16,7 @@ export interface TeachingLoadRow {
   campusName?: string;
   weeklyHours: number;
   restrictions?: string;
+  directorDeGrupo?: string; // "Director", "Acompañante", or empty
   rowNumber: number;
 }
 
@@ -153,6 +154,7 @@ export class TimetableExcelService {
       { header: 'Sede', key: 'campusName', width: 18 },
       { header: 'Horas Semanales *', key: 'weeklyHours', width: 16 },
       { header: 'Restricciones', key: 'restrictions', width: 30 },
+      { header: 'Director de Grupo', key: 'directorDeGrupo', width: 20 },
     ];
 
     loadSheet.getRow(1).eachCell(cell => { cell.style = headerStyle; });
@@ -363,12 +365,15 @@ export class TimetableExcelService {
       '  • Documento Docente: Número de documento (se usa como contraseña inicial si se crea el usuario).',
       '  • Jornada: Mañana, Tarde, Única, Noche. Si se omite, se usa la primera jornada disponible.',
       '  • Sede: Nombre de la sede. Si se omite, se usa la primera sede disponible.',
-      '  • Restricciones: Texto libre con restricciones del docente para esta asignación.', '',
+      '  • Restricciones: Texto libre con restricciones del docente para esta asignación.',
+      '  • Director de Grupo: Escriba "Director" si el docente es director de ese grupo, o "Acompañante" si es acompañante. Déjelo vacío si no aplica.', '',
       'CREACIÓN AUTOMÁTICA:', '',
       '  El sistema creará automáticamente las entidades que no existan:',
       '  - Docentes (con contraseña = número de documento o "temporal123")',
       '  - Áreas y asignaturas',
-      '  - Grados y grupos', '',
+      '  - Grados y grupos',
+      '  - Salones por grupo (ej: "Salón 6A")',
+      '  - Bloques de tiempo por defecto (si no existen)', '',
       'DESPUÉS DE IMPORTAR:',
       '  1. Revise los datos creados en la vista previa.',
       '  2. Configure bloques horarios (periodos, recesos, tutorías).',
@@ -423,6 +428,7 @@ export class TimetableExcelService {
       const campusName = row.getCell(9).value?.toString()?.trim() || '';
       const weeklyHoursRaw = row.getCell(10).value;
       const restrictions = row.getCell(11).value?.toString()?.trim() || '';
+      const directorDeGrupo = row.getCell(12).value?.toString()?.trim() || '';
 
       // Ignorar filas vacías
       if (!teacherName && !teacherEmail && !subjectName && !groupName) return;
@@ -460,7 +466,7 @@ export class TimetableExcelService {
       rows.push({
         teacherName, teacherEmail: teacherEmail ? teacherEmail.toLowerCase() : undefined, teacherDocument,
         areaName, subjectName, gradeName, groupName,
-        shiftName, campusName, weeklyHours, restrictions, rowNumber,
+        shiftName, campusName, weeklyHours, restrictions, directorDeGrupo, rowNumber,
       });
     });
 
@@ -800,6 +806,42 @@ export class TimetableExcelService {
       }
 
       teacherCache.set(cacheKey, user.id);
+    }
+
+    // ── FASE 5.5: Asignar Director/Acompañante de grupo ──
+    for (const row of rows) {
+      if (!row.directorDeGrupo) continue;
+      const role = row.directorDeGrupo.toLowerCase();
+      if (role !== 'director' && role !== 'acompañante' && role !== 'acompanante') continue;
+
+      const teacherCacheKey = row.teacherEmail || normalizeNameKey(row.teacherName);
+      const teacherId = teacherCache.get(teacherCacheKey);
+      if (!teacherId) continue;
+
+      const gradeId = gradeCache.get(row.gradeName.toLowerCase());
+      if (!gradeId) continue;
+      const campusKey = (row.campusName || '').toLowerCase() || '__default__';
+      const campusId = campusCache.get(campusKey);
+      if (!campusId) continue;
+      const shiftType = row.shiftName ? (SHIFT_MAPPING[row.shiftName.toLowerCase()] || 'MORNING') : 'MORNING';
+      const shiftId = shiftCache.get(`${campusId}|${shiftType}`);
+      if (!shiftId) continue;
+
+      const groupKey = `${row.groupName.toLowerCase()}|${gradeId}|${shiftId}|${campusId}`;
+      const groupId = groupCache.get(groupKey);
+      if (!groupId) continue;
+
+      try {
+        if (role === 'director') {
+          await this.prisma.group.update({ where: { id: groupId }, data: { directorId: teacherId } });
+          warnings.push(`"${row.teacherName}" asignado como Director de grupo "${row.groupName}"`);
+        } else {
+          await this.prisma.group.update({ where: { id: groupId }, data: { companionId: teacherId } });
+          warnings.push(`"${row.teacherName}" asignado como Acompañante de grupo "${row.groupName}"`);
+        }
+      } catch (e: any) {
+        errors.push(`Fila ${row.rowNumber}: Error al asignar director/acompañante — ${e.message}`);
+      }
     }
 
     // ── FASE 6: Crear/Actualizar TeacherAssignments ──
@@ -1168,6 +1210,8 @@ export class TimetableExcelService {
               grade: { select: { name: true } },
               shift: { select: { name: true } },
               campus: { select: { name: true } },
+              director: { select: { id: true, firstName: true, lastName: true } },
+              companion: { select: { id: true, firstName: true, lastName: true } },
             },
           },
           timeBlock: { select: { id: true, startTime: true, endTime: true, order: true, label: true, type: true } },
@@ -1192,15 +1236,39 @@ export class TimetableExcelService {
     // Agrupar según viewType
     const groupedData = new Map<string, { title: string; subtitle: string; entries: any[] }>();
 
+    // Build teacher-to-directed-groups map for by-teacher view
+    const teacherDirectsMap = new Map<string, string[]>();
+    const teacherCompanionMap = new Map<string, string[]>();
+    for (const e of entries) {
+      const dir = e.group?.director;
+      const comp = e.group?.companion;
+      const gName = e.group?.name || '';
+      if (dir) {
+        if (!teacherDirectsMap.has(dir.id)) teacherDirectsMap.set(dir.id, []);
+        const arr = teacherDirectsMap.get(dir.id)!;
+        if (!arr.includes(gName)) arr.push(gName);
+      }
+      if (comp) {
+        if (!teacherCompanionMap.has(comp.id)) teacherCompanionMap.set(comp.id, []);
+        const arr = teacherCompanionMap.get(comp.id)!;
+        if (!arr.includes(gName)) arr.push(gName);
+      }
+    }
+
     if (viewType === 'by-group') {
       for (const e of entries) {
         const key = e.groupId;
         if (!groupedData.has(key)) {
           const gradeName = e.group?.grade?.name || '';
           const shiftName = e.group?.shift?.name || '';
+          const dir = e.group?.director;
+          const comp = e.group?.companion;
+          let subtitle = `${gradeName} — ${shiftName}`;
+          if (dir) subtitle += ` · Director: ${dir.firstName} ${dir.lastName}`;
+          if (comp) subtitle += ` · Acompañante: ${comp.firstName} ${comp.lastName}`;
           groupedData.set(key, {
             title: `Horario ${e.group?.name || 'Grupo'}`,
-            subtitle: `${gradeName} — ${shiftName}`,
+            subtitle,
             entries: [],
           });
         }
@@ -1213,7 +1281,12 @@ export class TimetableExcelService {
         const key = t.id;
         if (!groupedData.has(key)) {
           const name = `${t.firstName || ''} ${t.lastName || ''}`.trim();
-          groupedData.set(key, { title: name, subtitle: 'Docente', entries: [] });
+          const dirGroups = teacherDirectsMap.get(t.id);
+          const compGroups = teacherCompanionMap.get(t.id);
+          let subtitle = 'Docente';
+          if (dirGroups?.length) subtitle += ` · Director de grupo: ${dirGroups.join(', ')}`;
+          if (compGroups?.length) subtitle += ` · Acompañante: ${compGroups.join(', ')}`;
+          groupedData.set(key, { title: name, subtitle, entries: [] });
         }
         groupedData.get(key)!.entries.push(e);
       }

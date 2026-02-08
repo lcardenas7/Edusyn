@@ -8,6 +8,7 @@ export interface GenerationOptions {
   clearExisting?: boolean;       // Limpiar horario existente antes de generar
   respectAvailability?: boolean; // Respetar disponibilidad docente
   maxAttempts?: number;          // Intentos máximos del algoritmo
+  activeDays?: DayOfWeek[];      // Días activos (default: L-V)
 }
 
 export interface GenerationResult {
@@ -66,7 +67,8 @@ export class ScheduleGeneratorService {
     institutionId: string,
     options: GenerationOptions,
   ): Promise<GenerationResult> {
-    const { academicYearId, groupIds, clearExisting = true, respectAvailability = true } = options;
+    const { academicYearId, groupIds, clearExisting = true, respectAvailability = true, activeDays } = options;
+    const daysToUse: DayOfWeek[] = activeDays && activeDays.length > 0 ? activeDays : DAYS;
 
     // 1. Obtener grupos objetivo
     const groups = await this.getTargetGroups(institutionId, academicYearId, groupIds);
@@ -115,6 +117,7 @@ export class ScheduleGeneratorService {
       teacherAvailability,
       gradeConfigs,
       groupRoomMap,
+      daysToUse,
     );
 
     return result;
@@ -243,6 +246,7 @@ export class ScheduleGeneratorService {
     teacherAvailability: Map<string, any[]>,
     gradeConfigs: Map<string, any>,
     groupRoomMap: Map<string, string>,
+    activeDays: DayOfWeek[],
   ): Promise<GenerationResult> {
     // Estado: slots ocupados
     // teacherSlots: teacherId -> Set<"DAY|timeBlockId">
@@ -295,10 +299,11 @@ export class ScheduleGeneratorService {
         teacherSlots,
         groupSlots,
         teacherAvailability,
+        activeDays,
       );
 
       // Estrategia de distribución: repartir horas equitativamente entre días
-      const daysWithSlots = DAYS.filter(day => (availableSlotsByDay.get(day)?.length || 0) > 0);
+      const daysWithSlots = activeDays.filter(day => (availableSlotsByDay.get(day)?.length || 0) > 0);
 
       if (daysWithSlots.length === 0) {
         conflicts.push(
@@ -439,11 +444,12 @@ export class ScheduleGeneratorService {
     teacherSlots: Map<string, Set<string>>,
     groupSlots: Map<string, Set<string>>,
     teacherAvailability: Map<string, any[]>,
+    activeDays: DayOfWeek[],
   ): Map<DayOfWeek, any[]> {
     const result = new Map<DayOfWeek, any[]>();
     const unavailablePeriods = teacherAvailability.get(assignment.teacherId) || [];
 
-    for (const day of DAYS) {
+    for (const day of activeDays) {
       const availableBlocks: any[] = [];
 
       for (const block of timeBlocks) {

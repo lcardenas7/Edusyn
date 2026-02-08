@@ -304,6 +304,10 @@ model User {
   
   // Timetabling (Horarios)
   teacherAvailabilities       TeacherAvailability[] @relation("TeacherScheduleAvailability")
+  
+  // Director / Acompañante de grupo
+  directedGroups              Group[] @relation("groupDirector")
+  companionGroups             Group[] @relation("groupCompanion")
 }
 
 model Role {
@@ -506,12 +510,16 @@ model Group {
   code        String?
   name        String
   maxCapacity Int?     // Cupo máximo del grupo (null = sin límite)
+  directorId  String?  // Director de grupo (docente titular)
+  companionId String?  // Acompañante de grupo
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  campus Campus @relation(fields: [campusId], references: [id], onDelete: Restrict)
-  shift  Shift  @relation(fields: [shiftId], references: [id], onDelete: Restrict)
-  grade  Grade  @relation(fields: [gradeId], references: [id], onDelete: Restrict)
+  campus    Campus @relation(fields: [campusId], references: [id], onDelete: Restrict)
+  shift     Shift  @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+  grade     Grade  @relation(fields: [gradeId], references: [id], onDelete: Restrict)
+  director  User?  @relation("groupDirector", fields: [directorId], references: [id], onDelete: SetNull)
+  companion User?  @relation("groupCompanion", fields: [companionId], references: [id], onDelete: SetNull)
 
   teacherAssignments  TeacherAssignment[]
   studentEnrollments  StudentEnrollment[]

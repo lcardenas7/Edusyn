@@ -168,6 +168,216 @@ export class ScheduleGeneratorController {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // CONFIGURAR PARÁMETROS DE HORARIO (bloques, días, duraciones)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('schedule-config')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async getScheduleConfig(@Request() req) {
+    const institutionId = req.user.institutionId;
+
+    // Buscar shifts con sus bloques
+    const shifts = await this.prisma.shift.findMany({
+      where: { campus: { institutionId } },
+      include: {
+        timeBlocks: { orderBy: { order: 'asc' } },
+        campus: { select: { name: true } },
+      },
+    });
+
+    // Derivar configuración actual del primer shift que tenga bloques
+    const activeShift = shifts.find(s => s.timeBlocks.length > 0) || shifts[0];
+    const blocks = activeShift?.timeBlocks || [];
+    const classBlocks = blocks.filter(b => b.type === 'CLASS');
+    const breakBlocks = blocks.filter(b => b.type === 'BREAK' || b.type === 'LUNCH');
+
+    // Calcular duración de clase promedio
+    const avgClassDuration = classBlocks.length > 0
+      ? Math.round(classBlocks.reduce((sum, b) => {
+          const [sh, sm] = b.startTime.split(':').map(Number);
+          const [eh, em] = b.endTime.split(':').map(Number);
+          return sum + ((eh * 60 + em) - (sh * 60 + sm));
+        }, 0) / classBlocks.length)
+      : 55;
+
+    return {
+      shiftId: activeShift?.id || null,
+      shiftName: activeShift?.name || '',
+      campusName: activeShift?.campus?.name || '',
+      startTime: classBlocks[0]?.startTime || '06:30',
+      classesPerDay: classBlocks.length || 7,
+      classDurationMinutes: avgClassDuration,
+      breakDurationMinutes: breakBlocks.find(b => b.type === 'BREAK')
+        ? (() => {
+            const b = breakBlocks.find(bl => bl.type === 'BREAK')!;
+            const [sh, sm] = b.startTime.split(':').map(Number);
+            const [eh, em] = b.endTime.split(':').map(Number);
+            return (eh * 60 + em) - (sh * 60 + sm);
+          })()
+        : 15,
+      breakAfterBlock: breakBlocks.length > 0
+        ? blocks.findIndex(b => b.type === 'BREAK') // position of first break
+        : 2,
+      includeLunch: breakBlocks.some(b => b.type === 'LUNCH'),
+      lunchDurationMinutes: breakBlocks.find(b => b.type === 'LUNCH')
+        ? (() => {
+            const b = breakBlocks.find(bl => bl.type === 'LUNCH')!;
+            const [sh, sm] = b.startTime.split(':').map(Number);
+            const [eh, em] = b.endTime.split(':').map(Number);
+            return (eh * 60 + em) - (sh * 60 + sm);
+          })()
+        : 30,
+      lunchAfterBlock: (() => {
+        const lunchIdx = blocks.findIndex(b => b.type === 'LUNCH');
+        if (lunchIdx < 0) return 6;
+        return blocks.slice(0, lunchIdx).filter(b => b.type === 'CLASS').length;
+      })(),
+      activeDays: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
+      totalBlocks: blocks.length,
+      existingBlocks: blocks.map(b => ({
+        id: b.id, type: b.type, startTime: b.startTime, endTime: b.endTime, label: b.label, order: b.order,
+      })),
+    };
+  }
+
+  @Post('configure-schedule')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async configureSchedule(
+    @Request() req,
+    @Body() body: {
+      startTime: string;        // e.g., "06:30"
+      classesPerDay: number;    // e.g., 7
+      classDuration: number;    // minutes, e.g., 55
+      breakDuration: number;    // minutes, e.g., 15
+      breakAfterBlock: number;  // after which class # to insert break, e.g., 2
+      secondBreakAfterBlock?: number; // optional second break position
+      includeLunch: boolean;
+      lunchDuration: number;    // minutes, e.g., 30
+      lunchAfterBlock: number;  // after which class # to insert lunch, e.g., 6
+      activeDays: string[];     // e.g., ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"]
+    },
+  ) {
+    const institutionId = req.user.institutionId;
+
+    // Find the active shift
+    const shift = await this.prisma.shift.findFirst({
+      where: { campus: { institutionId } },
+      include: { timeBlocks: true },
+    });
+
+    if (!shift) {
+      return { success: false, error: 'No hay jornada configurada. Importe la carga académica primero.' };
+    }
+
+    // Delete existing time blocks for this shift
+    await this.prisma.timeBlock.deleteMany({
+      where: { institutionId, shiftId: shift.id },
+    });
+
+    // Generate new blocks based on config
+    const blocks: { order: number; type: string; startTime: string; endTime: string; label: string }[] = [];
+    let currentMinutes = this.timeToMinutes(body.startTime);
+    let classCount = 0;
+    let order = 1;
+
+    for (let i = 0; i < body.classesPerDay; i++) {
+      classCount++;
+
+      // Add class block
+      const classStart = this.minutesToTime(currentMinutes);
+      currentMinutes += body.classDuration;
+      const classEnd = this.minutesToTime(currentMinutes);
+      blocks.push({
+        order: order++,
+        type: 'CLASS',
+        startTime: classStart,
+        endTime: classEnd,
+        label: `${classCount}° Hora`,
+      });
+
+      // Check if we need a break after this class
+      if (classCount === body.breakAfterBlock && i < body.classesPerDay - 1) {
+        const breakStart = this.minutesToTime(currentMinutes);
+        currentMinutes += body.breakDuration;
+        const breakEnd = this.minutesToTime(currentMinutes);
+        blocks.push({
+          order: order++,
+          type: 'BREAK',
+          startTime: breakStart,
+          endTime: breakEnd,
+          label: 'Receso',
+        });
+      }
+
+      // Second break
+      if (body.secondBreakAfterBlock && classCount === body.secondBreakAfterBlock && i < body.classesPerDay - 1) {
+        const breakStart = this.minutesToTime(currentMinutes);
+        currentMinutes += body.breakDuration;
+        const breakEnd = this.minutesToTime(currentMinutes);
+        blocks.push({
+          order: order++,
+          type: 'BREAK',
+          startTime: breakStart,
+          endTime: breakEnd,
+          label: 'Receso',
+        });
+      }
+
+      // Check if we need lunch after this class
+      if (body.includeLunch && classCount === body.lunchAfterBlock && i < body.classesPerDay - 1) {
+        const lunchStart = this.minutesToTime(currentMinutes);
+        currentMinutes += body.lunchDuration;
+        const lunchEnd = this.minutesToTime(currentMinutes);
+        blocks.push({
+          order: order++,
+          type: 'LUNCH',
+          startTime: lunchStart,
+          endTime: lunchEnd,
+          label: 'Almuerzo',
+        });
+      }
+    }
+
+    // Create new blocks
+    for (const block of blocks) {
+      await this.prisma.timeBlock.create({
+        data: {
+          institutionId,
+          shiftId: shift.id,
+          order: block.order,
+          type: block.type as any,
+          startTime: block.startTime,
+          endTime: block.endTime,
+          label: block.label,
+        },
+      });
+    }
+
+    const endTime = this.minutesToTime(currentMinutes);
+
+    return {
+      success: true,
+      totalBlocks: blocks.length,
+      classBlocks: blocks.filter(b => b.type === 'CLASS').length,
+      startTime: body.startTime,
+      endTime,
+      activeDays: body.activeDays,
+      blocks: blocks.map(b => ({ ...b })),
+    };
+  }
+
+  private timeToMinutes(time: string): number {
+    const [h, m] = time.split(':').map(Number);
+    return h * 60 + m;
+  }
+
+  private minutesToTime(minutes: number): string {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // PREVIEW: Vista previa de la carga académica actual
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -211,6 +421,38 @@ export class ScheduleGeneratorController {
         uniqueGroups: uniqueGroups.size,
         totalWeeklyHours: totalHours,
       },
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ELIMINAR CARGA ACADÉMICA
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('delete-teaching-load')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async deleteTeachingLoad(
+    @Request() req,
+    @Body() body: { academicYearId: string },
+  ) {
+    const institutionId = req.user.institutionId;
+
+    // First delete schedule entries that reference these assignments
+    await this.prisma.scheduleEntry.deleteMany({
+      where: { institutionId, academicYearId: body.academicYearId },
+    });
+
+    // Then delete all teacher assignments for this academic year in this institution
+    const result = await this.prisma.teacherAssignment.deleteMany({
+      where: {
+        academicYearId: body.academicYearId,
+        group: { shift: { campus: { institutionId } } },
+      },
+    });
+
+    return {
+      success: true,
+      deletedAssignments: result.count,
+      message: `Se eliminaron ${result.count} asignaciones y las entradas de horario asociadas.`,
     };
   }
 
