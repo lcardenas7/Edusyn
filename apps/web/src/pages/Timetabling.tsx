@@ -91,7 +91,7 @@ interface GradeGroup {
 }
 
 export default function Timetabling() {
-  const { user } = useAuth()
+  const { user, institution } = useAuth()
   const isManager = user?.roles?.some((r: any) => {
     const roleName = r.role?.name || r.name || ''
     return roleName.includes('ADMIN') || roleName.includes('COORDINADOR') || roleName.includes('SUPERADMIN')
@@ -110,6 +110,7 @@ export default function Timetabling() {
   const [conflicts, setConflicts] = useState<any>(null)
   const [academicYearId, setAcademicYearId] = useState<string>('')
   const [academicYearLabel, setAcademicYearLabel] = useState<string>('')
+  const [noAcademicYear, setNoAcademicYear] = useState(false)
 
   const loadGrades = useCallback(async () => {
     try {
@@ -167,23 +168,45 @@ export default function Timetabling() {
   }, [academicYearId])
 
   useEffect(() => {
-    // Cargar año académico activo
-    if (user?.institution?.id) {
-      academicYearLifecycleApi.getByInstitution(user.institution.id)
-        .then(res => {
-          const years = res.data || []
-          const active = years.find((y: any) => y.status === 'ACTIVE') || years[0]
-          if (active) {
-            setAcademicYearId(active.id)
-            setAcademicYearLabel(active.year?.toString() || active.name || '')
-          }
-        })
-        .catch(() => {})
+    const instId = institution?.id || user?.institution?.id
+    if (!instId) return
+
+    // Intentar primero getCurrent, luego getByInstitution como fallback
+    const resolveAcademicYear = async () => {
+      try {
+        // Primero intentar obtener el año actual directamente
+        const currentRes = await academicYearLifecycleApi.getCurrent(instId)
+        if (currentRes.data?.id) {
+          setAcademicYearId(currentRes.data.id)
+          setAcademicYearLabel(currentRes.data.year?.toString() || currentRes.data.name || '')
+          setNoAcademicYear(false)
+          return
+        }
+      } catch {
+        // getCurrent puede fallar si no hay año activo, intentar fallback
+      }
+
+      try {
+        const res = await academicYearLifecycleApi.getByInstitution(instId)
+        const years = res.data || []
+        const active = years.find((y: any) => y.status === 'ACTIVE') || years[0]
+        if (active) {
+          setAcademicYearId(active.id)
+          setAcademicYearLabel(active.year?.toString() || active.name || '')
+          setNoAcademicYear(false)
+        } else {
+          setNoAcademicYear(true)
+        }
+      } catch {
+        setNoAcademicYear(true)
+      }
     }
+
+    resolveAcademicYear()
     loadGrades()
     loadTimeBlocks()
     loadRooms()
-  }, [user?.institution?.id])
+  }, [institution?.id, user?.institution?.id])
 
   useEffect(() => {
     if (activeTab === 'schedule') loadGrid()
@@ -223,6 +246,20 @@ export default function Timetabling() {
           </p>
         </div>
       </div>
+
+      {/* No academic year banner */}
+      {noAcademicYear && (
+        <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-amber-800 font-medium">No se encontró un año académico activo</p>
+            <p className="text-amber-700 text-sm mt-1">
+              Para usar el módulo de horarios, primero debe crear y activar un año académico desde
+              <strong> Gestión Académica → Año Académico</strong>.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       {error && (
@@ -1118,15 +1155,28 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
         ].map((s, i) => {
           const Icon = s.icon
           const isActive = step === s.key
-          const isPast = ['load', 'preview', 'generate', 'result'].indexOf(step) > i
+          const stepOrder = ['load', 'preview', 'generate', 'result']
+          const currentIdx = stepOrder.indexOf(step)
+          const isPast = currentIdx > i
+          // Determine which steps are reachable
+          const canReach = (key: string) => {
+            if (key === 'load') return true
+            if (key === 'preview') return teachingLoad?.assignments?.length > 0 || (importResult && importResult.created > 0)
+            if (key === 'generate') return teachingLoad?.assignments?.length > 0
+            if (key === 'result') return !!generateResult
+            return false
+          }
+          const isReachable = canReach(s.key)
           return (
             <button
               key={s.key}
-              onClick={() => setStep(s.key as any)}
+              onClick={() => isReachable ? setStep(s.key as any) : null}
+              disabled={!isReachable}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
                 isActive ? 'bg-indigo-100 text-indigo-700 font-medium'
-                : isPast ? 'bg-green-50 text-green-700'
-                : 'bg-gray-50 text-gray-400'
+                : isPast && isReachable ? 'bg-green-50 text-green-700 cursor-pointer'
+                : isReachable ? 'bg-gray-100 text-gray-600 cursor-pointer hover:bg-gray-200'
+                : 'bg-gray-50 text-gray-300 cursor-not-allowed'
               }`}
             >
               <Icon className="w-4 h-4" />
