@@ -70,11 +70,12 @@ export class CommunicationsService {
     return this.prisma.message.delete({ where: { id } });
   }
 
-  async getByInstitution(institutionId: string, status?: string) {
+  async getByInstitution(institutionId: string, status?: string, authorId?: string) {
     return this.prisma.message.findMany({
       where: {
         institutionId,
         ...(status ? { status: status as any } : {}),
+        ...(authorId ? { authorId } : {}),
       },
       include: {
         author: {

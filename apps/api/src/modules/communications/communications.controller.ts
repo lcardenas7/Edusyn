@@ -39,7 +39,7 @@ export class CommunicationsController {
     return this.communicationsService.delete(id);
   }
 
-  // Listar mensajes por institución (query param o JWT)
+  // Listar mensajes enviados por el usuario actual
   @Get()
   @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'ACUDIENTE', 'SECRETARIA', 'ORIENTADOR')
   getAll(
@@ -48,7 +48,7 @@ export class CommunicationsController {
     @Query('status') status?: string,
   ) {
     const instId = institutionId || req.user.institutionId;
-    return this.communicationsService.getByInstitution(instId, status);
+    return this.communicationsService.getByInstitution(instId, status, req.user.id);
   }
 
   @Get('institution/:institutionId')
