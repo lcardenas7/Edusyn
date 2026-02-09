@@ -1994,6 +1994,16 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
   const [movingEntry, setMovingEntry] = useState<any>(null)
   const [exporting, setExporting] = useState(false)
 
+  // Provisional daily schedule
+  const [provisionalMode, setProvisionalMode] = useState(false)
+  const [provisionalDate, setProvisionalDate] = useState<string>(() => {
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
+    return tomorrow.toISOString().split('T')[0]
+  })
+  const [provisionalEdits, setProvisionalEdits] = useState<Map<string, any>>(new Map())
+  const [provisionalSelected, setProvisionalSelected] = useState<{ groupId: string; blockId: string } | null>(null)
+  const [provisionalNotes, setProvisionalNotes] = useState('')
+
   const loadView = async (mode?: string) => {
     if (!academicYearId) return
     setLoading(true)
@@ -2021,6 +2031,238 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
     setViewMode(mode as any)
     setSelectedFilter('')
     setMovingEntry(null)
+  }
+
+  // Get day of week from a date string
+  const getDayOfWeekFromDate = (dateStr: string): string => {
+    const date = new Date(dateStr + 'T12:00:00')
+    const dayMap: Record<number, string> = { 0: 'SUNDAY', 1: 'MONDAY', 2: 'TUESDAY', 3: 'WEDNESDAY', 4: 'THURSDAY', 5: 'FRIDAY', 6: 'SATURDAY' }
+    return dayMap[date.getDay()] || 'MONDAY'
+  }
+
+  // Toggle provisional mode
+  const toggleProvisionalMode = () => {
+    if (!provisionalMode) {
+      const dayKey = getDayOfWeekFromDate(provisionalDate)
+      setSelectedDay(dayKey)
+      setProvisionalEdits(new Map())
+      setProvisionalSelected(null)
+      setProvisionalNotes('')
+    }
+    setProvisionalMode(!provisionalMode)
+  }
+
+  // Handle provisional date change
+  const handleProvisionalDateChange = (dateStr: string) => {
+    setProvisionalDate(dateStr)
+    const dayKey = getDayOfWeekFromDate(dateStr)
+    setSelectedDay(dayKey)
+    setProvisionalEdits(new Map())
+    setProvisionalSelected(null)
+  }
+
+  // Handle click on entry in provisional mode (for swapping)
+  const handleProvisionalClick = (groupId: string, blockId: string, entry: any) => {
+    if (!provisionalMode) return
+    const key = `${groupId}::${blockId}`
+    if (!provisionalSelected) {
+      setProvisionalSelected({ groupId, blockId })
+    } else {
+      const sourceKey = `${provisionalSelected.groupId}::${provisionalSelected.blockId}`
+      if (sourceKey === key) {
+        setProvisionalSelected(null)
+        return
+      }
+      // Swap the two entries
+      const newEdits = new Map(provisionalEdits)
+      const sourceEntry = newEdits.get(sourceKey) !== undefined ? newEdits.get(sourceKey) : null // will resolve later
+      const targetEntry = newEdits.get(key) !== undefined ? newEdits.get(key) : null
+      newEdits.set(sourceKey, { ...entry, _swapped: true })
+      newEdits.set(key, { ...getResolvedEntry(provisionalSelected.groupId, provisionalSelected.blockId), _swapped: true })
+      setProvisionalEdits(newEdits)
+      setProvisionalSelected(null)
+    }
+  }
+
+  // Cancel an entry in provisional mode
+  const handleProvisionalCancel = (groupId: string, blockId: string) => {
+    const key = `${groupId}::${blockId}`
+    const newEdits = new Map(provisionalEdits)
+    newEdits.set(key, { _cancelled: true })
+    setProvisionalEdits(newEdits)
+    setProvisionalSelected(null)
+  }
+
+  // Restore an entry in provisional mode
+  const handleProvisionalRestore = (groupId: string, blockId: string) => {
+    const key = `${groupId}::${blockId}`
+    const newEdits = new Map(provisionalEdits)
+    newEdits.delete(key)
+    setProvisionalEdits(newEdits)
+  }
+
+  // Get resolved entry (original or edited)
+  const getResolvedEntry = (groupId: string, blockId: string): any => {
+    const key = `${groupId}::${blockId}`
+    if (provisionalEdits.has(key)) return provisionalEdits.get(key)
+    return null // will be resolved in render
+  }
+
+  // Print daily schedule
+  const handlePrintDay = () => {
+    if (!viewData) return
+    const allGroups: any[] = []
+    for (const grade of (viewData.grades || [])) {
+      for (const group of (grade.groups || [])) {
+        const dayEntries = (group.entries || []).filter((e: any) => e.dayOfWeek === selectedDay)
+        allGroups.push({ groupId: group.groupId, groupName: group.groupName, gradeName: grade.gradeName, entries: dayEntries })
+      }
+    }
+    const blocksMap = new Map<string, any>()
+    for (const g of allGroups) {
+      for (const e of g.entries) {
+        if (e.timeBlock && !blocksMap.has(e.timeBlock.id)) blocksMap.set(e.timeBlock.id, e.timeBlock)
+      }
+    }
+    for (const tb of (viewData.allTimeBlocks || [])) {
+      if (!blocksMap.has(tb.id) && tb.type !== 'CLASS' && tb.type !== 'FREE') blocksMap.set(tb.id, tb)
+    }
+    const sortedBlocks = Array.from(blocksMap.values()).sort((a: any, b: any) => a.order - b.order)
+    const dayLabel = DAYS.find(d => d.key === selectedDay)?.label || selectedDay
+    const dateStr = provisionalMode ? new Date(provisionalDate + 'T12:00:00').toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : dayLabel
+
+    const rows = sortedBlocks.map(block => {
+      const isBreak = block.type === 'BREAK' || block.type === 'LUNCH'
+      const cells = allGroups.map(g => {
+        if (isBreak) return '<td style="text-align:center;color:#94a3b8;font-style:italic;border:1px solid #e2e8f0;padding:4px;">—</td>'
+        const key = `${g.groupId}::${block.id}`
+        const edit = provisionalEdits.get(key)
+        if (edit?._cancelled) return '<td style="text-align:center;color:#ef4444;border:1px solid #e2e8f0;padding:4px;background:#fef2f2;"><s>Cancelada</s></td>'
+        const entry = edit?._swapped ? edit : g.entries.find((e: any) => e.timeBlock?.id === block.id)
+        if (!entry || (!entry.subjectName && !entry.projectName)) return '<td style="border:1px solid #e2e8f0;padding:4px;"></td>'
+        const bg = edit?._swapped ? 'background:#fef3c7;' : ''
+        return `<td style="text-align:center;border:1px solid #e2e8f0;padding:4px;${bg}"><strong style="font-size:11px;">${entry.subjectName || entry.projectName || ''}</strong><br/><span style="font-size:10px;color:#64748b;">${entry.teacherName || ''}</span></td>`
+      }).join('')
+      return `<tr${isBreak ? ' style="background:#f8fafc;"' : ''}><td style="padding:4px 8px;border:1px solid #e2e8f0;font-weight:600;font-size:11px;white-space:nowrap;">${block.label || 'B' + block.order}<br/><span style="font-size:10px;color:#94a3b8;font-weight:normal;">${block.startTime}-${block.endTime}</span></td>${cells}</tr>`
+    }).join('')
+
+    const headers = allGroups.map(g => `<th style="padding:6px 4px;border:1px solid #e2e8f0;font-size:11px;background:#4f46e5;color:white;text-align:center;">${g.groupName}</th>`).join('')
+
+    const printHTML = `<html><head><title>Horario ${dateStr}</title><style>@media print{@page{size:landscape;margin:1cm;}}body{font-family:Arial,sans-serif;font-size:12px;margin:20px;}table{border-collapse:collapse;width:100%;}h2{color:#1e293b;margin-bottom:4px;}p{color:#64748b;margin-top:0;}</style></head><body>
+      <h2>${provisionalMode ? '📋 HORARIO PROVISIONAL' : 'Horario del Día'}</h2>
+      <p>${dateStr}${provisionalMode && provisionalNotes ? ' — ' + provisionalNotes : ''}</p>
+      ${provisionalMode ? '<p style="color:#f59e0b;font-weight:bold;font-size:11px;">⚠️ Este horario es provisional y puede cambiar.</p>' : ''}
+      <table><thead><tr><th style="padding:6px 8px;border:1px solid #e2e8f0;background:#4f46e5;color:white;text-align:left;font-size:11px;">Hora</th>${headers}</tr></thead><tbody>${rows}</tbody></table>
+      <p style="margin-top:16px;font-size:10px;color:#94a3b8;">Generado por Edusyn — ${new Date().toLocaleString('es-CO')}</p>
+    </body></html>`
+
+    const printWindow = window.open('', '_blank')
+    if (printWindow) {
+      printWindow.document.write(printHTML)
+      printWindow.document.close()
+      printWindow.print()
+    }
+  }
+
+  // Print daily schedule BY COURSE (one table per group)
+  const handlePrintDayByCourse = () => {
+    if (!viewData) return
+    const allGroups: any[] = []
+    for (const grade of (viewData.grades || [])) {
+      for (const group of (grade.groups || [])) {
+        const dayEntries = (group.entries || []).filter((e: any) => e.dayOfWeek === selectedDay)
+        allGroups.push({ groupId: group.groupId, groupName: group.groupName, gradeName: grade.gradeName, entries: dayEntries })
+      }
+    }
+    const blocksMap = new Map<string, any>()
+    for (const g of allGroups) for (const e of g.entries) if (e.timeBlock && !blocksMap.has(e.timeBlock.id)) blocksMap.set(e.timeBlock.id, e.timeBlock)
+    for (const tb of (viewData.allTimeBlocks || [])) if (!blocksMap.has(tb.id) && tb.type !== 'CLASS' && tb.type !== 'FREE') blocksMap.set(tb.id, tb)
+    const sortedBlocks = Array.from(blocksMap.values()).sort((a: any, b: any) => a.order - b.order)
+    const dayLabel = DAYS.find(d => d.key === selectedDay)?.label || selectedDay
+    const dateStr = provisionalMode ? new Date(provisionalDate + 'T12:00:00').toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : dayLabel
+
+    const groupTables = allGroups.map(g => {
+      const rows = sortedBlocks.map(block => {
+        const isBreak = block.type === 'BREAK' || block.type === 'LUNCH'
+        const cellKey = `${g.groupId}::${block.id}`
+        const edit = provisionalEdits.get(cellKey)
+        const originalEntry = g.entries.find((e: any) => e.timeBlock?.id === block.id)
+        let cellContent = ''
+        if (isBreak) {
+          cellContent = `<td style="text-align:center;color:#94a3b8;font-style:italic;padding:6px;border:1px solid #e2e8f0;" colspan="2">Receso</td>`
+        } else if (edit?._cancelled) {
+          cellContent = `<td style="color:#ef4444;background:#fef2f2;padding:6px;border:1px solid #e2e8f0;"><s>${originalEntry?.subjectName || ''}</s></td><td style="color:#ef4444;background:#fef2f2;padding:6px;border:1px solid #e2e8f0;">Cancelada</td>`
+        } else {
+          const entry = edit?._swapped ? edit : originalEntry
+          const bg = edit?._swapped ? 'background:#fef3c7;' : ''
+          cellContent = entry
+            ? `<td style="padding:6px;border:1px solid #e2e8f0;font-weight:600;${bg}">${entry.subjectName || ''}</td><td style="padding:6px;border:1px solid #e2e8f0;${bg}">${entry.teacherName || ''}</td>`
+            : `<td style="padding:6px;border:1px solid #e2e8f0;"></td><td style="padding:6px;border:1px solid #e2e8f0;"></td>`
+        }
+        return `<tr><td style="padding:6px 8px;border:1px solid #e2e8f0;font-weight:600;font-size:12px;white-space:nowrap;">${block.label || 'B' + block.order}<br/><span style="font-size:10px;color:#94a3b8;font-weight:normal;">${block.startTime}-${block.endTime}</span></td>${cellContent}</tr>`
+      }).join('')
+      return `<div style="page-break-inside:avoid;margin-bottom:24px;"><h3 style="margin:0 0 8px;color:#1e293b;">${g.groupName} <span style="font-weight:normal;color:#64748b;font-size:14px;">(${g.gradeName})</span></h3><table style="border-collapse:collapse;width:100%;font-size:12px;"><thead><tr style="background:#4f46e5;color:white;"><th style="padding:6px 8px;border:1px solid #e2e8f0;text-align:left;">Hora</th><th style="padding:6px;border:1px solid #e2e8f0;text-align:left;">Asignatura</th><th style="padding:6px;border:1px solid #e2e8f0;text-align:left;">Docente</th></tr></thead><tbody>${rows}</tbody></table></div>`
+    }).join('')
+
+    const printHTML = `<html><head><title>Horario por Curso - ${dateStr}</title><style>@media print{@page{size:portrait;margin:1cm;}}body{font-family:Arial,sans-serif;margin:20px;}h2{color:#1e293b;margin-bottom:4px;}p{color:#64748b;margin-top:0;}</style></head><body>
+      <h2>${provisionalMode ? '📋 HORARIO PROVISIONAL POR CURSO' : 'Horario por Curso'}</h2>
+      <p>${dateStr}${provisionalMode && provisionalNotes ? ' — ' + provisionalNotes : ''}</p>
+      ${provisionalMode ? '<p style="color:#f59e0b;font-weight:bold;font-size:11px;">⚠️ Este horario es provisional.</p>' : ''}
+      ${groupTables}
+      <p style="margin-top:16px;font-size:10px;color:#94a3b8;">Generado por Edusyn — ${new Date().toLocaleString('es-CO')}</p>
+    </body></html>`
+    const w = window.open('', '_blank')
+    if (w) { w.document.write(printHTML); w.document.close(); w.print() }
+  }
+
+  // Print daily schedule BY TEACHER
+  const handlePrintDayByTeacher = () => {
+    if (!viewData) return
+    const teacherMap = new Map<string, { name: string; entries: { groupName: string; gradeName: string; block: any; entry: any; edited?: boolean; cancelled?: boolean }[] }>()
+
+    for (const grade of (viewData.grades || [])) {
+      for (const group of (grade.groups || [])) {
+        const dayEntries = (group.entries || []).filter((e: any) => e.dayOfWeek === selectedDay)
+        for (const entry of dayEntries) {
+          if (!entry.teacherName) continue
+          const cellKey = `${group.groupId}::${entry.timeBlock?.id}`
+          const edit = provisionalEdits.get(cellKey)
+          if (edit?._cancelled) {
+            const teacherKey = entry.teacherName
+            if (!teacherMap.has(teacherKey)) teacherMap.set(teacherKey, { name: entry.teacherName, entries: [] })
+            teacherMap.get(teacherKey)!.entries.push({ groupName: group.groupName, gradeName: grade.gradeName, block: entry.timeBlock, entry, cancelled: true })
+            continue
+          }
+          const displayEntry = edit?._swapped ? edit : entry
+          const teacherKey = displayEntry.teacherName || entry.teacherName
+          if (!teacherMap.has(teacherKey)) teacherMap.set(teacherKey, { name: teacherKey, entries: [] })
+          teacherMap.get(teacherKey)!.entries.push({ groupName: group.groupName, gradeName: grade.gradeName, block: entry.timeBlock, entry: displayEntry, edited: !!edit?._swapped })
+        }
+      }
+    }
+
+    const dayLabel = DAYS.find(d => d.key === selectedDay)?.label || selectedDay
+    const dateStr = provisionalMode ? new Date(provisionalDate + 'T12:00:00').toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : dayLabel
+
+    const sortedTeachers = Array.from(teacherMap.values()).sort((a, b) => a.name.localeCompare(b.name))
+    const teacherTables = sortedTeachers.map(t => {
+      const sorted = t.entries.sort((a, b) => (a.block?.order || 0) - (b.block?.order || 0))
+      const rows = sorted.map(e => {
+        const bg = e.cancelled ? 'background:#fef2f2;' : e.edited ? 'background:#fef3c7;' : ''
+        return `<tr><td style="padding:6px 8px;border:1px solid #e2e8f0;font-weight:600;white-space:nowrap;${bg}">${e.block?.label || ''}<br/><span style="font-size:10px;color:#94a3b8;font-weight:normal;">${e.block?.startTime || ''}-${e.block?.endTime || ''}</span></td><td style="padding:6px;border:1px solid #e2e8f0;${bg}">${e.cancelled ? '<s>' + e.entry.subjectName + '</s> <span style="color:red;">Cancelada</span>' : e.entry.subjectName || ''}</td><td style="padding:6px;border:1px solid #e2e8f0;${bg}">${e.groupName}</td></tr>`
+      }).join('')
+      return `<div style="page-break-inside:avoid;margin-bottom:24px;"><h3 style="margin:0 0 8px;color:#1e293b;">${t.name} <span style="font-weight:normal;color:#64748b;font-size:14px;">(${t.entries.length} horas)</span></h3><table style="border-collapse:collapse;width:100%;font-size:12px;"><thead><tr style="background:#7c3aed;color:white;"><th style="padding:6px 8px;border:1px solid #e2e8f0;text-align:left;">Hora</th><th style="padding:6px;border:1px solid #e2e8f0;text-align:left;">Asignatura</th><th style="padding:6px;border:1px solid #e2e8f0;text-align:left;">Grupo</th></tr></thead><tbody>${rows}</tbody></table></div>`
+    }).join('')
+
+    const printHTML = `<html><head><title>Horario por Docente - ${dateStr}</title><style>@media print{@page{size:portrait;margin:1cm;}}body{font-family:Arial,sans-serif;margin:20px;}h2{color:#1e293b;margin-bottom:4px;}p{color:#64748b;margin-top:0;}</style></head><body>
+      <h2>${provisionalMode ? '📋 HORARIO PROVISIONAL POR DOCENTE' : 'Horario por Docente'}</h2>
+      <p>${dateStr}${provisionalMode && provisionalNotes ? ' — ' + provisionalNotes : ''} — ${sortedTeachers.length} docentes</p>
+      ${provisionalMode ? '<p style="color:#f59e0b;font-weight:bold;font-size:11px;">⚠️ Este horario es provisional.</p>' : ''}
+      ${teacherTables}
+      <p style="margin-top:16px;font-size:10px;color:#94a3b8;">Generado por Edusyn — ${new Date().toLocaleString('es-CO')}</p>
+    </body></html>`
+    const w = window.open('', '_blank')
+    if (w) { w.document.write(printHTML); w.document.close(); w.print() }
   }
 
   // Exportar horario (Excel o PDF)
@@ -2299,41 +2541,126 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
         const sortedBlocks = Array.from(blocksMap.values()).sort((a: any, b: any) => a.order - b.order)
 
         const dayLabel = DAYS.find(d => d.key === selectedDay)?.label || selectedDay
+        const editCount = provisionalEdits.size
 
         return (
           <div>
-            {/* Selector de día */}
-            <div className="flex items-center gap-2 mb-4 flex-wrap">
-              <span className="text-sm text-gray-500 font-medium">Día:</span>
-              {DAYS.filter(d => d.key !== 'SATURDAY').map(d => (
+            {/* Selector de día + controles */}
+            <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                {!provisionalMode && (
+                  <>
+                    <span className="text-sm text-gray-500 font-medium">Día:</span>
+                    {DAYS.filter(d => d.key !== 'SATURDAY').map(d => (
+                      <button
+                        key={d.key}
+                        onClick={() => setSelectedDay(d.key)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          selectedDay === d.key
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </>
+                )}
+                {provisionalMode && (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-sm font-medium text-amber-700">📋 Provisional para:</span>
+                    <input
+                      type="date"
+                      value={provisionalDate}
+                      onChange={(e) => handleProvisionalDateChange(e.target.value)}
+                      className="px-3 py-1.5 border border-amber-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-400 bg-amber-50"
+                    />
+                    <span className="text-sm text-amber-600 font-medium">
+                      ({DAYS.find(d => d.key === selectedDay)?.label})
+                    </span>
+                    <input
+                      type="text"
+                      value={provisionalNotes}
+                      onChange={(e) => setProvisionalNotes(e.target.value)}
+                      placeholder="Motivo del cambio (opcional)"
+                      className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm w-64"
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
                 <button
-                  key={d.key}
-                  onClick={() => setSelectedDay(d.key)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    selectedDay === d.key
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  onClick={toggleProvisionalMode}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
+                    provisionalMode
+                      ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                      : 'bg-gray-100 text-gray-600 hover:bg-amber-50 hover:text-amber-700'
                   }`}
                 >
-                  {d.label}
+                  <CalendarDays className="w-4 h-4" />
+                  {provisionalMode ? 'Salir Provisional' : 'Horario Provisional'}
                 </button>
-              ))}
+                <div className="relative group">
+                  <button
+                    className="px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-200 flex items-center gap-1"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    Imprimir Día
+                    <ChevronDown className="w-3 h-3" />
+                  </button>
+                  <div className="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-lg py-1 z-20 hidden group-hover:block min-w-[200px]">
+                    <button onClick={handlePrintDay} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                      <Grid3X3 className="w-4 h-4 text-indigo-500" /> Grilla general del día
+                    </button>
+                    <button onClick={handlePrintDayByCourse} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-blue-500" /> Por curso (grupo)
+                    </button>
+                    <button onClick={handlePrintDayByTeacher} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-purple-500" /> Por docente
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
+            {/* Provisional mode instructions */}
+            {provisionalMode && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm">
+                <p className="font-medium text-amber-800 mb-1">Modo Provisional — Edición temporal</p>
+                <p className="text-amber-700 text-xs">
+                  • Haz <strong>clic en una celda</strong> para seleccionarla, luego <strong>clic en otra</strong> para intercambiarlas.
+                  • Haz <strong>doble clic</strong> en una celda para cancelarla.
+                  • Los cambios son temporales y solo afectan la impresión.
+                  {editCount > 0 && <span className="ml-2 px-2 py-0.5 bg-amber-200 rounded-full font-medium">{editCount} cambio{editCount !== 1 ? 's' : ''}</span>}
+                </p>
+                {editCount > 0 && (
+                  <button
+                    onClick={() => { setProvisionalEdits(new Map()); setProvisionalSelected(null) }}
+                    className="mt-2 text-xs text-amber-600 underline hover:text-amber-800"
+                  >
+                    Deshacer todos los cambios
+                  </button>
+                )}
+              </div>
+            )}
+
             <p className="text-sm text-gray-500 mb-4">
-              {dayLabel} — {allGroups.length} grupos • {allGroups.reduce((s, g) => s + g.entries.length, 0)} clases
+              {provisionalMode
+                ? `${new Date(provisionalDate + 'T12:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })} — ${allGroups.length} grupos`
+                : `${dayLabel} — ${allGroups.length} grupos • ${allGroups.reduce((s, g) => s + g.entries.length, 0)} clases`
+              }
             </p>
 
             {/* Tabla compacta: filas = bloques, columnas = grupos */}
             <div className="overflow-x-auto border rounded-lg">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="bg-indigo-600 text-white">
-                    <th className="px-2 py-2 text-left font-medium w-20 sticky left-0 bg-indigo-600 z-10">Hora</th>
+                  <tr className={provisionalMode ? 'bg-amber-600 text-white' : 'bg-indigo-600 text-white'}>
+                    <th className={`px-2 py-2 text-left font-medium w-20 sticky left-0 z-10 ${provisionalMode ? 'bg-amber-600' : 'bg-indigo-600'}`}>Hora</th>
                     {allGroups.map(g => (
                       <th key={g.groupId} className="px-1 py-2 text-center font-medium min-w-[80px]">
                         <div>{g.groupName}</div>
-                        <div className="text-indigo-200 text-[10px] font-normal">{g.gradeName}</div>
+                        <div className={`text-[10px] font-normal ${provisionalMode ? 'text-amber-200' : 'text-indigo-200'}`}>{g.gradeName}</div>
                       </th>
                     ))}
                   </tr>
@@ -2371,15 +2698,49 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
                               </td>
                             )
                           }
-                          const entry = g.entries.find((e: any) => e.timeBlock?.id === block.id)
-                          if (!entry) {
+
+                          const cellKey = `${g.groupId}::${block.id}`
+                          const edit = provisionalEdits.get(cellKey)
+                          const originalEntry = g.entries.find((e: any) => e.timeBlock?.id === block.id)
+                          const isSelected = provisionalSelected?.groupId === g.groupId && provisionalSelected?.blockId === block.id
+                          const isCancelled = edit?._cancelled
+                          const isSwapped = edit?._swapped
+                          const displayEntry = isSwapped ? edit : originalEntry
+
+                          if (provisionalMode) {
+                            return (
+                              <td
+                                key={g.groupId}
+                                className={`px-1 py-1 border-r cursor-pointer transition-all ${isSelected ? 'ring-2 ring-amber-500 ring-inset bg-amber-50' : ''}`}
+                                onClick={() => handleProvisionalClick(g.groupId, block.id, originalEntry || {})}
+                                onDoubleClick={() => originalEntry && !isCancelled ? handleProvisionalCancel(g.groupId, block.id) : isCancelled ? handleProvisionalRestore(g.groupId, block.id) : undefined}
+                              >
+                                {isCancelled ? (
+                                  <div className="bg-red-50 border border-red-200 rounded px-1 py-0.5 text-center">
+                                    <div className="text-red-400 line-through text-[10px]">{originalEntry?.subjectName || '—'}</div>
+                                    <div className="text-red-500 text-[9px] font-medium">Cancelada</div>
+                                  </div>
+                                ) : displayEntry ? (
+                                  <div className={`rounded px-1 py-0.5 text-center border ${isSwapped ? 'bg-amber-50 border-amber-300' : 'bg-blue-50 border-blue-100'}`}>
+                                    <div className={`font-semibold truncate text-[10px] ${isSwapped ? 'text-amber-800' : 'text-blue-800'}`}>{displayEntry.subjectName}</div>
+                                    {displayEntry.teacherName && <div className={`truncate text-[9px] ${isSwapped ? 'text-amber-600' : 'text-blue-500'}`}>{displayEntry.teacherName?.split(' ').slice(0, 2).join(' ')}</div>}
+                                    {isSwapped && <div className="text-amber-500 text-[8px]">⇄ modificado</div>}
+                                  </div>
+                                ) : (
+                                  <div className="text-center text-gray-300 text-[9px] py-1">vacío</div>
+                                )}
+                              </td>
+                            )
+                          }
+
+                          if (!originalEntry) {
                             return <td key={g.groupId} className="px-1 py-1 border-r" />
                           }
                           return (
                             <td key={g.groupId} className="px-1 py-1 border-r">
                               <div className="bg-blue-50 border border-blue-100 rounded px-1 py-0.5 text-center">
-                                <div className="font-semibold text-blue-800 truncate text-[10px]">{entry.subjectName}</div>
-                                {entry.teacherName && <div className="text-blue-500 truncate text-[9px]">{entry.teacherName.split(' ').slice(0, 2).join(' ')}</div>}
+                                <div className="font-semibold text-blue-800 truncate text-[10px]">{originalEntry.subjectName}</div>
+                                {originalEntry.teacherName && <div className="text-blue-500 truncate text-[9px]">{originalEntry.teacherName.split(' ').slice(0, 2).join(' ')}</div>}
                               </div>
                             </td>
                           )

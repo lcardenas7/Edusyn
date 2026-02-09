@@ -15,7 +15,7 @@ export class ScheduleEntriesService {
     timeBlock: { select: { id: true, startTime: true, endTime: true, order: true, label: true, type: true } },
     teacherAssignment: {
       include: {
-        teacher: { select: { id: true, name: true, email: true } },
+        teacher: { select: { id: true, firstName: true, lastName: true, email: true } },
         subject: { select: { id: true, name: true, code: true } },
       },
     },
@@ -151,14 +151,22 @@ export class ScheduleEntriesService {
       });
     }
 
-    const entry = await this.prisma.scheduleEntry.update({
-      where: { id },
-      data,
-      include: this.entryIncludes,
-    });
+    try {
+      const entry = await this.prisma.scheduleEntry.update({
+        where: { id },
+        data,
+        include: this.entryIncludes,
+      });
 
-    const warnings = conflicts.filter((c) => c.severity === 'WARNING');
-    return { entry, warnings };
+      const warnings = conflicts.filter((c) => c.severity === 'WARNING');
+      return { entry, warnings };
+    } catch (error: any) {
+      // Unique constraint violation (group+timeBlock+day already exists)
+      if (error.code === 'P2002') {
+        throw new BadRequestException('Ya existe una entrada en ese bloque horario para este grupo');
+      }
+      throw new BadRequestException(`Error al actualizar la entrada: ${error.message}`);
+    }
   }
 
   async delete(id: string, institutionId: string) {
