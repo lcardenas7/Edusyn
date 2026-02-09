@@ -2362,6 +2362,20 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
     }
   }
 
+  // Intercambiar dos entradas (swap)
+  const handleSwapEntries = async (entryA: any, entryB: any) => {
+    try {
+      await timetablingEntriesApi.swap(entryA.id, entryB.id)
+      setMovingEntry(null)
+      loadView()
+    } catch (err: any) {
+      console.error('Error swapping entries:', err)
+      alert(err.response?.data?.message || 'Error al intercambiar. Puede haber conflictos.')
+      setMovingEntry(null)
+      loadView()
+    }
+  }
+
   // Renderizar grilla horaria para un conjunto de entradas
   const renderScheduleGrid = (entries: any[], title: string, subtitle?: string, shiftId?: string) => {
     if (!entries || entries.length === 0) {
@@ -2484,16 +2498,27 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
                         )
                       }
                       const isMoving = movingEntry?.id === entry.id
+                      const isSwapTarget = movingEntry && !isMoving && !isSpecial
                       return (
                         <td key={day} className="px-2 py-1.5 border-r">
                           <div
                             className={`rounded px-1.5 py-1 text-center cursor-pointer transition-all ${
                               isMoving
                                 ? 'bg-amber-100 border-2 border-amber-400 ring-2 ring-amber-200'
-                                : 'bg-blue-50 border border-blue-200 hover:border-blue-400 hover:shadow-sm'
+                                : isSwapTarget
+                                  ? 'bg-orange-50 border-2 border-dashed border-orange-300 hover:border-orange-500 hover:shadow-sm'
+                                  : 'bg-blue-50 border border-blue-200 hover:border-blue-400 hover:shadow-sm'
                             }`}
-                            onClick={() => setMovingEntry(isMoving ? null : entry)}
-                            title={isMoving ? 'Click para cancelar' : 'Click para mover esta ficha'}
+                            onClick={() => {
+                              if (isMoving) {
+                                setMovingEntry(null)
+                              } else if (isSwapTarget) {
+                                handleSwapEntries(movingEntry, entry)
+                              } else {
+                                setMovingEntry(entry)
+                              }
+                            }}
+                            title={isMoving ? 'Click para cancelar' : isSwapTarget ? 'Click para intercambiar con la ficha seleccionada' : 'Click para mover esta ficha'}
                           >
                             <div className="font-semibold text-blue-800 truncate">{entry.subjectName}</div>
                             {entry.teacherName && <div className="text-blue-600 truncate">{entry.teacherName}</div>}
@@ -2501,7 +2526,8 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
                               <div className="text-gray-500 truncate">{entry.groupName}</div>
                             )}
                             {entry.roomName && <div className="text-gray-400 truncate">{entry.roomName}</div>}
-                            {isMoving && <div className="text-amber-600 text-[10px] mt-0.5 font-medium">← Moviendo... (click celda vacía)</div>}
+                            {isMoving && <div className="text-amber-600 text-[10px] mt-0.5 font-medium">← Moviendo... (click otra celda)</div>}
+                            {isSwapTarget && <div className="text-orange-500 text-[10px] mt-0.5 font-medium">↔ Intercambiar</div>}
                           </div>
                         </td>
                       )

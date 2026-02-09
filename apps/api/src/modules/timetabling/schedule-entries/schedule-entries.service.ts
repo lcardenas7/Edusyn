@@ -169,6 +169,70 @@ export class ScheduleEntriesService {
     }
   }
 
+  async swap(entryAId: string, entryBId: string, institutionId: string) {
+    const [entryA, entryB] = await Promise.all([
+      this.prisma.scheduleEntry.findFirst({ where: { id: entryAId, institutionId } }),
+      this.prisma.scheduleEntry.findFirst({ where: { id: entryBId, institutionId } }),
+    ]);
+    if (!entryA) throw new NotFoundException('Entrada A no encontrada');
+    if (!entryB) throw new NotFoundException('Entrada B no encontrada');
+
+    const aBlock = entryA.timeBlockId;
+    const aDay = entryA.dayOfWeek;
+    const bBlock = entryB.timeBlockId;
+    const bDay = entryB.dayOfWeek;
+
+    // Transacción interactiva para evitar violación de unique constraint
+    // Paso 1: borrar ambas entradas
+    // Paso 2: recrearlas con posiciones intercambiadas
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Borrar ambas
+      await tx.scheduleEntry.delete({ where: { id: entryAId } });
+      await tx.scheduleEntry.delete({ where: { id: entryBId } });
+
+      // Recrear con posiciones intercambiadas
+      const newA = await tx.scheduleEntry.create({
+        data: {
+          id: entryAId,
+          institutionId: entryA.institutionId,
+          academicYearId: entryA.academicYearId,
+          groupId: entryA.groupId,
+          timeBlockId: bBlock,
+          dayOfWeek: bDay,
+          teacherAssignmentId: entryA.teacherAssignmentId,
+          roomId: entryA.roomId,
+          projectName: entryA.projectName,
+          projectDescription: entryA.projectDescription,
+          notes: entryA.notes,
+          color: entryA.color,
+        },
+        include: this.entryIncludes,
+      });
+
+      const newB = await tx.scheduleEntry.create({
+        data: {
+          id: entryBId,
+          institutionId: entryB.institutionId,
+          academicYearId: entryB.academicYearId,
+          groupId: entryB.groupId,
+          timeBlockId: aBlock,
+          dayOfWeek: aDay,
+          teacherAssignmentId: entryB.teacherAssignmentId,
+          roomId: entryB.roomId,
+          projectName: entryB.projectName,
+          projectDescription: entryB.projectDescription,
+          notes: entryB.notes,
+          color: entryB.color,
+        },
+        include: this.entryIncludes,
+      });
+
+      return { entryA: newA, entryB: newB };
+    });
+
+    return result;
+  }
+
   async delete(id: string, institutionId: string) {
     const existing = await this.prisma.scheduleEntry.findFirst({
       where: { id, institutionId },

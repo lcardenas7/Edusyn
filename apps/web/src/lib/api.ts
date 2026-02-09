@@ -1234,6 +1234,8 @@ export const timetablingEntriesApi = {
     api.post('/timetabling/schedule-entries', data),
   update: (id: string, data: { timeBlockId?: string; dayOfWeek?: string; teacherAssignmentId?: string | null; projectName?: string | null; projectDescription?: string | null; roomId?: string | null; notes?: string | null; color?: string | null }) =>
     api.put(`/timetabling/schedule-entries/${id}`, data),
+  swap: (entryAId: string, entryBId: string) =>
+    api.post('/timetabling/schedule-entries/swap', { entryAId, entryBId }),
   delete: (id: string) => api.delete(`/timetabling/schedule-entries/${id}`),
   clearGroup: (groupId: string, academicYearId: string) =>
     api.delete(`/timetabling/schedule-entries/clear/${groupId}`, { params: { academicYearId } }),

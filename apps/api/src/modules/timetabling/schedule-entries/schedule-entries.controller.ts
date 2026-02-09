@@ -127,6 +127,11 @@ export class ScheduleEntriesController {
     });
   }
 
+  @Post('swap')
+  async swap(@Request() req, @Body() data: { entryAId: string; entryBId: string }) {
+    return this.scheduleEntriesService.swap(data.entryAId, data.entryBId, req.user.institutionId);
+  }
+
   @Delete(':id')
   async delete(@Request() req, @Param('id') id: string) {
     return this.scheduleEntriesService.delete(id, req.user.institutionId);
