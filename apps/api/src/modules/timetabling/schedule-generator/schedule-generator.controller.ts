@@ -453,6 +453,7 @@ export class ScheduleGeneratorController {
       success: true,
       deletedAssignments: result.count,
       message: `Se eliminaron ${result.count} asignaciones y las entradas de horario asociadas.`,
+      note: 'Los docentes, áreas, asignaturas, grados y grupos NO fueron afectados. Solo se eliminó la carga académica y el horario.',
     };
   }
 

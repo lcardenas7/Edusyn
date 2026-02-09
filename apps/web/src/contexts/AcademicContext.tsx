@@ -447,14 +447,43 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
     }
   }, [academicLevels])
 
-  // Guardar períodos en API
+  // Guardar períodos en API y sincronizar como AcademicTerm en la BD
   const savePeriodsToAPI = useCallback(async (): Promise<boolean> => {
     const token = getAuthToken()
     if (!token) return false
 
     setIsSaving(true)
     try {
-      await api.put('/institution-config/periods', periods)
+      // Intentar guardar en institution-config (legacy)
+      try {
+        await api.put('/institution-config/periods', periods)
+      } catch (e) {
+        // Endpoint puede no existir, no es crítico
+      }
+
+      // Sincronizar como AcademicTerm en la BD para el año activo
+      try {
+        const instId = localStorage.getItem('institutionId')
+        if (instId) {
+          const yearRes = await api.get(`/academic-years/institution/${instId}/current`)
+          const activeYear = yearRes.data
+          if (activeYear?.id) {
+            await api.post('/academic-terms/sync', {
+              academicYearId: activeYear.id,
+              periods: periods.map((p, i) => ({
+                name: p.name,
+                weight: p.weight,
+                order: i + 1,
+                startDate: p.startDate || undefined,
+                endDate: p.endDate || undefined,
+              })),
+            })
+          }
+        }
+      } catch (e) {
+        console.error('Error syncing periods to AcademicTerm:', e)
+      }
+
       return true
     } catch (error) {
       console.error('Error saving periods:', error)

@@ -40,6 +40,15 @@ export class AcademicTermsController {
     return this.academicTermsService.createYear(data);
   }
 
+  @Post('sync')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async syncPeriods(@Body() data: {
+    academicYearId: string;
+    periods: Array<{ name: string; weight: number; order?: number; startDate?: string; endDate?: string }>;
+  }) {
+    return this.academicTermsService.syncPeriods(data.academicYearId, data.periods);
+  }
+
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async create(@Body() dto: CreateAcademicTermDto) {

@@ -404,9 +404,105 @@ export class UsersController {
     return username;
   }
 
-  // La contraseña es el número de documento
+  // La contraseña es el número de documento, o temporal aleatoria si no tiene
   private getInitialPassword(documentNumber?: string): string {
-    return documentNumber || 'temporal123';
+    if (documentNumber) return documentNumber;
+    return `Edu${Math.random().toString(36).substring(2, 8)}`;
+  }
+
+  /**
+   * Resetear contraseñas masivamente (todos los docentes de la institución)
+   * IMPORTANTE: Esta ruta debe ir ANTES de users/:id/reset-password
+   */
+  @Post('users/bulk-reset-password')
+  @Roles('ADMIN_INSTITUTIONAL')
+  async bulkResetPasswords(@Request() req: any, @Body() body: { userIds?: string[] }) {
+    const institutionUser = await this.prisma.institutionUser.findFirst({
+      where: { userId: req.user.id },
+    });
+    if (!institutionUser) {
+      throw new BadRequestException('Usuario no asociado a ninguna institución');
+    }
+
+    // Si no se envían IDs, resetear todos los docentes de la institución
+    let userIds = body.userIds;
+    if (!userIds || userIds.length === 0) {
+      const allTeachers = await this.prisma.institutionUser.findMany({
+        where: {
+          institutionId: institutionUser.institutionId,
+          user: { roles: { some: { role: { name: 'DOCENTE' } } } },
+        },
+        select: { userId: true },
+      });
+      userIds = allTeachers.map(t => t.userId);
+    }
+
+    const results: { userId: string; name: string; newPassword: string }[] = [];
+    const errors: string[] = [];
+
+    for (const uid of userIds) {
+      try {
+        const res = await this.resetUserPassword(req, uid);
+        results.push({ userId: uid, name: `${res.firstName} ${res.lastName}`, newPassword: res.newPassword });
+      } catch (e: any) {
+        errors.push(`${uid}: ${e.message}`);
+      }
+    }
+
+    return { total: results.length, results, errors };
+  }
+
+  /**
+   * Resetear contraseña de un usuario (docente, coordinador, etc.)
+   * Si tiene número de documento, la contraseña se pone como el documento.
+   * Si no tiene, se genera una contraseña temporal aleatoria.
+   */
+  @Post('users/:id/reset-password')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async resetUserPassword(@Request() req: any, @Param('id') userId: string) {
+    const institutionUser = await this.prisma.institutionUser.findFirst({
+      where: { userId: req.user.id },
+    });
+    if (!institutionUser) {
+      throw new BadRequestException('Usuario no asociado a ninguna institución');
+    }
+
+    const targetInst = await this.prisma.institutionUser.findFirst({
+      where: { userId, institutionId: institutionUser.institutionId },
+    });
+    if (!targetInst) {
+      throw new ForbiddenException('No tiene acceso a este usuario');
+    }
+
+    const targetUser = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!targetUser) {
+      throw new BadRequestException('Usuario no encontrado');
+    }
+
+    // Contraseña = número de documento, o temporal aleatoria si no tiene
+    let newPassword: string;
+    if (targetUser.documentNumber) {
+      newPassword = targetUser.documentNumber;
+    } else {
+      newPassword = `Edu${Math.random().toString(36).substring(2, 8)}`;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, mustChangePassword: true },
+    });
+
+    return {
+      userId,
+      username: targetUser.username,
+      email: targetUser.email,
+      firstName: targetUser.firstName,
+      lastName: targetUser.lastName,
+      newPassword,
+      mustChangePassword: true,
+      message: `Contraseña reseteada correctamente. Nueva contraseña: ${newPassword}`,
+    };
   }
 
   /**

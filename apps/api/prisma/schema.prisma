@@ -308,6 +308,16 @@ model User {
   // Director / Acompañante de grupo
   directedGroups              Group[] @relation("groupDirector")
   companionGroups             Group[] @relation("groupCompanion")
+  
+  // Observador del estudiante
+  commitmentsAuthored         ObserverCommitment[]  @relation("CommitmentAuthor")
+  commitmentsClosed           ObserverCommitment[]  @relation("CommitmentCloser")
+  citationsAuthored           GuardianCitation[]
+  referralsAuthored           ObserverReferral[]    @relation("ReferralAuthor")
+  referralsReceived           ObserverReferral[]    @relation("ReferralTarget")
+  referralsResponded          ObserverReferral[]    @relation("ReferralResponder")
+  evidencesUploaded           ObserverEvidence[]
+  measuresApplied             PedagogicalMeasure[]
 }
 
 model Role {
@@ -1076,6 +1086,14 @@ model Student {
   disability    String?
   disabilityType String?
   
+  // Diagnóstico educativo/clínico (visible para docentes)
+  hasDiagnosis       Boolean  @default(false)
+  diagnosisType      String?  // Ej: TDAH, TEA, Dislexia, etc.
+  diagnosisDetails   String?  // Descripción detallada
+  diagnosisSupports  String?  // Apoyos/ajustes razonables recomendados
+  diagnosisDate      DateTime?
+  diagnosisEntity    String?  // Entidad que emitió el diagnóstico
+  
   // Información adicional
   previousSchool String?
   photo         String?
@@ -1295,6 +1313,12 @@ model StudentEnrollment {
   academicActs        AcademicAct[]
   performanceManualEdits PerformanceManualEdit[]
   studentAchievements StudentAchievement[]
+  
+  // Observador del estudiante (sub-módulos)
+  observerCommitments   ObserverCommitment[]
+  guardianCitations     GuardianCitation[]
+  observerReferrals     ObserverReferral[]
+  pedagogicalMeasures   PedagogicalMeasure[]
   
   // 🔥 SNAPSHOT de estructura académica al momento de matrícula
   enrollmentAreas      EnrollmentArea[]
@@ -1559,18 +1583,32 @@ model AttendanceRecord {
 // ==================== STUDENT OBSERVER ====================
 
 enum ObservationType {
-  POSITIVE      // Logro, reconocimiento
-  NEGATIVE      // Falta, llamado de atención
-  NEUTRAL       // Observación informativa
-  COMMITMENT    // Compromiso firmado
+  POSITIVE              // 🟢 Logro, liderazgo, buen comportamiento
+  PEDAGOGICAL           // 🟡 Dificultad académica, bajo rendimiento
+  BEHAVIORAL_MILD       // 🟠 Indisciplina menor
+  ACTA_TYPE_I           // 🔴 Falta leve formalizada
+  ACTA_TYPE_II          // 🔴 Falta grave / reincidencia
+  ACTA_TYPE_III         // ⚫ Falta gravísima / posible delito
+  PARENT_CITATION       // 📞 Citación a padre/acudiente
+  COMMITMENT            // 🤝 Compromiso firmado
+  COUNSELING_FOLLOWUP   // 🧠 Seguimiento de orientación
+  REFERRAL              // 📝 Remisión a orientación/coordinación/comité
+  COMMITTEE_DECISION    // 🏫 Decisión del comité de convivencia
+  PEDAGOGICAL_FOLLOWUP  // Seguimiento pedagógico
 }
 
 enum ObservationCategory {
   ACADEMIC      // Académico
-  BEHAVIORAL    // Comportamental
+  BEHAVIORAL    // Comportamental/convivencial
   ATTENDANCE    // Asistencia
   UNIFORM       // Uniforme/presentación
   OTHER         // Otro
+}
+
+enum ObserverEntryStatus {
+  OPEN          // Abierto
+  IN_PROGRESS   // En seguimiento
+  CLOSED        // Cerrado/resuelto
 }
 
 model StudentObservation {
@@ -1580,6 +1618,7 @@ model StudentObservation {
   date                DateTime @db.Date
   type                ObservationType
   category            ObservationCategory
+  status              ObserverEntryStatus @default(OPEN)
   description         String
   actionTaken         String?
   parentNotified      Boolean  @default(false)
@@ -1593,10 +1632,160 @@ model StudentObservation {
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
   author            User              @relation(fields: [authorId], references: [id], onDelete: Restrict)
 
+  // Relaciones con sub-módulos del observador
+  evidences         ObserverEvidence[]
+  commitments       ObserverCommitment[]
+  actaRecord        ActaRecord?
+  citation          GuardianCitation?
+  referral          ObserverReferral?
+  measures          PedagogicalMeasure[]
+
   @@index([studentEnrollmentId])
   @@index([authorId])
   @@index([date])
   @@index([type])
+  @@index([status])
+}
+
+// Acta formal (Tipo I, II, III) vinculada a una observación
+model ActaRecord {
+  id                  String   @id @default(cuid())
+  observationId       String   @unique
+  actaNumber          String?  // Número consecutivo del acta
+  actaType            String   // TYPE_I, TYPE_II, TYPE_III
+  facts               String   // Hechos
+  regulationApplied   String?  // Normatividad del manual de convivencia
+  witnesses           String?  // Testigos (JSON o texto)
+  studentStatement    String?  // Descargos del estudiante
+  digitalSignatures   String?  // Firmas digitales (JSON)
+  sanctions           String?  // Medidas/sanciones aplicadas
+  followUpRequired    Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  observation         StudentObservation @relation(fields: [observationId], references: [id], onDelete: Cascade)
+  evidences           ObserverEvidence[] @relation("ActaEvidences")
+
+  @@index([actaType])
+}
+
+// Compromiso del estudiante
+model ObserverCommitment {
+  id                  String   @id @default(cuid())
+  observationId       String?
+  studentEnrollmentId String
+  authorId            String
+  description         String
+  dueDate             DateTime?
+  responsibleRole     String?  // DOCENTE, COORDINADOR, ORIENTADOR, ACUDIENTE
+  status              ObserverEntryStatus @default(OPEN)
+  closedAt            DateTime?
+  closureEvidence     String?  // Evidencia de cierre
+  closedById          String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  observation         StudentObservation? @relation(fields: [observationId], references: [id], onDelete: SetNull)
+  studentEnrollment   StudentEnrollment   @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+  author              User                @relation("CommitmentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  closedBy            User?               @relation("CommitmentCloser", fields: [closedById], references: [id], onDelete: SetNull)
+
+  @@index([studentEnrollmentId])
+  @@index([status])
+}
+
+// Citación a padre/acudiente
+model GuardianCitation {
+  id                  String   @id @default(cuid())
+  observationId       String?  @unique
+  studentEnrollmentId String
+  authorId            String
+  reason              String
+  scheduledDate       DateTime
+  attended            Boolean?
+  agreements          String?  // Acuerdos de la reunión
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  observation         StudentObservation? @relation(fields: [observationId], references: [id], onDelete: SetNull)
+  studentEnrollment   StudentEnrollment   @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+  author              User                @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  evidences           ObserverEvidence[]  @relation("CitationEvidences")
+
+  @@index([studentEnrollmentId])
+  @@index([scheduledDate])
+}
+
+// Remisión interna (a orientación, coordinación, comité)
+model ObserverReferral {
+  id                  String   @id @default(cuid())
+  observationId       String?  @unique
+  studentEnrollmentId String
+  authorId            String
+  referredToRole      String   // ORIENTADOR, COORDINADOR, COMITE_CONVIVENCIA
+  referredToUserId    String?
+  reason              String
+  status              ObserverEntryStatus @default(OPEN)
+  responseNotes       String?
+  respondedAt         DateTime?
+  respondedById       String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  observation         StudentObservation? @relation(fields: [observationId], references: [id], onDelete: SetNull)
+  studentEnrollment   StudentEnrollment   @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+  author              User                @relation("ReferralAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  referredToUser      User?               @relation("ReferralTarget", fields: [referredToUserId], references: [id], onDelete: SetNull)
+  respondedBy         User?               @relation("ReferralResponder", fields: [respondedById], references: [id], onDelete: SetNull)
+
+  @@index([studentEnrollmentId])
+  @@index([status])
+}
+
+// Evidencias adjuntas (fotos, PDFs, actas firmadas)
+model ObserverEvidence {
+  id                String   @id @default(cuid())
+  observationId     String?
+  actaRecordId      String?
+  citationId        String?
+  fileName          String
+  fileUrl           String
+  fileType          String   // image/jpeg, application/pdf, etc.
+  fileSize          Int?
+  description       String?
+  uploadedById      String
+  createdAt         DateTime @default(now())
+
+  observation       StudentObservation? @relation(fields: [observationId], references: [id], onDelete: Cascade)
+  actaRecord        ActaRecord?         @relation("ActaEvidences", fields: [actaRecordId], references: [id], onDelete: Cascade)
+  citation          GuardianCitation?   @relation("CitationEvidences", fields: [citationId], references: [id], onDelete: Cascade)
+  uploadedBy        User                @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@index([observationId])
+}
+
+// Medidas pedagógicas y sanciones aplicadas
+model PedagogicalMeasure {
+  id                  String   @id @default(cuid())
+  observationId       String
+  studentEnrollmentId String
+  measureType         String   // FORMATIVE_WORKSHOP, SOCIAL_SERVICE, WRITTEN_REFLECTION, SUSPENSION, GROUP_CHANGE, OTHER
+  description         String
+  startDate           DateTime?
+  endDate             DateTime?
+  status              ObserverEntryStatus @default(OPEN)
+  result              String?  // Resultado/evidencia de cumplimiento
+  appliedById         String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  observation         StudentObservation @relation(fields: [observationId], references: [id], onDelete: Cascade)
+  studentEnrollment   StudentEnrollment  @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+  appliedBy           User               @relation(fields: [appliedById], references: [id], onDelete: Restrict)
+
+  @@index([studentEnrollmentId])
+  @@index([status])
 }
 
 // ==================== COMMUNICATIONS ====================

@@ -192,6 +192,8 @@ export const academicTermsApi = {
   getAll: (academicYearId?: string) => api.get('/academic-terms', { params: { academicYearId } }),
   getByAcademicYear: (academicYearId: string) => api.get('/academic-terms', { params: { academicYearId } }),
   create: (data: { academicYearId: string; type: string; name: string; order: number; weightPercentage: number }) => api.post('/academic-terms', data),
+  syncPeriods: (academicYearId: string, periods: Array<{ name: string; weight: number; order?: number; startDate?: string; endDate?: string }>) =>
+    api.post('/academic-terms/sync', { academicYearId, periods }),
 }
 
 // Teacher Assignments (Carga Academica)
@@ -290,8 +292,36 @@ export const attendanceApi = {
 
 // Observer (Observador del estudiante)
 export const observerApi = {
-  getByStudent: (studentEnrollmentId: string) => api.get('/observer', { params: { studentEnrollmentId } }),
-  create: (data: { studentEnrollmentId: string; type: string; category: string; description: string; date: string }) => api.post('/observer', data),
+  // Observaciones
+  create: (data: any) => api.post('/observer', data),
+  update: (id: string, data: any) => api.put(`/observer/${id}`, data),
+  delete: (id: string) => api.delete(`/observer/${id}`),
+  getById: (id: string) => api.get(`/observer/${id}`),
+  getByStudent: (enrollmentId: string, filters?: any) => api.get(`/observer/by-student/${enrollmentId}`, { params: filters }),
+  getByGroup: (groupId: string, academicYearId: string, filters?: any) => api.get(`/observer/by-group/${groupId}`, { params: { academicYearId, ...filters } }),
+  getTimeline: (enrollmentId: string) => api.get(`/observer/timeline/${enrollmentId}`),
+  getSummary: (enrollmentId: string) => api.get(`/observer/summary/${enrollmentId}`),
+  getDashboard: (academicYearId: string) => api.get('/observer/dashboard', { params: { academicYearId } }),
+  getPendingFollowUps: (all?: boolean) => api.get('/observer/pending-followups', { params: { all: all ? 'true' : undefined } }),
+  markParentNotified: (id: string) => api.put(`/observer/${id}/notify-parent`),
+  // Actas
+  createActa: (data: any) => api.post('/observer/actas', data),
+  updateActa: (id: string, data: any) => api.put(`/observer/actas/${id}`, data),
+  // Compromisos
+  createCommitment: (data: any) => api.post('/observer/commitments', data),
+  updateCommitment: (id: string, data: any) => api.put(`/observer/commitments/${id}`, data),
+  getCommitmentsByStudent: (enrollmentId: string) => api.get(`/observer/commitments/by-student/${enrollmentId}`),
+  // Citaciones
+  createCitation: (data: any) => api.post('/observer/citations', data),
+  updateCitation: (id: string, data: any) => api.put(`/observer/citations/${id}`, data),
+  getCitationsByStudent: (enrollmentId: string) => api.get(`/observer/citations/by-student/${enrollmentId}`),
+  // Remisiones
+  createReferral: (data: any) => api.post('/observer/referrals', data),
+  updateReferral: (id: string, data: any) => api.put(`/observer/referrals/${id}`, data),
+  getReferralsByStudent: (enrollmentId: string) => api.get(`/observer/referrals/by-student/${enrollmentId}`),
+  // Medidas pedagógicas
+  createMeasure: (data: any) => api.post('/observer/measures', data),
+  updateMeasure: (id: string, data: any) => api.put(`/observer/measures/${id}`, data),
 }
 
 // Preventive Alerts
@@ -829,6 +859,8 @@ export const staffApi = {
   }) => api.post('/iam/staff', data),
   update: (id: string, data: any) => api.put(`/iam/staff/${id}`, data),
   delete: (id: string) => api.delete(`/iam/staff/${id}`),
+  resetPassword: (userId: string) => api.post(`/iam/users/${userId}/reset-password`),
+  bulkResetPassword: (userIds?: string[]) => api.post('/iam/users/bulk-reset-password', { userIds }),
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

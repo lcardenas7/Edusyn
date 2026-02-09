@@ -76,4 +76,77 @@ export class AcademicTermsService {
   async delete(id: string) {
     return this.prisma.academicTerm.delete({ where: { id } });
   }
+
+  // Sincronizar períodos desde la configuración de Periods.tsx hacia AcademicTerm
+  async syncPeriods(academicYearId: string, periods: Array<{
+    name: string;
+    weight: number;
+    order?: number;
+    startDate?: string;
+    endDate?: string;
+  }>) {
+    // Verificar que el año existe
+    const year = await this.prisma.academicYear.findUnique({
+      where: { id: academicYearId },
+    });
+    if (!year) {
+      throw new BadRequestException('Año académico no encontrado');
+    }
+
+    // Obtener términos existentes
+    const existingTerms = await this.prisma.academicTerm.findMany({
+      where: { academicYearId },
+      orderBy: { order: 'asc' },
+    });
+
+    const results: any[] = [];
+
+    for (let i = 0; i < periods.length; i++) {
+      const period = periods[i];
+      const order = period.order ?? (i + 1);
+      const existing = existingTerms.find(t => t.order === order);
+
+      if (existing) {
+        // Actualizar existente
+        const updated = await this.prisma.academicTerm.update({
+          where: { id: existing.id },
+          data: {
+            name: period.name,
+            weightPercentage: period.weight,
+            startDate: period.startDate ? new Date(period.startDate) : existing.startDate,
+            endDate: period.endDate ? new Date(period.endDate) : existing.endDate,
+          },
+        });
+        results.push(updated);
+      } else {
+        // Crear nuevo
+        const created = await this.prisma.academicTerm.create({
+          data: {
+            academicYearId,
+            type: 'PERIOD',
+            name: period.name,
+            order,
+            weightPercentage: period.weight,
+            startDate: period.startDate ? new Date(period.startDate) : null,
+            endDate: period.endDate ? new Date(period.endDate) : null,
+          },
+        });
+        results.push(created);
+      }
+    }
+
+    // Eliminar términos sobrantes (si se redujo el número de períodos)
+    // Solo eliminar los de tipo PERIOD que excedan el número actual
+    const maxOrder = periods.length;
+    const toDelete = existingTerms.filter(t => t.order > maxOrder && t.type === 'PERIOD');
+    for (const t of toDelete) {
+      try {
+        await this.prisma.academicTerm.delete({ where: { id: t.id } });
+      } catch (e) {
+        // Si tiene dependencias, no eliminar
+      }
+    }
+
+    return { synced: results.length, terms: results };
+  }
 }

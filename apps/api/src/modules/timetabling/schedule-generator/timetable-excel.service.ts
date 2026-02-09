@@ -706,6 +706,7 @@ export class TimetableExcelService {
       if (teacherCache.has(cacheKey)) continue;
 
       let user: { id: string } | null = null;
+      let matchMethod = '';
 
       // 1) Buscar por email si lo tiene
       if (row.teacherEmail) {
@@ -713,9 +714,22 @@ export class TimetableExcelService {
           where: { email: row.teacherEmail },
           select: { id: true },
         });
+        if (user) matchMethod = 'email';
       }
 
-      // 2) Si no encontró por email, buscar por nombre dentro de la institución
+      // 2) Buscar por número de documento si lo tiene
+      if (!user && row.teacherDocument) {
+        const byDoc = await this.prisma.user.findFirst({
+          where: { documentNumber: row.teacherDocument, isActive: true },
+          select: { id: true },
+        });
+        if (byDoc) {
+          user = byDoc;
+          matchMethod = 'documento';
+        }
+      }
+
+      // 3) Buscar por nombre dentro de la institución
       if (!user) {
         const nameParts = row.teacherName.split(/\s+/);
         const firstName = nameParts[0] || '';
@@ -735,15 +749,24 @@ export class TimetableExcelService {
         });
         if (institutionUsers.length > 0) {
           user = institutionUsers[0].user;
+          matchMethod = 'nombre';
         }
       }
 
-      // 3) Si no existe, crear usuario nuevo
+      // 4) Si no existe, crear usuario nuevo
       if (!user) {
         const nameParts = row.teacherName.split(/\s+/);
         const firstName = nameParts[0] || 'Docente';
         const lastName = nameParts.slice(1).join(' ') || 'Sin Apellido';
-        const initialPassword = row.teacherDocument || 'temporal123';
+        // Contraseña = número de documento, o nombre+apellido normalizado si no tiene
+        let initialPassword: string;
+        if (row.teacherDocument) {
+          initialPassword = row.teacherDocument;
+        } else {
+          // Sin documento: usar PrimerNombre + PrimerApellido (sin tildes, sin espacios)
+          initialPassword = `${firstName}${lastName.split(/\s+/)[0] || ''}`
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        }
         const passwordHash = await bcrypt.hash(initialPassword, 10);
 
         // Generar email si no se proveyó
@@ -776,8 +799,11 @@ export class TimetableExcelService {
             } as any,
           });
           entitiesCreated.teachers++;
-          const emailNote = row.teacherEmail ? row.teacherEmail : `email auto-generado: ${autoEmail}`;
-          warnings.push(`Docente "${row.teacherName}" (${emailNote}) creado automáticamente`);
+          const emailNote = row.teacherEmail ? row.teacherEmail : `email auto: ${autoEmail}`;
+          const passwordNote = row.teacherDocument
+            ? `contraseña = N° documento (${row.teacherDocument})`
+            : `contraseña = "${initialPassword}" (nombre+apellido, sin tildes)`;
+          warnings.push(`➕ Docente NUEVO "${row.teacherName}" — usuario: ${username}, ${emailNote}, ${passwordNote}. Debe cambiar contraseña al ingresar.`);
         } catch (e: any) {
           errors.push(`Fila ${row.rowNumber}: Error al crear docente "${row.teacherName}" — ${e.message}`);
           continue;
@@ -794,6 +820,9 @@ export class TimetableExcelService {
         }
       }
 
+      if (matchMethod) {
+        warnings.push(`✅ Docente "${row.teacherName}" encontrado por ${matchMethod} (reutilizado, no duplicado)`);
+      }
       teacherCache.set(cacheKey, user.id);
     }
 
@@ -890,6 +919,10 @@ export class TimetableExcelService {
         skipped++;
       }
     }
+
+    // Agregar nota de protección de datos al final de warnings
+    warnings.push(`ℹ️ Resumen de entidades: ${entitiesCreated.teachers} docentes nuevos, ${entitiesCreated.areas} áreas nuevas, ${entitiesCreated.subjects} asignaturas nuevas, ${entitiesCreated.grades} grados nuevos, ${entitiesCreated.groups} grupos nuevos.`);
+    warnings.push(`🔒 Los docentes, áreas, asignaturas y grupos existentes NO fueron modificados ni eliminados. Solo se reemplazó la carga académica (asignaciones docente↔materia↔grupo).`);
 
     return {
       success: errors.length === 0,
