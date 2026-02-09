@@ -1262,6 +1262,7 @@ export const timetablingGeneratorApi = {
     groupIds?: string[];
     clearExisting?: boolean;
     respectAvailability?: boolean;
+    groupTeacherBlocks?: boolean;
     activeDays?: string[];
   }) => api.post('/timetabling/generator/generate', data),
   exportSchedule: (academicYearId: string, viewType: 'by-group' | 'by-teacher' = 'by-group') =>
