@@ -224,12 +224,12 @@ export class ScheduleGeneratorService {
     });
 
     for (const group of groups) {
-      // Buscar room cuyo nombre contenga el nombre del grupo (ej: "Salón 6A" para grupo "6A")
-      const match = rooms.find(r =>
-        r.name.toLowerCase().includes(group.name.toLowerCase()) ||
-        r.name.toLowerCase() === `salón ${group.name}`.toLowerCase() ||
-        r.name.toLowerCase() === `salon ${group.name}`.toLowerCase()
-      );
+      // Buscar room con nombre exacto "Salón {grupo}" (ej: "Salón 6A" para grupo "6A")
+      const gName = group.name.toLowerCase();
+      const match = rooms.find(r => {
+        const rName = r.name.toLowerCase();
+        return rName === `salón ${gName}` || rName === `salon ${gName}` || rName === gName;
+      });
       if (match) {
         map.set(group.id, match.id);
       }
@@ -328,38 +328,67 @@ export class ScheduleGeneratorService {
         const daySlots = availableSlotsByDay.get(day) || [];
         const hoursForThisDay = hoursPerDay[dayIndex] || 0;
         dayIndex++;
+        if (hoursForThisDay === 0) continue;
 
-        // Intentar colocar bloques consecutivos si es posible y permitido
-        let placedThisDay = 0;
-        for (const slot of daySlots) {
-          if (placedThisDay >= hoursForThisDay || hoursPlaced >= targetHours) break;
-
+        // Helper: verificar y marcar un slot
+        const canUseSlot = (slot: any) => {
           const slotKey = `${day}|${slot.id}`;
-
-          // Verificación final de disponibilidad
-          if (this.isSlotTaken(assignment.teacherId, slotKey, teacherSlots) ||
-              this.isSlotTaken(assignment.groupId, slotKey, groupSlots)) {
-            continue;
-          }
-
-          // Marcar slot como ocupado
+          return !this.isSlotTaken(assignment.teacherId, slotKey, teacherSlots) &&
+                 !this.isSlotTaken(assignment.groupId, slotKey, groupSlots);
+        };
+        const placeSlot = (slot: any) => {
+          const slotKey = `${day}|${slot.id}`;
           if (!teacherSlots.has(assignment.teacherId)) teacherSlots.set(assignment.teacherId, new Set());
           if (!groupSlots.has(assignment.groupId)) groupSlots.set(assignment.groupId, new Set());
           teacherSlots.get(assignment.teacherId)!.add(slotKey);
           groupSlots.get(assignment.groupId)!.add(slotKey);
-
           entriesToCreate.push({
-            institutionId,
-            academicYearId,
+            institutionId, academicYearId,
             groupId: assignment.groupId,
             timeBlockId: slot.id,
             dayOfWeek: day,
             teacherAssignmentId: assignment.id,
             roomId: groupRoomMap.get(assignment.groupId) || null,
           });
-
           hoursPlaced++;
-          placedThisDay++;
+        };
+
+        let placedThisDay = 0;
+
+        // Si necesitamos 2h este día, buscar par CONSECUTIVO primero
+        if (hoursForThisDay === 2) {
+          let foundPair = false;
+          for (let i = 0; i < daySlots.length - 1; i++) {
+            const s1 = daySlots[i];
+            const s2 = daySlots[i + 1];
+            // Consecutivos = órdenes adyacentes (diferencia de 1)
+            if (Math.abs(s1.order - s2.order) === 1 && canUseSlot(s1) && canUseSlot(s2)) {
+              placeSlot(s1);
+              placeSlot(s2);
+              placedThisDay = 2;
+              foundPair = true;
+              break;
+            }
+          }
+          // Fallback: si no hay par consecutivo, colocar sueltos
+          if (!foundPair) {
+            for (const slot of daySlots) {
+              if (placedThisDay >= hoursForThisDay || hoursPlaced >= targetHours) break;
+              if (canUseSlot(slot)) {
+                placeSlot(slot);
+                placedThisDay++;
+              }
+            }
+          }
+        } else {
+          // 1h: colocar en cualquier slot disponible
+          for (const slot of daySlots) {
+            if (placedThisDay >= hoursForThisDay || hoursPlaced >= targetHours) break;
+            if (canUseSlot(slot)) {
+              placeSlot(slot);
+              placedThisDay++;
+            }
+          }
         }
       }
 
@@ -483,40 +512,39 @@ export class ScheduleGeneratorService {
   }
 
   /**
-   * Distribuye N horas entre D días, respetando máximo por día.
-   * Intenta distribuir uniformemente.
+   * Distribuye N horas entre D días disponibles.
+   * Reglas:
+   *  - Máximo 2 horas de la misma materia por día (nunca 3+)
+   *  - Preferir bloques de 2h sobre horas sueltas de 1h
+   *  - Usar el menor número de días posible
+   * Ejemplo: 4h→[2,2], 5h→[2,2,1], 3h→[2,1], 6h→[2,2,2], 1h→[1]
    */
-  private distributeHours(totalHours: number, numDays: number, maxPerDay: number, preferDistribution: boolean): number[] {
+  private distributeHours(totalHours: number, numDays: number, maxPerDay: number, _preferDistribution: boolean): number[] {
+    const cap = Math.min(maxPerDay, 2); // Hard cap: nunca más de 2h/día de la misma materia
     const result: number[] = new Array(numDays).fill(0);
 
-    if (!preferDistribution) {
-      // Sin preferencia de distribución: llenar días secuencialmente
-      let remaining = totalHours;
-      for (let i = 0; i < numDays && remaining > 0; i++) {
-        const hours = Math.min(remaining, maxPerDay);
-        result[i] = hours;
-        remaining -= hours;
-      }
-      return result;
-    }
-
-    // Distribución uniforme
     let remaining = totalHours;
-    const basePerDay = Math.min(Math.floor(totalHours / numDays), maxPerDay);
 
-    // Primero: dar base a cada día
-    for (let i = 0; i < numDays && remaining > 0; i++) {
-      const hours = Math.min(basePerDay || 1, remaining, maxPerDay);
-      result[i] = hours;
-      remaining -= hours;
+    // 1. Llenar con bloques de 2h primero (preferencia principal)
+    for (let i = 0; i < numDays && remaining >= 2; i++) {
+      result[i] = Math.min(2, cap);
+      remaining -= result[i];
     }
 
-    // Segundo: repartir sobrantes
-    for (let i = 0; i < numDays && remaining > 0; i++) {
-      if (result[i] < maxPerDay) {
-        const extra = Math.min(remaining, maxPerDay - result[i]);
-        result[i] += extra;
-        remaining -= extra;
+    // 2. Si queda 1h, colocarla en un día nuevo (no agregar a un día que ya tiene 2h)
+    if (remaining === 1) {
+      // Buscar un día vacío
+      const emptyDay = result.findIndex(h => h === 0);
+      if (emptyDay >= 0) {
+        result[emptyDay] = 1;
+        remaining = 0;
+      } else {
+        // No hay días vacíos, usar el primer día con espacio
+        const spaceDay = result.findIndex(h => h < cap);
+        if (spaceDay >= 0) {
+          result[spaceDay]++;
+          remaining = 0;
+        }
       }
     }
 

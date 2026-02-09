@@ -196,7 +196,7 @@ export class ScheduleValidatorService {
       if (roomConflict) {
         conflicts.push({
           type: 'ROOM_OVERLAP',
-          severity: 'ERROR',
+          severity: 'WARNING',
           message: `El espacio "${roomConflict.room?.name}" ya está asignado al grupo ${roomConflict.group.name} en este bloque`,
           details: {
             dayOfWeek: entry.dayOfWeek,

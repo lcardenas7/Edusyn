@@ -548,14 +548,25 @@ export class ScheduleGeneratorController {
           if (!gMap.has(e.groupId)) gMap.set(e.groupId, []);
           gMap.get(e.groupId)!.push(e);
         }
-        const grades = Array.from(gradeMap.values()).map(g => ({
-          ...g,
-          groups: Array.from(groupsByGrade.get(g.gradeId)?.entries() || []).map(([groupId, entries]) => ({
-            groupId,
-            groupName: entries[0]?.groupName || '',
-            entries,
-          })),
-        }));
+        const grades = Array.from(gradeMap.values())
+          .sort((a, b) => {
+            // Ordenar por stage y luego por nombre numérico
+            const stageOrder: Record<string, number> = { PREESCOLAR: 0, BASICA_PRIMARIA: 1, BASICA_SECUNDARIA: 2, MEDIA: 3 };
+            const sa = stageOrder[a.stage] ?? 99;
+            const sb = stageOrder[b.stage] ?? 99;
+            if (sa !== sb) return sa - sb;
+            return a.gradeName.localeCompare(b.gradeName, 'es', { numeric: true });
+          })
+          .map(g => ({
+            ...g,
+            groups: Array.from(groupsByGrade.get(g.gradeId)?.entries() || [])
+              .map(([groupId, entries]) => ({
+                groupId,
+                groupName: entries[0]?.groupName || '',
+                entries,
+              }))
+              .sort((a, b) => a.groupName.localeCompare(b.groupName, 'es', { numeric: true })),
+          }));
         return { view, grades, totalEntries: formattedEntries.length };
       }
 

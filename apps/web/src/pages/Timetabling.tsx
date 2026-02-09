@@ -1984,7 +1984,7 @@ const VIEW_MODES = [
 ] as const
 
 function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
-  const [viewMode, setViewMode] = useState<'total' | 'by-grade' | 'by-teacher' | 'by-subject' | 'by-area'>('total')
+  const [viewMode, setViewMode] = useState<'total' | 'by-grade' | 'by-teacher' | 'by-subject' | 'by-area'>('by-grade')
   const [viewData, setViewData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [selectedFilter, setSelectedFilter] = useState<string>('')
