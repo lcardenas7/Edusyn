@@ -2133,8 +2133,14 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
 
     const rows = sortedBlocks.map(block => {
       const isBreak = block.type === 'BREAK' || block.type === 'LUNCH'
+      const isTutoring = block.type === 'TUTORING'
+      const isAssembly = block.type === 'ASSEMBLY'
+      const isSpecial = isBreak || isTutoring || isAssembly
+      const specialLabel = isBreak ? 'Receso' : isTutoring ? (block.label || 'Tutoría') : isAssembly ? (block.label || 'Formación') : ''
+      const specialColor = isBreak ? '#94a3b8' : isTutoring ? '#4f46e5' : '#7c3aed'
+      const specialBg = isBreak ? '' : isTutoring ? 'background:#eef2ff;' : 'background:#f5f3ff;'
       const cells = allGroups.map(g => {
-        if (isBreak) return '<td style="text-align:center;color:#94a3b8;font-style:italic;border:1px solid #e2e8f0;padding:4px;">—</td>'
+        if (isSpecial) return `<td style="text-align:center;color:${specialColor};font-weight:${isBreak ? 'normal' : '600'};font-style:${isBreak ? 'italic' : 'normal'};border:1px solid #e2e8f0;padding:4px;${specialBg}">${specialLabel}</td>`
         const key = `${g.groupId}::${block.id}`
         const edit = provisionalEdits.get(key)
         if (edit?._cancelled) return '<td style="text-align:center;color:#ef4444;border:1px solid #e2e8f0;padding:4px;background:#fef2f2;"><s>Cancelada</s></td>'
@@ -2184,12 +2190,18 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
     const groupTables = allGroups.map(g => {
       const rows = sortedBlocks.map(block => {
         const isBreak = block.type === 'BREAK' || block.type === 'LUNCH'
+        const isTutoring = block.type === 'TUTORING'
+        const isAssembly = block.type === 'ASSEMBLY'
         const cellKey = `${g.groupId}::${block.id}`
         const edit = provisionalEdits.get(cellKey)
         const originalEntry = g.entries.find((e: any) => e.timeBlock?.id === block.id)
         let cellContent = ''
         if (isBreak) {
           cellContent = `<td style="text-align:center;color:#94a3b8;font-style:italic;padding:6px;border:1px solid #e2e8f0;" colspan="2">Receso</td>`
+        } else if (isTutoring) {
+          cellContent = `<td style="text-align:center;color:#4f46e5;font-weight:600;padding:6px;border:1px solid #e2e8f0;background:#eef2ff;" colspan="2">${block.label || 'Tutoría'}</td>`
+        } else if (isAssembly) {
+          cellContent = `<td style="text-align:center;color:#7c3aed;font-weight:600;padding:6px;border:1px solid #e2e8f0;background:#f5f3ff;" colspan="2">${block.label || 'Formación'}</td>`
         } else if (edit?._cancelled) {
           cellContent = `<td style="color:#ef4444;background:#fef2f2;padding:6px;border:1px solid #e2e8f0;"><s>${originalEntry?.subjectName || ''}</s></td><td style="color:#ef4444;background:#fef2f2;padding:6px;border:1px solid #e2e8f0;">Cancelada</td>`
         } else {
