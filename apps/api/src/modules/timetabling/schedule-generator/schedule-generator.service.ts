@@ -360,8 +360,8 @@ export class ScheduleGeneratorService {
 
         let placedThisDay = 0;
 
-        // Si necesitamos 2h este día, buscar par CONSECUTIVO primero
-        if (hoursForThisDay === 2) {
+        // Si necesitamos 2h este día, buscar par CONSECUTIVO (NUNCA dispersas)
+        if (hoursForThisDay >= 2) {
           let foundPair = false;
           for (let i = 0; i < daySlots.length - 1; i++) {
             const s1 = daySlots[i];
@@ -375,10 +375,10 @@ export class ScheduleGeneratorService {
               break;
             }
           }
-          // Fallback: si no hay par consecutivo, colocar sueltos
+          // Fallback: si no hay par consecutivo, colocar SOLO 1h (no dispersar)
           if (!foundPair) {
             for (const slot of daySlots) {
-              if (placedThisDay >= hoursForThisDay || hoursPlaced >= targetHours) break;
+              if (placedThisDay >= 1 || hoursPlaced >= targetHours) break;
               if (canUseSlot(slot)) {
                 placeSlot(slot);
                 placedThisDay++;
@@ -397,7 +397,7 @@ export class ScheduleGeneratorService {
         }
       }
 
-      // Segundo intento: si quedan horas sin ubicar, intentar colocarlas como horas sueltas en cualquier día
+      // Segundo intento: si quedan horas sin ubicar, colocar respetando adyacencia
       if (hoursPlaced < targetHours) {
         const retrySlots = this.getAvailableSlots(
           assignment, timeBlocks, teacherSlots, groupSlots, teacherAvailability, activeDays,
@@ -405,32 +405,61 @@ export class ScheduleGeneratorService {
         for (const day of activeDays) {
           if (hoursPlaced >= targetHours) break;
           const daySlots = retrySlots.get(day) || [];
-          // Máximo 2h por día de la misma materia (contar ya colocadas este día)
+          // Contar horas ya colocadas este día para esta materia
           const alreadyThisDay = entriesToCreate.filter(
             e => e.teacherAssignmentId === assignment.id && e.dayOfWeek === day,
-          ).length;
-          if (alreadyThisDay >= 2) continue;
-          const canPlaceToday = 2 - alreadyThisDay;
-          let placedRetry = 0;
-          for (const slot of daySlots) {
-            if (placedRetry >= canPlaceToday || hoursPlaced >= targetHours) break;
-            const slotKey = `${day}|${slot.id}`;
-            if (this.isSlotTaken(assignment.teacherId, slotKey, teacherSlots) ||
-                this.isSlotTaken(assignment.groupId, slotKey, groupSlots)) continue;
-            if (!teacherSlots.has(assignment.teacherId)) teacherSlots.set(assignment.teacherId, new Set());
-            if (!groupSlots.has(assignment.groupId)) groupSlots.set(assignment.groupId, new Set());
-            teacherSlots.get(assignment.teacherId)!.add(slotKey);
-            groupSlots.get(assignment.groupId)!.add(slotKey);
-            entriesToCreate.push({
-              institutionId, academicYearId,
-              groupId: assignment.groupId,
-              timeBlockId: slot.id,
-              dayOfWeek: day,
-              teacherAssignmentId: assignment.id,
-              roomId: groupRoomMap.get(assignment.groupId) || null,
+          );
+          if (alreadyThisDay.length >= 2) continue;
+
+          if (alreadyThisDay.length === 1) {
+            // Ya hay 1h colocada — solo permitir slot ADYACENTE
+            const existingBlockId = alreadyThisDay[0].timeBlockId;
+            const existingBlock = timeBlocks.find(tb => tb.id === existingBlockId);
+            if (!existingBlock) continue;
+            const adjacentSlot = daySlots.find(slot => {
+              if (Math.abs(slot.order - existingBlock.order) !== 1) return false;
+              const slotKey = `${day}|${slot.id}`;
+              return !this.isSlotTaken(assignment.teacherId, slotKey, teacherSlots) &&
+                     !this.isSlotTaken(assignment.groupId, slotKey, groupSlots);
             });
-            hoursPlaced++;
-            placedRetry++;
+            if (adjacentSlot) {
+              const slotKey = `${day}|${adjacentSlot.id}`;
+              if (!teacherSlots.has(assignment.teacherId)) teacherSlots.set(assignment.teacherId, new Set());
+              if (!groupSlots.has(assignment.groupId)) groupSlots.set(assignment.groupId, new Set());
+              teacherSlots.get(assignment.teacherId)!.add(slotKey);
+              groupSlots.get(assignment.groupId)!.add(slotKey);
+              entriesToCreate.push({
+                institutionId, academicYearId,
+                groupId: assignment.groupId,
+                timeBlockId: adjacentSlot.id,
+                dayOfWeek: day,
+                teacherAssignmentId: assignment.id,
+                roomId: groupRoomMap.get(assignment.groupId) || null,
+              });
+              hoursPlaced++;
+            }
+          } else {
+            // Día vacío: colocar 1h suelta
+            for (const slot of daySlots) {
+              if (hoursPlaced >= targetHours) break;
+              const slotKey = `${day}|${slot.id}`;
+              if (this.isSlotTaken(assignment.teacherId, slotKey, teacherSlots) ||
+                  this.isSlotTaken(assignment.groupId, slotKey, groupSlots)) continue;
+              if (!teacherSlots.has(assignment.teacherId)) teacherSlots.set(assignment.teacherId, new Set());
+              if (!groupSlots.has(assignment.groupId)) groupSlots.set(assignment.groupId, new Set());
+              teacherSlots.get(assignment.teacherId)!.add(slotKey);
+              groupSlots.get(assignment.groupId)!.add(slotKey);
+              entriesToCreate.push({
+                institutionId, academicYearId,
+                groupId: assignment.groupId,
+                timeBlockId: slot.id,
+                dayOfWeek: day,
+                teacherAssignmentId: assignment.id,
+                roomId: groupRoomMap.get(assignment.groupId) || null,
+              });
+              hoursPlaced++;
+              break; // Solo 1h suelta por día en retry
+            }
           }
         }
       }
