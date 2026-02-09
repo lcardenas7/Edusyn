@@ -1288,6 +1288,8 @@ export const timetablingGeneratorApi = {
     includeLunch: boolean;
     lunchDuration: number;
     lunchAfterBlock: number;
+    includeTutoring: boolean;
+    tutoringDuration: number;
     activeDays: string[];
   }) => api.post('/timetabling/generator/configure-schedule', data),
   exportSchedulePdf: (academicYearId: string, viewType: 'by-group' | 'by-teacher' = 'by-group') =>

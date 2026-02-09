@@ -202,11 +202,25 @@ export class ScheduleGeneratorController {
         }, 0) / classBlocks.length)
       : 55;
 
+    // Detectar si hay bloque de tutoría
+    const tutoringBlock = blocks.find(b => b.type === 'TUTORING');
+    const tutoringDuration = tutoringBlock
+      ? (() => {
+          const [sh, sm] = tutoringBlock.startTime.split(':').map(Number);
+          const [eh, em] = tutoringBlock.endTime.split(':').map(Number);
+          return (eh * 60 + em) - (sh * 60 + sm);
+        })()
+      : 55;
+
+    // El startTime debe ser el del primer bloque (tutoría o clase)
+    const firstBlock = blocks[0];
+    const startTime = firstBlock?.startTime || '06:30';
+
     return {
       shiftId: activeShift?.id || null,
       shiftName: activeShift?.name || '',
       campusName: activeShift?.campus?.name || '',
-      startTime: classBlocks[0]?.startTime || '06:30',
+      startTime,
       classesPerDay: classBlocks.length || 7,
       classDurationMinutes: avgClassDuration,
       breakDurationMinutes: breakBlocks.find(b => b.type === 'BREAK')
@@ -234,6 +248,8 @@ export class ScheduleGeneratorController {
         if (lunchIdx < 0) return 6;
         return blocks.slice(0, lunchIdx).filter(b => b.type === 'CLASS').length;
       })(),
+      includeTutoring: !!tutoringBlock,
+      tutoringDurationMinutes: tutoringDuration,
       activeDays: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
       totalBlocks: blocks.length,
       existingBlocks: blocks.map(b => ({
@@ -256,6 +272,8 @@ export class ScheduleGeneratorController {
       includeLunch: boolean;
       lunchDuration: number;    // minutes, e.g., 30
       lunchAfterBlock: number;  // after which class # to insert lunch, e.g., 6
+      includeTutoring: boolean; // include tutoring block as first hour
+      tutoringDuration: number; // minutes, e.g., 55
       activeDays: string[];     // e.g., ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"]
     },
   ) {
@@ -280,7 +298,23 @@ export class ScheduleGeneratorController {
     const blocks: { order: number; type: string; startTime: string; endTime: string; label: string }[] = [];
     let currentMinutes = this.timeToMinutes(body.startTime);
     let classCount = 0;
-    let order = 1;
+    let order = 0;
+
+    // Tutoring block at order 0 (first block)
+    if (body.includeTutoring) {
+      const tutoringStart = this.minutesToTime(currentMinutes);
+      currentMinutes += body.tutoringDuration || 55;
+      const tutoringEnd = this.minutesToTime(currentMinutes);
+      blocks.push({
+        order: order++,
+        type: 'TUTORING',
+        startTime: tutoringStart,
+        endTime: tutoringEnd,
+        label: 'Tutor\u00eda',
+      });
+    } else {
+      order = 1;
+    }
 
     for (let i = 0; i < body.classesPerDay; i++) {
       classCount++;

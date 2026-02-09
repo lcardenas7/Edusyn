@@ -1042,6 +1042,8 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
     includeLunch: true,
     lunchDuration: 30,
     lunchAfterBlock: 6,
+    includeTutoring: true,
+    tutoringDuration: 55,
     activeDays: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'] as string[],
   })
   const [configSaved, setConfigSaved] = useState(false)
@@ -1082,6 +1084,8 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
         includeLunch: d.includeLunch ?? true,
         lunchDuration: d.lunchDurationMinutes || 30,
         lunchAfterBlock: d.lunchAfterBlock || 6,
+        includeTutoring: d.includeTutoring ?? true,
+        tutoringDuration: d.tutoringDurationMinutes || 55,
         activeDays: d.activeDays || ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'],
       }))
       setConfigLoaded(true)
@@ -1101,6 +1105,12 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
 
     let cur = toMin(scheduleConfig.startTime)
     let classNum = 0
+
+    if (scheduleConfig.includeTutoring) {
+      const ts = toTime(cur)
+      cur += scheduleConfig.tutoringDuration
+      blocks.push({ label: 'Tutoría', type: 'TUTORING', start: ts, end: toTime(cur) })
+    }
 
     for (let i = 0; i < scheduleConfig.classesPerDay; i++) {
       classNum++
@@ -1674,6 +1684,30 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
                       className="w-full border rounded-lg px-3 py-2 text-sm"
                     />
                   </div>
+                </div>
+
+                {/* Tutoría */}
+                <div className="bg-blue-50 rounded-lg p-4 space-y-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={scheduleConfig.includeTutoring}
+                      onChange={e => { setScheduleConfig(prev => ({ ...prev, includeTutoring: e.target.checked })); setConfigSaved(false) }}
+                      className="w-4 h-4 text-blue-600 rounded"
+                    />
+                    <span className="text-sm font-medium text-blue-800">Incluir tutoría (primera hora)</span>
+                  </label>
+                  {scheduleConfig.includeTutoring && (
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Duración tutoría (min)</label>
+                      <input
+                        type="number" min={15} max={120} step={5}
+                        value={scheduleConfig.tutoringDuration}
+                        onChange={e => { setScheduleConfig(prev => ({ ...prev, tutoringDuration: Number(e.target.value) })); setConfigSaved(false) }}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Almuerzo */}
