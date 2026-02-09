@@ -194,46 +194,6 @@ export class TimetableExcelService {
           restrictions: '',
         });
       }
-    } else {
-      loadSheet.addRow({
-        teacherName: 'Juan Pérez García',
-        teacherEmail: 'jperez@colegio.edu.co',
-        teacherDocument: '12345678',
-        areaName: 'Matemáticas',
-        subjectName: 'Álgebra',
-        gradeName: 'Séptimo',
-        groupName: '7A',
-        shiftName: 'Mañana',
-        campusName: 'Sede Principal',
-        weeklyHours: 5,
-        restrictions: '',
-      });
-      loadSheet.addRow({
-        teacherName: 'Juan Pérez García',
-        teacherEmail: 'jperez@colegio.edu.co',
-        teacherDocument: '12345678',
-        areaName: 'Matemáticas',
-        subjectName: 'Álgebra',
-        gradeName: 'Séptimo',
-        groupName: '7B',
-        shiftName: 'Mañana',
-        campusName: 'Sede Principal',
-        weeklyHours: 5,
-        restrictions: '',
-      });
-      loadSheet.addRow({
-        teacherName: 'María López Rodríguez',
-        teacherEmail: 'mlopez@colegio.edu.co',
-        teacherDocument: '87654321',
-        areaName: 'Lenguaje',
-        subjectName: 'Español',
-        gradeName: 'Séptimo',
-        groupName: '7A',
-        shiftName: 'Mañana',
-        campusName: 'Sede Principal',
-        weeklyHours: 4,
-        restrictions: 'No viernes',
-      });
     }
 
     // Estilos a datos
@@ -407,6 +367,21 @@ export class TimetableExcelService {
     const sheet = workbook.getWorksheet('Carga Académica') || workbook.getWorksheet(1);
     if (!sheet) {
       throw new BadRequestException('No se encontró la hoja "Carga Académica" en el archivo');
+    }
+
+    // ── LIMPIEZA: Borrar carga previa para reemplazarla con la nueva ──
+    this.logger.log('Eliminando carga académica previa antes de importar...');
+    await this.prisma.scheduleEntry.deleteMany({
+      where: { institutionId, academicYearId },
+    });
+    const prevDeleted = await this.prisma.teacherAssignment.deleteMany({
+      where: {
+        academicYearId,
+        group: { shift: { campus: { institutionId } } },
+      },
+    });
+    if (prevDeleted.count > 0) {
+      this.logger.log(`Eliminadas ${prevDeleted.count} asignaciones previas`);
     }
 
     // Parsear filas con nuevas columnas
