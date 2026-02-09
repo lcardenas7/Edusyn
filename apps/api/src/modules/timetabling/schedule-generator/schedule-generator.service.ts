@@ -218,6 +218,7 @@ export class ScheduleGeneratorService {
    */
   private async getGroupRoomMap(institutionId: string, groups: any[]): Promise<Map<string, string>> {
     const map = new Map<string, string>();
+    const usedRoomIds = new Set<string>(); // Evitar asignar el mismo salón a múltiples grupos
     const rooms = await this.prisma.room.findMany({
       where: { institutionId, isActive: true },
       select: { id: true, name: true },
@@ -227,11 +228,13 @@ export class ScheduleGeneratorService {
       // Buscar room con nombre exacto "Salón {grupo}" (ej: "Salón 6A" para grupo "6A")
       const gName = group.name.toLowerCase();
       const match = rooms.find(r => {
+        if (usedRoomIds.has(r.id)) return false; // Ya asignado a otro grupo
         const rName = r.name.toLowerCase();
         return rName === `salón ${gName}` || rName === `salon ${gName}` || rName === gName;
       });
       if (match) {
         map.set(group.id, match.id);
+        usedRoomIds.add(match.id);
       }
     }
     return map;
@@ -302,8 +305,10 @@ export class ScheduleGeneratorService {
         activeDays,
       );
 
-      // Estrategia de distribución: repartir horas equitativamente entre días
-      const daysWithSlots = activeDays.filter(day => (availableSlotsByDay.get(day)?.length || 0) > 0);
+      // Estrategia de distribución: preferir días con más slots libres para balancear la semana
+      const daysWithSlots = activeDays
+        .filter(day => (availableSlotsByDay.get(day)?.length || 0) > 0)
+        .sort((a, b) => (availableSlotsByDay.get(b)?.length || 0) - (availableSlotsByDay.get(a)?.length || 0));
 
       if (daysWithSlots.length === 0) {
         conflicts.push(
@@ -388,6 +393,44 @@ export class ScheduleGeneratorService {
               placeSlot(slot);
               placedThisDay++;
             }
+          }
+        }
+      }
+
+      // Segundo intento: si quedan horas sin ubicar, intentar colocarlas como horas sueltas en cualquier día
+      if (hoursPlaced < targetHours) {
+        const retrySlots = this.getAvailableSlots(
+          assignment, timeBlocks, teacherSlots, groupSlots, teacherAvailability, activeDays,
+        );
+        for (const day of activeDays) {
+          if (hoursPlaced >= targetHours) break;
+          const daySlots = retrySlots.get(day) || [];
+          // Máximo 2h por día de la misma materia (contar ya colocadas este día)
+          const alreadyThisDay = entriesToCreate.filter(
+            e => e.teacherAssignmentId === assignment.id && e.dayOfWeek === day,
+          ).length;
+          if (alreadyThisDay >= 2) continue;
+          const canPlaceToday = 2 - alreadyThisDay;
+          let placedRetry = 0;
+          for (const slot of daySlots) {
+            if (placedRetry >= canPlaceToday || hoursPlaced >= targetHours) break;
+            const slotKey = `${day}|${slot.id}`;
+            if (this.isSlotTaken(assignment.teacherId, slotKey, teacherSlots) ||
+                this.isSlotTaken(assignment.groupId, slotKey, groupSlots)) continue;
+            if (!teacherSlots.has(assignment.teacherId)) teacherSlots.set(assignment.teacherId, new Set());
+            if (!groupSlots.has(assignment.groupId)) groupSlots.set(assignment.groupId, new Set());
+            teacherSlots.get(assignment.teacherId)!.add(slotKey);
+            groupSlots.get(assignment.groupId)!.add(slotKey);
+            entriesToCreate.push({
+              institutionId, academicYearId,
+              groupId: assignment.groupId,
+              timeBlockId: slot.id,
+              dayOfWeek: day,
+              teacherAssignmentId: assignment.id,
+              roomId: groupRoomMap.get(assignment.groupId) || null,
+            });
+            hoursPlaced++;
+            placedRetry++;
           }
         }
       }

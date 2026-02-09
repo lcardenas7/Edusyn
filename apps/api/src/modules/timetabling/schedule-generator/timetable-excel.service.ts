@@ -449,6 +449,19 @@ export class TimetableExcelService {
       throw new BadRequestException('El archivo no contiene filas de datos válidas');
     }
 
+    // ── VALIDACIÓN: Detectar posibles errores grado-grupo ──
+    const gradeGroupPairs = new Map<string, Set<string>>();
+    for (const row of rows) {
+      const gn = row.groupName.toLowerCase();
+      if (!gradeGroupPairs.has(gn)) gradeGroupPairs.set(gn, new Set());
+      gradeGroupPairs.get(gn)!.add(row.gradeName);
+    }
+    for (const [groupName, grades] of gradeGroupPairs) {
+      if (grades.size > 1) {
+        warnings.push(`⚠️ El grupo "${groupName.toUpperCase()}" aparece en ${grades.size} grados distintos: ${Array.from(grades).join(', ')}. Verifique que no sea un error de digitación.`);
+      }
+    }
+
     // ── FASE 1: Resolver o crear Campus y Shift ──
     const defaultCampus = await this.prisma.campus.findFirst({ where: { institutionId } });
     const campusCache = new Map<string, string>();
@@ -598,6 +611,7 @@ export class TimetableExcelService {
       if (!groupId || roomCache.has(groupKey)) continue;
 
       const roomName = `Salón ${row.groupName}`;
+      // Buscar primero con nombre exacto, luego sin grado para retrocompatibilidad
       let room = await this.prisma.room.findFirst({
         where: { institutionId, name: { equals: roomName, mode: 'insensitive' } },
       });
