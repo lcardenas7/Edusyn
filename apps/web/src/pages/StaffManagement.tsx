@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { 
   Users, Search, Plus, Upload, Download, X, CheckCircle2, XCircle, 
   AlertTriangle, FileSpreadsheet, User, Mail, Phone, Shield, Trash2, Edit2,
-  Key, Eye, EyeOff, FileText, Printer
+  Key, Eye, EyeOff, FileText, Printer, RefreshCw, Lock, Loader2
 } from 'lucide-react'
 import { bulkUploadApi, staffApi, teachersApi } from '../lib/api'
 import api from '../lib/api'
@@ -80,6 +80,13 @@ export default function StaffManagement() {
   const [credentialsSearch, setCredentialsSearch] = useState('')
   const [credentialsRoleFilter, setCredentialsRoleFilter] = useState<string>('ALL')
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
+  
+  // Reset password modal
+  const [resetPasswordUser, setResetPasswordUser] = useState<any>(null)
+  const [customPassword, setCustomPassword] = useState('')
+  const [mustChangeOnLogin, setMustChangeOnLogin] = useState(true)
+  const [resetting, setResetting] = useState(false)
+  const [resetResult, setResetResult] = useState<{ password: string; username: string } | null>(null)
 
   // Load users
   useEffect(() => {
@@ -106,29 +113,39 @@ export default function StaffManagement() {
   const loadAllUsersForCredentials = async () => {
     setLoadingCredentials(true)
     try {
-      // Get staff users
+      // Get all users from IAM
       const staffResponse = await staffApi.getAll()
-      // Get teachers
+      // Get teachers (may overlap with IAM users)
       const teachersResponse = await teachersApi.getAll()
       
-      // Combine and format - EXCLUIR ADMIN_INSTITUTIONAL del listado
-      const allStaff = (staffResponse.data || [])
+      // Combine and DEDUPLICATE by user ID
+      const userMap = new Map<string, any>()
+      
+      // Add staff users (excluding ADMIN_INSTITUTIONAL)
+      ;(staffResponse.data || [])
         .filter((u: any) => !u.roles?.some((r: any) => r.role?.name === 'ADMIN_INSTITUTIONAL'))
-        .map((u: any) => ({
-          ...u,
-          username: u.username || generateUsernameFromData(u.firstName, u.lastName, u.documentNumber, u.roles),
-          initialPassword: u.documentNumber || 'Sin documento',
-          userType: 'staff'
-        }))
+        .forEach((u: any) => {
+          if (!userMap.has(u.id)) {
+            userMap.set(u.id, {
+              ...u,
+              username: u.username || generateUsernameFromData(u.firstName, u.lastName, u.documentNumber, u.roles),
+              initialPassword: u.documentNumber || null,
+            })
+          }
+        })
       
-      const allTeachers = (teachersResponse.data || []).map((u: any) => ({
-        ...u,
-        username: u.username || generateUsernameFromData(u.firstName, u.lastName, u.documentNumber, [{ role: { name: 'DOCENTE' } }]),
-        initialPassword: u.documentNumber || 'Sin documento',
-        userType: 'teacher'
-      }))
+      // Add teachers (only if not already added)
+      ;(teachersResponse.data || []).forEach((u: any) => {
+        if (!userMap.has(u.id)) {
+          userMap.set(u.id, {
+            ...u,
+            username: u.username || generateUsernameFromData(u.firstName, u.lastName, u.documentNumber, [{ role: { name: 'DOCENTE' } }]),
+            initialPassword: u.documentNumber || null,
+          })
+        }
+      })
       
-      setAllUsers([...allStaff, ...allTeachers])
+      setAllUsers(Array.from(userMap.values()))
     } catch (error) {
       console.error('Error loading credentials:', error)
     } finally {
@@ -181,16 +198,37 @@ export default function StaffManagement() {
     return { label: roleName, color: 'bg-slate-100 text-slate-700' }
   }
 
-  // Filter credentials
-  const filteredCredentials = allUsers.filter(user => {
-    const fullName = `${user.firstName} ${user.lastName} ${user.email} ${user.documentNumber || ''}`.toLowerCase()
-    const matchesSearch = fullName.includes(credentialsSearch.toLowerCase())
-    
-    const matchesRole = credentialsRoleFilter === 'ALL' || 
-      user.roles?.some((r: any) => r.role?.name === credentialsRoleFilter)
-    
-    return matchesSearch && matchesRole
-  })
+  // Filter credentials (includes username in search)
+  const filteredCredentials = useMemo(() => {
+    return allUsers.filter(user => {
+      const searchable = `${user.firstName} ${user.lastName} ${user.email} ${user.documentNumber || ''} ${user.username || ''}`.toLowerCase()
+      const matchesSearch = !credentialsSearch || searchable.includes(credentialsSearch.toLowerCase())
+      
+      const matchesRole = credentialsRoleFilter === 'ALL' || 
+        user.roles?.some((r: any) => r.role?.name === credentialsRoleFilter)
+      
+      return matchesSearch && matchesRole
+    })
+  }, [allUsers, credentialsSearch, credentialsRoleFilter])
+
+  // Handle reset password
+  const handleResetPassword = async () => {
+    if (!resetPasswordUser) return
+    setResetting(true)
+    setResetResult(null)
+    try {
+      const opts: any = { mustChangePassword: mustChangeOnLogin }
+      if (customPassword.trim().length >= 6) {
+        opts.newPassword = customPassword.trim()
+      }
+      const res = await staffApi.resetPassword(resetPasswordUser.id, opts)
+      setResetResult({ password: res.data.newPassword, username: res.data.username || resetPasswordUser.username })
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Error al resetear contraseña')
+    } finally {
+      setResetting(false)
+    }
+  }
 
   // Export credentials to Excel
   const handleExportCredentials = () => {
@@ -208,7 +246,7 @@ export default function StaffManagement() {
       documentNumber: u.documentNumber || 'N/A',
       email: u.email,
       username: u.username,
-      initialPassword: u.initialPassword,
+      initialPassword: u.initialPassword || 'Personalizada (usar resetear)',
       roleName: u.roles?.map((r: any) => r.role?.name).join(', ') || 'N/A'
     }))
     
@@ -254,7 +292,7 @@ export default function StaffManagement() {
                   <td>${u.documentNumber || 'N/A'}</td>
                   <td>${u.email}</td>
                   <td><span class="username">${u.username}</span></td>
-                  <td><span class="password">${u.initialPassword}</span></td>
+                  <td><span class="password">${u.initialPassword || 'Personalizada'}</span></td>
                   <td>${u.roles?.map((r: any) => r.role?.name).join(', ') || 'N/A'}</td>
                 </tr>
               `).join('')}
@@ -829,6 +867,7 @@ export default function StaffManagement() {
                       <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Usuario</th>
                       <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Contraseña Inicial</th>
                       <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Rol</th>
+                      <th className="text-center px-4 py-3 text-sm font-medium text-slate-600">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -839,11 +878,18 @@ export default function StaffManagement() {
                             <div className="w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center">
                               <User className="w-4 h-4 text-amber-600" />
                             </div>
-                            <span className="font-medium text-slate-900">{user.firstName} {user.lastName}</span>
+                            <div>
+                              <span className="font-medium text-slate-900">{user.firstName} {user.lastName}</span>
+                              {user.mustChangePassword && (
+                                <span className="ml-2 px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px] font-medium">
+                                  Debe cambiar
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-slate-600">
-                          {user.documentNumber || 'N/A'}
+                          {user.documentNumber || <span className="text-slate-400 italic">Sin doc.</span>}
                         </td>
                         <td className="px-4 py-3 text-sm text-slate-600">
                           {user.email}
@@ -855,15 +901,21 @@ export default function StaffManagement() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <code className="px-2 py-1 bg-amber-50 text-amber-700 rounded text-sm font-mono">
-                              {showPasswords[user.id] ? user.initialPassword : '••••••••'}
-                            </code>
-                            <button
-                              onClick={() => setShowPasswords(prev => ({ ...prev, [user.id]: !prev[user.id] }))}
-                              className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600"
-                            >
-                              {showPasswords[user.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
+                            {user.initialPassword ? (
+                              <>
+                                <code className="px-2 py-1 bg-amber-50 text-amber-700 rounded text-sm font-mono">
+                                  {showPasswords[user.id] ? user.initialPassword : '••••••••'}
+                                </code>
+                                <button
+                                  onClick={() => setShowPasswords(prev => ({ ...prev, [user.id]: !prev[user.id] }))}
+                                  className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600"
+                                >
+                                  {showPasswords[user.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-xs text-slate-400 italic">Personalizada</span>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-3">
@@ -878,6 +930,21 @@ export default function StaffManagement() {
                             })}
                           </div>
                         </td>
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            onClick={() => {
+                              setResetPasswordUser(user)
+                              setCustomPassword('')
+                              setMustChangeOnLogin(true)
+                              setResetResult(null)
+                            }}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+                            title="Resetear contraseña"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            Resetear
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -887,7 +954,7 @@ export default function StaffManagement() {
               <div className="px-4 py-3 border-t border-slate-200 bg-slate-50">
                 <p className="text-sm text-slate-500">
                   Mostrando {filteredCredentials.length} usuarios • 
-                  <span className="text-amber-600 ml-1">La contraseña inicial es el número de documento</span>
+                  <span className="text-amber-600 ml-1">La contraseña inicial es el número de documento (si lo tiene)</span>
                 </p>
               </div>
             </div>
@@ -1011,6 +1078,106 @@ export default function StaffManagement() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Reset Password Modal */}
+        {resetPasswordUser && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl w-full max-w-md mx-4 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-5 h-5 text-amber-600" />
+                  <h2 className="text-lg font-bold text-slate-900">Resetear Contraseña</h2>
+                </div>
+                <button onClick={() => setResetPasswordUser(null)} className="p-2 hover:bg-slate-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-lg mb-4">
+                <p className="font-medium text-slate-900">{resetPasswordUser.firstName} {resetPasswordUser.lastName}</p>
+                <p className="text-sm text-slate-500">Usuario: {resetPasswordUser.username} • {resetPasswordUser.email}</p>
+                {resetPasswordUser.documentNumber && (
+                  <p className="text-sm text-slate-500">Documento: {resetPasswordUser.documentNumber}</p>
+                )}
+              </div>
+
+              {resetResult ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm font-medium text-green-800 mb-2">Contraseña reseteada correctamente</p>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-green-700">Usuario:</span>
+                        <code className="px-2 py-1 bg-white text-green-800 rounded font-mono text-sm">{resetResult.username}</code>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-green-700">Nueva contraseña:</span>
+                        <code className="px-2 py-1 bg-white text-green-800 rounded font-mono text-sm">{resetResult.password}</code>
+                      </div>
+                    </div>
+                    <p className="text-xs text-green-600 mt-2">
+                      {mustChangeOnLogin ? 'El usuario deberá cambiar su contraseña al iniciar sesión.' : 'El usuario podrá usar esta contraseña directamente.'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setResetPasswordUser(null); loadAllUsersForCredentials() }}
+                    className="w-full px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Nueva contraseña <span className="text-slate-400">(opcional, mín. 6 caracteres)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={customPassword}
+                      onChange={(e) => setCustomPassword(e.target.value)}
+                      placeholder={resetPasswordUser.documentNumber ? `Dejar vacío = ${resetPasswordUser.documentNumber}` : 'Dejar vacío = contraseña aleatoria'}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    />
+                    {customPassword.length > 0 && customPassword.length < 6 && (
+                      <p className="text-xs text-red-500 mt-1">Mínimo 6 caracteres</p>
+                    )}
+                  </div>
+
+                  <label className="flex items-center gap-2 cursor-pointer p-3 bg-slate-50 rounded-lg">
+                    <input
+                      type="checkbox"
+                      checked={mustChangeOnLogin}
+                      onChange={(e) => setMustChangeOnLogin(e.target.checked)}
+                      className="w-4 h-4 rounded"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-slate-700">Obligar a cambiar contraseña</span>
+                      <p className="text-xs text-slate-500">El usuario deberá cambiar su contraseña al próximo inicio de sesión</p>
+                    </div>
+                  </label>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => setResetPasswordUser(null)}
+                      className="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleResetPassword}
+                      disabled={resetting || (customPassword.length > 0 && customPassword.length < 6)}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 text-sm"
+                    >
+                      {resetting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                      Resetear
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

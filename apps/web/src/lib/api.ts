@@ -859,7 +859,7 @@ export const staffApi = {
   }) => api.post('/iam/staff', data),
   update: (id: string, data: any) => api.put(`/iam/staff/${id}`, data),
   delete: (id: string) => api.delete(`/iam/staff/${id}`),
-  resetPassword: (userId: string) => api.post(`/iam/users/${userId}/reset-password`),
+  resetPassword: (userId: string, opts?: { newPassword?: string; mustChangePassword?: boolean }) => api.post(`/iam/users/${userId}/reset-password`, opts || {}),
   bulkResetPassword: (userIds?: string[]) => api.post('/iam/users/bulk-reset-password', { userIds }),
 }
 

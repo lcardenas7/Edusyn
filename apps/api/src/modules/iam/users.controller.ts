@@ -459,7 +459,7 @@ export class UsersController {
    */
   @Post('users/:id/reset-password')
   @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async resetUserPassword(@Request() req: any, @Param('id') userId: string) {
+  async resetUserPassword(@Request() req: any, @Param('id') userId: string, @Body() body?: { newPassword?: string; mustChangePassword?: boolean }) {
     const institutionUser = await this.prisma.institutionUser.findFirst({
       where: { userId: req.user.id },
     });
@@ -479,18 +479,23 @@ export class UsersController {
       throw new BadRequestException('Usuario no encontrado');
     }
 
-    // Contraseña = número de documento, o temporal aleatoria si no tiene
+    // Si el admin envía una contraseña personalizada, usarla
+    // Si no, usar número de documento o temporal aleatoria
     let newPassword: string;
-    if (targetUser.documentNumber) {
+    if (body?.newPassword && body.newPassword.length >= 6) {
+      newPassword = body.newPassword;
+    } else if (targetUser.documentNumber) {
       newPassword = targetUser.documentNumber;
     } else {
       newPassword = `Edu${Math.random().toString(36).substring(2, 8)}`;
     }
 
+    const shouldMustChange = body?.mustChangePassword !== undefined ? body.mustChangePassword : true;
+
     const passwordHash = await bcrypt.hash(newPassword, 10);
     await this.prisma.user.update({
       where: { id: userId },
-      data: { passwordHash, mustChangePassword: true },
+      data: { passwordHash, mustChangePassword: shouldMustChange },
     });
 
     return {
@@ -500,7 +505,7 @@ export class UsersController {
       firstName: targetUser.firstName,
       lastName: targetUser.lastName,
       newPassword,
-      mustChangePassword: true,
+      mustChangePassword: shouldMustChange,
       message: `Contraseña reseteada correctamente. Nueva contraseña: ${newPassword}`,
     };
   }
