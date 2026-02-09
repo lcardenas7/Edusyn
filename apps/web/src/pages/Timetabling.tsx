@@ -1030,6 +1030,7 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
   const [genOptions, setGenOptions] = useState({
     clearExisting: true,
     respectAvailability: true,
+    groupTeacherBlocks: true,
   })
   const [scheduleConfig, setScheduleConfig] = useState({
     startTime: '06:30',
@@ -1220,6 +1221,7 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
         groupIds: selectedGroupIds.length > 0 ? selectedGroupIds : undefined,
         clearExisting: genOptions.clearExisting,
         respectAvailability: genOptions.respectAvailability,
+        groupTeacherBlocks: genOptions.groupTeacherBlocks,
         activeDays: scheduleConfig.activeDays,
       })
       setGenerateResult(res.data)
@@ -1803,6 +1805,19 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
                 <div>
                   <p className="font-medium text-sm text-gray-800">Respetar disponibilidad docente</p>
                   <p className="text-xs text-gray-500">No asignar docentes en horarios donde no están disponibles</p>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                <input
+                  type="checkbox"
+                  checked={genOptions.groupTeacherBlocks}
+                  onChange={e => setGenOptions(prev => ({ ...prev, groupTeacherBlocks: e.target.checked }))}
+                  className="w-4 h-4 text-indigo-600 rounded"
+                />
+                <div>
+                  <p className="font-medium text-sm text-gray-800">Agrupar bloques de docentes</p>
+                  <p className="text-xs text-gray-500">Prefiere colocar las clases de un docente en horas consecutivas del mismo día</p>
                 </div>
               </label>
             </div>

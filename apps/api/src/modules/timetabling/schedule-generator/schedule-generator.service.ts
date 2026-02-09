@@ -9,6 +9,7 @@ export interface GenerationOptions {
   respectAvailability?: boolean; // Respetar disponibilidad docente
   maxAttempts?: number;          // Intentos máximos del algoritmo
   activeDays?: DayOfWeek[];      // Días activos (default: L-V)
+  groupTeacherBlocks?: boolean;  // Agrupar bloques de un mismo docente consecutivamente en el día
 }
 
 export interface GenerationResult {
@@ -67,7 +68,7 @@ export class ScheduleGeneratorService {
     institutionId: string,
     options: GenerationOptions,
   ): Promise<GenerationResult> {
-    const { academicYearId, groupIds, clearExisting = true, respectAvailability = true, activeDays } = options;
+    const { academicYearId, groupIds, clearExisting = true, respectAvailability = true, activeDays, groupTeacherBlocks = true } = options;
     const daysToUse: DayOfWeek[] = activeDays && activeDays.length > 0 ? activeDays : DAYS;
 
     // 1. Obtener grupos objetivo
@@ -118,6 +119,7 @@ export class ScheduleGeneratorService {
       gradeConfigs,
       groupRoomMap,
       daysToUse,
+      groupTeacherBlocks,
     );
 
     return result;
@@ -250,6 +252,7 @@ export class ScheduleGeneratorService {
     gradeConfigs: Map<string, any>,
     groupRoomMap: Map<string, string>,
     activeDays: DayOfWeek[],
+    groupTeacherBlocks: boolean = true,
   ): Promise<GenerationResult> {
     // Estado: slots ocupados
     // teacherSlots: teacherId -> Set<"DAY|timeBlockId">
@@ -330,10 +333,30 @@ export class ScheduleGeneratorService {
       for (const day of daysWithSlots) {
         if (hoursPlaced >= targetHours) break;
 
-        const daySlots = availableSlotsByDay.get(day) || [];
+        let daySlots = availableSlotsByDay.get(day) || [];
         const hoursForThisDay = hoursPerDay[dayIndex] || 0;
         dayIndex++;
         if (hoursForThisDay === 0) continue;
+
+        // Si groupTeacherBlocks está activado, ordenar slots priorizando
+        // los adyacentes a clases que el docente ya tiene colocadas ese día
+        if (groupTeacherBlocks) {
+          const teacherDayEntries = entriesToCreate.filter(
+            e => e.dayOfWeek === day && assignments.find(a => a.id === e.teacherAssignmentId)?.teacherId === assignment.teacherId,
+          );
+          if (teacherDayEntries.length > 0) {
+            const occupiedOrders = teacherDayEntries.map(e => {
+              const tb = timeBlocks.find(b => b.id === e.timeBlockId);
+              return tb?.order ?? -1;
+            }).filter(o => o >= 0);
+            // Ordenar slots: los más cercanos a bloques ocupados del docente primero
+            daySlots = [...daySlots].sort((a, b) => {
+              const distA = Math.min(...occupiedOrders.map(o => Math.abs(a.order - o)));
+              const distB = Math.min(...occupiedOrders.map(o => Math.abs(b.order - o)));
+              return distA - distB;
+            });
+          }
+        }
 
         // Helper: verificar y marcar un slot
         const canUseSlot = (slot: any) => {
@@ -363,9 +386,11 @@ export class ScheduleGeneratorService {
         // Si necesitamos 2h este día, buscar par CONSECUTIVO (NUNCA dispersas)
         if (hoursForThisDay >= 2) {
           let foundPair = false;
-          for (let i = 0; i < daySlots.length - 1; i++) {
-            const s1 = daySlots[i];
-            const s2 = daySlots[i + 1];
+          // Ordenar slots por orden para buscar pares consecutivos correctamente
+          const sortedDaySlots = [...daySlots].sort((a, b) => a.order - b.order);
+          for (let i = 0; i < sortedDaySlots.length - 1; i++) {
+            const s1 = sortedDaySlots[i];
+            const s2 = sortedDaySlots[i + 1];
             // Consecutivos = órdenes adyacentes (diferencia de 1)
             if (Math.abs(s1.order - s2.order) === 1 && canUseSlot(s1) && canUseSlot(s2)) {
               placeSlot(s1);
@@ -375,8 +400,18 @@ export class ScheduleGeneratorService {
               break;
             }
           }
-          // Fallback: si no hay par consecutivo, colocar SOLO 1h (no dispersar)
+          // Si no hay par consecutivo, NO colocar nada — saltar al siguiente día
+          // Las horas restantes se recogerán en el retry que sí permite 1h suelta
           if (!foundPair) {
+            // No colocar nada en este día; dejar para retry
+          }
+        } else if (hoursForThisDay === 1) {
+          // 1h planificada: solo si la materia tiene horas impares (ej: 3h, 5h)
+          // Para materias con horas pares (2h, 4h, 6h), preferir no colocar 1h suelta
+          // y dejar para retry como bloque doble en otro día
+          const isEvenHours = targetHours % 2 === 0;
+          if (!isEvenHours) {
+            // Horas impares: sí colocar la 1h suelta planificada
             for (const slot of daySlots) {
               if (placedThisDay >= 1 || hoursPlaced >= targetHours) break;
               if (canUseSlot(slot)) {
@@ -385,27 +420,21 @@ export class ScheduleGeneratorService {
               }
             }
           }
-        } else {
-          // 1h: colocar en cualquier slot disponible
-          for (const slot of daySlots) {
-            if (placedThisDay >= hoursForThisDay || hoursPlaced >= targetHours) break;
-            if (canUseSlot(slot)) {
-              placeSlot(slot);
-              placedThisDay++;
-            }
-          }
+          // Si es par, no colocar 1h suelta — retry buscará bloque doble
         }
       }
 
-      // Segundo intento: si quedan horas sin ubicar, colocar respetando adyacencia
+      // Segundo intento: buscar bloques dobles en días donde aún no se colocó esta materia
       if (hoursPlaced < targetHours) {
         const retrySlots = this.getAvailableSlots(
           assignment, timeBlocks, teacherSlots, groupSlots, teacherAvailability, activeDays,
         );
+
+        // Fase A: intentar colocar pares consecutivos en días vacíos para esta materia
         for (const day of activeDays) {
           if (hoursPlaced >= targetHours) break;
+          const remaining = targetHours - hoursPlaced;
           const daySlots = retrySlots.get(day) || [];
-          // Contar horas ya colocadas este día para esta materia
           const alreadyThisDay = entriesToCreate.filter(
             e => e.teacherAssignmentId === assignment.id && e.dayOfWeek === day,
           );
@@ -438,8 +467,64 @@ export class ScheduleGeneratorService {
               });
               hoursPlaced++;
             }
+          } else if (remaining >= 2) {
+            // Día vacío y quedan 2+ horas: intentar bloque doble primero
+            const sortedSlots = [...daySlots].sort((a, b) => a.order - b.order);
+            let placedPair = false;
+            for (let i = 0; i < sortedSlots.length - 1; i++) {
+              const s1 = sortedSlots[i];
+              const s2 = sortedSlots[i + 1];
+              if (Math.abs(s1.order - s2.order) !== 1) continue;
+              const k1 = `${day}|${s1.id}`;
+              const k2 = `${day}|${s2.id}`;
+              if (this.isSlotTaken(assignment.teacherId, k1, teacherSlots) ||
+                  this.isSlotTaken(assignment.groupId, k1, groupSlots)) continue;
+              if (this.isSlotTaken(assignment.teacherId, k2, teacherSlots) ||
+                  this.isSlotTaken(assignment.groupId, k2, groupSlots)) continue;
+              // Colocar par
+              for (const s of [s1, s2]) {
+                const sk = `${day}|${s.id}`;
+                if (!teacherSlots.has(assignment.teacherId)) teacherSlots.set(assignment.teacherId, new Set());
+                if (!groupSlots.has(assignment.groupId)) groupSlots.set(assignment.groupId, new Set());
+                teacherSlots.get(assignment.teacherId)!.add(sk);
+                groupSlots.get(assignment.groupId)!.add(sk);
+                entriesToCreate.push({
+                  institutionId, academicYearId,
+                  groupId: assignment.groupId,
+                  timeBlockId: s.id,
+                  dayOfWeek: day,
+                  teacherAssignmentId: assignment.id,
+                  roomId: groupRoomMap.get(assignment.groupId) || null,
+                });
+                hoursPlaced++;
+              }
+              placedPair = true;
+              break;
+            }
+            // Si no encontró par y queda exactamente 1h, colocar suelta
+            if (!placedPair && remaining === 1) {
+              for (const slot of daySlots) {
+                const slotKey = `${day}|${slot.id}`;
+                if (this.isSlotTaken(assignment.teacherId, slotKey, teacherSlots) ||
+                    this.isSlotTaken(assignment.groupId, slotKey, groupSlots)) continue;
+                if (!teacherSlots.has(assignment.teacherId)) teacherSlots.set(assignment.teacherId, new Set());
+                if (!groupSlots.has(assignment.groupId)) groupSlots.set(assignment.groupId, new Set());
+                teacherSlots.get(assignment.teacherId)!.add(slotKey);
+                groupSlots.get(assignment.groupId)!.add(slotKey);
+                entriesToCreate.push({
+                  institutionId, academicYearId,
+                  groupId: assignment.groupId,
+                  timeBlockId: slot.id,
+                  dayOfWeek: day,
+                  teacherAssignmentId: assignment.id,
+                  roomId: groupRoomMap.get(assignment.groupId) || null,
+                });
+                hoursPlaced++;
+                break;
+              }
+            }
           } else {
-            // Día vacío: colocar 1h suelta
+            // Queda solo 1h: colocar suelta
             for (const slot of daySlots) {
               if (hoursPlaced >= targetHours) break;
               const slotKey = `${day}|${slot.id}`;
@@ -458,7 +543,7 @@ export class ScheduleGeneratorService {
                 roomId: groupRoomMap.get(assignment.groupId) || null,
               });
               hoursPlaced++;
-              break; // Solo 1h suelta por día en retry
+              break;
             }
           }
         }

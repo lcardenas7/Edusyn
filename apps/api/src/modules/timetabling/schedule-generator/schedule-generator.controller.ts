@@ -91,6 +91,7 @@ export class ScheduleGeneratorController {
       groupIds?: string[];
       clearExisting?: boolean;
       respectAvailability?: boolean;
+      groupTeacherBlocks?: boolean;
     },
   ) {
     if (!body.academicYearId) {
@@ -102,6 +103,7 @@ export class ScheduleGeneratorController {
       groupIds: body.groupIds,
       clearExisting: body.clearExisting ?? true,
       respectAvailability: body.respectAvailability ?? true,
+      groupTeacherBlocks: body.groupTeacherBlocks ?? true,
     };
 
     return this.generatorService.generateSchedule(req.user.institutionId, options);
