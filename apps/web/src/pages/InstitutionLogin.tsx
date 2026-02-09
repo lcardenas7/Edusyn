@@ -190,8 +190,13 @@ export default function InstitutionLogin() {
       // Guardar token (AuthContext carga institución automáticamente desde /auth/me)
       localStorage.setItem('token', data.access_token)
       
-      // Recargar la página para que AuthContext cargue el perfil con el nuevo token
-      window.location.href = '/dashboard'
+      // Si debe cambiar contraseña, redirigir directo a cambio
+      if (data.mustChangePassword) {
+        window.location.href = '/change-password'
+      } else {
+        // Recargar la página para que AuthContext cargue el perfil con el nuevo token
+        window.location.href = '/dashboard'
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Credenciales incorrectas'
       setError(errorMessage)

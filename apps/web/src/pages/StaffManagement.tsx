@@ -128,7 +128,6 @@ export default function StaffManagement() {
           if (!userMap.has(u.id)) {
             userMap.set(u.id, {
               ...u,
-              username: u.username || generateUsernameFromData(u.firstName, u.lastName, u.documentNumber, u.roles),
               initialPassword: u.documentNumber || null,
             })
           }
@@ -139,7 +138,6 @@ export default function StaffManagement() {
         if (!userMap.has(u.id)) {
           userMap.set(u.id, {
             ...u,
-            username: u.username || generateUsernameFromData(u.firstName, u.lastName, u.documentNumber, [{ role: { name: 'DOCENTE' } }]),
             initialPassword: u.documentNumber || null,
           })
         }

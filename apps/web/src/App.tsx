@@ -36,6 +36,7 @@ import InstitutionalDocuments from './pages/InstitutionalDocuments'
 import ManagementTasks from './pages/ManagementTasks'
 import AcademicCatalog from './pages/AcademicCatalog'
 import AcademicTemplates from './pages/AcademicTemplates'
+import ForceChangePassword from './pages/ForceChangePassword'
 import Layout from './components/Layout'
 
 // Nuevas páginas por dominio (Refactor UX)
@@ -75,8 +76,8 @@ import {
   FinanceSettings,
 } from './pages/finance'
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
+function ProtectedRoute({ children, allowChangePassword = false }: { children: React.ReactNode; allowChangePassword?: boolean }) {
+  const { isAuthenticated, isLoading, mustChangePassword } = useAuth()
   
   if (isLoading) {
     return (
@@ -88,6 +89,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
+  }
+
+  if (mustChangePassword && !allowChangePassword) {
+    return <Navigate to="/change-password" replace />
   }
   
   return <>{children}</>
@@ -139,6 +144,16 @@ function App() {
         <Route path="/login" element={<InstitutionLogin />} />
         <Route path="/login/:slug" element={<InstitutionLogin />} />
         <Route path="/auth/login" element={<Login />} />
+        
+        {/* Cambio obligatorio de contraseña */}
+        <Route
+          path="/change-password"
+          element={
+            <ProtectedRoute allowChangePassword>
+              <ForceChangePassword />
+            </ProtectedRoute>
+          }
+        />
         
         {/* Portal de Votación - Ruta especial sin Layout para estudiantes */}
         <Route

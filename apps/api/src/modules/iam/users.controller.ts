@@ -58,6 +58,12 @@ export class UsersController {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
+      username: user.username,
+      documentType: user.documentType,
+      documentNumber: user.documentNumber,
+      phone: user.phone,
+      isActive: user.isActive,
+      mustChangePassword: user.mustChangePassword,
       roles: user.roles,
       extraPermissionsCount: 0,
       extraPermissions: []

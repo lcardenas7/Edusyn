@@ -31,8 +31,10 @@ interface AuthContextType {
   isAuthenticated: boolean
   isLoading: boolean
   isSuperAdmin: boolean
+  mustChangePassword: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => void
+  clearMustChangePassword: () => void
   enabledModules: string[]
   enabledFeatures: string[]
   hasModule: (moduleId: string) => boolean
@@ -45,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [institution, setInstitution] = useState<Institution | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [mustChangePassword, setMustChangePassword] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -54,6 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(res.data)
           if (res.data.institution) {
             setInstitution(res.data.institution)
+          }
+          if (res.data.mustChangePassword) {
+            setMustChangePassword(true)
           }
         })
         .catch(() => localStorage.removeItem('token'))
@@ -71,6 +77,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (userData?.institution) {
       setInstitution(userData.institution)
     }
+    if (res.data.mustChangePassword) {
+      setMustChangePassword(true)
+    }
+  }
+
+  const clearMustChangePassword = () => {
+    setMustChangePassword(false)
   }
 
   const logout = () => {
@@ -110,8 +123,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user, 
       isLoading, 
       isSuperAdmin,
+      mustChangePassword,
       login, 
       logout,
+      clearMustChangePassword,
       enabledModules,
       enabledFeatures,
       hasModule,

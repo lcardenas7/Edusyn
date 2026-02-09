@@ -45,7 +45,12 @@ export default function Login() {
       } else {
         // Login normal de institución
         await login(identifier, password)
-        navigate('/dashboard')
+        // Si debe cambiar contraseña, redirigir
+        if (loginRes.data.mustChangePassword) {
+          navigate('/change-password')
+        } else {
+          navigate('/dashboard')
+        }
       }
     } catch (err: any) {
       localStorage.removeItem('token')
