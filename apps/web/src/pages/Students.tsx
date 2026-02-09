@@ -161,6 +161,12 @@ export default function Students() {
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
   const [processingCredentials, setProcessingCredentials] = useState(false)
 
+  // Grupos únicos de los estudiantes de credenciales (debe estar antes de cualquier early return)
+  const credentialGroups = useMemo(() => {
+    const uniqueGroups = new Set(credentialStudents.map(s => s.group).filter(Boolean))
+    return Array.from(uniqueGroups).sort((a, b) => a.localeCompare(b))
+  }, [credentialStudents])
+
   // Cargar año académico actual y grupos disponibles
   useEffect(() => {
     const loadInitialData = async () => {
@@ -537,12 +543,6 @@ export default function Students() {
       (credentialsAccessFilter === 'WITHOUT_ACCESS' && !s.hasAccess)
     return matchesSearch && matchesGroup && matchesAccess
   })
-
-  // Grupos únicos de los estudiantes de credenciales
-  const credentialGroups = useMemo(() => {
-    const uniqueGroups = new Set(credentialStudents.map(s => s.group).filter(Boolean))
-    return Array.from(uniqueGroups).sort((a, b) => a.localeCompare(b))
-  }, [credentialStudents])
 
   const handleBulkActivateFiltered = async () => {
     const studentsWithoutAccess = filteredCredentialStudents.filter(s => !s.hasAccess)
