@@ -112,6 +112,8 @@ export class ScheduleEntriesController {
 
   @Put(':id')
   async update(@Request() req, @Param('id') id: string, @Body() data: {
+    timeBlockId?: string;
+    dayOfWeek?: string;
     teacherAssignmentId?: string | null;
     projectName?: string | null;
     projectDescription?: string | null;
@@ -119,7 +121,10 @@ export class ScheduleEntriesController {
     notes?: string | null;
     color?: string | null;
   }) {
-    return this.scheduleEntriesService.update(id, req.user.institutionId, data);
+    return this.scheduleEntriesService.update(id, req.user.institutionId, {
+      ...data,
+      dayOfWeek: data.dayOfWeek as any,
+    });
   }
 
   @Delete(':id')

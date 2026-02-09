@@ -1200,7 +1200,7 @@ export const timetablingEntriesApi = {
     api.get('/timetabling/schedule-entries/conflicts', { params: { academicYearId, groupId } }),
   create: (data: { academicYearId: string; groupId: string; timeBlockId: string; dayOfWeek: string; teacherAssignmentId?: string; projectName?: string; projectDescription?: string; roomId?: string; notes?: string; color?: string }) =>
     api.post('/timetabling/schedule-entries', data),
-  update: (id: string, data: { teacherAssignmentId?: string | null; projectName?: string | null; projectDescription?: string | null; roomId?: string | null; notes?: string | null; color?: string | null }) =>
+  update: (id: string, data: { timeBlockId?: string; dayOfWeek?: string; teacherAssignmentId?: string | null; projectName?: string | null; projectDescription?: string | null; roomId?: string | null; notes?: string | null; color?: string | null }) =>
     api.put(`/timetabling/schedule-entries/${id}`, data),
   delete: (id: string) => api.delete(`/timetabling/schedule-entries/${id}`),
   clearGroup: (groupId: string, academicYearId: string) =>

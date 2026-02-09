@@ -470,6 +470,13 @@ export class ScheduleGeneratorController {
   ) {
     const institutionId = req.user.institutionId;
 
+    // Obtener todos los bloques de tiempo de la institución para incluir TUTORING/BREAK/LUNCH
+    const allTimeBlocks = await this.prisma.timeBlock.findMany({
+      where: { institutionId },
+      select: { id: true, startTime: true, endTime: true, order: true, label: true, type: true, shiftId: true },
+      orderBy: { order: 'asc' },
+    });
+
     // Base query para todas las entradas del horario
     const entries = await this.prisma.scheduleEntry.findMany({
       where: { institutionId, academicYearId },
@@ -567,7 +574,7 @@ export class ScheduleGeneratorController {
               }))
               .sort((a, b) => a.groupName.localeCompare(b.groupName, 'es', { numeric: true })),
           }));
-        return { view, grades, totalEntries: formattedEntries.length };
+        return { view, grades, allTimeBlocks, totalEntries: formattedEntries.length };
       }
 
       case 'by-teacher': {
@@ -586,9 +593,9 @@ export class ScheduleGeneratorController {
         }
         // Si filterId, devolver solo ese docente
         if (filterId && teacherMap.has(filterId)) {
-          return { view, teachers: [teacherMap.get(filterId)], totalEntries: formattedEntries.length };
+          return { view, teachers: [teacherMap.get(filterId)], allTimeBlocks, totalEntries: formattedEntries.length };
         }
-        return { view, teachers: Array.from(teacherMap.values()), totalEntries: formattedEntries.length };
+        return { view, teachers: Array.from(teacherMap.values()), allTimeBlocks, totalEntries: formattedEntries.length };
       }
 
       case 'by-subject': {
@@ -605,7 +612,7 @@ export class ScheduleGeneratorController {
           }
           subjectMap.get(e.subjectId)!.entries.push(e);
         }
-        return { view, subjects: Array.from(subjectMap.values()), totalEntries: formattedEntries.length };
+        return { view, subjects: Array.from(subjectMap.values()), allTimeBlocks, totalEntries: formattedEntries.length };
       }
 
       case 'by-area': {
@@ -628,11 +635,11 @@ export class ScheduleGeneratorController {
           subjects: Array.from(a.subjects.values()),
           totalEntries: Array.from(a.subjects.values()).reduce((sum, s) => sum + s.entries.length, 0),
         }));
-        return { view, areas, totalEntries: formattedEntries.length };
+        return { view, areas, allTimeBlocks, totalEntries: formattedEntries.length };
       }
 
       default: // total
-        return { view: 'total', entries: formattedEntries, totalEntries: formattedEntries.length };
+        return { view: 'total', entries: formattedEntries, allTimeBlocks, totalEntries: formattedEntries.length };
     }
   }
 }

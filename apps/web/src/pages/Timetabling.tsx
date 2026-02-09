@@ -12,7 +12,8 @@ import {
 import {
   Clock, MapPin, Settings, Calendar, AlertTriangle, Plus, Trash2, Save,
   ChevronDown, Edit2, X, Check, Grid3X3, Users, Building2, Layers,
-  Upload, Download, Wand2, FileSpreadsheet, RefreshCw, Eye, CheckCircle2, XCircle
+  Upload, Download, Wand2, FileSpreadsheet, RefreshCw, Eye, CheckCircle2, XCircle,
+  Move, ArrowRight, CalendarDays
 } from 'lucide-react'
 
 const DAYS = [
@@ -1978,24 +1979,30 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
 const VIEW_MODES = [
   { key: 'total', label: 'Vista Total', icon: Grid3X3 },
   { key: 'by-grade', label: 'Por Grado', icon: Layers },
+  { key: 'by-day', label: 'Por Día', icon: CalendarDays },
   { key: 'by-teacher', label: 'Por Docente', icon: Users },
   { key: 'by-subject', label: 'Por Asignatura', icon: Calendar },
   { key: 'by-area', label: 'Por Área/Depto', icon: Building2 },
 ] as const
 
 function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
-  const [viewMode, setViewMode] = useState<'total' | 'by-grade' | 'by-teacher' | 'by-subject' | 'by-area'>('by-grade')
+  const [viewMode, setViewMode] = useState<'total' | 'by-grade' | 'by-day' | 'by-teacher' | 'by-subject' | 'by-area'>('by-grade')
   const [viewData, setViewData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [selectedFilter, setSelectedFilter] = useState<string>('')
+  const [selectedDay, setSelectedDay] = useState<string>('MONDAY')
+  const [movingEntry, setMovingEntry] = useState<any>(null)
+  const [exporting, setExporting] = useState(false)
 
   const loadView = async (mode?: string) => {
     if (!academicYearId) return
     setLoading(true)
     try {
+      // Para 'by-day' usamos los datos de 'by-grade' y filtramos en el frontend
+      const backendView = (mode || viewMode) === 'by-day' ? 'by-grade' : (mode || viewMode)
       const res = await timetablingGeneratorApi.getScheduleViews(
         academicYearId,
-        (mode || viewMode) as any,
+        backendView as any,
         selectedFilter || undefined,
       )
       setViewData(res.data)
@@ -2013,10 +2020,47 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
   const handleViewChange = (mode: string) => {
     setViewMode(mode as any)
     setSelectedFilter('')
+    setMovingEntry(null)
+  }
+
+  // Exportar horario (Excel o PDF)
+  const handleExport = async (format: 'excel' | 'pdf', viewType: 'by-group' | 'by-teacher' = 'by-group') => {
+    if (!academicYearId) return
+    setExporting(true)
+    try {
+      const res = format === 'pdf'
+        ? await timetablingGeneratorApi.exportSchedulePdf(academicYearId, viewType)
+        : await timetablingGeneratorApi.exportSchedule(academicYearId, viewType)
+      const ext = format === 'pdf' ? 'pdf' : 'xlsx'
+      const mime = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: mime }))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `horario-${viewType === 'by-teacher' ? 'docentes' : 'grupos'}.${ext}`
+      link.click()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      console.error('Error exporting:', err)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  // Mover entrada a otro bloque/día
+  const handleMoveEntry = async (entryId: string, newTimeBlockId: string, newDayOfWeek: string) => {
+    try {
+      await timetablingEntriesApi.update(entryId, { timeBlockId: newTimeBlockId, dayOfWeek: newDayOfWeek })
+      setMovingEntry(null)
+      loadView() // Recargar datos
+    } catch (err: any) {
+      console.error('Error moving entry:', err)
+      alert(err.response?.data?.message || 'Error al mover la entrada. Puede haber conflictos.')
+      setMovingEntry(null)
+    }
   }
 
   // Renderizar grilla horaria para un conjunto de entradas
-  const renderScheduleGrid = (entries: any[], title: string, subtitle?: string) => {
+  const renderScheduleGrid = (entries: any[], title: string, subtitle?: string, shiftId?: string) => {
     if (!entries || entries.length === 0) {
       return (
         <div className="text-center py-6 text-gray-400 text-sm">
@@ -2025,7 +2069,7 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
       )
     }
 
-    // Obtener bloques y días únicos
+    // Obtener bloques de las entradas
     const blocksMap = new Map<string, any>()
     const daysSet = new Set<string>()
     for (const e of entries) {
@@ -2034,8 +2078,23 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
       }
       if (e.dayOfWeek) daysSet.add(e.dayOfWeek)
     }
+
+    // Agregar bloques TUTORING/BREAK/LUNCH/ASSEMBLY del allTimeBlocks que no estén en las entradas
+    const allBlocks = viewData?.allTimeBlocks || []
+    for (const tb of allBlocks) {
+      if (!blocksMap.has(tb.id) && tb.type !== 'CLASS' && tb.type !== 'FREE') {
+        // Si hay shiftId, solo incluir bloques del mismo turno
+        if (shiftId && tb.shiftId !== shiftId) continue
+        blocksMap.set(tb.id, tb)
+      }
+    }
+
     const sortedBlocks = Array.from(blocksMap.values()).sort((a, b) => a.order - b.order)
     const daysOrder = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
+    // Mostrar al menos Lun-Vie si hay entradas en algún día
+    if (daysSet.size > 0) {
+      ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'].forEach(d => daysSet.add(d))
+    }
     const activeDays = daysOrder.filter(d => daysSet.has(d))
 
     // Crear lookup
@@ -2067,8 +2126,11 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
             <tbody>
               {sortedBlocks.map((block, bi) => {
                 const isBreak = block.type === 'BREAK' || block.type === 'LUNCH'
+                const isTutoring = block.type === 'TUTORING'
+                const isAssembly = block.type === 'ASSEMBLY'
+                const isSpecial = isBreak || isTutoring || isAssembly
                 return (
-                  <tr key={block.id} className={`border-t ${isBreak ? 'bg-gray-50' : bi % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                  <tr key={block.id} className={`border-t ${isBreak ? 'bg-gray-50' : isTutoring ? 'bg-indigo-50/50' : isAssembly ? 'bg-purple-50/50' : bi % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
                     <td className="px-2 py-1.5 text-gray-600 font-medium whitespace-nowrap border-r">
                       <div>{block.label || `Bloque ${block.order}`}</div>
                       <div className="text-gray-400 text-[10px]">{block.startTime}-{block.endTime}</div>
@@ -2082,18 +2144,61 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
                           </td>
                         )
                       }
-                      if (!entry) {
-                        return <td key={day} className="px-2 py-1.5 border-r" />
+                      if (isTutoring) {
+                        return (
+                          <td key={day} className="px-2 py-1.5 border-r">
+                            <div className="bg-indigo-50 border border-indigo-200 rounded px-1.5 py-1 text-center">
+                              <div className="font-semibold text-indigo-700 truncate">{block.label || 'Tutoría'}</div>
+                            </div>
+                          </td>
+                        )
                       }
+                      if (isAssembly) {
+                        return (
+                          <td key={day} className="px-2 py-1.5 border-r">
+                            <div className="bg-purple-50 border border-purple-200 rounded px-1.5 py-1 text-center">
+                              <div className="font-semibold text-purple-700 truncate">{block.label || 'Formación'}</div>
+                            </div>
+                          </td>
+                        )
+                      }
+                      if (!entry) {
+                        // Celda vacía: si hay entrada en movimiento, permitir soltar aquí
+                        const isTarget = movingEntry && !isSpecial
+                        return (
+                          <td
+                            key={day}
+                            className={`px-2 py-1.5 border-r ${isTarget ? 'bg-green-50 cursor-pointer hover:bg-green-100' : ''}`}
+                            onClick={isTarget ? () => handleMoveEntry(movingEntry.id, block.id, day) : undefined}
+                          >
+                            {isTarget && (
+                              <div className="border-2 border-dashed border-green-300 rounded px-1.5 py-1 text-center text-green-500 text-[10px]">
+                                <ArrowRight className="w-3 h-3 mx-auto" />
+                                Mover aquí
+                              </div>
+                            )}
+                          </td>
+                        )
+                      }
+                      const isMoving = movingEntry?.id === entry.id
                       return (
                         <td key={day} className="px-2 py-1.5 border-r">
-                          <div className="bg-blue-50 border border-blue-200 rounded px-1.5 py-1 text-center">
+                          <div
+                            className={`rounded px-1.5 py-1 text-center cursor-pointer transition-all ${
+                              isMoving
+                                ? 'bg-amber-100 border-2 border-amber-400 ring-2 ring-amber-200'
+                                : 'bg-blue-50 border border-blue-200 hover:border-blue-400 hover:shadow-sm'
+                            }`}
+                            onClick={() => setMovingEntry(isMoving ? null : entry)}
+                            title={isMoving ? 'Click para cancelar' : 'Click para mover esta ficha'}
+                          >
                             <div className="font-semibold text-blue-800 truncate">{entry.subjectName}</div>
                             {entry.teacherName && <div className="text-blue-600 truncate">{entry.teacherName}</div>}
-                            {entry.groupName && viewMode !== 'total' && viewMode !== 'by-grade' && (
+                            {entry.groupName && viewMode !== 'total' && viewMode !== 'by-grade' && viewMode !== 'by-day' && (
                               <div className="text-gray-500 truncate">{entry.groupName}</div>
                             )}
                             {entry.roomName && <div className="text-gray-400 truncate">{entry.roomName}</div>}
+                            {isMoving && <div className="text-amber-600 text-[10px] mt-0.5 font-medium">← Moviendo... (click celda vacía)</div>}
                           </div>
                         </td>
                       )
@@ -2164,6 +2269,127 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
                 ))}
               </div>
             ))}
+          </div>
+        )
+      }
+
+      case 'by-day': {
+        // Recopilar todos los grupos y entradas del día seleccionado
+        const allGroups: { groupId: string; groupName: string; gradeName: string; entries: any[] }[] = []
+        for (const grade of (viewData.grades || [])) {
+          for (const group of (grade.groups || [])) {
+            const dayEntries = (group.entries || []).filter((e: any) => e.dayOfWeek === selectedDay)
+            allGroups.push({ groupId: group.groupId, groupName: group.groupName, gradeName: grade.gradeName, entries: dayEntries })
+          }
+        }
+
+        // Obtener bloques de tiempo del primer grupo que tenga entradas
+        const blocksMap = new Map<string, any>()
+        for (const g of allGroups) {
+          for (const e of g.entries) {
+            if (e.timeBlock && !blocksMap.has(e.timeBlock.id)) blocksMap.set(e.timeBlock.id, e.timeBlock)
+          }
+        }
+        // Agregar bloques especiales
+        for (const tb of (viewData.allTimeBlocks || [])) {
+          if (!blocksMap.has(tb.id) && tb.type !== 'CLASS' && tb.type !== 'FREE') {
+            blocksMap.set(tb.id, tb)
+          }
+        }
+        const sortedBlocks = Array.from(blocksMap.values()).sort((a: any, b: any) => a.order - b.order)
+
+        const dayLabel = DAYS.find(d => d.key === selectedDay)?.label || selectedDay
+
+        return (
+          <div>
+            {/* Selector de día */}
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+              <span className="text-sm text-gray-500 font-medium">Día:</span>
+              {DAYS.filter(d => d.key !== 'SATURDAY').map(d => (
+                <button
+                  key={d.key}
+                  onClick={() => setSelectedDay(d.key)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    selectedDay === d.key
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+
+            <p className="text-sm text-gray-500 mb-4">
+              {dayLabel} — {allGroups.length} grupos • {allGroups.reduce((s, g) => s + g.entries.length, 0)} clases
+            </p>
+
+            {/* Tabla compacta: filas = bloques, columnas = grupos */}
+            <div className="overflow-x-auto border rounded-lg">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-indigo-600 text-white">
+                    <th className="px-2 py-2 text-left font-medium w-20 sticky left-0 bg-indigo-600 z-10">Hora</th>
+                    {allGroups.map(g => (
+                      <th key={g.groupId} className="px-1 py-2 text-center font-medium min-w-[80px]">
+                        <div>{g.groupName}</div>
+                        <div className="text-indigo-200 text-[10px] font-normal">{g.gradeName}</div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedBlocks.map((block: any, bi: number) => {
+                    const isBreak = block.type === 'BREAK' || block.type === 'LUNCH'
+                    const isTutoring = block.type === 'TUTORING'
+                    const isAssembly = block.type === 'ASSEMBLY'
+                    return (
+                      <tr key={block.id} className={`border-t ${isBreak ? 'bg-gray-50' : isTutoring ? 'bg-indigo-50/50' : bi % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                        <td className="px-2 py-1 text-gray-600 font-medium whitespace-nowrap border-r sticky left-0 bg-inherit z-10">
+                          <div className="text-[10px]">{block.label || `B${block.order}`}</div>
+                          <div className="text-gray-400 text-[9px]">{block.startTime}-{block.endTime}</div>
+                        </td>
+                        {allGroups.map(g => {
+                          if (isBreak) {
+                            return <td key={g.groupId} className="px-1 py-1 text-center text-gray-300 italic border-r text-[9px]">—</td>
+                          }
+                          if (isTutoring) {
+                            return (
+                              <td key={g.groupId} className="px-1 py-1 border-r">
+                                <div className="bg-indigo-50 rounded px-1 py-0.5 text-center text-indigo-600 text-[10px] font-medium truncate">
+                                  {block.label || 'Tutoría'}
+                                </div>
+                              </td>
+                            )
+                          }
+                          if (isAssembly) {
+                            return (
+                              <td key={g.groupId} className="px-1 py-1 border-r">
+                                <div className="bg-purple-50 rounded px-1 py-0.5 text-center text-purple-600 text-[10px] font-medium truncate">
+                                  {block.label || 'Formación'}
+                                </div>
+                              </td>
+                            )
+                          }
+                          const entry = g.entries.find((e: any) => e.timeBlock?.id === block.id)
+                          if (!entry) {
+                            return <td key={g.groupId} className="px-1 py-1 border-r" />
+                          }
+                          return (
+                            <td key={g.groupId} className="px-1 py-1 border-r">
+                              <div className="bg-blue-50 border border-blue-100 rounded px-1 py-0.5 text-center">
+                                <div className="font-semibold text-blue-800 truncate text-[10px]">{entry.subjectName}</div>
+                                {entry.teacherName && <div className="text-blue-500 truncate text-[9px]">{entry.teacherName.split(' ').slice(0, 2).join(' ')}</div>}
+                              </div>
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )
       }
@@ -2309,15 +2535,62 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
               </button>
             )
           })}
-          <button
-            onClick={() => loadView()}
-            className="ml-auto text-gray-400 hover:text-gray-600 p-2"
-            title="Recargar"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+          <div className="ml-auto flex items-center gap-1">
+            {/* Exportar */}
+            <div className="relative group">
+              <button
+                disabled={exporting || !viewData || viewData.totalEntries === 0}
+                className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-40 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Exportar
+                <ChevronDown className="w-3 h-3" />
+              </button>
+              <div className="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-lg py-1 w-52 hidden group-hover:block z-20">
+                <button onClick={() => handleExport('pdf', 'by-group')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4 text-red-500" /> PDF por grupo
+                </button>
+                <button onClick={() => handleExport('pdf', 'by-teacher')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4 text-red-500" /> PDF por docente
+                </button>
+                <hr className="my-1" />
+                <button onClick={() => handleExport('excel', 'by-group')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4 text-green-500" /> Excel por grupo
+                </button>
+                <button onClick={() => handleExport('excel', 'by-teacher')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4 text-green-500" /> Excel por docente
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => loadView()}
+              className="text-gray-400 hover:text-gray-600 p-2"
+              title="Recargar"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Indicador de ficha en movimiento */}
+      {movingEntry && (
+        <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 flex items-center gap-3">
+          <Move className="w-5 h-5 text-amber-600" />
+          <div className="flex-1">
+            <span className="text-sm font-medium text-amber-800">
+              Moviendo: {movingEntry.subjectName} ({movingEntry.teacherName || 'Sin docente'})
+            </span>
+            <span className="text-xs text-amber-600 ml-2">Haga click en una celda vacía para mover la ficha</span>
+          </div>
+          <button
+            onClick={() => setMovingEntry(null)}
+            className="text-amber-600 hover:text-amber-800 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Contenido de la vista */}
       <div className="bg-white border rounded-xl p-6">

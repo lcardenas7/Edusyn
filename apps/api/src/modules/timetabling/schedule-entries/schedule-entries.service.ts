@@ -111,6 +111,8 @@ export class ScheduleEntriesService {
   }
 
   async update(id: string, institutionId: string, data: {
+    timeBlockId?: string;
+    dayOfWeek?: DayOfWeek;
     teacherAssignmentId?: string | null;
     projectName?: string | null;
     projectDescription?: string | null;
@@ -123,14 +125,14 @@ export class ScheduleEntriesService {
     });
     if (!existing) throw new NotFoundException('Entrada de horario no encontrada');
 
-    // Detectar conflictos para la entrada actualizada
+    // Detectar conflictos para la entrada actualizada (con nuevo bloque/día si se está moviendo)
     const conflicts = await this.validator.validateEntry(
       institutionId,
       existing.academicYearId,
       {
         groupId: existing.groupId,
-        timeBlockId: existing.timeBlockId,
-        dayOfWeek: existing.dayOfWeek,
+        timeBlockId: data.timeBlockId || existing.timeBlockId,
+        dayOfWeek: data.dayOfWeek || existing.dayOfWeek,
         teacherAssignmentId: data.teacherAssignmentId !== undefined
           ? (data.teacherAssignmentId || undefined)
           : (existing.teacherAssignmentId || undefined),
