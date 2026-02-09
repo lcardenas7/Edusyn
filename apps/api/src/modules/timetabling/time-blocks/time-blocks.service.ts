@@ -35,7 +35,7 @@ export class TimeBlocksService {
     type?: TimeBlockType;
     startTime: string;
     endTime: string;
-    order: number;
+    order?: number;
     label?: string;
   }) {
     // Validar formato HH:mm
@@ -47,16 +47,56 @@ export class TimeBlocksService {
       throw new BadRequestException('La hora de inicio debe ser anterior a la hora de fin');
     }
 
-    return this.prisma.timeBlock.create({
-      data: {
-        institutionId,
-        ...data,
-        type: data.type || 'CLASS',
-      },
-      include: {
-        shift: { select: { id: true, name: true, type: true } },
-      },
-    });
+    // Auto-calcular orden si no se proporciona o si ya existe
+    let order = data.order;
+    if (!order) {
+      const maxOrder = await this.prisma.timeBlock.aggregate({
+        where: { institutionId, shiftId: data.shiftId },
+        _max: { order: true },
+      });
+      order = (maxOrder._max.order || 0) + 1;
+    }
+
+    try {
+      return await this.prisma.timeBlock.create({
+        data: {
+          institutionId,
+          shiftId: data.shiftId,
+          type: data.type || 'CLASS',
+          startTime: data.startTime,
+          endTime: data.endTime,
+          order,
+          label: data.label,
+        },
+        include: {
+          shift: { select: { id: true, name: true, type: true } },
+        },
+      });
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        // Auto-retry con el siguiente orden disponible
+        const maxOrder = await this.prisma.timeBlock.aggregate({
+          where: { institutionId, shiftId: data.shiftId },
+          _max: { order: true },
+        });
+        const nextOrder = (maxOrder._max.order || 0) + 1;
+        return this.prisma.timeBlock.create({
+          data: {
+            institutionId,
+            shiftId: data.shiftId,
+            type: data.type || 'CLASS',
+            startTime: data.startTime,
+            endTime: data.endTime,
+            order: nextOrder,
+            label: data.label,
+          },
+          include: {
+            shift: { select: { id: true, name: true, type: true } },
+          },
+        });
+      }
+      throw new BadRequestException(`Error al crear bloque: ${error.message}`);
+    }
   }
 
   async update(id: string, institutionId: string, data: {
@@ -71,13 +111,20 @@ export class TimeBlocksService {
     if (data.startTime) this.validateTimeFormat(data.startTime);
     if (data.endTime) this.validateTimeFormat(data.endTime);
 
-    return this.prisma.timeBlock.update({
-      where: { id },
-      data,
-      include: {
-        shift: { select: { id: true, name: true, type: true } },
-      },
-    });
+    try {
+      return await this.prisma.timeBlock.update({
+        where: { id },
+        data,
+        include: {
+          shift: { select: { id: true, name: true, type: true } },
+        },
+      });
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        throw new BadRequestException('Ya existe un bloque con ese número de orden en esta jornada');
+      }
+      throw new BadRequestException(`Error al actualizar bloque: ${error.message}`);
+    }
   }
 
   async delete(id: string, institutionId: string) {
