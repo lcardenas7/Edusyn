@@ -941,6 +941,9 @@ model TeacherAssignment {
   subjectId     String
   teacherId     String
   weeklyHours   Int      @default(0)
+  startDate     DateTime @default(now())
+  endDate       DateTime?
+  endReason     String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -959,7 +962,7 @@ model TeacherAssignment {
   attitudinalAchievements AttitudinalAchievement[]
   scheduleEntries         ScheduleEntry[]
 
-  @@unique([academicYearId, groupId, subjectId, teacherId])
+  @@unique([academicYearId, groupId, subjectId, teacherId, startDate])
 }
 
 model PerformanceScale {
