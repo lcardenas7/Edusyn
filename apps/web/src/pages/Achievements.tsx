@@ -12,7 +12,6 @@ import {
   Trash2,
   Edit3,
   ChevronDown,
-  Sparkles,
   Check,
   X,
   Target,
@@ -46,6 +45,7 @@ interface AchievementConfig {
   useAttitudinalAchievement: boolean
   attitudinalMode: 'GENERAL_PER_PERIOD' | 'PER_ACADEMIC_ACHIEVEMENT'
   useValueJudgments: boolean
+  useObservations: boolean
   displayMode: 'SEPARATE' | 'COMBINED'
   displayFormat: 'LIST' | 'PARAGRAPH'
   judgmentPosition: 'END_OF_EACH' | 'END_OF_ALL' | 'NONE'
@@ -85,12 +85,6 @@ interface StudentAchievement {
   }
 }
 
-interface ObservationTemplate {
-  id?: string
-  level: PerformanceLevel
-  template: string
-  isActive: boolean
-}
 
 const LEVEL_LABELS: Record<PerformanceLevel, string> = {
   SUPERIOR: 'Superior',
@@ -141,6 +135,7 @@ export default function Achievements() {
     useAttitudinalAchievement: false,
     attitudinalMode: 'GENERAL_PER_PERIOD',
     useValueJudgments: true,
+    useObservations: false,
     displayMode: 'SEPARATE',
     displayFormat: 'LIST',
     judgmentPosition: 'END_OF_EACH',
@@ -162,7 +157,6 @@ export default function Achievements() {
   // New: filter, selection, observation templates
   const [filterLevel, setFilterLevel] = useState<PerformanceLevel | 'ALL'>('ALL')
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set())
-  const [observationTemplates, setObservationTemplates] = useState<ObservationTemplate[]>([])
 
   // Banco de logros
   const [showBank, setShowBank] = useState(false)
@@ -348,6 +342,7 @@ export default function Achievements() {
             useAttitudinalAchievement: response.data.useAttitudinalAchievement ?? false,
             attitudinalMode: response.data.attitudinalMode || 'GENERAL_PER_PERIOD',
             useValueJudgments: response.data.useValueJudgments ?? true,
+            useObservations: response.data.useObservations ?? false,
             displayMode: response.data.displayMode || 'SEPARATE',
             displayFormat: response.data.displayFormat || 'LIST',
             judgmentPosition: response.data.judgmentPosition || 'END_OF_EACH',
@@ -359,11 +354,6 @@ export default function Achievements() {
           setTemplates(templatesResponse.data)
         }
 
-        // Load observation templates
-        const obsResponse = await achievementConfigApi.getObservationTemplates(institutionId)
-        if (obsResponse.data?.length > 0) {
-          setObservationTemplates(obsResponse.data)
-        }
       } catch (err) {
         console.error('Error loading config:', err)
       }
@@ -465,17 +455,6 @@ export default function Achievements() {
           isActive: t.isActive,
         })),
       })
-      // Save observation templates
-      if (observationTemplates.length > 0) {
-        await achievementConfigApi.bulkUpsertObservationTemplates({
-          institutionId,
-          templates: observationTemplates.map(t => ({
-            level: t.level,
-            template: t.template,
-            isActive: t.isActive,
-          })),
-        })
-      }
       setMessage({ type: 'success', text: 'Configuración guardada correctamente' })
     } catch (err) {
       console.error('Error saving config:', err)
@@ -504,23 +483,6 @@ export default function Achievements() {
     }
   }
 
-  // Create default observation templates
-  const handleCreateDefaultObservationTemplates = async () => {
-    if (!institutionId) return
-    setSaving(true)
-    try {
-      await achievementConfigApi.createDefaultObservationTemplates(institutionId)
-      const response = await achievementConfigApi.getObservationTemplates(institutionId)
-      setObservationTemplates(response.data || [])
-      setMessage({ type: 'success', text: 'Plantillas de observación por defecto creadas' })
-    } catch (err) {
-      console.error('Error creating default observation templates:', err)
-      setMessage({ type: 'error', text: 'Error al crear plantillas de observación' })
-    } finally {
-      setSaving(false)
-      setTimeout(() => setMessage(null), 3000)
-    }
-  }
 
   // Create achievement
   const handleCreateAchievement = async () => {
@@ -657,31 +619,6 @@ export default function Achievements() {
     }
   }
 
-  // BUTTON 2: Auto-fill observations from templates
-  const handleAutoFillObservations = async () => {
-    if (!selectedAchievementId || !institutionId) return
-    if (observationTemplates.length === 0) {
-      setMessage({ type: 'error', text: 'No hay plantillas de observación configuradas. Configure las plantillas en la pestaña de Configuración.' })
-      setTimeout(() => setMessage(null), 4000)
-      return
-    }
-    setSaving(true)
-    try {
-      await achievementsApi.autoFillObservations({
-        achievementId: selectedAchievementId,
-        institutionId,
-      })
-      const response = await achievementsApi.getStudentAchievements(selectedAchievementId)
-      setStudentAchievements(response.data || [])
-      setMessage({ type: 'success', text: 'Observaciones autocompletadas según escala' })
-    } catch (err) {
-      console.error('Error auto-filling observations:', err)
-      setMessage({ type: 'error', text: 'Error al autocompletar observaciones' })
-    } finally {
-      setSaving(false)
-      setTimeout(() => setMessage(null), 3000)
-    }
-  }
 
   // BUTTON 3: Assign achievement to selected students only
   const handleBulkAssignSelected = async () => {
@@ -1138,14 +1075,6 @@ export default function Achievements() {
                           Asignar a todos
                         </button>
                         <button
-                          onClick={handleAutoFillObservations}
-                          disabled={saving}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50"
-                        >
-                          <Sparkles className="w-4 h-4" />
-                          Autocompletar observación
-                        </button>
-                        <button
                           onClick={handleBulkAssignSelected}
                           disabled={saving || selectedStudentIds.size === 0}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-50"
@@ -1401,48 +1330,22 @@ export default function Achievements() {
               </div>
             )}
 
-            {/* Observation Templates */}
+            {/* Observaciones */}
             <div className="border-t border-slate-200 pt-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-medium text-slate-800">Plantillas de Observación por Escala</h4>
-                  <p className="text-sm text-slate-500 mt-1">Textos que se autocompletarán en la observación del estudiante según su nivel de desempeño</p>
+                  <h4 className="font-medium text-slate-800">Observaciones por Estudiante</h4>
+                  <p className="text-sm text-slate-500 mt-1">Permite al docente escribir una observación adicional por cada estudiante en el boletín</p>
                 </div>
-                <button
-                  onClick={handleCreateDefaultObservationTemplates}
-                  disabled={saving}
-                  className="text-sm text-purple-600 hover:text-purple-700"
-                >
-                  Restaurar por defecto
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {(['BAJO', 'BASICO', 'ALTO', 'SUPERIOR'] as PerformanceLevel[]).map((level) => {
-                  const obsTemplate = observationTemplates.find(t => t.level === level) || { level, template: '', isActive: true }
-                  return (
-                    <div key={level} className="flex items-start gap-4">
-                      <span className={`px-3 py-1 rounded-lg text-sm font-medium ${LEVEL_COLORS[level]} min-w-[80px] text-center`}>
-                        {LEVEL_LABELS[level]}
-                      </span>
-                      <textarea
-                        value={obsTemplate.template}
-                        onChange={(e) => {
-                          setObservationTemplates(prev => {
-                            const exists = prev.find(t => t.level === level)
-                            if (exists) {
-                              return prev.map(t => t.level === level ? { ...t, template: e.target.value } : t)
-                            }
-                            return [...prev, { level, template: e.target.value, isActive: true }]
-                          })
-                        }}
-                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                        rows={2}
-                        placeholder={`Observación para desempeño ${LEVEL_LABELS[level]}...`}
-                      />
-                    </div>
-                  )
-                })}
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={config.useObservations}
+                    onChange={(e) => setConfig({ ...config, useObservations: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
               </div>
             </div>
 
@@ -1621,17 +1524,19 @@ function StudentAchievementCard({
             </>
           )}
 
-          {/* Observation field */}
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Observación (boletín)</label>
-            <textarea
-              value={localObservation}
-              onChange={(e) => handleObservationChange(e.target.value)}
-              placeholder="Observación del estudiante..."
-              className="w-full px-2 py-1 border border-slate-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              rows={2}
-            />
-          </div>
+          {/* Observation field - solo si está habilitado en config */}
+          {config.useObservations && (
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Observación (boletín)</label>
+              <textarea
+                value={localObservation}
+                onChange={(e) => handleObservationChange(e.target.value)}
+                placeholder="Escriba la observación del estudiante..."
+                className="w-full px-2 py-1 border border-slate-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                rows={2}
+              />
+            </div>
+          )}
         </div>
       )}
 

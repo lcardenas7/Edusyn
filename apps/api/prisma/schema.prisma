@@ -2278,6 +2278,9 @@ model AchievementConfig {
   // Configuración de juicios valorativos
   useValueJudgments         Boolean  @default(true)     // Habilitar juicios valorativos por desempeño
   
+  // Configuración de observaciones
+  useObservations           Boolean  @default(false)    // Habilitar campo de observación por estudiante (el docente escribe manualmente)
+  
   // Configuración de visualización en boletín
   displayMode               AchievementDisplayMode @default(SEPARATE) // Cómo mostrar logros en boletín
   displayFormat             AchievementDisplayFormat @default(LIST)   // Formato de visualización
