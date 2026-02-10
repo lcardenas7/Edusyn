@@ -89,11 +89,11 @@ const GRADE_MAPPING: Record<string, { stage: GradeStage; number: number | null; 
   'decimo': { stage: 'MEDIA', number: 10, name: 'Décimo' },
   '10': { stage: 'MEDIA', number: 10, name: 'Décimo' },
   '10°': { stage: 'MEDIA', number: 10, name: 'Décimo' },
-  'once': { stage: 'MEDIA', number: 11, name: 'Once' },
-  'undécimo': { stage: 'MEDIA', number: 11, name: 'Once' },
-  'undecimo': { stage: 'MEDIA', number: 11, name: 'Once' },
-  '11': { stage: 'MEDIA', number: 11, name: 'Once' },
-  '11°': { stage: 'MEDIA', number: 11, name: 'Once' },
+  'once': { stage: 'MEDIA', number: 11, name: 'Undécimo' },
+  'undécimo': { stage: 'MEDIA', number: 11, name: 'Undécimo' },
+  'undecimo': { stage: 'MEDIA', number: 11, name: 'Undécimo' },
+  '11': { stage: 'MEDIA', number: 11, name: 'Undécimo' },
+  '11°': { stage: 'MEDIA', number: 11, name: 'Undécimo' },
 };
 
 const SHIFT_MAPPING: Record<string, SchoolShift> = {
