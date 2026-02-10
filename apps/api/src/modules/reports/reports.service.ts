@@ -198,7 +198,7 @@ export class ReportsService {
     );
 
     // Aplanar para compatibilidad con formato anterior
-    const subjectGrades = areaGrades.flatMap(a => a.subjects);
+    const subjectGradesFlat = areaGrades.flatMap(a => a.subjects);
 
     const attendanceSummary = await this.attendanceService.getStudentSummary(
       studentEnrollmentId,
@@ -211,6 +211,50 @@ export class ReportsService {
       startDate: term.startDate ?? undefined,
       endDate: term.endDate ?? undefined,
       limit: 10,
+    });
+
+    // Obtener logros del estudiante para este período (con observación del docente)
+    const studentAchievements = await this.prisma.studentAchievement.findMany({
+      where: {
+        studentEnrollmentId,
+        achievement: { academicTermId },
+      },
+      include: {
+        achievement: {
+          include: {
+            teacherAssignment: {
+              include: { subject: true },
+            },
+          },
+        },
+      },
+      orderBy: { achievement: { orderNumber: 'asc' } },
+    });
+
+    const achievements = studentAchievements.map((sa) => ({
+      subject: sa.achievement.teacherAssignment?.subject?.name || '',
+      orderNumber: sa.achievement.orderNumber,
+      description: sa.approvedText || sa.suggestedText || sa.achievement.baseDescription,
+      performanceLevel: sa.performanceLevel,
+      observation: sa.observation || null,
+      judgment: sa.approvedJudgment || sa.suggestedJudgment || null,
+    }));
+
+    // Enrich flat subject grades with achievement + observation for frontend rendering
+    const achievementBySubject = new Map<string, typeof achievements[number]>();
+    for (const ach of achievements) {
+      if (ach.subject && !achievementBySubject.has(ach.subject)) {
+        achievementBySubject.set(ach.subject, ach);
+      }
+    }
+    const subjectGrades = subjectGradesFlat.map(sg => {
+      const ach = achievementBySubject.get(sg.subject);
+      return {
+        ...sg,
+        achievement: ach?.description || null,
+        achievementObservation: ach?.observation || null,
+        judgment: ach?.judgment || null,
+      };
     });
 
     return {
@@ -248,6 +292,8 @@ export class ReportsService {
       // Fuente de datos: 'snapshot' o 'calculated'
       structureSource: enrollmentStructure.source,
       attendance: attendanceSummary,
+      // Logros del período con observaciones del docente
+      achievements,
       // Observaciones ya vienen como DTOs con authorName
       observations: observations.map((o) => ({
         date: o.date,
@@ -333,9 +379,28 @@ export class ReportsService {
       doc.text(`Porcentaje de asistencia: ${data.attendance.attendanceRate}%`);
       doc.moveDown();
 
+      // Achievements
+      if (data.achievements && data.achievements.length > 0) {
+        doc.fontSize(10).font('Helvetica-Bold').text('LOGROS');
+        doc.font('Helvetica').fontSize(8);
+
+        for (const ach of data.achievements) {
+          doc.font('Helvetica-Bold').text(`${ach.subject} - Logro ${ach.orderNumber}:`, { continued: true });
+          doc.font('Helvetica').text(` ${ach.description}`);
+          if (ach.observation) {
+            doc.text(`  Observación: ${ach.observation}`);
+          }
+          if (ach.judgment) {
+            doc.font('Helvetica-Oblique').text(`  ${ach.judgment}`);
+            doc.font('Helvetica');
+          }
+        }
+        doc.moveDown();
+      }
+
       // Observations
       if (data.observations.length > 0) {
-        doc.fontSize(10).font('Helvetica-Bold').text('OBSERVACIONES');
+        doc.fontSize(10).font('Helvetica-Bold').text('OBSERVACIONES DEL PERÍODO');
         doc.font('Helvetica').fontSize(8);
 
         for (const obs of data.observations.slice(0, 5)) {

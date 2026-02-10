@@ -280,6 +280,7 @@ model User {
   
   // Logros aprobados
   achievementsApproved      StudentAchievement[]   @relation("AchievementApprovedBy")
+  achievementBankEntries    AchievementBank[]      @relation("AchievementBankAuthor")
   
   // Documentos institucionales y Gestión de tareas
   documentsUploaded         InstitutionalDocument[] @relation("DocumentUploader")
@@ -428,7 +429,13 @@ model Institution {
   scheduleGradeConfigs        ScheduleGradeConfig[]
   teacherAvailabilities       TeacherAvailability[]
   scheduleEntries             ScheduleEntry[]
-  reportCardConfig            ReportCardConfig?
+  reportCardConfig            ReportCardConfig?     @relation("ReportCardConfigInstitution")
+  
+  // Capabilities de visualización por rol
+  roleCapabilities            InstitutionRoleCapability[] @relation("InstitutionRoleCapabilities")
+  
+  // Banco de logros
+  achievementBank             AchievementBank[] @relation("InstitutionAchievementBank")
 }
 
 // Módulos habilitados por institución
@@ -508,6 +515,7 @@ model Grade {
   elections      Election[]       // Elecciones de representante de grado
   gradeTemplates GradeTemplate[]  // Plantillas académicas por año (una por año académico)
   scheduleGradeConfigs ScheduleGradeConfig[]
+  achievementBank      AchievementBank[]
 
   @@unique([stage, name])
 }
@@ -563,6 +571,7 @@ model Area {
   templateAreas     TemplateArea[]
   finalRecoveryPlans FinalRecoveryPlan[]
   enrollmentAreas   EnrollmentArea[]     // Snapshots en matrículas
+  achievementBank   AchievementBank[]
 
   @@unique([institutionId, name])
   @@index([institutionId])
@@ -591,6 +600,7 @@ model Subject {
   groupExceptions        GroupSubjectException[]
   enrollmentSubjects     EnrollmentSubject[]     // Snapshots en matrículas
   roomRestrictions       RoomRestriction[]
+  achievementBank        AchievementBank[]
 
   @@unique([areaId, name])
   @@index([areaId])
@@ -2278,6 +2288,7 @@ model AchievementConfig {
 
   institution               Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   valueJudgmentTemplates    ValueJudgmentTemplate[]
+  observationTemplates      ObservationTemplate[]
 }
 
 enum AchievementDisplayMode {
@@ -2299,6 +2310,21 @@ enum JudgmentPosition {
 enum AttitudinalAchievementMode {
   GENERAL_PER_PERIOD        // Un logro actitudinal general por período
   PER_ACADEMIC_ACHIEVEMENT  // Un logro actitudinal por cada logro académico
+}
+
+// Plantillas de observación por nivel de desempeño (para autocompletar observación en logros)
+model ObservationTemplate {
+  id                  String           @id @default(cuid())
+  achievementConfigId String
+  level               PerformanceLevel
+  template            String           @db.Text  // Texto plantilla para este nivel
+  isActive            Boolean          @default(true)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  achievementConfig   AchievementConfig @relation(fields: [achievementConfigId], references: [id], onDelete: Cascade)
+
+  @@unique([achievementConfigId, level])
 }
 
 // Plantillas de juicios valorativos por nivel de desempeño
@@ -2384,6 +2410,9 @@ model StudentAchievement {
   approvedJudgment      String?          @db.Text  // Juicio aprobado por el docente
   isJudgmentApproved    Boolean          @default(false)
   
+  // Observación del docente (lo que va al boletín)
+  observation           String?          @db.Text
+  
   // Logro actitudinal combinado (si aplica)
   attitudinalText       String?          @db.Text
   
@@ -2399,6 +2428,49 @@ model StudentAchievement {
   @@unique([studentEnrollmentId, achievementId])
   @@index([studentEnrollmentId])
   @@index([achievementId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BANCO DE LOGROS (Plantillas reutilizables de logros)
+// Permite a docentes y coordinadores crear un repositorio de logros
+// que pueden reutilizarse entre períodos y años académicos.
+// ═══════════════════════════════════════════════════════════════════════════
+
+model AchievementBank {
+  id              String          @id @default(cuid())
+  institutionId   String
+  subjectId       String?         // NULL = logro general, NOT NULL = específico de asignatura
+  areaId          String?         // Área académica (para filtrar por área)
+  gradeId         String?         // Grado específico (NULL = aplica a todos)
+  
+  // Contenido
+  description     String          @db.Text    // Texto del logro
+  achievementType AchievementType @default(ACADEMIC)
+  performanceLevel PerformanceLevel?          // Nivel sugerido (SUPERIOR, ALTO, BASICO, BAJO) o NULL = genérico
+  
+  // Clasificación
+  category        String?         // Categoría libre (ej: "Pensamiento numérico", "Lectura crítica")
+  tags            String?         // Tags separados por coma para búsqueda
+  
+  // Autoría y visibilidad
+  createdById     String
+  isShared        Boolean         @default(true)  // true = visible para todos, false = solo el autor
+  usageCount      Int             @default(0)     // Cuántas veces se ha usado
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  institution     Institution     @relation("InstitutionAchievementBank", fields: [institutionId], references: [id], onDelete: Cascade)
+  subject         Subject?        @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  area            Area?           @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  grade           Grade?          @relation(fields: [gradeId], references: [id], onDelete: SetNull)
+  createdBy       User            @relation("AchievementBankAuthor", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([institutionId, subjectId])
+  @@index([institutionId, areaId])
+  @@index([institutionId, achievementType])
+  @@index([createdById])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -3700,7 +3772,29 @@ model ReportCardConfig {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  institution Institution @relation("ReportCardConfigInstitution", fields: [institutionId], references: [id], onDelete: Cascade)
 
   @@index([institutionId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CAPABILITIES DE VISUALIZACIÓN POR ROL E INSTITUCIÓN
+// Controla qué puede ver cada rol (reportes, horarios, etc.)
+// El admin puede configurar por institución
+// ═══════════════════════════════════════════════════════════════════════════
+
+model InstitutionRoleCapability {
+  id              String      @id @default(cuid())
+  institutionId   String
+  role            String      // "DOCENTE", "DOCENTE_TUTOR", "COORDINADOR", etc.
+  capabilityKey   String      // "VIEW_OWN_SCHEDULE", "VIEW_TUTOR_GROUP_REPORTS", etc.
+  isEnabled       Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  institution     Institution @relation("InstitutionRoleCapabilities", fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionId, role, capabilityKey])
+  @@index([institutionId])
+  @@index([institutionId, role])
 }

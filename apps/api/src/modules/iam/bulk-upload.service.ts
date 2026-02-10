@@ -14,7 +14,9 @@ interface TeacherRow {
 
 interface StudentRow {
   firstName: string;
+  secondName?: string;
   lastName: string;
+  secondLastName?: string;
   documentType: string;
   documentNumber: string;
   birthDate?: string;
@@ -110,10 +112,12 @@ export class BulkUploadService {
 
     const sheet = workbook.addWorksheet('Estudiantes');
 
-    // Definir columnas
+    // Definir columnas (4 columnas de nombre para compatibilidad con archivos MEN/SIMAT)
     sheet.columns = [
-      { header: 'Nombres *', key: 'firstName', width: 25 },
-      { header: 'Apellidos *', key: 'lastName', width: 25 },
+      { header: 'Primer Nombre *', key: 'firstName', width: 20 },
+      { header: 'Segundo Nombre', key: 'secondName', width: 20 },
+      { header: 'Primer Apellido *', key: 'lastName', width: 20 },
+      { header: 'Segundo Apellido', key: 'secondLastName', width: 20 },
       { header: 'Tipo Documento *', key: 'documentType', width: 15 },
       { header: 'Número Documento *', key: 'documentNumber', width: 20 },
       { header: 'Fecha Nacimiento', key: 'birthDate', width: 15 },
@@ -136,7 +140,9 @@ export class BulkUploadService {
     // Agregar filas de ejemplo
     sheet.addRow({
       firstName: 'Pedro',
-      lastName: 'Martínez Silva',
+      secondName: 'Andrés',
+      lastName: 'Martínez',
+      secondLastName: 'Silva',
       documentType: 'TI',
       documentNumber: '1234567890',
       birthDate: '2010-05-15',
@@ -147,8 +153,10 @@ export class BulkUploadService {
       groupCode: '6A',
     });
     sheet.addRow({
-      firstName: 'Ana María',
-      lastName: 'González Ruiz',
+      firstName: 'Ana',
+      secondName: 'María',
+      lastName: 'González',
+      secondLastName: 'Ruiz',
       documentType: 'TI',
       documentNumber: '0987654321',
       birthDate: '2011-08-22',
@@ -445,28 +453,73 @@ export class BulkUploadService {
     const result: UploadResult = { success: 0, errors: [], created: [] };
     const rows: StudentRow[] = [];
 
-    // Leer filas
+    // Leer filas — soportar 4 columnas de nombre (nombre1, nombre2, apellido1, apellido2)
+    // También soportar el formato viejo de 2 columnas (Nombres, Apellidos) detectando el encabezado
+    const headerRow = sheet.getRow(1);
+    const h1 = headerRow.getCell(1).value?.toString()?.trim()?.toLowerCase() || '';
+    const h3 = headerRow.getCell(3).value?.toString()?.trim()?.toLowerCase() || '';
+    
+    // Detectar si es formato de 4 columnas (nombre1, nombre2, apellido1, apellido2)
+    // o formato de 2 columnas (nombres, apellidos)
+    const isFourNameColumns = h3.includes('apellido') || h3.includes('primer apellido');
+
     sheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return;
 
-      const firstName = row.getCell(1).value?.toString()?.trim();
-      const lastName = row.getCell(2).value?.toString()?.trim();
-      const documentType = row.getCell(3).value?.toString()?.trim();
-      const documentNumber = row.getCell(4).value?.toString()?.trim();
+      let firstName: string | undefined;
+      let secondName: string | undefined;
+      let lastName: string | undefined;
+      let secondLastName: string | undefined;
+      let docTypeCol: number;
+      let docNumCol: number;
+      let birthCol: number;
+      let genderCol: number;
+      let emailCol: number;
+      let phoneCol: number;
+      let addressCol: number;
+      let groupCol: number;
+
+      if (isFourNameColumns) {
+        // Formato 4 columnas: nombre1 | nombre2 | apellido1 | apellido2 | tipodoc | numdoc | ...
+        firstName = row.getCell(1).value?.toString()?.trim();
+        secondName = row.getCell(2).value?.toString()?.trim() || undefined;
+        lastName = row.getCell(3).value?.toString()?.trim();
+        secondLastName = row.getCell(4).value?.toString()?.trim() || undefined;
+        docTypeCol = 5; docNumCol = 6; birthCol = 7; genderCol = 8;
+        emailCol = 9; phoneCol = 10; addressCol = 11; groupCol = 12;
+      } else {
+        // Formato 2 columnas: nombres | apellidos | tipodoc | numdoc | ...
+        const rawFirstName = row.getCell(1).value?.toString()?.trim() || '';
+        const rawLastName = row.getCell(2).value?.toString()?.trim() || '';
+        // Intentar separar nombres compuestos
+        const nameParts = rawFirstName.split(/\s+/);
+        firstName = nameParts[0];
+        secondName = nameParts.slice(1).join(' ') || undefined;
+        const lastParts = rawLastName.split(/\s+/);
+        lastName = lastParts[0];
+        secondLastName = lastParts.slice(1).join(' ') || undefined;
+        docTypeCol = 3; docNumCol = 4; birthCol = 5; genderCol = 6;
+        emailCol = 7; phoneCol = 8; addressCol = 9; groupCol = 10;
+      }
 
       if (!firstName || firstName.startsWith('*') || firstName.startsWith('Tipos')) return;
 
+      const documentType = row.getCell(docTypeCol).value?.toString()?.trim();
+      const documentNumber = row.getCell(docNumCol).value?.toString()?.trim();
+
       rows.push({
         firstName,
+        secondName,
         lastName: lastName || '',
+        secondLastName,
         documentType: documentType || 'TI',
         documentNumber: documentNumber || '',
-        birthDate: row.getCell(5).value?.toString()?.trim(),
-        gender: row.getCell(6).value?.toString()?.trim()?.toUpperCase(),
-        email: row.getCell(7).value?.toString()?.trim()?.toLowerCase(),
-        phone: row.getCell(8).value?.toString()?.trim(),
-        address: row.getCell(9).value?.toString()?.trim(),
-        groupCode: row.getCell(10).value?.toString()?.trim(),
+        birthDate: row.getCell(birthCol).value?.toString()?.trim(),
+        gender: row.getCell(genderCol).value?.toString()?.trim()?.toUpperCase(),
+        email: row.getCell(emailCol).value?.toString()?.trim()?.toLowerCase(),
+        phone: row.getCell(phoneCol).value?.toString()?.trim(),
+        address: row.getCell(addressCol).value?.toString()?.trim(),
+        groupCode: row.getCell(groupCol).value?.toString()?.trim(),
       });
     });
 
@@ -561,13 +614,17 @@ export class BulkUploadService {
           continue;
         }
 
+        // Crear usuario — combinar nombres para User (que solo tiene firstName/lastName)
+        const userFirstName = [row.firstName, row.secondName].filter(Boolean).join(' ');
+        const userLastName = [row.lastName, row.secondLastName].filter(Boolean).join(' ');
+
         // Crear usuario primero
         const user = await this.prisma.user.create({
           data: {
             email,
             username,
-            firstName: row.firstName,
-            lastName: row.lastName,
+            firstName: userFirstName,
+            lastName: userLastName,
             passwordHash,
             documentType: row.documentType as any,
             documentNumber: row.documentNumber,
@@ -588,13 +645,15 @@ export class BulkUploadService {
           } as any,
         });
 
-        // Crear estudiante vinculado al usuario
+        // Crear estudiante vinculado al usuario (guarda los 4 campos de nombre)
         const student = await this.prisma.student.create({
           data: {
             institutionId,
             userId: user.id,
             firstName: row.firstName,
+            secondName: row.secondName || undefined,
             lastName: row.lastName,
+            secondLastName: row.secondLastName || undefined,
             documentType: row.documentType,
             documentNumber: row.documentNumber,
             birthDate,
@@ -623,7 +682,7 @@ export class BulkUploadService {
         result.success++;
         result.created.push({
           id: student.id,
-          name: `${student.firstName} ${student.lastName}`,
+          name: [student.firstName, student.secondName, student.lastName, student.secondLastName].filter(Boolean).join(' '),
           email: user.email,
         });
       } catch (error: any) {

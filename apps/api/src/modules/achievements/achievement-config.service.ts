@@ -12,6 +12,9 @@ export class AchievementConfigService {
         valueJudgmentTemplates: {
           orderBy: { level: 'asc' },
         },
+        observationTemplates: {
+          orderBy: { level: 'asc' },
+        },
       },
     });
   }
@@ -145,5 +148,99 @@ export class AchievementConfigService {
     ];
 
     return this.bulkUpsertValueJudgmentTemplates(institutionId, defaultTemplates);
+  }
+
+  // ============================================
+  // OBSERVATION TEMPLATES
+  // ============================================
+
+  async getObservationTemplates(institutionId: string) {
+    const config = await this.prisma.achievementConfig.findUnique({
+      where: { institutionId },
+    });
+    if (!config) return [];
+
+    return this.prisma.observationTemplate.findMany({
+      where: { achievementConfigId: config.id },
+      orderBy: { level: 'asc' },
+    });
+  }
+
+  async upsertObservationTemplate(data: {
+    institutionId: string;
+    level: 'SUPERIOR' | 'ALTO' | 'BASICO' | 'BAJO';
+    template: string;
+    isActive?: boolean;
+  }) {
+    let config = await this.prisma.achievementConfig.findUnique({
+      where: { institutionId: data.institutionId },
+    });
+
+    if (!config) {
+      config = await this.prisma.achievementConfig.create({
+        data: { institutionId: data.institutionId },
+      });
+    }
+
+    return this.prisma.observationTemplate.upsert({
+      where: {
+        achievementConfigId_level: {
+          achievementConfigId: config.id,
+          level: data.level,
+        },
+      },
+      update: {
+        template: data.template,
+        isActive: data.isActive,
+      },
+      create: {
+        achievementConfigId: config.id,
+        level: data.level,
+        template: data.template,
+        isActive: data.isActive ?? true,
+      },
+    });
+  }
+
+  async bulkUpsertObservationTemplates(
+    institutionId: string,
+    templates: Array<{
+      level: 'SUPERIOR' | 'ALTO' | 'BASICO' | 'BAJO';
+      template: string;
+      isActive?: boolean;
+    }>,
+  ) {
+    const results = await Promise.all(
+      templates.map((t) =>
+        this.upsertObservationTemplate({
+          institutionId,
+          ...t,
+        }),
+      ),
+    );
+    return results;
+  }
+
+  async createDefaultObservationTemplates(institutionId: string) {
+    const defaultTemplates = [
+      {
+        level: 'BAJO' as const,
+        template: 'Presenta dificultades en el desarrollo de los procesos académicos y requiere mayor acompañamiento.',
+      },
+      {
+        level: 'BASICO' as const,
+        template: 'Evidencia avances básicos en el desarrollo de las competencias propuestas.',
+      },
+      {
+        level: 'ALTO' as const,
+        template: 'Logra satisfactoriamente los desempeños propuestos para el período.',
+      },
+      {
+        level: 'SUPERIOR' as const,
+        template: 'Demuestra dominio sobresaliente en todos los desempeños propuestos.',
+      },
+    ];
+
+    return this.bulkUpsertObservationTemplates(institutionId, defaultTemplates);
   }
 }

@@ -17,6 +17,7 @@ import { Roles } from '../../auth/decorators/roles.decorator';
 import { ScheduleGeneratorService, GenerationOptions } from './schedule-generator.service';
 import { TimetableExcelService } from './timetable-excel.service';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { CapabilitiesService } from '../../capabilities/capabilities.service';
 import type { Response } from 'express';
 
 @Controller('timetabling/generator')
@@ -26,6 +27,7 @@ export class ScheduleGeneratorController {
     private readonly generatorService: ScheduleGeneratorService,
     private readonly excelService: TimetableExcelService,
     private readonly prisma: PrismaService,
+    private readonly capabilitiesService: CapabilitiesService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -572,7 +574,52 @@ export class ScheduleGeneratorController {
       color: e.color || '',
     });
 
-    const formattedEntries = entries.map(formatEntry);
+    let formattedEntries = entries.map(formatEntry);
+
+    // ═══════════════════════════════════════════════════════════════════
+    // FILTRADO POR CAPABILITIES (solo para roles no-admin)
+    // ═══════════════════════════════════════════════════════════════════
+    const userId = req.user.sub || req.user.id;
+    const userCaps = await this.capabilitiesService.getUserCapabilities(userId, institutionId);
+    const isFullAccess = userCaps.effectiveRoles.some(r =>
+      ['SUPERADMIN', 'ADMIN_INSTITUTIONAL'].includes(r),
+    );
+
+    if (!isFullAccess) {
+      const canViewOwn = userCaps.capabilities.includes('VIEW_OWN_SCHEDULE');
+      const canViewTutorGroup = userCaps.capabilities.includes('VIEW_TUTOR_GROUP_SCHEDULE');
+
+      // Si no tiene ninguna capability de horario, devolver vacío
+      if (!canViewOwn && !canViewTutorGroup) {
+        return { view, entries: [], allTimeBlocks, totalEntries: 0, filtered: true };
+      }
+
+      // Construir set de groupIds permitidos
+      const allowedGroupIds = new Set<string>();
+
+      // Grupos donde el docente dicta clase (siempre si tiene VIEW_OWN_SCHEDULE)
+      if (canViewOwn) {
+        for (const gId of userCaps.teacherAssignmentGroupIds) {
+          allowedGroupIds.add(gId);
+        }
+      }
+
+      // Grupos donde es tutor/director
+      if (canViewTutorGroup) {
+        for (const gId of userCaps.tutorGroupIds) {
+          allowedGroupIds.add(gId);
+        }
+      }
+
+      // Filtrar entradas: solo las de grupos permitidos O las del propio docente
+      formattedEntries = formattedEntries.filter(e => {
+        // Si VIEW_OWN_SCHEDULE: mostrar entradas donde el docente es el teacher
+        if (canViewOwn && e.teacherId === userId) return true;
+        // Si VIEW_TUTOR_GROUP_SCHEDULE: mostrar todas las entradas del grupo tutor
+        if (canViewTutorGroup && userCaps.tutorGroupIds.includes(e.groupId)) return true;
+        return false;
+      });
+    }
 
     switch (view) {
       case 'by-grade': {

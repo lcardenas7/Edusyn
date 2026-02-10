@@ -252,6 +252,13 @@ export class AchievementService {
     };
   }
 
+  async updateStudentObservation(id: string, observation: string) {
+    return this.prisma.studentAchievement.update({
+      where: { id },
+      data: { observation },
+    });
+  }
+
   async upsertStudentAchievement(data: {
     studentEnrollmentId: string;
     achievementId: string;
@@ -263,6 +270,7 @@ export class AchievementService {
     approvedJudgment?: string;
     isJudgmentApproved?: boolean;
     attitudinalText?: string;
+    observation?: string;
     approvedById?: string;
   }) {
     const existing = await this.prisma.studentAchievement.findUnique({
@@ -285,6 +293,7 @@ export class AchievementService {
     if (data.approvedJudgment !== undefined) updateData.approvedJudgment = data.approvedJudgment;
     if (data.isJudgmentApproved !== undefined) updateData.isJudgmentApproved = data.isJudgmentApproved;
     if (data.attitudinalText !== undefined) updateData.attitudinalText = data.attitudinalText;
+    if (data.observation !== undefined) updateData.observation = data.observation;
 
     // If approving, set approval metadata
     if (data.isTextApproved && data.isJudgmentApproved && data.approvedById) {
@@ -394,6 +403,113 @@ export class AchievementService {
     }
     // Default to BAJO if no match
     return 'BAJO';
+  }
+
+  // ============================================
+  // BULK ASSIGN & AUTO-FILL OBSERVATION
+  // ============================================
+
+  async bulkAssignAchievement(
+    achievementId: string,
+    studentEnrollmentIds: string[],
+    institutionId: string,
+  ) {
+    // Get performance scales for the institution
+    const scales = await this.prisma.performanceScale.findMany({
+      where: { institutionId },
+      orderBy: { minScore: 'asc' },
+    });
+
+    // Get the achievement to know its assignment/term for fetching grades
+    const achievement = await this.prisma.achievement.findUnique({
+      where: { id: achievementId },
+      include: { teacherAssignment: true },
+    });
+
+    if (!achievement) {
+      throw new NotFoundException('Logro no encontrado');
+    }
+
+    // Get existing final grades for these students
+    const finalGrades = await this.prisma.periodFinalGrade.findMany({
+      where: {
+        studentEnrollment: { id: { in: studentEnrollmentIds } },
+        academicTermId: achievement.academicTermId,
+        subjectId: achievement.teacherAssignment.subjectId,
+      },
+      include: { studentEnrollment: true },
+    });
+
+    const gradeMap = new Map<string, number>();
+    for (const fg of finalGrades) {
+      gradeMap.set(fg.studentEnrollmentId, Number(fg.finalScore));
+    }
+
+    const results = await Promise.all(
+      studentEnrollmentIds.map(async (enrollmentId) => {
+        const grade = gradeMap.get(enrollmentId) || 0;
+        const level = this.getPerformanceLevelFromGrade(grade, scales);
+
+        return this.prisma.studentAchievement.upsert({
+          where: {
+            studentEnrollmentId_achievementId: {
+              studentEnrollmentId: enrollmentId,
+              achievementId,
+            },
+          },
+          update: {
+            performanceLevel: level,
+          },
+          create: {
+            studentEnrollmentId: enrollmentId,
+            achievementId,
+            performanceLevel: level,
+          },
+        });
+      }),
+    );
+
+    return results;
+  }
+
+  async autoFillObservations(
+    achievementId: string,
+    institutionId: string,
+  ) {
+    // Get observation templates for this institution
+    const config = await this.prisma.achievementConfig.findUnique({
+      where: { institutionId },
+      include: {
+        observationTemplates: {
+          where: { isActive: true },
+        },
+      },
+    });
+
+    const templateMap = new Map<string, string>();
+    for (const t of config?.observationTemplates || []) {
+      templateMap.set(t.level, t.template);
+    }
+
+    // Get all student achievements for this achievement
+    const studentAchievements = await this.prisma.studentAchievement.findMany({
+      where: { achievementId },
+    });
+
+    const results = await Promise.all(
+      studentAchievements.map(async (sa) => {
+        const template = templateMap.get(sa.performanceLevel);
+        if (template) {
+          return this.prisma.studentAchievement.update({
+            where: { id: sa.id },
+            data: { observation: template },
+          });
+        }
+        return sa;
+      }),
+    );
+
+    return results;
   }
 
   // ============================================

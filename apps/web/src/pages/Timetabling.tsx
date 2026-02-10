@@ -8,6 +8,7 @@ import {
   timetablingGeneratorApi,
   academicGradesApi,
   academicYearLifecycleApi,
+  capabilitiesApi,
 } from '../lib/api'
 import {
   Clock, MapPin, Settings, Calendar, AlertTriangle, Plus, Trash2, Save,
@@ -113,6 +114,15 @@ export default function Timetabling() {
   const [academicYearLabel, setAcademicYearLabel] = useState<string>('')
   const [noAcademicYear, setNoAcademicYear] = useState(false)
 
+  // Capabilities del usuario
+  const [userCaps, setUserCaps] = useState<{
+    capabilities: string[];
+    effectiveRoles: string[];
+    isTutor: boolean;
+    tutorGroupIds: string[];
+    teacherAssignmentGroupIds: string[];
+  } | null>(null)
+
   const loadGrades = useCallback(async () => {
     try {
       const res = await academicGradesApi.getAll()
@@ -207,6 +217,11 @@ export default function Timetabling() {
     loadGrades()
     loadTimeBlocks()
     loadRooms()
+
+    // Cargar capabilities del usuario
+    capabilitiesApi.getMyCapabilities().then(res => {
+      setUserCaps(res.data)
+    }).catch(err => console.error('Error loading capabilities:', err))
   }, [institution?.id, user?.institution?.id])
 
   useEffect(() => {
@@ -315,6 +330,8 @@ export default function Timetabling() {
           rooms={rooms}
           onReload={loadGrid}
           showMessage={showMessage}
+          isManager={isManager}
+          userCaps={userCaps}
         />
       )}
 
@@ -368,7 +385,7 @@ export default function Timetabling() {
 // SCHEDULE TAB - Grilla visual del horario
 // ═══════════════════════════════════════════════════════
 
-function ScheduleTab({ grades, selectedGroup, setSelectedGroup, gridData, loading, academicYearId, timeBlocks, rooms, onReload, showMessage }: any) {
+function ScheduleTab({ grades, selectedGroup, setSelectedGroup, gridData, loading, academicYearId, timeBlocks, rooms, onReload, showMessage, isManager, userCaps }: any) {
   const [editingCell, setEditingCell] = useState<{ day: string; blockId: string } | null>(null)
   const [cellForm, setCellForm] = useState<any>({})
 
@@ -455,7 +472,18 @@ function ScheduleTab({ grades, selectedGroup, setSelectedGroup, gridData, loadin
     }
   }
 
-  const allGroups = grades.flatMap((g: any) => g.groups?.map((gr: any) => ({ ...gr, gradeName: g.name })) || [])
+  const allGroupsRaw = grades.flatMap((g: any) => g.groups?.map((gr: any) => ({ ...gr, gradeName: g.name })) || [])
+
+  // Filtrar grupos según capabilities para no-managers
+  const allGroups = (() => {
+    if (isManager || !userCaps) return allGroupsRaw
+    const allowedIds = new Set<string>([
+      ...(userCaps.teacherAssignmentGroupIds || []),
+      ...(userCaps.tutorGroupIds || []),
+    ])
+    if (allowedIds.size === 0) return allGroupsRaw // fallback si no hay caps cargadas
+    return allGroupsRaw.filter((g: any) => allowedIds.has(g.id))
+  })()
 
   return (
     <div className="space-y-4">

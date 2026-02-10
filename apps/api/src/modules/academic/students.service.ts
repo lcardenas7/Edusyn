@@ -827,7 +827,9 @@ export class StudentsService {
           select: {
             id: true,
             firstName: true,
+            secondName: true,
             lastName: true,
+            secondLastName: true,
             documentNumber: true,
           },
         },
@@ -839,10 +841,15 @@ export class StudentsService {
       },
     });
 
-    // Mapear a formato académico simple
+    // Mapear a formato académico simple (nombre completo con los 4 campos)
     return enrollments.map((enrollment) => ({
       id: enrollment.student.id,
-      name: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
+      name: [
+        enrollment.student.firstName,
+        enrollment.student.secondName,
+        enrollment.student.lastName,
+        enrollment.student.secondLastName,
+      ].filter(Boolean).join(' '),
       enrollmentId: enrollment.id,
       documentNumber: enrollment.student.documentNumber || undefined,
     }));
@@ -873,7 +880,9 @@ export class StudentsService {
           select: {
             id: true,
             firstName: true,
+            secondName: true,
             lastName: true,
+            secondLastName: true,
             documentNumber: true,
           },
         },
@@ -893,7 +902,12 @@ export class StudentsService {
       }
       result[enrollment.groupId].push({
         id: enrollment.student.id,
-        name: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
+        name: [
+          enrollment.student.firstName,
+          enrollment.student.secondName,
+          enrollment.student.lastName,
+          enrollment.student.secondLastName,
+        ].filter(Boolean).join(' '),
         enrollmentId: enrollment.id,
         documentNumber: enrollment.student.documentNumber || undefined,
       });

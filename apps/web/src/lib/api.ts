@@ -655,6 +655,19 @@ export const achievementConfigApi = {
   }) => api.put('/achievements/config/templates', data),
   createDefaultTemplates: (institutionId: string) => 
     api.post(`/achievements/config/${institutionId}/templates/defaults`),
+  // Observation templates
+  getObservationTemplates: (institutionId: string) => 
+    api.get(`/achievements/config/${institutionId}/observation-templates`),
+  bulkUpsertObservationTemplates: (data: {
+    institutionId: string;
+    templates: Array<{
+      level: 'SUPERIOR' | 'ALTO' | 'BASICO' | 'BAJO';
+      template: string;
+      isActive?: boolean;
+    }>;
+  }) => api.put('/achievements/config/observation-templates', data),
+  createDefaultObservationTemplates: (institutionId: string) => 
+    api.post(`/achievements/config/${institutionId}/observation-templates/defaults`),
 }
 
 export const achievementsApi = {
@@ -707,6 +720,7 @@ export const achievementsApi = {
     approvedJudgment?: string;
     isJudgmentApproved?: boolean;
     attitudinalText?: string;
+    observation?: string;
   }) => api.put(`/achievements/students/${id}`, data),
   approveStudentAchievement: (id: string, data: {
     approvedText: string;
@@ -718,6 +732,18 @@ export const achievementsApi = {
     api.get('/achievements/validate', { params: { teacherAssignmentId, academicTermId, requiredCount } }),
   getUnapproved: (teacherAssignmentId: string, academicTermId: string) => 
     api.get('/achievements/unapproved', { params: { teacherAssignmentId, academicTermId } }),
+  // Bulk operations
+  bulkAssign: (data: {
+    achievementId: string;
+    studentEnrollmentIds: string[];
+    institutionId: string;
+  }) => api.post('/achievements/students/bulk-assign', data),
+  autoFillObservations: (data: {
+    achievementId: string;
+    institutionId: string;
+  }) => api.post('/achievements/students/auto-fill-observations', data),
+  updateObservation: (id: string, observation: string) => 
+    api.put(`/achievements/students/${id}/observation`, { observation }),
 }
 
 // ==================== GRADING PERIOD CONFIG ====================
@@ -1299,4 +1325,47 @@ export const timetablingGeneratorApi = {
       params: { academicYearId, viewType },
       responseType: 'blob',
     }),
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CAPABILITIES (Permisos de visualización por rol)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BANCO DE LOGROS (Achievement Bank)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const achievementBankApi = {
+  search: (params?: {
+    subjectId?: string; areaId?: string; gradeId?: string;
+    achievementType?: string; performanceLevel?: string;
+    category?: string; query?: string; page?: number; limit?: number;
+  }) => api.get('/achievement-bank', { params }),
+  getCategories: () => api.get('/achievement-bank/categories'),
+  create: (data: {
+    description: string; subjectId?: string; areaId?: string; gradeId?: string;
+    achievementType?: string; performanceLevel?: string;
+    category?: string; tags?: string; isShared?: boolean;
+  }) => api.post('/achievement-bank', data),
+  bulkCreate: (entries: Array<{
+    description: string; subjectId?: string; areaId?: string; gradeId?: string;
+    achievementType?: string; performanceLevel?: string;
+    category?: string; tags?: string; isShared?: boolean;
+  }>) => api.post('/achievement-bank/bulk', { entries }),
+  update: (id: string, data: any) => api.put(`/achievement-bank/${id}`, data),
+  delete: (id: string) => api.delete(`/achievement-bank/${id}`),
+  markUsed: (id: string) => api.post(`/achievement-bank/${id}/use`),
+}
+
+export const capabilitiesApi = {
+  getMyCapabilities: () =>
+    api.get('/capabilities/my-capabilities'),
+  getMatrix: (institutionId: string) =>
+    api.get(`/capabilities/matrix/${institutionId}`),
+  updateMatrix: (institutionId: string, updates: Array<{ role: string; capabilityKey: string; isEnabled: boolean }>) =>
+    api.put(`/capabilities/matrix/${institutionId}`, { updates }),
+  resetToDefaults: (institutionId: string) =>
+    api.post(`/capabilities/matrix/${institutionId}/reset`),
+  checkCapability: (capabilityKey: string) =>
+    api.get(`/capabilities/check/${capabilityKey}`),
 }

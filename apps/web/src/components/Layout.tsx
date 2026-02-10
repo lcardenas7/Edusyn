@@ -44,6 +44,7 @@ import {
   CalendarClock,
   DollarSign,
   Clock,
+  Shield,
 } from 'lucide-react'
 
 type Role = 'SUPER_ADMIN' | 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE' | 'SECRETARIA'
@@ -118,6 +119,7 @@ const institutionalNavigation: NavItem[] = [
       { name: 'Configuración SIEE', href: '/academic', icon: Percent, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
       { name: 'Catálogo Académico', href: '/academic-catalog', icon: Layers, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
       { name: 'Plantillas Académicas', href: '/academic-templates', icon: BookOpen, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
+      { name: 'Permisos de Reportes', href: '/capabilities-config', icon: Shield, roles: ['ADMIN_INSTITUTIONAL'], module: 'CONFIG' },
     ]
   },
   
@@ -182,11 +184,11 @@ const institutionalNavigation: NavItem[] = [
   { 
     name: 'Reportes', 
     icon: TrendingUp, 
-    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'],
+    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'],
     module: 'REPORTS',
     children: [
       { name: 'Informes', href: '/reports', icon: PieChart, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'REPORTS' },
-      { name: 'Boletines', href: '/report-cards', icon: FileText, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'REPORTS' },
+      { name: 'Boletines', href: '/report-cards', icon: FileText, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'REPORTS' },
       { name: 'Estadísticas', href: '/statistics', icon: BarChart3, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'REPORTS' },
     ]
   },

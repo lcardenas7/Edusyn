@@ -96,6 +96,41 @@ export class AchievementController {
   }
 
   // ============================================
+  // OBSERVATION TEMPLATES (Admin/Coordinator)
+  // ============================================
+
+  @Get('config/:institutionId/observation-templates')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getObservationTemplates(@Param('institutionId') institutionId: string) {
+    return this.configService.getObservationTemplates(institutionId);
+  }
+
+  @Put('config/observation-templates')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async bulkUpsertObservationTemplates(
+    @Body()
+    body: {
+      institutionId: string;
+      templates: Array<{
+        level: 'SUPERIOR' | 'ALTO' | 'BASICO' | 'BAJO';
+        template: string;
+        isActive?: boolean;
+      }>;
+    },
+  ) {
+    return this.configService.bulkUpsertObservationTemplates(
+      body.institutionId,
+      body.templates,
+    );
+  }
+
+  @Post('config/:institutionId/observation-templates/defaults')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async createDefaultObservationTemplates(@Param('institutionId') institutionId: string) {
+    return this.configService.createDefaultObservationTemplates(institutionId);
+  }
+
+  // ============================================
   // ACHIEVEMENTS (Teacher)
   // ============================================
 
@@ -221,6 +256,47 @@ export class AchievementController {
     );
   }
 
+  @Post('students/bulk-assign')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async bulkAssignAchievement(
+    @Body()
+    body: {
+      achievementId: string;
+      studentEnrollmentIds: string[];
+      institutionId: string;
+    },
+  ) {
+    return this.achievementService.bulkAssignAchievement(
+      body.achievementId,
+      body.studentEnrollmentIds,
+      body.institutionId,
+    );
+  }
+
+  @Post('students/auto-fill-observations')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async autoFillObservations(
+    @Body()
+    body: {
+      achievementId: string;
+      institutionId: string;
+    },
+  ) {
+    return this.achievementService.autoFillObservations(
+      body.achievementId,
+      body.institutionId,
+    );
+  }
+
+  @Put('students/:id/observation')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async updateStudentObservation(
+    @Param('id') id: string,
+    @Body() body: { observation: string },
+  ) {
+    return this.achievementService.updateStudentObservation(id, body.observation);
+  }
+
   @Put('students/:id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async upsertStudentAchievement(
@@ -237,6 +313,7 @@ export class AchievementController {
       approvedJudgment?: string;
       isJudgmentApproved?: boolean;
       attitudinalText?: string;
+      observation?: string;
     },
     @Request() req: any,
   ) {

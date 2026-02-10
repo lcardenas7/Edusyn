@@ -17,6 +17,11 @@ import {
   X,
   Target,
   Heart,
+  Filter,
+  Users,
+  CheckSquare,
+  Square,
+  Eye,
 } from 'lucide-react'
 import {
   academicYearsApi,
@@ -67,12 +72,20 @@ interface StudentAchievement {
   suggestedJudgment?: string
   approvedJudgment?: string
   isJudgmentApproved: boolean
+  observation?: string
   studentEnrollment?: {
     student: {
       firstName: string
       lastName: string
     }
   }
+}
+
+interface ObservationTemplate {
+  id?: string
+  level: PerformanceLevel
+  template: string
+  isActive: boolean
 }
 
 const LEVEL_LABELS: Record<PerformanceLevel, string> = {
@@ -141,6 +154,11 @@ export default function Achievements() {
   const [studentGrades, setStudentGrades] = useState<Record<string, number>>({})
   const [selectedAchievementId, setSelectedAchievementId] = useState<string | null>(null)
   const [studentAchievements, setStudentAchievements] = useState<StudentAchievement[]>([])
+
+  // New: filter, selection, observation templates
+  const [filterLevel, setFilterLevel] = useState<PerformanceLevel | 'ALL'>('ALL')
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set())
+  const [observationTemplates, setObservationTemplates] = useState<ObservationTemplate[]>([])
 
   const userRoles = useMemo(() => {
     if (!user?.roles) return []
@@ -294,6 +312,12 @@ export default function Achievements() {
         if (templatesResponse.data?.length > 0) {
           setTemplates(templatesResponse.data)
         }
+
+        // Load observation templates
+        const obsResponse = await achievementConfigApi.getObservationTemplates(institutionId)
+        if (obsResponse.data?.length > 0) {
+          setObservationTemplates(obsResponse.data)
+        }
       } catch (err) {
         console.error('Error loading config:', err)
       }
@@ -395,6 +419,17 @@ export default function Achievements() {
           isActive: t.isActive,
         })),
       })
+      // Save observation templates
+      if (observationTemplates.length > 0) {
+        await achievementConfigApi.bulkUpsertObservationTemplates({
+          institutionId,
+          templates: observationTemplates.map(t => ({
+            level: t.level,
+            template: t.template,
+            isActive: t.isActive,
+          })),
+        })
+      }
       setMessage({ type: 'success', text: 'Configuración guardada correctamente' })
     } catch (err) {
       console.error('Error saving config:', err)
@@ -417,6 +452,24 @@ export default function Achievements() {
     } catch (err) {
       console.error('Error creating default templates:', err)
       setMessage({ type: 'error', text: 'Error al crear plantillas' })
+    } finally {
+      setSaving(false)
+      setTimeout(() => setMessage(null), 3000)
+    }
+  }
+
+  // Create default observation templates
+  const handleCreateDefaultObservationTemplates = async () => {
+    if (!institutionId) return
+    setSaving(true)
+    try {
+      await achievementConfigApi.createDefaultObservationTemplates(institutionId)
+      const response = await achievementConfigApi.getObservationTemplates(institutionId)
+      setObservationTemplates(response.data || [])
+      setMessage({ type: 'success', text: 'Plantillas de observación por defecto creadas' })
+    } catch (err) {
+      console.error('Error creating default observation templates:', err)
+      setMessage({ type: 'error', text: 'Error al crear plantillas de observación' })
     } finally {
       setSaving(false)
       setTimeout(() => setMessage(null), 3000)
@@ -488,31 +541,135 @@ export default function Achievements() {
     }
   }
 
-  // Generate suggestions for all students
-  const handleGenerateSuggestions = async () => {
+  // Helper: get performance level from grade using institution scales
+  const getPerformanceLevelFromGrade = (grade: number): PerformanceLevel => {
+    // Simple mapping based on common Colombian scale
+    if (grade >= 4.6) return 'SUPERIOR'
+    if (grade >= 4.0) return 'ALTO'
+    if (grade >= 3.0) return 'BASICO'
+    return 'BAJO'
+  }
+
+  // Filtered students based on performance level
+  const filteredStudents = useMemo(() => {
+    if (filterLevel === 'ALL') return students
+    return students.filter(s => {
+      const grade = studentGrades[s.enrollmentId] || 0
+      return getPerformanceLevelFromGrade(grade) === filterLevel
+    })
+  }, [students, studentGrades, filterLevel])
+
+  // Toggle student selection
+  const toggleStudentSelection = (enrollmentId: string) => {
+    setSelectedStudentIds(prev => {
+      const next = new Set(prev)
+      if (next.has(enrollmentId)) next.delete(enrollmentId)
+      else next.add(enrollmentId)
+      return next
+    })
+  }
+
+  // Select/deselect all filtered students
+  const toggleSelectAll = () => {
+    const filteredIds = filteredStudents.map(s => s.enrollmentId)
+    const allSelected = filteredIds.every(id => selectedStudentIds.has(id))
+    if (allSelected) {
+      setSelectedStudentIds(prev => {
+        const next = new Set(prev)
+        filteredIds.forEach(id => next.delete(id))
+        return next
+      })
+    } else {
+      setSelectedStudentIds(prev => {
+        const next = new Set(prev)
+        filteredIds.forEach(id => next.add(id))
+        return next
+      })
+    }
+  }
+
+  // BUTTON 1: Assign achievement to all students
+  const handleBulkAssignAll = async () => {
     if (!selectedAchievementId || !institutionId) return
     setSaving(true)
     try {
-      const studentGradesArray = students.map(s => ({
-        studentEnrollmentId: s.enrollmentId,
-        finalGrade: studentGrades[s.enrollmentId] || 0,
-      }))
-      
-      await achievementsApi.generateSuggestions({
+      const enrollmentIds = students.map(s => s.enrollmentId)
+      await achievementsApi.bulkAssign({
         achievementId: selectedAchievementId,
+        studentEnrollmentIds: enrollmentIds,
         institutionId,
-        studentGrades: studentGradesArray,
       })
-      
-      // Reload student achievements
       const response = await achievementsApi.getStudentAchievements(selectedAchievementId)
       setStudentAchievements(response.data || [])
-      setMessage({ type: 'success', text: 'Sugerencias generadas correctamente' })
+      setMessage({ type: 'success', text: 'Logro asignado a todos los estudiantes' })
     } catch (err) {
-      console.error('Error generating suggestions:', err)
-      setMessage({ type: 'error', text: 'Error al generar sugerencias' })
+      console.error('Error bulk assigning:', err)
+      setMessage({ type: 'error', text: 'Error al asignar logro' })
     } finally {
       setSaving(false)
+      setTimeout(() => setMessage(null), 3000)
+    }
+  }
+
+  // BUTTON 2: Auto-fill observations from templates
+  const handleAutoFillObservations = async () => {
+    if (!selectedAchievementId || !institutionId) return
+    if (observationTemplates.length === 0) {
+      setMessage({ type: 'error', text: 'No hay plantillas de observación configuradas. Configure las plantillas en la pestaña de Configuración.' })
+      setTimeout(() => setMessage(null), 4000)
+      return
+    }
+    setSaving(true)
+    try {
+      await achievementsApi.autoFillObservations({
+        achievementId: selectedAchievementId,
+        institutionId,
+      })
+      const response = await achievementsApi.getStudentAchievements(selectedAchievementId)
+      setStudentAchievements(response.data || [])
+      setMessage({ type: 'success', text: 'Observaciones autocompletadas según escala' })
+    } catch (err) {
+      console.error('Error auto-filling observations:', err)
+      setMessage({ type: 'error', text: 'Error al autocompletar observaciones' })
+    } finally {
+      setSaving(false)
+      setTimeout(() => setMessage(null), 3000)
+    }
+  }
+
+  // BUTTON 3: Assign achievement to selected students only
+  const handleBulkAssignSelected = async () => {
+    if (!selectedAchievementId || !institutionId || selectedStudentIds.size === 0) return
+    setSaving(true)
+    try {
+      await achievementsApi.bulkAssign({
+        achievementId: selectedAchievementId,
+        studentEnrollmentIds: Array.from(selectedStudentIds),
+        institutionId,
+      })
+      const response = await achievementsApi.getStudentAchievements(selectedAchievementId)
+      setStudentAchievements(response.data || [])
+      setSelectedStudentIds(new Set())
+      setMessage({ type: 'success', text: `Logro asignado a ${selectedStudentIds.size} estudiantes` })
+    } catch (err) {
+      console.error('Error assigning to selected:', err)
+      setMessage({ type: 'error', text: 'Error al asignar logro' })
+    } finally {
+      setSaving(false)
+      setTimeout(() => setMessage(null), 3000)
+    }
+  }
+
+  // Update individual observation
+  const handleUpdateObservation = async (saId: string, observation: string) => {
+    try {
+      await achievementsApi.updateObservation(saId, observation)
+      setStudentAchievements(prev => prev.map(sa =>
+        sa.id === saId ? { ...sa, observation } : sa
+      ))
+    } catch (err) {
+      console.error('Error updating observation:', err)
+      setMessage({ type: 'error', text: 'Error al guardar observación' })
       setTimeout(() => setMessage(null), 3000)
     }
   }
@@ -813,20 +970,75 @@ export default function Achievements() {
 
               {/* Student Achievements */}
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-                <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-green-600" />
-                    <h3 className="font-semibold text-slate-900">Logros por Estudiante</h3>
+                <div className="px-6 py-4 border-b border-slate-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-green-600" />
+                      <h3 className="font-semibold text-slate-900">Estudiantes</h3>
+                    </div>
                   </div>
+
                   {selectedAchievementId && (
-                    <button
-                      onClick={handleGenerateSuggestions}
-                      disabled={saving}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50"
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      Generar Sugerencias
-                    </button>
+                    <div className="space-y-3">
+                      {/* Action Buttons */}
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={handleBulkAssignAll}
+                          disabled={saving}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          <Users className="w-4 h-4" />
+                          Asignar a todos
+                        </button>
+                        <button
+                          onClick={handleAutoFillObservations}
+                          disabled={saving}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          Autocompletar observación
+                        </button>
+                        <button
+                          onClick={handleBulkAssignSelected}
+                          disabled={saving || selectedStudentIds.size === 0}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-50"
+                        >
+                          <CheckSquare className="w-4 h-4" />
+                          Asignar a seleccionados ({selectedStudentIds.size})
+                        </button>
+                      </div>
+
+                      {/* Filter + Select All */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <Filter className="w-4 h-4 text-slate-400" />
+                          <select
+                            value={filterLevel}
+                            onChange={(e) => {
+                              setFilterLevel(e.target.value as PerformanceLevel | 'ALL')
+                              setSelectedStudentIds(new Set())
+                            }}
+                            className="px-2 py-1 border border-slate-300 rounded-lg text-sm"
+                          >
+                            <option value="ALL">Todas las escalas</option>
+                            <option value="SUPERIOR">Superior</option>
+                            <option value="ALTO">Alto</option>
+                            <option value="BASICO">Básico</option>
+                            <option value="BAJO">Bajo</option>
+                          </select>
+                        </div>
+                        <button
+                          onClick={toggleSelectAll}
+                          className="flex items-center gap-1.5 px-2 py-1 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded"
+                        >
+                          {filteredStudents.length > 0 && filteredStudents.every(s => selectedStudentIds.has(s.enrollmentId))
+                            ? <CheckSquare className="w-4 h-4 text-blue-600" />
+                            : <Square className="w-4 h-4" />
+                          }
+                          Seleccionar todos ({filteredStudents.length})
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
 
@@ -838,20 +1050,26 @@ export default function Achievements() {
                     </div>
                   ) : (
                     <div className="space-y-3 max-h-[500px] overflow-y-auto">
-                      {students.map((student) => {
+                      {filteredStudents.map((student) => {
                         const sa = studentAchievements.find(
                           s => s.studentEnrollmentId === student.enrollmentId
                         )
                         const grade = studentGrades[student.enrollmentId] || 0
+                        const level = getPerformanceLevelFromGrade(grade)
+                        const isSelected = selectedStudentIds.has(student.enrollmentId)
                         
                         return (
                           <StudentAchievementCard
                             key={student.id}
                             student={student}
                             grade={grade}
+                            level={level}
                             studentAchievement={sa}
                             config={config}
+                            isSelected={isSelected}
+                            onToggleSelect={() => toggleStudentSelection(student.enrollmentId)}
                             onApprove={handleApproveStudentAchievement}
+                            onUpdateObservation={handleUpdateObservation}
                             saving={saving}
                           />
                         )
@@ -1036,6 +1254,51 @@ export default function Achievements() {
               </div>
             )}
 
+            {/* Observation Templates */}
+            <div className="border-t border-slate-200 pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h4 className="font-medium text-slate-800">Plantillas de Observación por Escala</h4>
+                  <p className="text-sm text-slate-500 mt-1">Textos que se autocompletarán en la observación del estudiante según su nivel de desempeño</p>
+                </div>
+                <button
+                  onClick={handleCreateDefaultObservationTemplates}
+                  disabled={saving}
+                  className="text-sm text-purple-600 hover:text-purple-700"
+                >
+                  Restaurar por defecto
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {(['BAJO', 'BASICO', 'ALTO', 'SUPERIOR'] as PerformanceLevel[]).map((level) => {
+                  const obsTemplate = observationTemplates.find(t => t.level === level) || { level, template: '', isActive: true }
+                  return (
+                    <div key={level} className="flex items-start gap-4">
+                      <span className={`px-3 py-1 rounded-lg text-sm font-medium ${LEVEL_COLORS[level]} min-w-[80px] text-center`}>
+                        {LEVEL_LABELS[level]}
+                      </span>
+                      <textarea
+                        value={obsTemplate.template}
+                        onChange={(e) => {
+                          setObservationTemplates(prev => {
+                            const exists = prev.find(t => t.level === level)
+                            if (exists) {
+                              return prev.map(t => t.level === level ? { ...t, template: e.target.value } : t)
+                            }
+                            return [...prev, { level, template: e.target.value, isActive: true }]
+                          })
+                        }}
+                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        rows={2}
+                        placeholder={`Observación para desempeño ${LEVEL_LABELS[level]}...`}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
             {/* Save Button */}
             <div className="border-t border-slate-200 pt-6">
               <button
@@ -1058,47 +1321,84 @@ export default function Achievements() {
 function StudentAchievementCard({
   student,
   grade,
+  level,
   studentAchievement,
   config,
+  isSelected,
+  onToggleSelect,
   onApprove,
+  onUpdateObservation,
   saving,
 }: {
   student: { id: string; name: string; enrollmentId: string }
   grade: number
+  level: PerformanceLevel
   studentAchievement?: StudentAchievement
   config: AchievementConfig
+  isSelected: boolean
+  onToggleSelect: () => void
   onApprove: (sa: StudentAchievement, text: string, judgment?: string) => void
+  onUpdateObservation: (saId: string, observation: string) => void
   saving: boolean
 }) {
-  const [editedText, setEditedText] = useState(studentAchievement?.suggestedText || '')
-  const [editedJudgment, setEditedJudgment] = useState(studentAchievement?.suggestedJudgment || '')
+  const [editedText, setEditedText] = useState(studentAchievement?.approvedText || studentAchievement?.suggestedText || '')
+  const [editedJudgment, setEditedJudgment] = useState(studentAchievement?.approvedJudgment || studentAchievement?.suggestedJudgment || '')
+  const [localObservation, setLocalObservation] = useState(studentAchievement?.observation || '')
   const [isEditing, setIsEditing] = useState(false)
+  const [observationTimer, setObservationTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     setEditedText(studentAchievement?.approvedText || studentAchievement?.suggestedText || '')
     setEditedJudgment(studentAchievement?.approvedJudgment || studentAchievement?.suggestedJudgment || '')
+    setLocalObservation(studentAchievement?.observation || '')
   }, [studentAchievement])
 
-  const level = studentAchievement?.performanceLevel
+  const handleObservationChange = (value: string) => {
+    setLocalObservation(value)
+    if (observationTimer) clearTimeout(observationTimer)
+    if (studentAchievement) {
+      const timer = setTimeout(() => {
+        onUpdateObservation(studentAchievement.id, value)
+      }, 800)
+      setObservationTimer(timer)
+    }
+  }
+
+  const hasAchievement = !!studentAchievement
 
   return (
-    <div className="p-3 border border-slate-200 rounded-lg">
-      <div className="flex items-center justify-between mb-2">
-        <span className="font-medium text-slate-800">{student.name}</span>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-500">Nota: {grade > 0 ? grade.toFixed(1) : '-'}</span>
-          {level && (
-            <span className={`px-2 py-0.5 rounded text-xs font-medium ${LEVEL_COLORS[level]}`}>
-              {LEVEL_LABELS[level]}
-            </span>
+    <div className={`p-3 border rounded-lg transition-colors ${isSelected ? 'border-blue-400 bg-blue-50/50' : 'border-slate-200'}`}>
+      <div className="flex items-center gap-3 mb-2">
+        {/* Checkbox */}
+        <button onClick={onToggleSelect} className="flex-shrink-0">
+          {isSelected
+            ? <CheckSquare className="w-5 h-5 text-blue-600" />
+            : <Square className="w-5 h-5 text-slate-300" />
+          }
+        </button>
+
+        {/* Student info */}
+        <div className="flex-1 min-w-0">
+          <span className="font-medium text-slate-800 text-sm truncate block">{student.name}</span>
+        </div>
+
+        {/* Grade + Level */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-sm text-slate-500">{grade > 0 ? grade.toFixed(1) : '-'}</span>
+          <span className={`px-2 py-0.5 rounded text-xs font-medium ${LEVEL_COLORS[level]}`}>
+            {LEVEL_LABELS[level]}
+          </span>
+          {hasAchievement && (
+            <CheckCircle className="w-4 h-4 text-green-500" aria-label="Logro asignado" />
           )}
         </div>
       </div>
 
-      {studentAchievement ? (
-        <div className="space-y-2">
+      {hasAchievement && (
+        <div className="ml-8 space-y-2">
+          {/* Approved text / editing */}
           {isEditing ? (
-            <>
+            <div className="space-y-2">
               <textarea
                 value={editedText}
                 onChange={(e) => setEditedText(e.target.value)}
@@ -1117,7 +1417,7 @@ function StudentAchievementCard({
               <div className="flex gap-2">
                 <button
                   onClick={() => {
-                    onApprove(studentAchievement, editedText, editedJudgment)
+                    onApprove(studentAchievement!, editedText, editedJudgment)
                     setIsEditing(false)
                   }}
                   disabled={saving}
@@ -1133,23 +1433,34 @@ function StudentAchievementCard({
                   Cancelar
                 </button>
               </div>
-            </>
+            </div>
           ) : (
             <>
-              <p className="text-sm text-slate-600">
-                {studentAchievement.approvedText || studentAchievement.suggestedText || 'Sin texto generado'}
-              </p>
-              {config.useValueJudgments && (studentAchievement.approvedJudgment || studentAchievement.suggestedJudgment) && (
+              {(studentAchievement!.approvedText || studentAchievement!.suggestedText) && (
+                <p className="text-sm text-slate-600">
+                  {studentAchievement!.approvedText || studentAchievement!.suggestedText}
+                </p>
+              )}
+              {config.useValueJudgments && (studentAchievement!.approvedJudgment || studentAchievement!.suggestedJudgment) && (
                 <p className="text-sm text-amber-700 italic">
-                  {studentAchievement.approvedJudgment || studentAchievement.suggestedJudgment}
+                  {studentAchievement!.approvedJudgment || studentAchievement!.suggestedJudgment}
                 </p>
               )}
               <div className="flex items-center gap-2">
-                {studentAchievement.isTextApproved ? (
-                  <span className="flex items-center gap-1 text-xs text-green-600">
-                    <CheckCircle className="w-3 h-3" />
-                    Aprobado
-                  </span>
+                {studentAchievement!.isTextApproved ? (
+                  <>
+                    <span className="flex items-center gap-1 text-xs text-green-600">
+                      <CheckCircle className="w-3 h-3" />
+                      Aprobado
+                    </span>
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs hover:bg-slate-200"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                      Re-editar
+                    </button>
+                  </>
                 ) : (
                   <button
                     onClick={() => setIsEditing(true)}
@@ -1162,9 +1473,23 @@ function StudentAchievementCard({
               </div>
             </>
           )}
+
+          {/* Observation field */}
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">Observación (boletín)</label>
+            <textarea
+              value={localObservation}
+              onChange={(e) => handleObservationChange(e.target.value)}
+              placeholder="Observación del estudiante..."
+              className="w-full px-2 py-1 border border-slate-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              rows={2}
+            />
+          </div>
         </div>
-      ) : (
-        <p className="text-sm text-slate-400 italic">Genere sugerencias para ver el logro</p>
+      )}
+
+      {!hasAchievement && (
+        <p className="ml-8 text-sm text-slate-400 italic">Sin logro asignado</p>
       )}
     </div>
   )

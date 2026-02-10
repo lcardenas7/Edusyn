@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
-import { BookOpen, ChevronDown, Save, Plus, Trash2, X, Settings, AlertTriangle, Lock } from 'lucide-react'
+import { BookOpen, ChevronDown, Save, Plus, Trash2, X, Settings, AlertTriangle, Lock, Download, Library, Search, Copy } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import { useAuth } from '../contexts/AuthContext'
 import { useAcademic } from '../contexts/AcademicContext'
-import { teacherAssignmentsApi, academicStudentsApi, gradingPeriodConfigApi, periodFinalGradesApi, partialGradesApi, achievementsApi, achievementConfigApi } from '../lib/api'
+import { teacherAssignmentsApi, academicStudentsApi, gradingPeriodConfigApi, periodFinalGradesApi, partialGradesApi, achievementsApi, achievementConfigApi, achievementBankApi } from '../lib/api'
 
 interface TeacherAssignment {
   id: string
@@ -175,6 +176,33 @@ export default function Grades() {
     achievementsPerPeriod: number;
     useValueJudgments: boolean;
   } | null>(null)
+
+  // Banco de logros
+  const [showBank, setShowBank] = useState(false)
+  const [bankItems, setBankItems] = useState<any[]>([])
+  const [bankLoading, setBankLoading] = useState(false)
+  const [bankSearch, setBankSearch] = useState('')
+  const [bankFilter, setBankFilter] = useState<string>('')
+
+  const loadBank = useCallback(async () => {
+    setBankLoading(true)
+    try {
+      const params: any = {}
+      if (selectedAssignment?.subject?.id) params.subjectId = selectedAssignment.subject.id
+      if (bankSearch) params.query = bankSearch
+      if (bankFilter) params.achievementType = bankFilter
+      const res = await achievementBankApi.search(params)
+      setBankItems(res.data?.items || [])
+    } catch (err) {
+      console.error('Error loading bank:', err)
+    } finally {
+      setBankLoading(false)
+    }
+  }, [selectedAssignment?.subject?.id, bankSearch, bankFilter])
+
+  useEffect(() => {
+    if (showBank) loadBank()
+  }, [showBank, loadBank])
 
   // ============================================
   // CONFIGURACIÓN DINÁMICA DE PROCESOS
@@ -547,6 +575,95 @@ export default function Grades() {
     return cols
   }, [processConfigs, additionalActivities])
 
+  // ============================================
+  // DESCARGAR PLANILLA DE CALIFICACIONES
+  // ============================================
+  const downloadGradeSheet = (includeGrades: boolean) => {
+    if (!selectedAssignment || students.length === 0) return
+
+    const subjectName = selectedAssignment.subject.name
+    const groupName = `${selectedAssignment.group.grade?.name || ''} ${selectedAssignment.group.name}`.trim()
+    const periodName = periods.find(p => p.id === selectedPeriod)?.name || 'Período'
+
+    // Construir encabezados
+    const headers: string[] = ['#', 'ESTUDIANTE']
+    const subHeaders: string[] = ['', '']
+    processConfigs.forEach(process => {
+      const allActs = [...process.activities, ...(additionalActivities[process.code] || [])]
+      allActs.forEach(a => {
+        headers.push(process.name.toUpperCase())
+        subHeaders.push(a.name)
+      })
+      headers.push(process.name.toUpperCase())
+      subHeaders.push('PROM')
+    })
+    headers.push('FINAL')
+    subHeaders.push('')
+    headers.push('NIV')
+    subHeaders.push('')
+
+    // Construir filas de datos
+    const dataRows: any[][] = []
+    students.forEach((student, idx) => {
+      const row: any[] = [idx + 1, student.name]
+      processConfigs.forEach(process => {
+        const allActs = [...process.activities, ...(additionalActivities[process.code] || [])]
+        allActs.forEach(a => {
+          const val = grades[student.id]?.[a.id] || 0
+          row.push(includeGrades && val > 0 ? val : '')
+        })
+        // Promedio del proceso
+        if (includeGrades) {
+          const avg = calculateProcessAvg(student.id, process.code)
+          row.push(avg > 0 ? Math.round(avg * 10) / 10 : '')
+        } else {
+          row.push('')
+        }
+      })
+      // Nota final
+      if (includeGrades) {
+        const final = calculateFinalGrade(student.id)
+        row.push(final > 0 ? Math.round(final * 10) / 10 : '')
+        if (final > 0) {
+          const perf = getPerformanceLevel(final)
+          row.push(perf.label)
+        } else {
+          row.push('')
+        }
+      } else {
+        row.push('')
+        row.push('')
+      }
+      dataRows.push(row)
+    })
+
+    // Crear workbook
+    const wb = XLSX.utils.book_new()
+    const wsData = [
+      [`${subjectName} - ${groupName} - ${periodName}`],
+      [],
+      headers,
+      subHeaders,
+      ...dataRows,
+    ]
+    const ws = XLSX.utils.aoa_to_sheet(wsData)
+
+    // Ancho de columnas
+    ws['!cols'] = [
+      { wch: 4 },   // #
+      { wch: 35 },  // Estudiante
+      ...headers.slice(2).map(() => ({ wch: 10 })),
+    ]
+
+    // Merge título
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }]
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Planilla')
+    const fileName = `Planilla_${subjectName}_${groupName}_${periodName}${includeGrades ? '_con_notas' : '_vacia'}.xlsx`
+      .replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\.áéíóúÁÉÍÓÚñÑ]/g, '')
+    XLSX.writeFile(wb, fileName)
+  }
+
   // Guardar notas
   const saveGrades = async () => {
     if (!selectedAssignment?.id || !academicTermId) {
@@ -597,24 +714,47 @@ export default function Grades() {
 
       await partialGradesApi.bulkUpsert(partialGradesToSave)
       
-      // Guardar notas finales
-      const finalGradesToSave = students
-        .filter(student => {
-          const studentGrades = grades[student.id] || {}
-          return Object.values(studentGrades).some(v => v > 0)
-        })
-        .map(student => {
-          const finalScore = calculateFinalGrade(student.id)
-          return {
-            studentEnrollmentId: student.enrollmentId,
-            academicTermId: academicTermId!,
-            subjectId: selectedAssignment.subject.id,
-            finalScore: Math.round(finalScore * 10) / 10,
-          }
-        })
+      // Guardar notas finales (y limpiar las de estudiantes sin notas)
+      const studentsWithGrades: string[] = []
+      const studentsWithoutGrades: string[] = []
+      
+      students.forEach(student => {
+        const studentGrades = grades[student.id] || {}
+        if (Object.values(studentGrades).some(v => v > 0)) {
+          studentsWithGrades.push(student.id)
+        } else {
+          studentsWithoutGrades.push(student.id)
+        }
+      })
+
+      const finalGradesToSave = studentsWithGrades.map(studentId => {
+        const student = students.find(s => s.id === studentId)!
+        const finalScore = calculateFinalGrade(studentId)
+        return {
+          studentEnrollmentId: student.enrollmentId,
+          academicTermId: academicTermId!,
+          subjectId: selectedAssignment.subject.id,
+          finalScore: Math.round(finalScore * 10) / 10,
+        }
+      })
       
       if (finalGradesToSave.length > 0) {
         await periodFinalGradesApi.bulkUpsert(finalGradesToSave)
+      }
+
+      // Eliminar notas finales de estudiantes que ya no tienen calificaciones
+      if (studentsWithoutGrades.length > 0) {
+        const existingFinals = await periodFinalGradesApi.getByGroup(
+          selectedAssignment.group.id,
+          academicTermId!
+        )
+        const toDelete = (existingFinals.data || []).filter((g: any) => {
+          const student = students.find(s => s.enrollmentId === g.studentEnrollmentId)
+          return student && studentsWithoutGrades.includes(student.id) && g.subjectId === selectedAssignment.subject.id
+        })
+        for (const g of toDelete) {
+          await periodFinalGradesApi.delete(g.id)
+        }
       }
       
       const notasConValor = partialGradesToSave.filter(g => g.score > 0).length
@@ -733,6 +873,30 @@ export default function Grades() {
               <Settings className="w-4 h-4" />
               <span className="hidden sm:inline">Configurar</span>
             </button>
+          )}
+          {selectedAssignment && students.length > 0 && (
+            <div className="relative group">
+              <button
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm sm:text-base"
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Planilla</span>
+              </button>
+              <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-20 hidden group-hover:block min-w-[200px]">
+                <button
+                  onClick={() => downloadGradeSheet(false)}
+                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 rounded-t-lg transition-colors"
+                >
+                  Planilla vacía (para imprimir)
+                </button>
+                <button
+                  onClick={() => downloadGradeSheet(true)}
+                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 rounded-b-lg border-t border-slate-100 transition-colors"
+                >
+                  Planilla con notas actuales
+                </button>
+              </div>
+            </div>
           )}
           <button 
             onClick={saveGrades}
@@ -1097,6 +1261,108 @@ export default function Grades() {
           </div>
         ) : viewMode === 'achievements' ? (
           /* Vista de Logros - Asociación automática logro-desempeño */
+          <div className="space-y-4">
+          {/* Banco de Logros Panel */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <button
+              onClick={() => setShowBank(!showBank)}
+              className="w-full flex items-center justify-between px-6 py-3 hover:bg-slate-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Library className="w-5 h-5 text-indigo-600" />
+                <div className="text-left">
+                  <span className="font-semibold text-slate-900">Banco de Logros</span>
+                  <span className="text-sm text-slate-500 ml-2">Plantillas reutilizables para copiar</span>
+                </div>
+              </div>
+              <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${showBank ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {showBank && (
+              <div className="border-t border-slate-200 p-4 space-y-3">
+                {/* Búsqueda y filtros */}
+                <div className="flex gap-2 flex-wrap">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Buscar logros..."
+                      value={bankSearch}
+                      onChange={(e) => setBankSearch(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && loadBank()}
+                      className="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+                  <select
+                    value={bankFilter}
+                    onChange={(e) => setBankFilter(e.target.value)}
+                    className="text-sm border border-slate-300 rounded-lg px-3 py-2"
+                  >
+                    <option value="">Todos los tipos</option>
+                    <option value="ACADEMIC">Académico</option>
+                    <option value="ATTITUDINAL">Actitudinal</option>
+                  </select>
+                  <button
+                    onClick={loadBank}
+                    className="px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  >
+                    Buscar
+                  </button>
+                </div>
+
+                {/* Resultados */}
+                {bankLoading ? (
+                  <div className="text-center py-6 text-slate-400 text-sm">Cargando...</div>
+                ) : bankItems.length === 0 ? (
+                  <div className="text-center py-6">
+                    <Library className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                    <p className="text-sm text-slate-500">No hay logros en el banco</p>
+                    <p className="text-xs text-slate-400 mt-1">Puedes agregar logros desde el módulo de Logros y Juicios</p>
+                  </div>
+                ) : (
+                  <div className="max-h-64 overflow-y-auto space-y-2">
+                    {bankItems.map((item: any) => (
+                      <div key={item.id} className="flex items-start gap-3 p-3 rounded-lg border border-slate-100 hover:bg-slate-50 group">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-slate-800">{item.description}</p>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            {item.subject && (
+                              <span className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">{item.subject.name}</span>
+                            )}
+                            {item.performanceLevel && (
+                              <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                item.performanceLevel === 'SUPERIOR' ? 'bg-green-50 text-green-600' :
+                                item.performanceLevel === 'ALTO' ? 'bg-blue-50 text-blue-600' :
+                                item.performanceLevel === 'BASICO' ? 'bg-amber-50 text-amber-600' :
+                                'bg-red-50 text-red-600'
+                              }`}>{item.performanceLevel}</span>
+                            )}
+                            {item.category && (
+                              <span className="text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{item.category}</span>
+                            )}
+                            <span className="text-[10px] text-slate-400">Usado {item.usageCount}x</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(item.description)
+                            achievementBankApi.markUsed(item.id).catch(() => {})
+                            setSaveMessage({ type: 'success', text: 'Logro copiado al portapapeles' })
+                            setTimeout(() => setSaveMessage(null), 2000)
+                          }}
+                          className="flex-shrink-0 p-2 rounded-lg hover:bg-indigo-100 text-slate-400 hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Copiar texto del logro"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
               <h3 className="font-semibold text-slate-900">Asociación Logros - Desempeño</h3>
@@ -1193,6 +1459,7 @@ export default function Grades() {
                 </div>
               </div>
             )}
+          </div>
           </div>
         ) : null}
       </div>

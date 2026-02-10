@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { reportsApi, groupsApi, academicYearsApi, academicTermsApi } from '../lib/api'
+import { reportsApi, groupsApi, academicYearsApi, academicTermsApi, capabilitiesApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
 interface StudentRow {
@@ -105,7 +105,11 @@ const performanceConfig = {
 }
 
 export default function ReportCards() {
-  const { institution } = useAuth()
+  const { user, institution } = useAuth()
+  const isManager = user?.roles?.some((r: any) => {
+    const roleName = r.role?.name || r.name || ''
+    return roleName.includes('ADMIN') || roleName.includes('COORDINADOR') || roleName.includes('SUPERADMIN')
+  }) ?? false
 
   // Datos de API
   const [groups, setGroups] = useState<Array<{ id: string; name: string; grade?: any }>>([])
@@ -141,12 +145,26 @@ export default function ReportCards() {
       groupsApi.getAll({ institutionId: institution.id }),
       academicYearsApi.getAll(institution.id),
       reportsApi.getReportCardConfig(),
-    ]).then(([grpRes, yearRes, cfgRes]) => {
-      const grps = (grpRes.data || []).map((g: any) => ({
+      capabilitiesApi.getMyCapabilities().catch(() => ({ data: null })),
+    ]).then(([grpRes, yearRes, cfgRes, capsRes]) => {
+      let grps = (grpRes.data || []).map((g: any) => ({
         id: g.id,
         name: g.grade ? `${g.grade.name} - ${g.name}` : g.name,
         grade: g.grade,
       }))
+
+      // Filtrar grupos para DOCENTE según capabilities
+      if (!isManager && capsRes.data) {
+        const caps = capsRes.data
+        const allowedIds = new Set<string>([
+          ...(caps.teacherAssignmentGroupIds || []),
+          ...(caps.tutorGroupIds || []),
+        ])
+        if (allowedIds.size > 0) {
+          grps = grps.filter((g: any) => allowedIds.has(g.id))
+        }
+      }
+
       setGroups(grps)
       if (grps.length > 0) setSelectedGroupId(grps[0].id)
 
@@ -523,6 +541,12 @@ export default function ReportCards() {
                                       <p className="leading-tight font-medium">{sg.performanceLevel}</p>
                                     ) : (
                                       <p className="leading-tight">{sg.achievement || '-'}</p>
+                                    )}
+                                    {sg.achievementObservation && (
+                                      <p className="text-slate-500 mt-0.5 text-[10px]">{sg.achievementObservation}</p>
+                                    )}
+                                    {sg.judgment && (
+                                      <p className="text-amber-700 italic mt-0.5 text-[10px]">{sg.judgment}</p>
                                     )}
                                     {config.showRecommendations && sg.recommendation && (
                                       <p className="text-red-600 italic mt-0.5 text-[10px]">* {sg.recommendation}</p>

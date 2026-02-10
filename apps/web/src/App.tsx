@@ -62,6 +62,7 @@ import SystemConfig from './pages/admin/SystemConfig'
 
 // Módulo Financiero
 import Timetabling from './pages/Timetabling'
+import CapabilitiesConfig from './pages/CapabilitiesConfig'
 import {
   FinanceHub,
   FinanceDashboard,
@@ -296,6 +297,7 @@ function App() {
                   {/* MÓDULO DE TIMETABLING (HORARIOS)                            */}
                   {/* ═══════════════════════════════════════════════════════════ */}
                   <Route path="/timetabling" element={<Timetabling />} />
+                  <Route path="/capabilities-config" element={<CapabilitiesConfig />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

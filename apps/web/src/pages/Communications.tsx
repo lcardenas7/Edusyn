@@ -3,7 +3,7 @@ import { Search, Plus, X, Send, Mail, Bell, Users, Calendar, Eye, Trash2, FileTe
 import { communicationsApi, groupsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
-type CommunicationType = 'CIRCULAR' | 'NOTIFICATION' | 'MESSAGE' | 'ANNOUNCEMENT'
+type CommunicationType = 'CIRCULAR' | 'NOTIFICATION' | 'REMINDER' | 'ANNOUNCEMENT'
 type RecipientType = 'ALL' | 'TEACHERS' | 'STUDENTS' | 'PARENTS' | 'GROUP' | 'INDIVIDUAL'
 type CommunicationStatus = 'DRAFT' | 'SENT' | 'SCHEDULED'
 type TabType = 'sent' | 'inbox'
@@ -26,8 +26,8 @@ interface Communication {
 
 const typeLabels: Record<CommunicationType, { label: string; icon: typeof Mail; color: string }> = {
   CIRCULAR: { label: 'Circular', icon: FileText, color: 'bg-blue-100 text-blue-700' },
-  NOTIFICATION: { label: 'Notificacion', icon: Bell, color: 'bg-amber-100 text-amber-700' },
-  MESSAGE: { label: 'Mensaje', icon: MessageSquare, color: 'bg-green-100 text-green-700' },
+  NOTIFICATION: { label: 'Notificación', icon: Bell, color: 'bg-amber-100 text-amber-700' },
+  REMINDER: { label: 'Recordatorio', icon: Calendar, color: 'bg-green-100 text-green-700' },
   ANNOUNCEMENT: { label: 'Anuncio', icon: Megaphone, color: 'bg-purple-100 text-purple-700' },
 }
 
@@ -509,7 +509,7 @@ export default function Communications() {
                     <option value="ALL">Todos los tipos</option>
                     <option value="CIRCULAR">Circulares</option>
                     <option value="NOTIFICATION">Notificaciones</option>
-                    <option value="MESSAGE">Mensajes</option>
+                    <option value="REMINDER">Recordatorios</option>
                     <option value="ANNOUNCEMENT">Anuncios</option>
                   </select>
                   <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)} className="flex-1 min-w-[140px] px-3 py-2 border border-slate-300 rounded-lg">
@@ -691,7 +691,7 @@ export default function Communications() {
                   <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as CommunicationType })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
                     <option value="CIRCULAR">Circular</option>
                     <option value="NOTIFICATION">Notificacion</option>
-                    <option value="MESSAGE">Mensaje</option>
+                    <option value="REMINDER">Recordatorio</option>
                     <option value="ANNOUNCEMENT">Anuncio</option>
                   </select>
                 </div>
