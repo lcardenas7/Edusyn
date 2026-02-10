@@ -937,11 +937,13 @@ export default function Students() {
                                    gradeNamesExpected.some(name => gradeNameNorm.includes(name))
           const gradeMatches = gradeMatchByNumber || gradeMatchByName
           
-          // La sección debe coincidir
+          // La sección debe coincidir (soporta nombres simples "A" y combinados "11A")
           const sectionUpper = section!.toUpperCase()
+          const combinedName = normalizeText(`${gradeNum}${section}`)
           const sectionMatches = groupNameNorm === section!.toLowerCase() ||
                                  g.name.toUpperCase() === sectionUpper ||
-                                 normalizeText(g.name) === normalizeText(section!)
+                                 normalizeText(g.name) === normalizeText(section!) ||
+                                 groupNameNorm === combinedName
           
           return gradeMatches && sectionMatches
         })
