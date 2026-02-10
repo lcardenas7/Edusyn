@@ -129,6 +129,7 @@ export class StudentGradesService {
   /**
    * Calcula la nota del corte para un estudiante en una asignatura.
    * Promedio ponderado de componentes según el plan de evaluación.
+   * Lee de PartialGrade (fuente de verdad), fallback a StudentGrade.
    */
   async calculateTermGrade(
     studentEnrollmentId: string,
@@ -153,21 +154,52 @@ export class StudentGradesService {
 
     if (!plan) return { grade: null, components: [] };
 
-    const componentResults = await Promise.all(
-      plan.components.map(async (cw) => {
-        const avg = await this.calculateComponentAverage(
-          studentEnrollmentId,
-          academicTermId,
-          cw.componentId,
-        );
+    // Leer de PartialGrade (fuente de verdad desde la planilla)
+    const partials = await this.prisma.partialGrade.findMany({
+      where: { studentEnrollmentId, teacherAssignmentId, academicTermId },
+    });
+
+    let componentResults: { componentId: string; name: string; average: number | null; percentage: number }[];
+
+    if (partials.length > 0) {
+      // Agrupar PartialGrades por componentType (matches EvaluationComponent.code)
+      const scoresByType = new Map<string, number[]>();
+      for (const p of partials) {
+        const scores = scoresByType.get(p.componentType) || [];
+        scores.push(Number(p.score));
+        scoresByType.set(p.componentType, scores);
+      }
+
+      componentResults = plan.components.map((cw) => {
+        const scores = scoresByType.get(cw.component.code) || [];
+        const avg = scores.length > 0
+          ? this.roundToOneDecimal(scores.reduce((a, b) => a + b, 0) / scores.length)
+          : null;
         return {
           componentId: cw.componentId,
           name: cw.component.name,
           average: avg,
           percentage: cw.percentage,
         };
-      }),
-    );
+      });
+    } else {
+      // Fallback: leer de StudentGrade (sistema anterior)
+      componentResults = await Promise.all(
+        plan.components.map(async (cw) => {
+          const avg = await this.calculateComponentAverage(
+            studentEnrollmentId,
+            academicTermId,
+            cw.componentId,
+          );
+          return {
+            componentId: cw.componentId,
+            name: cw.component.name,
+            average: avg,
+            percentage: cw.percentage,
+          };
+        }),
+      );
+    }
 
     const validComponents = componentResults.filter((c) => c.average !== null);
     if (validComponents.length === 0) return { grade: null, components: componentResults };
