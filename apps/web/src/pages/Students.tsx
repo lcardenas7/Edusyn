@@ -123,7 +123,7 @@ export default function Students() {
   
   // Estados para importación con backend
   const [currentAcademicYear, setCurrentAcademicYear] = useState<{ id: string; year: number } | null>(null)
-  const [availableGroups, setAvailableGroups] = useState<{ id: string; name: string; grade?: { name: string } }[]>([])
+  const [availableGroups, setAvailableGroups] = useState<{ id: string; name: string; grade?: { name: string; number?: number } }[]>([])
   const [studentGuardians, setStudentGuardians] = useState<any[]>([])
   const [loadingGuardians, setLoadingGuardians] = useState(false)
   
@@ -922,21 +922,46 @@ export default function Students() {
         
         const gradeNameExpected = numberToGradeName(gradeNum)
         
-        // Buscar grupo en la BD
+        // Buscar grupo en la BD con múltiples estrategias
+        const gradeNumInt = parseInt(gradeNum, 10)
         const group = availableGroups.find(g => {
-          if (!g.grade?.name) return false
-          const gradeNameNorm = normalizeText(g.grade.name)
+          if (!g.grade) return false
+          const gradeObj = g.grade as any
+          const gradeNameNorm = normalizeText(g.grade.name || '')
           const groupNameNorm = normalizeText(g.name)
           
-          // El grado debe contener el número O el nombre esperado
-          const gradeMatches = gradeNameNorm.includes(gradeNum!) || 
-                               gradeNameNorm.includes(gradeNameExpected)
+          // Estrategia 1: Comparar por campo numérico del grado (más confiable)
+          const gradeMatchByNumber = gradeObj.number != null && gradeObj.number === gradeNumInt
+          // Estrategia 2: El nombre del grado contiene el número o nombre esperado
+          const gradeMatchByName = gradeNameNorm.includes(gradeNum!) || 
+                                   gradeNameNorm.includes(gradeNameExpected)
+          const gradeMatches = gradeMatchByNumber || gradeMatchByName
+          
           // La sección debe coincidir
+          const sectionUpper = section!.toUpperCase()
           const sectionMatches = groupNameNorm === section!.toLowerCase() ||
-                                 g.name.toUpperCase() === section
+                                 g.name.toUpperCase() === sectionUpper ||
+                                 normalizeText(g.name) === normalizeText(section!)
           
           return gradeMatches && sectionMatches
         })
+        
+        // Fallback: buscar por nombre combinado (ej: "6A" contra grade.name + group.name)
+        if (!group) {
+          const combinedSearch = normalizeText(`${gradeNum}${section}`)
+          const groupFallback = availableGroups.find(g => {
+            // Intentar match contra nombre completo del grupo
+            const fullName = normalizeText(`${(g.grade as any)?.number ?? ''}${g.name}`)
+            if (fullName === combinedSearch) return true
+            // También contra gradeName + groupName
+            const fullName2 = normalizeText(`${g.grade?.name || ''}${g.name}`)
+            if (fullName2.includes(combinedSearch)) return true
+            return false
+          })
+          if (groupFallback) {
+            return { id: groupFallback.id, matched: `${groupFallback.grade?.name} ${groupFallback.name}`, original }
+          }
+        }
         
         if (group) {
           return { id: group.id, matched: `${group.grade?.name} ${group.name}`, original }
@@ -976,12 +1001,18 @@ export default function Students() {
           summaryMsg += `   "${code}" (${v.count} estudiantes)\n`
         })
         summaryMsg += '\n⚠️ Estos estudiantes NO se importarán.\n'
-        summaryMsg += '\nGrupos disponibles en el sistema:\n'
+        summaryMsg += `\nGrupos disponibles en el sistema (${availableGroups.length}):\n`
         const availableGroupNames = availableGroups
-          .map(g => g.grade?.name ? `${g.grade.name} ${g.name}` : g.name)
+          .map(g => {
+            const gradeObj = g.grade as any
+            const num = gradeObj?.number ?? '?'
+            return `${g.grade?.name || '?'} (${num}) → "${g.name}"`
+          })
           .sort()
-          .join(', ')
-        summaryMsg += availableGroupNames || 'Ninguno'
+          .join('\n   ')
+        summaryMsg += '   ' + (availableGroupNames || 'Ninguno')
+        // Log para debugging
+        console.log('[Import Debug] availableGroups:', availableGroups.map(g => ({ id: g.id, name: g.name, gradeName: g.grade?.name, gradeNumber: (g.grade as any)?.number })))
       }
       
       summaryMsg += '\n\n¿Desea continuar con la importación?'
