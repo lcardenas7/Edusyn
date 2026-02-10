@@ -34,7 +34,7 @@ export class PeriodFinalGradesController {
   }
 
   @Get('by-student')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async findByStudent(
     @Query('studentEnrollmentId') studentEnrollmentId: string,
     @Query('academicTermId') academicTermId?: string,
@@ -43,7 +43,7 @@ export class PeriodFinalGradesController {
   }
 
   @Delete(':id')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async delete(@Param('id') id: string) {
     return this.periodFinalGradesService.delete(id);
   }

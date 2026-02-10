@@ -22,6 +22,9 @@ import {
   CheckSquare,
   Square,
   Eye,
+  Library,
+  Search,
+  Copy,
 } from 'lucide-react'
 import {
   academicYearsApi,
@@ -31,6 +34,7 @@ import {
   achievementsApi,
   periodFinalGradesApi,
   academicStudentsApi,
+  achievementBankApi,
 } from '../lib/api'
 
 type TabType = 'achievements' | 'config'
@@ -160,6 +164,13 @@ export default function Achievements() {
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set())
   const [observationTemplates, setObservationTemplates] = useState<ObservationTemplate[]>([])
 
+  // Banco de logros
+  const [showBank, setShowBank] = useState(false)
+  const [bankItems, setBankItems] = useState<any[]>([])
+  const [bankLoading, setBankLoading] = useState(false)
+  const [bankSearch, setBankSearch] = useState('')
+  const [bankFilter, setBankFilter] = useState<string>('')
+
   const userRoles = useMemo(() => {
     if (!user?.roles) return []
     return user.roles.map((r: any) => typeof r === 'string' ? r : r.role?.name || r.name).filter(Boolean)
@@ -171,6 +182,41 @@ export default function Achievements() {
   const isTeacher = userRoles.includes('DOCENTE')
 
   const selectedAssignment = teacherAssignments.find(a => a.id === selectedAssignmentId)
+
+  // Cargar banco de logros
+  const loadBank = async () => {
+    setBankLoading(true)
+    try {
+      const params: any = {}
+      if (selectedAssignment?.subject?.id) params.subjectId = selectedAssignment.subject.id
+      if (bankSearch) params.query = bankSearch
+      if (bankFilter) params.achievementType = bankFilter
+      const res = await achievementBankApi.search(params)
+      setBankItems(res.data?.items || [])
+    } catch (err) {
+      console.error('Error loading bank:', err)
+    } finally {
+      setBankLoading(false)
+    }
+  }
+
+  // Guardar logro actual al banco
+  const saveToBank = async (description: string) => {
+    if (!description.trim()) return
+    try {
+      await achievementBankApi.create({
+        description: description.trim(),
+        subjectId: selectedAssignment?.subject?.id,
+        achievementType: 'ACADEMIC',
+        isShared: true,
+      })
+      setMessage({ type: 'success', text: 'Logro guardado en el banco' })
+      setTimeout(() => setMessage(null), 2000)
+      if (showBank) loadBank()
+    } catch (err) {
+      console.error('Error saving to bank:', err)
+    }
+  }
 
   // 1. Cargar años académicos cuando institutionId esté disponible
   useEffect(() => {
@@ -923,22 +969,123 @@ export default function Achievements() {
                   ))}
 
                   {achievements.length < config.achievementsPerPeriod && (
-                    <div className="p-4 border-2 border-dashed border-slate-200 rounded-lg">
+                    <div className="p-4 border-2 border-dashed border-slate-200 rounded-lg space-y-3">
                       <textarea
                         value={newAchievementText}
                         onChange={(e) => setNewAchievementText(e.target.value)}
                         placeholder="Escriba el texto del logro académico..."
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mb-2"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                         rows={3}
                       />
-                      <button
-                        onClick={handleCreateAchievement}
-                        disabled={!newAchievementText.trim() || saving}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Agregar Logro
-                      </button>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={handleCreateAchievement}
+                          disabled={!newAchievementText.trim() || saving}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Agregar Logro
+                        </button>
+                        <button
+                          onClick={() => { setShowBank(!showBank); if (!showBank) loadBank() }}
+                          className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm transition-colors ${showBank ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-slate-300 hover:bg-slate-50 text-slate-600'}`}
+                        >
+                          <Library className="w-4 h-4" />
+                          Banco de Logros
+                        </button>
+                        {newAchievementText.trim() && (
+                          <button
+                            onClick={() => saveToBank(newAchievementText)}
+                            className="flex items-center gap-2 px-3 py-2 border border-green-300 text-green-700 rounded-lg hover:bg-green-50 text-sm"
+                            title="Guardar este texto en el banco para reutilizar"
+                          >
+                            <Save className="w-3 h-3" />
+                            Guardar al banco
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Panel Banco de Logros */}
+                      {showBank && (
+                        <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 space-y-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Library className="w-4 h-4 text-indigo-600" />
+                            <span className="text-sm font-semibold text-slate-800">Banco de Logros</span>
+                            <span className="text-xs text-slate-400">Seleccione para usar como texto base</span>
+                          </div>
+                          <div className="flex gap-2 flex-wrap">
+                            <div className="relative flex-1 min-w-[180px]">
+                              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                              <input
+                                type="text"
+                                placeholder="Buscar..."
+                                value={bankSearch}
+                                onChange={(e) => setBankSearch(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && loadBank()}
+                                className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                              />
+                            </div>
+                            <select
+                              value={bankFilter}
+                              onChange={(e) => { setBankFilter(e.target.value); setTimeout(loadBank, 0) }}
+                              className="text-xs border border-slate-300 rounded-lg px-2 py-1.5"
+                            >
+                              <option value="">Todos</option>
+                              <option value="ACADEMIC">Académico</option>
+                              <option value="ATTITUDINAL">Actitudinal</option>
+                            </select>
+                            <button onClick={loadBank} className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                              Buscar
+                            </button>
+                          </div>
+
+                          {bankLoading ? (
+                            <div className="text-center py-4 text-slate-400 text-xs">Cargando...</div>
+                          ) : bankItems.length === 0 ? (
+                            <div className="text-center py-4">
+                              <Library className="w-6 h-6 mx-auto text-slate-300 mb-1" />
+                              <p className="text-xs text-slate-500">No hay logros en el banco</p>
+                              <p className="text-[10px] text-slate-400">Escribe un logro y presiona "Guardar al banco" para agregarlo</p>
+                            </div>
+                          ) : (
+                            <div className="max-h-48 overflow-y-auto space-y-1.5">
+                              {bankItems.map((item: any) => (
+                                <div
+                                  key={item.id}
+                                  className="flex items-start gap-2 p-2.5 rounded-lg border border-slate-100 bg-white hover:bg-indigo-50 hover:border-indigo-200 cursor-pointer group transition-colors"
+                                  onClick={() => {
+                                    setNewAchievementText(item.description)
+                                    achievementBankApi.markUsed(item.id).catch(() => {})
+                                    setMessage({ type: 'success', text: 'Texto del logro insertado' })
+                                    setTimeout(() => setMessage(null), 2000)
+                                  }}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-slate-700 leading-relaxed">{item.description}</p>
+                                    <div className="flex items-center gap-1.5 mt-1">
+                                      {item.subject && (
+                                        <span className="text-[10px] bg-blue-50 text-blue-600 px-1 py-0.5 rounded">{item.subject.name}</span>
+                                      )}
+                                      {item.performanceLevel && (
+                                        <span className={`text-[10px] px-1 py-0.5 rounded ${
+                                          item.performanceLevel === 'SUPERIOR' ? 'bg-green-50 text-green-600' :
+                                          item.performanceLevel === 'ALTO' ? 'bg-blue-50 text-blue-600' :
+                                          item.performanceLevel === 'BASICO' ? 'bg-amber-50 text-amber-600' :
+                                          'bg-red-50 text-red-600'
+                                        }`}>{item.performanceLevel}</span>
+                                      )}
+                                      {item.category && (
+                                        <span className="text-[10px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded">{item.category}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <Copy className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-500 flex-shrink-0 mt-0.5" />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 
