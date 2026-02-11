@@ -113,6 +113,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasFeature = (featureId: string) => {
     // SuperAdmin tiene acceso a todo
     if (isSuperAdmin) return true
+    // Si hay módulos activos pero ninguno tiene features configuradas,
+    // se consideran todas habilitadas (features vacías = sin restricciones)
+    if (enabledModules.length > 0 && enabledFeatures.length === 0) return true
     return enabledFeatures.includes(featureId)
   }
 
