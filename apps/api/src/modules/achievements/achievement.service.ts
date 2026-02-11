@@ -79,8 +79,10 @@ export class AchievementService {
     const typePrefix = data.isPromotional ? 'PROM' : (data.achievementType === 'ATTITUDINAL' ? 'ACT' : 'LOG');
     const code = `${typePrefix}-${subjectCode}-P${periodOrder}-${String(data.orderNumber).padStart(2, '0')}`;
 
+    const ta = await this.prisma.teacherAssignment.findUnique({ where: { id: data.teacherAssignmentId }, select: { institutionId: true } });
     return this.prisma.achievement.create({
       data: {
+        institutionId: ta!.institutionId,
         code,
         teacherAssignmentId: data.teacherAssignmentId,
         academicTermId: data.academicTermId,
@@ -143,8 +145,10 @@ export class AchievementService {
       });
     }
 
+    const ta2 = await this.prisma.teacherAssignment.findUnique({ where: { id: data.teacherAssignmentId }, select: { institutionId: true } });
     return this.prisma.attitudinalAchievement.create({
       data: {
+        institutionId: ta2!.institutionId,
         teacherAssignmentId: data.teacherAssignmentId,
         academicTermId: data.academicTermId,
         achievementId: data.achievementId,
@@ -308,8 +312,10 @@ export class AchievementService {
       });
     }
 
+    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: data.studentEnrollmentId }, select: { institutionId: true } });
     return this.prisma.studentAchievement.create({
       data: {
+        institutionId: enr!.institutionId,
         studentEnrollmentId: data.studentEnrollmentId,
         achievementId: data.achievementId,
         performanceLevel: data.performanceLevel,
@@ -461,6 +467,7 @@ export class AchievementService {
             performanceLevel: level,
           },
           create: {
+            institutionId: (await this.prisma.studentEnrollment.findUnique({ where: { id: enrollmentId }, select: { institutionId: true } }))!.institutionId,
             studentEnrollmentId: enrollmentId,
             achievementId,
             performanceLevel: level,

@@ -148,6 +148,7 @@ async function main() {
       // Matricular estudiante
       const enrollment = await prisma.studentEnrollment.create({
         data: {
+          institutionId: institution.id,
           studentId: student.id,
           academicYearId: academicYear.id,
           groupId: group.id,
@@ -190,6 +191,7 @@ async function main() {
           if (!activity) {
             activity = await prisma.evaluativeActivity.create({
               data: {
+                institutionId: institution.id,
                 teacherAssignmentId: assignment.id,
                 academicTermId: term.id,
                 evaluationPlanId: evalPlan.id,
@@ -204,6 +206,7 @@ async function main() {
           const score = generateRandomScore();
           await prisma.studentGrade.create({
             data: {
+              institutionId: institution.id,
               studentEnrollmentId: enrollment.id,
               evaluativeActivityId: activity.id,
               score,
@@ -222,6 +225,7 @@ async function main() {
             },
             update: { finalScore: score },
             create: {
+              institutionId: institution.id,
               studentEnrollmentId: enrollment.id,
               academicTermId: term.id,
               subjectId: assignment.subjectId,
@@ -242,6 +246,7 @@ async function main() {
             try {
               await prisma.attendanceRecord.create({
                 data: {
+                  institutionId: institution.id,
                   teacherAssignmentId: assignment.id,
                   studentEnrollmentId: enrollment.id,
                   date,

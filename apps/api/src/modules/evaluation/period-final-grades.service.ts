@@ -26,7 +26,7 @@ export class PeriodFinalGradesService {
         observations: data.observations,
         enteredById: data.enteredById,
       },
-      create: data,
+      create: { ...data, institutionId: (await this.prisma.studentEnrollment.findUnique({ where: { id: data.studentEnrollmentId }, select: { institutionId: true } }))!.institutionId },
       include: {
         studentEnrollment: {
           include: {

@@ -360,8 +360,10 @@ export class GradeChangeService {
     movementType: EnrollmentMovementType;
     academicActId?: string;
   }) {
+    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: data.enrollmentId }, select: { institutionId: true } });
     await this.prisma.enrollmentEvent.create({
       data: {
+        institutionId: enr!.institutionId,
         enrollmentId: data.enrollmentId,
         type: data.type as any,
         previousValue: data.previousValue,

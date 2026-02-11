@@ -55,6 +55,7 @@ async function main() {
 
       await prisma.teacherAssignment.create({
         data: {
+          institutionId: academicYear.institutionId,
           academicYearId: academicYear.id,
           groupId: group.id,
           subjectId: subject.id,

@@ -247,8 +247,10 @@ export class StudentsService {
   }
 
   async enroll(dto: EnrollStudentDto) {
+    const student = await this.prisma.student.findUnique({ where: { id: dto.studentId }, select: { institutionId: true } });
     return this.prisma.studentEnrollment.create({
       data: {
+        institutionId: student!.institutionId,
         studentId: dto.studentId,
         academicYearId: dto.academicYearId,
         groupId: dto.groupId,
@@ -401,6 +403,7 @@ export class StudentsService {
         if (!existingEnrollment) {
           await this.prisma.studentEnrollment.create({
             data: {
+              institutionId: student.institutionId,
               studentId: student.id,
               academicYearId: data.academicYearId,
               groupId: studentData.groupId,

@@ -175,6 +175,7 @@ export class PreventiveCutsService {
             status: statusToPersist,
           },
           create: {
+            institutionId: teacherAssignment.institutionId,
             teacherAssignmentId: teacherAssignment.id,
             studentEnrollmentId: enrollment.id,
             academicTermId: dto.academicTermId,

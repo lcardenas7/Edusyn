@@ -100,6 +100,7 @@ async function main() {
       // Matricular en el grupo
       const enrollment = await prisma.studentEnrollment.create({
         data: {
+          institutionId: institution.id,
           studentId: student.id,
           groupId: group.id,
           academicYearId: academicYear.id,
@@ -116,6 +117,7 @@ async function main() {
 
           await prisma.periodFinalGrade.create({
             data: {
+              institutionId: institution.id,
               studentEnrollmentId: enrollment.id,
               subjectId: assignment.subjectId,
               academicTermId: term.id,
@@ -142,6 +144,7 @@ async function main() {
 
           await prisma.attendanceRecord.create({
             data: {
+              institutionId: institution.id,
               studentEnrollmentId: enrollment.id,
               teacherAssignmentId: assignment.id,
               date,

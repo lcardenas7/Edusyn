@@ -362,6 +362,7 @@ export class AcademicYearLifecycleService {
       // Crear evento de auditoría
       await this.prisma.enrollmentEvent.create({
         data: {
+          institutionId: enrollment.institutionId,
           enrollmentId: enrollment.id,
           type: shouldPromote ? 'PROMOTED' : 'REPEATED',
           reason: 'Cierre de año lectivo',
@@ -519,6 +520,7 @@ export class AcademicYearLifecycleService {
         // Crear nueva matrícula
         const newEnrollment = await this.prisma.studentEnrollment.create({
           data: {
+            institutionId: oldEnrollment.institutionId,
             studentId: oldEnrollment.studentId,
             academicYearId: dto.toYearId,
             groupId: targetGroup.id,
@@ -540,6 +542,7 @@ export class AcademicYearLifecycleService {
         // Crear evento de auditoría
         await this.prisma.enrollmentEvent.create({
           data: {
+            institutionId: oldEnrollment.institutionId,
             enrollmentId: newEnrollment.id,
             type: 'CREATED',
             reason: `Promoción desde año ${fromYear.year}`,

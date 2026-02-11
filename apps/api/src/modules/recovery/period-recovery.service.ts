@@ -284,9 +284,11 @@ export class PeriodRecoveryService {
     reinforcedDimension?: string;
     assignedById: string;
   }) {
+    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: data.studentEnrollmentId }, select: { institutionId: true } });
     return this.prisma.periodRecovery.create({
       data: {
         ...data,
+        institutionId: enr!.institutionId,
         status: 'PENDING',
       },
       include: {

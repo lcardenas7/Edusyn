@@ -37,6 +37,7 @@ export class FinalComponentGradesService {
     finalComponentId: string;
     grade: number;
   }) {
+    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: data.studentEnrollmentId }, select: { institutionId: true } });
     return this.prisma.finalComponentGrade.upsert({
       where: {
         studentEnrollmentId_teacherAssignmentId_finalComponentId: {
@@ -46,7 +47,7 @@ export class FinalComponentGradesService {
         },
       },
       update: { grade: data.grade },
-      create: data,
+      create: { ...data, institutionId: enr!.institutionId },
     });
   }
 
@@ -68,7 +69,7 @@ export class FinalComponentGradesService {
             },
           },
           update: { grade: g.grade },
-          create: g,
+          create: { ...g, institutionId: (await this.prisma.studentEnrollment.findUnique({ where: { id: g.studentEnrollmentId }, select: { institutionId: true } }))!.institutionId },
         });
         results.push(result);
       } else {

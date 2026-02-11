@@ -8,6 +8,7 @@ export class StudentGradesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async upsert(dto: UpsertStudentGradeDto) {
+    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: dto.studentEnrollmentId }, select: { institutionId: true } });
     return this.prisma.studentGrade.upsert({
       where: {
         studentEnrollmentId_evaluativeActivityId: {
@@ -20,6 +21,7 @@ export class StudentGradesService {
         observations: dto.observations,
       },
       create: {
+        institutionId: enr!.institutionId,
         studentEnrollmentId: dto.studentEnrollmentId,
         evaluativeActivityId: dto.evaluativeActivityId,
         score: dto.score,

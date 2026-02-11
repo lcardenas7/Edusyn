@@ -517,6 +517,12 @@ export class ReportsService {
     // 3. Delegar a AcademicYearService para obtener períodos
     const terms = await this.academicYearService.getTermsByAcademicYear(academicYearId);
 
+    // 3b. Obtener componentes finales (pruebas semestrales, etc.)
+    const finalComponents = await this.prisma.finalComponent.findMany({
+      where: { academicYearId },
+      orderBy: { order: 'asc' },
+    });
+
     // 4. Obtener estructura de asignaturas del estudiante
     const enrollmentStructure = await this.getEnrollmentSubjects(
       studentEnrollmentId,
@@ -546,7 +552,6 @@ export class ReportsService {
     for (const area of enrollmentStructure.areas) {
       for (const subject of area.subjects) {
         if (!subject.teacherAssignmentId) {
-          // Sin asignación de docente, no se puede calcular
           subjectResults.push({
             subjectId: subject.id || '',
             subjectName: subject.name,
@@ -567,7 +572,7 @@ export class ReportsService {
           continue;
         }
 
-        // Obtener notas por período
+        // Fuente 1: Notas por período
         const termGrades = await Promise.all(
           terms.map(async (term) => {
             const result = await this.studentGradesService.calculateTermGrade(
@@ -585,27 +590,55 @@ export class ReportsService {
           }),
         );
 
-        // Calcular nota anual actual
-        const obtainedTerms = termGrades.filter(t => t.grade !== null);
-        const pendingTerms = termGrades.filter(t => t.grade === null);
+        // Fuente 2: Notas de componentes finales (pruebas semestrales, etc.)
+        const fcGrades = await Promise.all(
+          finalComponents.map(async (fc) => {
+            const gradeRecord = await this.prisma.finalComponentGrade.findUnique({
+              where: {
+                studentEnrollmentId_teacherAssignmentId_finalComponentId: {
+                  studentEnrollmentId,
+                  teacherAssignmentId: subject.teacherAssignmentId!,
+                  finalComponentId: fc.id,
+                },
+              },
+            });
+            return {
+              id: fc.id,
+              name: fc.name,
+              weight: fc.weightPercentage,
+              grade: gradeRecord ? Number(gradeRecord.grade) : null,
+              status: (gradeRecord ? 'obtained' : 'pending') as 'obtained' | 'pending',
+            };
+          }),
+        );
+
+        // Unificar todas las fuentes de nota (períodos + componentes finales)
+        const allSources = [
+          ...termGrades.map(t => ({ weight: t.weight, grade: t.grade })),
+          ...fcGrades.map(fc => ({ weight: fc.weight, grade: fc.grade })),
+        ];
+
+        const obtainedSources = allSources.filter(s => s.grade !== null);
+        const pendingSources = allSources.filter(s => s.grade === null);
         
+        // Nota anual actual (promedio ponderado de fuentes obtenidas)
         let currentAnnualGrade: number | null = null;
-        if (obtainedTerms.length > 0) {
-          const weightedSum = obtainedTerms.reduce((acc, t) => acc + (t.grade! * t.weight), 0);
-          const totalObtainedWeight = obtainedTerms.reduce((acc, t) => acc + t.weight, 0);
+        if (obtainedSources.length > 0) {
+          const weightedSum = obtainedSources.reduce((acc, s) => acc + (s.grade! * s.weight), 0);
+          const totalObtainedWeight = obtainedSources.reduce((acc, s) => acc + s.weight, 0);
           currentAnnualGrade = Math.round((weightedSum / totalObtainedWeight) * 10) / 10;
         }
 
-        // Calcular nota mínima requerida en períodos pendientes
+        // Calcular nota mínima requerida en fuentes pendientes
         let minimumRequired: number | null = null;
         let status: 'approved' | 'at_risk' | 'impossible' | 'pending';
         let message: string;
 
-        const totalPendingWeight = pendingTerms.reduce((acc, t) => acc + t.weight, 0);
-        const obtainedWeightedSum = obtainedTerms.reduce((acc, t) => acc + (t.grade! * t.weight), 0);
+        const totalPendingWeight = pendingSources.reduce((acc, s) => acc + s.weight, 0);
+        const obtainedWeightedSum = obtainedSources.reduce((acc, s) => acc + (s.grade! * s.weight), 0);
 
-        if (pendingTerms.length === 0) {
-          // Todos los períodos calificados
+        if (pendingSources.length === 0) {
+          // Todas las fuentes calificadas
           if (currentAnnualGrade !== null && currentAnnualGrade >= passingGrade) {
             status = 'approved';
             message = `✅ Aprobado con ${currentAnnualGrade.toFixed(1)}`;
@@ -615,32 +648,31 @@ export class ReportsService {
             message = `❌ Reprobado con ${currentAnnualGrade?.toFixed(1) || 'N/A'}`;
             impossible++;
           }
-        } else if (obtainedTerms.length === 0) {
+        } else if (obtainedSources.length === 0) {
           // Sin notas aún
           minimumRequired = passingGrade;
           status = 'pending';
-          message = `📝 Necesita mínimo ${passingGrade.toFixed(1)} en todos los períodos`;
+          message = `📝 Necesita mínimo ${passingGrade.toFixed(1)} en todas las fuentes de nota`;
           pending++;
         } else {
-          // Algunos períodos calificados, otros pendientes
-          // Fórmula: notaRequerida = (notaAprobatoria * 100 - sumaObtenida) / pesoPendiente
+          // Algunas fuentes calificadas, otras pendientes
+          // Fórmula universal: notaRequerida = (notaAprobatoria * 100 - sumaObtenida) / pesoPendiente
           const requiredWeightedSum = passingGrade * 100 - obtainedWeightedSum;
           minimumRequired = Math.round((requiredWeightedSum / totalPendingWeight) * 10) / 10;
 
           if (minimumRequired <= 1.0) {
-            // Ya aprobó matemáticamente
             status = 'approved';
             message = `✅ Ya tiene asegurada la aprobación (actual: ${currentAnnualGrade?.toFixed(1)})`;
-            minimumRequired = 1.0; // Nota mínima posible
+            minimumRequired = 1.0;
             approved++;
           } else if (minimumRequired > 5.0) {
-            // Imposible aprobar (nota máxima es 5.0)
             status = 'impossible';
             message = `❌ Matemáticamente imposible aprobar (necesitaría ${minimumRequired.toFixed(1)})`;
             impossible++;
           } else {
+            const pendingCount = pendingSources.length;
             status = 'at_risk';
-            message = `⚠️ Necesita mínimo ${minimumRequired.toFixed(1)} en ${pendingTerms.length === 1 ? 'el período restante' : `los ${pendingTerms.length} períodos restantes`}`;
+            message = `⚠️ Necesita mínimo ${minimumRequired.toFixed(1)} en ${pendingCount === 1 ? 'la fuente restante' : `las ${pendingCount} fuentes restantes`}`;
             atRisk++;
           }
         }

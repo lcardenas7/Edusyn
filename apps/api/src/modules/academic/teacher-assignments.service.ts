@@ -47,8 +47,10 @@ export class TeacherAssignmentsService {
       );
     }
 
+    const year = await this.prisma.academicYear.findUnique({ where: { id: dto.academicYearId }, select: { institutionId: true } });
     return this.prisma.teacherAssignment.create({
       data: {
+        institutionId: year!.institutionId,
         academicYearId: dto.academicYearId,
         groupId: dto.groupId,
         subjectId: dto.subjectId,
@@ -99,6 +101,7 @@ export class TeacherAssignmentsService {
       // 2. Crear nueva asignación para el docente reemplazo
       const newAssignment = await tx.teacherAssignment.create({
         data: {
+          institutionId: existing.academicYear.institutionId,
           academicYearId: existing.academicYearId,
           groupId: existing.groupId,
           subjectId: existing.subjectId,

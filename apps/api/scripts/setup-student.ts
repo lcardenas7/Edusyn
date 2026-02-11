@@ -122,6 +122,7 @@ async function main() {
   // Matricular estudiante
   const enrollment = await prisma.studentEnrollment.create({
     data: {
+      institutionId: institution.id,
       studentId: student.id,
       academicYearId: academicYear.id,
       groupId: firstGroup.id,
@@ -145,6 +146,7 @@ async function main() {
     if (subject && teacher) {
       const newAssignment = await prisma.teacherAssignment.create({
         data: {
+          institutionId: institution.id,
           academicYearId: academicYear.id,
           groupId: firstGroup.id,
           subjectId: subject.id,
@@ -202,6 +204,7 @@ async function main() {
     // Crear actividad evaluativa
     const activity = await prisma.evaluativeActivity.create({
       data: {
+        institutionId: institution.id,
         teacherAssignmentId: assignment.id,
         academicTermId: firstTerm.id,
         evaluationPlanId: evalPlan.id,
@@ -215,6 +218,7 @@ async function main() {
     // Registrar calificación
     const grade = await prisma.studentGrade.create({
       data: {
+        institutionId: institution.id,
         studentEnrollmentId: enrollment.id,
         evaluativeActivityId: activity.id,
         score: 4.2,
@@ -225,6 +229,7 @@ async function main() {
     // Registrar asistencia
     const attendance = await prisma.attendanceRecord.create({
       data: {
+        institutionId: institution.id,
         teacherAssignmentId: assignment.id,
         studentEnrollmentId: enrollment.id,
         date: new Date(),
@@ -236,6 +241,7 @@ async function main() {
     // Crear nota final de período
     const periodGrade = await prisma.periodFinalGrade.create({
       data: {
+        institutionId: institution.id,
         studentEnrollmentId: enrollment.id,
         academicTermId: firstTerm.id,
         subjectId: assignment.subjectId,

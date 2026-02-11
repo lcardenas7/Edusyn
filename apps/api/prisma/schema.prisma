@@ -439,6 +439,34 @@ model Institution {
   
   // Componentes finales (pruebas semestrales, etc.)
   finalComponents             FinalComponent[] @relation("InstitutionFinalComponents")
+  
+  // ═══════ RLS Multi-tenant isolation relations ═══════
+  rlsStudentEnrollments       StudentEnrollment[]       @relation("RlsInstitutionSE")
+  rlsTeacherAssignments       TeacherAssignment[]       @relation("RlsInstitutionTA")
+  rlsPartialGrades            PartialGrade[]            @relation("RlsInstitutionPG")
+  rlsPeriodFinalGrades        PeriodFinalGrade[]        @relation("RlsInstitutionPFG")
+  rlsFinalComponentGrades     FinalComponentGrade[]     @relation("RlsInstitutionFCG")
+  rlsStudentGrades            StudentGrade[]            @relation("RlsInstitutionSG")
+  rlsAttendanceRecords        AttendanceRecord[]        @relation("RlsInstitutionAR")
+  rlsStudentObservations      StudentObservation[]      @relation("RlsInstitutionSO")
+  rlsEnrollmentAreas          EnrollmentArea[]          @relation("RlsInstitutionEA")
+  rlsEnrollmentSubjects       EnrollmentSubject[]       @relation("RlsInstitutionES")
+  rlsEnrollmentDimensions     EnrollmentDimension[]     @relation("RlsInstitutionED")
+  rlsEnrollmentEvents         EnrollmentEvent[]         @relation("RlsInstitutionEE")
+  rlsAchievements             Achievement[]             @relation("RlsInstitutionACH")
+  rlsStudentAchievements      StudentAchievement[]      @relation("RlsInstitutionSACH")
+  rlsAttitudinalAchievements  AttitudinalAchievement[]  @relation("RlsInstitutionAACH")
+  rlsPeriodRecoveries         PeriodRecovery[]          @relation("RlsInstitutionPR")
+  rlsFinalRecoveryPlans       FinalRecoveryPlan[]       @relation("RlsInstitutionFRP")
+  rlsRoomRestrictions         RoomRestriction[]         @relation("RlsInstitutionRR")
+  rlsObserverCommitments      ObserverCommitment[]      @relation("RlsInstitutionOC")
+  rlsGuardianCitations        GuardianCitation[]        @relation("RlsInstitutionGC")
+  rlsObserverReferrals        ObserverReferral[]        @relation("RlsInstitutionOR")
+  rlsPedagogicalMeasures      PedagogicalMeasure[]      @relation("RlsInstitutionPM")
+  rlsEvaluativeActivities     EvaluativeActivity[]      @relation("RlsInstitutionEVA")
+  rlsSubjectPerformances      SubjectPerformance[]      @relation("RlsInstitutionSP")
+  rlsPerformanceManualEdits   PerformanceManualEdit[]   @relation("RlsInstitutionPME")
+  rlsPreventiveAlerts         PreventiveAlert[]         @relation("RlsInstitutionPA")
 }
 
 // Módulos habilitados por institución
@@ -952,6 +980,7 @@ model RecoveryPeriodConfig {
 
 model TeacherAssignment {
   id            String   @id @default(cuid())
+  institutionId  String
   academicYearId String
   groupId       String
   subjectId     String
@@ -963,6 +992,7 @@ model TeacherAssignment {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  institution  Institution @relation("RlsInstitutionTA", fields: [institutionId], references: [id])
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
   group        Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
   subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
@@ -998,6 +1028,7 @@ model PerformanceScale {
 
 model EvaluativeActivity {
   id                 String   @id @default(cuid())
+  institutionId      String
   teacherAssignmentId String
   academicTermId     String
   evaluationPlanId   String
@@ -1007,6 +1038,7 @@ model EvaluativeActivity {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
+  institution       Institution       @relation("RlsInstitutionEVA", fields: [institutionId], references: [id])
   teacherAssignment TeacherAssignment @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
   academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
   evaluationPlan     EvaluationPlan   @relation(fields: [evaluationPlanId], references: [id], onDelete: Cascade)
@@ -1282,6 +1314,7 @@ enum GuardianRelationship {
 
 model StudentEnrollment {
   id              String           @id @default(cuid())
+  institutionId   String
   studentId       String
   academicYearId  String
   groupId         String
@@ -1309,6 +1342,7 @@ model StudentEnrollment {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
+  institution     Institution      @relation("RlsInstitutionSE", fields: [institutionId], references: [id])
   student         Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
   academicYear    AcademicYear     @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
   group           Group            @relation(fields: [groupId], references: [id], onDelete: Restrict)
@@ -1359,6 +1393,7 @@ model StudentEnrollment {
 // 🔥 100% AUTOSUFICIENTE: No depende del catálogo para existir
 model EnrollmentArea {
   id                String   @id @default(cuid())
+  institutionId     String
   enrollmentId      String
   areaId            String?  // Referencia OPCIONAL al catálogo (puede ser eliminada en el futuro)
   
@@ -1374,6 +1409,7 @@ model EnrollmentArea {
   
   createdAt         DateTime @default(now())
 
+  institution       Institution       @relation("RlsInstitutionEA", fields: [institutionId], references: [id])
   enrollment        StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   area              Area?             @relation(fields: [areaId], references: [id], onDelete: SetNull)
   enrollmentSubjects EnrollmentSubject[]
@@ -1387,6 +1423,7 @@ model EnrollmentArea {
 // 🔥 100% AUTOSUFICIENTE: No depende del catálogo para existir
 model EnrollmentSubject {
   id                String   @id @default(cuid())
+  institutionId     String
   enrollmentId      String
   enrollmentAreaId  String
   subjectId         String?  // Referencia OPCIONAL al catálogo (puede ser eliminada en el futuro)
@@ -1409,6 +1446,7 @@ model EnrollmentSubject {
   
   createdAt         DateTime @default(now())
 
+  institution       Institution       @relation("RlsInstitutionES", fields: [institutionId], references: [id])
   enrollment        StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   enrollmentArea    EnrollmentArea    @relation(fields: [enrollmentAreaId], references: [id], onDelete: Cascade)
   subject           Subject?          @relation(fields: [subjectId], references: [id], onDelete: SetNull)
@@ -1424,6 +1462,7 @@ model EnrollmentSubject {
 // Snapshot de dimensión para una matrícula específica (PREESCOLAR)
 model EnrollmentDimension {
   id            String   @id @default(cuid())
+  institutionId String
   enrollmentId  String
   dimensionId   String?  // Referencia histórica (opcional si se elimina)
   
@@ -1434,6 +1473,7 @@ model EnrollmentDimension {
   
   createdAt     DateTime @default(now())
 
+  institution   Institution       @relation("RlsInstitutionED", fields: [institutionId], references: [id])
   enrollment    StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   dimension     Dimension?        @relation(fields: [dimensionId], references: [id], onDelete: SetNull)
 
@@ -1447,6 +1487,7 @@ model EnrollmentDimension {
 
 model EnrollmentEvent {
   id              String                  @id @default(cuid())
+  institutionId   String
   enrollmentId    String
   type            EnrollmentEventType
   movementType    EnrollmentMovementType?
@@ -1464,6 +1505,7 @@ model EnrollmentEvent {
   performedById   String
   performedAt     DateTime                @default(now())
   
+  institution     Institution             @relation("RlsInstitutionEE", fields: [institutionId], references: [id])
   enrollment      StudentEnrollment       @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   performedBy     User                    @relation("EnrollmentEventPerformedBy", fields: [performedById], references: [id])
   academicAct     AcademicAct?            @relation(fields: [academicActId], references: [id])
@@ -1475,6 +1517,7 @@ model EnrollmentEvent {
 
 model StudentGrade {
   id                  String   @id @default(cuid())
+  institutionId       String
   studentEnrollmentId String
   evaluativeActivityId String
   score               Decimal  @db.Decimal(3, 1)
@@ -1482,6 +1525,7 @@ model StudentGrade {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  institution        Institution        @relation("RlsInstitutionSG", fields: [institutionId], references: [id])
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
   evaluativeActivity EvaluativeActivity @relation(fields: [evaluativeActivityId], references: [id], onDelete: Cascade)
 
@@ -1490,6 +1534,7 @@ model StudentGrade {
 
 model PeriodFinalGrade {
   id                  String   @id @default(cuid())
+  institutionId       String
   studentEnrollmentId String
   academicTermId      String
   subjectId           String
@@ -1499,6 +1544,7 @@ model PeriodFinalGrade {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  institution       Institution       @relation("RlsInstitutionPFG", fields: [institutionId], references: [id])
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
   academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
   subject           Subject           @relation(fields: [subjectId], references: [id], onDelete: Cascade)
@@ -1509,6 +1555,7 @@ model PeriodFinalGrade {
 
 model PartialGrade {
   id                  String   @id @default(cuid())
+  institutionId       String
   studentEnrollmentId String
   teacherAssignmentId String
   academicTermId      String
@@ -1521,6 +1568,7 @@ model PartialGrade {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  institution        Institution       @relation("RlsInstitutionPG", fields: [institutionId], references: [id])
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
   teacherAssignment TeacherAssignment @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
   academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
@@ -1553,6 +1601,7 @@ model FinalComponent {
 
 model FinalComponentGrade {
   id                  String   @id @default(cuid())
+  institutionId       String
   studentEnrollmentId String
   teacherAssignmentId String
   finalComponentId    String
@@ -1560,6 +1609,7 @@ model FinalComponentGrade {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  institution       Institution       @relation("RlsInstitutionFCG", fields: [institutionId], references: [id])
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
   teacherAssignment TeacherAssignment @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
   finalComponent    FinalComponent    @relation(fields: [finalComponentId], references: [id], onDelete: Cascade)
@@ -1589,6 +1639,7 @@ model FinalComponentGrade {
 
  model PreventiveAlert {
    id                  String   @id @default(cuid())
+   institutionId       String
    teacherAssignmentId String
    studentEnrollmentId String
    academicTermId      String
@@ -1602,6 +1653,7 @@ model FinalComponentGrade {
    createdAt           DateTime @default(now())
    updatedAt           DateTime @updatedAt
 
+   institution        Institution        @relation("RlsInstitutionPA", fields: [institutionId], references: [id])
    teacherAssignment  TeacherAssignment  @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
    studentEnrollment  StudentEnrollment  @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
    academicTerm       AcademicTerm       @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
@@ -1623,6 +1675,7 @@ enum AttendanceStatus {
 
 model AttendanceRecord {
   id                  String   @id @default(cuid())
+  institutionId       String
   teacherAssignmentId String
   studentEnrollmentId String
   date                DateTime @db.Date
@@ -1631,6 +1684,7 @@ model AttendanceRecord {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  institution       Institution       @relation("RlsInstitutionAR", fields: [institutionId], references: [id])
   teacherAssignment TeacherAssignment @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
 
@@ -1673,6 +1727,7 @@ enum ObserverEntryStatus {
 
 model StudentObservation {
   id                  String   @id @default(cuid())
+  institutionId       String
   studentEnrollmentId String
   authorId            String
   date                DateTime @db.Date
@@ -1689,6 +1744,7 @@ model StudentObservation {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  institution        Institution       @relation("RlsInstitutionSO", fields: [institutionId], references: [id])
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
   author            User              @relation(fields: [authorId], references: [id], onDelete: Restrict)
 
@@ -1732,6 +1788,7 @@ model ActaRecord {
 // Compromiso del estudiante
 model ObserverCommitment {
   id                  String   @id @default(cuid())
+  institutionId       String
   observationId       String?
   studentEnrollmentId String
   authorId            String
@@ -1745,6 +1802,7 @@ model ObserverCommitment {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  institution          Institution         @relation("RlsInstitutionOC", fields: [institutionId], references: [id])
   observation         StudentObservation? @relation(fields: [observationId], references: [id], onDelete: SetNull)
   studentEnrollment   StudentEnrollment   @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
   author              User                @relation("CommitmentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
@@ -1757,6 +1815,7 @@ model ObserverCommitment {
 // Citación a padre/acudiente
 model GuardianCitation {
   id                  String   @id @default(cuid())
+  institutionId       String
   observationId       String?  @unique
   studentEnrollmentId String
   authorId            String
@@ -1768,6 +1827,7 @@ model GuardianCitation {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  institution          Institution         @relation("RlsInstitutionGC", fields: [institutionId], references: [id])
   observation         StudentObservation? @relation(fields: [observationId], references: [id], onDelete: SetNull)
   studentEnrollment   StudentEnrollment   @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
   author              User                @relation(fields: [authorId], references: [id], onDelete: Restrict)
@@ -1780,6 +1840,7 @@ model GuardianCitation {
 // Remisión interna (a orientación, coordinación, comité)
 model ObserverReferral {
   id                  String   @id @default(cuid())
+  institutionId       String
   observationId       String?  @unique
   studentEnrollmentId String
   authorId            String
@@ -1793,6 +1854,7 @@ model ObserverReferral {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  institution          Institution         @relation("RlsInstitutionOR", fields: [institutionId], references: [id])
   observation         StudentObservation? @relation(fields: [observationId], references: [id], onDelete: SetNull)
   studentEnrollment   StudentEnrollment   @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
   author              User                @relation("ReferralAuthor", fields: [authorId], references: [id], onDelete: Restrict)
@@ -1828,6 +1890,7 @@ model ObserverEvidence {
 // Medidas pedagógicas y sanciones aplicadas
 model PedagogicalMeasure {
   id                  String   @id @default(cuid())
+  institutionId       String
   observationId       String
   studentEnrollmentId String
   measureType         String   // FORMATIVE_WORKSHOP, SOCIAL_SERVICE, WRITTEN_REFLECTION, SUSPENSION, GROUP_CHANGE, OTHER
@@ -1840,6 +1903,7 @@ model PedagogicalMeasure {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  institution          Institution        @relation("RlsInstitutionPM", fields: [institutionId], references: [id])
   observation         StudentObservation @relation(fields: [observationId], references: [id], onDelete: Cascade)
   studentEnrollment   StudentEnrollment  @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
   appliedBy           User               @relation(fields: [appliedById], references: [id], onDelete: Restrict)
@@ -2075,6 +2139,7 @@ model RecoveryConfig {
 // Recuperación por período
 model PeriodRecovery {
   id                    String   @id @default(cuid())
+  institutionId         String
   studentEnrollmentId   String
   academicTermId        String
   subjectId             String
@@ -2107,6 +2172,7 @@ model PeriodRecovery {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  institution        Institution       @relation("RlsInstitutionPR", fields: [institutionId], references: [id])
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
   academicTerm      AcademicTerm      @relation("PeriodRecoveryTerm", fields: [academicTermId], references: [id], onDelete: Cascade)
   subject           Subject           @relation(fields: [subjectId], references: [id], onDelete: Cascade)
@@ -2121,6 +2187,7 @@ model PeriodRecovery {
 // Plan de apoyo final (recuperación final por área)
 model FinalRecoveryPlan {
   id                    String   @id @default(cuid())
+  institutionId         String
   studentEnrollmentId   String
   academicYearId        String
   areaId                String
@@ -2162,6 +2229,7 @@ model FinalRecoveryPlan {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  institution         Institution       @relation("RlsInstitutionFRP", fields: [institutionId], references: [id])
   studentEnrollment  StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
   academicYear       AcademicYear      @relation("FinalRecoveryYear", fields: [academicYearId], references: [id], onDelete: Cascade)
   area               Area              @relation(fields: [areaId], references: [id], onDelete: Cascade)
@@ -2268,6 +2336,7 @@ model PerformanceConfig {
 // Desempeño base registrado por el docente (por asignatura, período y dimensión)
 model SubjectPerformance {
   id                    String               @id @default(cuid())
+  institutionId         String
   teacherAssignmentId   String
   academicTermId        String
   dimension             PerformanceDimension
@@ -2275,6 +2344,7 @@ model SubjectPerformance {
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
 
+  institution       Institution       @relation("RlsInstitutionSP", fields: [institutionId], references: [id])
   teacherAssignment TeacherAssignment @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
   academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
 
@@ -2286,6 +2356,7 @@ model SubjectPerformance {
 // Registro de ediciones manuales (auditoría)
 model PerformanceManualEdit {
   id                    String               @id @default(cuid())
+  institutionId         String
   studentEnrollmentId   String
   academicTermId        String
   subjectId             String
@@ -2296,6 +2367,7 @@ model PerformanceManualEdit {
   editedById            String
   createdAt             DateTime             @default(now())
 
+  institution        Institution       @relation("RlsInstitutionPME", fields: [institutionId], references: [id])
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
   academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
   subject           Subject           @relation(fields: [subjectId], references: [id], onDelete: Cascade)
@@ -2395,6 +2467,7 @@ model ValueJudgmentTemplate {
 // Logro académico definido por el docente (por asignatura, período)
 model Achievement {
   id                    String          @id @default(cuid())
+  institutionId         String
   code                  String          // Código interno (ej: LOG-MAT-P1-01)
   teacherAssignmentId   String
   academicTermId        String
@@ -2405,6 +2478,7 @@ model Achievement {
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
 
+  institution           Institution       @relation("RlsInstitutionACH", fields: [institutionId], references: [id])
   teacherAssignment     TeacherAssignment @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
   academicTerm          AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
   studentAchievements   StudentAchievement[]
@@ -2426,6 +2500,7 @@ enum AchievementType {
 // Logro actitudinal (puede ser general o asociado a un logro académico)
 model AttitudinalAchievement {
   id                    String       @id @default(cuid())
+  institutionId         String
   teacherAssignmentId   String
   academicTermId        String
   achievementId         String?      // NULL = general por período, NOT NULL = asociado a logro académico
@@ -2433,6 +2508,7 @@ model AttitudinalAchievement {
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
 
+  institution           Institution       @relation("RlsInstitutionAACH", fields: [institutionId], references: [id])
   teacherAssignment     TeacherAssignment @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
   academicTerm          AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
   achievement           Achievement?      @relation(fields: [achievementId], references: [id], onDelete: Cascade)
@@ -2444,6 +2520,7 @@ model AttitudinalAchievement {
 // Logro del estudiante (con nota, texto adaptado y juicio valorativo)
 model StudentAchievement {
   id                    String           @id @default(cuid())
+  institutionId         String
   studentEnrollmentId   String
   achievementId         String
   
@@ -2471,6 +2548,7 @@ model StudentAchievement {
   approvedAt            DateTime?        // Fecha de aprobación final
   approvedById          String?          // Quién aprobó
 
+  institution           Institution       @relation("RlsInstitutionSACH", fields: [institutionId], references: [id])
   studentEnrollment     StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
   achievement           Achievement       @relation(fields: [achievementId], references: [id], onDelete: Cascade)
   approvedBy            User?             @relation("AchievementApprovedBy", fields: [approvedById], references: [id])
@@ -3669,15 +3747,17 @@ model Room {
 
 // Restricción de espacio (OPCIONAL - la institución decide si activar)
 model RoomRestriction {
-  id        String              @id @default(cuid())
-  roomId    String
-  subjectId String?             // Asignatura (null = restricción general)
-  type      RoomRestrictionType @default(PREFERRED)
+  id            String              @id @default(cuid())
+  institutionId String
+  roomId        String
+  subjectId     String?             // Asignatura (null = restricción general)
+  type          RoomRestrictionType @default(PREFERRED)
   
-  createdAt DateTime @default(now())
+  createdAt     DateTime @default(now())
   
-  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  subject   Subject? @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  institution   Institution  @relation("RlsInstitutionRR", fields: [institutionId], references: [id])
+  room          Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  subject       Subject?     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
 
   @@unique([roomId, subjectId])
 }

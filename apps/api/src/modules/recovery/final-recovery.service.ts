@@ -95,9 +95,11 @@ export class FinalRecoveryService {
     responsibleTeacherId: string;
     supervisorId?: string;
   }) {
+    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: data.studentEnrollmentId }, select: { institutionId: true } });
     return this.prisma.finalRecoveryPlan.create({
       data: {
         ...data,
+        institutionId: enr!.institutionId,
         status: 'PENDING',
       },
       include: {

@@ -126,6 +126,7 @@ export class RoomsService {
 
     return this.prisma.roomRestriction.create({
       data: {
+        institutionId,
         roomId,
         subjectId: data.subjectId || null,
         type: data.type || 'PREFERRED',

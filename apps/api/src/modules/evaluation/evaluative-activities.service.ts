@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateEvaluativeActivityDto } from './dto/create-evaluative-activity.dto';
@@ -8,8 +8,10 @@ export class EvaluativeActivitiesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateEvaluativeActivityDto) {
+    const ta = await this.prisma.teacherAssignment.findUnique({ where: { id: dto.teacherAssignmentId }, select: { institutionId: true } });
     return this.prisma.evaluativeActivity.create({
       data: {
+        institutionId: ta!.institutionId,
         teacherAssignmentId: dto.teacherAssignmentId,
         academicTermId: dto.academicTermId,
         evaluationPlanId: dto.evaluationPlanId,

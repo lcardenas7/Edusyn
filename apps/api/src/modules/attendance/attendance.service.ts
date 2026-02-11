@@ -9,6 +9,8 @@ export class AttendanceService {
 
   async recordBulk(dto: RecordAttendanceDto) {
     const date = new Date(dto.date);
+    const ta = await this.prisma.teacherAssignment.findUnique({ where: { id: dto.teacherAssignmentId }, select: { institutionId: true } });
+    const instId = ta!.institutionId;
 
     const operations = dto.records.map((record) =>
       this.prisma.attendanceRecord.upsert({
@@ -24,6 +26,7 @@ export class AttendanceService {
           observations: record.observations,
         },
         create: {
+          institutionId: instId,
           teacherAssignmentId: dto.teacherAssignmentId,
           studentEnrollmentId: record.studentEnrollmentId,
           date,

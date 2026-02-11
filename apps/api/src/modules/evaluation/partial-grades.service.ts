@@ -16,6 +16,7 @@ export class PartialGradesService {
     score: number;
     observations?: string;
   }) {
+    const ta = await this.prisma.teacherAssignment.findUnique({ where: { id: data.teacherAssignmentId }, select: { institutionId: true } });
     return this.prisma.partialGrade.upsert({
       where: {
         studentEnrollmentId_teacherAssignmentId_academicTermId_componentType_activityIndex: {
@@ -32,7 +33,7 @@ export class PartialGradesService {
         score: data.score,
         observations: data.observations,
       },
-      create: data,
+      create: { ...data, institutionId: ta!.institutionId },
     });
   }
 
@@ -110,7 +111,7 @@ export class PartialGradesService {
     // 1. Obtener la asignación para saber subjectId y teacherId
     const assignment = await this.prisma.teacherAssignment.findUnique({
       where: { id: teacherAssignmentId },
-      select: { subjectId: true, teacherId: true },
+      select: { subjectId: true, teacherId: true, institutionId: true },
     });
     if (!assignment) return;
 
@@ -195,6 +196,7 @@ export class PartialGradesService {
         },
         update: { finalScore },
         create: {
+          institutionId: assignment.institutionId,
           studentEnrollmentId,
           academicTermId,
           subjectId: assignment.subjectId,

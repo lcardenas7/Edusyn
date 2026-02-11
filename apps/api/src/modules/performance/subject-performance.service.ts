@@ -38,6 +38,7 @@ export class SubjectPerformanceService {
     dimension: PerformanceDimension;
     baseDescription: string;
   }) {
+    const ta = await this.prisma.teacherAssignment.findUnique({ where: { id: data.teacherAssignmentId }, select: { institutionId: true } });
     return this.prisma.subjectPerformance.upsert({
       where: {
         teacherAssignmentId_academicTermId_dimension: {
@@ -50,6 +51,7 @@ export class SubjectPerformanceService {
         baseDescription: data.baseDescription,
       },
       create: {
+        institutionId: ta!.institutionId,
         teacherAssignmentId: data.teacherAssignmentId,
         academicTermId: data.academicTermId,
         dimension: data.dimension,

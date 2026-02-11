@@ -414,6 +414,7 @@ async function main() {
   if (matematicas && grupo6A && academicYear) {
     await prisma.teacherAssignment.create({
       data: {
+        institutionId: institution.id,
         teacherId: teacherUser.id,
         subjectId: matematicas.id,
         groupId: grupo6A.id,
@@ -426,6 +427,7 @@ async function main() {
   if (matematicas && grupo6B && academicYear) {
     await prisma.teacherAssignment.create({
       data: {
+        institutionId: institution.id,
         teacherId: teacherUser.id,
         subjectId: matematicas.id,
         groupId: grupo6B.id,
@@ -438,6 +440,7 @@ async function main() {
   if (fisica && grupo7A && academicYear) {
     await prisma.teacherAssignment.create({
       data: {
+        institutionId: institution.id,
         teacherId: teacherUser.id,
         subjectId: fisica.id,
         groupId: grupo7A.id,

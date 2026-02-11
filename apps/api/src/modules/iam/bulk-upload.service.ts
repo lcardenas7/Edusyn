@@ -670,6 +670,7 @@ export class BulkUploadService {
           if (groupId) {
             await this.prisma.studentEnrollment.create({
               data: {
+                institutionId,
                 studentId: student.id,
                 academicYearId,
                 groupId,

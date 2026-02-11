@@ -910,7 +910,7 @@ export class TimetableExcelService {
           }
         } else {
           await this.prisma.teacherAssignment.create({
-            data: { academicYearId, groupId, subjectId, teacherId, weeklyHours: row.weeklyHours },
+            data: { institutionId, academicYearId, groupId, subjectId, teacherId, weeklyHours: row.weeklyHours },
           });
           created++;
         }

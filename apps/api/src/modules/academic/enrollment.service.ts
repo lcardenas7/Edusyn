@@ -162,9 +162,14 @@ export class EnrollmentService {
       }
     }
 
+    // Obtener institutionId del estudiante
+    const student = await this.prisma.student.findUnique({ where: { id: dto.studentId }, select: { institutionId: true } });
+    if (!student) throw new NotFoundException('Estudiante no encontrado');
+
     // Crear la matrícula
     const enrollment = await this.prisma.studentEnrollment.create({
       data: {
+        institutionId: student.institutionId,
         studentId: dto.studentId,
         academicYearId: dto.academicYearId,
         groupId: dto.groupId,
@@ -328,6 +333,7 @@ export class EnrollmentService {
       // Crear matrícula
       const enrollment = await tx.studentEnrollment.create({
         data: {
+          institutionId: dto.institutionId,
           studentId: student.id,
           academicYearId: dto.academicYearId,
           groupId: dto.groupId,
@@ -353,6 +359,7 @@ export class EnrollmentService {
       // Crear evento de auditoría
       await tx.enrollmentEvent.create({
         data: {
+          institutionId: dto.institutionId,
           enrollmentId: enrollment.id,
           type: 'CREATED',
           newValue: {
@@ -951,8 +958,11 @@ export class EnrollmentService {
     academicActId?: string;
     performedById: string;
   }) {
+    // Fetch institutionId from the enrollment
+    const enrollment = await this.prisma.studentEnrollment.findUnique({ where: { id: data.enrollmentId }, select: { institutionId: true } });
     return this.prisma.enrollmentEvent.create({
       data: {
+        institutionId: enrollment!.institutionId,
         enrollmentId: data.enrollmentId,
         type: data.type,
         movementType: data.movementType,
@@ -1009,11 +1019,16 @@ export class EnrollmentService {
       );
 
       // Crear snapshot de áreas y asignaturas en transacción
+      // Obtener institutionId de la matrícula
+      const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: enrollmentId }, select: { institutionId: true } });
+      const instId = enr!.institutionId;
+
       await this.prisma.$transaction(async (tx) => {
         for (const templateArea of structure.areas) {
           // Crear EnrollmentArea (snapshot del área)
           const enrollmentArea = await tx.enrollmentArea.create({
             data: {
+              institutionId: instId,
               enrollmentId,
               areaId: templateArea.areaId,
               areaName: templateArea.area.name,
@@ -1034,6 +1049,7 @@ export class EnrollmentService {
             
             await tx.enrollmentSubject.create({
               data: {
+                institutionId: instId,
                 enrollmentId,
                 enrollmentAreaId: enrollmentArea.id,
                 subjectId: templateSubject.subjectId,

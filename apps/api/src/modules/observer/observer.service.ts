@@ -41,8 +41,10 @@ export class ObserverService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async create(authorId: string, dto: CreateObservationDto) {
+    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: dto.studentEnrollmentId }, select: { institutionId: true } });
     return this.prisma.studentObservation.create({
       data: {
+        institutionId: enr!.institutionId,
         studentEnrollmentId: dto.studentEnrollmentId,
         authorId,
         date: new Date(dto.date),
@@ -241,8 +243,10 @@ export class ObserverService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async createCommitment(authorId: string, dto: CreateCommitmentDto) {
+    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: dto.studentEnrollmentId }, select: { institutionId: true } });
     return this.prisma.observerCommitment.create({
       data: {
+        institutionId: enr!.institutionId,
         observationId: dto.observationId,
         studentEnrollmentId: dto.studentEnrollmentId,
         authorId,
@@ -288,8 +292,10 @@ export class ObserverService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async createCitation(authorId: string, dto: CreateCitationDto) {
+    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: dto.studentEnrollmentId }, select: { institutionId: true } });
     return this.prisma.guardianCitation.create({
       data: {
+        institutionId: enr!.institutionId,
         observationId: dto.observationId,
         studentEnrollmentId: dto.studentEnrollmentId,
         authorId,
@@ -325,8 +331,10 @@ export class ObserverService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async createReferral(authorId: string, dto: CreateReferralDto) {
+    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: dto.studentEnrollmentId }, select: { institutionId: true } });
     return this.prisma.observerReferral.create({
       data: {
+        institutionId: enr!.institutionId,
         observationId: dto.observationId,
         studentEnrollmentId: dto.studentEnrollmentId,
         authorId,
@@ -378,8 +386,10 @@ export class ObserverService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async createMeasure(userId: string, dto: CreateMeasureDto) {
+    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: dto.studentEnrollmentId }, select: { institutionId: true } });
     return this.prisma.pedagogicalMeasure.create({
       data: {
+        institutionId: enr!.institutionId,
         observationId: dto.observationId,
         studentEnrollmentId: dto.studentEnrollmentId,
         measureType: dto.measureType,
