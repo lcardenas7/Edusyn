@@ -501,6 +501,48 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
     setIsSaving(true)
     try {
       await api.put('/institution-config/grading', gradingConfig)
+
+      // Sincronizar componentes finales a la BD (FinalComponent table)
+      if (gradingConfig.useFinalComponents && gradingConfig.finalComponents.length > 0) {
+        try {
+          const instId = localStorage.getItem('institutionId')
+          if (instId) {
+            const yearRes = await api.get(`/academic-years/institution/${instId}/current`)
+            const activeYear = yearRes.data
+            if (activeYear?.id) {
+              await api.post('/final-components/sync', {
+                academicYearId: activeYear.id,
+                components: gradingConfig.finalComponents.map((fc, i) => ({
+                  id: fc.id?.startsWith('fc-') ? undefined : fc.id,
+                  name: fc.name,
+                  weightPercentage: fc.weightPercentage,
+                  order: i + 1,
+                })),
+              })
+            }
+          }
+        } catch (e) {
+          console.error('Error syncing final components:', e)
+        }
+      } else {
+        // Si se deshabilitaron, limpiar componentes de la BD
+        try {
+          const instId = localStorage.getItem('institutionId')
+          if (instId) {
+            const yearRes = await api.get(`/academic-years/institution/${instId}/current`)
+            const activeYear = yearRes.data
+            if (activeYear?.id) {
+              await api.post('/final-components/sync', {
+                academicYearId: activeYear.id,
+                components: [],
+              })
+            }
+          }
+        } catch (e) {
+          // No crítico
+        }
+      }
+
       return true
     } catch (error) {
       console.error('Error saving grading config:', error)

@@ -436,6 +436,9 @@ model Institution {
   
   // Banco de logros
   achievementBank             AchievementBank[] @relation("InstitutionAchievementBank")
+  
+  // Componentes finales (pruebas semestrales, etc.)
+  finalComponents             FinalComponent[] @relation("InstitutionFinalComponents")
 }
 
 // Módulos habilitados por institución
@@ -838,6 +841,9 @@ model AcademicYear {
   scheduleGradeConfigs   ScheduleGradeConfig[]
   teacherAvailabilities  TeacherAvailability[]
   scheduleEntries        ScheduleEntry[]
+  
+  // Componentes finales (pruebas semestrales, etc.)
+  finalComponents        FinalComponent[] @relation("AcademicYearFinalComponents")
 
   @@unique([institutionId, year])
 }
@@ -971,6 +977,7 @@ model TeacherAssignment {
   achievements Achievement[]
   attitudinalAchievements AttitudinalAchievement[]
   scheduleEntries         ScheduleEntry[]
+  finalComponentGrades    FinalComponentGrade[]
 
   @@unique([academicYearId, groupId, subjectId, teacherId, startDate])
 }
@@ -1337,6 +1344,7 @@ model StudentEnrollment {
   enrollmentAreas      EnrollmentArea[]
   enrollmentSubjects   EnrollmentSubject[]
   enrollmentDimensions EnrollmentDimension[]  // 🆕 Para estructura DIMENSIONS (preescolar)
+  finalComponentGrades FinalComponentGrade[]
 
   @@unique([studentId, academicYearId])
 }
@@ -1519,6 +1527,45 @@ model PartialGrade {
 
   @@unique([studentEnrollmentId, teacherAssignmentId, academicTermId, componentType, activityIndex])
   @@index([teacherAssignmentId, academicTermId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COMPONENTES FINALES (Pruebas Semestrales, Proyecto Final, etc.)
+// Fuentes de nota ponderadas adicionales a los períodos para la nota anual
+// ═══════════════════════════════════════════════════════════════════════════
+
+model FinalComponent {
+  id               String   @id @default(cuid())
+  institutionId    String
+  academicYearId   String
+  name             String   // "Prueba Semestral I", "Proyecto Final"
+  weightPercentage Int      // Peso en la nota anual (ej: 10)
+  order            Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  institution  Institution  @relation("InstitutionFinalComponents", fields: [institutionId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation("AcademicYearFinalComponents", fields: [academicYearId], references: [id], onDelete: Cascade)
+  grades       FinalComponentGrade[]
+
+  @@unique([academicYearId, order])
+}
+
+model FinalComponentGrade {
+  id                  String   @id @default(cuid())
+  studentEnrollmentId String
+  teacherAssignmentId String
+  finalComponentId    String
+  grade               Decimal  @db.Decimal(3, 1)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+  teacherAssignment TeacherAssignment @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
+  finalComponent    FinalComponent    @relation(fields: [finalComponentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentEnrollmentId, teacherAssignmentId, finalComponentId])
+  @@index([teacherAssignmentId, finalComponentId])
 }
 
  enum PreventiveAlertStatus {

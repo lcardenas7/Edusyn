@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
-import { BookOpen, ChevronDown, Save, Plus, Trash2, X, Settings, AlertTriangle, Lock, Download, Library, Search, Copy } from 'lucide-react'
+import { BookOpen, ChevronDown, Save, Plus, Trash2, X, Settings, AlertTriangle, Lock, Download, Upload, Library, Search, Copy, FileText } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { useAuth } from '../contexts/AuthContext'
 import { useAcademic } from '../contexts/AcademicContext'
-import { teacherAssignmentsApi, academicStudentsApi, gradingPeriodConfigApi, partialGradesApi, achievementsApi, achievementConfigApi, achievementBankApi } from '../lib/api'
+import { teacherAssignmentsApi, academicStudentsApi, gradingPeriodConfigApi, partialGradesApi, achievementsApi, achievementConfigApi, achievementBankApi, finalComponentsApi, finalComponentGradesApi } from '../lib/api'
 
 interface TeacherAssignment {
   id: string
@@ -156,6 +156,13 @@ export default function Grades() {
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [academicTermId, setAcademicTermId] = useState<string | null>(null)
+
+  // Fuentes de nota unificadas (períodos + componentes finales)
+  const [selectedSourceType, setSelectedSourceType] = useState<'period' | 'final_component'>('period')
+  const [finalComponents, setFinalComponents] = useState<Array<{ id: string; name: string; weightPercentage: number; order: number }>>([])
+  const [selectedFinalComponentId, setSelectedFinalComponentId] = useState<string | null>(null)
+  const [fcGrades, setFcGrades] = useState<Record<string, number>>({}) // studentId → grade
+  const [savingFc, setSavingFc] = useState(false)
   
   // Estado para logros
   const [achievements, setAchievements] = useState<Array<{
@@ -328,6 +335,24 @@ export default function Grades() {
     }
   }, [selectedPeriod, periodsStatus])
 
+  // Cargar componentes finales del año
+  useEffect(() => {
+    const fetchFinalComponents = async () => {
+      if (!selectedAssignment?.academicYear?.id) {
+        setFinalComponents([])
+        return
+      }
+      try {
+        const res = await finalComponentsApi.getByAcademicYear(selectedAssignment.academicYear.id)
+        setFinalComponents(res.data || [])
+      } catch (err) {
+        console.error('Error loading final components:', err)
+        setFinalComponents([])
+      }
+    }
+    fetchFinalComponents()
+  }, [selectedAssignment?.academicYear?.id])
+
   // Estudiantes
   const [students, setStudents] = useState<Array<{ id: string; name: string; enrollmentId: string }>>([])
   const [loadingStudents, setLoadingStudents] = useState(false)
@@ -356,6 +381,29 @@ export default function Grades() {
     }
     fetchStudents()
   }, [selectedAssignment?.group?.id, selectedAssignment?.academicYear?.id])
+
+  // Cargar notas de componente final cuando se selecciona uno
+  useEffect(() => {
+    const loadFcGrades = async () => {
+      if (selectedSourceType !== 'final_component' || !selectedFinalComponentId || !selectedAssignment?.id || students.length === 0) {
+        if (selectedSourceType === 'final_component') setFcGrades({})
+        return
+      }
+      try {
+        const res = await finalComponentGradesApi.getByComponent(selectedFinalComponentId, selectedAssignment.id)
+        const gradeMap: Record<string, number> = {}
+        ;(res.data || []).forEach((g: any) => {
+          const student = students.find(s => s.enrollmentId === g.studentEnrollmentId)
+          if (student) gradeMap[student.id] = Number(g.grade)
+        })
+        setFcGrades(gradeMap)
+      } catch (err) {
+        console.error('Error loading final component grades:', err)
+        setFcGrades({})
+      }
+    }
+    loadFcGrades()
+  }, [selectedSourceType, selectedFinalComponentId, selectedAssignment?.id, students])
 
   // ============================================
   // ESTADO DE NOTAS
@@ -393,21 +441,28 @@ export default function Grades() {
           initGrades[student.id] = createEmptyGrades()
         })
         
-        // Mapear notas guardadas
+        // Mapear notas guardadas y extraer nombres personalizados
+        const savedNames: Record<string, string> = {}
         savedGrades.forEach((grade: any) => {
           const student = students.find(s => s.enrollmentId === grade.studentEnrollmentId)
           if (student && initGrades[student.id]) {
-            // Buscar la actividad correspondiente
             const process = processConfigs.find(p => p.code === grade.componentType)
             if (process) {
               const activity = process.activities[grade.activityIndex - 1]
               if (activity) {
                 initGrades[student.id][activity.id] = Number(grade.score)
+                // Guardar nombre personalizado si difiere del generado
+                if (grade.activityName && grade.activityName !== activity.name) {
+                  savedNames[activity.id] = grade.activityName
+                }
               }
             }
           }
         })
         
+        if (Object.keys(savedNames).length > 0) {
+          setCustomActivityNames(prev => ({ ...prev, ...savedNames }))
+        }
         setGrades(initGrades)
       } catch (err) {
         console.error('Error loading saved grades:', err)
@@ -423,6 +478,10 @@ export default function Grades() {
   }, [selectedAssignment?.id, academicTermId, students, createEmptyGrades, processConfigs])
 
   const [newActivity, setNewActivity] = useState({ name: '', type: activityTypes[0] })
+
+  // Nombres personalizados de actividades (el docente puede renombrar columnas)
+  const [customActivityNames, setCustomActivityNames] = useState<Record<string, string>>({})
+  const [editingActivityName, setEditingActivityName] = useState<string | null>(null)
 
   // Estado para actividades adicionales del docente
   const [additionalActivities, setAdditionalActivities] = useState<Record<string, Activity[]>>({})
@@ -593,7 +652,7 @@ export default function Grades() {
       const allActs = [...process.activities, ...(additionalActivities[process.code] || [])]
       allActs.forEach(a => {
         headers.push(process.name.toUpperCase())
-        subHeaders.push(a.name)
+        subHeaders.push(customActivityNames[a.id] || a.name)
       })
       headers.push(process.name.toUpperCase())
       subHeaders.push('PROM')
@@ -665,6 +724,106 @@ export default function Grades() {
     XLSX.writeFile(wb, fileName)
   }
 
+  // Importar notas desde Excel
+  const importGradesFromExcel = (file: File) => {
+    if (!selectedAssignment || students.length === 0) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer)
+        const wb = XLSX.read(data, { type: 'array' })
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 })
+
+        // Buscar la fila de sub-headers (row 3, index 3) — formato: [título, vacía, headers, subHeaders, ...datos]
+        // La plantilla tiene: fila 0=título, fila 1=vacía, fila 2=headers proceso, fila 3=sub-headers, fila 4+=datos
+        let subHeaderRowIdx = -1
+        let dataStartIdx = -1
+        for (let i = 0; i < Math.min(rows.length, 10); i++) {
+          const row = rows[i]
+          if (row && row.length > 2 && (row[0] === '#' || row[0] === '')) {
+            // Posible fila de sub-headers si la siguiente tiene datos numéricos
+            if (i > 0 && rows[i - 1]?.some((cell: any) => typeof cell === 'string' && cell.includes('%'))) {
+              subHeaderRowIdx = i
+              dataStartIdx = i + 1
+              break
+            }
+          }
+        }
+
+        // Fallback: buscar PROM en sub-headers
+        if (subHeaderRowIdx === -1) {
+          for (let i = 0; i < Math.min(rows.length, 10); i++) {
+            if (rows[i]?.includes('PROM')) {
+              subHeaderRowIdx = i
+              dataStartIdx = i + 1
+              break
+            }
+          }
+        }
+
+        if (subHeaderRowIdx === -1 || dataStartIdx === -1) {
+          setSaveMessage({ type: 'error', text: 'No se pudo detectar el formato de la planilla. Use la plantilla descargada.' })
+          setTimeout(() => setSaveMessage(null), 5000)
+          return
+        }
+
+        // Construir mapa de columnas: colIndex → activityId
+        // Columnas: [#, ESTUDIANTE, ...actividades por proceso con PROM intercalado..., FINAL, NIV]
+        const colToActivityId: Record<number, string> = {}
+        let colIdx = 2 // Empieza después de # y ESTUDIANTE
+        processConfigs.forEach(process => {
+          const allActs = [...process.activities, ...(additionalActivities[process.code] || [])]
+          allActs.forEach(a => {
+            colToActivityId[colIdx] = a.id
+            colIdx++
+          })
+          colIdx++ // saltar PROM
+        })
+
+        // Leer datos
+        const updatedGrades = { ...grades }
+        let imported = 0
+        for (let r = dataStartIdx; r < rows.length; r++) {
+          const row = rows[r]
+          if (!row || row.length < 3) continue
+
+          const rowNum = row[0]
+          const studentName = String(row[1] || '').trim()
+          if (!studentName) continue
+
+          // Buscar estudiante por número de fila o por nombre
+          const studentIdx = typeof rowNum === 'number' ? rowNum - 1 : students.findIndex(s => s.name.toLowerCase().includes(studentName.toLowerCase().substring(0, 15)))
+          const student = students[studentIdx]
+          if (!student) continue
+
+          if (!updatedGrades[student.id]) updatedGrades[student.id] = {}
+
+          Object.entries(colToActivityId).forEach(([col, actId]) => {
+            const val = parseFloat(row[parseInt(col)])
+            if (!isNaN(val) && val > 0) {
+              let clamped = val
+              if (clamped > 5) clamped = 5
+              if (clamped < 1) clamped = 1
+              updatedGrades[student.id][actId] = Math.round(clamped * 10) / 10
+              imported++
+            }
+          })
+        }
+
+        setGrades(updatedGrades)
+        setSaveMessage({ type: 'success', text: `${imported} notas importadas desde Excel. Revise y presione Guardar.` })
+        setTimeout(() => setSaveMessage(null), 5000)
+      } catch (err) {
+        console.error('Error importing Excel:', err)
+        setSaveMessage({ type: 'error', text: 'Error al leer el archivo Excel' })
+        setTimeout(() => setSaveMessage(null), 5000)
+      }
+    }
+    reader.readAsArrayBuffer(file)
+  }
+
   // Guardar notas
   const saveGrades = async () => {
     if (!selectedAssignment?.id || !academicTermId) {
@@ -705,7 +864,7 @@ export default function Grades() {
               academicTermId: academicTermId!,
               componentType: process.code,
               activityIndex: idx + 1,
-              activityName: activity.name,
+              activityName: customActivityNames[activity.id] || activity.name,
               activityType: activity.type,
               score,
             })
@@ -725,6 +884,39 @@ export default function Grades() {
       setTimeout(() => setSaveMessage(null), 5000)
     } finally {
       setSaving(false)
+    }
+  }
+
+  // Guardar notas de componente final (planilla simplificada)
+  const saveFinalComponentGrades = async () => {
+    if (!selectedAssignment?.id || !selectedFinalComponentId) {
+      setSaveMessage({ type: 'error', text: 'No se puede guardar: falta información del componente' })
+      setTimeout(() => setSaveMessage(null), 3000)
+      return
+    }
+
+    setSavingFc(true)
+    setSaveMessage(null)
+
+    try {
+      const gradesToSave = students.map(student => ({
+        studentEnrollmentId: student.enrollmentId,
+        teacherAssignmentId: selectedAssignment.id,
+        finalComponentId: selectedFinalComponentId,
+        grade: fcGrades[student.id] || 0,
+      }))
+
+      await finalComponentGradesApi.bulkUpsert(gradesToSave)
+
+      const notasConValor = gradesToSave.filter(g => g.grade > 0).length
+      setSaveMessage({ type: 'success', text: `Notas del componente actualizadas (${notasConValor} notas guardadas)` })
+      setTimeout(() => setSaveMessage(null), 3000)
+    } catch (err: any) {
+      console.error('Error saving final component grades:', err)
+      setSaveMessage({ type: 'error', text: err.response?.data?.message || 'Error al guardar' })
+      setTimeout(() => setSaveMessage(null), 5000)
+    } finally {
+      setSavingFc(false)
     }
   }
 
@@ -862,9 +1054,29 @@ export default function Grades() {
                     </button>
                     <button
                       onClick={() => { downloadGradeSheet(true); setShowDownloadMenu(false) }}
-                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 rounded-b-lg border-t border-slate-100 transition-colors"
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 border-t border-slate-100 transition-colors"
                     >
                       📊 Planilla con notas actuales
+                    </button>
+                    <label className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 border-t border-slate-100 transition-colors cursor-pointer block">
+                      📥 Importar notas desde Excel
+                      <input
+                        type="file"
+                        accept=".xlsx,.xls"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) importGradesFromExcel(file)
+                          e.target.value = ''
+                          setShowDownloadMenu(false)
+                        }}
+                      />
+                    </label>
+                    <button
+                      onClick={() => { window.print(); setShowDownloadMenu(false) }}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 rounded-b-lg border-t border-slate-100 transition-colors"
+                    >
+                      🖨️ Imprimir / PDF
                     </button>
                   </div>
                 </>
@@ -872,12 +1084,12 @@ export default function Grades() {
             </div>
           )}
           <button 
-            onClick={saveGrades}
-            disabled={saving || !currentPeriodOpen}
+            onClick={selectedSourceType === 'final_component' ? saveFinalComponentGrades : saveGrades}
+            disabled={(selectedSourceType === 'period' ? saving : savingFc) || !currentPeriodOpen}
             className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
           >
             <Save className="w-4 h-4" />
-            {saving ? 'Guardando...' : 'Guardar'}
+            {(saving || savingFc) ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
       </div>
@@ -949,17 +1161,35 @@ export default function Grades() {
 
         <div className="relative">
           <select
-            value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value)}
+            value={selectedSourceType === 'final_component' ? `fc_${selectedFinalComponentId}` : selectedPeriod}
+            onChange={(e) => {
+              const val = e.target.value
+              if (val.startsWith('fc_')) {
+                setSelectedSourceType('final_component')
+                setSelectedFinalComponentId(val.replace('fc_', ''))
+                setViewMode('detailed')
+              } else {
+                setSelectedSourceType('period')
+                setSelectedFinalComponentId(null)
+                setSelectedPeriod(val)
+              }
+            }}
             className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           >
             {periods.map((period) => (
               <option key={period.id} value={period.id}>{period.name}</option>
             ))}
+            {finalComponents.length > 0 && (
+              <option disabled>──────────────</option>
+            )}
+            {finalComponents.map((fc) => (
+              <option key={fc.id} value={`fc_${fc.id}`}>{fc.name}</option>
+            ))}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
         </div>
 
+        {selectedSourceType === 'period' && (
         <div className="flex bg-slate-100 rounded-lg p-1">
           <button
             onClick={() => setViewMode('detailed')}
@@ -980,16 +1210,23 @@ export default function Grades() {
             Logros
           </button>
         </div>
+        )}
 
         <div className="ml-auto flex gap-2 flex-wrap">
-          {processConfigs.map((process) => {
-            const colors = processColors[process.colorIndex]
-            return (
-              <span key={process.code} className={`px-3 py-1 rounded-lg text-sm font-medium ${colors.bg} ${colors.text} ${colors.border} border`}>
-                {process.name} ({process.weight}%)
-              </span>
-            )
-          })}
+          {selectedSourceType === 'period' ? (
+            processConfigs.map((process) => {
+              const colors = processColors[process.colorIndex]
+              return (
+                <span key={process.code} className={`px-3 py-1 rounded-lg text-sm font-medium ${colors.bg} ${colors.text} ${colors.border} border`}>
+                  {process.name} ({process.weight}%)
+                </span>
+              )
+            })
+          ) : (
+            <span className="px-3 py-1 rounded-lg text-sm font-medium bg-purple-50 text-purple-700 border-purple-200 border">
+              {finalComponents.find(fc => fc.id === selectedFinalComponentId)?.name} ({finalComponents.find(fc => fc.id === selectedFinalComponentId)?.weightPercentage}% anual)
+            </span>
+          )}
         </div>
       </div>
 
@@ -999,7 +1236,7 @@ export default function Grades() {
             <BookOpen className="w-5 h-5 text-blue-600" />
             <div>
               <h2 className="font-semibold text-slate-900">{selectedAssignment?.subject.name}</h2>
-              <p className="text-sm text-slate-500">{selectedAssignment?.group.grade?.name} {selectedAssignment?.group.name} • {periods.find(p => p.id === selectedPeriod)?.name || 'Período'}</p>
+              <p className="text-sm text-slate-500">{selectedAssignment?.group.grade?.name} {selectedAssignment?.group.name} • {selectedSourceType === 'final_component' ? finalComponents.find(fc => fc.id === selectedFinalComponentId)?.name : (periods.find(p => p.id === selectedPeriod)?.name || 'Período')}</p>
             </div>
           </div>
         </div>
@@ -1014,7 +1251,76 @@ export default function Grades() {
           </div>
         )}
 
-        {viewMode === 'detailed' ? (
+        {selectedSourceType === 'final_component' ? (
+          /* ═══════════════════════════════════════════════════════
+             PLANILLA SIMPLIFICADA - Componente Final (1 nota por estudiante)
+             ═══════════════════════════════════════════════════════ */
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-purple-50">
+                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase min-w-[250px]">Estudiante</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-purple-700 uppercase min-w-[120px]">
+                    {finalComponents.find(fc => fc.id === selectedFinalComponentId)?.name || 'Nota'}
+                  </th>
+                  <th className="text-center px-4 py-3 text-xs font-medium text-slate-500 uppercase min-w-[80px]">Desempeño</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loadingStudents ? (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-8 text-center text-slate-500">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
+                        Cargando estudiantes...
+                      </div>
+                    </td>
+                  </tr>
+                ) : students.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-8 text-center text-slate-500">
+                      No hay estudiantes matriculados en este grupo
+                    </td>
+                  </tr>
+                ) : students.map((student) => {
+                  const grade = fcGrades[student.id] || 0
+                  const performance = getPerformanceLevel(grade)
+                  return (
+                    <tr key={student.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3 font-medium text-slate-900">{student.name}</td>
+                      <td className="px-4 py-3 text-center">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="1"
+                          max="5"
+                          value={grade || ''}
+                          onChange={(e) => {
+                            let val = parseFloat(e.target.value) || 0
+                            if (val > 5) val = 5
+                            else if (val < 1 && val !== 0) val = 1
+                            else if (val < 0) val = 0
+                            setFcGrades(prev => ({ ...prev, [student.id]: val }))
+                          }}
+                          onFocus={(e) => e.target.select()}
+                          disabled={!currentPeriodOpen}
+                          className={`w-20 px-2 py-1.5 text-center text-sm border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none ${!currentPeriodOpen ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' : 'border-slate-300'}`}
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {grade > 0 && (
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${performance.color}`}>
+                            {performance.label}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : viewMode === 'detailed' ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -1051,15 +1357,43 @@ export default function Grades() {
                     ]
                     return (
                       <React.Fragment key={process.code}>
-                        {allProcessActivities.map((activity) => (
+                        {allProcessActivities.map((activity) => {
+                          const displayName = customActivityNames[activity.id] || activity.name
+                          return (
                           <th key={activity.id} className="text-center px-1 py-1 min-w-[50px] border-b border-slate-200">
                             <div className="flex flex-col items-center">
-                              <span className="text-slate-600 truncate max-w-[45px]" title={activity.name}>
-                                {activity.name.length > 6 ? activity.name.substring(0, 6) + '.' : activity.name}
-                              </span>
+                              {editingActivityName === activity.id ? (
+                                <input
+                                  autoFocus
+                                  type="text"
+                                  defaultValue={displayName}
+                                  onBlur={(e) => {
+                                    const val = e.target.value.trim()
+                                    if (val && val !== activity.name) {
+                                      setCustomActivityNames(prev => ({ ...prev, [activity.id]: val }))
+                                    } else if (val === activity.name) {
+                                      setCustomActivityNames(prev => { const copy = { ...prev }; delete copy[activity.id]; return copy })
+                                    }
+                                    setEditingActivityName(null)
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                                    if (e.key === 'Escape') setEditingActivityName(null)
+                                  }}
+                                  className="w-16 px-0.5 py-0 text-[10px] text-center border border-blue-400 rounded outline-none"
+                                />
+                              ) : (
+                                <span
+                                  className="text-slate-600 truncate max-w-[45px] cursor-pointer hover:text-blue-600 hover:underline"
+                                  title={`${displayName} (click para renombrar)`}
+                                  onClick={() => setEditingActivityName(activity.id)}
+                                >
+                                  {displayName.length > 6 ? displayName.substring(0, 6) + '.' : displayName}
+                                </span>
+                              )}
                               {activity.subprocessIndex === -1 && (
                                 <button 
-                                  onClick={() => setDeleteConfirm({ processCode: process.code, activityId: activity.id, activityName: activity.name })}
+                                  onClick={() => setDeleteConfirm({ processCode: process.code, activityId: activity.id, activityName: displayName })}
                                   className="p-0.5 hover:bg-red-100 rounded text-slate-400 hover:text-red-500 mt-0.5"
                                   title="Eliminar actividad"
                                 >
@@ -1068,7 +1402,7 @@ export default function Grades() {
                               )}
                             </div>
                           </th>
-                        ))}
+                        )})}
                         {process.allowAdd && (
                           <th className="text-center px-1 py-1 min-w-[30px] border-b border-slate-200">
                             <button 

@@ -1357,6 +1357,34 @@ export const achievementBankApi = {
   markUsed: (id: string) => api.post(`/achievement-bank/${id}/use`),
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// COMPONENTES FINALES (Pruebas Semestrales, Proyecto Final, etc.)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const finalComponentsApi = {
+  getByAcademicYear: (academicYearId: string) =>
+    api.get('/final-components', { params: { academicYearId } }),
+  create: (data: { academicYearId: string; name: string; weightPercentage: number; order: number }) =>
+    api.post('/final-components', data),
+  sync: (academicYearId: string, components: Array<{ id?: string; name: string; weightPercentage: number; order: number }>) =>
+    api.post('/final-components/sync', { academicYearId, components }),
+  update: (id: string, data: { name?: string; weightPercentage?: number; order?: number }) =>
+    api.put(`/final-components/${id}`, data),
+  delete: (id: string) => api.delete(`/final-components/${id}`),
+}
+
+export const finalComponentGradesApi = {
+  getByComponent: (finalComponentId: string, teacherAssignmentId: string) =>
+    api.get('/final-component-grades', { params: { finalComponentId, teacherAssignmentId } }),
+  getByStudent: (studentEnrollmentId: string, academicYearId: string) =>
+    api.get('/final-component-grades/student', { params: { studentEnrollmentId, academicYearId } }),
+  upsert: (data: { studentEnrollmentId: string; teacherAssignmentId: string; finalComponentId: string; grade: number }) =>
+    api.post('/final-component-grades/upsert', data),
+  bulkUpsert: (grades: Array<{ studentEnrollmentId: string; teacherAssignmentId: string; finalComponentId: string; grade: number }>) =>
+    api.post('/final-component-grades/bulk-upsert', grades),
+  delete: (id: string) => api.delete(`/final-component-grades/${id}`),
+}
+
 export const capabilitiesApi = {
   getMyCapabilities: () =>
     api.get('/capabilities/my-capabilities'),

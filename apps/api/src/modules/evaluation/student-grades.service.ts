@@ -279,19 +279,25 @@ export class StudentGradesService {
 
   /**
    * Calcula la nota anual para un estudiante en una asignatura.
-   * Promedio ponderado de todos los cortes académicos según sus pesos.
+   * Fórmula universal: Σ(fuentes de nota ponderadas)
+   * Fuentes = períodos (PeriodFinalGrade) + componentes finales (FinalComponentGrade)
+   * El motor no sabe qué es un período o una prueba. Solo suma componentes ponderados.
    */
   async calculateAnnualGrade(
     studentEnrollmentId: string,
     teacherAssignmentId: string,
     academicYearId: string,
-  ): Promise<{ annualGrade: number | null; terms: { termId: string; name: string; grade: number | null; weight: number }[] }> {
+  ): Promise<{
+    annualGrade: number | null;
+    sources: Array<{ id: string; name: string; type: 'period' | 'final_component'; grade: number | null; weight: number }>;
+  }> {
+    // Fuente 1: Períodos académicos
     const terms = await this.prisma.academicTerm.findMany({
       where: { academicYearId },
       orderBy: { order: 'asc' },
     });
 
-    const termResults = await Promise.all(
+    const termSources = await Promise.all(
       terms.map(async (term) => {
         const result = await this.calculateTermGrade(
           studentEnrollmentId,
@@ -299,26 +305,57 @@ export class StudentGradesService {
           term.id,
         );
         return {
-          termId: term.id,
+          id: term.id,
           name: term.name,
+          type: 'period' as const,
           grade: result.grade,
           weight: term.weightPercentage,
         };
       }),
     );
 
-    const validTerms = termResults.filter((t) => t.grade !== null);
-    if (validTerms.length === 0) return { annualGrade: null, terms: termResults };
+    // Fuente 2: Componentes finales (pruebas semestrales, proyecto final, etc.)
+    const finalComponents = await this.prisma.finalComponent.findMany({
+      where: { academicYearId },
+      orderBy: { order: 'asc' },
+    });
 
-    const weightedSum = validTerms.reduce(
-      (acc, t) => acc + (t.grade! * t.weight) / 100,
+    const componentSources = await Promise.all(
+      finalComponents.map(async (fc) => {
+        const gradeRecord = await this.prisma.finalComponentGrade.findUnique({
+          where: {
+            studentEnrollmentId_teacherAssignmentId_finalComponentId: {
+              studentEnrollmentId,
+              teacherAssignmentId,
+              finalComponentId: fc.id,
+            },
+          },
+        });
+        return {
+          id: fc.id,
+          name: fc.name,
+          type: 'final_component' as const,
+          grade: gradeRecord ? Number(gradeRecord.grade) : null,
+          weight: fc.weightPercentage,
+        };
+      }),
+    );
+
+    // Unificar todas las fuentes de nota
+    const allSources = [...termSources, ...componentSources];
+
+    const validSources = allSources.filter((s) => s.grade !== null);
+    if (validSources.length === 0) return { annualGrade: null, sources: allSources };
+
+    const weightedSum = validSources.reduce(
+      (acc, s) => acc + (s.grade! * s.weight) / 100,
       0,
     );
 
-    const totalWeight = validTerms.reduce((acc, t) => acc + t.weight, 0);
+    const totalWeight = validSources.reduce((acc, s) => acc + s.weight, 0);
     const annualGrade = totalWeight > 0 ? this.roundToOneDecimal((weightedSum * 100) / totalWeight) : null;
 
-    return { annualGrade, terms: termResults };
+    return { annualGrade, sources: allSources };
   }
 
   /**
