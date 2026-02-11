@@ -15,7 +15,6 @@ ALTER TABLE "EnrollmentEvent" ADD COLUMN IF NOT EXISTS "institutionId" TEXT;
 ALTER TABLE "StudentGrade" ADD COLUMN IF NOT EXISTS "institutionId" TEXT;
 ALTER TABLE "PeriodFinalGrade" ADD COLUMN IF NOT EXISTS "institutionId" TEXT;
 ALTER TABLE "PartialGrade" ADD COLUMN IF NOT EXISTS "institutionId" TEXT;
-ALTER TABLE "FinalComponentGrade" ADD COLUMN IF NOT EXISTS "institutionId" TEXT;
 ALTER TABLE "PreventiveAlert" ADD COLUMN IF NOT EXISTS "institutionId" TEXT;
 ALTER TABLE "AttendanceRecord" ADD COLUMN IF NOT EXISTS "institutionId" TEXT;
 ALTER TABLE "StudentObservation" ADD COLUMN IF NOT EXISTS "institutionId" TEXT;
@@ -83,11 +82,6 @@ UPDATE "PartialGrade" pg
 SET "institutionId" = s."institutionId"
 FROM "StudentEnrollment" se JOIN "Student" s ON se."studentId" = s."id"
 WHERE pg."studentEnrollmentId" = se."id" AND pg."institutionId" IS NULL;
-
-UPDATE "FinalComponentGrade" fcg
-SET "institutionId" = s."institutionId"
-FROM "StudentEnrollment" se JOIN "Student" s ON se."studentId" = s."id"
-WHERE fcg."studentEnrollmentId" = se."id" AND fcg."institutionId" IS NULL;
 
 UPDATE "PreventiveAlert" pa
 SET "institutionId" = s."institutionId"
@@ -184,7 +178,6 @@ ALTER TABLE "EnrollmentEvent" ALTER COLUMN "institutionId" SET NOT NULL;
 ALTER TABLE "StudentGrade" ALTER COLUMN "institutionId" SET NOT NULL;
 ALTER TABLE "PeriodFinalGrade" ALTER COLUMN "institutionId" SET NOT NULL;
 ALTER TABLE "PartialGrade" ALTER COLUMN "institutionId" SET NOT NULL;
-ALTER TABLE "FinalComponentGrade" ALTER COLUMN "institutionId" SET NOT NULL;
 ALTER TABLE "PreventiveAlert" ALTER COLUMN "institutionId" SET NOT NULL;
 ALTER TABLE "AttendanceRecord" ALTER COLUMN "institutionId" SET NOT NULL;
 ALTER TABLE "StudentObservation" ALTER COLUMN "institutionId" SET NOT NULL;
@@ -212,7 +205,6 @@ ALTER TABLE "EnrollmentEvent" ADD CONSTRAINT "EnrollmentEvent_institutionId_fkey
 ALTER TABLE "StudentGrade" ADD CONSTRAINT "StudentGrade_institutionId_fkey" FOREIGN KEY ("institutionId") REFERENCES "Institution"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "PeriodFinalGrade" ADD CONSTRAINT "PeriodFinalGrade_institutionId_fkey" FOREIGN KEY ("institutionId") REFERENCES "Institution"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "PartialGrade" ADD CONSTRAINT "PartialGrade_institutionId_fkey" FOREIGN KEY ("institutionId") REFERENCES "Institution"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "FinalComponentGrade" ADD CONSTRAINT "FinalComponentGrade_institutionId_fkey" FOREIGN KEY ("institutionId") REFERENCES "Institution"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "PreventiveAlert" ADD CONSTRAINT "PreventiveAlert_institutionId_fkey" FOREIGN KEY ("institutionId") REFERENCES "Institution"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "AttendanceRecord" ADD CONSTRAINT "AttendanceRecord_institutionId_fkey" FOREIGN KEY ("institutionId") REFERENCES "Institution"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "StudentObservation" ADD CONSTRAINT "StudentObservation_institutionId_fkey" FOREIGN KEY ("institutionId") REFERENCES "Institution"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -323,16 +315,6 @@ ALTER TABLE "PartialGrade" ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='PartialGrade' AND policyname='tenant_isolation') THEN
     CREATE POLICY "tenant_isolation" ON "PartialGrade" FOR ALL
-      USING ("institutionId" = current_institution_id())
-      WITH CHECK ("institutionId" = current_institution_id());
-  END IF;
-END $$;
-
--- FinalComponentGrade
-ALTER TABLE "FinalComponentGrade" ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='FinalComponentGrade' AND policyname='tenant_isolation') THEN
-    CREATE POLICY "tenant_isolation" ON "FinalComponentGrade" FOR ALL
       USING ("institutionId" = current_institution_id())
       WITH CHECK ("institutionId" = current_institution_id());
   END IF;
@@ -511,7 +493,6 @@ ALTER TABLE "EnrollmentEvent" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "StudentGrade" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "PeriodFinalGrade" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "PartialGrade" FORCE ROW LEVEL SECURITY;
-ALTER TABLE "FinalComponentGrade" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "PreventiveAlert" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "AttendanceRecord" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "StudentObservation" FORCE ROW LEVEL SECURITY;
