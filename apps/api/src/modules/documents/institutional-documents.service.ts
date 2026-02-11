@@ -231,31 +231,12 @@ export class InstitutionalDocumentsService {
     const ext = file.originalname.split('.').pop() || 'pdf';
     const fileName = `${category.toLowerCase()}_${Date.now()}.${ext}`;
     const path = `institucion/${institutionId}/institucionales/${category.toLowerCase()}/${fileName}`;
-    
-    const { data, error } = await (this.storageService as any).supabase.storage
-      .from('documentos')
-      .upload(path, file.buffer, {
-        contentType: file.mimetype,
-        upsert: false,
-      });
-    
-    if (error) {
-      console.error('[InstitutionalDocuments] Upload error:', error);
-      throw new BadRequestException(`Error al subir archivo: ${error.message}`);
-    }
-    
-    // Obtener URL pública
-    const { data: urlData } = (this.storageService as any).supabase.storage
-      .from('documentos')
-      .getPublicUrl(path);
-    
-    return {
-      url: urlData.publicUrl,
+
+    return this.storageService.uploadGenericFile(
+      this.storageService.buckets.documentos,
       path,
-      fileName: file.originalname,
-      fileSize: file.size,
-      mimeType: file.mimetype,
-    };
+      file,
+    );
   }
 
   private async checkStorageLimit(institutionId: string, fileSize: number) {
@@ -360,39 +341,35 @@ export class InstitutionalDocumentsService {
     let allStorageFiles: string[] = [];
     
     try {
-      console.log('[InstitutionalDocuments] Scanning Supabase path:', basePath);
+      console.log('[InstitutionalDocuments] Scanning storage path:', basePath);
       
-      const { data: folders, error: foldersError } = await (this.storageService as any).supabase.storage
-        .from('documentos')
-        .list(basePath);
+      const folders = await this.storageService.listFiles(
+        this.storageService.buckets.documentos,
+        basePath,
+      );
       
-      console.log('[InstitutionalDocuments] Folders found:', folders?.length || 0, folders?.map((f: any) => f.name));
+      console.log('[InstitutionalDocuments] Items found:', folders?.length || 0);
       
-      if (foldersError) {
-        console.error('[InstitutionalDocuments] Error listing folders:', foldersError);
-      } else if (folders && folders.length > 0) {
-        // Iterar sobre cada carpeta de categoría
+      if (folders && folders.length > 0) {
         for (const folder of folders) {
-          if (folder.name && folder.id) { // folder.id indica que es una carpeta
-            const categoryPath = `${basePath}/${folder.name}`;
-            console.log('[InstitutionalDocuments] Scanning category:', categoryPath);
-            
-            const { data: files, error: filesError } = await (this.storageService as any).supabase.storage
-              .from('documentos')
-              .list(categoryPath);
-            
-            console.log('[InstitutionalDocuments] Files in', folder.name, ':', files?.length || 0);
-            
-            if (!filesError && files) {
-              for (const file of files) {
-                if (file.name && !file.name.startsWith('.') && !file.id) { // !file.id indica que es un archivo, no carpeta
-                  const fullPath = `${categoryPath}/${file.name}`;
-                  allStorageFiles.push(fullPath);
-                  // Si el archivo no está en la BD, es huérfano
-                  if (!dbPaths.has(fullPath)) {
-                    orphanedFiles.push(fullPath);
-                    console.log('[InstitutionalDocuments] Orphaned file found:', fullPath);
-                  }
+          const categoryPath = `${basePath}/${folder.name}`;
+          console.log('[InstitutionalDocuments] Scanning category:', categoryPath);
+          
+          const files = await this.storageService.listFiles(
+            this.storageService.buckets.documentos,
+            categoryPath,
+          );
+          
+          console.log('[InstitutionalDocuments] Files in', folder.name, ':', files?.length || 0);
+          
+          if (files) {
+            for (const file of files) {
+              if (file.name && !file.name.startsWith('.')) {
+                const fullPath = `${categoryPath}/${file.name}`;
+                allStorageFiles.push(fullPath);
+                if (!dbPaths.has(fullPath)) {
+                  orphanedFiles.push(fullPath);
+                  console.log('[InstitutionalDocuments] Orphaned file found:', fullPath);
                 }
               }
             }
@@ -412,14 +389,12 @@ export class InstitutionalDocumentsService {
     for (const filePath of orphanedFiles) {
       try {
         console.log('[InstitutionalDocuments] Deleting:', filePath);
-        const { error } = await (this.storageService as any).supabase.storage
-          .from('documentos')
-          .remove([filePath]);
-        
-        if (!error) {
-          deletedFiles.push(filePath);
-          console.log('[InstitutionalDocuments] Deleted orphaned file:', filePath);
-        }
+        await this.storageService.deleteFile(
+          this.storageService.buckets.documentos,
+          filePath,
+        );
+        deletedFiles.push(filePath);
+        console.log('[InstitutionalDocuments] Deleted orphaned file:', filePath);
       } catch (error) {
         console.error('[InstitutionalDocuments] Error deleting file:', filePath, error);
       }

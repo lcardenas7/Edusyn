@@ -1,5 +1,5 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { Injectable, BadRequestException, Inject } from '@nestjs/common';
+import { StorageService } from './storage.service';
 
 export interface UploadResult {
   url: string;
@@ -22,21 +22,26 @@ export interface FileAuditInfo {
   metadata?: Record<string, any>;
 }
 
+/**
+ * Fachada de alto nivel que expone métodos de negocio para subir/descargar archivos.
+ * Internamente delega a StorageService (Cloudflare R2).
+ *
+ * Los antiguos "buckets" de Supabase ahora son prefijos de carpeta dentro
+ * del único bucket de R2 (ej: "boletines/...", "mensajes/...").
+ */
 @Injectable()
 export class SupabaseStorageService {
-  private supabase: SupabaseClient;
-  
-  // Buckets organizados por tipo de contenido
+  // Prefijos de carpeta (antes eran buckets separados en Supabase)
   readonly buckets = {
-    boletines: 'boletines',           // Boletines de notas (PDF)
-    evidencias: 'evidencias',         // Evidencias académicas
-    reportes: 'reportes',             // Reportes e informes (PIAR, actas)
-    importaciones: 'importaciones',   // Archivos de carga masiva
-    exportaciones: 'exportaciones',   // Archivos exportados
-    perfiles: 'perfiles',             // Fotos de perfil (estudiantes, docentes)
-    documentos: 'documentos',         // Documentos de estudiantes (RC, EPS, etc.)
-    galeria: 'galeria',               // Imágenes del dashboard institucional
-    mensajes: 'mensajes',               // Adjuntos de mensajes/comunicaciones
+    boletines: 'boletines',
+    evidencias: 'evidencias',
+    reportes: 'reportes',
+    importaciones: 'importaciones',
+    exportaciones: 'exportaciones',
+    perfiles: 'perfiles',
+    documentos: 'documentos',
+    galeria: 'galeria',
+    mensajes: 'mensajes',
   };
 
   // Tiempos de expiración para URLs firmadas (en segundos)
@@ -47,32 +52,25 @@ export class SupabaseStorageService {
     documentos: 15 * 60,    // 15 minutos
     importaciones: 30 * 60, // 30 minutos (archivos de trabajo)
     exportaciones: 60 * 60, // 1 hora (descargas)
-    perfiles: 0,            // Público - no necesita firma
-    galeria: 0,             // Público - no necesita firma
-    mensajes: 15 * 60,       // 15 minutos - adjuntos de mensajes
+    perfiles: 600,           // 10 minutos (antes público)
+    galeria: 600,            // 10 minutos (antes público)
+    mensajes: 15 * 60,      // 15 minutos - adjuntos de mensajes
   };
 
-  constructor() {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    // Usar SERVICE_ROLE_KEY (nombre estandarizado) con fallback a SERVICE_KEY (legacy)
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.warn('[SupabaseStorage] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not configured');
-      return;
-    }
-
-    this.supabase = createClient(supabaseUrl, supabaseKey);
-    console.log('[SupabaseStorage] Initialized successfully');
-  }
+  constructor(private readonly storage: StorageService) {}
 
   private isConfigured(): boolean {
-    return !!this.supabase;
+    return this.storage.isConfigured();
+  }
+
+  /** Construye la key completa: bucket-prefix/path */
+  private buildKey(bucket: string, path: string): string {
+    return `${bucket}/${path}`;
   }
 
   /**
    * Sube un documento de estudiante
-   * Ruta: institucion/{institutionId}/estudiantes/{studentId}/documentos/{fileName}
+   * Ruta: documentos/institucion/{institutionId}/estudiantes/{studentId}/documentos/{fileName}
    */
   async uploadStudentDocument(
     institutionId: string,
@@ -95,7 +93,7 @@ export class SupabaseStorageService {
 
   /**
    * Sube una imagen para la galería del dashboard
-   * Ruta: institucion/{institutionId}/gallery/{fileName}
+   * Ruta: galeria/institucion/{institutionId}/gallery/{fileName}
    */
   async uploadGalleryImage(
     institutionId: string,
@@ -161,12 +159,14 @@ export class SupabaseStorageService {
   async deleteMessageAttachments(institutionId: string, messageId: string): Promise<void> {
     if (!this.isConfigured()) return;
 
-    const folderPath = `institucion/${institutionId}/mensajes/${messageId}`;
-    const files = await this.listFiles(this.buckets.mensajes, folderPath);
-    
+    const prefix = this.buildKey(
+      this.buckets.mensajes,
+      `institucion/${institutionId}/mensajes/${messageId}/`,
+    );
+    const files = await this.storage.listFiles(prefix);
+
     if (files.length > 0) {
-      const paths = files.map(f => `${folderPath}/${f.name}`);
-      await this.supabase.storage.from(this.buckets.mensajes).remove(paths);
+      await this.storage.deleteMany(files.map((f) => f.key));
     }
   }
 
@@ -196,8 +196,7 @@ export class SupabaseStorageService {
 
   /**
    * Sube el boletín de un estudiante
-   * Estructura: {year}/{gradeName}/{studentId}.pdf
-   * Ejemplo: 2026/grado-9/abc123-uuid.pdf
+   * Estructura: boletines/{institutionId}/{year}/{gradeName}/{periodName}/{studentId}.pdf
    */
   async uploadReportCard(
     institutionId: string,
@@ -212,30 +211,20 @@ export class SupabaseStorageService {
       throw new BadRequestException('Storage no configurado');
     }
 
-    // Estructura: año/grado-normalizado/periodo/estudiante.pdf
     const gradeSlug = this.slugify(gradeName);
     const periodSlug = this.slugify(periodName);
     const fileName = `${studentId}.pdf`;
     const path = `${institutionId}/${year}/${gradeSlug}/${periodSlug}/${fileName}`;
+    const key = this.buildKey(this.buckets.boletines, path);
 
-    const { data, error } = await this.supabase.storage
-      .from(this.buckets.boletines)
-      .upload(path, pdfBuffer, {
-        contentType: 'application/pdf',
-        upsert: true,
-      });
+    await this.storage.upload(key, pdfBuffer, 'application/pdf');
 
-    if (error) {
-      console.error('[SupabaseStorage] Upload error:', error);
-      throw new BadRequestException(`Error al subir archivo: ${error.message}`);
-    }
-
-    // Para boletines, NO devolver URL pública, usar URL firmada
+    // Para boletines, usar URL firmada (contenido sensible)
     const signedUrl = await this.getSignedUrlForBucket(this.buckets.boletines, path);
 
     const auditInfo: FileAuditInfo = {
       bucket: this.buckets.boletines,
-      path: data.path,
+      path: key,
       fileName,
       fileSize: pdfBuffer.length,
       mimeType: 'application/pdf',
@@ -247,7 +236,7 @@ export class SupabaseStorageService {
 
     return {
       url: signedUrl,
-      path: data.path,
+      path: key,
       fileName,
       fileSize: pdfBuffer.length,
       mimeType: 'application/pdf',
@@ -284,23 +273,11 @@ export class SupabaseStorageService {
       throw new BadRequestException('Storage no configurado');
     }
 
-    const expiresIn = this.signedUrlExpiration[bucket as keyof typeof this.signedUrlExpiration] || 600;
-    
-    // Si es bucket público, devolver URL pública
-    if (expiresIn === 0) {
-      const { data } = this.supabase.storage.from(bucket).getPublicUrl(path);
-      return data.publicUrl;
-    }
+    const expiresIn =
+      this.signedUrlExpiration[bucket as keyof typeof this.signedUrlExpiration] || 600;
+    const key = this.buildKey(bucket, path);
 
-    const { data, error } = await this.supabase.storage
-      .from(bucket)
-      .createSignedUrl(path, expiresIn);
-
-    if (error) {
-      throw new BadRequestException(`Error al generar URL: ${error.message}`);
-    }
-
-    return data.signedUrl;
+    return this.storage.getSignedUrl(key, expiresIn);
   }
 
   /**
@@ -312,15 +289,8 @@ export class SupabaseStorageService {
       throw new BadRequestException('Storage no configurado');
     }
 
-    const { data, error } = await this.supabase.storage
-      .from(bucket)
-      .createSignedUrl(path, expiresIn);
-
-    if (error) {
-      throw new BadRequestException(`Error al generar URL: ${error.message}`);
-    }
-
-    return data.signedUrl;
+    const key = this.buildKey(bucket, path);
+    return this.storage.getSignedUrl(key, expiresIn);
   }
 
   /**
@@ -336,7 +306,7 @@ export class SupabaseStorageService {
     const gradeSlug = this.slugify(gradeName);
     const periodSlug = this.slugify(periodName);
     const path = `${institutionId}/${year}/${gradeSlug}/${periodSlug}/${studentId}.pdf`;
-    
+
     return this.getSignedUrlForBucket(this.buckets.boletines, path);
   }
 
@@ -348,12 +318,8 @@ export class SupabaseStorageService {
       throw new BadRequestException('Storage no configurado');
     }
 
-    const { error } = await this.supabase.storage.from(bucket).remove([path]);
-
-    if (error) {
-      console.error('[SupabaseStorage] Delete error:', error);
-      throw new BadRequestException(`Error al eliminar archivo: ${error.message}`);
-    }
+    const key = this.buildKey(bucket, path);
+    await this.storage.delete(key);
   }
 
   /**
@@ -364,14 +330,58 @@ export class SupabaseStorageService {
       return [];
     }
 
-    const { data, error } = await this.supabase.storage.from(bucket).list(path);
+    const prefix = this.buildKey(bucket, path);
+    const files = await this.storage.listFiles(prefix);
 
-    if (error) {
-      console.error('[SupabaseStorage] List error:', error);
-      return [];
+    // Compatibilidad: devolver con propiedad "name" como lo hacía Supabase
+    return files.map((f) => ({
+      name: f.key.split('/').pop() || f.key,
+      key: f.key,
+      size: f.size,
+      lastModified: f.lastModified,
+    }));
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // UPLOAD GENÉRICO (para módulos que necesitan subir a cualquier bucket/path)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Método genérico para subir un archivo a cualquier bucket/prefijo.
+   * Usado por módulos que manejan rutas custom (documentos institucionales, tareas, etc.)
+   */
+  async uploadGenericFile(
+    bucket: string,
+    path: string,
+    file: Express.Multer.File,
+  ): Promise<UploadResult> {
+    if (!this.isConfigured()) {
+      throw new BadRequestException('Storage no configurado');
     }
+    return this.uploadFile(bucket, path, file);
+  }
 
-    return data || [];
+  /**
+   * Método genérico para subir un Buffer a cualquier bucket/prefijo.
+   */
+  async uploadGenericBuffer(
+    bucket: string,
+    path: string,
+    buffer: Buffer,
+    contentType: string,
+  ): Promise<UploadResult> {
+    if (!this.isConfigured()) {
+      throw new BadRequestException('Storage no configurado');
+    }
+    const key = this.buildKey(bucket, path);
+    const result = await this.storage.upload(key, buffer, contentType);
+    return {
+      url: result.url,
+      path: result.key,
+      fileName: path.split('/').pop() || path,
+      fileSize: buffer.length,
+      mimeType: contentType,
+    };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -383,23 +393,12 @@ export class SupabaseStorageService {
     path: string,
     file: Express.Multer.File,
   ): Promise<UploadResult> {
-    const { data, error } = await this.supabase.storage
-      .from(bucket)
-      .upload(path, file.buffer, {
-        contentType: file.mimetype,
-        upsert: false,
-      });
-
-    if (error) {
-      console.error('[SupabaseStorage] Upload error:', error);
-      throw new BadRequestException(`Error al subir archivo: ${error.message}`);
-    }
-
-    const { data: urlData } = this.supabase.storage.from(bucket).getPublicUrl(path);
+    const key = this.buildKey(bucket, path);
+    const result = await this.storage.upload(key, file.buffer, file.mimetype);
 
     return {
-      url: urlData.publicUrl,
-      path: data.path,
+      url: result.url,
+      path: result.key,
       fileName: file.originalname,
       fileSize: file.size,
       mimeType: file.mimetype,

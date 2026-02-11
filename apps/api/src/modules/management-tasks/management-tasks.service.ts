@@ -469,26 +469,16 @@ export class ManagementTasksService {
     const ext = file.originalname.split('.').pop() || 'pdf';
     const fileName = `evidence_${Date.now()}.${ext}`;
     const path = `institucion/${institutionId}/tareas/${taskId}/${userId}/${fileName}`;
-    
-    const { data, error } = await (this.storageService as any).supabase.storage
-      .from('documentos')
-      .upload(path, file.buffer, {
-        contentType: file.mimetype,
-        upsert: false,
-      });
-    
-    if (error) {
-      console.error('[ManagementTasks] Upload error:', error);
-      throw new BadRequestException(`Error al subir archivo: ${error.message}`);
-    }
-    
-    const { data: urlData } = (this.storageService as any).supabase.storage
-      .from('documentos')
-      .getPublicUrl(path);
-    
-    return {
-      url: urlData.publicUrl,
+
+    const result = await this.storageService.uploadGenericFile(
+      this.storageService.buckets.documentos,
       path,
+      file,
+    );
+
+    return {
+      url: result.url,
+      path: result.path,
     };
   }
 
