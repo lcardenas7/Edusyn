@@ -1,0 +1,96 @@
+name: Database Backup to R2
+
+on:
+  schedule:
+    # Cada 1ro y 15 del mes a las 3:00 AM UTC (10:00 PM Colombia)
+    - cron: '0 3 1,15 * *'
+  workflow_dispatch: # Permite ejecutar manualmente desde GitHub
+
+env:
+  BACKUP_RETENTION_DAYS: 30
+
+jobs:
+  backup:
+    name: PostgreSQL Backup
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Install AWS CLI
+        run: |
+          sudo apt-get install -y awscli
+
+      - name: Generate backup filename
+        id: filename
+        run: |
+          TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
+          echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "filename=edusyn-db-${TIMESTAMP}.sql.gz" >> $GITHUB_OUTPUT
+
+      - name: Run pg_dump
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_PUBLIC_URL }}
+        run: |
+          echo "🔄 Starting database backup..."
+          pg_dump "$DATABASE_URL" \
+            --no-owner \
+            --no-privileges \
+            --format=plain \
+            --verbose \
+            2>&1 | gzip > ${{ steps.filename.outputs.filename }}
+          
+          FILE_SIZE=$(du -h ${{ steps.filename.outputs.filename }} | cut -f1)
+          echo "✅ Backup completed: ${{ steps.filename.outputs.filename }} ($FILE_SIZE)"
+
+      - name: Upload to Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+        run: |
+          echo "📤 Uploading to R2..."
+          aws s3 cp \
+            ${{ steps.filename.outputs.filename }} \
+            s3://edusyn-files/backups/db/${{ steps.filename.outputs.filename }} \
+            --endpoint-url "$R2_ENDPOINT"
+          echo "✅ Upload completed"
+
+      - name: Cleanup old backups (retain last 30)
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+        run: |
+          echo "🧹 Checking old backups..."
+          # Listar backups ordenados por fecha
+          BACKUPS=$(aws s3 ls s3://edusyn-files/backups/db/ \
+            --endpoint-url "$R2_ENDPOINT" | \
+            grep "edusyn-db-" | \
+            sort -r | \
+            awk '{print $4}')
+          
+          COUNT=0
+          for FILE in $BACKUPS; do
+            COUNT=$((COUNT + 1))
+            if [ $COUNT -gt ${{ env.BACKUP_RETENTION_DAYS }} ]; then
+              echo "🗑️ Deleting old backup: $FILE"
+              aws s3 rm "s3://edusyn-files/backups/db/$FILE" \
+                --endpoint-url "$R2_ENDPOINT"
+            fi
+          done
+          echo "✅ Cleanup done. Keeping last ${{ env.BACKUP_RETENTION_DAYS }} backups."
+
+      - name: Summary
+        run: |
+          echo "## 📦 Database Backup Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **File** | \`${{ steps.filename.outputs.filename }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Location** | \`s3://edusyn-files/backups/db/\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Date** | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Retention** | Last ${{ env.BACKUP_RETENTION_DAYS }} backups |" >> $GITHUB_STEP_SUMMARY
