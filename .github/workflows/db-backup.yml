@@ -22,7 +22,7 @@ jobs:
 
       - name: Install AWS CLI
         run: |
-          sudo apt-get install -y awscli
+          pip install awscli --quiet
 
       - name: Generate backup filename
         id: filename
