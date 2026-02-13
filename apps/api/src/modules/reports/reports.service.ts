@@ -710,6 +710,618 @@ export class ReportsService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // MOTOR DE CONSULTA ACADÉMICA — Base para reportes institucionales
+  // Usa PeriodFinalGrade como fuente única con diferentes agregaciones.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Consulta base: obtiene PeriodFinalGrade con joins completos.
+   * Todos los reportes académicos se derivan de esta consulta.
+   */
+  private async getBaseGradeData(params: {
+    institutionId: string;
+    academicYearId: string;
+    groupId?: string;
+    termId?: string;
+    subjectId?: string;
+    stage?: string; // GradeStage: PREESCOLAR, BASICA_PRIMARIA, BASICA_SECUNDARIA, MEDIA
+  }) {
+    return this.prisma.periodFinalGrade.findMany({
+      where: {
+        institutionId: params.institutionId,
+        academicTerm: {
+          academicYearId: params.academicYearId,
+          ...(params.termId && { id: params.termId }),
+        },
+        studentEnrollment: {
+          status: 'ACTIVE',
+          ...(params.groupId && { groupId: params.groupId }),
+          ...(params.stage && { group: { grade: { stage: params.stage as any } } }),
+        },
+        ...(params.subjectId && { subjectId: params.subjectId }),
+      },
+      include: {
+        studentEnrollment: {
+          include: {
+            student: { select: { id: true, firstName: true, lastName: true } },
+            group: { include: { grade: true } },
+          },
+        },
+        academicTerm: { select: { id: true, name: true, weightPercentage: true, order: true } },
+        subject: { include: { area: { select: { id: true, name: true } } } },
+      },
+      orderBy: { studentEnrollment: { student: { lastName: 'asc' } } },
+    });
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // BLOQUE 1 — RENDIMIENTO ACADÉMICO
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Reporte 2: Promedio por asignatura
+   * ¿Qué asignatura tiene mejor o peor rendimiento?
+   */
+  async getSubjectAverages(institutionId: string, academicYearId: string, groupId?: string, termId?: string, stage?: string) {
+    const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
+    const grades = await this.getBaseGradeData({ institutionId, academicYearId, groupId, termId, stage });
+
+    // Agrupar por asignatura
+    const subjectMap = new Map<string, { name: string; areaName: string; scores: number[] }>();
+    for (const g of grades) {
+      const key = g.subjectId;
+      if (!subjectMap.has(key)) {
+        subjectMap.set(key, {
+          name: g.subject.name,
+          areaName: g.subject.area?.name || '',
+          scores: [],
+        });
+      }
+      subjectMap.get(key)!.scores.push(Number(g.finalScore));
+    }
+
+    const results = Array.from(subjectMap.entries()).map(([subjectId, data]) => {
+      const { scores } = data;
+      const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+      const approved = scores.filter(s => s >= passingGrade).length;
+      return {
+        subjectId,
+        subjectName: data.name,
+        areaName: data.areaName,
+        average: Math.round(avg * 10) / 10,
+        approvalRate: Math.round((approved / scores.length) * 1000) / 10,
+        failRate: Math.round(((scores.length - approved) / scores.length) * 1000) / 10,
+        bestGrade: Math.max(...scores),
+        worstGrade: Math.min(...scores),
+        totalStudents: scores.length,
+      };
+    });
+
+    return { passingGrade, results: results.sort((a, b) => a.subjectName.localeCompare(b.subjectName)) };
+  }
+
+  /**
+   * Reporte 3: Ranking de estudiantes
+   * ¿Quiénes son los mejores / peores del grupo?
+   */
+  async getStudentRanking(institutionId: string, academicYearId: string, groupId: string, termId?: string) {
+    const grades = await this.getBaseGradeData({ institutionId, academicYearId, groupId, termId });
+
+    // Agrupar por estudiante → promedio de todas sus asignaturas
+    const studentMap = new Map<string, { name: string; group: string; scores: number[] }>();
+    for (const g of grades) {
+      const key = g.studentEnrollmentId;
+      if (!studentMap.has(key)) {
+        const s = g.studentEnrollment.student;
+        studentMap.set(key, {
+          name: `${s.lastName} ${s.firstName}`,
+          group: `${g.studentEnrollment.group.grade?.name || ''} ${g.studentEnrollment.group.name}`,
+          scores: [],
+        });
+      }
+      studentMap.get(key)!.scores.push(Number(g.finalScore));
+    }
+
+    const results = Array.from(studentMap.values())
+      .map(data => {
+        const avg = data.scores.reduce((a, b) => a + b, 0) / data.scores.length;
+        return {
+          studentName: data.name,
+          group: data.group,
+          average: Math.round(avg * 10) / 10,
+          subjectCount: data.scores.length,
+          performance: avg >= 4.6 ? 'Superior' : avg >= 4.0 ? 'Alto' : avg >= 3.0 ? 'Básico' : 'Bajo',
+        };
+      })
+      .sort((a, b) => b.average - a.average)
+      .map((r, idx) => ({ position: idx + 1, ...r }));
+
+    return results;
+  }
+
+  /**
+   * Reporte 4: Distribución de notas
+   * ¿Cómo se distribuyen las notas?
+   */
+  async getGradeDistribution(institutionId: string, academicYearId: string, groupId: string, subjectId?: string, termId?: string) {
+    const grades = await this.getBaseGradeData({ institutionId, academicYearId, groupId, termId, subjectId });
+    const scores = grades.map(g => Number(g.finalScore));
+
+    const ranges = [
+      { label: '1.0 – 2.9 (Bajo)', min: 0, max: 2.99 },
+      { label: '3.0 – 3.9 (Básico)', min: 3.0, max: 3.99 },
+      { label: '4.0 – 4.5 (Alto)', min: 4.0, max: 4.5 },
+      { label: '4.6 – 5.0 (Superior)', min: 4.6, max: 5.0 },
+    ];
+
+    const distribution = ranges.map(r => {
+      const count = scores.filter(s => s >= r.min && s <= r.max).length;
+      return {
+        range: r.label,
+        count,
+        percentage: scores.length > 0 ? Math.round((count / scores.length) * 1000) / 10 : 0,
+      };
+    });
+
+    return { totalGrades: scores.length, distribution };
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // BLOQUE 2 — RIESGO ACADÉMICO
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Reporte 6: Asignaturas reprobadas
+   * ¿Qué materias perdió cada estudiante?
+   */
+  async getFailedSubjects(institutionId: string, academicYearId: string, groupId: string, termId?: string) {
+    const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
+    const grades = await this.getBaseGradeData({ institutionId, academicYearId, groupId, termId });
+
+    const failed = grades
+      .filter(g => Number(g.finalScore) < passingGrade)
+      .map(g => ({
+        studentName: `${g.studentEnrollment.student.lastName} ${g.studentEnrollment.student.firstName}`,
+        group: `${g.studentEnrollment.group.grade?.name || ''} ${g.studentEnrollment.group.name}`,
+        subjectName: g.subject.name,
+        areaName: g.subject.area?.name || '',
+        grade: Number(g.finalScore),
+        termName: g.academicTerm.name,
+        deficit: Math.round((passingGrade - Number(g.finalScore)) * 10) / 10,
+        recoverable: Number(g.finalScore) >= (passingGrade - 1.0),
+      }))
+      .sort((a, b) => a.studentName.localeCompare(b.studentName) || a.subjectName.localeCompare(b.subjectName));
+
+    // Resumen
+    const uniqueStudents = new Set(failed.map(f => f.studentName)).size;
+    const uniqueSubjects = new Set(failed.map(f => f.subjectName)).size;
+
+    return { passingGrade, totalFailed: failed.length, uniqueStudents, uniqueSubjects, results: failed };
+  }
+
+  /**
+   * Reporte 7: Listado de recuperación
+   * ¿Quién puede recuperar? Filtra por rango configurable.
+   */
+  async getRecoveryList(institutionId: string, academicYearId: string, groupId: string, termId?: string, minScore?: number, maxScore?: number) {
+    const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
+    const effectiveMin = minScore ?? (passingGrade - 1.0);
+    const effectiveMax = maxScore ?? (passingGrade - 0.1);
+    const grades = await this.getBaseGradeData({ institutionId, academicYearId, groupId, termId });
+
+    const recoverable = grades
+      .filter(g => {
+        const score = Number(g.finalScore);
+        return score >= effectiveMin && score < passingGrade && score <= effectiveMax;
+      })
+      .map(g => ({
+        studentName: `${g.studentEnrollment.student.lastName} ${g.studentEnrollment.student.firstName}`,
+        group: `${g.studentEnrollment.group.grade?.name || ''} ${g.studentEnrollment.group.name}`,
+        subjectName: g.subject.name,
+        grade: Number(g.finalScore),
+        termName: g.academicTerm.name,
+        deficit: Math.round((passingGrade - Number(g.finalScore)) * 10) / 10,
+      }))
+      .sort((a, b) => a.studentName.localeCompare(b.studentName));
+
+    return { passingGrade, rangeMin: effectiveMin, rangeMax: effectiveMax, totalRecoverable: recoverable.length, results: recoverable };
+  }
+
+  /**
+   * Reporte 8: Proyección de promoción
+   * Si mantiene tendencia, ¿aprueba el año?
+   * Reutiliza calculateMinimumGradeForGroup para datos, agrega proyección.
+   */
+  async getPromotionProjection(institutionId: string, academicYearId: string, groupId: string) {
+    const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
+    const terms = await this.academicYearService.getTermsByAcademicYear(academicYearId);
+    const grades = await this.getBaseGradeData({ institutionId, academicYearId, groupId });
+
+    // Agrupar por estudiante → por asignatura → por período
+    const studentMap = new Map<string, {
+      name: string;
+      group: string;
+      subjects: Map<string, { name: string; termGrades: Map<string, number> }>;
+    }>();
+
+    for (const g of grades) {
+      const sKey = g.studentEnrollmentId;
+      if (!studentMap.has(sKey)) {
+        const s = g.studentEnrollment.student;
+        studentMap.set(sKey, {
+          name: `${s.lastName} ${s.firstName}`,
+          group: `${g.studentEnrollment.group.grade?.name || ''} ${g.studentEnrollment.group.name}`,
+          subjects: new Map(),
+        });
+      }
+      const student = studentMap.get(sKey)!;
+      if (!student.subjects.has(g.subjectId)) {
+        student.subjects.set(g.subjectId, { name: g.subject.name, termGrades: new Map() });
+      }
+      student.subjects.get(g.subjectId)!.termGrades.set(g.academicTermId, Number(g.finalScore));
+    }
+
+    const completedTermIds = new Set<string>();
+    const termWeights = new Map<string, number>();
+    for (const t of terms) {
+      termWeights.set(t.id, t.weightPercentage);
+    }
+
+    // Determinar períodos completados (tienen al menos una nota)
+    for (const g of grades) {
+      completedTermIds.add(g.academicTermId);
+    }
+
+    const pendingTerms = terms.filter(t => !completedTermIds.has(t.id));
+    const totalPendingWeight = pendingTerms.reduce((acc, t) => acc + t.weightPercentage, 0);
+
+    const results = Array.from(studentMap.entries()).map(([, data]) => {
+      let totalSubjects = 0;
+      let projectedApproved = 0;
+      let atRisk = 0;
+      let projectedFailed = 0;
+
+      const subjectDetails: Array<{
+        subjectName: string;
+        currentWeightedAvg: number | null;
+        projectedAnnual: number | null;
+        status: string;
+      }> = [];
+
+      for (const [, subj] of data.subjects) {
+        totalSubjects++;
+        // Calcular promedio ponderado actual
+        let weightedSum = 0;
+        let totalWeight = 0;
+        for (const [termId, grade] of subj.termGrades) {
+          const weight = termWeights.get(termId) || 0;
+          weightedSum += grade * weight;
+          totalWeight += weight;
+        }
+        const currentAvg = totalWeight > 0 ? weightedSum / totalWeight : null;
+
+        // Proyectar: si mantiene promedio actual en períodos restantes
+        let projectedAnnual: number | null = null;
+        if (currentAvg !== null && totalPendingWeight > 0) {
+          projectedAnnual = Math.round(((weightedSum + currentAvg * totalPendingWeight) / 100) * 10) / 10;
+        } else if (currentAvg !== null) {
+          projectedAnnual = Math.round((weightedSum / 100) * 10) / 10;
+        }
+
+        let status = 'Sin datos';
+        if (projectedAnnual !== null) {
+          if (projectedAnnual >= passingGrade) {
+            status = 'Promueve';
+            projectedApproved++;
+          } else if (currentAvg !== null && currentAvg >= passingGrade - 0.5) {
+            status = 'En riesgo';
+            atRisk++;
+          } else {
+            status = 'No promueve';
+            projectedFailed++;
+          }
+        }
+
+        subjectDetails.push({
+          subjectName: subj.name,
+          currentWeightedAvg: currentAvg !== null ? Math.round(currentAvg * 10) / 10 : null,
+          projectedAnnual,
+          status,
+        });
+      }
+
+      return {
+        studentName: data.name,
+        group: data.group,
+        totalSubjects,
+        projectedApproved,
+        atRisk,
+        projectedFailed,
+        overallProjection: projectedFailed > 0 ? 'No promueve' : atRisk > 0 ? 'En riesgo' : 'Promueve',
+        subjects: subjectDetails,
+      };
+    });
+
+    return {
+      passingGrade,
+      completedTerms: completedTermIds.size,
+      totalTerms: terms.length,
+      pendingTerms: pendingTerms.length,
+      results: results.sort((a, b) => a.studentName.localeCompare(b.studentName)),
+    };
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // BLOQUE 3 — HISTÓRICO
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Reporte 9: Comparativo de períodos
+   * Evolución del rendimiento entre períodos.
+   */
+  async getPeriodComparison(institutionId: string, academicYearId: string, groupId?: string, studentEnrollmentId?: string) {
+    const grades = await this.getBaseGradeData({ institutionId, academicYearId, groupId });
+    const terms = await this.academicYearService.getTermsByAcademicYear(academicYearId);
+    const termOrder = terms.sort((a, b) => a.order - b.order);
+
+    // Si es un estudiante específico, mostrar por asignatura × período
+    if (studentEnrollmentId) {
+      const studentGrades = grades.filter(g => g.studentEnrollmentId === studentEnrollmentId);
+      const subjectMap = new Map<string, { name: string; termGrades: Map<string, number> }>();
+
+      for (const g of studentGrades) {
+        if (!subjectMap.has(g.subjectId)) {
+          subjectMap.set(g.subjectId, { name: g.subject.name, termGrades: new Map() });
+        }
+        subjectMap.get(g.subjectId)!.termGrades.set(g.academicTermId, Number(g.finalScore));
+      }
+
+      const results = Array.from(subjectMap.values()).map(data => {
+        const termValues = termOrder.map(t => data.termGrades.get(t.id) ?? null);
+        const obtained = termValues.filter((v): v is number => v !== null);
+        const first = obtained[0] ?? null;
+        const last = obtained.length > 1 ? obtained[obtained.length - 1] : null;
+        const variation = first !== null && last !== null ? Math.round((last - first) * 10) / 10 : null;
+
+        return {
+          subjectName: data.name,
+          termGrades: termOrder.map(t => ({
+            termId: t.id,
+            termName: t.name,
+            grade: data.termGrades.get(t.id) ?? null,
+          })),
+          variation,
+          trend: variation !== null ? (variation > 0 ? 'Mejora' : variation < 0 ? 'Baja' : 'Estable') : null,
+        };
+      });
+
+      return { type: 'student', terms: termOrder.map(t => ({ id: t.id, name: t.name })), results };
+    }
+
+    // Vista grupal: promedio del grupo por período
+    const termAverages = termOrder.map(term => {
+      const termGrades = grades.filter(g => g.academicTermId === term.id);
+      const scores = termGrades.map(g => Number(g.finalScore));
+      const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+      return {
+        termId: term.id,
+        termName: term.name,
+        average: avg !== null ? Math.round(avg * 10) / 10 : null,
+        totalGrades: scores.length,
+      };
+    });
+
+    // Por estudiante
+    const studentMap = new Map<string, { name: string; termAvgs: Map<string, number[]> }>();
+    for (const g of grades) {
+      const key = g.studentEnrollmentId;
+      if (!studentMap.has(key)) {
+        const s = g.studentEnrollment.student;
+        studentMap.set(key, { name: `${s.lastName} ${s.firstName}`, termAvgs: new Map() });
+      }
+      const data = studentMap.get(key)!;
+      if (!data.termAvgs.has(g.academicTermId)) data.termAvgs.set(g.academicTermId, []);
+      data.termAvgs.get(g.academicTermId)!.push(Number(g.finalScore));
+    }
+
+    const studentResults = Array.from(studentMap.values()).map(data => {
+      const termValues = termOrder.map(t => {
+        const scores = data.termAvgs.get(t.id);
+        return scores ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10 : null;
+      });
+      const obtained = termValues.filter((v): v is number => v !== null);
+      const first = obtained[0] ?? null;
+      const last = obtained.length > 1 ? obtained[obtained.length - 1] : null;
+      const variation = first !== null && last !== null ? Math.round((last - first) * 10) / 10 : null;
+
+      return {
+        studentName: data.name,
+        termAverages: termOrder.map((t, i) => ({
+          termId: t.id,
+          termName: t.name,
+          average: termValues[i],
+        })),
+        variation,
+        trend: variation !== null ? (variation > 0 ? 'Mejora' : variation < 0 ? 'Baja' : 'Estable') : null,
+      };
+    }).sort((a, b) => a.studentName.localeCompare(b.studentName));
+
+    return {
+      type: 'group',
+      terms: termOrder.map(t => ({ id: t.id, name: t.name })),
+      groupAverages: termAverages,
+      results: studentResults,
+    };
+  }
+
+  /**
+   * Reporte 10: Historial académico
+   * Trayectoria de un estudiante a lo largo de los años.
+   */
+  async getStudentHistory(studentId: string) {
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: { studentId },
+      include: {
+        academicYear: true,
+        group: { include: { grade: true } },
+        periodFinalGrades: {
+          include: {
+            subject: { include: { area: { select: { name: true } } } },
+            academicTerm: { select: { name: true, order: true, weightPercentage: true } },
+          },
+        },
+      },
+      orderBy: { academicYear: { year: 'asc' } },
+    });
+
+    return enrollments.map(enrollment => {
+      const gradesBySubject = new Map<string, { name: string; area: string; grades: number[] }>();
+      for (const pfg of enrollment.periodFinalGrades) {
+        if (!gradesBySubject.has(pfg.subjectId)) {
+          gradesBySubject.set(pfg.subjectId, {
+            name: pfg.subject.name,
+            area: pfg.subject.area?.name || '',
+            grades: [],
+          });
+        }
+        gradesBySubject.get(pfg.subjectId)!.grades.push(Number(pfg.finalScore));
+      }
+
+      const subjects = Array.from(gradesBySubject.values()).map(s => ({
+        subjectName: s.name,
+        areaName: s.area,
+        average: s.grades.length > 0 ? Math.round((s.grades.reduce((a, b) => a + b, 0) / s.grades.length) * 10) / 10 : null,
+      }));
+
+      const allGrades = enrollment.periodFinalGrades.map(g => Number(g.finalScore));
+      const yearAvg = allGrades.length > 0 ? Math.round((allGrades.reduce((a, b) => a + b, 0) / allGrades.length) * 10) / 10 : null;
+
+      return {
+        yearId: enrollment.academicYearId,
+        year: enrollment.academicYear.year,
+        yearName: enrollment.academicYear.name || `${enrollment.academicYear.year}`,
+        group: `${enrollment.group.grade?.name || ''} ${enrollment.group.name}`,
+        status: enrollment.status,
+        average: yearAvg,
+        subjects,
+      };
+    });
+  }
+
+  /**
+   * Reporte 11: Análisis por asignatura
+   * ¿Cómo se comporta una asignatura a lo largo del tiempo?
+   */
+  async getSubjectAnalysis(institutionId: string, academicYearId: string, subjectId: string, groupId?: string) {
+    const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
+    const terms = await this.academicYearService.getTermsByAcademicYear(academicYearId);
+    const grades = await this.getBaseGradeData({ institutionId, academicYearId, subjectId, groupId });
+
+    // Agrupar por grupo
+    const groupMap = new Map<string, { name: string; termData: Map<string, number[]> }>();
+    for (const g of grades) {
+      const gKey = g.studentEnrollment.groupId;
+      if (!groupMap.has(gKey)) {
+        groupMap.set(gKey, {
+          name: `${g.studentEnrollment.group.grade?.name || ''} ${g.studentEnrollment.group.name}`,
+          termData: new Map(),
+        });
+      }
+      const group = groupMap.get(gKey)!;
+      if (!group.termData.has(g.academicTermId)) group.termData.set(g.academicTermId, []);
+      group.termData.get(g.academicTermId)!.push(Number(g.finalScore));
+    }
+
+    const termOrder = terms.sort((a, b) => a.order - b.order);
+
+    const results = Array.from(groupMap.entries()).map(([, data]) => {
+      const termResults = termOrder.map(t => {
+        const scores = data.termData.get(t.id) || [];
+        const avg = scores.length > 0 ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10 : null;
+        const approved = scores.filter(s => s >= passingGrade).length;
+        return {
+          termName: t.name,
+          average: avg,
+          approvalRate: scores.length > 0 ? Math.round((approved / scores.length) * 1000) / 10 : null,
+          totalStudents: scores.length,
+        };
+      });
+
+      return { groupName: data.name, terms: termResults };
+    });
+
+    return { passingGrade, subject: grades[0]?.subject?.name || '', results };
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // BLOQUE 4 — GESTIÓN DOCENTE
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Reporte 12: Rendimiento por docente
+   * ¿Cómo rinden los grupos con cada docente?
+   */
+  async getTeacherPerformance(institutionId: string, academicYearId: string, teacherId?: string) {
+    const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
+
+    // Obtener asignaciones de docentes
+    const assignments = await this.prisma.teacherAssignment.findMany({
+      where: {
+        institutionId,
+        academicYearId,
+        ...(teacherId && { teacherId }),
+      },
+      include: {
+        teacher: { select: { id: true, firstName: true, lastName: true } },
+        subject: { select: { id: true, name: true } },
+        group: { include: { grade: true } },
+      },
+    });
+
+    // Para cada asignación, obtener notas
+    const results: Array<{
+      teacherName: string;
+      subjectName: string;
+      groupName: string;
+      average: number | null;
+      approvalRate: number | null;
+      totalStudents: number;
+    }> = [];
+
+    // Obtener todas las notas del año de una vez
+    const allGrades = await this.getBaseGradeData({ institutionId, academicYearId });
+
+    // Indexar notas por grupo+asignatura
+    const gradeIndex = new Map<string, number[]>();
+    for (const g of allGrades) {
+      const key = `${g.studentEnrollment.groupId}:${g.subjectId}`;
+      if (!gradeIndex.has(key)) gradeIndex.set(key, []);
+      gradeIndex.get(key)!.push(Number(g.finalScore));
+    }
+
+    for (const a of assignments) {
+      const key = `${a.groupId}:${a.subjectId}`;
+      const scores = gradeIndex.get(key) || [];
+      const avg = scores.length > 0 ? Math.round((scores.reduce((x, y) => x + y, 0) / scores.length) * 10) / 10 : null;
+      const approved = scores.filter(s => s >= passingGrade).length;
+
+      results.push({
+        teacherName: `${a.teacher.lastName} ${a.teacher.firstName}`,
+        subjectName: a.subject.name,
+        groupName: `${a.group.grade?.name || ''} ${a.group.name}`,
+        average: avg,
+        approvalRate: scores.length > 0 ? Math.round((approved / scores.length) * 1000) / 10 : null,
+        totalStudents: scores.length,
+      });
+    }
+
+    return {
+      passingGrade,
+      results: results.sort((a, b) => a.teacherName.localeCompare(b.teacherName) || a.subjectName.localeCompare(b.subjectName)),
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // BOLETINES BATCH — buildGroupReportCards()
   // Reduce ~1,100 queries por grupo a ~8 queries usando precarga en batch.
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1327,8 +1939,140 @@ export class ReportsService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SNAPSHOT LEGAL — FINALIZACIÓN Y REAPERTURA DE PERÍODOS
+  // SNAPSHOT LEGAL — CIERRE, FINALIZACIÓN Y REAPERTURA DE PERÍODOS
   // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Valida notas faltantes de un período sin cambiar estado.
+   * Retorna detalle de estudiantes/asignaturas sin nota final.
+   */
+  async validateTermGrades(termId: string) {
+    const term = await this.prisma.academicTerm.findUnique({
+      where: { id: termId },
+      include: { academicYear: { select: { id: true, institutionId: true } } },
+    });
+    if (!term) throw new NotFoundException('Período académico no encontrado');
+
+    // Grupos con estudiantes activos en este año
+    const groups = await this.prisma.group.findMany({
+      where: {
+        studentEnrollments: {
+          some: { academicYearId: term.academicYearId, status: 'ACTIVE' },
+        },
+      },
+      select: { id: true, name: true },
+    });
+
+    const missing: Array<{
+      group: string;
+      student: string;
+      subject: string;
+    }> = [];
+    let totalExpected = 0;
+    let totalFound = 0;
+
+    for (const group of groups) {
+      // Asignaturas asignadas a este grupo en este año
+      const assignments = await this.prisma.teacherAssignment.findMany({
+        where: { groupId: group.id, academicYearId: term.academicYearId },
+        select: { subjectId: true, subject: { select: { name: true } } },
+      });
+      const subjectIds = [...new Set(assignments.map(a => a.subjectId))];
+      const subjectNames = new Map(assignments.map(a => [a.subjectId, a.subject.name]));
+
+      // Estudiantes activos en este grupo
+      const enrollments = await this.prisma.studentEnrollment.findMany({
+        where: { groupId: group.id, academicYearId: term.academicYearId, status: 'ACTIVE' },
+        select: { id: true, student: { select: { firstName: true, lastName: true } } },
+      });
+
+      if (enrollments.length === 0 || subjectIds.length === 0) continue;
+
+      // Notas finales existentes para este grupo/período
+      const existingGrades = await this.prisma.periodFinalGrade.findMany({
+        where: {
+          academicTermId: termId,
+          studentEnrollmentId: { in: enrollments.map(e => e.id) },
+          subjectId: { in: subjectIds },
+        },
+        select: { studentEnrollmentId: true, subjectId: true },
+      });
+
+      const gradeSet = new Set(
+        existingGrades.map(g => `${g.studentEnrollmentId}|${g.subjectId}`),
+      );
+
+      for (const enrollment of enrollments) {
+        for (const subjectId of subjectIds) {
+          totalExpected++;
+          const key = `${enrollment.id}|${subjectId}`;
+          if (gradeSet.has(key)) {
+            totalFound++;
+          } else {
+            missing.push({
+              group: group.name,
+              student: `${enrollment.student.lastName} ${enrollment.student.firstName}`,
+              subject: subjectNames.get(subjectId) || subjectId,
+            });
+          }
+        }
+      }
+    }
+
+    return {
+      termId,
+      totalExpected,
+      totalFound,
+      totalMissing: missing.length,
+      completionPercent: totalExpected > 0 ? Math.round((totalFound / totalExpected) * 100) : 100,
+      isComplete: missing.length === 0,
+      missing: missing.slice(0, 100), // Limitar a 100 para no saturar
+      hasMore: missing.length > 100,
+    };
+  }
+
+  /**
+   * Cierra un período académico (OPEN → CLOSED):
+   * 1) Valida que esté en OPEN
+   * 2) Verifica notas faltantes — si hay, retorna error con detalle
+   * 3) Cambia status a CLOSED
+   */
+  async closeTerm(termId: string) {
+    const term = await this.prisma.academicTerm.findUnique({
+      where: { id: termId },
+      include: { academicYear: { select: { id: true, institutionId: true } } },
+    });
+    if (!term) throw new NotFoundException('Período académico no encontrado');
+
+    if (term.status !== 'OPEN') {
+      throw new BadRequestException(
+        `El período debe estar en estado OPEN para cerrar. Estado actual: ${term.status}`,
+      );
+    }
+
+    // Validar notas faltantes
+    const validation = await this.validateTermGrades(termId);
+
+    if (!validation.isComplete) {
+      throw new BadRequestException({
+        message: `Faltan ${validation.totalMissing} notas por registrar (${validation.completionPercent}% completado)`,
+        validation,
+      });
+    }
+
+    // Cambiar estado a CLOSED
+    await this.prisma.academicTerm.update({
+      where: { id: termId },
+      data: { status: 'CLOSED' },
+    });
+
+    return {
+      success: true,
+      termId,
+      newStatus: 'CLOSED',
+      validation,
+    };
+  }
 
   /**
    * Finaliza un período académico:
@@ -1476,11 +2220,11 @@ export class ReportsService {
       },
     });
 
-    // Cambiar estado a CLOSED (permite edición de notas)
+    // Cambiar estado a OPEN (permite edición de notas)
     await this.prisma.academicTerm.update({
       where: { id: termId },
       data: {
-        status: 'CLOSED',
+        status: 'OPEN',
         finalizedAt: null,
       },
     });
@@ -1489,7 +2233,7 @@ export class ReportsService {
       success: true,
       termId,
       previousVersion: lastVersion._max.version ?? 0,
-      newStatus: 'CLOSED',
+      newStatus: 'OPEN',
     };
   }
 

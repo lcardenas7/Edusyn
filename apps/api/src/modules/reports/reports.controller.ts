@@ -129,6 +129,133 @@ export class ReportsController {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // REPORTES ACADÉMICOS INSTITUCIONALES
+  // Motor de consulta: Rendimiento, Riesgo, Histórico, Gestión Docente
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('academic/subject-averages')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getSubjectAverages(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId?: string,
+    @Query('termId') termId?: string,
+    @Query('stage') stage?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getSubjectAverages(institutionId, academicYearId, groupId, termId, stage);
+  }
+
+  @Get('academic/student-ranking')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getStudentRanking(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId: string,
+    @Query('termId') termId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getStudentRanking(institutionId, academicYearId, groupId, termId);
+  }
+
+  @Get('academic/grade-distribution')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getGradeDistribution(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId: string,
+    @Query('subjectId') subjectId?: string,
+    @Query('termId') termId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getGradeDistribution(institutionId, academicYearId, groupId, subjectId, termId);
+  }
+
+  @Get('academic/failed-subjects')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getFailedSubjects(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId: string,
+    @Query('termId') termId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getFailedSubjects(institutionId, academicYearId, groupId, termId);
+  }
+
+  @Get('academic/recovery-list')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getRecoveryList(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId: string,
+    @Query('termId') termId?: string,
+    @Query('minScore') minScore?: string,
+    @Query('maxScore') maxScore?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getRecoveryList(
+      institutionId, academicYearId, groupId, termId,
+      minScore ? parseFloat(minScore) : undefined,
+      maxScore ? parseFloat(maxScore) : undefined,
+    );
+  }
+
+  @Get('academic/promotion-projection')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getPromotionProjection(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getPromotionProjection(institutionId, academicYearId, groupId);
+  }
+
+  @Get('academic/period-comparison')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getPeriodComparison(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId?: string,
+    @Query('studentEnrollmentId') studentEnrollmentId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getPeriodComparison(institutionId, academicYearId, groupId, studentEnrollmentId);
+  }
+
+  @Get('academic/student-history')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getStudentHistory(
+    @Query('studentId') studentId: string,
+  ) {
+    return this.reportsService.getStudentHistory(studentId);
+  }
+
+  @Get('academic/subject-analysis')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getSubjectAnalysis(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('subjectId') subjectId: string,
+    @Query('groupId') groupId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getSubjectAnalysis(institutionId, academicYearId, subjectId, groupId);
+  }
+
+  @Get('academic/teacher-performance')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async getTeacherPerformance(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('teacherId') teacherId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getTeacherPerformance(institutionId, academicYearId, teacherId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // CONFIGURACIÓN DE BOLETINES
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -147,8 +274,24 @@ export class ReportsController {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SNAPSHOT LEGAL — FINALIZACIÓN Y REAPERTURA DE PERÍODOS
+  // CICLO DE VIDA DE PERÍODOS: VALIDACIÓN, CIERRE, FINALIZACIÓN Y REAPERTURA
   // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('terms/:termId/validate-grades')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async validateTermGrades(
+    @Param('termId') termId: string,
+  ) {
+    return this.reportsService.validateTermGrades(termId);
+  }
+
+  @Post('terms/:termId/close')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async closeTerm(
+    @Param('termId') termId: string,
+  ) {
+    return this.reportsService.closeTerm(termId);
+  }
 
   @Post('terms/:termId/finalize')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')

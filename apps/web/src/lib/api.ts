@@ -341,13 +341,38 @@ export const reportsApi = {
     api.get(`/reports/minimum-grade/${studentEnrollmentId}`, { params: { academicYearId } }),
   getMinimumGradeForGroup: (groupId: string, academicYearId: string) =>
     api.get(`/reports/minimum-grade/group/${groupId}`, { params: { academicYearId } }),
+  // Reportes académicos institucionales
+  getSubjectAverages: (academicYearId: string, params?: { groupId?: string; termId?: string; stage?: string }) =>
+    api.get('/reports/academic/subject-averages', { params: { academicYearId, ...params } }),
+  getStudentRanking: (academicYearId: string, groupId: string, termId?: string) =>
+    api.get('/reports/academic/student-ranking', { params: { academicYearId, groupId, termId } }),
+  getGradeDistribution: (academicYearId: string, groupId: string, params?: { subjectId?: string; termId?: string }) =>
+    api.get('/reports/academic/grade-distribution', { params: { academicYearId, groupId, ...params } }),
+  getFailedSubjects: (academicYearId: string, groupId: string, termId?: string) =>
+    api.get('/reports/academic/failed-subjects', { params: { academicYearId, groupId, termId } }),
+  getRecoveryList: (academicYearId: string, groupId: string, params?: { termId?: string; minScore?: number; maxScore?: number }) =>
+    api.get('/reports/academic/recovery-list', { params: { academicYearId, groupId, ...params } }),
+  getPromotionProjection: (academicYearId: string, groupId: string) =>
+    api.get('/reports/academic/promotion-projection', { params: { academicYearId, groupId } }),
+  getPeriodComparison: (academicYearId: string, params?: { groupId?: string; studentEnrollmentId?: string }) =>
+    api.get('/reports/academic/period-comparison', { params: { academicYearId, ...params } }),
+  getStudentHistory: (studentId: string) =>
+    api.get('/reports/academic/student-history', { params: { studentId } }),
+  getSubjectAnalysis: (academicYearId: string, subjectId: string, groupId?: string) =>
+    api.get('/reports/academic/subject-analysis', { params: { academicYearId, subjectId, groupId } }),
+  getTeacherPerformance: (academicYearId: string, teacherId?: string) =>
+    api.get('/reports/academic/teacher-performance', { params: { academicYearId, teacherId } }),
   // Configuración de boletines
   getReportCardConfig: () => api.get('/reports/report-card-config'),
   updateReportCardConfig: (data: any) => api.put('/reports/report-card-config', data),
   // Lista de boletines por grupo
   getGroupReportCardList: (groupId: string, academicTermId: string, academicYearId: string) =>
     api.get(`/reports/report-cards/group/${groupId}`, { params: { academicTermId, academicYearId } }),
-  // Finalización y reapertura de períodos
+  // Ciclo de vida de períodos
+  validateTermGrades: (termId: string) =>
+    api.get(`/reports/terms/${termId}/validate-grades`),
+  closeTerm: (termId: string) =>
+    api.post(`/reports/terms/${termId}/close`),
   finalizeTerm: (termId: string) =>
     api.post(`/reports/terms/${termId}/finalize`),
   reopenTerm: (termId: string, reason: string) =>
