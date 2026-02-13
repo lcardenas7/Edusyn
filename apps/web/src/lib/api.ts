@@ -347,6 +347,11 @@ export const reportsApi = {
   // Lista de boletines por grupo
   getGroupReportCardList: (groupId: string, academicTermId: string, academicYearId: string) =>
     api.get(`/reports/report-cards/group/${groupId}`, { params: { academicTermId, academicYearId } }),
+  // Finalización y reapertura de períodos
+  finalizeTerm: (termId: string) =>
+    api.post(`/reports/terms/${termId}/finalize`),
+  reopenTerm: (termId: string, reason: string) =>
+    api.post(`/reports/terms/${termId}/reopen`, { reason }),
 }
 
 // Communications

@@ -3,11 +3,15 @@ import {
   Calendar,
   Lock,
   Unlock,
-  ArrowLeft
+  ArrowLeft,
+  ShieldCheck,
+  ShieldAlert,
+  RotateCcw,
+  AlertTriangle
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../contexts/AuthContext'
-import { gradingPeriodConfigApi, academicYearsApi } from '../../../../lib/api'
+import { gradingPeriodConfigApi, academicYearsApi, reportsApi, academicTermsApi } from '../../../../lib/api'
 
 interface GradingPeriodConfig {
   id: string
@@ -28,6 +32,16 @@ export default function GradingWindows() {
   const [savingPeriod, setSavingPeriod] = useState<string | null>(null)
   const [academicYears, setAcademicYears] = useState<Array<{ id: string; year: number; status?: string }>>([])
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>('')
+
+  // Estado de finalización de períodos
+  const [termStatuses, setTermStatuses] = useState<Record<string, 'OPEN' | 'FINALIZED'>>({})
+  const [finalizingTerm, setFinalizingTerm] = useState<string | null>(null)
+  const [reopeningTerm, setReopeningTerm] = useState<string | null>(null)
+  const [showFinalizeConfirm, setShowFinalizeConfirm] = useState<string | null>(null)
+  const [showReopenConfirm, setShowReopenConfirm] = useState<string | null>(null)
+  const [reopenReason, setReopenReason] = useState('')
+  const [termActionError, setTermActionError] = useState('')
+  const [termActionSuccess, setTermActionSuccess] = useState('')
 
   // Cargar años académicos
   useEffect(() => {
@@ -54,8 +68,11 @@ export default function GradingWindows() {
       if (!selectedAcademicYear) return
       setLoadingGradingPeriods(true)
       try {
-        const response = await gradingPeriodConfigApi.getByAcademicYear(selectedAcademicYear)
-        const data = response.data || []
+        const [configRes, termsRes] = await Promise.all([
+          gradingPeriodConfigApi.getByAcademicYear(selectedAcademicYear),
+          academicTermsApi.getAll(selectedAcademicYear),
+        ])
+        const data = configRes.data || []
         setGradingPeriods(data.map((p: any) => ({
           id: p.id,
           name: p.name,
@@ -66,6 +83,14 @@ export default function GradingWindows() {
           allowLateEntry: p.config?.allowLateEntry || false,
           lateEntryDays: p.config?.lateEntryDays || 0,
         })))
+
+        // Cargar estado de finalización de cada término
+        const terms = termsRes.data || []
+        const statuses: Record<string, 'OPEN' | 'FINALIZED'> = {}
+        terms.forEach((t: any) => {
+          statuses[t.id] = t.status || 'OPEN'
+        })
+        setTermStatuses(statuses)
       } catch (err) {
         console.error('Error loading grading periods:', err)
       } finally {
@@ -74,6 +99,45 @@ export default function GradingWindows() {
     }
     fetchGradingPeriods()
   }, [selectedAcademicYear])
+
+  // Finalizar período
+  const handleFinalizeTerm = async (termId: string) => {
+    setFinalizingTerm(termId)
+    setTermActionError('')
+    setTermActionSuccess('')
+    try {
+      await reportsApi.finalizeTerm(termId)
+      setTermStatuses(prev => ({ ...prev, [termId]: 'FINALIZED' }))
+      setTermActionSuccess('Período finalizado exitosamente. Se generó snapshot de boletines.')
+      setShowFinalizeConfirm(null)
+    } catch (err: any) {
+      setTermActionError(err.response?.data?.message || 'Error al finalizar el período')
+    } finally {
+      setFinalizingTerm(null)
+    }
+  }
+
+  // Reabrir período finalizado
+  const handleReopenTerm = async (termId: string) => {
+    if (!reopenReason.trim()) {
+      setTermActionError('Debe ingresar una razón para reabrir el período')
+      return
+    }
+    setReopeningTerm(termId)
+    setTermActionError('')
+    setTermActionSuccess('')
+    try {
+      await reportsApi.reopenTerm(termId, reopenReason)
+      setTermStatuses(prev => ({ ...prev, [termId]: 'OPEN' }))
+      setTermActionSuccess('Período reabierto exitosamente.')
+      setShowReopenConfirm(null)
+      setReopenReason('')
+    } catch (err: any) {
+      setTermActionError(err.response?.data?.message || 'Error al reabrir el período')
+    } finally {
+      setReopeningTerm(null)
+    }
+  }
 
   // Guardar configuración de un período
   const saveGradingPeriodConfig = async (periodId: string, config: Partial<GradingPeriodConfig>) => {
@@ -167,9 +231,13 @@ export default function GradingWindows() {
             <div className="space-y-4">
               {gradingPeriods.map((period) => (
                 <div key={period.id} className="border border-slate-200 rounded-lg overflow-hidden">
-                  <div className={`px-4 py-3 flex items-center justify-between ${period.isOpen ? 'bg-green-50' : 'bg-slate-50'}`}>
+                  <div className={`px-4 py-3 flex items-center justify-between ${
+                    termStatuses[period.id] === 'FINALIZED' ? 'bg-purple-50' : period.isOpen ? 'bg-green-50' : 'bg-slate-50'
+                  }`}>
                     <div className="flex items-center gap-3">
-                      {period.isOpen ? (
+                      {termStatuses[period.id] === 'FINALIZED' ? (
+                        <ShieldCheck className="w-5 h-5 text-purple-600" />
+                      ) : period.isOpen ? (
                         <Unlock className="w-5 h-5 text-green-600" />
                       ) : (
                         <Lock className="w-5 h-5 text-slate-400" />
@@ -177,7 +245,9 @@ export default function GradingWindows() {
                       <div>
                         <h3 className="font-medium text-slate-900">{period.name}</h3>
                         <p className="text-xs text-slate-500">
-                          {period.isOpen ? (
+                          {termStatuses[period.id] === 'FINALIZED' ? (
+                            <span className="text-purple-600 font-medium">✅ Finalizado — Boletines congelados</span>
+                          ) : period.isOpen ? (
                             <span className="text-green-600">Abierto para calificaciones</span>
                           ) : (
                             <span className="text-slate-500">Cerrado para calificaciones</span>
@@ -185,6 +255,24 @@ export default function GradingWindows() {
                         </p>
                       </div>
                     </div>
+                    <div className="flex items-center gap-3">
+                      {termStatuses[period.id] === 'FINALIZED' ? (
+                        <button
+                          onClick={() => { setShowReopenConfirm(period.id); setTermActionError(''); setReopenReason(''); }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-100 border border-amber-300 rounded-lg hover:bg-amber-200 transition-colors"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          Reabrir
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => { setShowFinalizeConfirm(period.id); setTermActionError(''); }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-100 border border-purple-300 rounded-lg hover:bg-purple-200 transition-colors"
+                        >
+                          <ShieldAlert className="w-3.5 h-3.5" />
+                          Finalizar
+                        </button>
+                      )}
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
@@ -195,6 +283,7 @@ export default function GradingWindows() {
                       />
                       <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
                     </label>
+                    </div>
                   </div>
                   
                   <div className="px-4 py-4 bg-white">
@@ -267,7 +356,137 @@ export default function GradingWindows() {
             </div>
           )}
         </div>
+
+        {/* Mensajes de éxito/error */}
+        {termActionSuccess && (
+          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center justify-between">
+            <span>{termActionSuccess}</span>
+            <button onClick={() => setTermActionSuccess('')} className="text-green-500 hover:text-green-700 ml-2">&times;</button>
+          </div>
+        )}
+        {termActionError && !showFinalizeConfirm && !showReopenConfirm && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center justify-between">
+            <span>{termActionError}</span>
+            <button onClick={() => setTermActionError('')} className="text-red-500 hover:text-red-700 ml-2">&times;</button>
+          </div>
+        )}
       </div>
+
+      {/* Modal de confirmación para FINALIZAR */}
+      {showFinalizeConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                <ShieldAlert className="w-5 h-5 text-purple-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900">Finalizar Período</h3>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-amber-800">
+                  <p className="font-medium mb-1">Esta acción:</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li>Genera un <strong>snapshot legal</strong> de todos los boletines del período</li>
+                    <li><strong>Bloquea</strong> la modificación de notas parciales y finales</li>
+                    <li>Los boletines se leerán desde el snapshot congelado</li>
+                    <li>Solo un administrador puede reabrir el período después</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            {termActionError && (
+              <div className="mb-4 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">{termActionError}</div>
+            )}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowFinalizeConfirm(null)}
+                className="px-4 py-2 text-sm text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleFinalizeTerm(showFinalizeConfirm)}
+                disabled={finalizingTerm !== null}
+                className="px-4 py-2 text-sm text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {finalizingTerm ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Finalizando...
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-4 h-4" />
+                    Confirmar Finalización
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación para REABRIR */}
+      {showReopenConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                <RotateCcw className="w-5 h-5 text-amber-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900">Reabrir Período Finalizado</h3>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-amber-800">
+                  Esta acción permitirá modificar notas nuevamente. Se registrará quién reabrió el período y la razón.
+                </p>
+              </div>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Razón de reapertura <span className="text-red-500">*</span></label>
+              <textarea
+                value={reopenReason}
+                onChange={(e) => setReopenReason(e.target.value)}
+                placeholder="Ej: Corrección de notas del docente de Matemáticas..."
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 resize-none"
+                rows={3}
+              />
+            </div>
+            {termActionError && (
+              <div className="mb-4 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">{termActionError}</div>
+            )}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setShowReopenConfirm(null); setReopenReason(''); }}
+                className="px-4 py-2 text-sm text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleReopenTerm(showReopenConfirm)}
+                disabled={reopeningTerm !== null || !reopenReason.trim()}
+                className="px-4 py-2 text-sm text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {reopeningTerm ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Reabriendo...
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-4 h-4" />
+                    Confirmar Reapertura
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

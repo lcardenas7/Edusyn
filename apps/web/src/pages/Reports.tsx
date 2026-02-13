@@ -331,22 +331,21 @@ export default function Reports() {
           let approvedCount = 0
           let totalGradesCount = 0
           
-          for (const groupId of groupIds) {
-            try {
-              const gradesRes = await periodFinalGradesApi.getByGroup(groupId as string, filterPeriod)
-              const grades = gradesRes.data || []
-              grades.forEach((g: any) => {
-                const score = Number(g.finalScore)
-                if (!isNaN(score)) {
-                  allGrades.push(score)
-                  totalGradesCount++
-                  if (score >= 3.0) approvedCount++
-                }
-              })
-            } catch (err) {
-              // Ignorar errores de grupos individuales
-            }
-          }
+          const statsResults = await Promise.allSettled(
+            groupIds.map((groupId: any) => periodFinalGradesApi.getByGroup(groupId as string, filterPeriod))
+          )
+          statsResults.forEach((result) => {
+            if (result.status !== 'fulfilled') return
+            const grades = result.value.data || []
+            grades.forEach((g: any) => {
+              const score = Number(g.finalScore)
+              if (!isNaN(score)) {
+                allGrades.push(score)
+                totalGradesCount++
+                if (score >= 3.0) approvedCount++
+              }
+            })
+          })
           
           if (allGrades.length > 0) {
             institutionalAvg = allGrades.reduce((a, b) => a + b, 0) / allGrades.length
@@ -557,30 +556,29 @@ export default function Reports() {
         // Obtener notas de todos los grupos
         const studentGradesMap = new Map<string, any>()
         
-        for (const groupId of groupIds) {
-          if (filterGrade !== 'all' && groupId !== filterGrade) continue
+        const targetGroupIds = filterGrade !== 'all' ? groupIds.filter((id: any) => id === filterGrade) : groupIds
+        
+        const gradeResults = await Promise.allSettled(
+          targetGroupIds.map((groupId: any) => periodFinalGradesApi.getByGroup(groupId as string, filterPeriod))
+        )
+        gradeResults.forEach((result) => {
+          if (result.status !== 'fulfilled') return
+          const grades = result.value.data || []
           
-          try {
-            const gradesRes = await periodFinalGradesApi.getByGroup(groupId as string, filterPeriod)
-            const grades = gradesRes.data || []
-            
-            grades.forEach((g: any) => {
-              const studentId = g.studentEnrollmentId
-              const student = g.studentEnrollment?.student
-              if (!studentGradesMap.has(studentId)) {
-                studentGradesMap.set(studentId, {
-                  id: studentId,
-                  name: student ? `${student.lastName} ${student.firstName}`.toUpperCase() : 'Estudiante',
-                  grades: {}
-                })
-              }
-              const studentData = studentGradesMap.get(studentId)
-              studentData.grades[g.subject?.name || 'Asignatura'] = Number(g.finalScore)
-            })
-          } catch (err) {
-            // Ignorar errores de grupos individuales
-          }
-        }
+          grades.forEach((g: any) => {
+            const studentId = g.studentEnrollmentId
+            const student = g.studentEnrollment?.student
+            if (!studentGradesMap.has(studentId)) {
+              studentGradesMap.set(studentId, {
+                id: studentId,
+                name: student ? `${student.lastName} ${student.firstName}`.toUpperCase() : 'Estudiante',
+                grades: {}
+              })
+            }
+            const studentData = studentGradesMap.get(studentId)
+            studentData.grades[g.subject?.name || 'Asignatura'] = Number(g.finalScore)
+          })
+        })
         
         const studentsData = Array.from(studentGradesMap.values()).map((s, idx) => {
           const gradeValues = Object.values(s.grades) as number[]
@@ -616,15 +614,12 @@ export default function Reports() {
             const groupsRes = await groupsApi.getAll()
             const allGroups = groupsRes.data || []
             
-            for (const group of allGroups) {
-              try {
-                const response = await attendanceApi.getReportByGroup(group.id, filterYear, params)
-                const data = response.data || []
-                rawData.push(...data)
-              } catch (err) {
-                // Ignorar errores de grupos individuales
-              }
-            }
+            const grpResults = await Promise.allSettled(
+              allGroups.map((group: any) => attendanceApi.getReportByGroup(group.id, filterYear, params))
+            )
+            grpResults.forEach((r) => {
+              if (r.status === 'fulfilled') rawData.push(...(r.value.data || []))
+            })
           }
           
           // Mapear campos del backend a los esperados por el frontend
@@ -704,15 +699,12 @@ export default function Reports() {
             const groupsRes = await groupsApi.getAll()
             const allGroups = groupsRes.data || []
             
-            for (const group of allGroups) {
-              try {
-                const response = await attendanceApi.getReportByGroup(group.id, filterYear, params)
-                const data = response.data || []
-                rawData.push(...data)
-              } catch (err) {
-                // Ignorar errores de grupos individuales
-              }
-            }
+            const subjResults = await Promise.allSettled(
+              allGroups.map((group: any) => attendanceApi.getReportByGroup(group.id, filterYear, params))
+            )
+            subjResults.forEach((r) => {
+              if (r.status === 'fulfilled') rawData.push(...(r.value.data || []))
+            })
           }
           
           // Mapear campos del backend a los esperados por el frontend
@@ -789,15 +781,12 @@ export default function Reports() {
             const groupsRes = await groupsApi.getAll()
             const allGroups = groupsRes.data || []
             
-            for (const group of allGroups) {
-              try {
-                const response = await attendanceApi.getReportByGroup(group.id, filterYear, params)
-                const data = response.data || []
-                rawData.push(...data)
-              } catch (err) {
-                // Ignorar errores de grupos individuales
-              }
-            }
+            const critResults = await Promise.allSettled(
+              allGroups.map((group: any) => attendanceApi.getReportByGroup(group.id, filterYear, params))
+            )
+            critResults.forEach((r) => {
+              if (r.status === 'fulfilled') rawData.push(...(r.value.data || []))
+            })
           }
           
           // Mapear campos del backend a los esperados por el frontend
@@ -887,48 +876,47 @@ export default function Reports() {
         
         const alertsList: any[] = []
         
-        for (const groupId of groupIds) {
-          try {
-            const gradesRes = await periodFinalGradesApi.getByGroup(groupId as string, filterPeriod)
-            const grades = gradesRes.data || []
-            
-            // Agrupar por estudiante
-            const studentGrades = new Map<string, any>()
-            grades.forEach((g: any) => {
-              const studentId = g.studentEnrollmentId
-              const student = g.studentEnrollment?.student
-              if (!studentGrades.has(studentId)) {
-                studentGrades.set(studentId, {
-                  name: student ? `${student.lastName} ${student.firstName}`.toUpperCase() : 'Estudiante',
-                  group: g.studentEnrollment?.group?.name || '',
-                  grades: [],
-                  failedCount: 0
-                })
-              }
-              const sData = studentGrades.get(studentId)
-              const score = Number(g.finalScore)
-              sData.grades.push(score)
-              if (score < 3.0) sData.failedCount++
-            })
-            
-            // Filtrar estudiantes con bajo rendimiento
-            studentGrades.forEach((s) => {
-              const avg = s.grades.length > 0 ? s.grades.reduce((a: number, b: number) => a + b, 0) / s.grades.length : 0
-              if (avg < 3.5 || s.failedCount > 0) {
-                alertsList.push({
-                  nro: alertsList.length + 1,
-                  name: s.name,
-                  group: s.group,
-                  avg: avg,
-                  failed: s.failedCount,
-                  risk: avg < 3.0 ? 'Alto' : s.failedCount >= 2 ? 'Alto' : 'Medio'
-                })
-              }
-            })
-          } catch (err) {
-            // Ignorar errores
-          }
-        }
+        const alertResults = await Promise.allSettled(
+          groupIds.map((groupId: any) => periodFinalGradesApi.getByGroup(groupId as string, filterPeriod))
+        )
+        alertResults.forEach((result) => {
+          if (result.status !== 'fulfilled') return
+          const grades = result.value.data || []
+          
+          // Agrupar por estudiante
+          const studentGrades = new Map<string, any>()
+          grades.forEach((g: any) => {
+            const studentId = g.studentEnrollmentId
+            const student = g.studentEnrollment?.student
+            if (!studentGrades.has(studentId)) {
+              studentGrades.set(studentId, {
+                name: student ? `${student.lastName} ${student.firstName}`.toUpperCase() : 'Estudiante',
+                group: g.studentEnrollment?.group?.name || '',
+                grades: [],
+                failedCount: 0
+              })
+            }
+            const sData = studentGrades.get(studentId)
+            const score = Number(g.finalScore)
+            sData.grades.push(score)
+            if (score < 3.0) sData.failedCount++
+          })
+          
+          // Filtrar estudiantes con bajo rendimiento
+          studentGrades.forEach((s) => {
+            const avg = s.grades.length > 0 ? s.grades.reduce((a: number, b: number) => a + b, 0) / s.grades.length : 0
+            if (avg < 3.5 || s.failedCount > 0) {
+              alertsList.push({
+                nro: alertsList.length + 1,
+                name: s.name,
+                group: s.group,
+                avg: avg,
+                failed: s.failedCount,
+                risk: avg < 3.0 ? 'Alto' : s.failedCount >= 2 ? 'Alto' : 'Medio'
+              })
+            }
+          })
+        })
         
         setAlertsData(alertsList)
       }
