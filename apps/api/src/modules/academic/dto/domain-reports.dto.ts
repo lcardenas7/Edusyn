@@ -151,6 +151,7 @@ export interface AcademicTermForReport {
   type: string;
   order: number;
   weightPercentage: number;
+  status: string;
   startDate: Date | null;
   endDate: Date | null;
 }

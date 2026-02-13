@@ -146,6 +146,31 @@ export class ReportsController {
     return this.reportsService.updateReportCardConfig(institutionId, data);
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SNAPSHOT LEGAL — FINALIZACIÓN Y REAPERTURA DE PERÍODOS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('terms/:termId/finalize')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async finalizeTerm(
+    @Param('termId') termId: string,
+    @Request() req,
+  ) {
+    const userId = req.user.sub || req.user.id;
+    return this.reportsService.finalizeTerm(termId, userId);
+  }
+
+  @Post('terms/:termId/reopen')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async reopenFinalizedTerm(
+    @Param('termId') termId: string,
+    @Body() body: { reason: string },
+    @Request() req,
+  ) {
+    const userId = req.user.sub || req.user.id;
+    return this.reportsService.reopenFinalizedTerm(termId, body.reason, userId);
+  }
+
   @Get('report-cards/group/:groupId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getGroupReportCardList(

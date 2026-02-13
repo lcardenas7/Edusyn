@@ -133,7 +133,7 @@ export default function ContentManager() {
         ? await storageApi.uploadGalleryImage(file, institution.id, galleryForm.category || undefined)
         : await storageApi.uploadAnnouncementImage(file, institution.id)
       
-      const imageUrl = response.data?.data?.url
+      const imageUrl = response.data?.data?.path || response.data?.data?.url
       if (imageUrl) {
         if (type === 'gallery') {
           setGalleryForm(prev => ({ ...prev, imageUrl }))

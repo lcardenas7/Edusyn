@@ -43,6 +43,14 @@ enum AcademicTermType {
   SEMESTER_EXAM
 }
 
+// Estado del período académico (ciclo de vida)
+enum AcademicTermStatus {
+  DRAFT       // En configuración
+  OPEN        // Abierto - docentes pueden registrar notas
+  CLOSED      // Cerrado - notas bloqueadas, pendiente de finalización
+  FINALIZED   // Finalizado - snapshot congelado, solo lectura
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ENUMS PARA GESTIÓN DE AÑO LECTIVO
 // ═══════════════════════════════════════════════════════════════════════════
@@ -319,6 +327,10 @@ model User {
   referralsResponded          ObserverReferral[]    @relation("ReferralResponder")
   evidencesUploaded           ObserverEvidence[]
   measuresApplied             PedagogicalMeasure[]
+  
+  // Snapshot legal de boletines
+  snapshotsGenerated          TermReportCardSnapshot[] @relation("SnapshotGeneratedBy")
+  termsReopened               TermReopeningRecord[]    @relation("TermReopenedBy")
 }
 
 model Role {
@@ -919,16 +931,18 @@ model Period {
 }
 
 model AcademicTerm {
-  id             String           @id @default(cuid())
+  id             String              @id @default(cuid())
   academicYearId String
   type           AcademicTermType
   name           String
   order          Int
   weightPercentage Int
+  status         AcademicTermStatus  @default(OPEN)
+  finalizedAt    DateTime?
   startDate      DateTime?
   endDate        DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
   evaluationPlans EvaluationPlan[]
@@ -944,8 +958,48 @@ model AcademicTerm {
   recoveryPeriodConfig RecoveryPeriodConfig? @relation("RecoveryPeriodConfig")
   achievements Achievement[]
   attitudinalAchievements AttitudinalAchievement[]
+  reportCardSnapshots TermReportCardSnapshot[]
+  reopeningRecords TermReopeningRecord[]
 
   @@unique([academicYearId, order])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SNAPSHOT LEGAL DE BOLETINES POR PERÍODO
+// Congela el boletín completo al finalizar un período.
+// Cada reapertura + re-finalización genera una nueva versión.
+// ═══════════════════════════════════════════════════════════════════════════
+
+model TermReportCardSnapshot {
+  id                  String   @id @default(cuid())
+  academicTermId      String
+  studentEnrollmentId String
+  version             Int
+  generatedAt         DateTime @default(now())
+  generatedById       String?
+  data                Json     // Boletín completo congelado (mismo DTO de buildGroupReportCards)
+
+  academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+  generatedBy       User?             @relation("SnapshotGeneratedBy", fields: [generatedById], references: [id])
+
+  @@unique([academicTermId, studentEnrollmentId, version])
+  @@index([academicTermId])
+  @@index([studentEnrollmentId])
+}
+
+model TermReopeningRecord {
+  id             String   @id @default(cuid())
+  academicTermId String
+  reopenedById   String
+  reason         String
+  previousVersion Int     // Versión del snapshot antes de reabrir
+  reopenedAt     DateTime @default(now())
+
+  academicTerm AcademicTerm @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
+  reopenedBy   User         @relation("TermReopenedBy", fields: [reopenedById], references: [id])
+
+  @@index([academicTermId])
 }
 
 // Configuración de ventana de calificaciones por período
@@ -1379,6 +1433,9 @@ model StudentEnrollment {
   enrollmentSubjects   EnrollmentSubject[]
   enrollmentDimensions EnrollmentDimension[]  // 🆕 Para estructura DIMENSIONS (preescolar)
   finalComponentGrades FinalComponentGrade[]
+  
+  // Snapshot legal de boletines por período
+  reportCardSnapshots  TermReportCardSnapshot[]
 
   @@unique([studentId, academicYearId])
 }
@@ -1551,6 +1608,7 @@ model PeriodFinalGrade {
   enteredBy         User              @relation("PeriodGradeEnteredBy", fields: [enteredById], references: [id])
 
   @@unique([studentEnrollmentId, academicTermId, subjectId])
+  @@index([studentEnrollmentId, academicTermId])
 }
 
 model PartialGrade {
@@ -1575,6 +1633,7 @@ model PartialGrade {
 
   @@unique([studentEnrollmentId, teacherAssignmentId, academicTermId, componentType, activityIndex])
   @@index([teacherAssignmentId, academicTermId])
+  @@index([studentEnrollmentId, academicTermId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1692,6 +1751,7 @@ model AttendanceRecord {
   @@index([teacherAssignmentId])
   @@index([studentEnrollmentId])
   @@index([date])
+  @@index([studentEnrollmentId, date])
 }
 
 // ==================== STUDENT OBSERVER ====================

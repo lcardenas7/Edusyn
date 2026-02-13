@@ -89,10 +89,12 @@ export class StorageService {
       }),
     );
 
-    // Si hay URL pública configurada, usarla; sino, generar URL firmada corta
+    // Devolver la key como "url" para que se persista en la DB.
+    // Las URLs firmadas se generan al momento de SERVIR los datos, no al subir.
+    // Esto evita que las URLs expiren y las imágenes/archivos se rompan.
     const url = this.publicBaseUrl
       ? `${this.publicBaseUrl}/${key}`
-      : await this.getSignedUrl(key, 600);
+      : key;
 
     return {
       key,

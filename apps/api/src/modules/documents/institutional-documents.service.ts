@@ -123,14 +123,16 @@ export class InstitutionalDocumentsService {
     console.log('[InstitutionalDocuments] Found documents:', documents.length);
     
     // Filtrar por visibilidad de rol si no es admin
+    let filtered = documents;
     if (userRoles && !userRoles.some(r => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL'].includes(r))) {
-      return documents.filter(doc => {
+      filtered = documents.filter(doc => {
         if (doc.visibleToRoles.length === 0) return true; // Visible para todos
         return doc.visibleToRoles.some(role => userRoles.includes(role));
       });
     }
     
-    return documents;
+    // Regenerar URLs firmadas frescas para los archivos
+    return this.refreshFileUrls(filtered);
   }
 
   async findOne(id: string) {
@@ -147,7 +149,25 @@ export class InstitutionalDocumentsService {
       throw new NotFoundException('Documento no encontrado');
     }
     
-    return document;
+    // Regenerar URL firmada fresca
+    const freshUrl = await this.storageService.resolveFileUrl(document.fileUrl, 15 * 60);
+    return { ...document, fileUrl: freshUrl };
+  }
+
+  /**
+   * Regenera URLs firmadas frescas para los archivos de documentos.
+   */
+  private async refreshFileUrls<T extends { fileUrl: string }>(items: T[]): Promise<T[]> {
+    return Promise.all(
+      items.map(async (item) => {
+        try {
+          const freshUrl = await this.storageService.resolveFileUrl(item.fileUrl, 15 * 60);
+          return { ...item, fileUrl: freshUrl };
+        } catch {
+          return item;
+        }
+      }),
+    );
   }
 
   async update(id: string, dto: UpdateDocumentDto) {

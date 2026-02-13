@@ -1,9 +1,34 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SupabaseStorageService } from '../storage/supabase-storage.service';
 
 @Injectable()
 export class AnnouncementsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(AnnouncementsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: SupabaseStorageService,
+  ) {}
+
+  /**
+   * Regenera URLs firmadas frescas para las imágenes de anuncios.
+   * Las URLs firmadas de R2 expiran, así que se regeneran al servir datos.
+   */
+  private async refreshImageUrls<T extends { imageUrl?: string | null }>(items: T[]): Promise<T[]> {
+    return Promise.all(
+      items.map(async (item) => {
+        if (!item.imageUrl) return item;
+        try {
+          const freshUrl = await this.storage.resolveFileUrl(item.imageUrl);
+          return { ...item, imageUrl: freshUrl };
+        } catch (err) {
+          this.logger.warn(`Failed to refresh image URL for announcement: ${err.message}`);
+        }
+        return item;
+      }),
+    );
+  }
 
   async create(data: {
     institutionId: string;
@@ -32,7 +57,7 @@ export class AnnouncementsService {
 
   async list(institutionId?: string, onlyActive = true, limit?: number) {
     const now = new Date();
-    return this.prisma.announcement.findMany({
+    const items = await this.prisma.announcement.findMany({
       where: {
         institutionId,
         ...(onlyActive && {
@@ -44,6 +69,7 @@ export class AnnouncementsService {
       orderBy: [{ priority: 'desc' }, { publishedAt: 'desc' }],
       ...(limit && { take: limit }),
     });
+    return this.refreshImageUrls(items);
   }
 
   async update(id: string, data: Partial<{
@@ -79,10 +105,11 @@ export class AnnouncementsService {
     });
 
     // Filtrar por roles visibles
-    return announcements.filter(a => {
+    const filtered = announcements.filter(a => {
       if (!a.visibleToRoles || a.visibleToRoles.length === 0) return true;
       return a.visibleToRoles.some(role => userRoles.includes(role));
     });
+    return this.refreshImageUrls(filtered);
   }
 
   async delete(id: string) {

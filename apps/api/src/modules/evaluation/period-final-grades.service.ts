@@ -5,6 +5,23 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class PeriodFinalGradesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Valida que el período NO esté FINALIZED.
+   * Lanza ForbiddenException si está congelado.
+   */
+  private async guardTermNotFinalized(academicTermId: string): Promise<void> {
+    const term = await this.prisma.academicTerm.findUnique({
+      where: { id: academicTermId },
+      select: { status: true },
+    });
+
+    if (term?.status === 'FINALIZED') {
+      throw new ForbiddenException(
+        'El período está finalizado. Debe reabrirse formalmente para modificar notas.',
+      );
+    }
+  }
+
   async upsert(data: {
     studentEnrollmentId: string;
     academicTermId: string;
@@ -13,6 +30,7 @@ export class PeriodFinalGradesService {
     observations?: string;
     enteredById: string;
   }) {
+    await this.guardTermNotFinalized(data.academicTermId);
     return this.prisma.periodFinalGrade.upsert({
       where: {
         studentEnrollmentId_academicTermId_subjectId: {
@@ -81,6 +99,13 @@ export class PeriodFinalGradesService {
   }
 
   async delete(id: string) {
+    const grade = await this.prisma.periodFinalGrade.findUnique({
+      where: { id },
+      select: { academicTermId: true },
+    });
+    if (grade) {
+      await this.guardTermNotFinalized(grade.academicTermId);
+    }
     return this.prisma.periodFinalGrade.delete({ where: { id } });
   }
 

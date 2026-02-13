@@ -1,9 +1,26 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class PartialGradesService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Valida que el período NO esté FINALIZED.
+   * Lanza ForbiddenException si está congelado.
+   */
+  private async guardTermNotFinalized(academicTermId: string): Promise<void> {
+    const term = await this.prisma.academicTerm.findUnique({
+      where: { id: academicTermId },
+      select: { status: true },
+    });
+
+    if (term?.status === 'FINALIZED') {
+      throw new ForbiddenException(
+        'El período está finalizado. Debe reabrirse formalmente para modificar notas.',
+      );
+    }
+  }
 
   async upsert(data: {
     studentEnrollmentId: string;
@@ -16,6 +33,7 @@ export class PartialGradesService {
     score: number;
     observations?: string;
   }) {
+    await this.guardTermNotFinalized(data.academicTermId);
     const ta = await this.prisma.teacherAssignment.findUnique({ where: { id: data.teacherAssignmentId }, select: { institutionId: true } });
     return this.prisma.partialGrade.upsert({
       where: {
@@ -48,6 +66,12 @@ export class PartialGradesService {
     score: number;
     observations?: string;
   }>) {
+    // Validar que ningún período esté FINALIZED
+    const termIds = [...new Set(grades.map(g => g.academicTermId))];
+    for (const termId of termIds) {
+      await this.guardTermNotFinalized(termId);
+    }
+
     const results: any[] = [];
     for (const grade of grades) {
       if (grade.score > 0) {
@@ -261,6 +285,13 @@ export class PartialGradesService {
   }
 
   async delete(id: string) {
+    const grade = await this.prisma.partialGrade.findUnique({
+      where: { id },
+      select: { academicTermId: true },
+    });
+    if (grade) {
+      await this.guardTermNotFinalized(grade.academicTermId);
+    }
     return this.prisma.partialGrade.delete({ where: { id } });
   }
 
@@ -270,6 +301,7 @@ export class PartialGradesService {
     componentType: string,
     activityIndex: number,
   ) {
+    await this.guardTermNotFinalized(academicTermId);
     return this.prisma.partialGrade.deleteMany({
       where: {
         teacherAssignmentId,

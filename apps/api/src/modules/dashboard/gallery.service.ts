@@ -1,9 +1,33 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SupabaseStorageService } from '../storage/supabase-storage.service';
 
 @Injectable()
 export class GalleryService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(GalleryService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: SupabaseStorageService,
+  ) {}
+
+  /**
+   * Regenera URLs firmadas frescas para las imágenes de galería.
+   */
+  private async refreshImageUrls<T extends { imageUrl?: string | null }>(items: T[]): Promise<T[]> {
+    return Promise.all(
+      items.map(async (item) => {
+        if (!item.imageUrl) return item;
+        try {
+          const freshUrl = await this.storage.resolveFileUrl(item.imageUrl);
+          return { ...item, imageUrl: freshUrl };
+        } catch (err) {
+          this.logger.warn(`Failed to refresh image URL for gallery: ${err.message}`);
+        }
+        return item;
+      }),
+    );
+  }
 
   async create(data: {
     institutionId: string;
@@ -24,7 +48,7 @@ export class GalleryService {
   }
 
   async list(institutionId?: string, category?: string, onlyActive = true, limit?: number) {
-    return this.prisma.galleryImage.findMany({
+    const items = await this.prisma.galleryImage.findMany({
       where: {
         institutionId,
         category,
@@ -34,6 +58,7 @@ export class GalleryService {
       orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
       ...(limit && { take: limit }),
     });
+    return this.refreshImageUrls(items);
   }
 
   async update(id: string, data: Partial<{
@@ -67,10 +92,11 @@ export class GalleryService {
       orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
     });
 
-    return images.filter(img => {
+    const filtered = images.filter(img => {
       if (!img.visibleToRoles || img.visibleToRoles.length === 0) return true;
       return img.visibleToRoles.some(role => userRoles.includes(role));
     });
+    return this.refreshImageUrls(filtered);
   }
 
   async delete(id: string) {

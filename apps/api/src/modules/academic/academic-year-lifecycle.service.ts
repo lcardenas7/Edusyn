@@ -669,6 +669,7 @@ export class AcademicYearLifecycleService {
       type: term.type,
       order: term.order,
       weightPercentage: term.weightPercentage,
+      status: term.status,
       startDate: term.startDate,
       endDate: term.endDate,
     };
@@ -690,6 +691,7 @@ export class AcademicYearLifecycleService {
       type: t.type,
       order: t.order,
       weightPercentage: t.weightPercentage,
+      status: t.status,
       startDate: t.startDate,
       endDate: t.endDate,
     }));

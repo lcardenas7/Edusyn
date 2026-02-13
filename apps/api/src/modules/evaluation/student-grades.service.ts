@@ -386,6 +386,97 @@ export class StudentGradesService {
     };
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MÉTODOS PRELOADED (0 queries — operan 100% en memoria)
+  // Para uso en buildGroupReportCards() y reportes batch
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Calcula la nota del período usando datos precargados.
+   * 0 queries a la DB — toda la lógica opera en memoria.
+   *
+   * @param enrollmentId - ID de la matrícula
+   * @param teacherAssignmentId - ID de la asignación docente
+   * @param termId - ID del período
+   * @param plansMap - Map<teacherAssignmentId_termId, { components: [...] }>
+   * @param partialsMap - Map<enrollmentId, PartialGrade[]>
+   */
+  calculateTermGradeFromPreloaded(
+    enrollmentId: string,
+    teacherAssignmentId: string,
+    termId: string,
+    plansMap: Map<string, { components: { componentId: string; code: string; name: string; percentage: number }[] }>,
+    partialsMap: Map<string, { teacherAssignmentId: string; academicTermId: string; componentType: string; score: number }[]>,
+  ): { grade: number | null; components: { componentId: string; name: string; average: number | null; percentage: number }[] } {
+    const planKey = `${teacherAssignmentId}_${termId}`;
+    const plan = plansMap.get(planKey);
+    if (!plan) return { grade: null, components: [] };
+
+    // Filtrar partials de este estudiante para esta asignación y período
+    const allPartials = partialsMap.get(enrollmentId) || [];
+    const partials = allPartials.filter(
+      p => p.teacherAssignmentId === teacherAssignmentId && p.academicTermId === termId,
+    );
+
+    // Agrupar scores por componentType
+    const scoresByType = new Map<string, number[]>();
+    for (const p of partials) {
+      const scores = scoresByType.get(p.componentType) || [];
+      scores.push(p.score);
+      scoresByType.set(p.componentType, scores);
+    }
+
+    const componentResults = plan.components.map((cw) => {
+      const scores = scoresByType.get(cw.code) || [];
+      const avg = scores.length > 0
+        ? this.roundToOneDecimal(scores.reduce((a, b) => a + b, 0) / scores.length)
+        : null;
+      return {
+        componentId: cw.componentId,
+        name: cw.name,
+        average: avg,
+        percentage: cw.percentage,
+      };
+    });
+
+    const validComponents = componentResults.filter((c) => c.average !== null);
+    if (validComponents.length === 0) return { grade: null, components: componentResults };
+
+    const weightedSum = validComponents.reduce(
+      (acc, c) => acc + (c.average! * c.percentage) / 100,
+      0,
+    );
+    const totalPercentage = validComponents.reduce((acc, c) => acc + c.percentage, 0);
+    const grade = totalPercentage > 0 ? this.roundToOneDecimal((weightedSum * 100) / totalPercentage) : null;
+
+    return { grade, components: componentResults };
+  }
+
+  /**
+   * Clasifica una nota según la escala de desempeño precargada.
+   * 0 queries a la DB — lookup en memoria.
+   *
+   * @param scale - Array de { level, minScore, maxScore } precargado
+   * @param score - Nota a clasificar
+   */
+  getPerformanceLevelFromScale(
+    scale: { level: string; minScore: number; maxScore: number }[],
+    score: number,
+  ): { level: string; score: number } | null {
+    const roundedScore = this.roundToOneDecimal(score);
+
+    const match = scale.find(
+      s => roundedScore >= s.minScore && roundedScore <= s.maxScore,
+    );
+
+    if (!match) return null;
+
+    return {
+      level: match.level,
+      score: roundedScore,
+    };
+  }
+
   /**
    * Redondea a 1 decimal según reglas INEDIC.
    */

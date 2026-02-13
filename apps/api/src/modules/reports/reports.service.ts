@@ -1,5 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import type { Response } from 'express';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
 import { EnrollmentStatus } from '@prisma/client';
 
@@ -107,208 +106,76 @@ export class ReportsService {
   }
 
   async getReportCardData(studentEnrollmentId: string, academicTermId: string) {
-    // Delegar a StudentsService para obtener matrícula
-    const enrollment = await this.studentsService.getEnrollmentForReport(studentEnrollmentId);
+    // Verificar si el período está FINALIZED → leer snapshot congelado
+    const termStatus = await this.prisma.academicTerm.findUnique({
+      where: { id: academicTermId },
+      select: { status: true },
+    });
+
+    if (termStatus?.status === 'FINALIZED') {
+      const snapshot = await this.getSnapshotForStudent(academicTermId, studentEnrollmentId);
+      if (snapshot) return snapshot;
+      // Si no hay snapshot (caso raro), fallback a cálculo en vivo
+    }
+
+    // OPTIMIZADO: Usa buildGroupReportCards() (~10 queries batch)
+    // Obtener groupId del enrollment (1 query ligera)
+    const enrollment = await this.prisma.studentEnrollment.findUnique({
+      where: { id: studentEnrollmentId },
+      select: { groupId: true },
+    });
 
     if (!enrollment) {
       throw new NotFoundException('Student enrollment not found');
     }
 
-    // Delegar a AcademicYearService para obtener término
-    const term = await this.academicYearService.getTermById(academicTermId);
+    // Batch: ~10 queries para TODO el grupo
+    const groupData = await this.buildGroupReportCards(enrollment.groupId, academicTermId);
 
-    if (!term) {
-      throw new NotFoundException('Academic term not found');
+    // Extraer la card del estudiante solicitado (0 queries — lookup en memoria)
+    const card = groupData.cards.find(c => c.enrollmentId === studentEnrollmentId);
+
+    if (!card) {
+      throw new NotFoundException('Report card not found for this student in the group batch');
     }
-
-    // Usar snapshot de matrícula para obtener asignaturas
-    // Esto protege contra cambios en plantillas después de la matrícula
-    const enrollmentStructure = await this.getEnrollmentSubjects(
-      studentEnrollmentId,
-      enrollment.group.id,
-      enrollment.academicYear.id,
-    );
-
-    // Calcular notas por área y asignatura
-    const areaGrades = await Promise.all(
-      enrollmentStructure.areas.map(async (area) => {
-        const subjectResults = await Promise.all(
-          area.subjects.map(async (subject) => {
-            let termGrade = { grade: null as number | null, components: [] as any[] };
-            
-            if (subject.teacherAssignmentId) {
-              termGrade = await this.studentGradesService.calculateTermGrade(
-                studentEnrollmentId,
-                subject.teacherAssignmentId,
-                academicTermId,
-              );
-            }
-
-            const performanceResult = termGrade.grade
-              ? await this.studentGradesService.getPerformanceLevel(
-                  enrollment.academicYear.institutionId,
-                  termGrade.grade,
-                )
-              : null;
-
-            return {
-              subject: subject.name,
-              subjectCode: subject.code,
-              teacher: subject.teacher,
-              grade: termGrade.grade,
-              weightPercentage: subject.weightPercentage,
-              performanceLevel: performanceResult?.level || null,
-              components: termGrade.components,
-            };
-          }),
-        );
-
-        // Calcular promedio del área según tipo de cálculo
-        const validGrades = subjectResults.filter(s => s.grade !== null);
-        let areaAverage: number | null = null;
-        
-        if (validGrades.length > 0) {
-          if (area.calculationType === 'WEIGHTED') {
-            const weightedSum = validGrades.reduce((acc, s) => acc + (s.grade! * s.weightPercentage), 0);
-            const totalWeight = validGrades.reduce((acc, s) => acc + s.weightPercentage, 0);
-            areaAverage = totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 10) / 10 : null;
-          } else {
-            // AVERAGE por defecto
-            areaAverage = Math.round((validGrades.reduce((acc, s) => acc + s.grade!, 0) / validGrades.length) * 10) / 10;
-          }
-        }
-
-        const areaPerformance = areaAverage
-          ? await this.studentGradesService.getPerformanceLevel(
-              enrollment.academicYear.institutionId,
-              areaAverage,
-            )
-          : null;
-
-        return {
-          area: area.name,
-          areaCode: area.code,
-          weightPercentage: area.weightPercentage,
-          calculationType: area.calculationType,
-          areaAverage,
-          areaPerformanceLevel: areaPerformance?.level || null,
-          subjects: subjectResults,
-        };
-      }),
-    );
-
-    // Aplanar para compatibilidad con formato anterior
-    const subjectGradesFlat = areaGrades.flatMap(a => a.subjects);
-
-    const attendanceSummary = await this.attendanceService.getStudentSummary(
-      studentEnrollmentId,
-      academicTermId,
-    );
-
-    // Delegar a StudentsService para obtener observaciones
-    const observations = await this.studentsService.getStudentObservationsForReport({
-      studentEnrollmentId,
-      startDate: term.startDate ?? undefined,
-      endDate: term.endDate ?? undefined,
-      limit: 10,
-    });
-
-    // Obtener logros del estudiante para este período (con observación del docente)
-    const studentAchievements = await this.prisma.studentAchievement.findMany({
-      where: {
-        studentEnrollmentId,
-        achievement: { academicTermId },
-      },
-      include: {
-        achievement: {
-          include: {
-            teacherAssignment: {
-              include: { subject: true },
-            },
-          },
-        },
-      },
-      orderBy: { achievement: { orderNumber: 'asc' } },
-    });
-
-    const achievements = studentAchievements.map((sa) => ({
-      subject: sa.achievement.teacherAssignment?.subject?.name || '',
-      orderNumber: sa.achievement.orderNumber,
-      description: sa.approvedText || sa.suggestedText || sa.achievement.baseDescription,
-      performanceLevel: sa.performanceLevel,
-      observation: sa.observation || null,
-      judgment: sa.approvedJudgment || sa.suggestedJudgment || null,
-    }));
-
-    // Enrich flat subject grades with achievement + observation for frontend rendering
-    const achievementBySubject = new Map<string, typeof achievements[number]>();
-    for (const ach of achievements) {
-      if (ach.subject && !achievementBySubject.has(ach.subject)) {
-        achievementBySubject.set(ach.subject, ach);
-      }
-    }
-    const subjectGrades = subjectGradesFlat.map(sg => {
-      const ach = achievementBySubject.get(sg.subject);
-      return {
-        ...sg,
-        achievement: ach?.description || null,
-        achievementObservation: ach?.observation || null,
-        judgment: ach?.judgment || null,
-      };
-    });
 
     return {
-      institution: {
-        id: enrollment.academicYear.institutionId,
-        name: enrollment.academicYear.institutionName,
-        nit: enrollment.academicYear.institutionNit,
-      },
-      academicYear: {
-        id: enrollment.academicYear.id,
-        year: enrollment.academicYear.year,
-        name: enrollment.academicYear.name,
-      },
-      term: {
-        id: term.id,
-        name: term.name,
-        type: term.type,
-      },
-      student: {
-        id: enrollment.student.id,
-        firstName: enrollment.student.firstName,
-        lastName: enrollment.student.lastName,
-        documentType: enrollment.student.documentType,
-        documentNumber: enrollment.student.documentNumber,
-      },
-      group: {
-        id: enrollment.group.id,
-        name: enrollment.group.name,
-        gradeLevel: enrollment.group.gradeName,
-      },
-      // Estructura por áreas (nuevo formato con snapshot)
-      areaGrades,
-      // Compatibilidad: lista plana de asignaturas
-      subjectGrades,
-      // Fuente de datos: 'snapshot' o 'calculated'
-      structureSource: enrollmentStructure.source,
-      attendance: attendanceSummary,
-      // Logros del período con observaciones del docente
-      achievements,
-      // Observaciones ya vienen como DTOs con authorName
-      observations: observations.map((o) => ({
-        date: o.date,
-        type: o.type,
-        category: o.category,
-        description: o.description,
-        author: o.authorName,
-      })),
-      generatedAt: new Date(),
+      institution: groupData.institution,
+      academicYear: groupData.academicYear,
+      term: groupData.term,
+      student: card.student,
+      group: card.group,
+      areaGrades: card.areaGrades,
+      subjectGrades: card.subjectGrades,
+      structureSource: card.structureSource,
+      attendance: card.attendance,
+      achievements: card.achievements,
+      observations: card.observations,
+      generatedAt: groupData.generatedAt,
     };
   }
 
   async generateReportCardPdf(studentEnrollmentId: string, academicTermId: string): Promise<Buffer> {
     const data = await this.getReportCardData(studentEnrollmentId, academicTermId);
+    return this.renderReportCardPdf(data);
+  }
 
+  /**
+   * Renderiza un PDF de boletín a partir de datos precargados.
+   * 0 queries a la DB — toda la lógica opera en memoria.
+   * Usado por generateReportCardPdf() y generateBulkReportCards().
+   */
+  private renderReportCardPdf(data: {
+    institution: { name: string; nit: string | null };
+    academicYear: { year: number };
+    term: { name: string };
+    student: { firstName: string; lastName: string; documentType: string; documentNumber: string };
+    group: { name: string; gradeLevel: string };
+    subjectGrades: Array<{ subject: string; grade: number | null; performanceLevel: string | null; teacher: string | null }>;
+    attendance: { total: number; present: number; absent: number; late: number; excused: number; attendanceRate: number };
+    achievements: Array<{ subject: string; orderNumber: number; description: string; observation: string | null; judgment: string | null }>;
+    observations: Array<{ date: Date; type: string; description: string }>;
+  }): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ size: 'LETTER', margin: 50 });
       const chunks: Buffer[] = [];
@@ -364,7 +231,7 @@ export class ReportsService {
         doc.text(subject.subject, col1, y, { width: 190 });
         doc.text(subject.grade?.toFixed(1) || 'N/A', col2, y);
         doc.text(this.getPerformanceLevelText(subject.performanceLevel), col3, y);
-        doc.text(subject.teacher, col4, y, { width: 100 });
+        doc.text(subject.teacher || '', col4, y, { width: 100 });
         y += 20;
       }
 
@@ -426,12 +293,18 @@ export class ReportsService {
     return level ? levels[level] || level : 'N/A';
   }
 
-  async generateBulkReportCards(groupId: string, academicTermId: string, academicYearId: string) {
-    // Delegar a StudentsService para obtener matrículas del grupo
-    const enrollments = await this.studentsService.getEnrollmentsForGroupReport({
-      groupId,
-      academicYearId,
-      status: EnrollmentStatus.ACTIVE,
+  /**
+   * OPTIMIZADO: Genera boletines PDF para todo un grupo en batch.
+   * 1 llamada a buildGroupReportCards() (~10 queries) + renderizado en memoria.
+   *
+   * Antes: N × getReportCardData() = N × ~100+ queries = ~3,300 queries para 30 estudiantes
+   * Después: ~10 queries totales + N renderizados PDF en memoria
+   */
+  async generateBulkReportCards(groupId: string, academicTermId: string, _academicYearId: string) {
+    // Verificar si el período está FINALIZED → leer snapshots congelados
+    const termStatus = await this.prisma.academicTerm.findUnique({
+      where: { id: academicTermId },
+      select: { status: true },
     });
 
     const results: Array<{
@@ -442,20 +315,64 @@ export class ReportsService {
       error?: string;
     }> = [];
 
-    for (const enrollment of enrollments) {
+    if (termStatus?.status === 'FINALIZED') {
+      // Leer snapshots congelados (2 queries: aggregate + findMany)
+      const snapshotsMap = await this.getSnapshotsForTerm(academicTermId);
+
+      // Filtrar solo snapshots del grupo solicitado
+      for (const [, snapshotData] of snapshotsMap) {
+        if (snapshotData?.group?.id !== groupId) continue;
+        try {
+          const pdf = await this.renderReportCardPdf(snapshotData);
+          results.push({
+            studentId: snapshotData.student?.id || '',
+            studentName: `${snapshotData.student?.lastName || ''} ${snapshotData.student?.firstName || ''}`,
+            status: 'success',
+            pdf: pdf.toString('base64'),
+          });
+        } catch (error) {
+          results.push({
+            studentId: snapshotData.student?.id || '',
+            studentName: `${snapshotData.student?.lastName || ''} ${snapshotData.student?.firstName || ''}`,
+            status: 'error',
+            error: error.message,
+          });
+        }
+      }
+
+      if (results.length > 0) return results;
+      // Fallback si no hay snapshots
+    }
+
+    // Cálculo en vivo: ~10 queries batch para TODO el grupo
+    const groupData = await this.buildGroupReportCards(groupId, academicTermId);
+
+    for (const card of groupData.cards) {
       try {
-        const pdf = await this.generateReportCardPdf(enrollment.id, academicTermId);
-        // Usar propiedades del DTO EnrollmentForGroupList
+        const pdfData = {
+          institution: groupData.institution,
+          academicYear: groupData.academicYear,
+          term: groupData.term,
+          student: card.student,
+          group: card.group,
+          subjectGrades: card.subjectGrades,
+          attendance: card.attendance,
+          achievements: card.achievements,
+          observations: card.observations,
+        };
+
+        const pdf = await this.renderReportCardPdf(pdfData);
+
         results.push({
-          studentId: enrollment.studentId,
-          studentName: enrollment.studentName,
+          studentId: card.student.id,
+          studentName: `${card.student.lastName} ${card.student.firstName}`,
           status: 'success',
           pdf: pdf.toString('base64'),
         });
       } catch (error) {
         results.push({
-          studentId: enrollment.studentId,
-          studentName: enrollment.studentName,
+          studentId: card.student.id,
+          studentName: `${card.student.lastName} ${card.student.firstName}`,
           status: 'error',
           error: error.message,
         });
@@ -793,6 +710,512 @@ export class ReportsService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // BOLETINES BATCH — buildGroupReportCards()
+  // Reduce ~1,100 queries por grupo a ~8 queries usando precarga en batch.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Construye TODOS los boletines de un grupo en batch.
+   * ~8 queries totales + procesamiento en memoria.
+   *
+   * Reemplaza el patrón anterior de N+1:
+   *   for each student → getReportCardData() → múltiples queries internas
+   *
+   * Retorna la misma estructura que getReportCardData() pero para todos los estudiantes.
+   */
+  async buildGroupReportCards(
+    groupId: string,
+    academicTermId: string,
+  ): Promise<{
+    institution: { id: string; name: string; nit: string | null };
+    academicYear: { id: string; year: number; name: string | null };
+    term: { id: string; name: string; type: string };
+    cards: Array<{
+      enrollmentId: string;
+      student: { id: string; firstName: string; lastName: string; documentType: string; documentNumber: string };
+      group: { id: string; name: string; gradeLevel: string };
+      areaGrades: Array<{
+        area: string;
+        areaCode: string | null;
+        weightPercentage: number;
+        calculationType: string;
+        areaAverage: number | null;
+        areaPerformanceLevel: string | null;
+        subjects: Array<{
+          subject: string;
+          subjectCode: string | null;
+          teacher: string | null;
+          grade: number | null;
+          weightPercentage: number;
+          performanceLevel: string | null;
+          components: { componentId: string; name: string; average: number | null; percentage: number }[];
+          achievement: string | null;
+          achievementObservation: string | null;
+          judgment: string | null;
+        }>;
+      }>;
+      subjectGrades: Array<{
+        subject: string;
+        subjectCode: string | null;
+        teacher: string | null;
+        grade: number | null;
+        weightPercentage: number;
+        performanceLevel: string | null;
+        components: { componentId: string; name: string; average: number | null; percentage: number }[];
+        achievement: string | null;
+        achievementObservation: string | null;
+        judgment: string | null;
+      }>;
+      structureSource: 'snapshot' | 'calculated';
+      attendance: { total: number; present: number; absent: number; late: number; excused: number; attendanceRate: number };
+      achievements: Array<{ subject: string; orderNumber: number; description: string; performanceLevel: string | null; observation: string | null; judgment: string | null }>;
+      observations: Array<{ date: Date; type: string; category: string | null; description: string; author: string }>;
+    }>;
+    generatedAt: Date;
+  }> {
+    // ─── QUERY 1: Término académico ───────────────────────────────────────
+    const term = await this.academicYearService.getTermById(academicTermId);
+    if (!term) throw new NotFoundException('Período académico no encontrado');
+
+    // ─── QUERY 2: Matrículas del grupo con estudiante + grupo + año ──────
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: { groupId, status: 'ACTIVE' },
+      include: {
+        student: true,
+        group: { include: { grade: true } },
+        academicYear: { include: { institution: true } },
+      },
+      orderBy: { student: { lastName: 'asc' } },
+    });
+
+    if (enrollments.length === 0) {
+      throw new NotFoundException('No hay estudiantes activos en este grupo');
+    }
+
+    const firstEnrollment = enrollments[0];
+    const institutionId = firstEnrollment.academicYear.institutionId;
+    const academicYearId = firstEnrollment.academicYearId;
+    const enrollmentIds = enrollments.map(e => e.id);
+
+    // ─── QUERY 3: Snapshot de estructura académica (EnrollmentArea + EnrollmentSubject) ──
+    const enrollmentAreas = await this.prisma.enrollmentArea.findMany({
+      where: { enrollmentId: { in: enrollmentIds } },
+      include: {
+        enrollmentSubjects: {
+          include: { subject: true },
+          orderBy: { order: 'asc' },
+        },
+      },
+      orderBy: { order: 'asc' },
+    });
+
+    // Map<enrollmentId, EnrollmentArea[]>
+    const enrollmentAreasMap = new Map<string, typeof enrollmentAreas>();
+    for (const area of enrollmentAreas) {
+      const list = enrollmentAreasMap.get(area.enrollmentId) || [];
+      list.push(area);
+      enrollmentAreasMap.set(area.enrollmentId, list);
+    }
+
+    // ─── QUERY 4: TeacherAssignments del grupo ───────────────────────────
+    const teacherAssignments = await this.prisma.teacherAssignment.findMany({
+      where: { groupId, academicYearId },
+      include: {
+        subject: { include: { area: true } },
+        teacher: { select: { firstName: true, lastName: true } },
+      },
+    });
+
+    // Map<subjectId, TeacherAssignment>
+    const taBySubjectId = new Map<string, (typeof teacherAssignments)[0]>();
+    for (const ta of teacherAssignments) {
+      taBySubjectId.set(ta.subjectId, ta);
+    }
+    const teacherAssignmentIds = teacherAssignments.map(ta => ta.id);
+
+    // ─── QUERY 5: EvaluationPlans con componentes (batch) ────────────────
+    const evaluationPlans = await this.prisma.evaluationPlan.findMany({
+      where: {
+        teacherAssignmentId: { in: teacherAssignmentIds },
+        academicTermId,
+      },
+      include: {
+        components: {
+          include: { component: true },
+        },
+      },
+    });
+
+    // Map<teacherAssignmentId_termId, { components: [...] }>
+    const plansMap = new Map<string, { components: { componentId: string; code: string; name: string; percentage: number }[] }>();
+    for (const plan of evaluationPlans) {
+      const key = `${plan.teacherAssignmentId}_${plan.academicTermId}`;
+      plansMap.set(key, {
+        components: plan.components.map(cw => ({
+          componentId: cw.componentId,
+          code: cw.component.code,
+          name: cw.component.name,
+          percentage: cw.percentage,
+        })),
+      });
+    }
+
+    // ─── QUERY 6: PartialGrades de todos los estudiantes (batch) ─────────
+    const allPartialGrades = await this.prisma.partialGrade.findMany({
+      where: {
+        studentEnrollmentId: { in: enrollmentIds },
+        academicTermId,
+      },
+    });
+
+    // Map<enrollmentId, PartialGrade[]>
+    const partialsMap = new Map<string, { teacherAssignmentId: string; academicTermId: string; componentType: string; score: number }[]>();
+    for (const pg of allPartialGrades) {
+      const list = partialsMap.get(pg.studentEnrollmentId) || [];
+      list.push({
+        teacherAssignmentId: pg.teacherAssignmentId,
+        academicTermId: pg.academicTermId,
+        componentType: pg.componentType,
+        score: Number(pg.score),
+      });
+      partialsMap.set(pg.studentEnrollmentId, list);
+    }
+
+    // ─── QUERY 7: PerformanceScale (1 sola vez por institución) ──────────
+    const performanceScales = await this.prisma.performanceScale.findMany({
+      where: { institutionId },
+      orderBy: { minScore: 'asc' },
+    });
+    const scaleArray = performanceScales.map(s => ({
+      level: s.level,
+      minScore: Number(s.minScore),
+      maxScore: Number(s.maxScore),
+    }));
+
+    // ─── QUERY 8: AttendanceRecords de todos los estudiantes (batch) ─────
+    const dateFilter: { gte?: Date; lte?: Date } = {};
+    if (term.startDate) dateFilter.gte = term.startDate;
+    if (term.endDate) dateFilter.lte = term.endDate;
+
+    const allAttendance = await this.prisma.attendanceRecord.findMany({
+      where: {
+        studentEnrollmentId: { in: enrollmentIds },
+        ...(Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {}),
+      },
+    });
+
+    // Map<enrollmentId, AttendanceSummary>
+    const attendanceMap = new Map<string, { total: number; present: number; absent: number; late: number; excused: number; attendanceRate: number }>();
+    // Agrupar por enrollmentId
+    const attByEnrollment = new Map<string, (typeof allAttendance)>();
+    for (const rec of allAttendance) {
+      const list = attByEnrollment.get(rec.studentEnrollmentId) || [];
+      list.push(rec);
+      attByEnrollment.set(rec.studentEnrollmentId, list);
+    }
+    for (const enrollmentId of enrollmentIds) {
+      const records = attByEnrollment.get(enrollmentId) || [];
+      const total = records.length;
+      const present = records.filter(r => r.status === 'PRESENT').length;
+      const absent = records.filter(r => r.status === 'ABSENT').length;
+      const late = records.filter(r => r.status === 'LATE').length;
+      const excused = records.filter(r => r.status === 'EXCUSED').length;
+      const attendanceRate = total > 0 ? Math.round(((present + late + excused) / total) * 100) : 0;
+      attendanceMap.set(enrollmentId, { total, present, absent, late, excused, attendanceRate });
+    }
+
+    // ─── QUERY 9: StudentAchievements de todos los estudiantes (batch) ───
+    const allAchievements = await this.prisma.studentAchievement.findMany({
+      where: {
+        studentEnrollmentId: { in: enrollmentIds },
+        achievement: { academicTermId },
+      },
+      include: {
+        achievement: {
+          include: {
+            teacherAssignment: {
+              include: { subject: true },
+            },
+          },
+        },
+      },
+      orderBy: { achievement: { orderNumber: 'asc' } },
+    });
+
+    // Map<enrollmentId, Achievement[]>
+    const achievementsMap = new Map<string, typeof allAchievements>();
+    for (const sa of allAchievements) {
+      const list = achievementsMap.get(sa.studentEnrollmentId) || [];
+      list.push(sa);
+      achievementsMap.set(sa.studentEnrollmentId, list);
+    }
+
+    // ─── QUERY 10: StudentObservations de todos los estudiantes (batch) ──
+    const obsWhere: any = {
+      studentEnrollmentId: { in: enrollmentIds },
+    };
+    if (term.startDate || term.endDate) {
+      obsWhere.date = {};
+      if (term.startDate) obsWhere.date.gte = term.startDate;
+      if (term.endDate) obsWhere.date.lte = term.endDate;
+    }
+    const allObservations = await this.prisma.studentObservation.findMany({
+      where: obsWhere,
+      include: {
+        author: { select: { firstName: true, lastName: true } },
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    // Map<enrollmentId, Observation[]>
+    const observationsMap = new Map<string, typeof allObservations>();
+    for (const obs of allObservations) {
+      const list = observationsMap.get(obs.studentEnrollmentId) || [];
+      list.push(obs);
+      observationsMap.set(obs.studentEnrollmentId, list);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PROCESAMIENTO EN MEMORIA — 0 queries adicionales
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const cards = enrollments.map((enrollment) => {
+      const enrollmentId = enrollment.id;
+
+      // ─── Resolver estructura académica ─────────────────────────────────
+      const areas = enrollmentAreasMap.get(enrollmentId);
+      let structureSource: 'snapshot' | 'calculated' = 'calculated';
+      let resolvedAreas: Array<{
+        name: string;
+        code: string | null;
+        weightPercentage: number;
+        calculationType: string;
+        subjects: Array<{
+          id: string | null;
+          name: string;
+          code: string | null;
+          weightPercentage: number;
+          teacherAssignmentId: string | null;
+          teacher: string | null;
+        }>;
+      }>;
+
+      if (areas && areas.length > 0) {
+        // Usar snapshot
+        structureSource = 'snapshot';
+        resolvedAreas = areas.map(area => ({
+          name: area.areaName,
+          code: area.areaCode,
+          weightPercentage: area.weightPercentage,
+          calculationType: area.calculationType,
+          subjects: area.enrollmentSubjects.map(es => {
+            const ta = es.subjectId ? taBySubjectId.get(es.subjectId) : null;
+            return {
+              id: es.subjectId,
+              name: es.subjectName,
+              code: es.subjectCode,
+              weightPercentage: es.weightPercentage,
+              teacherAssignmentId: ta?.id ?? null,
+              teacher: es.teacherName ?? (ta ? `${ta.teacher.firstName} ${ta.teacher.lastName}` : null),
+            };
+          }),
+        }));
+      } else {
+        // Fallback: construir desde TeacherAssignments
+        structureSource = 'calculated';
+        const areaMap = new Map<string, { name: string; code: string | null; subjects: typeof resolvedAreas[0]['subjects'] }>();
+        for (const ta of teacherAssignments) {
+          const areaId = ta.subject.areaId;
+          if (!areaMap.has(areaId)) {
+            areaMap.set(areaId, {
+              name: ta.subject.area.name,
+              code: ta.subject.area.code,
+              subjects: [],
+            });
+          }
+          areaMap.get(areaId)!.subjects.push({
+            id: ta.subjectId,
+            name: ta.subject.name,
+            code: ta.subject.code,
+            weightPercentage: 0, // Se calcula después
+            teacherAssignmentId: ta.id,
+            teacher: `${ta.teacher.firstName} ${ta.teacher.lastName}`,
+          });
+        }
+        resolvedAreas = Array.from(areaMap.entries()).map(([, data]) => ({
+          name: data.name,
+          code: data.code,
+          weightPercentage: 100 / areaMap.size,
+          calculationType: 'AVERAGE',
+          subjects: data.subjects.map(s => ({
+            ...s,
+            weightPercentage: 100 / data.subjects.length,
+          })),
+        }));
+      }
+
+      // ─── Calcular notas por área y asignatura (en memoria) ─────────────
+      const areaGrades = resolvedAreas.map((area) => {
+        const subjectResults = area.subjects.map((subject) => {
+          let termGrade: { grade: number | null; components: { componentId: string; name: string; average: number | null; percentage: number }[] } = { grade: null, components: [] };
+
+          if (subject.teacherAssignmentId) {
+            termGrade = this.studentGradesService.calculateTermGradeFromPreloaded(
+              enrollmentId,
+              subject.teacherAssignmentId,
+              academicTermId,
+              plansMap,
+              partialsMap,
+            );
+          }
+
+          const performanceResult = termGrade.grade
+            ? this.studentGradesService.getPerformanceLevelFromScale(scaleArray, termGrade.grade)
+            : null;
+
+          return {
+            subject: subject.name,
+            subjectCode: subject.code,
+            teacher: subject.teacher,
+            grade: termGrade.grade,
+            weightPercentage: subject.weightPercentage,
+            performanceLevel: performanceResult?.level || null,
+            components: termGrade.components,
+            achievement: null as string | null,
+            achievementObservation: null as string | null,
+            judgment: null as string | null,
+          };
+        });
+
+        // Calcular promedio del área
+        const validGrades = subjectResults.filter(s => s.grade !== null);
+        let areaAverage: number | null = null;
+
+        if (validGrades.length > 0) {
+          if (area.calculationType === 'WEIGHTED') {
+            const weightedSum = validGrades.reduce((acc, s) => acc + (s.grade! * s.weightPercentage), 0);
+            const totalWeight = validGrades.reduce((acc, s) => acc + s.weightPercentage, 0);
+            areaAverage = totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 10) / 10 : null;
+          } else {
+            areaAverage = Math.round((validGrades.reduce((acc, s) => acc + s.grade!, 0) / validGrades.length) * 10) / 10;
+          }
+        }
+
+        const areaPerformance = areaAverage
+          ? this.studentGradesService.getPerformanceLevelFromScale(scaleArray, areaAverage)
+          : null;
+
+        return {
+          area: area.name,
+          areaCode: area.code,
+          weightPercentage: area.weightPercentage,
+          calculationType: area.calculationType,
+          areaAverage,
+          areaPerformanceLevel: areaPerformance?.level || null,
+          subjects: subjectResults,
+        };
+      });
+
+      // ─── Enriquecer con logros (en memoria) ───────────────────────────
+      const studentAchievements = achievementsMap.get(enrollmentId) || [];
+      const achievements = studentAchievements.map(sa => ({
+        subject: sa.achievement.teacherAssignment?.subject?.name || '',
+        orderNumber: sa.achievement.orderNumber,
+        description: sa.approvedText || sa.suggestedText || sa.achievement.baseDescription,
+        performanceLevel: sa.performanceLevel,
+        observation: sa.observation || null,
+        judgment: sa.approvedJudgment || sa.suggestedJudgment || null,
+      }));
+
+      // Map de logros por asignatura para enriquecer subjectGrades
+      const achievementBySubject = new Map<string, (typeof achievements)[0]>();
+      for (const ach of achievements) {
+        if (ach.subject && !achievementBySubject.has(ach.subject)) {
+          achievementBySubject.set(ach.subject, ach);
+        }
+      }
+
+      // Aplanar subject grades y enriquecer con logros
+      const subjectGrades = areaGrades.flatMap(a => a.subjects).map(sg => {
+        const ach = achievementBySubject.get(sg.subject);
+        return {
+          ...sg,
+          achievement: ach?.description || null,
+          achievementObservation: ach?.observation || null,
+          judgment: ach?.judgment || null,
+        };
+      });
+
+      // También enriquecer los subjects dentro de areaGrades
+      for (const area of areaGrades) {
+        for (const subj of area.subjects) {
+          const ach = achievementBySubject.get(subj.subject);
+          subj.achievement = ach?.description || null;
+          subj.achievementObservation = ach?.observation || null;
+          subj.judgment = ach?.judgment || null;
+        }
+      }
+
+      // ─── Asistencia (en memoria) ──────────────────────────────────────
+      const attendance = attendanceMap.get(enrollmentId) || {
+        total: 0, present: 0, absent: 0, late: 0, excused: 0, attendanceRate: 0,
+      };
+
+      // ─── Observaciones (en memoria, limitadas a 10) ───────────────────
+      const studentObs = (observationsMap.get(enrollmentId) || []).slice(0, 10);
+      const observations = studentObs.map(o => ({
+        date: o.date,
+        type: o.type,
+        category: o.category,
+        description: o.description,
+        author: `${o.author.firstName} ${o.author.lastName}`,
+      }));
+
+      return {
+        enrollmentId,
+        student: {
+          id: enrollment.student.id,
+          firstName: enrollment.student.firstName,
+          lastName: enrollment.student.lastName,
+          documentType: enrollment.student.documentType,
+          documentNumber: enrollment.student.documentNumber,
+        },
+        group: {
+          id: enrollment.group.id,
+          name: enrollment.group.name,
+          gradeLevel: enrollment.group.grade?.name || '',
+        },
+        areaGrades,
+        subjectGrades,
+        structureSource,
+        attendance,
+        achievements,
+        observations,
+      };
+    });
+
+    return {
+      institution: {
+        id: institutionId,
+        name: firstEnrollment.academicYear.institution.name,
+        nit: firstEnrollment.academicYear.institution.nit,
+      },
+      academicYear: {
+        id: academicYearId,
+        year: firstEnrollment.academicYear.year,
+        name: firstEnrollment.academicYear.name,
+      },
+      term: {
+        id: term.id,
+        name: term.name,
+        type: term.type,
+      },
+      cards,
+      generatedAt: new Date(),
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // CONFIGURACIÓN DE BOLETINES
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -860,61 +1283,38 @@ export class ReportsService {
   }
 
   /**
-   * Lista de estudiantes de un grupo con resumen de notas para la tabla de boletines
+   * Lista de estudiantes de un grupo con resumen de notas para la tabla de boletines.
+   *
+   * OPTIMIZADO: Usa buildGroupReportCards() que hace ~10 queries batch
+   * en vez del patrón anterior de ~1,100 queries (N+1 en cascada).
    */
   async getGroupReportCardList(groupId: string, academicTermId: string, academicYearId: string) {
-    const enrollments = await this.studentsService.getEnrollmentsForGroupReport({
-      groupId,
-      academicYearId,
+    const groupData = await this.buildGroupReportCards(groupId, academicTermId);
+
+    const results = groupData.cards.map((card) => {
+      const allGrades = card.subjectGrades.filter(s => s.grade !== null);
+      const generalAvg = allGrades.length > 0
+        ? Math.round((allGrades.reduce((sum, s) => sum + s.grade!, 0) / allGrades.length) * 10) / 10
+        : null;
+
+      const approved = allGrades.filter(s => (s.grade ?? 0) >= 3.0).length;
+      const failed = allGrades.filter(s => (s.grade ?? 0) < 3.0).length;
+
+      return {
+        enrollmentId: card.enrollmentId,
+        studentId: card.student.id,
+        studentName: `${card.student.lastName} ${card.student.firstName}`,
+        documentNumber: card.student.documentNumber || '',
+        groupName: `${card.group.gradeLevel} ${card.group.name}`,
+        average: generalAvg,
+        approvedSubjects: approved,
+        failedSubjects: failed,
+        totalSubjects: allGrades.length,
+        attendance: card.attendance,
+      };
     });
 
-    const term = await this.academicYearService.getTermById(academicTermId);
-    if (!term) throw new NotFoundException('Período académico no encontrado');
-
-    const results = await Promise.all(
-      enrollments.map(async (enrollment) => {
-        try {
-          const data = await this.getReportCardData(enrollment.id, academicTermId);
-
-          // Calcular promedio general
-          const allGrades = data.subjectGrades.filter(s => s.grade !== null);
-          const generalAvg = allGrades.length > 0
-            ? Math.round((allGrades.reduce((sum, s) => sum + s.grade!, 0) / allGrades.length) * 10) / 10
-            : null;
-
-          const approved = allGrades.filter(s => (s.grade ?? 0) >= 3.0).length;
-          const failed = allGrades.filter(s => (s.grade ?? 0) < 3.0).length;
-
-          return {
-            enrollmentId: enrollment.id,
-            studentId: enrollment.studentId,
-            studentName: `${enrollment.studentLastName} ${enrollment.studentFirstName}`,
-            documentNumber: enrollment.documentNumber || '',
-            groupName: enrollment.groupName || '',
-            average: generalAvg,
-            approvedSubjects: approved,
-            failedSubjects: failed,
-            totalSubjects: allGrades.length,
-            attendance: data.attendance,
-          };
-        } catch {
-          return {
-            enrollmentId: enrollment.id,
-            studentId: enrollment.studentId,
-            studentName: `${enrollment.studentLastName} ${enrollment.studentFirstName}`,
-            documentNumber: enrollment.documentNumber || '',
-            groupName: enrollment.groupName || '',
-            average: null,
-            approvedSubjects: 0,
-            failedSubjects: 0,
-            totalSubjects: 0,
-            attendance: null,
-          };
-        }
-      }),
-    );
-
-    // Calcular ranking
+    // Calcular ranking en memoria
     const sorted = [...results]
       .filter(r => r.average !== null)
       .sort((a, b) => (b.average ?? 0) - (a.average ?? 0));
@@ -924,5 +1324,217 @@ export class ReportsService {
       rank: r.average !== null ? sorted.findIndex(s => s.enrollmentId === r.enrollmentId) + 1 : null,
       totalStudents: sorted.length,
     }));
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SNAPSHOT LEGAL — FINALIZACIÓN Y REAPERTURA DE PERÍODOS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Finaliza un período académico:
+   * 1) Valida que esté en CLOSED
+   * 2) Genera boletines para todos los grupos del período
+   * 3) Guarda snapshots congelados (JSON) por estudiante
+   * 4) Cambia status a FINALIZED
+   *
+   * Si se reabre y vuelve a finalizar → genera nueva versión.
+   */
+  async finalizeTerm(termId: string, userId: string) {
+    // 1. Obtener término con su año académico
+    const term = await this.prisma.academicTerm.findUnique({
+      where: { id: termId },
+      include: {
+        academicYear: { select: { id: true, institutionId: true } },
+      },
+    });
+
+    if (!term) throw new NotFoundException('Período académico no encontrado');
+
+    if (term.status !== 'CLOSED') {
+      throw new BadRequestException(
+        `El período debe estar en estado CLOSED para finalizar. Estado actual: ${term.status}`,
+      );
+    }
+
+    // 2. Obtener todos los grupos que tienen estudiantes en este año
+    const groups = await this.prisma.group.findMany({
+      where: {
+        studentEnrollments: {
+          some: {
+            academicYearId: term.academicYearId,
+            status: 'ACTIVE',
+          },
+        },
+      },
+      select: { id: true },
+    });
+
+    if (groups.length === 0) {
+      throw new BadRequestException('No hay grupos con estudiantes activos para este período');
+    }
+
+    // 3. Calcular versión
+    const lastVersion = await this.prisma.termReportCardSnapshot.aggregate({
+      where: { academicTermId: termId },
+      _max: { version: true },
+    });
+    const version = (lastVersion._max.version ?? 0) + 1;
+
+    // 4. Generar snapshots por grupo
+    let totalSnapshots = 0;
+
+    for (const group of groups) {
+      try {
+        const groupData = await this.buildGroupReportCards(group.id, termId);
+
+        // Guardar snapshot por cada estudiante
+        const snapshotData = groupData.cards.map((card) => ({
+          academicTermId: termId,
+          studentEnrollmentId: card.enrollmentId,
+          version,
+          generatedById: userId,
+          data: {
+            institution: groupData.institution,
+            academicYear: groupData.academicYear,
+            term: groupData.term,
+            student: card.student,
+            group: card.group,
+            areaGrades: card.areaGrades,
+            subjectGrades: card.subjectGrades,
+            structureSource: card.structureSource,
+            attendance: card.attendance,
+            achievements: card.achievements,
+            observations: card.observations,
+            generatedAt: groupData.generatedAt,
+          },
+        }));
+
+        // Bulk insert snapshots
+        for (const snap of snapshotData) {
+          await this.prisma.termReportCardSnapshot.create({ data: snap });
+          totalSnapshots++;
+        }
+      } catch (error) {
+        console.error(`[finalizeTerm] Error procesando grupo ${group.id}:`, error.message);
+      }
+    }
+
+    // 5. Actualizar estado del término
+    await this.prisma.academicTerm.update({
+      where: { id: termId },
+      data: {
+        status: 'FINALIZED',
+        finalizedAt: new Date(),
+      },
+    });
+
+    return {
+      success: true,
+      termId,
+      version,
+      totalSnapshots,
+      finalizedAt: new Date(),
+    };
+  }
+
+  /**
+   * Reabre un período finalizado para permitir correcciones.
+   * Crea un registro de auditoría (TermReopeningRecord).
+   * NO elimina snapshots anteriores.
+   * Cuando se vuelva a finalizar → se genera nueva versión.
+   */
+  async reopenFinalizedTerm(termId: string, reason: string, userId: string) {
+    const term = await this.prisma.academicTerm.findUnique({
+      where: { id: termId },
+    });
+
+    if (!term) throw new NotFoundException('Período académico no encontrado');
+
+    if (term.status !== 'FINALIZED') {
+      throw new BadRequestException(
+        `El período debe estar en estado FINALIZED para reabrir. Estado actual: ${term.status}`,
+      );
+    }
+
+    if (!reason || reason.trim().length < 10) {
+      throw new BadRequestException('Debe proporcionar un motivo de reapertura (mínimo 10 caracteres)');
+    }
+
+    // Obtener versión actual del snapshot
+    const lastVersion = await this.prisma.termReportCardSnapshot.aggregate({
+      where: { academicTermId: termId },
+      _max: { version: true },
+    });
+
+    // Crear registro de auditoría
+    await this.prisma.termReopeningRecord.create({
+      data: {
+        academicTermId: termId,
+        reopenedById: userId,
+        reason: reason.trim(),
+        previousVersion: lastVersion._max.version ?? 0,
+      },
+    });
+
+    // Cambiar estado a CLOSED (permite edición de notas)
+    await this.prisma.academicTerm.update({
+      where: { id: termId },
+      data: {
+        status: 'CLOSED',
+        finalizedAt: null,
+      },
+    });
+
+    return {
+      success: true,
+      termId,
+      previousVersion: lastVersion._max.version ?? 0,
+      newStatus: 'CLOSED',
+    };
+  }
+
+  /**
+   * Lee el snapshot más reciente de un estudiante para un período.
+   * Retorna null si no existe snapshot.
+   */
+  private async getSnapshotForStudent(
+    academicTermId: string,
+    studentEnrollmentId: string,
+  ): Promise<any | null> {
+    const snapshot = await this.prisma.termReportCardSnapshot.findFirst({
+      where: { academicTermId, studentEnrollmentId },
+      orderBy: { version: 'desc' },
+    });
+
+    return snapshot?.data ?? null;
+  }
+
+  /**
+   * Lee todos los snapshots más recientes de un período.
+   * Retorna Map<enrollmentId, snapshotData>.
+   */
+  private async getSnapshotsForTerm(
+    academicTermId: string,
+  ): Promise<Map<string, any>> {
+    // Obtener la versión más reciente
+    const lastVersion = await this.prisma.termReportCardSnapshot.aggregate({
+      where: { academicTermId },
+      _max: { version: true },
+    });
+
+    if (!lastVersion._max.version) return new Map();
+
+    const snapshots = await this.prisma.termReportCardSnapshot.findMany({
+      where: {
+        academicTermId,
+        version: lastVersion._max.version,
+      },
+    });
+
+    const map = new Map<string, any>();
+    for (const snap of snapshots) {
+      map.set(snap.studentEnrollmentId, snap.data);
+    }
+    return map;
   }
 }

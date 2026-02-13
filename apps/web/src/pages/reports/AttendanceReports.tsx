@@ -272,20 +272,22 @@ export default function AttendanceReports() {
         const mappedByGrade = (response.data?.byGrade || []).map((item: any, idx: number) => ({
           nro: idx + 1,
           grade: item.name || item.grade || '',
-          totalStudents: item.totalStudents || '-',
           totalClasses: item.total || item.totalClasses || 0,
           totalAttended: item.present || item.totalAttended || 0,
           totalAbsent: item.absent || item.totalAbsent || 0,
+          totalLate: item.late || 0,
+          totalExcused: item.excused || 0,
           pct: item.attendanceRate || item.pct || 0,
         }))
         
         const mappedBySubject = (response.data?.bySubject || []).map((item: any, idx: number) => ({
           nro: idx + 1,
           subject: item.name || item.subject || '',
-          totalRecords: item.total || item.totalRecords || 0,
           totalClasses: item.total || item.totalClasses || 0,
           totalAttended: item.present || item.totalAttended || 0,
           totalAbsent: item.absent || item.totalAbsent || 0,
+          totalLate: item.late || 0,
+          totalExcused: item.excused || 0,
           pct: item.attendanceRate || item.pct || 0,
         }))
         
@@ -498,6 +500,112 @@ export default function AttendanceReports() {
       )
     }
 
+    if (selectedReport === 'att-subject') {
+      return (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Año</label>
+              <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
+                <option value="">Seleccionar...</option>
+                {academicYears.map(year => (
+                  <option key={year.id} value={year.id}>{year.year}{year.status === 'ACTIVE' ? ' - Activo' : ''}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Asignatura *</label>
+              <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} className="w-full px-2 py-1.5 border border-amber-400 rounded text-sm bg-amber-50">
+                <option value="all">Seleccionar asignatura...</option>
+                {subjects.map(subject => (
+                  <option key={subject.id} value={subject.id}>{subject.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Grupo</label>
+              <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
+                <option value="all">Todos los grupos</option>
+                {groups.map(group => (
+                  <option key={group.id} value={group.id}>{group.grade?.name} {group.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Estado</label>
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
+                <option value="all">Todos</option>
+                <option value="Normal">Normal (&ge;85%)</option>
+                <option value="Alerta">Alerta (70-84%)</option>
+                <option value="Riesgo">Riesgo (&lt;70%)</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Desde</label>
+              <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Hasta</label>
+              <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Buscar estudiante</label>
+              <input type="text" value={searchStudent} onChange={(e) => setSearchStudent(e.target.value)} placeholder="Nombre..." className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
+            </div>
+            <div className="flex items-end">
+              <button onClick={() => {
+                if (filterSubject === 'all') {
+                  alert('Debe seleccionar una asignatura para este reporte')
+                  return
+                }
+                loadReportData(selectedReport!)
+              }} className="px-4 py-1.5 bg-amber-600 text-white rounded text-sm hover:bg-amber-700 w-full">Buscar</button>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    if (selectedReport === 'att-consolidated') {
+      return (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Año</label>
+              <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
+                <option value="">Seleccionar...</option>
+                {academicYears.map(year => (
+                  <option key={year.id} value={year.id}>{year.year}{year.status === 'ACTIVE' ? ' - Activo' : ''}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Asignatura</label>
+              <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
+                <option value="all">Todas</option>
+                {subjects.map(subject => (
+                  <option key={subject.id} value={subject.id}>{subject.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Desde</label>
+              <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Hasta</label>
+              <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button onClick={() => loadReportData(selectedReport!)} className="px-4 py-1.5 bg-amber-600 text-white rounded text-sm hover:bg-amber-700">Buscar</button>
+          </div>
+        </div>
+      )
+    }
+
     if (selectedReport === 'att-teacher') {
       return (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-4">
@@ -521,6 +629,26 @@ export default function AttendanceReports() {
               </select>
             </div>
             <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Grupo</label>
+              <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
+                <option value="all">Todos</option>
+                {groups.map(group => (
+                  <option key={group.id} value={group.id}>{group.grade?.name} {group.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Asignatura</label>
+              <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
+                <option value="all">Todas</option>
+                {subjects.map(subject => (
+                  <option key={subject.id} value={subject.id}>{subject.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Desde</label>
               <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
             </div>
@@ -528,9 +656,9 @@ export default function AttendanceReports() {
               <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Hasta</label>
               <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
             </div>
-          </div>
-          <div className="flex justify-end">
-            <button onClick={() => loadReportData(selectedReport!)} className="px-4 py-1.5 bg-amber-600 text-white rounded text-sm hover:bg-amber-700">Buscar</button>
+            <div className="col-span-2 flex items-end justify-end">
+              <button onClick={() => loadReportData(selectedReport!)} className="px-4 py-1.5 bg-amber-600 text-white rounded text-sm hover:bg-amber-700">Buscar</button>
+            </div>
           </div>
         </div>
       )
@@ -710,6 +838,55 @@ export default function AttendanceReports() {
       )
     }
 
+    if (selectedReport === 'att-subject' && attendanceBySubjectData.length > 0) {
+      const filteredData = searchStudent
+        ? attendanceBySubjectData.filter(d => d.name?.toLowerCase().includes(searchStudent.toLowerCase()))
+        : attendanceBySubjectData
+
+      return (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="px-3 py-2 text-left">Nro</th>
+                <th className="px-3 py-2 text-left">Estudiante</th>
+                <th className="px-3 py-2 text-left">Grupo</th>
+                <th className="px-3 py-2 text-center">Total</th>
+                <th className="px-3 py-2 text-center">Asist.</th>
+                <th className="px-3 py-2 text-center">Fallas</th>
+                <th className="px-3 py-2 text-center">Tardanzas</th>
+                <th className="px-3 py-2 text-center">Excusas</th>
+                <th className="px-3 py-2 text-center">%</th>
+                <th className="px-3 py-2 text-center">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredData.map((row, idx) => (
+                <tr key={idx} className="border-b hover:bg-slate-50">
+                  <td className="px-3 py-2">{idx + 1}</td>
+                  <td className="px-3 py-2 font-medium">{row.name}</td>
+                  <td className="px-3 py-2">{row.group}</td>
+                  <td className="px-3 py-2 text-center">{row.totalClasses}</td>
+                  <td className="px-3 py-2 text-center text-green-600">{row.attended}</td>
+                  <td className="px-3 py-2 text-center text-red-600">{row.absent}</td>
+                  <td className="px-3 py-2 text-center text-amber-600">{row.late || 0}</td>
+                  <td className="px-3 py-2 text-center text-blue-600">{row.excused || 0}</td>
+                  <td className="px-3 py-2 text-center font-medium">{row.pct}%</td>
+                  <td className="px-3 py-2 text-center">
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      row.status === 'Normal' ? 'bg-green-100 text-green-700' :
+                      row.status === 'Alerta' ? 'bg-amber-100 text-amber-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>{row.status}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
+    }
+
     if (selectedReport === 'att-teacher' && teacherComplianceData.length > 0) {
       return (
         <div className="overflow-x-auto">
@@ -790,10 +967,11 @@ export default function AttendanceReports() {
                     <tr>
                       <th className="px-3 py-2 text-left">Nro</th>
                       <th className="px-3 py-2 text-left">Grado</th>
-                      <th className="px-3 py-2 text-center">Estudiantes</th>
                       <th className="px-3 py-2 text-center">Total Registros</th>
                       <th className="px-3 py-2 text-center">Presentes</th>
                       <th className="px-3 py-2 text-center">Ausentes</th>
+                      <th className="px-3 py-2 text-center">Tardanzas</th>
+                      <th className="px-3 py-2 text-center">Excusas</th>
                       <th className="px-3 py-2 text-center">% Asist.</th>
                     </tr>
                   </thead>
@@ -802,10 +980,11 @@ export default function AttendanceReports() {
                       <tr key={idx} className="border-b hover:bg-slate-50">
                         <td className="px-3 py-2">{row.nro}</td>
                         <td className="px-3 py-2 font-medium">{row.grade}</td>
-                        <td className="px-3 py-2 text-center">{row.totalStudents}</td>
                         <td className="px-3 py-2 text-center">{row.totalClasses}</td>
                         <td className="px-3 py-2 text-center text-green-600">{row.totalAttended}</td>
                         <td className="px-3 py-2 text-center text-red-600">{row.totalAbsent}</td>
+                        <td className="px-3 py-2 text-center text-amber-600">{row.totalLate}</td>
+                        <td className="px-3 py-2 text-center text-blue-600">{row.totalExcused}</td>
                         <td className="px-3 py-2 text-center font-medium">{row.pct}%</td>
                       </tr>
                     ))}
@@ -827,6 +1006,8 @@ export default function AttendanceReports() {
                       <th className="px-3 py-2 text-center">Total Registros</th>
                       <th className="px-3 py-2 text-center">Presentes</th>
                       <th className="px-3 py-2 text-center">Ausentes</th>
+                      <th className="px-3 py-2 text-center">Tardanzas</th>
+                      <th className="px-3 py-2 text-center">Excusas</th>
                       <th className="px-3 py-2 text-center">% Asist.</th>
                     </tr>
                   </thead>
@@ -838,6 +1019,8 @@ export default function AttendanceReports() {
                         <td className="px-3 py-2 text-center">{row.totalClasses}</td>
                         <td className="px-3 py-2 text-center text-green-600">{row.totalAttended}</td>
                         <td className="px-3 py-2 text-center text-red-600">{row.totalAbsent}</td>
+                        <td className="px-3 py-2 text-center text-amber-600">{row.totalLate}</td>
+                        <td className="px-3 py-2 text-center text-blue-600">{row.totalExcused}</td>
                         <td className="px-3 py-2 text-center font-medium">{row.pct}%</td>
                       </tr>
                     ))}

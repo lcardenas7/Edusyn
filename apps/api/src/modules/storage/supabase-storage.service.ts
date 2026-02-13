@@ -265,6 +265,60 @@ export class SupabaseStorageService {
   }
 
   /**
+   * Resuelve una URL/key almacenada en la DB a una URL firmada fresca.
+   * Maneja 3 casos:
+   *  1. Key directa (ej: "galeria/institucion/xxx/gallery/img.jpg") → genera signed URL
+   *  2. URL firmada expirada de R2 → extrae key y genera signed URL fresca
+   *  3. URL pública (http sin firma) → la devuelve tal cual
+   *
+   * @param storedValue - El valor de fileUrl/imageUrl almacenado en la DB
+   * @param expiresIn - Segundos de validez (default: 600 = 10min)
+   */
+  async resolveFileUrl(storedValue: string, expiresIn = 600): Promise<string> {
+    if (!this.isConfigured() || !storedValue) return storedValue;
+
+    try {
+      // Caso 1: Es una key directa (no empieza con http)
+      if (!storedValue.startsWith('http')) {
+        return this.storage.getSignedUrl(storedValue, expiresIn);
+      }
+
+      // Caso 2: URL firmada de R2 (contiene X-Amz- params)
+      if (storedValue.includes('X-Amz-')) {
+        const key = this.extractKeyFromSignedUrl(storedValue);
+        if (key) {
+          return this.storage.getSignedUrl(key, expiresIn);
+        }
+      }
+
+      // Caso 3: URL pública o externa → devolver tal cual
+      return storedValue;
+    } catch {
+      return storedValue;
+    }
+  }
+
+  /**
+   * Extrae la key del archivo desde una URL firmada de R2.
+   * URL: https://xxx.r2.cloudflarestorage.com/edusyn-files/galeria/institucion/xxx/img.jpg?X-Amz-...
+   * Key: galeria/institucion/xxx/img.jpg
+   */
+  private extractKeyFromSignedUrl(signedUrl: string): string | null {
+    try {
+      const url = new URL(signedUrl);
+      const path = decodeURIComponent(url.pathname);
+      // Quitar /bucket-name/ del inicio → la key es todo lo que sigue
+      const parts = path.split('/').filter(Boolean);
+      if (parts.length > 1) {
+        return parts.slice(1).join('/');
+      }
+    } catch {
+      // URL inválida
+    }
+    return null;
+  }
+
+  /**
    * Obtiene una URL firmada con tiempo de expiración según el bucket
    * Usa tiempos cortos para contenido sensible (boletines: 5min, reportes: 10min)
    */

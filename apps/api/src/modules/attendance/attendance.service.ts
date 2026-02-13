@@ -200,29 +200,9 @@ export class AttendanceService {
   }
 
   // Reporte de asistencia por grupo (para reportes administrativos)
+  // OPTIMIZADO: 2 queries batch + agrupación en memoria (antes: N+1)
   async getReportByGroup(groupId: string, academicYearId: string, params?: { startDate?: string; endDate?: string; subjectId?: string }) {
-    const whereClause: any = {
-      studentEnrollment: {
-        groupId,
-        academicYearId,
-        status: 'ACTIVE',
-      },
-    };
-
-    if (params?.startDate && params?.endDate) {
-      whereClause.date = {
-        gte: new Date(params.startDate),
-        lte: new Date(params.endDate),
-      };
-    }
-
-    if (params?.subjectId) {
-      whereClause.teacherAssignment = {
-        subjectId: params.subjectId,
-      };
-    }
-
-    // Obtener todos los estudiantes del grupo
+    // QUERY 1: Obtener todos los estudiantes del grupo
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
         groupId,
@@ -240,53 +220,95 @@ export class AttendanceService {
       },
     });
 
-    // Obtener registros de asistencia para cada estudiante
-    const results = await Promise.all(
-      enrollments.map(async (enrollment) => {
-        const records = await this.prisma.attendanceRecord.findMany({
-          where: {
-            studentEnrollmentId: enrollment.id,
-            ...whereClause.date ? { date: whereClause.date } : {},
-            ...params?.subjectId ? { teacherAssignment: { subjectId: params.subjectId } } : {},
-          },
-        });
+    const enrollmentIds = enrollments.map(e => e.id);
+    if (enrollmentIds.length === 0) return [];
 
-        const total = records.length;
-        const present = records.filter((r) => r.status === 'PRESENT').length;
-        const absent = records.filter((r) => r.status === 'ABSENT').length;
-        const late = records.filter((r) => r.status === 'LATE').length;
-        const excused = records.filter((r) => r.status === 'EXCUSED').length;
-        const attendanceRate = total > 0 ? Math.round(((present + late + excused) / total) * 100) : 100;
+    // QUERY 2: Batch — TODOS los registros de asistencia del grupo
+    const dateFilter: any = {};
+    if (params?.startDate && params?.endDate) {
+      dateFilter.date = {
+        gte: new Date(params.startDate),
+        lte: new Date(params.endDate),
+      };
+    }
 
-        // Determinar estado
-        let status = 'Normal';
-        if (attendanceRate < 70) status = 'Riesgo';
-        else if (attendanceRate < 85) status = 'Alerta';
+    const allRecords = await this.prisma.attendanceRecord.findMany({
+      where: {
+        studentEnrollmentId: { in: enrollmentIds },
+        ...dateFilter,
+        ...(params?.subjectId ? { teacherAssignment: { subjectId: params.subjectId } } : {}),
+      },
+    });
 
-        return {
-          studentName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
-          groupName: `${enrollment.group.grade?.name || ''} ${enrollment.group.name}`,
-          totalClasses: total,
-          present,
-          absent,
-          late,
-          excused,
-          attendanceRate,
-          status,
-        };
-      }),
-    );
+    // Agrupar en memoria por enrollmentId — O(n)
+    const recordsByEnrollment = new Map<string, typeof allRecords>();
+    for (const rec of allRecords) {
+      const list = recordsByEnrollment.get(rec.studentEnrollmentId) || [];
+      list.push(rec);
+      recordsByEnrollment.set(rec.studentEnrollmentId, list);
+    }
 
-    return results;
+    // Construir resultado — 0 queries
+    return enrollments.map((enrollment) => {
+      const records = recordsByEnrollment.get(enrollment.id) || [];
+      const total = records.length;
+      const present = records.filter((r) => r.status === 'PRESENT').length;
+      const absent = records.filter((r) => r.status === 'ABSENT').length;
+      const late = records.filter((r) => r.status === 'LATE').length;
+      const excused = records.filter((r) => r.status === 'EXCUSED').length;
+      const attendanceRate = total > 0 ? Math.round(((present + late + excused) / total) * 100) : 100;
+
+      let status = 'Normal';
+      if (attendanceRate < 70) status = 'Riesgo';
+      else if (attendanceRate < 85) status = 'Alerta';
+
+      return {
+        studentName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
+        groupName: `${enrollment.group.grade?.name || ''} ${enrollment.group.name}`,
+        totalClasses: total,
+        present,
+        absent,
+        late,
+        excused,
+        attendanceRate,
+        status,
+      };
+    });
   }
 
   // Reporte consolidado institucional
+  // OPTIMIZADO: 3 queries batch + agrupación en memoria (antes: N+1 doble por grupo y asignatura)
   async getConsolidatedReport(params: {
     academicYearId: string;
     startDate?: string;
     endDate?: string;
     subjectId?: string;
   }) {
+    // QUERY 1: Obtener enrollments con grupo y grado (para mapear groupId → gradeName)
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: { academicYearId: params.academicYearId, status: 'ACTIVE' },
+      select: {
+        id: true,
+        groupId: true,
+        group: { select: { id: true, name: true, grade: { select: { name: true } } } },
+      },
+    });
+
+    if (enrollments.length === 0) return { byGrade: [], bySubject: [] };
+
+    // Mapas de lookup
+    const enrollmentToGroup = new Map<string, string>();
+    const groupToGrade = new Map<string, string>();
+    for (const e of enrollments) {
+      enrollmentToGroup.set(e.id, e.groupId);
+      if (!groupToGrade.has(e.groupId)) {
+        groupToGrade.set(e.groupId, e.group.grade?.name || 'Sin grado');
+      }
+    }
+
+    const enrollmentIds = enrollments.map(e => e.id);
+
+    // QUERY 2: Batch — TODOS los registros de asistencia del año con teacherAssignment.subjectId
     const dateFilter: any = {};
     if (params.startDate && params.endDate) {
       dateFilter.date = {
@@ -295,101 +317,84 @@ export class AttendanceService {
       };
     }
 
-    // Obtener todos los grupos del año académico a través de enrollments
-    const enrollments = await this.prisma.studentEnrollment.findMany({
-      where: { academicYearId: params.academicYearId },
-      select: { groupId: true },
-      distinct: ['groupId'],
+    const allRecords = await this.prisma.attendanceRecord.findMany({
+      where: {
+        studentEnrollmentId: { in: enrollmentIds },
+        ...dateFilter,
+        ...(params.subjectId ? { teacherAssignment: { subjectId: params.subjectId } } : {}),
+      },
+      select: {
+        studentEnrollmentId: true,
+        status: true,
+        teacherAssignment: {
+          select: { subjectId: true },
+        },
+      },
     });
-    
-    const groupIds = enrollments.map(e => e.groupId);
-    const groups = await this.prisma.group.findMany({
-      where: { id: { in: groupIds } },
-      include: { grade: true },
+
+    // QUERY 3: Obtener nombres de asignaturas (1 query)
+    const subjectIds = [...new Set(allRecords.map(r => r.teacherAssignment.subjectId))];
+    const subjects = await this.prisma.subject.findMany({
+      where: { id: { in: subjectIds } },
+      select: { id: true, name: true },
     });
+    const subjectNameMap = new Map(subjects.map(s => [s.id, s.name]));
+
+    // ─── Agrupación en memoria — 0 queries ───
 
     // Consolidado por grado
-    const byGrade: any[] = [];
     const gradeMap = new Map<string, { name: string; total: number; present: number; absent: number; late: number; excused: number }>();
 
-    for (const group of groups) {
-      const gradeName = group.grade?.name || 'Sin grado';
-      
-      const whereClause: any = {
-        studentEnrollment: {
-          groupId: group.id,
-          academicYearId: params.academicYearId,
-        },
-        ...dateFilter,
-      };
-
-      if (params.subjectId) {
-        whereClause.teacherAssignment = { subjectId: params.subjectId };
-      }
-
-      const records = await this.prisma.attendanceRecord.findMany({
-        where: whereClause,
-      });
+    for (const rec of allRecords) {
+      const groupId = enrollmentToGroup.get(rec.studentEnrollmentId);
+      const gradeName = groupId ? (groupToGrade.get(groupId) || 'Sin grado') : 'Sin grado';
 
       if (!gradeMap.has(gradeName)) {
         gradeMap.set(gradeName, { name: gradeName, total: 0, present: 0, absent: 0, late: 0, excused: 0 });
       }
-
-      const gradeData = gradeMap.get(gradeName)!;
-      gradeData.total += records.length;
-      gradeData.present += records.filter(r => r.status === 'PRESENT').length;
-      gradeData.absent += records.filter(r => r.status === 'ABSENT').length;
-      gradeData.late += records.filter(r => r.status === 'LATE').length;
-      gradeData.excused += records.filter(r => r.status === 'EXCUSED').length;
+      const g = gradeMap.get(gradeName)!;
+      g.total++;
+      if (rec.status === 'PRESENT') g.present++;
+      else if (rec.status === 'ABSENT') g.absent++;
+      else if (rec.status === 'LATE') g.late++;
+      else if (rec.status === 'EXCUSED') g.excused++;
     }
 
-    gradeMap.forEach((data) => {
-      byGrade.push({
-        ...data,
-        attendanceRate: data.total > 0 ? Math.round(((data.present + data.late + data.excused) / data.total) * 100) : 0,
-      });
-    });
+    const byGrade = [...gradeMap.values()].map(data => ({
+      ...data,
+      attendanceRate: data.total > 0 ? Math.round(((data.present + data.late + data.excused) / data.total) * 100) : 0,
+    }));
 
     // Consolidado por asignatura
-    const bySubject: any[] = [];
-    const subjects = await this.prisma.subject.findMany({
-      where: params.subjectId ? { id: params.subjectId } : {},
-    });
+    const subjectMap = new Map<string, { name: string; total: number; present: number; absent: number; late: number; excused: number }>();
 
-    for (const subject of subjects) {
-      const records = await this.prisma.attendanceRecord.findMany({
-        where: {
-          teacherAssignment: {
-            subjectId: subject.id,
-            academicYearId: params.academicYearId,
-          },
-          ...dateFilter,
-        },
-      });
+    for (const rec of allRecords) {
+      const subjectId = rec.teacherAssignment.subjectId;
+      const subjectName = subjectNameMap.get(subjectId) || 'Sin asignatura';
 
-      if (records.length > 0) {
-        const total = records.length;
-        const present = records.filter(r => r.status === 'PRESENT').length;
-        const absent = records.filter(r => r.status === 'ABSENT').length;
-        const late = records.filter(r => r.status === 'LATE').length;
-        const excused = records.filter(r => r.status === 'EXCUSED').length;
-
-        bySubject.push({
-          name: subject.name,
-          total,
-          present,
-          absent,
-          late,
-          excused,
-          attendanceRate: Math.round(((present + late + excused) / total) * 100),
-        });
+      if (!subjectMap.has(subjectId)) {
+        subjectMap.set(subjectId, { name: subjectName, total: 0, present: 0, absent: 0, late: 0, excused: 0 });
       }
+      const s = subjectMap.get(subjectId)!;
+      s.total++;
+      if (rec.status === 'PRESENT') s.present++;
+      else if (rec.status === 'ABSENT') s.absent++;
+      else if (rec.status === 'LATE') s.late++;
+      else if (rec.status === 'EXCUSED') s.excused++;
     }
+
+    const bySubject = [...subjectMap.values()]
+      .filter(data => data.total > 0)
+      .map(data => ({
+        ...data,
+        attendanceRate: Math.round(((data.present + data.late + data.excused) / data.total) * 100),
+      }));
 
     return { byGrade, bySubject };
   }
 
   // Reporte de cumplimiento docente - clases registradas vs esperadas
+  // OPTIMIZADO: 2 queries batch + agrupación en memoria (antes: N+1)
   async getTeacherComplianceReport(params: {
     academicYearId: string;
     teacherId?: string;
@@ -398,22 +403,14 @@ export class AttendanceService {
     startDate?: string;
     endDate?: string;
   }) {
-    // Obtener todas las asignaciones de docentes
+    // QUERY 1: Obtener todas las asignaciones de docentes
     const whereClause: any = {
       academicYearId: params.academicYearId,
     };
 
-    if (params.teacherId) {
-      whereClause.teacherId = params.teacherId;
-    }
-
-    if (params.groupId) {
-      whereClause.groupId = params.groupId;
-    }
-
-    if (params.subjectId) {
-      whereClause.subjectId = params.subjectId;
-    }
+    if (params.teacherId) whereClause.teacherId = params.teacherId;
+    if (params.groupId) whereClause.groupId = params.groupId;
+    if (params.subjectId) whereClause.subjectId = params.subjectId;
 
     const assignments = await this.prisma.teacherAssignment.findMany({
       where: whereClause,
@@ -426,58 +423,66 @@ export class AttendanceService {
       },
     });
 
-    // Para cada asignación, contar los días únicos con registros de asistencia
-    const results = await Promise.all(
-      assignments.map(async (assignment) => {
-        const dateFilter: any = {};
-        if (params.startDate && params.endDate) {
-          dateFilter.date = {
-            gte: new Date(params.startDate),
-            lte: new Date(params.endDate),
-          };
-        }
+    const assignmentIds = assignments.map(a => a.id);
+    if (assignmentIds.length === 0) return [];
 
-        // Contar días únicos con registros de asistencia
-        const records = await this.prisma.attendanceRecord.findMany({
-          where: {
-            teacherAssignmentId: assignment.id,
-            ...dateFilter,
-          },
-          select: {
-            date: true,
-          },
-          distinct: ['date'],
-        });
+    // QUERY 2: Batch — TODOS los registros de asistencia de todas las asignaciones
+    const dateFilter: any = {};
+    if (params.startDate && params.endDate) {
+      dateFilter.date = {
+        gte: new Date(params.startDate),
+        lte: new Date(params.endDate),
+      };
+    }
 
-        const classesRegistered = records.length;
-        
-        // Estimar clases programadas (asumiendo 1 clase por día hábil por semana)
-        // Esto es una aproximación - idealmente vendría de un horario
-        let classesScheduled = 20; // Por defecto 20 clases por período
-        if (params.startDate && params.endDate) {
-          const start = new Date(params.startDate);
-          const end = new Date(params.endDate);
-          const weeks = Math.ceil((end.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
-          classesScheduled = Math.max(weeks, 1); // Al menos 1 clase por semana
-        }
+    const allRecords = await this.prisma.attendanceRecord.findMany({
+      where: {
+        teacherAssignmentId: { in: assignmentIds },
+        ...dateFilter,
+      },
+      select: {
+        teacherAssignmentId: true,
+        date: true,
+      },
+    });
 
-        const complianceRate = classesScheduled > 0 
-          ? Math.round((classesRegistered / classesScheduled) * 100) 
-          : 0;
+    // Agrupar en memoria: Map<assignmentId, Set<dateString>> para días únicos — O(n)
+    const datesByAssignment = new Map<string, Set<string>>();
+    for (const rec of allRecords) {
+      const dates = datesByAssignment.get(rec.teacherAssignmentId) || new Set();
+      dates.add(rec.date.toISOString().split('T')[0]);
+      datesByAssignment.set(rec.teacherAssignmentId, dates);
+    }
 
-        return {
-          teacherName: `${assignment.teacher.firstName} ${assignment.teacher.lastName}`,
-          subjectName: assignment.subject.name,
-          groupName: `${assignment.group.grade?.name || ''} ${assignment.group.name}`,
-          classesScheduled,
-          classesRegistered,
-          classesNotRegistered: Math.max(0, classesScheduled - classesRegistered),
-          complianceRate: Math.min(100, complianceRate),
-        };
-      }),
-    );
+    // Estimar clases programadas
+    let classesScheduled = 20;
+    if (params.startDate && params.endDate) {
+      const start = new Date(params.startDate);
+      const end = new Date(params.endDate);
+      const weeks = Math.ceil((end.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
+      classesScheduled = Math.max(weeks, 1);
+    }
 
-    // Agrupar por docente
+    // Construir resultados — 0 queries
+    const results = assignments.map((assignment) => {
+      const uniqueDates = datesByAssignment.get(assignment.id);
+      const classesRegistered = uniqueDates ? uniqueDates.size : 0;
+      const complianceRate = classesScheduled > 0
+        ? Math.round((classesRegistered / classesScheduled) * 100)
+        : 0;
+
+      return {
+        teacherName: `${assignment.teacher.firstName} ${assignment.teacher.lastName}`,
+        subjectName: assignment.subject.name,
+        groupName: `${assignment.group.grade?.name || ''} ${assignment.group.name}`,
+        classesScheduled,
+        classesRegistered,
+        classesNotRegistered: Math.max(0, classesScheduled - classesRegistered),
+        complianceRate: Math.min(100, complianceRate),
+      };
+    });
+
+    // Agrupar por docente en memoria
     const groupedByTeacher = results.reduce((acc: any, item) => {
       const key = item.teacherName;
       if (!acc[key]) {
@@ -503,7 +508,7 @@ export class AttendanceService {
 
     return Object.values(groupedByTeacher).map((teacher: any) => ({
       ...teacher,
-      complianceRate: teacher.classesScheduled > 0 
+      complianceRate: teacher.classesScheduled > 0
         ? Math.round((teacher.classesRegistered / teacher.classesScheduled) * 100)
         : 0,
     }));
