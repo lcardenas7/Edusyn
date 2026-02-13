@@ -95,12 +95,12 @@ export default function AttendanceReports() {
           const groupsRes = await groupsApi.getAll()
           const allGroups = groupsRes.data || []
           
-          for (const group of allGroups) {
-            try {
-              const response = await attendanceApi.getReportByGroup(group.id, filterYear, params)
-              rawData.push(...(response.data || []))
-            } catch (err) { /* ignore */ }
-          }
+          const results = await Promise.allSettled(
+            allGroups.map((group: any) => attendanceApi.getReportByGroup(group.id, filterYear, params))
+          )
+          results.forEach((r) => {
+            if (r.status === 'fulfilled') rawData.push(...(r.value.data || []))
+          })
         }
         
         rawData = rawData.map((item: any) => ({
@@ -165,12 +165,12 @@ export default function AttendanceReports() {
           const groupsRes = await groupsApi.getAll()
           const allGroups = groupsRes.data || []
           
-          for (const group of allGroups) {
-            try {
-              const response = await attendanceApi.getReportByGroup(group.id, filterYear, params)
-              rawData.push(...(response.data || []))
-            } catch (err) { /* ignore */ }
-          }
+          const results = await Promise.allSettled(
+            allGroups.map((group: any) => attendanceApi.getReportByGroup(group.id, filterYear, params))
+          )
+          results.forEach((r) => {
+            if (r.status === 'fulfilled') rawData.push(...(r.value.data || []))
+          })
         }
         
         rawData = rawData.map((item: any) => ({
@@ -230,12 +230,12 @@ export default function AttendanceReports() {
           const groupsRes = await groupsApi.getAll()
           const allGroups = groupsRes.data || []
           
-          for (const group of allGroups) {
-            try {
-              const response = await attendanceApi.getReportByGroup(group.id, filterYear, params)
-              rawData.push(...(response.data || []))
-            } catch (err) { /* ignore */ }
-          }
+          const results = await Promise.allSettled(
+            allGroups.map((group: any) => attendanceApi.getReportByGroup(group.id, filterYear, params))
+          )
+          results.forEach((r) => {
+            if (r.status === 'fulfilled') rawData.push(...(r.value.data || []))
+          })
         }
         
         rawData = rawData.map((item: any) => ({
