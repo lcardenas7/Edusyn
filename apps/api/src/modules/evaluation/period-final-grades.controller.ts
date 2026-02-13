@@ -25,7 +25,7 @@ export class PeriodFinalGradesController {
   }
 
   @Get('by-group')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA')
   async findByGroup(
     @Query('groupId') groupId: string,
     @Query('academicTermId') academicTermId: string,

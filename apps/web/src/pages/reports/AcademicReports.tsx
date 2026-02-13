@@ -95,35 +95,34 @@ export default function AcademicReports() {
         const assignmentsRes = await teacherAssignmentsApi.getAll({ academicYearId: filterYear })
         const assignments = assignmentsRes.data || []
         const groupIds = [...new Set(assignments.map((a: any) => a.group?.id).filter(Boolean))]
+        const targetGroupIds = filterGrade !== 'all' ? groupIds.filter((id: any) => id === filterGrade) : groupIds
         
-        // Obtener notas de todos los grupos
+        // Obtener notas de todos los grupos en paralelo
         const studentGradesMap = new Map<string, any>()
         
-        for (const groupId of groupIds) {
-          if (filterGrade !== 'all' && groupId !== filterGrade) continue
+        const results = await Promise.allSettled(
+          targetGroupIds.map((groupId: any) => periodFinalGradesApi.getByGroup(groupId as string, filterPeriod))
+        )
+        
+        results.forEach((result) => {
+          if (result.status !== 'fulfilled') return
+          const grades = result.value.data || []
           
-          try {
-            const gradesRes = await periodFinalGradesApi.getByGroup(groupId as string, filterPeriod)
-            const grades = gradesRes.data || []
-            
-            grades.forEach((g: any) => {
-              const studentId = g.studentEnrollmentId
-              const student = g.studentEnrollment?.student
-              if (!studentGradesMap.has(studentId)) {
-                studentGradesMap.set(studentId, {
-                  id: studentId,
-                  name: student ? `${student.lastName} ${student.firstName}`.toUpperCase() : 'Estudiante',
-                  group: g.studentEnrollment?.group?.name || '',
-                  grades: {}
-                })
-              }
-              const studentData = studentGradesMap.get(studentId)
-              studentData.grades[g.subject?.name || 'Asignatura'] = Number(g.finalScore)
-            })
-          } catch (err) {
-            // Ignorar errores de grupos individuales
-          }
-        }
+          grades.forEach((g: any) => {
+            const studentId = g.studentEnrollmentId
+            const student = g.studentEnrollment?.student
+            if (!studentGradesMap.has(studentId)) {
+              studentGradesMap.set(studentId, {
+                id: studentId,
+                name: student ? `${student.lastName} ${student.firstName}`.toUpperCase() : 'Estudiante',
+                group: g.studentEnrollment?.group?.name || '',
+                grades: {}
+              })
+            }
+            const studentData = studentGradesMap.get(studentId)
+            studentData.grades[g.subject?.name || 'Asignatura'] = Number(g.finalScore)
+          })
+        })
         
         const studentsData = Array.from(studentGradesMap.values()).map((s, idx) => {
           const gradeValues = Object.values(s.grades) as number[]
