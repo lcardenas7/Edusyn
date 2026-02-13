@@ -28,7 +28,7 @@ export class AcademicTermsController {
   ) {}
 
   @Get('years')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA')
   async listYears(@Request() req: any, @Query('institutionId') institutionId?: string) {
     const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
     return this.academicTermsService.listYears(instId);
@@ -56,7 +56,7 @@ export class AcademicTermsController {
   }
 
   @Get()
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA')
   async list(@Query('academicYearId') academicYearId: string) {
     return this.academicTermsService.list(academicYearId);
   }

@@ -23,7 +23,7 @@ export class SubjectsController {
   }
 
   @Get()
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA')
   async list(
     @Request() req: any,
     @Query('areaId') areaId?: string,

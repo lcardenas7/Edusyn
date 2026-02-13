@@ -23,7 +23,7 @@ export class GroupsController {
   }
 
   @Get()
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'SECRETARIA')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'SECRETARIA', 'RECTOR')
   async list(
     @Request() req: any,
     @Query('campusId') campusId?: string,
