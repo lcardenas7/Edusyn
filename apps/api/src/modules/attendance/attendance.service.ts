@@ -454,14 +454,30 @@ export class AttendanceService {
       datesByAssignment.set(rec.teacherAssignmentId, dates);
     }
 
-    // Estimar clases programadas
-    let classesScheduled = 20;
+    // Calcular clases programadas = días hábiles reales en el rango
+    let rangeStart: Date;
+    let rangeEnd: Date;
     if (params.startDate && params.endDate) {
-      const start = new Date(params.startDate);
-      const end = new Date(params.endDate);
-      const weeks = Math.ceil((end.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
-      classesScheduled = Math.max(weeks, 1);
+      rangeStart = new Date(params.startDate);
+      rangeEnd = new Date(params.endDate);
+    } else {
+      // Sin rango explícito: usar fechas del año académico
+      const academicYear = await this.prisma.academicYear.findUnique({
+        where: { id: params.academicYearId },
+        select: { startDate: true, endDate: true },
+      });
+      rangeStart = academicYear?.startDate ? new Date(academicYear.startDate) : new Date();
+      rangeEnd = academicYear?.endDate ? new Date(academicYear.endDate) : new Date();
     }
+    // Contar días hábiles (lun-vie) en el rango
+    let classesScheduled = 0;
+    const cursor = new Date(rangeStart);
+    while (cursor <= rangeEnd) {
+      const dow = cursor.getDay();
+      if (dow !== 0 && dow !== 6) classesScheduled++;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    classesScheduled = Math.max(classesScheduled, 1);
 
     // Construir resultados — 0 queries
     const results = assignments.map((assignment) => {
@@ -508,8 +524,9 @@ export class AttendanceService {
 
     return Object.values(groupedByTeacher).map((teacher: any) => ({
       ...teacher,
+      classesNotRegistered: Math.max(0, teacher.classesScheduled - teacher.classesRegistered),
       complianceRate: teacher.classesScheduled > 0
-        ? Math.round((teacher.classesRegistered / teacher.classesScheduled) * 100)
+        ? Math.min(100, Math.round((teacher.classesRegistered / teacher.classesScheduled) * 100))
         : 0,
     }));
   }
