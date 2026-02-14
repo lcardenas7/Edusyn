@@ -98,14 +98,16 @@ const defaultConfig: ReportConfig = {
   ],
 }
 
-const DEFAULT_PERF_CONFIG = {
+type PerfEntry = { label: string; color: string; bgColor: string; min: number; max: number }
+
+const DEFAULT_PERF_CONFIG: Record<string, PerfEntry> = {
   SUPERIOR: { label: 'Superior', color: 'text-green-700', bgColor: 'bg-green-100', min: 4.6, max: 5.0 },
   ALTO: { label: 'Alto', color: 'text-blue-700', bgColor: 'bg-blue-100', min: 4.0, max: 4.5 },
   BASICO: { label: 'Basico', color: 'text-amber-700', bgColor: 'bg-amber-100', min: 3.0, max: 3.9 },
   BAJO: { label: 'Bajo', color: 'text-red-700', bgColor: 'bg-red-100', min: 1.0, max: 2.9 },
 }
 
-function buildPerformanceConfig(levels: any[], minGrade: number, maxGrade: number) {
+function buildPerformanceConfig(levels: any[], minGrade: number, maxGrade: number): Record<string, PerfEntry> {
   if (!levels || levels.length === 0) return DEFAULT_PERF_CONFIG
   const sorted = [...levels].sort((a, b) => a.order - b.order)
   const result: Record<string, { label: string; color: string; bgColor: string; min: number; max: number }> = {}
