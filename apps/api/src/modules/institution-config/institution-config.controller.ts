@@ -2,6 +2,7 @@ import { Controller, Get, Put, Body, UseGuards, Request } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import type { ProfileDto, AreaConfigDto, GradingConfigDto, AcademicLevelConfig, PeriodConfig } from './institution-config.service'
 import { InstitutionConfigService } from './institution-config.service'
+import { InstitutionContextService } from '../institution-context/institution-context.service'
 import { PrismaService } from '../../prisma/prisma.service'
 
 @Controller('institution-config')
@@ -9,6 +10,7 @@ import { PrismaService } from '../../prisma/prisma.service'
 export class InstitutionConfigController {
   constructor(
     private configService: InstitutionConfigService,
+    private institutionContext: InstitutionContextService,
     private prisma: PrismaService,
   ) {}
 
@@ -129,5 +131,15 @@ export class InstitutionConfigController {
   async updatePeriods(@Request() req, @Body() periods: PeriodConfig[]) {
     const institutionId = await this.getInstitutionId(req.user.id)
     return this.configService.updatePeriods(institutionId, periods)
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CONTEXTO DE REGLAS INSTITUCIONALES (para frontend)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('rules-context')
+  async getRulesContext(@Request() req) {
+    const institutionId = await this.getInstitutionId(req.user.id)
+    return this.institutionContext.getContext(institutionId)
   }
 }

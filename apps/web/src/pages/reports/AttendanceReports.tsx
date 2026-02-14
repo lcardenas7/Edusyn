@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Calendar, Users, GraduationCap, ClipboardList, UserCheck,
   AlertTriangle, BarChart3, ArrowLeft, Search, BookOpen,
@@ -9,7 +9,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { attendanceApi, groupsApi } from '../../lib/api'
 import AttendanceReportLayout, {
   KPICard, kpiColorFromPct, sortByRisk, getRowBg, getStatusBadge,
-  getPctColor, EmptyState, THRESHOLDS,
+  getPctColor, EmptyState, THRESHOLDS, setAttendanceThresholds,
 } from '../../components/reports/AttendanceReportLayout'
 
 // ─── Types & constants ─────────────────────────────────────────────────
@@ -78,12 +78,20 @@ export default function AttendanceReports() {
   const instName = institution?.name || 'Institucion'
   const {
     academicYears, terms, groups, subjects, teachers, students,
+    rulesContext,
     filterYear, setFilterYear, filterPeriod, setFilterPeriod,
     filterGrade, setFilterGrade, filterSubject, setFilterSubject,
     filterTeacher, setFilterTeacher, filterStudentId, setFilterStudentId,
     filterDateFrom, setFilterDateFrom, filterDateTo, setFilterDateTo,
     filterStatus, setFilterStatus,
   } = useReportsData()
+
+  // Actualizar umbrales de asistencia desde configuración institucional
+  useEffect(() => {
+    if (rulesContext.minAttendancePercentage) {
+      setAttendanceThresholds(rulesContext.minAttendancePercentage)
+    }
+  }, [rulesContext.minAttendancePercentage])
 
   const [selectedReport, setSelectedReport] = useState<string | null>(null)
   const [showReport, setShowReport] = useState(false)

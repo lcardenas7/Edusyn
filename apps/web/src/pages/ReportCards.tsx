@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { reportsApi, groupsApi, academicYearsApi, academicTermsApi, capabilitiesApi } from '../lib/api'
+import { reportsApi, groupsApi, academicYearsApi, academicTermsApi, capabilitiesApi, institutionConfigApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
 interface StudentRow {
@@ -41,6 +41,7 @@ interface SignatureEntry {
   label: string
   name: string
   enabled: boolean
+  signatureImageUrl?: string
 }
 
 interface ReportConfig {
@@ -91,17 +92,38 @@ const defaultConfig: ReportConfig = {
   showRecoveryGrades: true,
   showComponents: false,
   signatureConfig: [
-    { role: 'RECTOR', label: 'Rector(a)', name: '', enabled: true },
-    { role: 'COORDINATOR', label: 'Coordinador(a)', name: '', enabled: true },
-    { role: 'TEACHER', label: 'Director(a) de Grupo', name: '', enabled: true },
+    { role: 'RECTOR', label: 'Rector(a)', name: '', enabled: true, signatureImageUrl: '' },
+    { role: 'COORDINATOR', label: 'Coordinador(a)', name: '', enabled: true, signatureImageUrl: '' },
+    { role: 'TEACHER', label: 'Director(a) de Grupo', name: '', enabled: true, signatureImageUrl: '' },
   ],
 }
 
-const performanceConfig = {
+const DEFAULT_PERF_CONFIG = {
   SUPERIOR: { label: 'Superior', color: 'text-green-700', bgColor: 'bg-green-100', min: 4.6, max: 5.0 },
   ALTO: { label: 'Alto', color: 'text-blue-700', bgColor: 'bg-blue-100', min: 4.0, max: 4.5 },
   BASICO: { label: 'Basico', color: 'text-amber-700', bgColor: 'bg-amber-100', min: 3.0, max: 3.9 },
   BAJO: { label: 'Bajo', color: 'text-red-700', bgColor: 'bg-red-100', min: 1.0, max: 2.9 },
+}
+
+function buildPerformanceConfig(levels: any[], minGrade: number, maxGrade: number) {
+  if (!levels || levels.length === 0) return DEFAULT_PERF_CONFIG
+  const sorted = [...levels].sort((a, b) => a.order - b.order)
+  const result: Record<string, { label: string; color: string; bgColor: string; min: number; max: number }> = {}
+  const colors = [
+    { color: 'text-red-700', bgColor: 'bg-red-100' },
+    { color: 'text-amber-700', bgColor: 'bg-amber-100' },
+    { color: 'text-blue-700', bgColor: 'bg-blue-100' },
+    { color: 'text-green-700', bgColor: 'bg-green-100' },
+  ]
+  sorted.forEach((l, i) => {
+    const c = colors[Math.min(i, colors.length - 1)]
+    result[l.code || l.name?.toUpperCase() || `LEVEL_${i}`] = {
+      label: l.name, color: l.color ? `text-[${l.color}]` : c.color,
+      bgColor: l.color ? `bg-[${l.color}]/10` : c.bgColor,
+      min: l.minScore, max: l.maxScore,
+    }
+  })
+  return result
 }
 
 export default function ReportCards() {
@@ -137,6 +159,15 @@ export default function ReportCards() {
   const [showBulkDownloadModal, setShowBulkDownloadModal] = useState(false)
   const [isGeneratingBulk, setIsGeneratingBulk] = useState(false)
 
+  // Reglas institucionales
+  const [rulesCtx, setRulesCtx] = useState<{ minGradeValue: number; maxGradeValue: number; minPassingGrade: number; performanceLevels: any[] }>(
+    { minGradeValue: 1, maxGradeValue: 5, minPassingGrade: 3.0, performanceLevels: [] }
+  )
+  const performanceConfig = React.useMemo(
+    () => buildPerformanceConfig(rulesCtx.performanceLevels, rulesCtx.minGradeValue, rulesCtx.maxGradeValue),
+    [rulesCtx]
+  )
+
   // Cargar datos iniciales
   useEffect(() => {
     if (!institution?.id) return
@@ -146,7 +177,12 @@ export default function ReportCards() {
       academicYearsApi.getAll(institution.id),
       reportsApi.getReportCardConfig(),
       capabilitiesApi.getMyCapabilities().catch(() => ({ data: null })),
-    ]).then(([grpRes, yearRes, cfgRes, capsRes]) => {
+      institutionConfigApi.getRulesContext().catch(() => ({ data: null })),
+    ]).then(([grpRes, yearRes, cfgRes, capsRes, rulesRes]) => {
+      // Reglas institucionales
+      if (rulesRes.data) {
+        setRulesCtx(rulesRes.data)
+      }
       let grps = (grpRes.data || []).map((g: any) => ({
         id: g.id,
         name: g.grade ? `${g.grade.name} - ${g.name}` : g.name,
@@ -219,11 +255,20 @@ export default function ReportCards() {
     atRisk: filteredStudents.filter(s => s.failedSubjects > 0).length,
   }
 
-  const getPerformanceLevel = (grade: number): 'SUPERIOR' | 'ALTO' | 'BASICO' | 'BAJO' => {
-    if (grade >= 4.6) return 'SUPERIOR'
-    if (grade >= 4.0) return 'ALTO'
-    if (grade >= 3.0) return 'BASICO'
-    return 'BAJO'
+  const getPerformanceLevel = (grade: number): string => {
+    // Buscar en niveles configurados
+    const entries = Object.entries(performanceConfig)
+    const sorted = entries.sort((a, b) => b[1].min - a[1].min)
+    for (const [key, cfg] of sorted) {
+      if (grade >= cfg.min && grade <= cfg.max) return key
+    }
+    // Fallback porcentual
+    const range = rulesCtx.maxGradeValue - rulesCtx.minGradeValue
+    const pct = range > 0 ? ((grade - rulesCtx.minGradeValue) / range) * 100 : 0
+    if (pct >= 85) return sorted[0]?.[0] || 'SUPERIOR'
+    if (pct >= 70) return sorted[1]?.[0] || 'ALTO'
+    if (pct >= 50) return sorted[2]?.[0] || 'BASICO'
+    return sorted[sorted.length - 1]?.[0] || 'BAJO'
   }
 
   const getMotivationalMessage = (avg: number | null, failedSubjects: number) => {
@@ -232,12 +277,14 @@ export default function ReportCards() {
     if (config.motivationalMsgType === 'CUSTOM' && config.customMotivationalTpl) {
       return config.customMotivationalTpl
     }
-    // AUTO
+    // AUTO - usar escala dinámica
     if (avg === null) return null
-    if (avg >= 4.6) return 'Excelente desempeno academico. Continua asi, eres un ejemplo para tus companeros.'
-    if (avg >= 4.0) return 'Muy buen rendimiento. Sigue esforzandote para alcanzar la excelencia.'
-    if (avg >= 3.0 && failedSubjects === 0) return 'Buen trabajo. Te animamos a seguir mejorando en todas las areas.'
-    if (avg >= 3.0) return 'Debes reforzar las areas con dificultades. Con dedicacion puedes superar los retos pendientes.'
+    const range = rulesCtx.maxGradeValue - rulesCtx.minGradeValue
+    const pct = range > 0 ? ((avg - rulesCtx.minGradeValue) / range) * 100 : 0
+    if (pct >= 85) return 'Excelente desempeno academico. Continua asi, eres un ejemplo para tus companeros.'
+    if (pct >= 70) return 'Muy buen rendimiento. Sigue esforzandote para alcanzar la excelencia.'
+    if (avg >= rulesCtx.minPassingGrade && failedSubjects === 0) return 'Buen trabajo. Te animamos a seguir mejorando en todas las areas.'
+    if (avg >= rulesCtx.minPassingGrade) return 'Debes reforzar las areas con dificultades. Con dedicacion puedes superar los retos pendientes.'
     return 'Es necesario un mayor compromiso academico. Busca apoyo de tus docentes y dedica mas tiempo al estudio.'
   }
 
@@ -412,7 +459,7 @@ export default function ReportCards() {
                       <td className="px-4 py-3 text-sm text-slate-600">{s.documentNumber}</td>
                       <td className="px-4 py-3 text-center">
                         {s.average !== null ? (
-                          <span className={`text-lg font-bold ${s.average >= 4.0 ? 'text-green-600' : s.average >= 3.0 ? 'text-amber-600' : 'text-red-600'}`}>
+                          <span className={`text-lg font-bold ${s.average >= rulesCtx.minPassingGrade ? 'text-green-600' : 'text-red-600'}`}>
                             {s.average.toFixed(1)}
                           </span>
                         ) : <span className="text-slate-400">-</span>}
@@ -526,7 +573,7 @@ export default function ReportCards() {
                                   <span className="font-bold text-slate-800 uppercase text-[11px]">{area.area}</span>
                                   {config.showAreaAverages && area.areaAverage !== null && (
                                     <span className="text-[10px] text-slate-600">
-                                      Promedio: <span className={`font-bold ${area.areaAverage >= 3 ? 'text-green-700' : 'text-red-600'}`}>{area.areaAverage?.toFixed(1)}</span>
+                                      Promedio: <span className={`font-bold ${area.areaAverage >= rulesCtx.minPassingGrade ? 'text-green-700' : 'text-red-600'}`}>{area.areaAverage?.toFixed(1)}</span>
                                     </span>
                                   )}
                                 </div>
@@ -554,7 +601,7 @@ export default function ReportCards() {
                                   </td>
                                 )}
                                 {config.showNumericGrade && (
-                                  <td className={`px-1 py-1.5 text-center font-bold text-sm ${sg.grade !== null && sg.grade < 3 ? 'text-red-600' : 'text-green-700'}`}>
+                                  <td className={`px-1 py-1.5 text-center font-bold text-sm ${sg.grade !== null && sg.grade < rulesCtx.minPassingGrade ? 'text-red-600' : 'text-green-700'}`}>
                                     {sg.grade !== null ? sg.grade.toFixed(1) : '-'}
                                   </td>
                                 )}
@@ -596,7 +643,7 @@ export default function ReportCards() {
                   {config.showMotivationalMsg && (() => {
                     const avg = previewData.subjectGrades?.filter((s: any) => s.grade !== null)
                     const generalAvg = avg?.length > 0 ? avg.reduce((sum: number, s: any) => sum + s.grade, 0) / avg.length : null
-                    const failed = previewData.subjectGrades?.filter((s: any) => s.grade !== null && s.grade < 3.0).length || 0
+                    const failed = previewData.subjectGrades?.filter((s: any) => s.grade !== null && s.grade < rulesCtx.minPassingGrade).length || 0
                     const msg = getMotivationalMessage(generalAvg, failed)
                     return msg ? (
                       <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mb-4 text-xs text-blue-800 italic">
@@ -638,7 +685,11 @@ export default function ReportCards() {
                     {config.signatureConfig.filter(s => s.enabled).map((sig) => (
                       <div key={sig.role}>
                         <div className="h-16 border-b-2 border-slate-400 mb-1 flex items-end justify-center">
-                          <span className="text-slate-300 text-[10px] mb-1">Firma</span>
+                          {sig.signatureImageUrl ? (
+                            <img src={sig.signatureImageUrl} alt={`Firma ${sig.label}`} className="h-14 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; const span = document.createElement('span'); span.className = 'text-slate-300 text-[10px]'; span.textContent = 'Firma'; e.currentTarget.parentElement?.appendChild(span) }} />
+                          ) : (
+                            <span className="text-slate-300 text-[10px] mb-1">Firma</span>
+                          )}
                         </div>
                         <p className="font-bold">{sig.name || '_______________'}</p>
                         <p className="text-slate-500">{sig.label}</p>
@@ -792,30 +843,49 @@ export default function ReportCards() {
                         }}
                         className="w-4 h-4 rounded"
                       />
-                      <div className="flex-1 grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-xs text-slate-500 mb-0.5">Cargo</label>
-                          <input type="text" value={sig.label} onChange={(e) => {
-                            const updated = [...configDraft.signatureConfig]
-                            updated[idx] = { ...updated[idx], label: e.target.value }
-                            setConfigDraft({...configDraft, signatureConfig: updated})
-                          }} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
+                      <div className="flex-1 space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-0.5">Cargo</label>
+                            <input type="text" value={sig.label} onChange={(e) => {
+                              const updated = [...configDraft.signatureConfig]
+                              updated[idx] = { ...updated[idx], label: e.target.value }
+                              setConfigDraft({...configDraft, signatureConfig: updated})
+                            }} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-0.5">Nombre completo</label>
+                            <input type="text" value={sig.name} onChange={(e) => {
+                              const updated = [...configDraft.signatureConfig]
+                              updated[idx] = { ...updated[idx], name: e.target.value }
+                              setConfigDraft({...configDraft, signatureConfig: updated})
+                            }} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" placeholder="Nombre del firmante" />
+                          </div>
                         </div>
                         <div>
-                          <label className="block text-xs text-slate-500 mb-0.5">Nombre completo</label>
-                          <input type="text" value={sig.name} onChange={(e) => {
+                          <label className="block text-xs text-slate-500 mb-0.5">URL de imagen de firma (opcional)</label>
+                          <input type="text" value={sig.signatureImageUrl || ''} onChange={(e) => {
                             const updated = [...configDraft.signatureConfig]
-                            updated[idx] = { ...updated[idx], name: e.target.value }
+                            updated[idx] = { ...updated[idx], signatureImageUrl: e.target.value }
                             setConfigDraft({...configDraft, signatureConfig: updated})
-                          }} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" placeholder="Nombre del firmante" />
+                          }} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" placeholder="https://... o ruta del archivo de firma" />
+                          {sig.signatureImageUrl && (
+                            <div className="mt-1 flex items-center gap-2">
+                              <img src={sig.signatureImageUrl} alt="Firma" className="h-8 object-contain border rounded" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                              <span className="text-xs text-green-600">Vista previa</span>
+                            </div>
+                          )}
                         </div>
+                        {sig.role === 'TEACHER' && (
+                          <p className="text-xs text-blue-600 italic">El docente tutor puede adjuntar su firma desde su perfil de usuario. Se asigna dinamicamente al grupo del cual es tutor.</p>
+                        )}
                       </div>
                     </div>
                   ))}
                   <button
                     onClick={() => setConfigDraft({
                       ...configDraft,
-                      signatureConfig: [...configDraft.signatureConfig, { role: `CUSTOM_${Date.now()}`, label: 'Nuevo cargo', name: '', enabled: true }]
+                      signatureConfig: [...configDraft.signatureConfig, { role: `CUSTOM_${Date.now()}`, label: 'Nuevo cargo', name: '', enabled: true, signatureImageUrl: '' }]
                     })}
                     className="text-sm text-blue-600 hover:underline"
                   >

@@ -6,11 +6,18 @@ import {
   Info,
 } from 'lucide-react'
 
-// ─── Constantes de umbrales ────────────────────────────────────────────
-export const THRESHOLDS = {
+// ─── Umbrales de asistencia (configurables desde reglas institucionales) ───
+export let THRESHOLDS = {
   NORMAL_MIN: 85,
   ALERT_MIN: 70,
-} as const
+}
+
+export function setAttendanceThresholds(minAttendancePercentage: number) {
+  THRESHOLDS = {
+    NORMAL_MIN: minAttendancePercentage,
+    ALERT_MIN: Math.max(0, minAttendancePercentage - 15),
+  }
+}
 
 export function getStatusFromPct(pct: number): 'Normal' | 'Alerta' | 'Riesgo' {
   if (pct >= THRESHOLDS.NORMAL_MIN) return 'Normal'

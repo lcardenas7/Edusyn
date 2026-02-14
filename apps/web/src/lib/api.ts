@@ -57,6 +57,7 @@ export const institutionConfigApi = {
   getFullConfig: () => api.get('/institution-config'),
   getGradingConfig: () => api.get('/institution-config/grading'),
   getAcademicLevels: () => api.get('/institution-config/academic-levels'),
+  getRulesContext: () => api.get('/institution-config/rules-context'),
 }
 
 // Institution Profile (identidad institucional - para admin institucional)

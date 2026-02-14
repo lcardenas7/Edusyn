@@ -7,9 +7,10 @@ import {
   ChevronLeft,
   GraduationCap,
   Award,
-  ClipboardList
+  ClipboardList,
+  ExternalLink
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useReportsData } from '../../hooks/useReportsData'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -39,6 +40,7 @@ export default function BulletinsReports() {
     filterStudentId, setFilterStudentId,
   } = useReportsData()
 
+  const navigate = useNavigate()
   const [selectedReport, setSelectedReport] = useState<string | null>(null)
   const [showReport, setShowReport] = useState(false)
   const [loadingReport, setLoadingReport] = useState(false)
@@ -68,13 +70,18 @@ export default function BulletinsReports() {
       return
     }
 
+    // Boletín parcial y final: redirigir a la página de Boletines Académicos
+    if (selectedReport === 'report-partial' || selectedReport === 'report-final') {
+      navigate('/report-cards')
+      return
+    }
+
     setGeneratingPDF(true)
     
     try {
-      // Aquí iría la lógica de generación de PDF
-      // Por ahora mostramos un mensaje informativo
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      alert('La generación de boletines está en desarrollo. Próximamente disponible.')
+      // Certificados y constancias: próximamente con generación PDF completa
+      await new Promise(resolve => setTimeout(resolve, 800))
+      alert('La generación de este documento estará disponible próximamente. Use la sección de Boletines Académicos para generar boletines de notas.')
     } catch (err) {
       console.error('Error generating report:', err)
       alert('Error al generar el reporte')
@@ -171,6 +178,7 @@ export default function BulletinsReports() {
 
   // Renderizar vista previa o información
   const renderPreview = () => {
+    const isBoletinType = selectedReport === 'report-partial' || selectedReport === 'report-final'
     return (
       <div className="text-center py-12">
         <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -178,6 +186,17 @@ export default function BulletinsReports() {
         </div>
         <h3 className="text-lg font-medium text-slate-900 mb-2">{currentReportData?.name}</h3>
         <p className="text-slate-500 mb-6 max-w-md mx-auto">{currentReportData?.description}</p>
+        {isBoletinType && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-lg mx-auto mb-6">
+            <p className="text-sm text-blue-800 flex items-center justify-center gap-2">
+              <ExternalLink className="w-4 h-4" />
+              Para generar y previsualizar boletines, use la sección de <strong>Boletines Académicos</strong> (Reportes &gt; Boletines)
+            </p>
+            <button onClick={() => navigate('/report-cards')} className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors inline-flex items-center gap-2">
+              <FileText className="w-4 h-4" /> Ir a Boletines Académicos
+            </button>
+          </div>
+        )}
         
         <div className="bg-slate-50 rounded-lg p-4 max-w-lg mx-auto text-left">
           <h4 className="font-medium text-slate-800 mb-3">Información del documento:</h4>

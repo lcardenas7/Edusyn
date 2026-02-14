@@ -937,7 +937,8 @@ export class ReportsService {
    * Reutiliza calculateMinimumGradeForGroup para datos, agrega proyección.
    */
   async getPromotionProjection(institutionId: string, academicYearId: string, groupId: string) {
-    const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
+    const rulesCtx = await this.institutionContext.getContext(institutionId);
+    const passingGrade = rulesCtx.minPassingGrade;
     const terms = await this.academicYearService.getTermsByAcademicYear(academicYearId);
     const grades = await this.getBaseGradeData({ institutionId, academicYearId, groupId });
 
@@ -1012,16 +1013,16 @@ export class ReportsService {
           projectedAnnual = Math.round((weightedSum / 100) * 10) / 10;
         }
 
-        let status = 'Sin datos';
+        let status = 'SIN_DATOS';
         if (projectedAnnual !== null) {
           if (projectedAnnual >= passingGrade) {
-            status = 'Promueve';
+            status = 'PROMUEVE';
             projectedApproved++;
           } else if (currentAvg !== null && currentAvg >= passingGrade - 0.5) {
-            status = 'En riesgo';
+            status = 'EN_RIESGO';
             atRisk++;
           } else {
-            status = 'No promueve';
+            status = 'NO_PROMUEVE';
             projectedFailed++;
           }
         }
@@ -1041,17 +1042,25 @@ export class ReportsService {
         projectedApproved,
         atRisk,
         projectedFailed,
-        overallProjection: projectedFailed > 0 ? 'No promueve' : atRisk > 0 ? 'En riesgo' : 'Promueve',
+        overallProjection: projectedFailed > 0 ? 'NO_PROMUEVE' : atRisk > 0 ? 'EN_RIESGO' : 'PROMUEVE',
         subjects: subjectDetails,
       };
     });
+
+    const sortedResults = results.sort((a, b) => a.studentName.localeCompare(b.studentName));
 
     return {
       passingGrade,
       completedTerms: completedTermIds.size,
       totalTerms: terms.length,
       pendingTerms: pendingTerms.length,
-      results: results.sort((a, b) => a.studentName.localeCompare(b.studentName)),
+      summary: {
+        total: sortedResults.length,
+        promoted: sortedResults.filter(r => r.overallProjection === 'PROMUEVE').length,
+        atRisk: sortedResults.filter(r => r.overallProjection === 'EN_RIESGO').length,
+        notPromoted: sortedResults.filter(r => r.overallProjection === 'NO_PROMUEVE').length,
+      },
+      results: sortedResults,
     };
   }
 

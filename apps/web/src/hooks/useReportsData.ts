@@ -42,6 +42,32 @@ export interface GradingScaleInfo {
   academicLevels: AcademicLevelConfig[]
 }
 
+export interface InstitutionRulesContext {
+  minGradeValue: number
+  maxGradeValue: number
+  minPassingGrade: number
+  minAttendancePercentage: number
+  maxFailedSubjectsForPromotion: number
+  academicStructure: string
+  recoveryMaxScore: number
+  maxAreasRecoverable: number
+  performanceLevels: PerformanceLevelConfig[]
+  qualitativeLevels: any[]
+}
+
+const DEFAULT_RULES_CONTEXT: InstitutionRulesContext = {
+  minGradeValue: 1,
+  maxGradeValue: 5,
+  minPassingGrade: 3.0,
+  minAttendancePercentage: 80,
+  maxFailedSubjectsForPromotion: 2,
+  academicStructure: 'SUBJECTS_ONLY',
+  recoveryMaxScore: 3.0,
+  maxAreasRecoverable: 3,
+  performanceLevels: [],
+  qualitativeLevels: [],
+}
+
 export function useReportsData() {
   const { institution } = useAuth()
   
@@ -58,6 +84,9 @@ export function useReportsData() {
     minGrade: 1, maxGrade: 5, minPassingGrade: 3.0,
     performanceLevels: [], academicLevels: [],
   })
+  
+  // Contexto de reglas institucionales (fuente única de verdad)
+  const [rulesContext, setRulesContext] = useState<InstitutionRulesContext>(DEFAULT_RULES_CONTEXT)
   
   // Filtros compartidos
   const [filterYear, setFilterYear] = useState('')
@@ -77,11 +106,17 @@ export function useReportsData() {
     const loadInitial = async () => {
       try {
         // Cargar config institucional + años en paralelo
-        const [yearsRes, gradingRes, levelsRes] = await Promise.allSettled([
+        const [yearsRes, gradingRes, levelsRes, rulesRes] = await Promise.allSettled([
           academicYearsApi.getAll(),
           institutionConfigApi.getGradingConfig(),
           institutionConfigApi.getAcademicLevels(),
+          institutionConfigApi.getRulesContext(),
         ])
+
+        // Reglas institucionales
+        if (rulesRes.status === 'fulfilled' && rulesRes.value.data) {
+          setRulesContext(rulesRes.value.data)
+        }
 
         // Años académicos
         if (yearsRes.status === 'fulfilled') {
@@ -203,6 +238,7 @@ export function useReportsData() {
     students,
     loading,
     gradingScale,
+    rulesContext,
     
     // Filtros
     filterYear, setFilterYear,
