@@ -2,6 +2,12 @@ import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { RecordAttendanceDto, UpdateAttendanceDto } from './dto/record-attendance.dto';
+import {
+  calculateExpectedClassesBatch,
+  type TeacherAssignmentInfo,
+  type ScheduleEntryInfo,
+  type DateRange,
+} from '../../engines/AttendanceSchedulingEngine';
 
 @Injectable()
 export class AttendanceService {
@@ -454,14 +460,13 @@ export class AttendanceService {
       datesByAssignment.set(rec.teacherAssignmentId, dates);
     }
 
-    // Calcular clases programadas = días hábiles reales en el rango
+    // ─── Calcular clases programadas usando AttendanceSchedulingEngine ───
     let rangeStart: Date;
     let rangeEnd: Date;
     if (params.startDate && params.endDate) {
       rangeStart = new Date(params.startDate);
       rangeEnd = new Date(params.endDate);
     } else {
-      // Sin rango explícito: usar fechas del año académico
       const academicYear = await this.prisma.academicYear.findUnique({
         where: { id: params.academicYearId },
         select: { startDate: true, endDate: true },
@@ -469,20 +474,44 @@ export class AttendanceService {
       rangeStart = academicYear?.startDate ? new Date(academicYear.startDate) : new Date();
       rangeEnd = academicYear?.endDate ? new Date(academicYear.endDate) : new Date();
     }
-    // Contar días hábiles (lun-vie) en el rango
-    let classesScheduled = 0;
-    const cursor = new Date(rangeStart);
-    while (cursor <= rangeEnd) {
-      const dow = cursor.getDay();
-      if (dow !== 0 && dow !== 6) classesScheduled++;
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    classesScheduled = Math.max(classesScheduled, 1);
+    const dateRange: DateRange = { start: rangeStart, end: rangeEnd };
 
-    // Construir resultados — 0 queries
+    // QUERY 3: Obtener entradas de horario para las asignaciones (si existen)
+    const scheduleEntries = await this.prisma.scheduleEntry.findMany({
+      where: {
+        teacherAssignmentId: { in: assignmentIds },
+        academicYearId: params.academicYearId,
+      },
+      select: {
+        teacherAssignmentId: true,
+        dayOfWeek: true,
+      },
+    });
+
+    // Preparar datos para el engine
+    const assignmentInfos: TeacherAssignmentInfo[] = assignments.map(a => ({
+      id: a.id,
+      teacherId: a.teacherId,
+      groupId: a.groupId,
+      subjectId: a.subjectId,
+      weeklyHours: a.weeklyHours,
+    }));
+    const scheduleInfos: ScheduleEntryInfo[] = scheduleEntries
+      .filter(e => e.teacherAssignmentId != null)
+      .map(e => ({
+        teacherAssignmentId: e.teacherAssignmentId!,
+        dayOfWeek: e.dayOfWeek,
+      }));
+
+    // Calcular clases esperadas por asignación (usa horario real o weeklyHours como fallback)
+    const expectedMap = calculateExpectedClassesBatch(assignmentInfos, scheduleInfos, dateRange);
+
+    // Construir resultados
     const results = assignments.map((assignment) => {
       const uniqueDates = datesByAssignment.get(assignment.id);
       const classesRegistered = uniqueDates ? uniqueDates.size : 0;
+      const expected = expectedMap.get(assignment.id);
+      const classesScheduled = expected?.expectedClasses || Math.max(1, assignment.weeklyHours);
       const complianceRate = classesScheduled > 0
         ? Math.round((classesRegistered / classesScheduled) * 100)
         : 0;
@@ -495,6 +524,7 @@ export class AttendanceService {
         classesRegistered,
         classesNotRegistered: Math.max(0, classesScheduled - classesRegistered),
         complianceRate: Math.min(100, complianceRate),
+        calculationSource: expected?.source || 'WEEKLY_HOURS',
       };
     });
 

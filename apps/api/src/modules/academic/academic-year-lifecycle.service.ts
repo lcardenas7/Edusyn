@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AcademicYearStatus, EnrollmentStatus, EnrollmentEventType } from '@prisma/client';
+import { InstitutionContextService } from '../institution-context/institution-context.service';
 import {
   AcademicTermForReport,
   PerformanceScaleForReport,
@@ -63,7 +64,10 @@ export interface PromotionResult {
 
 @Injectable()
 export class AcademicYearLifecycleService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private institutionContext: InstitutionContextService,
+  ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CREAR AÑO LECTIVO (en estado DRAFT)
@@ -393,6 +397,9 @@ export class AcademicYearLifecycleService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async previewPromotions(yearId: string): Promise<PromotionPreview[]> {
+    const yearData = await this.prisma.academicYear.findUnique({ where: { id: yearId }, select: { institutionId: true } });
+    const rulesCtx = await this.institutionContext.getContext(yearData?.institutionId || '');
+
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
         academicYearId: yearId,
@@ -424,7 +431,7 @@ export class AcademicYearLifecycleService {
         currentGradeName: enrollment.group.grade.name,
         currentGroupName: enrollment.group.name,
         finalAverage,
-        suggestedStatus: finalAverage && finalAverage >= 3.0 ? 'PROMOTED' : 'REPEATED',
+        suggestedStatus: finalAverage && finalAverage >= rulesCtx.minPassingGrade ? 'PROMOTED' : 'REPEATED',
         nextGradeId: nextGrade,
         nextGradeName: nextGrade,
       });

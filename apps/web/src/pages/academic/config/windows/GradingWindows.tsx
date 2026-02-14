@@ -7,7 +7,11 @@ import {
   ShieldCheck,
   ShieldAlert,
   RotateCcw,
-  AlertTriangle
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  ChevronRight
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../contexts/AuthContext'
@@ -33,15 +37,17 @@ export default function GradingWindows() {
   const [academicYears, setAcademicYears] = useState<Array<{ id: string; year: number; status?: string }>>([])
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>('')
 
-  // Estado de finalización de períodos
-  const [termStatuses, setTermStatuses] = useState<Record<string, 'OPEN' | 'FINALIZED'>>({})
-  const [finalizingTerm, setFinalizingTerm] = useState<string | null>(null)
-  const [reopeningTerm, setReopeningTerm] = useState<string | null>(null)
+  // Estado del ciclo de vida de períodos
+  const [termStatuses, setTermStatuses] = useState<Record<string, 'OPEN' | 'CLOSED' | 'FINALIZED'>>({})
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [showCloseConfirm, setShowCloseConfirm] = useState<string | null>(null)
   const [showFinalizeConfirm, setShowFinalizeConfirm] = useState<string | null>(null)
   const [showReopenConfirm, setShowReopenConfirm] = useState<string | null>(null)
   const [reopenReason, setReopenReason] = useState('')
   const [termActionError, setTermActionError] = useState('')
   const [termActionSuccess, setTermActionSuccess] = useState('')
+  const [validationResult, setValidationResult] = useState<any>(null)
+  const [validatingTerm, setValidatingTerm] = useState<string | null>(null)
 
   // Cargar años académicos
   useEffect(() => {
@@ -84,9 +90,9 @@ export default function GradingWindows() {
           lateEntryDays: p.config?.lateEntryDays || 0,
         })))
 
-        // Cargar estado de finalización de cada término
+        // Cargar estado del ciclo de vida de cada término
         const terms = termsRes.data || []
-        const statuses: Record<string, 'OPEN' | 'FINALIZED'> = {}
+        const statuses: Record<string, 'OPEN' | 'CLOSED' | 'FINALIZED'> = {}
         terms.forEach((t: any) => {
           statuses[t.id] = t.status || 'OPEN'
         })
@@ -100,30 +106,70 @@ export default function GradingWindows() {
     fetchGradingPeriods()
   }, [selectedAcademicYear])
 
-  // Finalizar período
+  // Validar notas antes de cerrar
+  const handleValidateGrades = async (termId: string) => {
+    setValidatingTerm(termId)
+    setTermActionError('')
+    setValidationResult(null)
+    try {
+      const res = await reportsApi.validateTermGrades(termId)
+      setValidationResult(res.data)
+      setShowCloseConfirm(termId)
+    } catch (err: any) {
+      setTermActionError(err.response?.data?.message || 'Error al validar notas del período')
+    } finally {
+      setValidatingTerm(null)
+    }
+  }
+
+  // Cerrar período (OPEN → CLOSED)
+  const handleCloseTerm = async (termId: string) => {
+    setActionLoading(termId)
+    setTermActionError('')
+    setTermActionSuccess('')
+    try {
+      await reportsApi.closeTerm(termId)
+      setTermStatuses(prev => ({ ...prev, [termId]: 'CLOSED' }))
+      setTermActionSuccess('Período cerrado exitosamente. Ahora puede finalizar para generar el snapshot de boletines.')
+      setShowCloseConfirm(null)
+      setValidationResult(null)
+    } catch (err: any) {
+      const data = err.response?.data
+      if (data?.validation) {
+        setValidationResult(data.validation)
+        setTermActionError(data.message || 'Faltan notas por registrar')
+      } else {
+        setTermActionError(data?.message || 'Error al cerrar el período')
+      }
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  // Finalizar período (CLOSED → FINALIZED)
   const handleFinalizeTerm = async (termId: string) => {
-    setFinalizingTerm(termId)
+    setActionLoading(termId)
     setTermActionError('')
     setTermActionSuccess('')
     try {
       await reportsApi.finalizeTerm(termId)
       setTermStatuses(prev => ({ ...prev, [termId]: 'FINALIZED' }))
-      setTermActionSuccess('Período finalizado exitosamente. Se generó snapshot de boletines.')
+      setTermActionSuccess('Período finalizado exitosamente. Se generó snapshot legal de boletines.')
       setShowFinalizeConfirm(null)
     } catch (err: any) {
       setTermActionError(err.response?.data?.message || 'Error al finalizar el período')
     } finally {
-      setFinalizingTerm(null)
+      setActionLoading(null)
     }
   }
 
-  // Reabrir período finalizado
+  // Reabrir período (FINALIZED → OPEN)
   const handleReopenTerm = async (termId: string) => {
     if (!reopenReason.trim()) {
       setTermActionError('Debe ingresar una razón para reabrir el período')
       return
     }
-    setReopeningTerm(termId)
+    setActionLoading(termId)
     setTermActionError('')
     setTermActionSuccess('')
     try {
@@ -135,7 +181,7 @@ export default function GradingWindows() {
     } catch (err: any) {
       setTermActionError(err.response?.data?.message || 'Error al reabrir el período')
     } finally {
-      setReopeningTerm(null)
+      setActionLoading(null)
     }
   }
 
@@ -231,12 +277,17 @@ export default function GradingWindows() {
             <div className="space-y-4">
               {gradingPeriods.map((period) => (
                 <div key={period.id} className="border border-slate-200 rounded-lg overflow-hidden">
+                  {/* Header del período */}
                   <div className={`px-4 py-3 flex items-center justify-between ${
-                    termStatuses[period.id] === 'FINALIZED' ? 'bg-purple-50' : period.isOpen ? 'bg-green-50' : 'bg-slate-50'
+                    termStatuses[period.id] === 'FINALIZED' ? 'bg-purple-50' :
+                    termStatuses[period.id] === 'CLOSED' ? 'bg-blue-50' :
+                    period.isOpen ? 'bg-green-50' : 'bg-slate-50'
                   }`}>
                     <div className="flex items-center gap-3">
                       {termStatuses[period.id] === 'FINALIZED' ? (
                         <ShieldCheck className="w-5 h-5 text-purple-600" />
+                      ) : termStatuses[period.id] === 'CLOSED' ? (
+                        <Lock className="w-5 h-5 text-blue-600" />
                       ) : period.isOpen ? (
                         <Unlock className="w-5 h-5 text-green-600" />
                       ) : (
@@ -244,9 +295,11 @@ export default function GradingWindows() {
                       )}
                       <div>
                         <h3 className="font-medium text-slate-900">{period.name}</h3>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs">
                           {termStatuses[period.id] === 'FINALIZED' ? (
-                            <span className="text-purple-600 font-medium">✅ Finalizado — Boletines congelados</span>
+                            <span className="text-purple-600 font-medium">Finalizado — Boletines congelados</span>
+                          ) : termStatuses[period.id] === 'CLOSED' ? (
+                            <span className="text-blue-600 font-medium">Cerrado — Listo para finalizar</span>
                           ) : period.isOpen ? (
                             <span className="text-green-600">Abierto para calificaciones</span>
                           ) : (
@@ -256,6 +309,7 @@ export default function GradingWindows() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
+                      {/* Botón de acción según estado */}
                       {termStatuses[period.id] === 'FINALIZED' ? (
                         <button
                           onClick={() => { setShowReopenConfirm(period.id); setTermActionError(''); setReopenReason(''); }}
@@ -264,7 +318,7 @@ export default function GradingWindows() {
                           <RotateCcw className="w-3.5 h-3.5" />
                           Reabrir
                         </button>
-                      ) : (
+                      ) : termStatuses[period.id] === 'CLOSED' ? (
                         <button
                           onClick={() => { setShowFinalizeConfirm(period.id); setTermActionError(''); }}
                           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-100 border border-purple-300 rounded-lg hover:bg-purple-200 transition-colors"
@@ -272,17 +326,50 @@ export default function GradingWindows() {
                           <ShieldAlert className="w-3.5 h-3.5" />
                           Finalizar
                         </button>
+                      ) : (
+                        <button
+                          onClick={() => handleValidateGrades(period.id)}
+                          disabled={validatingTerm === period.id}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-100 border border-blue-300 rounded-lg hover:bg-blue-200 transition-colors disabled:opacity-50"
+                        >
+                          {validatingTerm === period.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Lock className="w-3.5 h-3.5" />
+                          )}
+                          Cerrar Período
+                        </button>
                       )}
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={period.isOpen}
-                        onChange={(e) => saveGradingPeriodConfig(period.id, { ...period, isOpen: e.target.checked })}
-                        disabled={savingPeriod === period.id}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
-                    </label>
+                      {/* Toggle de ventana de calificación (solo si no está finalizado) */}
+                      {termStatuses[period.id] !== 'FINALIZED' && (
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={period.isOpen}
+                            onChange={(e) => saveGradingPeriodConfig(period.id, { ...period, isOpen: e.target.checked })}
+                            disabled={savingPeriod === period.id}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Indicador visual del ciclo de vida */}
+                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
+                    <div className="flex items-center gap-1 text-[10px]">
+                      <span className={`px-2 py-0.5 rounded-full font-medium ${
+                        termStatuses[period.id] === 'OPEN' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'
+                      }`}>ABIERTO</span>
+                      <ChevronRight className="w-3 h-3 text-slate-300" />
+                      <span className={`px-2 py-0.5 rounded-full font-medium ${
+                        termStatuses[period.id] === 'CLOSED' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'
+                      }`}>CERRADO</span>
+                      <ChevronRight className="w-3 h-3 text-slate-300" />
+                      <span className={`px-2 py-0.5 rounded-full font-medium ${
+                        termStatuses[period.id] === 'FINALIZED' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-400'
+                      }`}>FINALIZADO</span>
                     </div>
                   </div>
                   
@@ -372,7 +459,118 @@ export default function GradingWindows() {
         )}
       </div>
 
-      {/* Modal de confirmación para FINALIZAR */}
+      {/* Modal: CERRAR PERÍODO (con validación de notas) */}
+      {showCloseConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <Lock className="w-5 h-5 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900">Cerrar Período</h3>
+            </div>
+
+            {/* Resultado de validación */}
+            {validationResult && (
+              <div className="mb-4">
+                {validationResult.isComplete ? (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <span className="font-medium text-green-800">Todas las notas están completas</span>
+                    </div>
+                    <p className="text-sm text-green-700">
+                      {validationResult.totalFound} de {validationResult.totalExpected} notas registradas (100%)
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <XCircle className="w-5 h-5 text-red-600" />
+                      <span className="font-medium text-red-800">
+                        Faltan {validationResult.totalMissing} notas ({validationResult.completionPercent}% completado)
+                      </span>
+                    </div>
+                    {/* Barra de progreso */}
+                    <div className="w-full bg-red-200 rounded-full h-2 mb-3">
+                      <div
+                        className="bg-red-500 h-2 rounded-full transition-all"
+                        style={{ width: `${validationResult.completionPercent}%` }}
+                      />
+                    </div>
+                    {/* Lista de faltantes */}
+                    {validationResult.missing && validationResult.missing.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs font-medium text-red-700 mb-1">Notas faltantes:</p>
+                        <div className="max-h-40 overflow-y-auto border border-red-200 rounded bg-white">
+                          <table className="w-full text-xs">
+                            <thead className="bg-red-50 sticky top-0">
+                              <tr>
+                                <th className="px-2 py-1 text-left text-red-700">Grupo</th>
+                                <th className="px-2 py-1 text-left text-red-700">Estudiante</th>
+                                <th className="px-2 py-1 text-left text-red-700">Asignatura</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {validationResult.missing.map((m: any, i: number) => (
+                                <tr key={i} className="border-t border-red-100">
+                                  <td className="px-2 py-1 text-slate-600">{m.group}</td>
+                                  <td className="px-2 py-1 text-slate-700">{m.student}</td>
+                                  <td className="px-2 py-1 text-slate-600">{m.subject}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        {validationResult.hasMore && (
+                          <p className="text-xs text-red-500 mt-1">... y más registros faltantes</p>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-xs text-red-600 mt-2 font-medium">
+                      No se puede cerrar el período hasta que todas las notas estén registradas.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {termActionError && (
+              <div className="mb-4 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">{termActionError}</div>
+            )}
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setShowCloseConfirm(null); setValidationResult(null); setTermActionError(''); }}
+                className="px-4 py-2 text-sm text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200"
+              >
+                Cancelar
+              </button>
+              {validationResult?.isComplete && (
+                <button
+                  onClick={() => handleCloseTerm(showCloseConfirm)}
+                  disabled={actionLoading !== null}
+                  className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                >
+                  {actionLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Cerrando...
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-4 h-4" />
+                      Confirmar Cierre
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: FINALIZAR PERÍODO (generar snapshot) */}
       {showFinalizeConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
@@ -408,12 +606,12 @@ export default function GradingWindows() {
               </button>
               <button
                 onClick={() => handleFinalizeTerm(showFinalizeConfirm)}
-                disabled={finalizingTerm !== null}
+                disabled={actionLoading !== null}
                 className="px-4 py-2 text-sm text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2"
               >
-                {finalizingTerm ? (
+                {actionLoading ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     Finalizando...
                   </>
                 ) : (
@@ -428,7 +626,7 @@ export default function GradingWindows() {
         </div>
       )}
 
-      {/* Modal de confirmación para REABRIR */}
+      {/* Modal: REABRIR PERÍODO */}
       {showReopenConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
@@ -468,12 +666,12 @@ export default function GradingWindows() {
               </button>
               <button
                 onClick={() => handleReopenTerm(showReopenConfirm)}
-                disabled={reopeningTerm !== null || !reopenReason.trim()}
+                disabled={actionLoading !== null || !reopenReason.trim()}
                 className="px-4 py-2 text-sm text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2"
               >
-                {reopeningTerm ? (
+                {actionLoading ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     Reabriendo...
                   </>
                 ) : (

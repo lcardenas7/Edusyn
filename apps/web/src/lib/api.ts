@@ -52,6 +52,13 @@ export const institutionsApi = {
   create: (data: { name: string; daneCode?: string; nit?: string }) => api.post('/institutions', data),
 }
 
+// Institution Config (configuración completa institucional)
+export const institutionConfigApi = {
+  getFullConfig: () => api.get('/institution-config'),
+  getGradingConfig: () => api.get('/institution-config/grading'),
+  getAcademicLevels: () => api.get('/institution-config/academic-levels'),
+}
+
 // Institution Profile (identidad institucional - para admin institucional)
 export const institutionProfileApi = {
   get: () => api.get('/institution-config/profile'),

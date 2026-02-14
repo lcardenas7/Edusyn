@@ -1,6 +1,46 @@
 import { useState, useEffect, useMemo } from 'react'
-import { academicYearsApi, academicTermsApi, teacherAssignmentsApi, groupsApi, subjectsApi, studentsApi } from '../lib/api'
+import { academicYearsApi, academicTermsApi, teacherAssignmentsApi, groupsApi, subjectsApi, studentsApi, institutionConfigApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
+
+export interface PerformanceLevelConfig {
+  id: string
+  name: string
+  code: string
+  minScore: number
+  maxScore: number
+  order: number
+  color: string
+  isApproved: boolean
+}
+
+export interface AcademicLevelConfig {
+  id: string
+  name: string
+  code: string
+  gradingScaleType: string
+  grades: string[]
+  minGrade?: number
+  maxGrade?: number
+  minPassingGrade?: number
+  performanceLevels?: PerformanceLevelConfig[]
+  qualitativeLevels?: Array<{
+    id: string
+    code: string
+    name: string
+    description: string
+    color: string
+    order: number
+    isApproved: boolean
+  }>
+}
+
+export interface GradingScaleInfo {
+  minGrade: number
+  maxGrade: number
+  minPassingGrade: number
+  performanceLevels: PerformanceLevelConfig[]
+  academicLevels: AcademicLevelConfig[]
+}
 
 export function useReportsData() {
   const { institution } = useAuth()
@@ -12,6 +52,12 @@ export function useReportsData() {
   const [subjects, setSubjects] = useState<any[]>([])
   const [teachers, setTeachers] = useState<any[]>([])
   const [students, setStudents] = useState<any[]>([])
+  
+  // Configuración de calificación institucional
+  const [gradingScale, setGradingScale] = useState<GradingScaleInfo>({
+    minGrade: 1, maxGrade: 5, minPassingGrade: 3.0,
+    performanceLevels: [], academicLevels: [],
+  })
   
   // Filtros compartidos
   const [filterYear, setFilterYear] = useState('')
@@ -26,20 +72,59 @@ export function useReportsData() {
   
   const [loading, setLoading] = useState(false)
 
-  // Cargar años académicos al iniciar
+  // Cargar configuración institucional y años académicos al iniciar
   useEffect(() => {
-    const loadYears = async () => {
+    const loadInitial = async () => {
       try {
-        const response = await academicYearsApi.getAll()
-        const years = response.data || []
-        setAcademicYears(years)
-        const activeYear = years.find((y: any) => y.status === 'ACTIVE') || years[0]
-        if (activeYear) setFilterYear(activeYear.id)
+        // Cargar config institucional + años en paralelo
+        const [yearsRes, gradingRes, levelsRes] = await Promise.allSettled([
+          academicYearsApi.getAll(),
+          institutionConfigApi.getGradingConfig(),
+          institutionConfigApi.getAcademicLevels(),
+        ])
+
+        // Años académicos
+        if (yearsRes.status === 'fulfilled') {
+          const years = yearsRes.value.data || []
+          setAcademicYears(years)
+          const activeYear = years.find((y: any) => y.status === 'ACTIVE') || years[0]
+          if (activeYear) setFilterYear(activeYear.id)
+        }
+
+        // Configuración de calificación
+        const gradingConfig = gradingRes.status === 'fulfilled' ? gradingRes.value.data : null
+        const academicLevels = levelsRes.status === 'fulfilled' ? (levelsRes.value.data || []) : []
+
+        // Derivar escala desde academic levels o grading config
+        let minGrade = 1, maxGrade = 5, minPassingGrade = 3.0
+        let performanceLevels: PerformanceLevelConfig[] = []
+
+        if (academicLevels.length > 0) {
+          // Usar el primer nivel numérico como referencia de escala
+          const numericLevel = academicLevels.find((l: any) => l.gradingScaleType?.startsWith('NUMERIC'))
+          if (numericLevel) {
+            minGrade = numericLevel.minGrade ?? 1
+            maxGrade = numericLevel.maxGrade ?? 5
+            minPassingGrade = numericLevel.minPassingGrade ?? gradingConfig?.minPassingGrade ?? 3.0
+            if (numericLevel.performanceLevels?.length > 0) {
+              performanceLevels = numericLevel.performanceLevels
+            }
+          }
+        }
+
+        if (gradingConfig) {
+          if (gradingConfig.minPassingGrade != null) minPassingGrade = gradingConfig.minPassingGrade
+          if (gradingConfig.performanceLevels?.length > 0 && performanceLevels.length === 0) {
+            performanceLevels = gradingConfig.performanceLevels
+          }
+        }
+
+        setGradingScale({ minGrade, maxGrade, minPassingGrade, performanceLevels, academicLevels })
       } catch (err) {
-        console.error('Error loading years:', err)
+        console.error('Error loading initial data:', err)
       }
     }
-    loadYears()
+    loadInitial()
   }, [])
 
   // Cargar datos cuando cambia el año
@@ -90,7 +175,16 @@ export function useReportsData() {
       }
       try {
         const response = await studentsApi.getAll({ groupId: filterGrade })
-        setStudents(response.data || [])
+        const raw = response.data || []
+        // Normalizar: si viene de StudentEnrollment, aplanar student data
+        const normalized = raw.map((s: any) => ({
+          id: s.student?.id || s.id,
+          enrollmentId: s.id, // El ID del enrollment es el top-level id
+          firstName: s.student?.firstName || s.firstName || '',
+          lastName: s.student?.lastName || s.lastName || '',
+          group: s.group,
+        }))
+        setStudents(normalized)
       } catch (err) {
         console.error('Error loading students:', err)
         setStudents([])
@@ -108,6 +202,7 @@ export function useReportsData() {
     teachers,
     students,
     loading,
+    gradingScale,
     
     // Filtros
     filterYear, setFilterYear,

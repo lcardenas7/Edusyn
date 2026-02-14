@@ -7,6 +7,8 @@ import { StudentGradesService } from '../evaluation/student-grades.service';
 import { AttendanceService } from '../attendance/attendance.service';
 import { StudentsService } from '../academic/students.service';
 import { AcademicYearLifecycleService } from '../academic/academic-year-lifecycle.service';
+import { InstitutionContextService } from '../institution-context/institution-context.service';
+import { getPerformanceLevel, isFailing } from '../../engines/academic-rules.engine';
 
 @Injectable()
 export class ReportsService {
@@ -16,6 +18,7 @@ export class ReportsService {
     private readonly attendanceService: AttendanceService,
     private readonly studentsService: StudentsService,
     private readonly academicYearService: AcademicYearLifecycleService,
+    private readonly institutionContext: InstitutionContextService,
   ) {}
 
   /**
@@ -805,6 +808,7 @@ export class ReportsService {
    * ¿Quiénes son los mejores / peores del grupo?
    */
   async getStudentRanking(institutionId: string, academicYearId: string, groupId: string, termId?: string) {
+    const rulesCtx = await this.institutionContext.getContext(institutionId);
     const grades = await this.getBaseGradeData({ institutionId, academicYearId, groupId, termId });
 
     // Agrupar por estudiante → promedio de todas sus asignaturas
@@ -830,7 +834,7 @@ export class ReportsService {
           group: data.group,
           average: Math.round(avg * 10) / 10,
           subjectCount: data.scores.length,
-          performance: avg >= 4.6 ? 'Superior' : avg >= 4.0 ? 'Alto' : avg >= 3.0 ? 'Básico' : 'Bajo',
+          performance: getPerformanceLevel(avg, rulesCtx).label,
         };
       })
       .sort((a, b) => b.average - a.average)
@@ -1901,6 +1905,8 @@ export class ReportsService {
    * en vez del patrón anterior de ~1,100 queries (N+1 en cascada).
    */
   async getGroupReportCardList(groupId: string, academicTermId: string, academicYearId: string) {
+    const year = await this.prisma.academicYear.findUnique({ where: { id: academicYearId }, select: { institutionId: true } });
+    const rulesCtx = await this.institutionContext.getContext(year?.institutionId || '');
     const groupData = await this.buildGroupReportCards(groupId, academicTermId);
 
     const results = groupData.cards.map((card) => {
@@ -1909,8 +1915,8 @@ export class ReportsService {
         ? Math.round((allGrades.reduce((sum, s) => sum + s.grade!, 0) / allGrades.length) * 10) / 10
         : null;
 
-      const approved = allGrades.filter(s => (s.grade ?? 0) >= 3.0).length;
-      const failed = allGrades.filter(s => (s.grade ?? 0) < 3.0).length;
+      const approved = allGrades.filter(s => !isFailing(s.grade ?? 0, rulesCtx)).length;
+      const failed = allGrades.filter(s => isFailing(s.grade ?? 0, rulesCtx)).length;
 
       return {
         enrollmentId: card.enrollmentId,

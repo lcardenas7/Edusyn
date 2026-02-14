@@ -68,9 +68,10 @@ const STAGE_OPTIONS = [
 ]
 
 export default function AcademicReports() {
-  const { hasFeature } = useAuth()
+  const { hasFeature, institution } = useAuth()
   const {
     academicYears, terms, groups, subjects, teachers, students,
+    gradingScale,
     filterYear, setFilterYear,
     filterPeriod, setFilterPeriod,
     filterGrade, setFilterGrade,
@@ -96,6 +97,58 @@ export default function AcademicReports() {
 
   const currentMeta = allReports.find(r => r.id === selectedReport)
   const style = currentMeta ? BLOCK_STYLES[currentMeta.blockColor] : BLOCK_STYLES.green
+
+  // ─── Helpers dinámicos basados en configuración institucional ──────────
+  const { minGrade: scaleMin, maxGrade: scaleMax, minPassingGrade } = gradingScale
+  const scaleRange = scaleMax - scaleMin || 1
+
+  const getPerformanceLabel = (grade: number): string => {
+    if (gradingScale.performanceLevels.length > 0) {
+      const sorted = [...gradingScale.performanceLevels].sort((a, b) => b.minScore - a.minScore)
+      for (const level of sorted) {
+        if (grade >= level.minScore && grade <= level.maxScore) return level.name
+      }
+      return sorted[sorted.length - 1]?.name || 'Bajo'
+    }
+    const pct = ((grade - scaleMin) / scaleRange) * 100
+    if (pct >= 85) return 'Superior'
+    if (pct >= 70) return 'Alto'
+    if (pct >= 50) return 'Básico'
+    return 'Bajo'
+  }
+
+  const getPerformanceBadgeColor = (label: string): string => {
+    const level = gradingScale.performanceLevels.find(l => l.name === label)
+    if (level?.color) {
+      return `bg-[${level.color}20] text-[${level.color}]`
+    }
+    switch (label) {
+      case 'Superior': return 'bg-green-100 text-green-700'
+      case 'Alto': return 'bg-blue-100 text-blue-700'
+      case 'Básico': return 'bg-amber-100 text-amber-700'
+      default: return 'bg-red-100 text-red-700'
+    }
+  }
+
+  const isFailed = (grade: number): boolean => grade < minPassingGrade
+
+  // Detectar si el grupo seleccionado es DIMENSIONS (preescolar)
+  const selectedGroup = groups.find((g: any) => g.id === filterGrade)
+  const isDimensionsMode = selectedGroup?.grade?.academicStructure === 'DIMENSIONS' || selectedGroup?.grade?.stage === 'PREESCOLAR'
+  // Niveles cualitativos para DIMENSIONS
+  const qualitativeLevels = gradingScale.academicLevels
+    .find((l) => l.gradingScaleType === 'QUALITATIVE' || l.code === 'PRE')
+    ?.qualitativeLevels || []
+
+  const getDistBarColor = (rangeLabel: string): string => {
+    const match = rangeLabel?.match(/[\d.]+/)
+    if (!match) return 'bg-slate-400'
+    const start = parseFloat(match[0])
+    if (start < minPassingGrade) return 'bg-red-400'
+    const pct = ((start - scaleMin) / scaleRange) * 100
+    if (pct >= 70) return 'bg-green-400'
+    return 'bg-amber-400'
+  }
 
   const handleSelectReport = (reportId: string) => {
     setSelectedReport(reportId)
@@ -143,11 +196,11 @@ export default function AcademicReports() {
           const studentsData = Array.from(studentGradesMap.values()).map((s, idx) => {
             const gradeValues = Object.values(s.grades) as number[]
             const avg = gradeValues.length > 0 ? gradeValues.reduce((a, b) => a + b, 0) / gradeValues.length : 0
-            const failedCount = gradeValues.filter(g => g < 3.0).length
+            const failedCount = gradeValues.filter(g => g < minPassingGrade).length
             return { nro: idx + 1, name: s.name, group: s.group, grades: s.grades, average: avg, failedCount,
-              performance: avg >= 4.6 ? 'Superior' : avg >= 4.0 ? 'Alto' : avg >= 3.0 ? 'Básico' : 'Bajo' }
+              performance: getPerformanceLabel(avg) }
           })
-          setStudentsGradesData(showOnlyFailed ? studentsData.filter(s => s.failedCount > 0 || s.average < 3.0) : studentsData)
+          setStudentsGradesData(showOnlyFailed ? studentsData.filter(s => s.failedCount > 0 || s.average < minPassingGrade) : studentsData)
           break
         }
         case 'avg-subject': {
@@ -327,10 +380,29 @@ export default function AcademicReports() {
       alert('No hay datos para exportar')
       return
     }
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+
+    // Metadata institucional
+    const meta = [
+      `"Institución","${institution?.name || ''}"`,
+      `"Reporte","${currentMeta?.name || filename}"`,
+      `"Fecha de generación","${new Date().toLocaleString('es-CO')}"`,
+      `"Escala de calificación","${scaleMin} - ${scaleMax}"`,
+      `"Nota mínima aprobatoria","${minPassingGrade}"`,
+      isDimensionsMode
+        ? `"Estructura académica","DIMENSIONS (Evaluación cualitativa - Preescolar)"`
+        : gradingScale.performanceLevels.length > 0
+          ? `"Niveles de desempeño","${gradingScale.performanceLevels.sort((a, b) => a.order - b.order).map(l => `${l.name}(${l.minScore}-${l.maxScore})`).join(' / ')}"`
+          : `"Clasificación","Porcentaje relativo a escala (Superior>=85% Alto>=70% Básico>=50% Bajo<50%)"`,
+      selectedGroup?.grade?.academicStructure ? `"Tipo de estructura","${selectedGroup.grade.academicStructure}"` : '',
+      '',
+    ].join('\n')
+
+    const fullCsv = meta + '\n' + csvContent
+    const blob = new Blob(['\ufeff' + fullCsv], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
-    link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`
+    const instSlug = (institution?.name || 'edusyn').replace(/\s+/g, '_').substring(0, 20)
+    link.download = `${instSlug}_${filename}_${new Date().toISOString().split('T')[0]}.csv`
     link.click()
   }
 
@@ -488,7 +560,7 @@ export default function AcademicReports() {
   const statusLabel = (s: string) => s === 'approved' ? 'Aprobado' : s === 'at_risk' ? 'En riesgo' : s === 'impossible' ? 'Imposible' : 'Pendiente'
   const statusColor = (s: string) => s === 'approved' ? 'bg-green-100 text-green-700' : s === 'at_risk' ? 'bg-amber-100 text-amber-700' : s === 'impossible' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'
   const perfBadge = (p: string) => {
-    const c = p === 'Superior' ? 'bg-green-100 text-green-700' : p === 'Alto' ? 'bg-blue-100 text-blue-700' : p === 'Básico' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+    const c = getPerformanceBadgeColor(p)
     return <span className={`px-2 py-1 rounded text-xs ${c}`}>{p}</span>
   }
 
@@ -496,6 +568,21 @@ export default function AcademicReports() {
   const renderReportTable = () => {
     if (loadingReport) {
       return <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div></div>
+    }
+
+    // ── DIMENSIONS: Reportes no aplicables a preescolar ──
+    const numericOnlyReports = ['ranking-students', 'min-grade', 'min-grade-group', 'failed-subjects', 'recovery-list', 'promotion-projection']
+    if (isDimensionsMode && numericOnlyReports.includes(selectedReport || '')) {
+      return (
+        <div className="text-center py-12">
+          <div className="text-4xl mb-3">🎨</div>
+          <h3 className="text-lg font-semibold text-purple-700 mb-2">Reporte no disponible para Preescolar</h3>
+          <p className="text-sm text-slate-500 max-w-md mx-auto">
+            Este reporte requiere calificaciones numéricas. Los grados con estructura de <strong>Dimensiones del desarrollo</strong> utilizan evaluación cualitativa.
+          </p>
+          <p className="text-xs text-slate-400 mt-2">Seleccione un grupo con estructura numérica o utilice el Consolidado Académico para ver la evaluación cualitativa.</p>
+        </div>
+      )
     }
 
     // ── Consolidado ──
@@ -524,7 +611,7 @@ export default function AcademicReports() {
                   <td className="px-3 py-2 font-medium sticky left-10 bg-white">{row.name}</td>
                   <td className="px-3 py-2">{row.group}</td>
                   {showGrades && subjectList.map(subj => {
-                    const g = row.grades[subj]; const fail = g !== undefined && g < 3.0
+                    const g = row.grades[subj]; const fail = g !== undefined && isFailed(g)
                     return <td key={subj} className={`px-3 py-2 text-center ${fail ? 'text-red-600 font-medium' : ''}`}>{g !== undefined ? g.toFixed(parseInt(decimalPlaces)) : '-'}</td>
                   })}
                   <td className="px-3 py-2 text-center font-medium">{row.average.toFixed(parseInt(decimalPlaces))}</td>
@@ -612,7 +699,7 @@ export default function AcademicReports() {
               <div key={i} className="flex items-center gap-3">
                 <span className="w-24 text-sm text-right font-medium">{d.range}</span>
                 <div className="flex-1 bg-slate-100 rounded-full h-6 overflow-hidden">
-                  <div className={`h-full rounded-full ${d.range?.includes('0') || d.range?.includes('1') || d.range?.includes('2') ? 'bg-red-400' : d.range?.includes('3') ? 'bg-amber-400' : 'bg-green-400'}`} style={{ width: `${(d.count / max) * 100}%` }}></div>
+                  <div className={`h-full rounded-full ${getDistBarColor(d.range)}`} style={{ width: `${(d.count / max) * 100}%` }}></div>
                 </div>
                 <span className="w-12 text-sm text-right">{d.count}</span>
                 <span className="w-16 text-xs text-slate-500 text-right">{d.percentage?.toFixed(1)}%</span>
@@ -841,7 +928,7 @@ export default function AcademicReports() {
                     <tr key={si} className="border-t">
                       <td className="px-3 py-1">{s.subjectName}</td>
                       {(s.termGrades || []).map((g: any, gi: number) => (
-                        <td key={gi} className={`px-3 py-1 text-center ${g < 3 ? 'text-red-600' : ''}`}>{g?.toFixed(1) ?? '-'}</td>
+                        <td key={gi} className={`px-3 py-1 text-center ${g != null && isFailed(g) ? 'text-red-600' : ''}`}>{g?.toFixed(1) ?? '-'}</td>
                       ))}
                       <td className="px-3 py-1 text-center font-medium">{s.finalGrade?.toFixed(1) ?? '-'}</td>
                     </tr>
@@ -1015,7 +1102,49 @@ export default function AcademicReports() {
 
       {renderFilters()}
 
-      <div className="mt-6 bg-white rounded-xl border border-slate-200 p-4">
+      {/* Información de escala institucional */}
+      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-slate-500 px-1">
+        {isDimensionsMode ? (
+          <>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-purple-400 inline-block" />
+              Estructura: <strong className="text-purple-700">Dimensiones del desarrollo (Preescolar)</strong>
+            </span>
+            <span className="flex items-center gap-1 italic">
+              Evaluación cualitativa — Sin promedios numéricos
+            </span>
+            {qualitativeLevels.length > 0 && (
+              <span className="flex items-center gap-1">
+                Niveles: {qualitativeLevels.sort((a, b) => a.order - b.order).map(l => l.name).join(' · ')}
+              </span>
+            )}
+          </>
+        ) : (
+          <>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
+              Escala: <strong className="text-slate-700">{scaleMin} – {scaleMax}</strong>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+              Nota mínima aprobatoria: <strong className="text-slate-700">{minPassingGrade}</strong>
+            </span>
+            {gradingScale.performanceLevels.length > 0 && (
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
+                Niveles: {gradingScale.performanceLevels.sort((a, b) => a.order - b.order).map(l => `${l.name} (${l.minScore}–${l.maxScore})`).join(' · ')}
+              </span>
+            )}
+            {gradingScale.performanceLevels.length === 0 && (
+              <span className="flex items-center gap-1 italic">
+                Clasificación por porcentaje: Superior ≥85% · Alto 70–84% · Básico 50–69% · Bajo &lt;50%
+              </span>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="mt-4 bg-white rounded-xl border border-slate-200 p-4">
         {renderReportTable()}
       </div>
     </div>

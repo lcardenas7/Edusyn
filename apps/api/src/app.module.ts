@@ -29,6 +29,7 @@ import { ManagementTasksModule } from './modules/management-tasks/management-tas
 import { FinanceModule } from './modules/finance/finance.module';
 import { TimetablingModule } from './modules/timetabling/timetabling.module';
 import { CapabilitiesModule } from './modules/capabilities/capabilities.module';
+import { InstitutionContextModule } from './modules/institution-context/institution-context.module';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 
 @Module({
@@ -41,6 +42,7 @@ import { TenantContextInterceptor } from './common/interceptors/tenant-context.i
       limit: 100,
     }]),
     PrismaModule,
+    InstitutionContextModule,
     IamModule,
     AuthModule,
     AcademicModule,
