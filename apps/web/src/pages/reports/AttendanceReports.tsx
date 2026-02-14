@@ -1,52 +1,87 @@
-import { useState, useEffect } from 'react'
-import { 
-  Calendar,
-  Users,
-  GraduationCap,
-  ClipboardList,
-  UserCheck,
-  AlertTriangle,
-  BarChart3,
-  Download,
-  Printer,
-  ArrowLeft,
-  ChevronLeft,
-  Search
+import { useState, useMemo } from 'react'
+import {
+  Calendar, Users, GraduationCap, ClipboardList, UserCheck,
+  AlertTriangle, BarChart3, ArrowLeft, Search, BookOpen,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useReportsData } from '../../hooks/useReportsData'
 import { useAuth } from '../../contexts/AuthContext'
 import { attendanceApi, groupsApi } from '../../lib/api'
+import AttendanceReportLayout, {
+  KPICard, kpiColorFromPct, sortByRisk, getRowBg, getStatusBadge,
+  getPctColor, EmptyState, THRESHOLDS,
+} from '../../components/reports/AttendanceReportLayout'
 
-interface ReportItem {
-  id: string
-  name: string
-  description: string
-  icon: any
-  feature?: string
-}
+// ─── Types & constants ─────────────────────────────────────────────────
+interface ReportItem { id: string; name: string; description: string; icon: any; feature?: string }
 
 const attendanceReports: ReportItem[] = [
   { id: 'att-group', name: 'Asistencia por grupo', description: 'Estado general de asistencia de un grupo o curso', icon: GraduationCap, feature: 'RPT_ATT_GROUP' },
   { id: 'att-student', name: 'Asistencia por estudiante', description: 'Seguimiento individual de asistencia (casos especiales)', icon: Users, feature: 'RPT_ATT_STUDENT' },
   { id: 'att-subject', name: 'Asistencia por asignatura', description: 'Analizar comportamiento por materia', icon: ClipboardList, feature: 'RPT_ATT_SUBJECT' },
   { id: 'att-teacher', name: 'Asistencia por docente', description: 'Control institucional del registro de clases', icon: UserCheck, feature: 'RPT_ATT_TEACHER' },
-  { id: 'att-critical', name: 'Inasistencias críticas', description: 'Detectar estudiantes en riesgo por inasistencia', icon: AlertTriangle, feature: 'RPT_ATT_CRITICAL' },
+  { id: 'att-critical', name: 'Inasistencias criticas', description: 'Detectar estudiantes en riesgo por inasistencia', icon: AlertTriangle, feature: 'RPT_ATT_CRITICAL' },
   { id: 'att-consolidated', name: 'Consolidado institucional', description: 'Datos macro para informes oficiales', icon: BarChart3, feature: 'RPT_ATT_CONSOLIDATED' },
 ]
 
+// ─── Shared filter components ──────────────────────────────────────────
+function FSelect({ label, value, onChange, options, required }: {
+  label: string; value: string; onChange: (v: string) => void; options: { value: string; label: string }[]; required?: boolean
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-slate-600 mb-1">{label}{required && ' *'}</label>
+      <select value={value} onChange={e => onChange(e.target.value)}
+        className={`w-full px-2.5 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 ${required && value === 'all' ? 'border-amber-400 bg-amber-50' : 'border-slate-300 bg-white'}`}>
+        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </div>
+  )
+}
+function FDate({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-slate-600 mb-1">{label}</label>
+      <input type="date" value={value} onChange={e => onChange(e.target.value)}
+        className="w-full px-2.5 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-300" />
+    </div>
+  )
+}
+function SearchBtn({ onClick, loading }: { onClick: () => void; loading?: boolean }) {
+  return (
+    <div className="flex items-end">
+      <button onClick={onClick} disabled={loading}
+        className="w-full px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 shadow-sm">
+        {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Search className="w-4 h-4" />}
+        Generar reporte
+      </button>
+    </div>
+  )
+}
+
+// ─── CSV helpers ────────────────────────────────────────────────────────
+function buildCSV(inst: string, title: string, headers: string, rows: string): string {
+  const now = new Date().toLocaleString('es-CO')
+  return `"Institucion","${inst}"\n"Reporte","${title}"\n"Generado","${now}"\n"Criterios","Normal >= ${THRESHOLDS.NORMAL_MIN}% | Alerta ${THRESHOLDS.ALERT_MIN}-${THRESHOLDS.NORMAL_MIN - 1}% | Riesgo < ${THRESHOLDS.ALERT_MIN}%"\n"Calculo","El porcentaje incluye asistencias, tardanzas y excusas justificadas."\n\n${headers}\n${rows}`
+}
+function downloadCSV(content: string, filename: string) {
+  const blob = new Blob(['\ufeff' + content], { type: 'text/csv;charset=utf-8;' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = `asistencia_${filename}_${new Date().toISOString().split('T')[0]}.csv`
+  a.click()
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 export default function AttendanceReports() {
-  const { hasFeature } = useAuth()
+  const { hasFeature, institution } = useAuth()
+  const instName = institution?.name || 'Institucion'
   const {
     academicYears, terms, groups, subjects, teachers, students,
-    filterYear, setFilterYear,
-    filterPeriod, setFilterPeriod,
-    filterGrade, setFilterGrade,
-    filterSubject, setFilterSubject,
-    filterTeacher, setFilterTeacher,
-    filterStudentId, setFilterStudentId,
-    filterDateFrom, setFilterDateFrom,
-    filterDateTo, setFilterDateTo,
+    filterYear, setFilterYear, filterPeriod, setFilterPeriod,
+    filterGrade, setFilterGrade, filterSubject, setFilterSubject,
+    filterTeacher, setFilterTeacher, filterStudentId, setFilterStudentId,
+    filterDateFrom, setFilterDateFrom, filterDateTo, setFilterDateTo,
     filterStatus, setFilterStatus,
   } = useReportsData()
 
@@ -56,1019 +91,334 @@ export default function AttendanceReports() {
   const [searchStudent, setSearchStudent] = useState('')
   const [filterMinPercent, setFilterMinPercent] = useState('80')
 
-  // Datos de reportes
   const [attendanceData, setAttendanceData] = useState<any[]>([])
   const [attendanceDetailData, setAttendanceDetailData] = useState<any[]>([])
   const [attendanceBySubjectData, setAttendanceBySubjectData] = useState<any[]>([])
   const [teacherComplianceData, setTeacherComplianceData] = useState<any[]>([])
   const [criticalAbsencesData, setCriticalAbsencesData] = useState<any[]>([])
-  const [consolidatedData, setConsolidatedData] = useState<{ byGrade: any[], bySubject: any[], byPeriod: any[] }>({ byGrade: [], bySubject: [], byPeriod: [] })
+  const [consolidatedData, setConsolidatedData] = useState<{ byGrade: any[]; bySubject: any[]; byPeriod: any[] }>({ byGrade: [], bySubject: [], byPeriod: [] })
 
-  // Filtrar reportes según features
   const filteredReports = attendanceReports.filter(r => !r.feature || hasFeature(r.feature))
 
-  const handleSelectReport = async (reportId: string) => {
-    setSelectedReport(reportId)
-    setShowReport(true)
-    await loadReportData(reportId)
+  // ─── Select options ──────────────────────────────────────────────────
+  const yearOpts = useMemo(() => [{ value: '', label: 'Seleccionar...' }, ...academicYears.map(y => ({ value: y.id, label: `${y.year}${y.status === 'ACTIVE' ? ' - Activo' : ''}` }))], [academicYears])
+  const groupOpts = useMemo(() => [{ value: 'all', label: 'Todos los grupos' }, ...groups.map(g => ({ value: g.id, label: `${g.grade?.name || ''} ${g.name}` }))], [groups])
+  const subjOpts = useMemo(() => [{ value: 'all', label: 'Todas' }, ...subjects.map(s => ({ value: s.id, label: s.name }))], [subjects])
+  const teachOpts = useMemo(() => [{ value: 'all', label: 'Todos' }, ...teachers.map(t => ({ value: t.id, label: t.name }))], [teachers])
+  const statOpts = [{ value: 'all', label: 'Todos' }, { value: 'Normal', label: `Normal (>= ${THRESHOLDS.NORMAL_MIN}%)` }, { value: 'Alerta', label: `Alerta (${THRESHOLDS.ALERT_MIN}-${THRESHOLDS.NORMAL_MIN - 1}%)` }, { value: 'Riesgo', label: `Riesgo (< ${THRESHOLDS.ALERT_MIN}%)` }]
+  const attStatOpts = [{ value: 'all', label: 'Todos' }, { value: 'PRESENT', label: 'Presente' }, { value: 'ABSENT', label: 'Ausente' }, { value: 'LATE', label: 'Tarde' }, { value: 'EXCUSED', label: 'Excusa' }]
+
+  // ─── Data fetch helpers ──────────────────────────────────────────────
+  async function fetchGroupData(params: any): Promise<any[]> {
+    let raw: any[] = []
+    if (filterGrade && filterGrade !== 'all') {
+      const res = await attendanceApi.getReportByGroup(filterGrade, filterYear, params)
+      raw = res.data || []
+    } else {
+      const gRes = await groupsApi.getAll()
+      const results = await Promise.allSettled((gRes.data || []).map((g: any) => attendanceApi.getReportByGroup(g.id, filterYear, params)))
+      results.forEach(r => { if (r.status === 'fulfilled') raw.push(...(r.value.data || [])) })
+    }
+    return raw
+  }
+  function mapRow(item: any) {
+    return { name: item.studentName || item.name, group: item.groupName || item.group, totalClasses: item.totalClasses || 0, attended: item.present || item.attended || 0, absent: item.absent || 0, late: item.late || 0, excused: item.excused || 0, pct: item.attendanceRate || item.pct || 0, status: item.status || 'Normal' }
   }
 
+  // ─── Load report data ────────────────────────────────────────────────
+  const handleSelectReport = async (id: string) => { setSelectedReport(id); setShowReport(true); await loadReportData(id) }
   const loadReportData = async (reportId: string) => {
     if (!filterYear) return
     setLoadingReport(true)
-
     try {
-      // Reporte de asistencia por grupo
+      const bp: any = { startDate: filterDateFrom || undefined, endDate: filterDateTo || undefined, subjectId: filterSubject !== 'all' ? filterSubject : undefined }
+
       if (reportId === 'att-group') {
-        const params: any = {
-          startDate: filterDateFrom || undefined,
-          endDate: filterDateTo || undefined,
-          subjectId: filterSubject !== 'all' ? filterSubject : undefined,
-        }
-        
-        let rawData: any[] = []
-        
-        if (filterGrade && filterGrade !== 'all') {
-          const response = await attendanceApi.getReportByGroup(filterGrade, filterYear, params)
-          rawData = response.data || []
-        } else {
-          const groupsRes = await groupsApi.getAll()
-          const allGroups = groupsRes.data || []
-          
-          const results = await Promise.allSettled(
-            allGroups.map((group: any) => attendanceApi.getReportByGroup(group.id, filterYear, params))
-          )
-          results.forEach((r) => {
-            if (r.status === 'fulfilled') rawData.push(...(r.value.data || []))
-          })
-        }
-        
-        rawData = rawData.map((item: any) => ({
-          name: item.studentName || item.name,
-          group: item.groupName || item.group,
-          totalClasses: item.totalClasses || 0,
-          attended: item.present || item.attended || 0,
-          absent: item.absent || 0,
-          late: item.late || 0,
-          excused: item.excused || 0,
-          pct: item.attendanceRate || item.pct || 0,
-          status: item.status || 'Normal',
-        }))
-        
-        if (filterStatus !== 'all') {
-          rawData = rawData.filter((item: any) => item.status === filterStatus)
-        }
-        
-        setAttendanceData(rawData.map((item, idx) => ({ ...item, nro: idx + 1 })))
+        let d = (await fetchGroupData(bp)).map(mapRow)
+        if (filterStatus !== 'all') d = d.filter(i => i.status === filterStatus)
+        setAttendanceData(sortByRisk(d).map((item, idx) => ({ ...item, nro: idx + 1 })))
       }
-
-      // Reporte de asistencia por estudiante (detallado)
       if (reportId === 'att-student') {
-        const params: any = {
-          academicYearId: filterYear,
-          groupId: filterGrade !== 'all' ? filterGrade : undefined,
-          subjectId: filterSubject !== 'all' ? filterSubject : undefined,
-          startDate: filterDateFrom || undefined,
-          endDate: filterDateTo || undefined,
-          status: filterStatus !== 'all' ? filterStatus : undefined,
-          studentEnrollmentId: filterStudentId !== 'all' ? filterStudentId : undefined,
-        }
-        
-        const response = await attendanceApi.getDetailedReport(params)
-        const mappedData = (response.data || []).map((item: any, idx: number) => ({
-          nro: idx + 1,
-          date: item.date ? new Date(item.date).toLocaleDateString('es-CO') : '',
-          student: item.studentName || item.student || '',
-          group: item.groupName || item.group || '',
-          subject: item.subjectName || item.subject || '',
-          teacher: item.teacherName || item.teacher || '',
-          status: item.status || '',
-          observations: item.observations || '',
-        }))
-        setAttendanceDetailData(mappedData)
+        const p = { academicYearId: filterYear, groupId: filterGrade !== 'all' ? filterGrade : undefined, subjectId: bp.subjectId, startDate: bp.startDate, endDate: bp.endDate, status: filterStatus !== 'all' ? filterStatus : undefined, studentEnrollmentId: filterStudentId !== 'all' ? filterStudentId : undefined }
+        const res = await attendanceApi.getDetailedReport(p)
+        setAttendanceDetailData((res.data || []).map((item: any, idx: number) => ({ nro: idx + 1, date: item.date ? new Date(item.date).toLocaleDateString('es-CO') : '', student: item.studentName || item.student || '', group: item.groupName || item.group || '', subject: item.subjectName || item.subject || '', teacher: item.teacherName || item.teacher || '', status: item.status || '', observations: item.observations || '' })))
       }
-
-      // Reporte de asistencia por asignatura
       if (reportId === 'att-subject') {
-        const params: any = {
-          startDate: filterDateFrom || undefined,
-          endDate: filterDateTo || undefined,
-          subjectId: filterSubject !== 'all' ? filterSubject : undefined,
-        }
-        
-        let rawData: any[] = []
-        
-        if (filterGrade && filterGrade !== 'all') {
-          const response = await attendanceApi.getReportByGroup(filterGrade, filterYear, params)
-          rawData = response.data || []
-        } else {
-          const groupsRes = await groupsApi.getAll()
-          const allGroups = groupsRes.data || []
-          
-          const results = await Promise.allSettled(
-            allGroups.map((group: any) => attendanceApi.getReportByGroup(group.id, filterYear, params))
-          )
-          results.forEach((r) => {
-            if (r.status === 'fulfilled') rawData.push(...(r.value.data || []))
-          })
-        }
-        
-        rawData = rawData.map((item: any) => ({
-          name: item.studentName || item.name,
-          group: item.groupName || item.group,
-          totalClasses: item.totalClasses || 0,
-          attended: item.present || item.attended || 0,
-          absent: item.absent || 0,
-          pct: item.attendanceRate || item.pct || 0,
-          status: item.status || 'Normal',
-        }))
-        
-        if (filterStatus !== 'all') {
-          rawData = rawData.filter((item: any) => item.status === filterStatus)
-        }
-        
-        setAttendanceBySubjectData(rawData.map((item, idx) => ({ ...item, nro: idx + 1 })))
+        let d = (await fetchGroupData(bp)).map(mapRow)
+        if (filterStatus !== 'all') d = d.filter(i => i.status === filterStatus)
+        setAttendanceBySubjectData(sortByRisk(d).map((item, idx) => ({ ...item, nro: idx + 1 })))
       }
-
-      // Reporte de gestión docente
       if (reportId === 'att-teacher') {
-        const params: any = {
-          academicYearId: filterYear,
-          teacherId: filterTeacher !== 'all' ? filterTeacher : undefined,
-          groupId: filterGrade !== 'all' ? filterGrade : undefined,
-          subjectId: filterSubject !== 'all' ? filterSubject : undefined,
-          startDate: filterDateFrom || undefined,
-          endDate: filterDateTo || undefined,
-        }
-        
-        const response = await attendanceApi.getTeacherComplianceReport(params)
-        const mappedData = (response.data || []).map((item: any, idx: number) => ({
-          nro: idx + 1,
-          teacher: item.teacherName || item.teacher || '',
-          classesScheduled: item.classesScheduled || 0,
-          classesRegistered: item.classesRegistered || 0,
-          classesNotRegistered: item.classesNotRegistered || 0,
-          complianceRate: item.complianceRate || 0,
-        }))
-        setTeacherComplianceData(mappedData)
+        const p = { academicYearId: filterYear, teacherId: filterTeacher !== 'all' ? filterTeacher : undefined, groupId: filterGrade !== 'all' ? filterGrade : undefined, subjectId: bp.subjectId, startDate: bp.startDate, endDate: bp.endDate }
+        const res = await attendanceApi.getTeacherComplianceReport(p)
+        const mapped = (res.data || []).map((item: any, idx: number) => ({ nro: idx + 1, teacher: item.teacherName || item.teacher || '', classesScheduled: item.classesScheduled || 0, classesRegistered: item.classesRegistered || 0, classesNotRegistered: item.classesNotRegistered || 0, complianceRate: item.complianceRate || 0 }))
+        mapped.sort((a: any, b: any) => a.complianceRate - b.complianceRate)
+        setTeacherComplianceData(mapped)
       }
-
-      // Reporte de inasistencias críticas
       if (reportId === 'att-critical') {
-        const params: any = {
-          startDate: filterDateFrom || undefined,
-          endDate: filterDateTo || undefined,
-          subjectId: filterSubject !== 'all' ? filterSubject : undefined,
-        }
-        
-        let rawData: any[] = []
-        
-        if (filterGrade && filterGrade !== 'all') {
-          const response = await attendanceApi.getReportByGroup(filterGrade, filterYear, params)
-          rawData = response.data || []
-        } else {
-          const groupsRes = await groupsApi.getAll()
-          const allGroups = groupsRes.data || []
-          
-          const results = await Promise.allSettled(
-            allGroups.map((group: any) => attendanceApi.getReportByGroup(group.id, filterYear, params))
-          )
-          results.forEach((r) => {
-            if (r.status === 'fulfilled') rawData.push(...(r.value.data || []))
-          })
-        }
-        
-        rawData = rawData.map((item: any) => ({
-          name: item.studentName || item.name,
-          group: item.groupName || item.group,
-          totalClasses: item.totalClasses || 0,
-          absent: item.absent || 0,
-          pct: item.attendanceRate || item.pct || 0,
-          status: item.status || 'Normal',
-        }))
-        
+        let d = (await fetchGroupData(bp)).map(mapRow)
         const minPct = parseInt(filterMinPercent) || 80
-        rawData = rawData.filter((item: any) => item.pct < minPct)
-        
-        if (filterStatus !== 'all') {
-          rawData = rawData.filter((item: any) => item.status === filterStatus)
-        }
-        
-        rawData.sort((a, b) => a.pct - b.pct)
-        setCriticalAbsencesData(rawData.map((item, idx) => ({ ...item, nro: idx + 1 })))
+        d = d.filter(i => i.pct < minPct)
+        if (filterStatus !== 'all') d = d.filter(i => i.status === filterStatus)
+        setCriticalAbsencesData(sortByRisk(d).map((item, idx) => ({ ...item, nro: idx + 1 })))
       }
-
-      // Reporte consolidado institucional
       if (reportId === 'att-consolidated') {
-        const params = {
-          academicYearId: filterYear,
-          startDate: filterDateFrom || undefined,
-          endDate: filterDateTo || undefined,
-          subjectId: filterSubject !== 'all' ? filterSubject : undefined,
-        }
-        
-        const response = await attendanceApi.getConsolidatedReport(params)
-        
-        const mappedByGrade = (response.data?.byGrade || []).map((item: any, idx: number) => ({
-          nro: idx + 1,
-          grade: item.name || item.grade || '',
-          totalClasses: item.total || item.totalClasses || 0,
-          totalAttended: item.present || item.totalAttended || 0,
-          totalAbsent: item.absent || item.totalAbsent || 0,
-          totalLate: item.late || 0,
-          totalExcused: item.excused || 0,
-          pct: item.attendanceRate || item.pct || 0,
-        }))
-        
-        const mappedBySubject = (response.data?.bySubject || []).map((item: any, idx: number) => ({
-          nro: idx + 1,
-          subject: item.name || item.subject || '',
-          totalClasses: item.total || item.totalClasses || 0,
-          totalAttended: item.present || item.totalAttended || 0,
-          totalAbsent: item.absent || item.totalAbsent || 0,
-          totalLate: item.late || 0,
-          totalExcused: item.excused || 0,
-          pct: item.attendanceRate || item.pct || 0,
-        }))
-        
-        setConsolidatedData({ byGrade: mappedByGrade, bySubject: mappedBySubject, byPeriod: [] })
+        const p = { academicYearId: filterYear, startDate: bp.startDate, endDate: bp.endDate, subjectId: bp.subjectId }
+        const res = await attendanceApi.getConsolidatedReport(p)
+        const mr = (item: any, idx: number) => ({ nro: idx + 1, grade: item.name || item.grade || '', subject: item.name || item.subject || '', totalClasses: item.total || item.totalClasses || 0, totalAttended: item.present || item.totalAttended || 0, totalAbsent: item.absent || item.totalAbsent || 0, totalLate: item.late || 0, totalExcused: item.excused || 0, pct: item.attendanceRate || item.pct || 0 })
+        setConsolidatedData({ byGrade: (res.data?.byGrade || []).map(mr), bySubject: (res.data?.bySubject || []).map(mr), byPeriod: [] })
       }
-
-    } catch (err) {
-      console.error('Error loading report data:', err)
-    } finally {
-      setLoadingReport(false)
-    }
+    } catch (err) { console.error('Error loading report data:', err) }
+    finally { setLoadingReport(false) }
   }
 
-  // Exportar a CSV
+  // ─── CSV export ──────────────────────────────────────────────────────
   const exportToCSV = () => {
-    let csvContent = ''
-    let filename = 'reporte_asistencia'
-
-    if (selectedReport === 'att-group') {
-      filename = 'asistencia_por_grupo'
-      csvContent = 'Nro,Estudiante,Grupo,Total Clases,Asistencias,Fallas,Tardanzas,Excusas,% Asist.,Estado\n'
-      attendanceData.forEach((row, idx) => {
-        csvContent += `${idx + 1},"${row.name || ''}","${row.group || ''}",${row.totalClasses || 0},${row.attended || 0},${row.absent || 0},${row.late || 0},${row.excused || 0},${row.pct || 0}%,${row.status || ''}\n`
-      })
-    } else if (selectedReport === 'att-student') {
-      filename = 'asistencia_por_estudiante'
-      csvContent = 'Nro,Fecha,Estudiante,Grupo,Asignatura,Docente,Estado,Observación\n'
-      attendanceDetailData.forEach((row, idx) => {
-        const statusText = row.status === 'PRESENT' ? 'Presente' : row.status === 'ABSENT' ? 'Ausente' : row.status === 'LATE' ? 'Tarde' : 'Excusa'
-        csvContent += `${idx + 1},"${row.date || ''}","${row.student || ''}","${row.group || ''}","${row.subject || ''}","${row.teacher || ''}",${statusText},"${row.observations || ''}"\n`
-      })
-    } else if (selectedReport === 'att-subject') {
-      filename = 'asistencia_por_asignatura'
-      csvContent = 'Nro,Estudiante,Grupo,Total Clases,Asistencias,Fallas,% Asist.,Estado\n'
-      attendanceBySubjectData.forEach((row, idx) => {
-        csvContent += `${idx + 1},"${row.name || ''}","${row.group || ''}",${row.totalClasses || 0},${row.attended || 0},${row.absent || 0},${row.pct || 0}%,${row.status || ''}\n`
-      })
-    } else if (selectedReport === 'att-teacher') {
-      filename = 'asistencia_por_docente'
-      csvContent = 'Nro,Docente,Clases Programadas,Clases Registradas,Clases NO Registradas,% Cumplimiento\n'
-      teacherComplianceData.forEach((row, idx) => {
-        csvContent += `${idx + 1},"${row.teacher || ''}",${row.classesScheduled || 0},${row.classesRegistered || 0},${row.classesNotRegistered || 0},${row.complianceRate || 0}%\n`
-      })
-    } else if (selectedReport === 'att-critical') {
-      filename = 'inasistencias_criticas'
-      csvContent = 'Nro,Estudiante,Grupo,Total Clases,Fallas,% Asist.,Estado\n'
-      criticalAbsencesData.forEach((row, idx) => {
-        csvContent += `${idx + 1},"${row.name || ''}","${row.group || ''}",${row.totalClasses || 0},${row.absent || 0},${row.pct || 0}%,${row.status || ''}\n`
-      })
-    } else if (selectedReport === 'att-consolidated') {
-      filename = 'consolidado_institucional'
-      csvContent = 'ASISTENCIA POR GRADO\nNro,Grado,Estudiantes,Total Registros,Presentes,Ausentes,% Asistencia\n'
-      consolidatedData.byGrade.forEach((g, idx) => {
-        csvContent += `${idx + 1},"${g.grade}",${g.totalStudents},${g.totalClasses},${g.totalAttended},${g.totalAbsent},${g.pct}%\n`
-      })
-      csvContent += '\nASISTENCIA POR ASIGNATURA\nNro,Asignatura,Total Registros,Presentes,Ausentes,% Asistencia\n'
-      consolidatedData.bySubject.forEach((s, idx) => {
-        csvContent += `${idx + 1},"${s.subject}",${s.totalClasses},${s.totalAttended},${s.totalAbsent},${s.pct}%\n`
-      })
-    }
-
-    if (!csvContent || csvContent.split('\n').length <= 1) {
-      alert('No hay datos para exportar')
-      return
-    }
-
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`
-    link.click()
+    let csv = '', fn = 'general'
+    if (selectedReport === 'att-group') { fn = 'por_grupo'; csv = buildCSV(instName, 'Asistencia por Grupo', 'Nro,Estudiante,Grupo,Total,Asist.,Fallas,Tardanzas,Excusas,%,Estado', attendanceData.map((r, i) => `${i+1},"${r.name}","${r.group}",${r.totalClasses},${r.attended},${r.absent},${r.late},${r.excused},${r.pct}%,${r.status}`).join('\n')) }
+    else if (selectedReport === 'att-student') { fn = 'por_estudiante'; const sl = (s: string) => s === 'PRESENT' ? 'Presente' : s === 'ABSENT' ? 'Ausente' : s === 'LATE' ? 'Tarde' : 'Excusa'; csv = buildCSV(instName, 'Asistencia por Estudiante', 'Nro,Fecha,Estudiante,Grupo,Asignatura,Docente,Estado,Obs', attendanceDetailData.map((r, i) => `${i+1},"${r.date}","${r.student}","${r.group}","${r.subject}","${r.teacher}",${sl(r.status)},"${r.observations}"`).join('\n')) }
+    else if (selectedReport === 'att-subject') { fn = 'por_asignatura'; csv = buildCSV(instName, 'Asistencia por Asignatura', 'Nro,Estudiante,Grupo,Total,Asist.,Fallas,Tardanzas,Excusas,%,Estado', attendanceBySubjectData.map((r, i) => `${i+1},"${r.name}","${r.group}",${r.totalClasses},${r.attended},${r.absent},${r.late||0},${r.excused||0},${r.pct}%,${r.status}`).join('\n')) }
+    else if (selectedReport === 'att-teacher') { fn = 'por_docente'; csv = buildCSV(instName, 'Asistencia por Docente', 'Nro,Docente,Programadas,Registradas,Faltantes,% Cumplimiento', teacherComplianceData.map((r, i) => `${i+1},"${r.teacher}",${r.classesScheduled},${r.classesRegistered},${r.classesNotRegistered},${r.complianceRate}%`).join('\n')) }
+    else if (selectedReport === 'att-critical') { fn = 'criticas'; csv = buildCSV(instName, 'Inasistencias Criticas', 'Nro,Estudiante,Grupo,Total,Fallas,%,Estado', criticalAbsencesData.map((r, i) => `${i+1},"${r.name}","${r.group}",${r.totalClasses},${r.absent},${r.pct}%,${r.status}`).join('\n')) }
+    else if (selectedReport === 'att-consolidated') { fn = 'consolidado'; let body = 'POR GRADO\nNro,Grado,Total,Presentes,Ausentes,Tardanzas,Excusas,%\n' + consolidatedData.byGrade.map((g, i) => `${i+1},"${g.grade}",${g.totalClasses},${g.totalAttended},${g.totalAbsent},${g.totalLate},${g.totalExcused},${g.pct}%`).join('\n') + '\n\nPOR ASIGNATURA\nNro,Asignatura,Total,Presentes,Ausentes,Tardanzas,Excusas,%\n' + consolidatedData.bySubject.map((s, i) => `${i+1},"${s.subject}",${s.totalClasses},${s.totalAttended},${s.totalAbsent},${s.totalLate},${s.totalExcused},${s.pct}%`).join('\n'); csv = buildCSV(instName, 'Consolidado Institucional', '', body) }
+    if (!csv) { alert('No hay datos para exportar'); return }
+    downloadCSV(csv, fn)
   }
 
-  const handleBack = () => {
-    setShowReport(false)
-    setSelectedReport(null)
-  }
+  const handleBack = () => { setShowReport(false); setSelectedReport(null) }
+  const currentReport = filteredReports.find(r => r.id === selectedReport)
 
-  const currentReportData = filteredReports.find(r => r.id === selectedReport)
+  // ═══════════════════════════════════════════════════════════════════════
+  // KPI CARDS
+  // ═══════════════════════════════════════════════════════════════════════
+  const groupKPIs = useMemo(() => {
+    if (!attendanceData.length) return null
+    const avg = Math.round(attendanceData.reduce((s, r) => s + r.pct, 0) / attendanceData.length)
+    const alertC = attendanceData.filter(r => r.status === 'Alerta').length
+    const riskC = attendanceData.filter(r => r.status === 'Riesgo').length
+    const total = attendanceData[0]?.totalClasses || 0
+    return (<>
+      <KPICard label="Promedio del grupo" value={`${avg}%`} color={kpiColorFromPct(avg)} sub={`${attendanceData.length} estudiantes`} />
+      <KPICard label="En alerta" value={`${Math.round((alertC / attendanceData.length) * 100)}%`} color={alertC > 0 ? 'amber' : 'green'} sub={`${alertC} estudiantes`} />
+      <KPICard label="En riesgo" value={`${Math.round((riskC / attendanceData.length) * 100)}%`} color={riskC > 0 ? 'red' : 'green'} sub={`${riskC} estudiantes`} />
+      <KPICard label="Total sesiones" value={total} color="blue" sub="clases registradas" />
+    </>)
+  }, [attendanceData])
 
-  // Renderizar filtros según el reporte seleccionado
+  const studentKPIs = useMemo(() => {
+    if (!attendanceDetailData.length) return null
+    const t = attendanceDetailData.length, ab = attendanceDetailData.filter(r => r.status === 'ABSENT').length
+    const lt = attendanceDetailData.filter(r => r.status === 'LATE').length
+    const pr = attendanceDetailData.filter(r => r.status === 'PRESENT').length
+    const ex = attendanceDetailData.filter(r => r.status === 'EXCUSED').length
+    const pct = t > 0 ? Math.round(((pr + lt + ex) / t) * 100) : 0
+    return (<>
+      <KPICard label="% Asistencia" value={`${pct}%`} color={kpiColorFromPct(pct)} sub={`${t} registros`} />
+      <KPICard label="Total fallas" value={ab} color={ab > 5 ? 'red' : 'slate'} sub="ausencias" />
+      <KPICard label="Total tardanzas" value={lt} color={lt > 5 ? 'amber' : 'slate'} sub="llegadas tarde" />
+      <KPICard label="Total registros" value={t} color="blue" sub="periodo consultado" />
+    </>)
+  }, [attendanceDetailData])
+
+  const subjectKPIs = useMemo(() => {
+    if (!attendanceBySubjectData.length) return null
+    const avg = Math.round(attendanceBySubjectData.reduce((s, r) => s + r.pct, 0) / attendanceBySubjectData.length)
+    const alertC = attendanceBySubjectData.filter(r => r.status === 'Alerta').length
+    const critC = attendanceBySubjectData.filter(r => r.status === 'Riesgo').length
+    return (<>
+      <KPICard label="Promedio materia" value={`${avg}%`} color={kpiColorFromPct(avg)} sub={`${attendanceBySubjectData.length} estudiantes`} />
+      <KPICard label="En alerta" value={alertC} color={alertC > 0 ? 'amber' : 'green'} sub="estudiantes" />
+      <KPICard label="Estudiantes criticos" value={critC} color={critC > 0 ? 'red' : 'green'} sub="< 70% asistencia" />
+      <KPICard label="Total sesiones" value={attendanceBySubjectData[0]?.totalClasses || 0} color="blue" sub="clases" />
+    </>)
+  }, [attendanceBySubjectData])
+
+  const teacherKPIs = useMemo(() => {
+    if (!teacherComplianceData.length) return null
+    const avg = Math.round(teacherComplianceData.reduce((s, r) => s + r.complianceRate, 0) / teacherComplianceData.length)
+    const reg = teacherComplianceData.reduce((s, r) => s + r.classesRegistered, 0)
+    const miss = teacherComplianceData.reduce((s, r) => s + r.classesNotRegistered, 0)
+    return (<>
+      <KPICard label="% Cumplimiento" value={`${avg}%`} color={kpiColorFromPct(avg)} sub={`${teacherComplianceData.length} docentes`} />
+      <KPICard label="Clases registradas" value={reg} color="green" sub="total" />
+      <KPICard label="Clases faltantes" value={miss} color={miss > 0 ? 'red' : 'green'} sub="sin registro" />
+      <KPICard label="Programadas" value={teacherComplianceData.reduce((s, r) => s + r.classesScheduled, 0)} color="blue" sub="total" />
+    </>)
+  }, [teacherComplianceData])
+
+  const criticalKPIs = useMemo(() => {
+    if (!criticalAbsencesData.length) return null
+    const t = criticalAbsencesData.length
+    const rC = criticalAbsencesData.filter(r => r.status === 'Riesgo').length
+    const gc: Record<string, number> = {}; criticalAbsencesData.forEach(r => { gc[r.group] = (gc[r.group] || 0) + 1 })
+    const wg = Object.entries(gc).sort((a, b) => b[1] - a[1])[0]
+    const avg = Math.round(criticalAbsencesData.reduce((s, r) => s + r.pct, 0) / t)
+    return (<>
+      <KPICard label="Estudiantes criticos" value={t} color="red" sub="bajo el umbral" />
+      <KPICard label="En riesgo grave" value={rC} color={rC > 0 ? 'red' : 'amber'} sub={`< ${THRESHOLDS.ALERT_MIN}%`} />
+      <KPICard label="Grupo mas afectado" value={wg ? wg[0] : '-'} color="amber" sub={wg ? `${wg[1]} est.` : ''} />
+      <KPICard label="Promedio criticos" value={`${avg}%`} color="red" sub="promedio" />
+    </>)
+  }, [criticalAbsencesData])
+
+  const consolidatedKPIs = useMemo(() => {
+    const g = consolidatedData.byGrade; if (!g.length) return null
+    const tR = g.reduce((s, x) => s + x.totalClasses, 0), tP = g.reduce((s, x) => s + x.totalAttended, 0), tA = g.reduce((s, x) => s + x.totalAbsent, 0)
+    const avg = tR > 0 ? Math.round((tP / tR) * 100) : 0
+    const rG = g.filter(x => x.pct < THRESHOLDS.ALERT_MIN).length, aG = g.filter(x => x.pct >= THRESHOLDS.ALERT_MIN && x.pct < THRESHOLDS.NORMAL_MIN).length
+    return (<>
+      <KPICard label="Promedio general" value={`${avg}%`} color={kpiColorFromPct(avg)} sub={`${g.length} grados`} />
+      <KPICard label="Grados en riesgo" value={rG} color={rG > 0 ? 'red' : 'green'} sub={`< ${THRESHOLDS.ALERT_MIN}%`} />
+      <KPICard label="Grados en alerta" value={aG} color={aG > 0 ? 'amber' : 'green'} sub={`${THRESHOLDS.ALERT_MIN}-${THRESHOLDS.NORMAL_MIN - 1}%`} />
+      <KPICard label="Total registros" value={tR.toLocaleString()} color="blue" sub={`${tA.toLocaleString()} ausencias`} />
+    </>)
+  }, [consolidatedData])
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // FILTERS
+  // ═══════════════════════════════════════════════════════════════════════
   const renderFilters = () => {
+    const W = ({ children }: { children: React.ReactNode }) => <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-4">{children}</div>
+    if (selectedReport === 'att-group') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} /><FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={statOpts} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><div><label className="block text-xs font-medium text-slate-600 mb-1">Buscar estudiante</label><input type="text" value={searchStudent} onChange={e => setSearchStudent(e.target.value)} placeholder="Nombre..." className="w-full px-2.5 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-300" /></div><SearchBtn onClick={() => loadReportData('att-group')} loading={loadingReport} /></div></W>
+    if (selectedReport === 'att-student') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Grupo" value={filterGrade} onChange={v => { setFilterGrade(v); setFilterStudentId('all') }} options={groupOpts} /><FSelect label="Estudiante" value={filterStudentId} onChange={setFilterStudentId} options={[{ value: 'all', label: 'Todos' }, ...students.map(s => ({ value: s.enrollmentId || s.id, label: `${s.lastName} ${s.firstName}` }))]} /><FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={attStatOpts} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} /><SearchBtn onClick={() => loadReportData('att-student')} loading={loadingReport} /></div></W>
+    if (selectedReport === 'att-subject') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={[{ value: 'all', label: 'Seleccionar asignatura...' }, ...subjects.map(s => ({ value: s.id, label: s.name }))]} required /><FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={statOpts} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><div><label className="block text-xs font-medium text-slate-600 mb-1">Buscar estudiante</label><input type="text" value={searchStudent} onChange={e => setSearchStudent(e.target.value)} placeholder="Nombre..." className="w-full px-2.5 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-300" /></div><SearchBtn onClick={() => { if (filterSubject === 'all') { alert('Debe seleccionar una asignatura'); return }; loadReportData('att-subject') }} loading={loadingReport} /></div></W>
+    if (selectedReport === 'att-teacher') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Docente" value={filterTeacher} onChange={setFilterTeacher} options={teachOpts} /><FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><div /><SearchBtn onClick={() => loadReportData('att-teacher')} loading={loadingReport} /></div></W>
+    if (selectedReport === 'att-critical') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><div><label className="block text-xs font-medium text-slate-600 mb-1">% Umbral</label><input type="number" value={filterMinPercent} onChange={e => setFilterMinPercent(e.target.value)} className="w-full px-2.5 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-300" /></div><FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={[{ value: 'all', label: 'Todos' }, { value: 'Alerta', label: 'Alerta' }, { value: 'Riesgo', label: 'Riesgo' }]} /><SearchBtn onClick={() => loadReportData('att-critical')} loading={loadingReport} /></div></W>
+    if (selectedReport === 'att-consolidated') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} /><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><SearchBtn onClick={() => loadReportData('att-consolidated')} loading={loadingReport} /></div></W>
+    return null
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // TABLE RENDERING
+  // ═══════════════════════════════════════════════════════════════════════
+  const th = 'px-3 py-2.5 text-xs font-semibold text-slate-600 uppercase tracking-wider'
+  const td = 'px-3 py-2.5 text-sm'
+  const tfoot = (n: number) => <div className="px-4 py-3 bg-slate-50 border-t text-xs text-slate-500">{n} registros encontrados</div>
+
+  // Reusable table for group-like data (group, subject, critical share same shape)
+  function GroupTable({ data, showLate = true }: { data: any[]; showLate?: boolean }) {
+    return (<div className="overflow-x-auto">
+      <table className="w-full"><thead className="bg-slate-50 border-b border-slate-200"><tr>
+        <th className={`${th} text-left w-12`}>#</th><th className={`${th} text-left`}>Estudiante</th><th className={`${th} text-left`}>Grupo</th><th className={`${th} text-center`}>Total</th><th className={`${th} text-center`}>Asist.</th><th className={`${th} text-center`}>Fallas</th>
+        {showLate && <><th className={`${th} text-center`}>Tardanzas</th><th className={`${th} text-center`}>Excusas</th></>}
+        <th className={`${th} text-center`}>%</th><th className={`${th} text-center`}>Estado</th>
+      </tr></thead><tbody className="divide-y divide-slate-100">
+        {data.map((r, i) => (<tr key={i} className={`${getRowBg(r.status)} hover:bg-slate-50/80 transition-colors`}>
+          <td className={`${td} text-slate-400`}>{i + 1}</td>
+          <td className={`${td} font-medium text-slate-800`}>{r.name}</td>
+          <td className={td}>{r.group}</td>
+          <td className={`${td} text-center font-medium`}>{r.totalClasses}</td>
+          <td className={`${td} text-center text-emerald-600`}>{r.attended}</td>
+          <td className={`${td} text-center text-red-600 font-medium`}>{r.absent}</td>
+          {showLate && <><td className={`${td} text-center text-amber-600`}>{r.late || 0}</td><td className={`${td} text-center text-blue-600`}>{r.excused || 0}</td></>}
+          <td className={`${td} text-center font-bold ${getPctColor(r.pct)}`}>{r.pct}%</td>
+          <td className={`${td} text-center`}><span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusBadge(r.status)}`}>{r.status}</span></td>
+        </tr>))}
+      </tbody></table>{tfoot(data.length)}
+    </div>)
+  }
+
+  const renderTable = () => {
+    if (loadingReport) return <div className="flex flex-col items-center justify-center py-16"><div className="w-10 h-10 border-3 border-amber-200 border-t-amber-600 rounded-full animate-spin mb-3" /><p className="text-sm text-slate-500">Generando reporte...</p></div>
+
     if (selectedReport === 'att-group') {
-      return (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Año</label>
-              <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="">Seleccionar...</option>
-                {academicYears.map(year => (
-                  <option key={year.id} value={year.id}>{year.year}{year.status === 'ACTIVE' ? ' - Activo' : ''}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Grupo</label>
-              <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="all">Todos los grupos</option>
-                {groups.map(group => (
-                  <option key={group.id} value={group.id}>{group.grade?.name} {group.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Asignatura</label>
-              <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="all">Todas</option>
-                {subjects.map(subject => (
-                  <option key={subject.id} value={subject.id}>{subject.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Estado</label>
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="all">Todos</option>
-                <option value="Normal">Normal (≥90%)</option>
-                <option value="Alerta">Alerta (80-89%)</option>
-                <option value="Riesgo">Riesgo (&lt;80%)</option>
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Desde</label>
-              <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Hasta</label>
-              <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Buscar estudiante</label>
-              <input type="text" value={searchStudent} onChange={(e) => setSearchStudent(e.target.value)} placeholder="Nombre..." className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
-            </div>
-            <div className="flex items-end">
-              <button onClick={() => loadReportData(selectedReport!)} className="px-4 py-1.5 bg-amber-600 text-white rounded text-sm hover:bg-amber-700 w-full">Buscar</button>
-            </div>
-          </div>
-        </div>
-      )
+      const d = searchStudent ? attendanceData.filter(r => r.name?.toLowerCase().includes(searchStudent.toLowerCase())) : attendanceData
+      if (!d.length) return <EmptyState icon={<GraduationCap className="w-12 h-12" />} />
+      return <GroupTable data={d} />
     }
 
     if (selectedReport === 'att-student') {
-      return (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Año</label>
-              <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="">Seleccionar...</option>
-                {academicYears.map(year => (
-                  <option key={year.id} value={year.id}>{year.year}{year.status === 'ACTIVE' ? ' - Activo' : ''}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Grupo</label>
-              <select value={filterGrade} onChange={(e) => { setFilterGrade(e.target.value); setFilterStudentId('all') }} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="all">Todos los grupos</option>
-                {groups.map(group => (
-                  <option key={group.id} value={group.id}>{group.grade?.name} {group.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Estudiante</label>
-              <select value={filterStudentId} onChange={(e) => setFilterStudentId(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="all">Todos</option>
-                {students.map(student => (
-                  <option key={student.id} value={student.enrollmentId || student.id}>{student.lastName} {student.firstName}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Estado</label>
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="all">Todos</option>
-                <option value="PRESENT">Presente</option>
-                <option value="ABSENT">Ausente</option>
-                <option value="LATE">Tarde</option>
-                <option value="EXCUSED">Excusa</option>
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Desde</label>
-              <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Hasta</label>
-              <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Asignatura</label>
-              <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="all">Todas</option>
-                {subjects.map(subject => (
-                  <option key={subject.id} value={subject.id}>{subject.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-end">
-              <button onClick={() => loadReportData(selectedReport!)} className="px-4 py-1.5 bg-amber-600 text-white rounded text-sm hover:bg-amber-700 w-full">Buscar</button>
-            </div>
-          </div>
-        </div>
-      )
+      if (!attendanceDetailData.length) return <EmptyState icon={<Users className="w-12 h-12" />} />
+      const sl = (s: string) => s === 'PRESENT' ? 'Presente' : s === 'ABSENT' ? 'Ausente' : s === 'LATE' ? 'Tarde' : 'Excusa'
+      const sc = (s: string) => ({ PRESENT: 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200', ABSENT: 'bg-red-100 text-red-700 ring-1 ring-red-200', LATE: 'bg-amber-100 text-amber-700 ring-1 ring-amber-200', EXCUSED: 'bg-blue-100 text-blue-700 ring-1 ring-blue-200' }[s] || 'bg-slate-100 text-slate-700')
+      return (<div className="overflow-x-auto"><table className="w-full"><thead className="bg-slate-50 border-b border-slate-200"><tr>
+        <th className={`${th} text-left w-12`}>#</th><th className={`${th} text-left`}>Fecha</th><th className={`${th} text-left`}>Estudiante</th><th className={`${th} text-left`}>Grupo</th><th className={`${th} text-left`}>Asignatura</th><th className={`${th} text-left`}>Docente</th><th className={`${th} text-center`}>Estado</th><th className={`${th} text-left`}>Obs.</th>
+      </tr></thead><tbody className="divide-y divide-slate-100">
+        {attendanceDetailData.map((r, i) => (<tr key={i} className={`${r.status === 'ABSENT' ? 'bg-red-50/40' : r.status === 'LATE' ? 'bg-amber-50/40' : ''} hover:bg-slate-50/80 transition-colors`}>
+          <td className={`${td} text-slate-400`}>{r.nro}</td><td className={td}>{r.date}</td><td className={`${td} font-medium text-slate-800`}>{r.student}</td><td className={td}>{r.group}</td><td className={td}>{r.subject}</td><td className={td}>{r.teacher}</td>
+          <td className={`${td} text-center`}><span className={`px-2.5 py-1 rounded-full text-xs font-medium ${sc(r.status)}`}>{sl(r.status)}</span></td>
+          <td className={`${td} text-slate-500 max-w-[200px] truncate`}>{r.observations}</td>
+        </tr>))}
+      </tbody></table>{tfoot(attendanceDetailData.length)}</div>)
     }
 
     if (selectedReport === 'att-subject') {
-      return (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Año</label>
-              <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="">Seleccionar...</option>
-                {academicYears.map(year => (
-                  <option key={year.id} value={year.id}>{year.year}{year.status === 'ACTIVE' ? ' - Activo' : ''}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Asignatura *</label>
-              <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} className="w-full px-2 py-1.5 border border-amber-400 rounded text-sm bg-amber-50">
-                <option value="all">Seleccionar asignatura...</option>
-                {subjects.map(subject => (
-                  <option key={subject.id} value={subject.id}>{subject.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Grupo</label>
-              <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="all">Todos los grupos</option>
-                {groups.map(group => (
-                  <option key={group.id} value={group.id}>{group.grade?.name} {group.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Estado</label>
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="all">Todos</option>
-                <option value="Normal">Normal (&ge;85%)</option>
-                <option value="Alerta">Alerta (70-84%)</option>
-                <option value="Riesgo">Riesgo (&lt;70%)</option>
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Desde</label>
-              <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Hasta</label>
-              <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Buscar estudiante</label>
-              <input type="text" value={searchStudent} onChange={(e) => setSearchStudent(e.target.value)} placeholder="Nombre..." className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
-            </div>
-            <div className="flex items-end">
-              <button onClick={() => {
-                if (filterSubject === 'all') {
-                  alert('Debe seleccionar una asignatura para este reporte')
-                  return
-                }
-                loadReportData(selectedReport!)
-              }} className="px-4 py-1.5 bg-amber-600 text-white rounded text-sm hover:bg-amber-700 w-full">Buscar</button>
-            </div>
-          </div>
-        </div>
-      )
-    }
-
-    if (selectedReport === 'att-consolidated') {
-      return (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Año</label>
-              <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="">Seleccionar...</option>
-                {academicYears.map(year => (
-                  <option key={year.id} value={year.id}>{year.year}{year.status === 'ACTIVE' ? ' - Activo' : ''}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Asignatura</label>
-              <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="all">Todas</option>
-                {subjects.map(subject => (
-                  <option key={subject.id} value={subject.id}>{subject.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Desde</label>
-              <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Hasta</label>
-              <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <button onClick={() => loadReportData(selectedReport!)} className="px-4 py-1.5 bg-amber-600 text-white rounded text-sm hover:bg-amber-700">Buscar</button>
-          </div>
-        </div>
-      )
+      const d = searchStudent ? attendanceBySubjectData.filter(r => r.name?.toLowerCase().includes(searchStudent.toLowerCase())) : attendanceBySubjectData
+      if (!d.length) return <EmptyState icon={<ClipboardList className="w-12 h-12" />} />
+      return <GroupTable data={d} />
     }
 
     if (selectedReport === 'att-teacher') {
-      return (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Año</label>
-              <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="">Seleccionar...</option>
-                {academicYears.map(year => (
-                  <option key={year.id} value={year.id}>{year.year}{year.status === 'ACTIVE' ? ' - Activo' : ''}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Docente</label>
-              <select value={filterTeacher} onChange={(e) => setFilterTeacher(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="all">Todos</option>
-                {teachers.map(teacher => (
-                  <option key={teacher.id} value={teacher.id}>{teacher.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Grupo</label>
-              <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="all">Todos</option>
-                {groups.map(group => (
-                  <option key={group.id} value={group.id}>{group.grade?.name} {group.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Asignatura</label>
-              <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="all">Todas</option>
-                {subjects.map(subject => (
-                  <option key={subject.id} value={subject.id}>{subject.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Desde</label>
-              <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Hasta</label>
-              <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
-            </div>
-            <div className="col-span-2 flex items-end justify-end">
-              <button onClick={() => loadReportData(selectedReport!)} className="px-4 py-1.5 bg-amber-600 text-white rounded text-sm hover:bg-amber-700">Buscar</button>
-            </div>
-          </div>
-        </div>
-      )
+      if (!teacherComplianceData.length) return <EmptyState icon={<UserCheck className="w-12 h-12" />} />
+      return (<div className="overflow-x-auto"><table className="w-full"><thead className="bg-slate-50 border-b border-slate-200"><tr>
+        <th className={`${th} text-left w-12`}>#</th><th className={`${th} text-left`}>Docente</th><th className={`${th} text-center`}>Programadas</th><th className={`${th} text-center`}>Registradas</th><th className={`${th} text-center`}>Sin registrar</th><th className={`${th} text-center`}>% Cumplimiento</th>
+      </tr></thead><tbody className="divide-y divide-slate-100">
+        {teacherComplianceData.map((r, i) => {
+          const bg = r.complianceRate < THRESHOLDS.ALERT_MIN ? 'bg-red-50/60' : r.complianceRate < THRESHOLDS.NORMAL_MIN ? 'bg-amber-50/50' : ''
+          return (<tr key={i} className={`${bg} hover:bg-slate-50/80 transition-colors`}>
+            <td className={`${td} text-slate-400`}>{r.nro}</td><td className={`${td} font-medium text-slate-800`}>{r.teacher}</td>
+            <td className={`${td} text-center`}>{r.classesScheduled}</td><td className={`${td} text-center text-emerald-600`}>{r.classesRegistered}</td>
+            <td className={`${td} text-center text-red-600 font-medium`}>{r.classesNotRegistered}</td>
+            <td className={`${td} text-center font-bold ${getPctColor(r.complianceRate)}`}>{r.complianceRate}%</td>
+          </tr>)
+        })}
+      </tbody></table>{tfoot(teacherComplianceData.length)}</div>)
     }
 
     if (selectedReport === 'att-critical') {
-      return (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Año</label>
-              <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="">Seleccionar...</option>
-                {academicYears.map(year => (
-                  <option key={year.id} value={year.id}>{year.year}{year.status === 'ACTIVE' ? ' - Activo' : ''}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Grupo</label>
-              <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="all">Todos</option>
-                {groups.map(group => (
-                  <option key={group.id} value={group.id}>{group.grade?.name} {group.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">% Mínimo</label>
-              <input type="number" value={filterMinPercent} onChange={(e) => setFilterMinPercent(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Estado</label>
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-                <option value="all">Todos</option>
-                <option value="Alerta">Alerta</option>
-                <option value="Riesgo">Riesgo</option>
-              </select>
-            </div>
-            <div className="flex items-end">
-              <button onClick={() => loadReportData(selectedReport!)} className="px-4 py-1.5 bg-amber-600 text-white rounded text-sm hover:bg-amber-700 w-full">Buscar</button>
-            </div>
-          </div>
-        </div>
-      )
-    }
-
-    // Filtros genéricos para otros reportes
-    return (
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Año</label>
-            <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-              <option value="">Seleccionar...</option>
-              {academicYears.map(year => (
-                <option key={year.id} value={year.id}>{year.year}{year.status === 'ACTIVE' ? ' - Activo' : ''}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Desde</label>
-            <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Hasta</label>
-            <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
-          </div>
-          <div className="flex items-end">
-            <button onClick={() => loadReportData(selectedReport!)} className="px-4 py-1.5 bg-amber-600 text-white rounded text-sm hover:bg-amber-700 w-full">Buscar</button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Renderizar tabla de resultados
-  const renderReportTable = () => {
-    if (loadingReport) {
-      return (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
-        </div>
-      )
-    }
-
-    if (selectedReport === 'att-group' && attendanceData.length > 0) {
-      const filteredData = searchStudent 
-        ? attendanceData.filter(d => d.name?.toLowerCase().includes(searchStudent.toLowerCase()))
-        : attendanceData
-      
-      return (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-100">
-              <tr>
-                <th className="px-3 py-2 text-left">Nro</th>
-                <th className="px-3 py-2 text-left">Estudiante</th>
-                <th className="px-3 py-2 text-left">Grupo</th>
-                <th className="px-3 py-2 text-center">Total</th>
-                <th className="px-3 py-2 text-center">Asist.</th>
-                <th className="px-3 py-2 text-center">Fallas</th>
-                <th className="px-3 py-2 text-center">Tardanzas</th>
-                <th className="px-3 py-2 text-center">Excusas</th>
-                <th className="px-3 py-2 text-center">%</th>
-                <th className="px-3 py-2 text-center">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.map((row, idx) => (
-                <tr key={idx} className="border-b hover:bg-slate-50">
-                  <td className="px-3 py-2">{row.nro}</td>
-                  <td className="px-3 py-2 font-medium">{row.name}</td>
-                  <td className="px-3 py-2">{row.group}</td>
-                  <td className="px-3 py-2 text-center">{row.totalClasses}</td>
-                  <td className="px-3 py-2 text-center text-green-600">{row.attended}</td>
-                  <td className="px-3 py-2 text-center text-red-600">{row.absent}</td>
-                  <td className="px-3 py-2 text-center text-amber-600">{row.late}</td>
-                  <td className="px-3 py-2 text-center text-blue-600">{row.excused}</td>
-                  <td className="px-3 py-2 text-center font-medium">{row.pct}%</td>
-                  <td className="px-3 py-2 text-center">
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      row.status === 'Normal' ? 'bg-green-100 text-green-700' :
-                      row.status === 'Alerta' ? 'bg-amber-100 text-amber-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>{row.status}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
-    }
-
-    if (selectedReport === 'att-student' && attendanceDetailData.length > 0) {
-      return (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-100">
-              <tr>
-                <th className="px-3 py-2 text-left">Nro</th>
-                <th className="px-3 py-2 text-left">Fecha</th>
-                <th className="px-3 py-2 text-left">Estudiante</th>
-                <th className="px-3 py-2 text-left">Grupo</th>
-                <th className="px-3 py-2 text-left">Asignatura</th>
-                <th className="px-3 py-2 text-left">Docente</th>
-                <th className="px-3 py-2 text-center">Estado</th>
-                <th className="px-3 py-2 text-left">Observación</th>
-              </tr>
-            </thead>
-            <tbody>
-              {attendanceDetailData.map((row, idx) => (
-                <tr key={idx} className="border-b hover:bg-slate-50">
-                  <td className="px-3 py-2">{row.nro}</td>
-                  <td className="px-3 py-2">{row.date}</td>
-                  <td className="px-3 py-2 font-medium">{row.student}</td>
-                  <td className="px-3 py-2">{row.group}</td>
-                  <td className="px-3 py-2">{row.subject}</td>
-                  <td className="px-3 py-2">{row.teacher}</td>
-                  <td className="px-3 py-2 text-center">
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      row.status === 'PRESENT' ? 'bg-green-100 text-green-700' :
-                      row.status === 'ABSENT' ? 'bg-red-100 text-red-700' :
-                      row.status === 'LATE' ? 'bg-amber-100 text-amber-700' :
-                      'bg-blue-100 text-blue-700'
-                    }`}>
-                      {row.status === 'PRESENT' ? 'Presente' : row.status === 'ABSENT' ? 'Ausente' : row.status === 'LATE' ? 'Tarde' : 'Excusa'}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-slate-500">{row.observations}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
-    }
-
-    if (selectedReport === 'att-subject' && attendanceBySubjectData.length > 0) {
-      const filteredData = searchStudent
-        ? attendanceBySubjectData.filter(d => d.name?.toLowerCase().includes(searchStudent.toLowerCase()))
-        : attendanceBySubjectData
-
-      return (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-100">
-              <tr>
-                <th className="px-3 py-2 text-left">Nro</th>
-                <th className="px-3 py-2 text-left">Estudiante</th>
-                <th className="px-3 py-2 text-left">Grupo</th>
-                <th className="px-3 py-2 text-center">Total</th>
-                <th className="px-3 py-2 text-center">Asist.</th>
-                <th className="px-3 py-2 text-center">Fallas</th>
-                <th className="px-3 py-2 text-center">Tardanzas</th>
-                <th className="px-3 py-2 text-center">Excusas</th>
-                <th className="px-3 py-2 text-center">%</th>
-                <th className="px-3 py-2 text-center">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.map((row, idx) => (
-                <tr key={idx} className="border-b hover:bg-slate-50">
-                  <td className="px-3 py-2">{idx + 1}</td>
-                  <td className="px-3 py-2 font-medium">{row.name}</td>
-                  <td className="px-3 py-2">{row.group}</td>
-                  <td className="px-3 py-2 text-center">{row.totalClasses}</td>
-                  <td className="px-3 py-2 text-center text-green-600">{row.attended}</td>
-                  <td className="px-3 py-2 text-center text-red-600">{row.absent}</td>
-                  <td className="px-3 py-2 text-center text-amber-600">{row.late || 0}</td>
-                  <td className="px-3 py-2 text-center text-blue-600">{row.excused || 0}</td>
-                  <td className="px-3 py-2 text-center font-medium">{row.pct}%</td>
-                  <td className="px-3 py-2 text-center">
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      row.status === 'Normal' ? 'bg-green-100 text-green-700' :
-                      row.status === 'Alerta' ? 'bg-amber-100 text-amber-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>{row.status}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
-    }
-
-    if (selectedReport === 'att-teacher' && teacherComplianceData.length > 0) {
-      return (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-100">
-              <tr>
-                <th className="px-3 py-2 text-left">Nro</th>
-                <th className="px-3 py-2 text-left">Docente</th>
-                <th className="px-3 py-2 text-center">Clases Programadas</th>
-                <th className="px-3 py-2 text-center">Clases Registradas</th>
-                <th className="px-3 py-2 text-center">Sin Registrar</th>
-                <th className="px-3 py-2 text-center">% Cumplimiento</th>
-              </tr>
-            </thead>
-            <tbody>
-              {teacherComplianceData.map((row, idx) => (
-                <tr key={idx} className="border-b hover:bg-slate-50">
-                  <td className="px-3 py-2">{row.nro}</td>
-                  <td className="px-3 py-2 font-medium">{row.teacher}</td>
-                  <td className="px-3 py-2 text-center">{row.classesScheduled}</td>
-                  <td className="px-3 py-2 text-center text-green-600">{row.classesRegistered}</td>
-                  <td className="px-3 py-2 text-center text-red-600">{row.classesNotRegistered}</td>
-                  <td className="px-3 py-2 text-center font-medium">{row.complianceRate}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
-    }
-
-    if (selectedReport === 'att-critical' && criticalAbsencesData.length > 0) {
-      return (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-100">
-              <tr>
-                <th className="px-3 py-2 text-left">Nro</th>
-                <th className="px-3 py-2 text-left">Estudiante</th>
-                <th className="px-3 py-2 text-left">Grupo</th>
-                <th className="px-3 py-2 text-center">Total Clases</th>
-                <th className="px-3 py-2 text-center">Fallas</th>
-                <th className="px-3 py-2 text-center">% Asist.</th>
-                <th className="px-3 py-2 text-center">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {criticalAbsencesData.map((row, idx) => (
-                <tr key={idx} className="border-b hover:bg-slate-50">
-                  <td className="px-3 py-2">{row.nro}</td>
-                  <td className="px-3 py-2 font-medium">{row.name}</td>
-                  <td className="px-3 py-2">{row.group}</td>
-                  <td className="px-3 py-2 text-center">{row.totalClasses}</td>
-                  <td className="px-3 py-2 text-center text-red-600">{row.absent}</td>
-                  <td className="px-3 py-2 text-center font-medium">{row.pct}%</td>
-                  <td className="px-3 py-2 text-center">
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      row.status === 'Alerta' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
-                    }`}>{row.status}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
+      if (!criticalAbsencesData.length) return <EmptyState icon={<AlertTriangle className="w-12 h-12" />} message="No se encontraron estudiantes bajo el umbral indicado" />
+      return <GroupTable data={criticalAbsencesData} showLate={false} />
     }
 
     if (selectedReport === 'att-consolidated') {
-      return (
-        <div className="space-y-6">
-          {consolidatedData.byGrade.length > 0 && (
-            <div>
-              <h4 className="font-medium text-slate-800 mb-2">Asistencia por Grado</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-100">
-                    <tr>
-                      <th className="px-3 py-2 text-left">Nro</th>
-                      <th className="px-3 py-2 text-left">Grado</th>
-                      <th className="px-3 py-2 text-center">Total Registros</th>
-                      <th className="px-3 py-2 text-center">Presentes</th>
-                      <th className="px-3 py-2 text-center">Ausentes</th>
-                      <th className="px-3 py-2 text-center">Tardanzas</th>
-                      <th className="px-3 py-2 text-center">Excusas</th>
-                      <th className="px-3 py-2 text-center">% Asist.</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {consolidatedData.byGrade.map((row, idx) => (
-                      <tr key={idx} className="border-b hover:bg-slate-50">
-                        <td className="px-3 py-2">{row.nro}</td>
-                        <td className="px-3 py-2 font-medium">{row.grade}</td>
-                        <td className="px-3 py-2 text-center">{row.totalClasses}</td>
-                        <td className="px-3 py-2 text-center text-green-600">{row.totalAttended}</td>
-                        <td className="px-3 py-2 text-center text-red-600">{row.totalAbsent}</td>
-                        <td className="px-3 py-2 text-center text-amber-600">{row.totalLate}</td>
-                        <td className="px-3 py-2 text-center text-blue-600">{row.totalExcused}</td>
-                        <td className="px-3 py-2 text-center font-medium">{row.pct}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-          
-          {consolidatedData.bySubject.length > 0 && (
-            <div>
-              <h4 className="font-medium text-slate-800 mb-2">Asistencia por Asignatura</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-100">
-                    <tr>
-                      <th className="px-3 py-2 text-left">Nro</th>
-                      <th className="px-3 py-2 text-left">Asignatura</th>
-                      <th className="px-3 py-2 text-center">Total Registros</th>
-                      <th className="px-3 py-2 text-center">Presentes</th>
-                      <th className="px-3 py-2 text-center">Ausentes</th>
-                      <th className="px-3 py-2 text-center">Tardanzas</th>
-                      <th className="px-3 py-2 text-center">Excusas</th>
-                      <th className="px-3 py-2 text-center">% Asist.</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {consolidatedData.bySubject.map((row, idx) => (
-                      <tr key={idx} className="border-b hover:bg-slate-50">
-                        <td className="px-3 py-2">{row.nro}</td>
-                        <td className="px-3 py-2 font-medium">{row.subject}</td>
-                        <td className="px-3 py-2 text-center">{row.totalClasses}</td>
-                        <td className="px-3 py-2 text-center text-green-600">{row.totalAttended}</td>
-                        <td className="px-3 py-2 text-center text-red-600">{row.totalAbsent}</td>
-                        <td className="px-3 py-2 text-center text-amber-600">{row.totalLate}</td>
-                        <td className="px-3 py-2 text-center text-blue-600">{row.totalExcused}</td>
-                        <td className="px-3 py-2 text-center font-medium">{row.pct}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
+      const hasG = consolidatedData.byGrade.length > 0, hasS = consolidatedData.bySubject.length > 0
+      if (!hasG && !hasS) return <EmptyState icon={<BarChart3 className="w-12 h-12" />} />
+      const ConsolidatedTable = ({ data, nameKey, nameLabel }: { data: any[]; nameKey: string; nameLabel: string }) => (
+        <table className="w-full"><thead className="bg-slate-50 border-b border-slate-200"><tr>
+          <th className={`${th} text-left w-12`}>#</th><th className={`${th} text-left`}>{nameLabel}</th><th className={`${th} text-center`}>Total</th><th className={`${th} text-center`}>Presentes</th><th className={`${th} text-center`}>Ausentes</th><th className={`${th} text-center`}>Tardanzas</th><th className={`${th} text-center`}>Excusas</th><th className={`${th} text-center`}>%</th>
+        </tr></thead><tbody className="divide-y divide-slate-100">
+          {data.map((r, i) => {
+            const status = r.pct >= THRESHOLDS.NORMAL_MIN ? '' : r.pct >= THRESHOLDS.ALERT_MIN ? 'bg-amber-50/50' : 'bg-red-50/60'
+            return (<tr key={i} className={`${status} hover:bg-slate-50/80 transition-colors`}>
+              <td className={`${td} text-slate-400`}>{r.nro}</td><td className={`${td} font-medium text-slate-800`}>{r[nameKey]}</td>
+              <td className={`${td} text-center font-medium`}>{r.totalClasses}</td><td className={`${td} text-center text-emerald-600`}>{r.totalAttended}</td>
+              <td className={`${td} text-center text-red-600`}>{r.totalAbsent}</td><td className={`${td} text-center text-amber-600`}>{r.totalLate}</td>
+              <td className={`${td} text-center text-blue-600`}>{r.totalExcused}</td><td className={`${td} text-center font-bold ${getPctColor(r.pct)}`}>{r.pct}%</td>
+            </tr>)
+          })}
+        </tbody></table>
       )
+      return (<div className="divide-y divide-slate-200">
+        {hasG && <div className="p-4"><h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3">Asistencia por Grado</h4><div className="overflow-x-auto"><ConsolidatedTable data={consolidatedData.byGrade} nameKey="grade" nameLabel="Grado" /></div></div>}
+        {hasS && <div className="p-4"><h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3">Asistencia por Asignatura</h4><div className="overflow-x-auto"><ConsolidatedTable data={consolidatedData.bySubject} nameKey="subject" nameLabel="Asignatura" /></div></div>}
+      </div>)
     }
 
-    return (
-      <div className="text-center py-12 text-slate-500">
-        <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p>Seleccione los filtros y haga clic en "Buscar" para generar el reporte</p>
-      </div>
-    )
+    return <EmptyState icon={<Calendar className="w-12 h-12" />} />
   }
 
-  // Vista de selección de reporte
+  // ═══════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════════════
   if (!showReport) {
     return (
-      <div className="p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <Link to="/reports" className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5 text-slate-600" />
-          </Link>
+      <div className="p-6 max-w-[1400px] mx-auto">
+        <div className="flex items-center gap-4 mb-8">
+          <Link to="/reports" className="p-2 hover:bg-slate-100 rounded-lg transition-colors"><ArrowLeft className="w-5 h-5 text-slate-600" /></Link>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-amber-600" />
-            </div>
+            <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center shadow-sm"><Calendar className="w-6 h-6 text-amber-600" /></div>
             <div>
               <h1 className="text-xl font-semibold text-slate-900">Reportes de Asistencia</h1>
-              <p className="text-sm text-slate-500">Control y seguimiento de asistencia</p>
+              <p className="text-sm text-slate-500">Panel de control y seguimiento institucional</p>
             </div>
           </div>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredReports.map((report) => (
-            <button
-              key={report.id}
-              onClick={() => handleSelectReport(report.id)}
-              className="p-4 bg-white rounded-xl border border-slate-200 hover:border-amber-300 hover:shadow-md transition-all text-left"
-            >
+          {filteredReports.map(report => (
+            <button key={report.id} onClick={() => handleSelectReport(report.id)}
+              className="p-5 bg-white rounded-xl border border-slate-200 hover:border-amber-300 hover:shadow-lg transition-all text-left group">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center group-hover:bg-amber-200 transition-colors">
                   <report.icon className="w-5 h-5 text-amber-600" />
                 </div>
                 <h3 className="font-medium text-slate-900">{report.name}</h3>
@@ -1081,39 +431,23 @@ export default function AttendanceReports() {
     )
   }
 
-  // Vista de reporte seleccionado
+  const kpiMap: Record<string, React.ReactNode> = {
+    'att-group': groupKPIs, 'att-student': studentKPIs, 'att-subject': subjectKPIs,
+    'att-teacher': teacherKPIs, 'att-critical': criticalKPIs, 'att-consolidated': consolidatedKPIs,
+  }
+
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <button onClick={handleBack} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-            <ChevronLeft className="w-5 h-5 text-slate-600" />
-          </button>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-              {currentReportData && <currentReportData.icon className="w-5 h-5 text-amber-600" />}
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">{currentReportData?.name}</h2>
-              <p className="text-sm text-slate-500">{currentReportData?.description}</p>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={exportToCSV} className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
-            <Download className="w-4 h-4" /> Exportar CSV
-          </button>
-          <button onClick={() => window.print()} className="flex items-center gap-2 px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 text-sm">
-            <Printer className="w-4 h-4" /> Imprimir
-          </button>
-        </div>
-      </div>
-
-      {renderFilters()}
-
-      <div className="mt-6 bg-white rounded-xl border border-slate-200 p-4">
-        {renderReportTable()}
-      </div>
-    </div>
+    <AttendanceReportLayout
+      title={currentReport?.name || ''}
+      subtitle={currentReport?.description || ''}
+      icon={currentReport ? <currentReport.icon className="w-5 h-5 text-amber-600" /> : null}
+      onBack={handleBack}
+      onExport={exportToCSV}
+      filters={renderFilters()}
+      kpis={selectedReport ? kpiMap[selectedReport] : null}
+      hasData={!loadingReport && (attendanceData.length > 0 || attendanceDetailData.length > 0 || attendanceBySubjectData.length > 0 || teacherComplianceData.length > 0 || criticalAbsencesData.length > 0 || consolidatedData.byGrade.length > 0)}
+    >
+      {renderTable()}
+    </AttendanceReportLayout>
   )
 }
