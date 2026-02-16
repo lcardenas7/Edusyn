@@ -74,6 +74,7 @@ export default function Recoveries() {
   const institutionId = authInstitution?.id
   const [activeTab, setActiveTab] = useState<TabType>('period')
   const [loading, setLoading] = useState(true)
+  const [loadingGroups, setLoadingGroups] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -218,6 +219,7 @@ export default function Recoveries() {
   useEffect(() => {
     const loadGroupsAndSubjects = async () => {
       if (!selectedYearId) return
+      setLoadingGroups(true)
       try {
         // teacherAssignmentsApi ya resuelve institutionId en backend para admin/coordinador
         const assignmentsRes = await teacherAssignmentsApi.getAll({ academicYearId: selectedYearId })
@@ -276,6 +278,8 @@ export default function Recoveries() {
         console.error('Error loading groups and subjects:', err)
         setGroups([])
         setSubjects([])
+      } finally {
+        setLoadingGroups(false)
       }
     }
     loadGroupsAndSubjects()
@@ -500,8 +504,8 @@ export default function Recoveries() {
     ...(isAdmin ? [{ id: 'config' as TabType, label: 'Configuración', icon: Settings }] : []),
   ]
 
-  // Si no hay grupos (todos son DIMENSIONS), mostrar mensaje
-  if (!loading && groups.length === 0) {
+  // Si no hay grupos (todos son DIMENSIONS), mostrar mensaje — solo después de que grupos hayan cargado
+  if (!loading && !loadingGroups && groups.length === 0) {
     return (
       <div className="max-w-2xl mx-auto mt-12">
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">

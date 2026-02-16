@@ -48,6 +48,7 @@ export default function PedagogicalSupport() {
   const [plans, setPlans] = useState<any[]>([])
   const [students, setStudents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingGroups, setLoadingGroups] = useState(true)
   const [loadingPlans, setLoadingPlans] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -114,6 +115,7 @@ export default function PedagogicalSupport() {
   // ── Load groups (only DIMENSIONS) ──
   useEffect(() => {
     if (!selectedYearId) return
+    setLoadingGroups(true)
     const load = async () => {
       try {
         // teacherAssignmentsApi ya resuelve institutionId en backend para admin/coordinador
@@ -147,6 +149,8 @@ export default function PedagogicalSupport() {
       } catch (err) {
         console.error('Error loading groups:', err)
         setGroups([])
+      } finally {
+        setLoadingGroups(false)
       }
     }
     load()
@@ -320,8 +324,8 @@ export default function PedagogicalSupport() {
     )
   }
 
-  // If no DIMENSIONS groups exist
-  if (groups.length === 0 && !loading) {
+  // If no DIMENSIONS groups exist (only show after groups have loaded)
+  if (groups.length === 0 && !loading && !loadingGroups) {
     return (
       <div className="max-w-2xl mx-auto mt-12">
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
