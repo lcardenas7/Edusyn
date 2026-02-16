@@ -84,7 +84,7 @@ export default function Expenses() {
             <ArrowLeft className="w-4 h-4 mr-1" />
             Volver a Finanzas
           </Link>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-y-2">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-red-100 rounded-xl">
                 <TrendingDown className="w-6 h-6 text-red-600" />
@@ -94,7 +94,7 @@ export default function Expenses() {
                 <p className="text-gray-500">Gastos y pagos a proveedores</p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <div className="px-4 py-2 bg-red-100 rounded-lg">
                 <p className="text-xs text-red-600">Egresos del Mes</p>
                 <p className="text-lg font-bold text-red-700">{formatCurrency(monthTotal)}</p>
@@ -213,7 +213,7 @@ export default function Expenses() {
 
       {/* New Expense Modal - Placeholder */}
       {showNewExpenseModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Registrar Egreso</h2>
             <div className="space-y-4">
@@ -237,7 +237,7 @@ export default function Expenses() {
                   placeholder="Descripción del gasto"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Monto</label>
                   <input

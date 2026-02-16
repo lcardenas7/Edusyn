@@ -110,7 +110,7 @@ export default function FinanceSettings() {
           <Link to="/finance" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4">
             <ArrowLeft className="w-4 h-4 mr-1" /> Volver a Finanzas
           </Link>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-y-2">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-gray-200 rounded-xl">
                 <SettingsIcon className="w-6 h-6 text-gray-600" />
@@ -222,7 +222,7 @@ export default function FinanceSettings() {
                       <span className="text-sm font-medium text-gray-700">Cuenta {idx + 1}</span>
                       <button onClick={() => removeBankAccount(idx)} className="p-1 text-gray-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <input type="text" value={account.bankName} onChange={e => updateBankAccount(idx, 'bankName', e.target.value)}
                         className="px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Banco" />
                       <input type="text" value={account.accountNumber} onChange={e => updateBankAccount(idx, 'accountNumber', e.target.value)}

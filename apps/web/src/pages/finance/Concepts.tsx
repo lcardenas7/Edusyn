@@ -74,7 +74,7 @@ export default function Concepts() {
             <ArrowLeft className="w-4 h-4 mr-1" />
             Volver a Finanzas
           </Link>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-y-2">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-indigo-100 rounded-xl">
                 <FileText className="w-6 h-6 text-indigo-600" />
@@ -133,6 +133,7 @@ export default function Concepts() {
               </Link>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
@@ -208,6 +209,7 @@ export default function Concepts() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>

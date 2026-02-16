@@ -107,7 +107,7 @@ export default function Invoices() {
           <Link to="/finance" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4">
             <ArrowLeft className="w-4 h-4 mr-1" /> Volver a Finanzas
           </Link>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-y-2">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-orange-100 rounded-xl">
                 <Receipt className="w-6 h-6 text-orange-600" />

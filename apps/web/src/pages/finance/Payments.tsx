@@ -93,7 +93,7 @@ export default function Payments() {
             <ArrowLeft className="w-4 h-4 mr-1" />
             Volver a Finanzas
           </Link>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-y-2">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-emerald-100 rounded-xl">
                 <Wallet className="w-6 h-6 text-emerald-600" />
@@ -103,7 +103,7 @@ export default function Payments() {
                 <p className="text-gray-500">Registro de pagos y recibos</p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <div className="px-4 py-2 bg-green-100 rounded-lg">
                 <p className="text-xs text-green-600">Recaudo Hoy</p>
                 <p className="text-lg font-bold text-green-700">{formatCurrency(todayTotal)}</p>
@@ -235,7 +235,7 @@ export default function Payments() {
 
       {/* New Payment Modal - Placeholder */}
       {showNewPaymentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Registrar Pago</h2>
             <div className="space-y-4">

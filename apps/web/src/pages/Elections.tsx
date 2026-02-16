@@ -392,7 +392,7 @@ export default function Elections() {
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center flex-wrap gap-y-2 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <Vote className="w-7 h-7 text-purple-600" />
@@ -402,7 +402,7 @@ export default function Elections() {
             Gestiona los procesos electorales de tu institución
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <a
             href="/resultados-elecciones"
             target="_blank"
@@ -486,7 +486,7 @@ export default function Elections() {
                     <p className="text-gray-500 mt-1">{selectedProcess.description}</p>
                   )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {selectedProcess.status === 'DRAFT' && (
                     <button
                       onClick={() => handleUpdateStatus(selectedProcess.id, 'REGISTRATION')}
@@ -554,7 +554,7 @@ export default function Elections() {
 
               {/* Estadísticas */}
               {stats && selectedProcess.status === 'VOTING' && (
-                <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                   <div className="bg-blue-50 rounded-lg p-4 text-center">
                     <p className="text-2xl font-bold text-blue-600">{stats.totalStudents}</p>
                     <p className="text-sm text-blue-700">Estudiantes</p>
@@ -571,7 +571,7 @@ export default function Elections() {
               )}
 
               {/* Fechas */}
-              <div className="grid grid-cols-3 gap-4 mb-6 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 text-sm">
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-gray-500 text-xs">Inscripción</p>
                   <p className="font-medium">{new Date(selectedProcess.registrationStart).toLocaleDateString()}</p>
@@ -681,7 +681,7 @@ export default function Elections() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Inicio Inscripción</label>
                   <input
@@ -740,7 +740,7 @@ export default function Elections() {
 
               <div className="border-t border-gray-200 pt-4">
                 <p className="text-sm font-medium text-gray-700 mb-3">Cargos a elegir</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -1013,7 +1013,7 @@ export default function Elections() {
               )}
 
               {/* Campos del candidato */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Número en Tarjetón

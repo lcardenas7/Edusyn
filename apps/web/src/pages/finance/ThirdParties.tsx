@@ -94,7 +94,7 @@ export default function ThirdParties() {
             <ArrowLeft className="w-4 h-4 mr-1" />
             Volver a Finanzas
           </Link>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-y-2">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-purple-100 rounded-xl">
                 <Users className="w-6 h-6 text-purple-600" />
@@ -104,7 +104,7 @@ export default function ThirdParties() {
                 <p className="text-gray-500">Gestión de clientes y proveedores</p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={syncFromAcademic}
                 disabled={syncing}
@@ -172,6 +172,7 @@ export default function ThirdParties() {
               </button>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
@@ -219,6 +220,7 @@ export default function ThirdParties() {
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>

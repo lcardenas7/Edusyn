@@ -138,6 +138,7 @@ export default function FinanceReports() {
             {/* Debtors Report */}
             {activeTab === 'debtors' && Array.isArray(data) && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
@@ -158,6 +159,7 @@ export default function FinanceReports() {
                     ))}
                   </tbody>
                 </table>
+                </div>
                 {data.length === 0 && <p className="p-8 text-center text-gray-500">No hay morosos</p>}
               </div>
             )}
@@ -165,6 +167,7 @@ export default function FinanceReports() {
             {/* Monthly Balance */}
             {activeTab === 'monthly' && Array.isArray(data) && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
@@ -209,12 +212,14 @@ export default function FinanceReports() {
                     </tr>
                   </tfoot>
                 </table>
+                </div>
               </div>
             )}
 
             {/* Profitability Report */}
             {activeTab === 'profitability' && Array.isArray(data) && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
@@ -245,6 +250,7 @@ export default function FinanceReports() {
                     ))}
                   </tbody>
                 </table>
+                </div>
                 {data.length === 0 && <p className="p-8 text-center text-gray-500">Sin datos de rentabilidad</p>}
               </div>
             )}

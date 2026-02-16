@@ -94,7 +94,7 @@ export default function Obligations() {
             <ArrowLeft className="w-4 h-4 mr-1" />
             Volver a Finanzas
           </Link>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-y-2">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-green-100 rounded-xl">
                 <DollarSign className="w-6 h-6 text-green-600" />
@@ -104,7 +104,7 @@ export default function Obligations() {
                 <p className="text-gray-500">Gestión de cobros y cartera</p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setShowMassiveModal(true)}
                 className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 flex items-center gap-2"
@@ -281,7 +281,7 @@ export default function Obligations() {
 
       {/* Massive Assignment Modal - Placeholder */}
       {showMassiveModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Asignación Masiva</h2>
             <p className="text-gray-500 mb-4">
