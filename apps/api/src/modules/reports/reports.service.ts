@@ -9,6 +9,8 @@ import { StudentsService } from '../academic/students.service';
 import { AcademicYearLifecycleService } from '../academic/academic-year-lifecycle.service';
 import { InstitutionContextService } from '../institution-context/institution-context.service';
 import { getPerformanceLevel, isFailing } from '../../engines/academic-rules.engine';
+import { getReportCardMode, getDisplayConfig } from '../../engines/report-card.engine';
+import type { AcademicStructureType } from '../../engines/AcademicStructure';
 
 @Injectable()
 export class ReportsService {
@@ -146,6 +148,8 @@ export class ReportsService {
       institution: groupData.institution,
       academicYear: groupData.academicYear,
       term: groupData.term,
+      academicStructure: groupData.academicStructure,
+      displayConfig: groupData.displayConfig,
       student: card.student,
       group: card.group,
       areaGrades: card.areaGrades,
@@ -1355,6 +1359,8 @@ export class ReportsService {
     institution: { id: string; name: string; nit: string | null };
     academicYear: { id: string; year: number; name: string | null };
     term: { id: string; name: string; type: string };
+    academicStructure: AcademicStructureType;
+    displayConfig: ReturnType<typeof getDisplayConfig>;
     cards: Array<{
       enrollmentId: string;
       student: { id: string; firstName: string; lastName: string; documentType: string; documentNumber: string };
@@ -1421,6 +1427,10 @@ export class ReportsService {
     const institutionId = firstEnrollment.academicYear.institutionId;
     const academicYearId = firstEnrollment.academicYearId;
     const enrollmentIds = enrollments.map(e => e.id);
+
+    // ─── Resolver estructura académica del grado → displayConfig ────────
+    const gradeStructure = (firstEnrollment.group.grade as any)?.academicStructure as AcademicStructureType || 'AREAS_SUBJECTS';
+    const displayConfig = getDisplayConfig(gradeStructure);
 
     // ─── QUERY 3: Snapshot de estructura académica (EnrollmentArea + EnrollmentSubject) ──
     const enrollmentAreas = await this.prisma.enrollmentArea.findMany({
@@ -1835,6 +1845,8 @@ export class ReportsService {
         name: term.name,
         type: term.type,
       },
+      academicStructure: gradeStructure,
+      displayConfig,
       cards,
       generatedAt: new Date(),
     };

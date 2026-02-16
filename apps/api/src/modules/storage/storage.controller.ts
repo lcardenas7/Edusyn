@@ -6,17 +6,22 @@ import {
   Body,
   BadRequestException,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SupabaseStorageService } from './supabase-storage.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Controller('storage')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class StorageController {
-  constructor(private readonly storageService: SupabaseStorageService) {}
+  constructor(
+    private readonly storageService: SupabaseStorageService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Post('upload/gallery')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
@@ -69,6 +74,74 @@ export class StorageController {
     return {
       success: true,
       data: result,
+    };
+  }
+
+  @Post('upload/signature')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadSignatureImage(
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req,
+    @Body('role') role: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No se proporcionó ningún archivo');
+    }
+    if (!role) {
+      throw new BadRequestException('Se requiere el campo "role"');
+    }
+
+    const institutionId = req.user.institutionId;
+    if (!institutionId) {
+      throw new BadRequestException('No se pudo determinar la institución del usuario');
+    }
+
+    const result = await this.storageService.uploadSignatureImage(
+      institutionId,
+      role,
+      file,
+    );
+
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  @Post('upload/my-signature')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadMySignature(
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No se proporcionó ningún archivo');
+    }
+
+    const institutionId = req.user.institutionId;
+    if (!institutionId) {
+      throw new BadRequestException('No se pudo determinar la institución del usuario');
+    }
+
+    const result = await this.storageService.uploadSignatureImage(
+      institutionId,
+      `user_${req.user.id}`,
+      file,
+    );
+
+    const url = result?.url || result?.path || '';
+
+    // Guardar URL en el perfil del usuario
+    await this.prisma.user.update({
+      where: { id: req.user.id },
+      data: { signatureImageUrl: url },
+    });
+
+    return {
+      success: true,
+      data: { ...result, savedToProfile: true },
     };
   }
 }

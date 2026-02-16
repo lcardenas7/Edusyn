@@ -369,13 +369,24 @@ export default function AcademicTemplates() {
     }
   }
 
-  const removeTemplateSubject = async (templateSubjectId: string) => {
+  const removeTemplateSubject = async (templateSubjectId: string, force = false) => {
     setSaving(true)
     try {
-      await academicTemplatesApi.removeSubject(templateSubjectId)
+      await academicTemplatesApi.removeSubject(templateSubjectId, force)
       await loadData()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al eliminar asignatura')
+      const errData = error.response?.data
+      if (errData?.code === 'SUBJECT_HAS_DATA') {
+        const confirmed = window.confirm(
+          `${errData.message}\n\nNota: Esto solo elimina la asignatura de la plantilla, NO borra las notas existentes.\n\n¿Continuar?`
+        )
+        if (confirmed) {
+          await removeTemplateSubject(templateSubjectId, true)
+          return
+        }
+      } else {
+        alert(errData?.message || 'Error al eliminar asignatura')
+      }
     } finally {
       setSaving(false)
     }

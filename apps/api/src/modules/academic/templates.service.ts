@@ -323,7 +323,57 @@ export class TemplatesService {
     });
   }
 
-  async removeSubjectFromTemplateArea(templateSubjectId: string) {
+  async removeSubjectFromTemplateArea(templateSubjectId: string, force = false) {
+    // Obtener la asignatura con su contexto
+    const templateSubject = await this.prisma.templateSubject.findUnique({
+      where: { id: templateSubjectId },
+      include: {
+        subject: true,
+        templateArea: {
+          include: {
+            template: { select: { institutionId: true, academicYearId: true } },
+          },
+        },
+      },
+    });
+
+    if (!templateSubject) {
+      throw new NotFoundException('Configuración de asignatura no encontrada');
+    }
+
+    const { institutionId, academicYearId } = templateSubject.templateArea.template;
+    const subjectId = templateSubject.subjectId;
+
+    // Verificar datos asociados
+    const [teacherAssignments, partialGrades, finalGrades] = await Promise.all([
+      this.prisma.teacherAssignment.count({
+        where: { subjectId, academicYearId, institutionId },
+      }),
+      this.prisma.partialGrade.count({
+        where: {
+          teacherAssignment: { subjectId, academicYearId, institutionId },
+        },
+      }),
+      this.prisma.periodFinalGrade.count({
+        where: { subjectId, institutionId },
+      }),
+    ]);
+
+    const hasData = teacherAssignments > 0 || partialGrades > 0 || finalGrades > 0;
+
+    if (hasData && !force) {
+      const warnings: string[] = [];
+      if (teacherAssignments > 0) warnings.push(`${teacherAssignments} asignación(es) de docente`);
+      if (partialGrades > 0) warnings.push(`${partialGrades} nota(s) parcial(es)`);
+      if (finalGrades > 0) warnings.push(`${finalGrades} nota(s) final(es) de período`);
+
+      throw new BadRequestException({
+        message: `La asignatura "${templateSubject.subject.name}" tiene datos asociados: ${warnings.join(', ')}. ¿Desea eliminarla de todas formas?`,
+        code: 'SUBJECT_HAS_DATA',
+        details: { teacherAssignments, partialGrades, finalGrades },
+      });
+    }
+
     return this.prisma.templateSubject.delete({ where: { id: templateSubjectId } });
   }
 

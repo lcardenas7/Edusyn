@@ -42,6 +42,7 @@ export class SupabaseStorageService {
     documentos: 'documentos',
     galeria: 'galeria',
     mensajes: 'mensajes',
+    firmas: 'firmas',
   };
 
   // Tiempos de expiración para URLs firmadas (en segundos)
@@ -436,6 +437,44 @@ export class SupabaseStorageService {
       fileSize: buffer.length,
       mimeType: contentType,
     };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FIRMAS (imágenes de firma para boletines)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Sube una imagen de firma (rector, coordinador, docente/tutor)
+   * Ruta: firmas/institucion/{institutionId}/{role}_{timestamp}.{ext}
+   * Max 200KB, solo PNG/JPG
+   */
+  async uploadSignatureImage(
+    institutionId: string,
+    role: string,
+    file: Express.Multer.File,
+  ): Promise<UploadResult> {
+    if (!this.isConfigured()) {
+      throw new BadRequestException('Storage no configurado');
+    }
+
+    this.validateFile(file, ['image/jpeg', 'image/png'], 0.2); // Max 200KB
+
+    const ext = this.getFileExtension(file.originalname);
+    const safeRole = this.slugify(role);
+    const fileName = `${safeRole}_${Date.now()}.${ext}`;
+    const path = `institucion/${institutionId}/${fileName}`;
+
+    return this.uploadFile(this.buckets.firmas, path, file);
+  }
+
+  /**
+   * Obtiene URL firmada para una imagen de firma
+   */
+  async getSignatureUrl(key: string): Promise<string> {
+    if (!this.isConfigured()) {
+      throw new BadRequestException('Storage no configurado');
+    }
+    return this.storage.getUrl(key, 600); // 10 min
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

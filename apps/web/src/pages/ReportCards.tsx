@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { reportsApi, groupsApi, academicYearsApi, academicTermsApi, capabilitiesApi, institutionConfigApi } from '../lib/api'
+import { reportsApi, groupsApi, academicYearsApi, academicTermsApi, capabilitiesApi, institutionConfigApi, storageApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
 interface StudentRow {
@@ -161,6 +161,8 @@ export default function ReportCards() {
   const [showBulkDownloadModal, setShowBulkDownloadModal] = useState(false)
   const [isGeneratingBulk, setIsGeneratingBulk] = useState(false)
 
+  const [uploadingSignature, setUploadingSignature] = useState<string | null>(null)
+
   // Reglas institucionales
   const [rulesCtx, setRulesCtx] = useState<{ minGradeValue: number; maxGradeValue: number; minPassingGrade: number; performanceLevels: any[] }>(
     { minGradeValue: 1, maxGradeValue: 5, minPassingGrade: 3.0, performanceLevels: [] }
@@ -288,6 +290,23 @@ export default function ReportCards() {
     if (avg >= rulesCtx.minPassingGrade && failedSubjects === 0) return 'Buen trabajo. Te animamos a seguir mejorando en todas las areas.'
     if (avg >= rulesCtx.minPassingGrade) return 'Debes reforzar las areas con dificultades. Con dedicacion puedes superar los retos pendientes.'
     return 'Es necesario un mayor compromiso academico. Busca apoyo de tus docentes y dedica mas tiempo al estudio.'
+  }
+
+  const handleSignatureUpload = async (idx: number, file: File) => {
+    const sig = configDraft.signatureConfig[idx]
+    if (!sig) return
+    setUploadingSignature(sig.role)
+    try {
+      const res = await storageApi.uploadSignature(file, sig.role)
+      const url = res.data?.data?.url || res.data?.data?.path || ''
+      const updated = [...configDraft.signatureConfig]
+      updated[idx] = { ...updated[idx], signatureImageUrl: url }
+      setConfigDraft({ ...configDraft, signatureConfig: updated })
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Error al subir la firma. Verifique que sea PNG/JPG y menor a 200KB.')
+    } finally {
+      setUploadingSignature(null)
+    }
   }
 
   const handlePreview = async (student: StudentRow) => {
@@ -515,7 +534,21 @@ export default function ReportCards() {
             <div className="flex-1 overflow-y-auto p-6 bg-slate-100">
               {loadingPreview ? (
                 <div className="flex items-center justify-center py-20"><Loader2 className="w-10 h-10 text-blue-600 animate-spin" /></div>
-              ) : previewData ? (
+              ) : previewData ? (() => {
+                // Merge: backend displayConfig (capabilities por estructura) + user config (preferencias)
+                const dc = previewData.displayConfig || {}
+                const isQualitative = dc.mode === 'QUALITATIVE'
+                const isFlat = dc.mode === 'QUANTITATIVE_FLAT'
+                const showNumeric = (dc.showNumericGrades !== false) && config.showNumericGrade
+                const showPerf = config.showPerformanceLevel
+                const showAchiev = config.showAchievements
+                const showAreaAvg = (dc.showAreaAverages !== false) && config.showAreaAverages
+                const showGenAvg = (dc.showAverages !== false) && config.showGeneralAverage
+                const showRank = (dc.showRanking !== false) && config.showRanking
+                const showAttend = config.showAttendance
+                const showAreaRows = dc.showAreaAverages !== false // false for SUBJECTS_ONLY
+
+                return (
                 <div className="bg-white border-2 border-slate-400 rounded-lg p-8 max-w-4xl mx-auto shadow-lg">
                   {/* Encabezado Institucional */}
                   <div className="text-center border-b-2 border-slate-300 pb-4 mb-4">
@@ -548,7 +581,7 @@ export default function ReportCards() {
                     </div>
                     <div>
                       <p><span className="font-semibold">Grado:</span> {previewData.group?.gradeLevel} - {previewData.group?.name}</p>
-                      {config.showRanking && previewData.rank && (
+                      {showRank && previewData.rank && (
                         <p><span className="font-semibold">Puesto:</span> {previewData.rank} de {previewData.totalStudents}</p>
                       )}
                     </div>
@@ -559,21 +592,22 @@ export default function ReportCards() {
                     <table className="w-full text-xs">
                       <thead className="bg-blue-800 text-white">
                         <tr>
-                          <th className="px-2 py-2 text-left font-medium w-28">Area / Asignatura</th>
-                          {config.showAchievements && <th className="px-2 py-2 text-left font-medium">Logro</th>}
-                          {config.showNumericGrade && <th className="px-1 py-2 text-center font-medium w-10">Nota</th>}
-                          {config.showPerformanceLevel && <th className="px-1 py-2 text-center font-medium w-16">Desempeno</th>}
-                          {config.showAttendance && <th className="px-1 py-2 text-center font-medium w-10">Fallas</th>}
+                          <th className="px-2 py-2 text-left font-medium w-28">{isQualitative ? 'Dimension' : isFlat ? 'Asignatura' : 'Area / Asignatura'}</th>
+                          {showAchiev && <th className="px-2 py-2 text-left font-medium">{isQualitative ? 'Observacion' : 'Logro'}</th>}
+                          {showNumeric && <th className="px-1 py-2 text-center font-medium w-10">Nota</th>}
+                          {showPerf && <th className="px-1 py-2 text-center font-medium w-16">Desempeno</th>}
+                          {showAttend && <th className="px-1 py-2 text-center font-medium w-10">Fallas</th>}
                         </tr>
                       </thead>
                       <tbody>
                         {(previewData.areaGrades || []).map((area: any) => (
                           <React.Fragment key={area.area}>
+                            {showAreaRows && (
                             <tr className="bg-slate-200">
                               <td colSpan={5} className="px-2 py-1.5">
                                 <div className="flex items-center justify-between">
                                   <span className="font-bold text-slate-800 uppercase text-[11px]">{area.area}</span>
-                                  {config.showAreaAverages && area.areaAverage !== null && (
+                                  {showAreaAvg && area.areaAverage !== null && (
                                     <span className="text-[10px] text-slate-600">
                                       Promedio: <span className={`font-bold ${area.areaAverage >= rulesCtx.minPassingGrade ? 'text-green-700' : 'text-red-600'}`}>{area.areaAverage?.toFixed(1)}</span>
                                     </span>
@@ -581,15 +615,30 @@ export default function ReportCards() {
                                 </div>
                               </td>
                             </tr>
+                            )}
                             {(area.subjects || []).map((sg: any, idx: number) => (
                               <tr key={`${area.area}-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
                                 <td className="px-2 py-1.5 pl-4 font-medium text-slate-900 border-l-2 border-blue-300">{sg.subject}</td>
-                                {config.showAchievements && (
+                                {showAchiev && (
                                   <td className="px-2 py-1.5 text-slate-700">
-                                    {config.evaluationType === 'QUALITATIVE' && sg.performanceLevel ? (
-                                      <p className="leading-tight font-medium">{sg.performanceLevel}</p>
+                                    {isQualitative ? (
+                                      <>
+                                        {sg.qualitativeObservation ? (
+                                          <p className="leading-tight">{sg.qualitativeObservation}</p>
+                                        ) : sg.achievement ? (
+                                          <p className="leading-tight">{sg.achievement}</p>
+                                        ) : (
+                                          <p className="leading-tight text-slate-400">-</p>
+                                        )}
+                                      </>
                                     ) : (
-                                      <p className="leading-tight">{sg.achievement || '-'}</p>
+                                      <>
+                                        {sg.achievement ? (
+                                          <p className="leading-tight">{sg.achievement}</p>
+                                        ) : (
+                                          <p className="leading-tight text-slate-400">-</p>
+                                        )}
+                                      </>
                                     )}
                                     {sg.achievementObservation && (
                                       <p className="text-slate-500 mt-0.5 text-[10px]">{sg.achievementObservation}</p>
@@ -602,12 +651,12 @@ export default function ReportCards() {
                                     )}
                                   </td>
                                 )}
-                                {config.showNumericGrade && (
+                                {showNumeric && (
                                   <td className={`px-1 py-1.5 text-center font-bold text-sm ${sg.grade !== null && sg.grade < rulesCtx.minPassingGrade ? 'text-red-600' : 'text-green-700'}`}>
                                     {sg.grade !== null ? sg.grade.toFixed(1) : '-'}
                                   </td>
                                 )}
-                                {config.showPerformanceLevel && (
+                                {showPerf && (
                                   <td className="px-1 py-1.5 text-center">
                                     {sg.performanceLevel ? (
                                       <span className={`px-1 py-0.5 rounded text-[10px] font-medium ${performanceConfig[sg.performanceLevel as keyof typeof performanceConfig]?.bgColor || 'bg-slate-100'} ${performanceConfig[sg.performanceLevel as keyof typeof performanceConfig]?.color || 'text-slate-600'}`}>
@@ -616,25 +665,25 @@ export default function ReportCards() {
                                     ) : '-'}
                                   </td>
                                 )}
-                                {config.showAttendance && <td className="px-1 py-1.5 text-center">-</td>}
+                                {showAttend && <td className="px-1 py-1.5 text-center">-</td>}
                               </tr>
                             ))}
                           </React.Fragment>
                         ))}
                       </tbody>
-                      {config.showGeneralAverage && (
+                      {showGenAvg && (
                         <tfoot className="bg-blue-100">
                           <tr>
-                            <td className="px-2 py-2 font-bold" colSpan={config.showAchievements ? 2 : 1}>PROMEDIO GENERAL</td>
-                            {config.showNumericGrade && (
+                            <td className="px-2 py-2 font-bold" colSpan={showAchiev ? 2 : 1}>PROMEDIO GENERAL</td>
+                            {showNumeric && (
                               <td className="px-1 py-2 text-center font-bold text-lg text-blue-800">
                                 {previewData.subjectGrades?.filter((s: any) => s.grade !== null).length > 0
                                   ? (previewData.subjectGrades.filter((s: any) => s.grade !== null).reduce((sum: number, s: any) => sum + s.grade, 0) / previewData.subjectGrades.filter((s: any) => s.grade !== null).length).toFixed(1)
                                   : '-'}
                               </td>
                             )}
-                            {config.showPerformanceLevel && <td className="px-1 py-2 text-center">-</td>}
-                            {config.showAttendance && <td className="px-1 py-2 text-center">-</td>}
+                            {showPerf && <td className="px-1 py-2 text-center">-</td>}
+                            {showAttend && <td className="px-1 py-2 text-center">-</td>}
                           </tr>
                         </tfoot>
                       )}
@@ -705,7 +754,8 @@ export default function ReportCards() {
                     <p>{previewData.institution?.name || institution?.name || ''}</p>
                   </div>
                 </div>
-              ) : (
+                )
+              })() : (
                 <div className="text-center py-20 text-slate-500">No se pudieron cargar los datos del boletin</div>
               )}
             </div>
@@ -754,21 +804,15 @@ export default function ReportCards() {
                 </div>
               </div>
 
-              {/* Tipo de evaluacion */}
-              <div>
-                <h4 className="font-medium text-slate-900 mb-3">Tipo de Evaluacion</h4>
-                <div className="flex gap-4">
-                  {[
-                    { value: 'NUMERIC', label: 'Numerica (1.0 - 5.0)' },
-                    { value: 'QUALITATIVE', label: 'Cualitativa (descriptores)' },
-                    { value: 'MIXED', label: 'Mixta (ambos)' },
-                  ].map(opt => (
-                    <label key={opt.value} className="flex items-center gap-2 text-sm">
-                      <input type="radio" name="evalType" checked={configDraft.evaluationType === opt.value} onChange={() => setConfigDraft({...configDraft, evaluationType: opt.value})} className="w-4 h-4" />
-                      {opt.label}
-                    </label>
-                  ))}
-                </div>
+              {/* Tipo de evaluacion — auto-detectado */}
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="font-medium text-blue-900 mb-1">Tipo de Evaluacion</h4>
+                <p className="text-sm text-blue-700">
+                  El tipo de boletin se determina automaticamente segun la <strong>estructura academica</strong> configurada en cada grado (Dimensiones, Asignaturas, o Areas con Asignaturas).
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Configura la estructura en <strong>Gestion Institucional → Catalogo Academico → Grados</strong>.
+                </p>
               </div>
 
               {/* Contenido */}
@@ -865,16 +909,29 @@ export default function ReportCards() {
                           </div>
                         </div>
                         <div>
-                          <label className="block text-xs text-slate-500 mb-0.5">URL de imagen de firma (opcional)</label>
-                          <input type="text" value={sig.signatureImageUrl || ''} onChange={(e) => {
-                            const updated = [...configDraft.signatureConfig]
-                            updated[idx] = { ...updated[idx], signatureImageUrl: e.target.value }
-                            setConfigDraft({...configDraft, signatureConfig: updated})
-                          }} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" placeholder="https://... o ruta del archivo de firma" />
+                          <label className="block text-xs text-slate-500 mb-0.5">Imagen de firma (PNG/JPG, max 200KB)</label>
+                          <div className="flex items-center gap-2">
+                            <label className={`cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 rounded text-sm hover:bg-slate-50 transition-colors ${uploadingSignature === sig.role ? 'opacity-50 pointer-events-none' : ''}`}>
+                              {uploadingSignature === sig.role ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                              {sig.signatureImageUrl ? 'Cambiar firma' : 'Subir firma'}
+                              <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => {
+                                const file = e.target.files?.[0]
+                                if (file) handleSignatureUpload(idx, file)
+                                e.target.value = ''
+                              }} />
+                            </label>
+                            {sig.signatureImageUrl && (
+                              <button onClick={() => {
+                                const updated = [...configDraft.signatureConfig]
+                                updated[idx] = { ...updated[idx], signatureImageUrl: '' }
+                                setConfigDraft({...configDraft, signatureConfig: updated})
+                              }} className="text-xs text-red-500 hover:underline">Eliminar</button>
+                            )}
+                          </div>
                           {sig.signatureImageUrl && (
-                            <div className="mt-1 flex items-center gap-2">
-                              <img src={sig.signatureImageUrl} alt="Firma" className="h-8 object-contain border rounded" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                              <span className="text-xs text-green-600">Vista previa</span>
+                            <div className="mt-1.5 flex items-center gap-2 p-1.5 bg-slate-50 rounded border">
+                              <img src={sig.signatureImageUrl} alt="Firma" className="h-10 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                              <span className="text-xs text-green-600">Firma cargada</span>
                             </div>
                           )}
                         </div>

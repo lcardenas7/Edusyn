@@ -118,12 +118,22 @@ export default function Levels() {
         ...(newType.startsWith('NUMERIC') ? {
           ...getNumericConfig(newType),
           qualitativeLevels: undefined,
+        } : newType === 'QUALITATIVE_DESC' ? {
+          qualitativeLevels: [
+            { id: 'qd1', code: 'L', name: 'Logrado', description: 'Demuestra dominio completo de los indicadores de logro propuestos para su nivel de desarrollo', color: '#22c55e', order: 0, isApproved: true },
+            { id: 'qd2', code: 'EP', name: 'En Proceso', description: 'Avanza satisfactoriamente en el desarrollo de los indicadores, requiere seguir practicando', color: '#f59e0b', order: 1, isApproved: true },
+            { id: 'qd3', code: 'I', name: 'Iniciando', description: 'Necesita mayor acompañamiento y práctica para alcanzar los indicadores de logro', color: '#ef4444', order: 2, isApproved: false },
+          ],
+          minGrade: undefined,
+          maxGrade: undefined,
+          minPassingGrade: undefined,
+          performanceLevels: undefined,
         } : {
           qualitativeLevels: [
-            { id: 'q1', code: 'S', name: 'Superior', description: 'Supera los logros', color: '#22c55e', order: 0, isApproved: true },
-            { id: 'q2', code: 'A', name: 'Alto', description: 'Alcanza los logros', color: '#3b82f6', order: 1, isApproved: true },
-            { id: 'q3', code: 'B', name: 'Básico', description: 'Logros mínimos', color: '#f59e0b', order: 2, isApproved: true },
-            { id: 'q4', code: 'J', name: 'Bajo', description: 'No alcanza', color: '#ef4444', order: 3, isApproved: false },
+            { id: 'q1', code: 'S', name: 'Superior', description: 'Supera los logros propuestos', color: '#22c55e', order: 0, isApproved: true },
+            { id: 'q2', code: 'A', name: 'Alto', description: 'Alcanza satisfactoriamente los logros', color: '#3b82f6', order: 1, isApproved: true },
+            { id: 'q3', code: 'B', name: 'Básico', description: 'Alcanza los logros mínimos', color: '#f59e0b', order: 2, isApproved: true },
+            { id: 'q4', code: 'J', name: 'Bajo', description: 'No alcanza los logros mínimos', color: '#ef4444', order: 3, isApproved: false },
           ],
           minGrade: undefined,
           maxGrade: undefined,
@@ -142,12 +152,11 @@ export default function Levels() {
         name: 'Preescolar',
         code: 'PREESCOLAR',
         order: 0,
-        gradingScaleType: 'QUALITATIVE',
+        gradingScaleType: 'QUALITATIVE_DESC',
         qualitativeLevels: [
-          { id: 'q1', code: 'S', name: 'Superior', description: 'Supera los logros', color: '#22c55e', order: 0, isApproved: true },
-          { id: 'q2', code: 'A', name: 'Alto', description: 'Alcanza los logros', color: '#3b82f6', order: 1, isApproved: true },
-          { id: 'q3', code: 'B', name: 'Básico', description: 'Logros mínimos', color: '#f59e0b', order: 2, isApproved: true },
-          { id: 'q4', code: 'J', name: 'Bajo', description: 'No alcanza', color: '#ef4444', order: 3, isApproved: false },
+          { id: 'qd1', code: 'L', name: 'Logrado', description: 'Demuestra dominio completo de los indicadores de logro propuestos para su nivel de desarrollo', color: '#22c55e', order: 0, isApproved: true },
+          { id: 'qd2', code: 'EP', name: 'En Proceso', description: 'Avanza satisfactoriamente en el desarrollo de los indicadores, requiere seguir practicando', color: '#f59e0b', order: 1, isApproved: true },
+          { id: 'qd3', code: 'I', name: 'Iniciando', description: 'Necesita mayor acompañamiento y práctica para alcanzar los indicadores de logro', color: '#ef4444', order: 2, isApproved: false },
         ],
         grades: ['Pre-Jardín', 'Jardín', 'Transición'],
       },

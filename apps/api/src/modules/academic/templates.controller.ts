@@ -184,8 +184,11 @@ export class TemplatesController {
 
   @Delete('subjects/:templateSubjectId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async removeSubjectFromTemplateArea(@Param('templateSubjectId') templateSubjectId: string) {
-    return this.templatesService.removeSubjectFromTemplateArea(templateSubjectId);
+  async removeSubjectFromTemplateArea(
+    @Param('templateSubjectId') templateSubjectId: string,
+    @Query('force') force?: string,
+  ) {
+    return this.templatesService.removeSubjectFromTemplateArea(templateSubjectId, force === 'true');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

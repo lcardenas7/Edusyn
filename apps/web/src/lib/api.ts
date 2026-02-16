@@ -514,6 +514,21 @@ export const storageApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+  uploadSignature: (file: File, role: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('role', role);
+    return api.post('/storage/upload/signature', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  uploadMySignature: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/storage/upload/my-signature', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 }
 
 export const eventsApi = {
@@ -1094,7 +1109,7 @@ export const academicTemplatesApi = {
     achievementsPerPeriod?: number | null;
     useAttitudinalAchievement?: boolean | null;
   }) => api.put(`/academic-templates/subjects/${templateSubjectId}`, data),
-  removeSubject: (templateSubjectId: string) => api.delete(`/academic-templates/subjects/${templateSubjectId}`),
+  removeSubject: (templateSubjectId: string, force = false) => api.delete(`/academic-templates/subjects/${templateSubjectId}${force ? '?force=true' : ''}`),
 
   // Asignación a grados (por año académico)
   assignToGrade: (gradeId: string, templateId: string, academicYearId: string, overrides?: any) => 

@@ -2,13 +2,14 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { BookOpen, ChevronDown, Save, Plus, Trash2, X, Settings, AlertTriangle, Lock, Download, Upload, Library, Search, Copy, FileText } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { useAuth } from '../contexts/AuthContext'
-import { useAcademic } from '../contexts/AcademicContext'
+import { useAcademic, type AcademicLevel, type QualitativeLevel } from '../contexts/AcademicContext'
 import { teacherAssignmentsApi, academicStudentsApi, gradingPeriodConfigApi, partialGradesApi, achievementsApi, achievementConfigApi, achievementBankApi, finalComponentsApi, finalComponentGradesApi } from '../lib/api'
+import { toPerformanceLevel, toQualitativeCode } from '../utils/qualitativePerformanceMapper'
 
 interface TeacherAssignment {
   id: string
   subject: { id: string; name: string; area?: { name: string } }
-  group: { id: string; name: string; grade?: { name: string } }
+  group: { id: string; name: string; grade?: { name: string; stage?: string; academicStructure?: string } }
   academicYear: { id: string; year: number }
 }
 
@@ -23,11 +24,32 @@ const activityTypes = [
   'Participación',
 ]
 
-const getPerformanceLevel = (grade: number) => {
-  if (grade >= 4.5) return { label: 'Superior', color: 'text-green-600 bg-green-100' }
-  if (grade >= 4.0) return { label: 'Alto', color: 'text-blue-600 bg-blue-100' }
-  if (grade >= 3.0) return { label: 'Básico', color: 'text-amber-600 bg-amber-100' }
-  return { label: 'Bajo', color: 'text-red-600 bg-red-100' }
+// Dynamic performance level based on AcademicLevel config (no hardcodes)
+function getPerformanceLevelDynamic(
+  grade: number,
+  level?: AcademicLevel | null,
+): { label: string; color: string } {
+  if (!level || !level.performanceLevels || level.performanceLevels.length === 0) {
+    // Fallback for when no level config is available
+    if (grade >= 4.5) return { label: 'Superior', color: 'text-green-600 bg-green-100' }
+    if (grade >= 4.0) return { label: 'Alto', color: 'text-blue-600 bg-blue-100' }
+    if (grade >= 3.0) return { label: 'Básico', color: 'text-amber-600 bg-amber-100' }
+    return { label: 'Bajo', color: 'text-red-600 bg-red-100' }
+  }
+  const sorted = [...level.performanceLevels].sort((a, b) => b.minScore - a.minScore)
+  for (const pl of sorted) {
+    if (grade >= pl.minScore && grade <= pl.maxScore) {
+      const colorMap: Record<string, string> = {
+        '#22c55e': 'text-green-600 bg-green-100',
+        '#3b82f6': 'text-blue-600 bg-blue-100',
+        '#f59e0b': 'text-amber-600 bg-amber-100',
+        '#ef4444': 'text-red-600 bg-red-100',
+      }
+      return { label: pl.name, color: colorMap[pl.color] || 'text-slate-600 bg-slate-100' }
+    }
+  }
+  const lowest = sorted[sorted.length - 1]
+  return { label: lowest?.name || 'Bajo', color: 'text-red-600 bg-red-100' }
 }
 
 // Colores para los procesos (se asignan cíclicamente)
@@ -67,9 +89,14 @@ interface ProcessConfig {
 
 export default function Grades() {
   const { user, institution: authInstitution } = useAuth()
-  const { gradingConfig, setGradingConfig, periods, selectedPeriod, setSelectedPeriod } = useAcademic()
+  const { gradingConfig, setGradingConfig, periods, selectedPeriod, setSelectedPeriod, academicLevels } = useAcademic()
   // institutionId viene de Auth (dato institucional)
   const institutionId = authInstitution?.id
+
+  // ============================================
+  // DETECCIÓN DE MODO: Cualitativo vs Numérico
+  // Fuente de verdad: AcademicLevel del grupo seleccionado
+  // ============================================
   
   const userRoles = useMemo(() => {
     if (!user?.roles) return []
@@ -84,7 +111,7 @@ export default function Grades() {
   const [error, setError] = useState<string | null>(null)
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('')
   const [selectedGroupId, setSelectedGroupId] = useState<string>('')
-  const [selectedAssignment, setSelectedAssignment] = useState<TeacherAssignment | null>(null)
+  // selectedAssignment is now a useMemo (see below) — no useState needed
   
   // Obtener listas únicas de asignaturas y grupos
   const uniqueSubjects = useMemo(() => {
@@ -113,26 +140,62 @@ export default function Grades() {
     )
   }, [assignments])
 
-  // Filtrar grupos disponibles según la asignatura seleccionada
-  const filteredGroups = useMemo(() => {
-    if (!selectedSubjectId) return uniqueGroups
-    const groupIds = new Set(
-      assignments.filter(a => a.subject.id === selectedSubjectId).map(a => a.group.id)
+  // Filtrar asignaturas disponibles según el grupo seleccionado (Grupo → Asignatura)
+  const filteredSubjects = useMemo(() => {
+    if (!selectedGroupId) return uniqueSubjects
+    const subjectIds = new Set(
+      assignments.filter(a => a.group.id === selectedGroupId).map(a => a.subject.id)
     )
-    return uniqueGroups.filter(g => groupIds.has(g.id))
-  }, [assignments, selectedSubjectId, uniqueGroups])
+    return uniqueSubjects.filter(s => subjectIds.has(s.id))
+  }, [assignments, selectedGroupId, uniqueSubjects])
 
-  // Actualizar asignación seleccionada cuando cambian los filtros
-  useEffect(() => {
+  // Resolver asignación seleccionada SINCRÓNICAMENTE (useMemo, no useEffect)
+  // Esto evita flicker de layout: isQualitative se resuelve en el mismo render
+  const selectedAssignment = useMemo<TeacherAssignment | null>(() => {
     if (selectedSubjectId && selectedGroupId) {
-      const assignment = assignments.find(
+      return assignments.find(
         a => a.subject.id === selectedSubjectId && a.group.id === selectedGroupId
-      )
-      setSelectedAssignment(assignment || null)
-    } else {
-      setSelectedAssignment(null)
+      ) || null
     }
+    return null
   }, [selectedSubjectId, selectedGroupId, assignments])
+
+  // ── Resolver AcademicLevel del grupo seleccionado ──────────────────
+  const resolvedLevel: AcademicLevel | null = useMemo(() => {
+    if (!selectedAssignment?.group?.grade) return null
+    const gradeName = selectedAssignment.group.grade.name || ''
+    const gradeStage = selectedAssignment.group.grade.stage || ''
+    // Match by grade name in level.grades[] or by stage code
+    return academicLevels.find(lvl =>
+      lvl.grades.some(g => g.toLowerCase() === gradeName.toLowerCase()) ||
+      lvl.code === gradeStage
+    ) || null
+  }, [selectedAssignment, academicLevels])
+
+  // DETECCIÓN DE MODO ESTRUCTURAL: exclusivamente por academicStructure del grado
+  // gradingScaleType solo se usa para escala/labels, NUNCA para decidir layout
+  const academicStructure = selectedAssignment?.group?.grade?.academicStructure
+  const isQualitative = academicStructure === 'DIMENSIONS'
+  const isNumeric = !isQualitative
+  // Escala cualitativa: se lee del resolvedLevel (para labels/dropdown)
+  const qualitativeLevels: QualitativeLevel[] = resolvedLevel?.qualitativeLevels || []
+
+  // Dynamic scale from AcademicLevel (no hardcodes)
+  const minGrade = resolvedLevel?.minGrade ?? 1.0
+  const maxGrade = resolvedLevel?.maxGrade ?? 5.0
+  const minPassingGrade = resolvedLevel?.minPassingGrade ?? 3.0
+
+  // Dynamic label: "Dimensión" for qualitative, "Asignatura" for numeric
+  const subjectLabel = isQualitative ? 'Dimensión' : 'Asignatura'
+
+  // Wrapper for getPerformanceLevel using resolved level
+  const getPerformanceLevel = useCallback((grade: number) => {
+    return getPerformanceLevelDynamic(grade, resolvedLevel)
+  }, [resolvedLevel])
+
+  // ── Estado para evaluación cualitativa ─────────────────────────────
+  // Map: studentId → { qualitativeLevelId, observation }
+  const [qualitativeGrades, setQualitativeGrades] = useState<Record<string, { levelCode: string; observation: string }>>({})
 
   const [showAddActivity, setShowAddActivity] = useState(false)
   const [showConfig, setShowConfig] = useState(false)
@@ -274,8 +337,9 @@ export default function Grades() {
         const data = response.data || []
         setAssignments(data)
         if (data.length > 0) {
-          setSelectedSubjectId(data[0].subject.id)
+          // Select group first, then subject (Group → Subject order)
           setSelectedGroupId(data[0].group.id)
+          setSelectedSubjectId(data[0].subject.id)
         }
       } catch (err: any) {
         console.error('Error loading assignments:', err)
@@ -539,8 +603,8 @@ export default function Grades() {
 
   const updateGrade = (studentId: string, activityId: string, value: number) => {
     let clampedValue = value
-    if (value > 5) clampedValue = 5
-    else if (value < 1 && value !== 0) clampedValue = 1
+    if (value > maxGrade) clampedValue = maxGrade
+    else if (value < minGrade && value !== 0) clampedValue = minGrade
     else if (value < 0) clampedValue = 0
     
     setGrades(prev => ({
@@ -601,6 +665,40 @@ export default function Grades() {
     })
     return total
   }
+
+  // ── Cargar evaluación cualitativa cuando cambia la asignación/período ──
+  useEffect(() => {
+    const loadQualitativeGrades = async () => {
+      if (!isQualitative || !selectedAssignment?.id || !academicTermId || students.length === 0) return
+      try {
+        const res = await achievementsApi.getByAssignment(selectedAssignment.id, academicTermId)
+        const achievementsList = res.data || []
+        const qGrades: Record<string, { levelCode: string; observation: string }> = {}
+        
+        // For each student, find their StudentAchievement and extract level + observation
+        // Uses explicit mapper (aligned with seed): SUPERIOR→LOGRADO, BASICO→EN_PROCESO, BAJO→INICIANDO
+        students.forEach(student => {
+          for (const ach of achievementsList) {
+            const sa = ach.studentAchievements?.find(
+              (sa: any) => sa.studentEnrollmentId === student.enrollmentId
+            )
+            if (sa) {
+              const levelCode = toQualitativeCode(sa.performanceLevel)
+              qGrades[student.id] = {
+                levelCode,
+                observation: sa.observation || sa.approvedText || sa.suggestedText || '',
+              }
+              break // Take first achievement per student
+            }
+          }
+        })
+        setQualitativeGrades(qGrades)
+      } catch (err) {
+        console.error('Error loading qualitative grades:', err)
+      }
+    }
+    loadQualitativeGrades()
+  }, [isQualitative, selectedAssignment?.id, academicTermId, students, qualitativeLevels])
 
   // Cargar logros cuando se cambia a la pestaña de logros
   useEffect(() => {
@@ -804,8 +902,8 @@ export default function Grades() {
             const val = parseFloat(row[parseInt(col)])
             if (!isNaN(val) && val > 0) {
               let clamped = val
-              if (clamped > 5) clamped = 5
-              if (clamped < 1) clamped = 1
+              if (clamped > maxGrade) clamped = maxGrade
+              if (clamped < minGrade) clamped = minGrade
               updatedGrades[student.id][actId] = Math.round(clamped * 10) / 10
               imported++
             }
@@ -822,6 +920,72 @@ export default function Grades() {
       }
     }
     reader.readAsArrayBuffer(file)
+  }
+
+  // Guardar evaluación cualitativa
+  // GUARD: Solo ejecutar en modo DIMENSIONS. Nunca en modo numérico.
+  const saveQualitativeGrades = async () => {
+    if (!isQualitative) return
+    if (!selectedAssignment?.id || !academicTermId) {
+      setSaveMessage({ type: 'error', text: 'No se puede guardar: falta información del período o dimensión' })
+      setTimeout(() => setSaveMessage(null), 3000)
+      return
+    }
+
+    setSaving(true)
+    setSaveMessage(null)
+
+    try {
+      // 1. Get achievements for this assignment+term
+      const res = await achievementsApi.getByAssignment(selectedAssignment.id, academicTermId)
+      const achievementsList = res.data || []
+      
+      if (achievementsList.length === 0) {
+        setSaveMessage({ type: 'error', text: 'No hay logros creados para esta dimensión en este período. Cree logros primero desde el módulo de Logros.' })
+        setTimeout(() => setSaveMessage(null), 5000)
+        return
+      }
+
+      // Use the first achievement as the target
+      const achievement = achievementsList[0]
+
+      let saved = 0
+      let skipped = 0
+      for (const student of students) {
+        const qg = qualitativeGrades[student.id]
+        if (!qg || !qg.levelCode) continue
+
+        // Mapeo explícito alineado con seed: LOGRADO→SUPERIOR, EN_PROCESO→BASICO, INICIANDO→BAJO
+        const performanceLevel = toPerformanceLevel(qg.levelCode)
+        if (!performanceLevel) {
+          skipped++
+          continue
+        }
+
+        await achievementsApi.upsertStudentAchievement('upsert', {
+          studentEnrollmentId: student.enrollmentId,
+          achievementId: achievement.id,
+          performanceLevel,
+          suggestedText: qg.levelCode,
+          approvedText: qg.levelCode,
+          isTextApproved: true,
+          observation: qg.observation || undefined,
+        })
+        saved++
+      }
+
+      const msg = skipped > 0
+        ? `Evaluación guardada (${saved} estudiantes, ${skipped} omitidos por nivel no mapeado)`
+        : `Evaluación cualitativa guardada (${saved} estudiantes)`
+      setSaveMessage({ type: 'success', text: msg })
+      setTimeout(() => setSaveMessage(null), 3000)
+    } catch (err: any) {
+      console.error('Error saving qualitative grades:', err)
+      setSaveMessage({ type: 'error', text: err.response?.data?.message || 'Error al guardar la evaluación cualitativa' })
+      setTimeout(() => setSaveMessage(null), 5000)
+    } finally {
+      setSaving(false)
+    }
   }
 
   // Guardar notas
@@ -1013,7 +1177,9 @@ export default function Grades() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Calificaciones</h1>
-          <p className="text-sm sm:text-base text-slate-500 mt-1">Registro de notas por componente evaluativo</p>
+          <p className="text-sm sm:text-base text-slate-500 mt-1">
+            {isQualitative ? 'Evaluación cualitativa por dimensiones' : 'Registro de notas por componente evaluativo'}
+          </p>
         </div>
         <div className="flex gap-2">
           {isAdmin && (
@@ -1084,7 +1250,7 @@ export default function Grades() {
             </div>
           )}
           <button 
-            onClick={selectedSourceType === 'final_component' ? saveFinalComponentGrades : saveGrades}
+            onClick={isQualitative ? saveQualitativeGrades : selectedSourceType === 'final_component' ? saveFinalComponentGrades : saveGrades}
             disabled={(selectedSourceType === 'period' ? saving : savingFc) || !currentPeriodOpen}
             className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
           >
@@ -1122,38 +1288,41 @@ export default function Grades() {
       ) : (
       <>
       <div className="flex gap-4 mb-6 flex-wrap">
+        {/* 1️⃣ GRUPO (primero) */}
         <div className="relative">
           <select
-            value={selectedSubjectId}
+            value={selectedGroupId}
             onChange={(e) => {
-              setSelectedSubjectId(e.target.value)
-              const newGroupIds = new Set(
-                assignments.filter(a => a.subject.id === e.target.value).map(a => a.group.id)
-              )
-              if (!newGroupIds.has(selectedGroupId)) {
-                const firstGroup = assignments.find(a => a.subject.id === e.target.value)?.group.id
-                if (firstGroup) setSelectedGroupId(firstGroup)
+              setSelectedGroupId(e.target.value)
+              // Auto-select first subject of this group
+              const firstSubject = assignments.find(a => a.group.id === e.target.value)?.subject.id
+              if (firstSubject) {
+                setSelectedSubjectId(firstSubject)
+              } else {
+                setSelectedSubjectId('')
               }
             }}
             className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           >
-            <option value="">Seleccionar asignatura</option>
-            {uniqueSubjects.map((subject) => (
-              <option key={subject.id} value={subject.id}>{subject.name}</option>
+            <option value="">Seleccionar curso</option>
+            {uniqueGroups.map((group) => (
+              <option key={group.id} value={group.id}>{group.gradeName} {group.name}</option>
             ))}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
         </div>
 
+        {/* 2️⃣ ASIGNATURA / DIMENSIÓN (segundo, filtrado por grupo) */}
         <div className="relative">
           <select
-            value={selectedGroupId}
-            onChange={(e) => setSelectedGroupId(e.target.value)}
-            className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            value={selectedSubjectId}
+            onChange={(e) => setSelectedSubjectId(e.target.value)}
+            disabled={!selectedGroupId}
+            className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
           >
-            <option value="">Seleccionar curso</option>
-            {filteredGroups.map((group) => (
-              <option key={group.id} value={group.id}>{group.gradeName} {group.name}</option>
+            <option value="">Seleccionar {subjectLabel.toLowerCase()}</option>
+            {filteredSubjects.map((subject) => (
+              <option key={subject.id} value={subject.id}>{subject.name}</option>
             ))}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -1189,7 +1358,7 @@ export default function Grades() {
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
         </div>
 
-        {selectedSourceType === 'period' && (
+        {selectedSourceType === 'period' && !isQualitative && (
         <div className="flex bg-slate-100 rounded-lg p-1">
           <button
             onClick={() => setViewMode('detailed')}
@@ -1212,6 +1381,15 @@ export default function Grades() {
         </div>
         )}
 
+        {isQualitative && resolvedLevel && (
+          <div className="ml-auto flex items-center gap-2">
+            <span className="px-3 py-1 rounded-lg text-sm font-medium bg-amber-50 text-amber-700 border-amber-200 border">
+              {resolvedLevel.gradingScaleType === 'QUALITATIVE_DESC' ? 'Cualitativo descriptivo' : 'Cualitativo (letras)'}
+            </span>
+          </div>
+        )}
+
+        {!isQualitative && (
         <div className="ml-auto flex gap-2 flex-wrap">
           {selectedSourceType === 'period' ? (
             processConfigs.map((process) => {
@@ -1228,15 +1406,22 @@ export default function Grades() {
             </span>
           )}
         </div>
+        )}
       </div>
 
+      {!selectedAssignment ? (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
+          <BookOpen className="w-12 h-12 text-slate-300 mx-auto" />
+          <p className="mt-4 text-slate-500">Selecciona un grupo y {subjectLabel.toLowerCase()} para ver la planilla</p>
+        </div>
+      ) : (
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
           <div className="flex items-center gap-3">
             <BookOpen className="w-5 h-5 text-blue-600" />
             <div>
-              <h2 className="font-semibold text-slate-900">{selectedAssignment?.subject.name}</h2>
-              <p className="text-sm text-slate-500">{selectedAssignment?.group.grade?.name} {selectedAssignment?.group.name} • {selectedSourceType === 'final_component' ? finalComponents.find(fc => fc.id === selectedFinalComponentId)?.name : (periods.find(p => p.id === selectedPeriod)?.name || 'Período')}</p>
+              <h2 className="font-semibold text-slate-900">{selectedAssignment.subject.name}</h2>
+              <p className="text-sm text-slate-500">{selectedAssignment.group.grade?.name} {selectedAssignment.group.name} • {selectedSourceType === 'final_component' ? finalComponents.find(fc => fc.id === selectedFinalComponentId)?.name : (periods.find(p => p.id === selectedPeriod)?.name || 'Período')}</p>
             </div>
           </div>
         </div>
@@ -1251,7 +1436,91 @@ export default function Grades() {
           </div>
         )}
 
-        {selectedSourceType === 'final_component' ? (
+        {isQualitative ? (
+          /* ═══════════════════════════════════════════════════════
+             PLANILLA CUALITATIVA - Estudiante | Nivel | Observación
+             ═══════════════════════════════════════════════════════ */
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-amber-50">
+                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase min-w-[250px]">Estudiante</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-amber-700 uppercase min-w-[160px]">Nivel</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-amber-700 uppercase min-w-[300px]">Observación</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loadingStudents ? (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-8 text-center text-slate-500">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-600"></div>
+                        Cargando estudiantes...
+                      </div>
+                    </td>
+                  </tr>
+                ) : students.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-8 text-center text-slate-500">
+                      No hay estudiantes matriculados en este grupo
+                    </td>
+                  </tr>
+                ) : students.map((student) => {
+                  const qg = qualitativeGrades[student.id] || { levelCode: '', observation: '' }
+                  const selectedQl = qualitativeLevels.find(ql => ql.code === qg.levelCode)
+                  return (
+                    <tr key={student.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3 font-medium text-slate-900">{student.name}</td>
+                      <td className="px-4 py-3 text-center">
+                        <select
+                          value={qg.levelCode}
+                          onChange={(e) => {
+                            setQualitativeGrades(prev => ({
+                              ...prev,
+                              [student.id]: { ...prev[student.id] || { levelCode: '', observation: '' }, levelCode: e.target.value }
+                            }))
+                          }}
+                          disabled={!currentPeriodOpen}
+                          className={`w-full px-2 py-1.5 text-sm border rounded-lg outline-none ${
+                            !currentPeriodOpen ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' : 'border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500'
+                          }`}
+                          style={selectedQl ? { borderLeftColor: selectedQl.color, borderLeftWidth: '4px' } : {}}
+                        >
+                          <option value="">Seleccionar nivel</option>
+                          {qualitativeLevels.map(ql => (
+                            <option key={ql.id} value={ql.code}>
+                              {ql.code} - {ql.name}
+                            </option>
+                          ))}
+                        </select>
+                        {selectedQl && (
+                          <p className="text-[10px] mt-1 text-slate-500 leading-tight">{selectedQl.description}</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <textarea
+                          value={qg.observation}
+                          onChange={(e) => {
+                            setQualitativeGrades(prev => ({
+                              ...prev,
+                              [student.id]: { ...prev[student.id] || { levelCode: '', observation: '' }, observation: e.target.value }
+                            }))
+                          }}
+                          disabled={!currentPeriodOpen}
+                          placeholder="Observación del docente..."
+                          rows={2}
+                          className={`w-full px-2 py-1.5 text-sm border rounded-lg outline-none resize-none ${
+                            !currentPeriodOpen ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' : 'border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500'
+                          }`}
+                        />
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : selectedSourceType === 'final_component' ? (
           /* ═══════════════════════════════════════════════════════
              PLANILLA SIMPLIFICADA - Componente Final (1 nota por estudiante)
              ═══════════════════════════════════════════════════════ */
@@ -1292,13 +1561,13 @@ export default function Grades() {
                         <input
                           type="number"
                           step="0.1"
-                          min="1"
-                          max="5"
+                          min={minGrade}
+                          max={maxGrade}
                           value={grade || ''}
                           onChange={(e) => {
                             let val = parseFloat(e.target.value) || 0
-                            if (val > 5) val = 5
-                            else if (val < 1 && val !== 0) val = 1
+                            if (val > maxGrade) val = maxGrade
+                            else if (val < minGrade && val !== 0) val = minGrade
                             else if (val < 0) val = 0
                             setFcGrades(prev => ({ ...prev, [student.id]: val }))
                           }}
@@ -1464,8 +1733,8 @@ export default function Grades() {
                                   id={`grade-${student.id}-${activity.id}`}
                                   type="number"
                                   step="0.1"
-                                  min="1"
-                                  max="5"
+                                  min={minGrade}
+                                  max={maxGrade}
                                   value={grades[student.id]?.[activity.id] || ''}
                                   onChange={(e) => updateGrade(student.id, activity.id, parseFloat(e.target.value) || 0)}
                                   onKeyDown={(e) => handleKeyNavigation(e, student.id, activity.id)}
@@ -1770,6 +2039,7 @@ export default function Grades() {
           </div>
         ) : null}
       </div>
+      )}
 
       {/* Modal Nueva Actividad */}
       {showAddActivity && addToProcessCode && (

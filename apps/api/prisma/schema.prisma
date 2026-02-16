@@ -233,6 +233,7 @@ model User {
   isActive       Boolean    @default(true)
   isSuperAdmin   Boolean    @default(false)  // SuperAdmin del sistema
   mustChangePassword Boolean @default(false) // Forzar cambio de contraseña en primer login
+  signatureImageUrl  String?                 // URL de imagen de firma (subida por el usuario)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
@@ -3933,8 +3934,9 @@ model ReportCardConfig {
   headerMunicipality    String?
   headerDepartment      String?
 
-  // Tipo de evaluación
-  evaluationType        String  @default("NUMERIC")   // NUMERIC, QUALITATIVE, MIXED
+  // Tipo de evaluación — DEPRECADO: el sistema lo deduce de academicStructure del nivel
+  // Se mantiene por compatibilidad con datos existentes, pero NO se usa para decidir layout
+  evaluationType        String  @default("NUMERIC")   // DEPRECADO — ignorado por ReportCardEngine
   showNumericGrade      Boolean @default(true)
   showPerformanceLevel  Boolean @default(true)
   showAchievements      Boolean @default(true)
@@ -3956,7 +3958,8 @@ model ReportCardConfig {
   showComponents        Boolean @default(false)        // Desglose por componentes (Saber, Hacer, Ser)
 
   // Firmas configurables — JSON array
-  // [{"role":"RECTOR","label":"Rector(a)","name":"NOMBRE","enabled":true}, ...]
+  // [{"role":"RECTOR","label":"Rector(a)","name":"NOMBRE","enabled":true,"signatureImageUrl":"..."}]
+  // Para Director de Grupo: role="DIRECTOR_GRUPO", imageUrl se toma de User.signatureImageUrl del tutor
   signatureConfig       Json    @default("[]")
 
   createdAt DateTime @default(now())

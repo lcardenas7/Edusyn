@@ -590,8 +590,20 @@ export default function AcademicReports() {
       const allSubjects = new Set<string>()
       studentsGradesData.forEach(s => Object.keys(s.grades).forEach(subj => allSubjects.add(subj)))
       const subjectList = Array.from(allSubjects)
+      const totalStudents = studentsGradesData.length
+      const avgGrades = studentsGradesData.filter(s => s.average > 0)
+      const groupAvg = avgGrades.length > 0 ? (avgGrades.reduce((sum, s) => sum + s.average, 0) / avgGrades.length) : 0
+      const withFailed = studentsGradesData.filter(s => s.failedCount > 0).length
+      const approvalPct = totalStudents > 0 ? Math.round(((totalStudents - withFailed) / totalStudents) * 100) : 0
       return (
-        <div className="overflow-x-auto">
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"><p className="text-xs text-blue-500 uppercase font-medium">Total Estudiantes</p><p className="text-2xl font-bold text-blue-700">{totalStudents}</p></div>
+            <div className={`${groupAvg >= minPassingGrade ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-xl p-3 text-center`}><p className="text-xs text-slate-500 uppercase font-medium">Promedio Grupo</p><p className={`text-2xl font-bold ${groupAvg >= minPassingGrade ? 'text-green-700' : 'text-red-700'}`}>{groupAvg.toFixed(1)}</p></div>
+            <div className={`${withFailed > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'} border rounded-xl p-3 text-center`}><p className="text-xs text-slate-500 uppercase font-medium">Con Reprobadas</p><p className={`text-2xl font-bold ${withFailed > 0 ? 'text-red-700' : 'text-green-700'}`}>{withFailed}</p><p className="text-xs text-slate-400">{totalStudents - withFailed} sin reprobadas</p></div>
+            <div className={`${approvalPct >= 80 ? 'bg-green-50 border-green-200' : approvalPct >= 60 ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'} border rounded-xl p-3 text-center`}><p className="text-xs text-slate-500 uppercase font-medium">Aprobacion</p><p className={`text-2xl font-bold ${approvalPct >= 80 ? 'text-green-700' : approvalPct >= 60 ? 'text-amber-700' : 'text-red-700'}`}>{approvalPct}%</p></div>
+          </div>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-100">
               <tr>
@@ -621,14 +633,28 @@ export default function AcademicReports() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )
     }
 
     // ── Promedio por asignatura ──
     if (selectedReport === 'avg-subject' && reportData?.results) {
+      const avgResults = reportData.results as any[]
+      const totalSubj = avgResults.length
+      const generalAvg = totalSubj > 0 ? (avgResults.reduce((s: number, r: any) => s + (r.average || 0), 0) / totalSubj) : 0
+      const bestSubj = avgResults.reduce((best: any, r: any) => (!best || (r.average || 0) > (best.average || 0)) ? r : best, null)
+      const worstSubj = avgResults.reduce((worst: any, r: any) => (!worst || (r.average || 0) < (worst.average || 0)) ? r : worst, null)
+      const avgApproval = totalSubj > 0 ? (avgResults.reduce((s: number, r: any) => s + (r.approvalRate || 0), 0) / totalSubj) : 0
       return (
-        <div className="overflow-x-auto">
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"><p className="text-xs text-blue-500 uppercase font-medium">Asignaturas</p><p className="text-2xl font-bold text-blue-700">{totalSubj}</p></div>
+            <div className={`${generalAvg >= minPassingGrade ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-xl p-3 text-center`}><p className="text-xs text-slate-500 uppercase font-medium">Promedio General</p><p className={`text-2xl font-bold ${generalAvg >= minPassingGrade ? 'text-green-700' : 'text-red-700'}`}>{generalAvg.toFixed(1)}</p></div>
+            <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center"><p className="text-xs text-green-500 uppercase font-medium">Mejor Asignatura</p><p className="text-lg font-bold text-green-700">{bestSubj?.subjectName || '-'}</p><p className="text-xs text-green-600">{bestSubj?.average?.toFixed(1)}</p></div>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center"><p className="text-xs text-red-500 uppercase font-medium">Menor Rendimiento</p><p className="text-lg font-bold text-red-700">{worstSubj?.subjectName || '-'}</p><p className="text-xs text-red-600">{worstSubj?.average?.toFixed(1)}</p></div>
+          </div>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-100"><tr>
               <th className="px-3 py-2 text-left">Asignatura</th><th className="px-3 py-2 text-left">Área</th>
@@ -650,14 +676,26 @@ export default function AcademicReports() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )
     }
 
     // ── Ranking de estudiantes ──
     if (selectedReport === 'ranking-students' && Array.isArray(reportData) && reportData.length > 0) {
+      const rkTotal = reportData.length
+      const rkAvg = rkTotal > 0 ? (reportData.reduce((s: number, r: any) => s + (r.average || 0), 0) / rkTotal) : 0
+      const rkTop = reportData[0]
+      const rkAbovePass = reportData.filter((r: any) => (r.average || 0) >= minPassingGrade).length
       return (
-        <div className="overflow-x-auto">
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"><p className="text-xs text-blue-500 uppercase font-medium">Total Estudiantes</p><p className="text-2xl font-bold text-blue-700">{rkTotal}</p></div>
+            <div className={`${rkAvg >= minPassingGrade ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-xl p-3 text-center`}><p className="text-xs text-slate-500 uppercase font-medium">Promedio Grupo</p><p className={`text-2xl font-bold ${rkAvg >= minPassingGrade ? 'text-green-700' : 'text-red-700'}`}>{rkAvg.toFixed(1)}</p></div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center"><p className="text-xs text-amber-500 uppercase font-medium">Mejor Estudiante</p><p className="text-sm font-bold text-amber-700 truncate">{rkTop?.studentName || '-'}</p><p className="text-xs text-amber-600">{rkTop?.average?.toFixed(2)}</p></div>
+            <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center"><p className="text-xs text-green-500 uppercase font-medium">Aprobados</p><p className="text-2xl font-bold text-green-700">{rkAbovePass}</p><p className="text-xs text-slate-400">{rkTotal - rkAbovePass} por debajo</p></div>
+          </div>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-100"><tr>
               <th className="px-3 py-2 text-center">Pos.</th><th className="px-3 py-2 text-left">Estudiante</th>
@@ -677,6 +715,7 @@ export default function AcademicReports() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )
     }
@@ -816,8 +855,18 @@ export default function AcademicReports() {
 
     // ── Listado de recuperación ──
     if (selectedReport === 'recovery-list' && reportData?.results) {
+      const recResults = reportData.results as any[]
+      const recTotal = recResults.length
+      const recStudents = new Set(recResults.map((r: any) => r.studentName)).size
+      const recAvgDeficit = recTotal > 0 ? (recResults.reduce((s: number, r: any) => s + (r.deficit || 0), 0) / recTotal) : 0
       return (
-        <div className="overflow-x-auto">
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center"><p className="text-xs text-amber-500 uppercase font-medium">Asignaturas a Recuperar</p><p className="text-2xl font-bold text-amber-700">{recTotal}</p></div>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"><p className="text-xs text-blue-500 uppercase font-medium">Estudiantes</p><p className="text-2xl font-bold text-blue-700">{recStudents}</p></div>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center"><p className="text-xs text-red-500 uppercase font-medium">Deficit Promedio</p><p className="text-2xl font-bold text-red-700">{recAvgDeficit.toFixed(1)}</p></div>
+          </div>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-100"><tr>
               <th className="px-3 py-2 text-left">Estudiante</th><th className="px-3 py-2 text-left">Asignatura</th>
@@ -835,6 +884,7 @@ export default function AcademicReports() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )
     }
