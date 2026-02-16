@@ -24,8 +24,7 @@ import {
   academicActsApi,
   teacherAssignmentsApi,
   periodFinalGradesApi,
-  recoveryPeriodConfigApi,
-  groupsApi
+  recoveryPeriodConfigApi
 } from '../lib/api'
 
 type TabType = 'period' | 'final' | 'config' | 'acts'
@@ -220,34 +219,18 @@ export default function Recoveries() {
     const loadGroupsAndSubjects = async () => {
       if (!selectedYearId) return
       try {
-        const uniqueGroups = new Map<string, any>()
-        const uniqueSubjects = new Map<string, any>()
-
-        if (isAdminOrCoordinator) {
-          // Admin/Coordinador: cargar TODOS los grupos de la institución
-          const groupsRes = await groupsApi.getAll({ institutionId })
-          const allGroups = groupsRes.data || []
-          allGroups.forEach((g: any) => {
-            // Excluir grupos DIMENSIONS
-            if (g.grade?.academicStructure === 'DIMENSIONS') return
-            if (!uniqueGroups.has(g.id)) {
-              uniqueGroups.set(g.id, {
-                id: g.id,
-                name: g.name,
-                gradeName: g.grade?.name
-              })
-            }
-          })
-        }
-
-        // Cargar asignaciones (para docentes es la fuente principal, para admin complementa con asignaturas)
+        // teacherAssignmentsApi ya resuelve institutionId en backend para admin/coordinador
         const assignmentsRes = await teacherAssignmentsApi.getAll({ academicYearId: selectedYearId })
         const assignments = assignmentsRes.data || []
         setTeacherAssignments(assignments)
+        console.log('[Recoveries] assignments loaded:', assignments.length)
+        
+        const uniqueGroups = new Map<string, any>()
+        const uniqueSubjects = new Map<string, any>()
         
         assignments.forEach((assignment: any) => {
-          if (!isAdminOrCoordinator && assignment.group && !uniqueGroups.has(assignment.group.id)) {
-            // Docente: extraer grupos de sus asignaciones
+          if (assignment.group && !uniqueGroups.has(assignment.group.id)) {
+            // Excluir grupos con estructura DIMENSIONS (preescolar) — no manejan recuperación
             const academicStructure = assignment.group.grade?.academicStructure
             if (academicStructure === 'DIMENSIONS') return
             uniqueGroups.set(assignment.group.id, {
@@ -275,6 +258,7 @@ export default function Recoveries() {
         
         const groupsList = Array.from(uniqueGroups.values())
         const subjectsList = Array.from(uniqueSubjects.values())
+        console.log('[Recoveries] non-DIMENSIONS groups:', groupsList.length, '| subjects:', subjectsList.length)
         
         // Para admin/coordinador, agregar opción "Todos"
         if (isAdminOrCoordinator) {
@@ -295,7 +279,7 @@ export default function Recoveries() {
       }
     }
     loadGroupsAndSubjects()
-  }, [selectedYearId, isAdminOrCoordinator, institutionId])
+  }, [selectedYearId, isAdminOrCoordinator])
 
   // Cargar estudiantes que perdieron cuando cambian los filtros
   useEffect(() => {
