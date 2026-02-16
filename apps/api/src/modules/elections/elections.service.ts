@@ -42,8 +42,9 @@ export class ElectionsService {
     // Crear proceso electoral (se permiten múltiples procesos por año)
     const process = await this.prisma.electionProcess.create({
       data: {
-        institutionId: data.institutionId,
-        academicYearId: data.academicYearId,
+        institution: { connect: { id: data.institutionId } },
+        academicYear: { connect: { id: data.academicYearId } },
+        createdBy: { connect: { id: data.createdById } },
         name: data.name,
         description: data.description,
         registrationStart: data.registrationStart,
@@ -57,7 +58,6 @@ export class ElectionsService {
         enableRepresentanteGrado: data.enableRepresentanteGrado ?? true,
         enableRepresentanteCurso: data.enableRepresentanteCurso ?? true,
         allowBlankVote: data.allowBlankVote ?? true,
-        createdById: data.createdById,
       },
     });
 
