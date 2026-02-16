@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx'
 import { useAuth } from '../contexts/AuthContext'
 import { useAcademic, type AcademicLevel, type QualitativeLevel } from '../contexts/AcademicContext'
 import { teacherAssignmentsApi, academicStudentsApi, gradingPeriodConfigApi, partialGradesApi, achievementsApi, achievementConfigApi, achievementBankApi, finalComponentsApi, finalComponentGradesApi } from '../lib/api'
-import { toPerformanceLevel, toQualitativeCode } from '../utils/qualitativePerformanceMapper'
+import { buildQualitativeMaps, toPerformanceLevel, toQualitativeCode } from '../utils/qualitativePerformanceMapper'
 
 interface TeacherAssignment {
   id: string
@@ -179,6 +179,12 @@ export default function Grades() {
   const isNumeric = !isQualitative
   // Escala cualitativa: se lee del resolvedLevel (para labels/dropdown)
   const qualitativeLevels: QualitativeLevel[] = resolvedLevel?.qualitativeLevels || []
+
+  // Mapas dinámicos: qualitativeCode ↔ PerformanceLevel (basado en niveles configurados)
+  const { toPerf, toQual } = useMemo(
+    () => buildQualitativeMaps(qualitativeLevels),
+    [qualitativeLevels]
+  )
 
   // Dynamic scale from AcademicLevel (no hardcodes)
   const minGrade = resolvedLevel?.minGrade ?? 1.0
@@ -676,14 +682,14 @@ export default function Grades() {
         const qGrades: Record<string, { levelCode: string; observation: string }> = {}
         
         // For each student, find their StudentAchievement and extract level + observation
-        // Uses explicit mapper (aligned with seed): SUPERIOR→LOGRADO, BASICO→EN_PROCESO, BAJO→INICIANDO
+        // Uses dynamic mapper: PerformanceLevel → qualitative code (based on configured levels)
         students.forEach(student => {
           for (const ach of achievementsList) {
             const sa = ach.studentAchievements?.find(
               (sa: any) => sa.studentEnrollmentId === student.enrollmentId
             )
             if (sa) {
-              const levelCode = toQualitativeCode(sa.performanceLevel)
+              const levelCode = toQualitativeCode(sa.performanceLevel, toQual)
               qGrades[student.id] = {
                 levelCode,
                 observation: sa.observation || sa.approvedText || sa.suggestedText || '',
@@ -698,7 +704,7 @@ export default function Grades() {
       }
     }
     loadQualitativeGrades()
-  }, [isQualitative, selectedAssignment?.id, academicTermId, students, qualitativeLevels])
+  }, [isQualitative, selectedAssignment?.id, academicTermId, students, toQual])
 
   // Cargar logros cuando se cambia a la pestaña de logros
   useEffect(() => {
@@ -955,8 +961,8 @@ export default function Grades() {
         const qg = qualitativeGrades[student.id]
         if (!qg || !qg.levelCode) continue
 
-        // Mapeo explícito alineado con seed: LOGRADO→SUPERIOR, EN_PROCESO→BASICO, INICIANDO→BAJO
-        const performanceLevel = toPerformanceLevel(qg.levelCode)
+        // Mapeo dinámico: código cualitativo → PerformanceLevel (basado en niveles configurados)
+        const performanceLevel = toPerformanceLevel(qg.levelCode, toPerf)
         if (!performanceLevel) {
           skipped++
           continue
