@@ -84,8 +84,12 @@ export default function PedagogicalSupport() {
     const load = async () => {
       try {
         const res = await academicYearsApi.getAll()
-        setAcademicYears(res.data || [])
-        const current = res.data?.find((y: any) => y.isCurrent)
+        const years = res.data || []
+        setAcademicYears(years)
+        // Prioridad: isCurrent > status ACTIVE > año más reciente
+        const current = years.find((y: any) => y.isCurrent)
+          || years.find((y: any) => y.status === 'ACTIVE')
+          || years.sort((a: any, b: any) => b.year - a.year)[0]
         if (current) setSelectedYearId(current.id)
       } catch (err) {
         console.error('Error loading academic years:', err)

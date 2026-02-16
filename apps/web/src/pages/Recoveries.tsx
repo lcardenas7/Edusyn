@@ -391,8 +391,12 @@ export default function Recoveries() {
   const loadAcademicYears = async () => {
     try {
       const response = await academicYearsApi.getAll()
-      setAcademicYears(response.data)
-      const current = response.data.find((y: any) => y.isCurrent)
+      const years = response.data || []
+      setAcademicYears(years)
+      // Prioridad: isCurrent > status ACTIVE > año más reciente
+      const current = years.find((y: any) => y.isCurrent)
+        || years.find((y: any) => y.status === 'ACTIVE')
+        || years.sort((a: any, b: any) => b.year - a.year)[0]
       if (current) {
         setSelectedYearId(current.id)
       }
