@@ -35,8 +35,7 @@ export class FinancialReportsService {
   // Prioriza obligaciones vencidas (OVERDUE o PENDING con dueDate < now)
   async getTopDebtors(institutionId: string, limit = 20) {
     const now = new Date();
-    // Obtener morosos: obligaciones vencidas o con saldo pendiente
-    return this.prisma.financialObligation.groupBy({
+    const grouped = await this.prisma.financialObligation.groupBy({
       by: ['thirdPartyId'],
       where: {
         institutionId,
@@ -51,6 +50,22 @@ export class FinancialReportsService {
       orderBy: { _sum: { balance: 'desc' } },
       take: limit,
     });
+
+    // Enrich with third party names
+    const thirdPartyIds = grouped.map(g => g.thirdPartyId);
+    const thirdParties = await this.prisma.financialThirdParty.findMany({
+      where: { id: { in: thirdPartyIds } },
+      select: { id: true, name: true, document: true, type: true },
+    });
+    const tpMap = new Map(thirdParties.map(tp => [tp.id, tp]));
+
+    return grouped.map(g => ({
+      thirdPartyId: g.thirdPartyId,
+      thirdPartyName: tpMap.get(g.thirdPartyId)?.name || 'Desconocido',
+      thirdPartyDocument: tpMap.get(g.thirdPartyId)?.document || null,
+      thirdPartyType: tpMap.get(g.thirdPartyId)?.type || null,
+      _sum: g._sum,
+    }));
   }
 
   // Balance mensual

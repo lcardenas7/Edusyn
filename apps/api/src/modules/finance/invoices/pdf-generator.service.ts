@@ -1,10 +1,37 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import PDFDocument from 'pdfkit';
+import https from 'https';
+import http from 'http';
 
 @Injectable()
 export class PdfGeneratorService {
   constructor(private prisma: PrismaService) {}
+
+  private async fetchImage(url: string): Promise<Buffer | null> {
+    try {
+      return new Promise((resolve) => {
+        const client = url.startsWith('https') ? https : http;
+        client.get(url, (res) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (chunk) => chunks.push(chunk));
+          res.on('end', () => resolve(Buffer.concat(chunks)));
+          res.on('error', () => resolve(null));
+        }).on('error', () => resolve(null));
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  private getPageConfig(settings: any): { size: string; margin: number; contentWidth: number } {
+    const isHalfLetter = settings?.invoicePageSize === 'HALF_LETTER';
+    return {
+      size: isHalfLetter ? [396, 612] as any : 'LETTER',
+      margin: isHalfLetter ? 30 : 50,
+      contentWidth: isHalfLetter ? 336 : 512,
+    };
+  }
 
   async generateInvoicePdf(invoiceId: string, institutionId: string): Promise<Buffer> {
     const invoice = await this.prisma.financialInvoice.findFirst({
@@ -24,31 +51,45 @@ export class PdfGeneratorService {
       where: { institutionId },
     });
 
+    const pageConfig = this.getPageConfig(settings);
+    let logoBuffer: Buffer | null = null;
+    if (settings?.invoiceLogoUrl) {
+      logoBuffer = await this.fetchImage(settings.invoiceLogoUrl);
+    } else if ((invoice.institution as any).logoUrl) {
+      logoBuffer = await this.fetchImage((invoice.institution as any).logoUrl);
+    }
+
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: 'LETTER', margin: 50 });
+      const doc = new PDFDocument({ size: pageConfig.size, margin: pageConfig.margin });
       const chunks: Buffer[] = [];
 
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
-      // Header
-      this.drawHeader(doc, invoice.institution, settings);
+      const m = pageConfig.margin;
+      const w = pageConfig.contentWidth;
+
+      // Header with logo
+      this.drawHeader(doc, invoice.institution, settings, logoBuffer, m, w);
+
+      // DIAN Resolution
+      this.drawResolution(doc, settings, m, w);
 
       // Invoice Info
-      this.drawInvoiceInfo(doc, invoice);
+      this.drawInvoiceInfo(doc, invoice, m, w);
 
       // Third Party Info
-      this.drawThirdPartyInfo(doc, invoice.thirdParty);
+      this.drawThirdPartyInfo(doc, invoice.thirdParty, m, w);
 
       // Items Table
-      this.drawItemsTable(doc, invoice.items);
+      this.drawItemsTable(doc, invoice.items, m, w);
 
       // Totals
-      this.drawTotals(doc, invoice);
+      this.drawTotals(doc, invoice, m, w);
 
       // Footer
-      this.drawFooter(doc, invoice.institution);
+      this.drawFooter(doc, invoice.institution, settings, m, w);
 
       doc.end();
     });
@@ -69,240 +110,287 @@ export class PdfGeneratorService {
       throw new Error('Pago no encontrado');
     }
 
+    const settings = await this.prisma.financialSettings.findUnique({
+      where: { institutionId },
+    });
+
+    const pageConfig = this.getPageConfig(settings);
+    let logoBuffer: Buffer | null = null;
+    if (settings?.invoiceLogoUrl) {
+      logoBuffer = await this.fetchImage(settings.invoiceLogoUrl);
+    } else if ((payment.institution as any).logoUrl) {
+      logoBuffer = await this.fetchImage((payment.institution as any).logoUrl);
+    }
+
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: 'LETTER', margin: 50 });
+      const doc = new PDFDocument({ size: pageConfig.size, margin: pageConfig.margin });
       const chunks: Buffer[] = [];
 
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
-      // Header
-      doc.fontSize(20).font('Helvetica-Bold').text(payment.institution.name, { align: 'center' });
-      doc.fontSize(10).font('Helvetica').text(payment.institution.address || '', { align: 'center' });
-      doc.moveDown(2);
+      const m = pageConfig.margin;
+      const w = pageConfig.contentWidth;
+
+      // Header with logo
+      if (logoBuffer) {
+        try {
+          doc.image(logoBuffer, m, m, { width: 50, height: 50 });
+          doc.fontSize(16).font('Helvetica-Bold').text(payment.institution.name, m + 60, m + 5, { width: w - 60 });
+          doc.fontSize(9).font('Helvetica').text(payment.institution.address || '', m + 60, m + 25, { width: w - 60 });
+          if (settings?.taxId) {
+            doc.text(`NIT: ${settings.taxId}`, m + 60, doc.y, { width: w - 60 });
+          }
+          doc.y = m + 60;
+        } catch {
+          doc.fontSize(16).font('Helvetica-Bold').text(payment.institution.name, { align: 'center' });
+          doc.fontSize(9).font('Helvetica').text(payment.institution.address || '', { align: 'center' });
+        }
+      } else {
+        doc.fontSize(16).font('Helvetica-Bold').text(payment.institution.name, { align: 'center' });
+        doc.fontSize(9).font('Helvetica').text(payment.institution.address || '', { align: 'center' });
+        if (settings?.taxId) {
+          doc.text(`NIT: ${settings.taxId}`, { align: 'center' });
+        }
+      }
+      doc.moveDown(1.5);
 
       // Receipt Title
-      doc.fontSize(16).font('Helvetica-Bold').text('RECIBO DE PAGO', { align: 'center' });
-      doc.fontSize(12).font('Helvetica').text(`N° ${payment.receiptNumber}`, { align: 'center' });
-      doc.moveDown(2);
+      doc.fontSize(14).font('Helvetica-Bold').text('RECIBO DE PAGO', { align: 'center' });
+      doc.fontSize(11).font('Helvetica').text(`N° ${payment.receiptNumber}`, { align: 'center' });
+      doc.moveDown(1.5);
 
       // Payment Details
       const startY = doc.y;
-      doc.fontSize(10);
+      const labelX = m;
+      const valueX = m + 110;
+      doc.fontSize(9);
 
-      doc.font('Helvetica-Bold').text('Fecha:', 50, startY);
-      doc.font('Helvetica').text(new Date(payment.paymentDate).toLocaleDateString('es-CO'), 150, startY);
+      doc.font('Helvetica-Bold').text('Fecha:', labelX, startY);
+      doc.font('Helvetica').text(new Date(payment.paymentDate).toLocaleDateString('es-CO'), valueX, startY);
 
-      doc.font('Helvetica-Bold').text('Recibido de:', 50, startY + 20);
-      doc.font('Helvetica').text(payment.thirdParty.name, 150, startY + 20);
+      doc.font('Helvetica-Bold').text('Recibido de:', labelX, startY + 18);
+      doc.font('Helvetica').text(payment.thirdParty.name, valueX, startY + 18);
 
+      let nextY = startY + 36;
       if (payment.thirdParty.document) {
-        doc.font('Helvetica-Bold').text('Documento:', 50, startY + 40);
-        doc.font('Helvetica').text(payment.thirdParty.document, 150, startY + 40);
+        doc.font('Helvetica-Bold').text('Documento:', labelX, nextY);
+        doc.font('Helvetica').text(payment.thirdParty.document, valueX, nextY);
+        nextY += 18;
       }
 
-      doc.font('Helvetica-Bold').text('Concepto:', 50, startY + 60);
-      doc.font('Helvetica').text(
-        payment.obligation?.concept?.name || 'Pago general',
-        150,
-        startY + 60,
-      );
+      doc.font('Helvetica-Bold').text('Concepto:', labelX, nextY);
+      doc.font('Helvetica').text(payment.obligation?.concept?.name || 'Pago general', valueX, nextY);
+      nextY += 18;
 
-      doc.font('Helvetica-Bold').text('Método de pago:', 50, startY + 80);
-      doc.font('Helvetica').text(this.getPaymentMethodLabel(payment.paymentMethod), 150, startY + 80);
+      doc.font('Helvetica-Bold').text('Método de pago:', labelX, nextY);
+      doc.font('Helvetica').text(this.getPaymentMethodLabel(payment.paymentMethod), valueX, nextY);
+      nextY += 18;
 
       if (payment.transactionRef) {
-        doc.font('Helvetica-Bold').text('Referencia:', 50, startY + 100);
-        doc.font('Helvetica').text(payment.transactionRef, 150, startY + 100);
+        doc.font('Helvetica-Bold').text('Referencia:', labelX, nextY);
+        doc.font('Helvetica').text(payment.transactionRef, valueX, nextY);
+        nextY += 18;
       }
 
-      doc.moveDown(6);
+      doc.y = nextY + 15;
 
       // Amount Box
       const amountY = doc.y;
-      doc.rect(50, amountY, 512, 60).stroke();
-      doc.fontSize(14).font('Helvetica-Bold').text('VALOR RECIBIDO:', 60, amountY + 10);
-      doc.fontSize(20).text(
-        this.formatCurrency(Number(payment.amount)),
-        60,
-        amountY + 30,
-      );
+      doc.rect(m, amountY, w, 50).stroke();
+      doc.fontSize(12).font('Helvetica-Bold').text('VALOR RECIBIDO:', m + 10, amountY + 8);
+      doc.fontSize(18).text(this.formatCurrency(Number(payment.amount)), m + 10, amountY + 25);
 
-      doc.moveDown(4);
+      doc.y = amountY + 65;
 
       // Signature
-      doc.fontSize(10).font('Helvetica');
-      doc.text('_______________________________', 350, doc.y);
-      doc.text(`Recibido por: ${payment.receivedBy.firstName} ${payment.receivedBy.lastName}`, 350, doc.y + 5);
+      doc.fontSize(9).font('Helvetica');
+      doc.text('_______________________________', m + w - 200, doc.y);
+      doc.text(`Recibido por: ${payment.receivedBy.firstName} ${payment.receivedBy.lastName}`, m + w - 200, doc.y + 3);
 
       // Footer
-      doc.fontSize(8).text(
-        `Documento generado el ${new Date().toLocaleString('es-CO')}`,
-        50,
-        doc.page.height - 50,
-        { align: 'center' },
-      );
+      this.drawFooter(doc, payment.institution, settings, m, w);
 
       doc.end();
     });
   }
 
-  private drawHeader(doc: PDFKit.PDFDocument, institution: any, settings: any) {
-    doc.fontSize(18).font('Helvetica-Bold').text(institution.name, { align: 'center' });
-    
-    if (institution.address) {
-      doc.fontSize(10).font('Helvetica').text(institution.address, { align: 'center' });
+  private drawHeader(doc: PDFKit.PDFDocument, institution: any, settings: any, logoBuffer: Buffer | null, m: number, w: number) {
+    if (logoBuffer) {
+      try {
+        doc.image(logoBuffer, m, m, { width: 55, height: 55 });
+        doc.fontSize(16).font('Helvetica-Bold').text(institution.name, m + 65, m + 2, { width: w - 65 });
+        const subLines: string[] = [];
+        if (institution.address) subLines.push(institution.address);
+        if (settings?.invoiceCity) subLines.push(settings.invoiceCity);
+        if (settings?.taxId) subLines.push(`NIT: ${settings.taxId}`);
+        if (settings?.economicActivity) subLines.push(settings.economicActivity);
+        if (settings?.invoicePhone) subLines.push(`Tel: ${settings.invoicePhone}`);
+        if (settings?.invoiceEmail) subLines.push(settings.invoiceEmail);
+        doc.fontSize(8).font('Helvetica');
+        subLines.forEach(line => {
+          doc.text(line, m + 65, doc.y, { width: w - 65 });
+        });
+        doc.y = Math.max(doc.y, m + 60) + 10;
+      } catch {
+        this.drawHeaderText(doc, institution, settings, m, w);
+      }
+    } else {
+      this.drawHeaderText(doc, institution, settings, m, w);
     }
-    
-    if (settings?.taxId) {
-      doc.fontSize(10).text(`NIT: ${settings.taxId}`, { align: 'center' });
-    }
-    
-    doc.moveDown(2);
   }
 
-  private drawInvoiceInfo(doc: PDFKit.PDFDocument, invoice: any) {
-    doc.fontSize(14).font('Helvetica-Bold').text(
+  private drawHeaderText(doc: PDFKit.PDFDocument, institution: any, settings: any, m: number, w: number) {
+    doc.fontSize(16).font('Helvetica-Bold').text(institution.name, m, m, { width: w, align: 'center' });
+    doc.fontSize(8).font('Helvetica');
+    if (institution.address) doc.text(institution.address, { align: 'center' });
+    if (settings?.invoiceCity) doc.text(settings.invoiceCity, { align: 'center' });
+    if (settings?.taxId) doc.text(`NIT: ${settings.taxId}`, { align: 'center' });
+    if (settings?.taxRegime) doc.text(`Régimen: ${settings.taxRegime}`, { align: 'center' });
+    if (settings?.economicActivity) doc.text(settings.economicActivity, { align: 'center' });
+    if (settings?.invoicePhone) doc.text(`Tel: ${settings.invoicePhone}`, { align: 'center' });
+    if (settings?.invoiceEmail) doc.text(settings.invoiceEmail, { align: 'center' });
+    doc.moveDown(1);
+  }
+
+  private drawResolution(doc: PDFKit.PDFDocument, settings: any, m: number, w: number) {
+    if (!settings?.invoiceResolution) return;
+    doc.fontSize(7).font('Helvetica');
+    let resText = settings.invoiceResolution;
+    if (settings.invoiceResolutionDate) {
+      resText += ` del ${new Date(settings.invoiceResolutionDate).toLocaleDateString('es-CO')}`;
+    }
+    if (settings.invoiceRangeFrom != null && settings.invoiceRangeTo != null) {
+      resText += `. Numeración autorizada del ${settings.invoiceRangeFrom} al ${settings.invoiceRangeTo}`;
+    }
+    doc.text(resText, m, doc.y, { width: w, align: 'center' });
+    doc.moveDown(0.5);
+  }
+
+  private drawInvoiceInfo(doc: PDFKit.PDFDocument, invoice: any, m: number, w: number) {
+    doc.fontSize(13).font('Helvetica-Bold').text(
       invoice.type === 'INCOME' ? 'FACTURA DE VENTA' : 'FACTURA DE COMPRA',
-      { align: 'center' },
+      m, doc.y, { width: w, align: 'center' },
     );
-    doc.fontSize(12).font('Helvetica').text(`N° ${invoice.invoiceNumber}`, { align: 'center' });
-    doc.moveDown();
+    doc.fontSize(11).font('Helvetica').text(`N° ${invoice.invoiceNumber}`, m, doc.y, { width: w, align: 'center' });
+    doc.moveDown(0.8);
 
     const infoY = doc.y;
-    doc.fontSize(10);
+    doc.fontSize(9);
     
-    doc.font('Helvetica-Bold').text('Fecha de emisión:', 50, infoY);
+    doc.font('Helvetica-Bold').text('Fecha de emisión:', m, infoY);
     doc.font('Helvetica').text(
       invoice.issueDate ? new Date(invoice.issueDate).toLocaleDateString('es-CO') : 'Pendiente',
-      170,
-      infoY,
+      m + 110, infoY,
     );
 
     if (invoice.dueDate) {
-      doc.font('Helvetica-Bold').text('Fecha de vencimiento:', 300, infoY);
-      doc.font('Helvetica').text(new Date(invoice.dueDate).toLocaleDateString('es-CO'), 430, infoY);
+      doc.font('Helvetica-Bold').text('Fecha de vencimiento:', m + w / 2, infoY);
+      doc.font('Helvetica').text(new Date(invoice.dueDate).toLocaleDateString('es-CO'), m + w / 2 + 120, infoY);
     }
 
-    doc.font('Helvetica-Bold').text('Estado:', 50, infoY + 15);
-    doc.font('Helvetica').text(this.getStatusLabel(invoice.status), 170, infoY + 15);
+    doc.font('Helvetica-Bold').text('Estado:', m, infoY + 15);
+    doc.font('Helvetica').text(this.getStatusLabel(invoice.status), m + 110, infoY + 15);
 
-    doc.moveDown(2);
+    doc.y = infoY + 35;
   }
 
-  private drawThirdPartyInfo(doc: PDFKit.PDFDocument, thirdParty: any) {
-    doc.fontSize(10).font('Helvetica-Bold').text('DATOS DEL CLIENTE:');
+  private drawThirdPartyInfo(doc: PDFKit.PDFDocument, thirdParty: any, m: number, w: number) {
+    doc.fontSize(9).font('Helvetica-Bold').text('DATOS DEL CLIENTE:', m);
     doc.font('Helvetica');
-    doc.text(`Nombre: ${thirdParty.name}`);
-    
-    if (thirdParty.document) {
-      doc.text(`Documento: ${thirdParty.documentType || ''} ${thirdParty.document}`);
-    }
-    
-    if (thirdParty.address) {
-      doc.text(`Dirección: ${thirdParty.address}`);
-    }
-    
-    if (thirdParty.phone) {
-      doc.text(`Teléfono: ${thirdParty.phone}`);
-    }
-    
-    if (thirdParty.email) {
-      doc.text(`Email: ${thirdParty.email}`);
-    }
-    
-    doc.moveDown(2);
+    doc.text(`Nombre: ${thirdParty.name}`, m);
+    if (thirdParty.document) doc.text(`Documento: ${thirdParty.documentType || ''} ${thirdParty.document}`, m);
+    if (thirdParty.address) doc.text(`Dirección: ${thirdParty.address}`, m);
+    if (thirdParty.phone) doc.text(`Teléfono: ${thirdParty.phone}`, m);
+    if (thirdParty.email) doc.text(`Email: ${thirdParty.email}`, m);
+    doc.moveDown(1);
   }
 
-  private drawItemsTable(doc: PDFKit.PDFDocument, items: any[]) {
+  private drawItemsTable(doc: PDFKit.PDFDocument, items: any[], m: number, w: number) {
     const tableTop = doc.y;
-    const tableHeaders = ['Descripción', 'Cantidad', 'Valor Unit.', 'Total'];
-    const columnWidths = [250, 70, 100, 100];
-    const startX = 50;
+    const tableHeaders = ['Descripción', 'Cant.', 'Valor Unit.', 'Total'];
+    const descW = w - 180;
+    const columnWidths = [descW, 40, 70, 70];
 
     // Header row
-    doc.rect(startX, tableTop, 520, 20).fill('#f3f4f6');
-    doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold');
+    doc.rect(m, tableTop, w, 18).fill('#f3f4f6');
+    doc.fillColor('#000000').fontSize(8).font('Helvetica-Bold');
 
-    let currentX = startX + 5;
+    let currentX = m + 4;
     tableHeaders.forEach((header, i) => {
-      doc.text(header, currentX, tableTop + 5, { width: columnWidths[i] - 10 });
+      doc.text(header, currentX, tableTop + 4, { width: columnWidths[i] - 6 });
       currentX += columnWidths[i];
     });
 
     // Data rows
-    doc.font('Helvetica').fontSize(9);
-    let currentY = tableTop + 25;
+    doc.font('Helvetica').fontSize(8);
+    let currentY = tableTop + 22;
 
     items.forEach((item) => {
-      currentX = startX + 5;
-      
-      doc.text(item.description, currentX, currentY, { width: columnWidths[0] - 10 });
+      currentX = m + 4;
+      doc.text(item.description, currentX, currentY, { width: columnWidths[0] - 6 });
       currentX += columnWidths[0];
-      
-      doc.text(String(item.quantity), currentX, currentY, { width: columnWidths[1] - 10, align: 'center' });
+      doc.text(String(item.quantity), currentX, currentY, { width: columnWidths[1] - 6, align: 'center' });
       currentX += columnWidths[1];
-      
-      doc.text(this.formatCurrency(Number(item.unitPrice)), currentX, currentY, { width: columnWidths[2] - 10, align: 'right' });
+      doc.text(this.formatCurrency(Number(item.unitPrice)), currentX, currentY, { width: columnWidths[2] - 6, align: 'right' });
       currentX += columnWidths[2];
-      
-      doc.text(this.formatCurrency(Number(item.total)), currentX, currentY, { width: columnWidths[3] - 10, align: 'right' });
-
-      currentY += 20;
-
-      // Draw line
-      doc.moveTo(startX, currentY - 5).lineTo(startX + 520, currentY - 5).stroke('#e5e7eb');
+      doc.text(this.formatCurrency(Number(item.total)), currentX, currentY, { width: columnWidths[3] - 6, align: 'right' });
+      currentY += 18;
+      doc.moveTo(m, currentY - 4).lineTo(m + w, currentY - 4).stroke('#e5e7eb');
     });
 
-    doc.y = currentY + 10;
+    doc.y = currentY + 8;
   }
 
-  private drawTotals(doc: PDFKit.PDFDocument, invoice: any) {
-    const totalsX = 370;
-    const valueX = 470;
+  private drawTotals(doc: PDFKit.PDFDocument, invoice: any, m: number, w: number) {
+    const totalsX = m + w - 170;
+    const valueX = m + w - 80;
     const startY = doc.y;
 
-    doc.fontSize(10);
-
+    doc.fontSize(9);
     doc.font('Helvetica').text('Subtotal:', totalsX, startY);
-    doc.text(this.formatCurrency(Number(invoice.subtotal)), valueX, startY, { align: 'right', width: 100 });
+    doc.text(this.formatCurrency(Number(invoice.subtotal)), valueX, startY, { align: 'right', width: 80 });
 
-    if (invoice.taxAmount && Number(invoice.taxAmount) > 0) {
-      doc.text('IVA:', totalsX, startY + 15);
-      doc.text(this.formatCurrency(Number(invoice.taxAmount)), valueX, startY + 15, { align: 'right', width: 100 });
+    if (invoice.taxTotal && Number(invoice.taxTotal) > 0) {
+      doc.text('IVA:', totalsX, startY + 14);
+      doc.text(this.formatCurrency(Number(invoice.taxTotal)), valueX, startY + 14, { align: 'right', width: 80 });
     }
 
-    if (invoice.discountAmount && Number(invoice.discountAmount) > 0) {
-      doc.text('Descuento:', totalsX, startY + 30);
-      doc.text(`-${this.formatCurrency(Number(invoice.discountAmount))}`, valueX, startY + 30, { align: 'right', width: 100 });
+    if (invoice.discountTotal && Number(invoice.discountTotal) > 0) {
+      doc.text('Descuento:', totalsX, startY + 28);
+      doc.text(`-${this.formatCurrency(Number(invoice.discountTotal))}`, valueX, startY + 28, { align: 'right', width: 80 });
     }
 
-    doc.font('Helvetica-Bold').fontSize(12);
-    doc.text('TOTAL:', totalsX, startY + 50);
-    doc.text(this.formatCurrency(Number(invoice.total)), valueX, startY + 50, { align: 'right', width: 100 });
+    doc.font('Helvetica-Bold').fontSize(11);
+    doc.text('TOTAL:', totalsX, startY + 45);
+    doc.text(this.formatCurrency(Number(invoice.total)), valueX, startY + 45, { align: 'right', width: 80 });
 
-    doc.moveDown(3);
+    doc.moveDown(2);
   }
 
-  private drawFooter(doc: PDFKit.PDFDocument, institution: any) {
-    const footerY = doc.page.height - 80;
+  private drawFooter(doc: PDFKit.PDFDocument, institution: any, settings: any, m: number, w: number) {
+    const footerY = doc.page.height - (settings?.invoiceFooterText ? 90 : 60);
     
-    doc.fontSize(8).font('Helvetica');
+    doc.fontSize(7).font('Helvetica');
+
+    if (settings?.invoiceFooterText) {
+      doc.text(settings.invoiceFooterText, m, footerY, { width: w, align: 'center' });
+    }
+
+    const contactParts: string[] = [];
+    if (settings?.invoicePhone || institution.phone) contactParts.push(`Tel: ${settings?.invoicePhone || institution.phone}`);
+    if (settings?.invoiceEmail || institution.email) contactParts.push(settings?.invoiceEmail || institution.email);
+    if (contactParts.length > 0) {
+      doc.text(contactParts.join(' | '), m, doc.page.height - 45, { width: w, align: 'center' });
+    }
+
     doc.text(
       `Documento generado el ${new Date().toLocaleString('es-CO')}`,
-      50,
-      footerY,
-      { align: 'center' },
+      m,
+      doc.page.height - 30,
+      { width: w, align: 'center' },
     );
-    
-    if (institution.phone) {
-      doc.text(`Teléfono: ${institution.phone}`, 50, footerY + 12, { align: 'center' });
-    }
-    
-    if (institution.email) {
-      doc.text(`Email: ${institution.email}`, 50, footerY + 24, { align: 'center' });
-    }
   }
 
   private formatCurrency(value: number): string {

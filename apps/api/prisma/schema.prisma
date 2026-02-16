@@ -3772,6 +3772,19 @@ model FinancialSettings {
   taxId         String?         // NIT para facturación
   taxRegime     String?         // Régimen tributario
   
+  // Configuración de factura
+  invoiceLogoUrl        String?   // URL del logo/escudo para facturas
+  invoiceResolution     String?   // "Resolución DIAN No. 18764..."
+  invoiceResolutionDate DateTime? // Fecha de resolución
+  invoiceRangeFrom      Int?      // Numeración autorizada desde
+  invoiceRangeTo        Int?      // Numeración autorizada hasta
+  invoiceFooterText     String?   @db.Text // Texto legal pie de página
+  invoicePageSize       String    @default("LETTER") // LETTER o HALF_LETTER
+  invoiceCity           String?   // Ciudad para facturación
+  invoicePhone          String?   // Teléfono para facturación
+  invoiceEmail          String?   // Email para facturación
+  economicActivity      String?   // Actividad económica
+  
   // Cuentas bancarias
   bankAccounts  Json?           // Array de cuentas bancarias
   

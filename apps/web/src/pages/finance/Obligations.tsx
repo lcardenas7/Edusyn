@@ -12,8 +12,9 @@ import {
   AlertTriangle,
   XCircle,
   Users,
+  Loader2,
 } from 'lucide-react'
-import { financeObligationsApi } from '../../lib/api'
+import { financeObligationsApi, financeConceptsApi, academicGradesApi, groupsApi } from '../../lib/api'
 
 type ObligationStatus = 'PENDING' | 'PARTIAL' | 'PAID' | 'CANCELLED' | 'OVERDUE'
 
@@ -57,6 +58,23 @@ export default function Obligations() {
   )
   const [showMassiveModal, setShowMassiveModal] = useState(false)
 
+  // Massive modal state
+  const [concepts, setConcepts] = useState<any[]>([])
+  const [grades, setGrades] = useState<any[]>([])
+  const [groups, setGroups] = useState<any[]>([])
+  const [loadingMassive, setLoadingMassive] = useState(false)
+  const [savingMassive, setSavingMassive] = useState(false)
+  const [massiveResult, setMassiveResult] = useState<any>(null)
+  const [massiveForm, setMassiveForm] = useState({
+    conceptId: '',
+    targetType: 'GRADE' as 'GRADE' | 'GROUP',
+    targetId: '',
+    amount: '',
+    discountAmount: '',
+    discountReason: '',
+    dueDate: '',
+  })
+
   const fetchObligations = async () => {
     setLoading(true)
     try {
@@ -74,6 +92,62 @@ export default function Obligations() {
   useEffect(() => {
     fetchObligations()
   }, [statusFilter])
+
+  const openMassiveModal = async () => {
+    setShowMassiveModal(true)
+    setLoadingMassive(true)
+    setMassiveResult(null)
+    setMassiveForm({ conceptId: '', targetType: 'GRADE', targetId: '', amount: '', discountAmount: '', discountReason: '', dueDate: '' })
+    try {
+      const [conceptsRes, gradesRes, groupsRes] = await Promise.all([
+        financeConceptsApi.getAll({ isActive: 'true' }),
+        academicGradesApi.getAll(),
+        groupsApi.getAll(),
+      ])
+      setConcepts(conceptsRes.data)
+      setGrades(gradesRes.data)
+      setGroups(groupsRes.data)
+    } catch (err) {
+      console.error('Error loading massive data:', err)
+    } finally {
+      setLoadingMassive(false)
+    }
+  }
+
+  const handleConceptChangeMassive = (conceptId: string) => {
+    const concept = concepts.find((c: any) => c.id === conceptId)
+    setMassiveForm(f => ({
+      ...f,
+      conceptId,
+      amount: concept ? String(Number(concept.defaultAmount)) : '',
+    }))
+  }
+
+  const handleSubmitMassive = async () => {
+    if (!massiveForm.conceptId || !massiveForm.targetId) {
+      alert('Concepto y destino son requeridos')
+      return
+    }
+    setSavingMassive(true)
+    setMassiveResult(null)
+    try {
+      const res = await financeObligationsApi.createMassive({
+        conceptId: massiveForm.conceptId,
+        targetType: massiveForm.targetType,
+        targetIds: [massiveForm.targetId],
+        amount: massiveForm.amount ? Number(massiveForm.amount) : undefined,
+        discountAmount: massiveForm.discountAmount ? Number(massiveForm.discountAmount) : undefined,
+        discountReason: massiveForm.discountReason || undefined,
+        dueDate: massiveForm.dueDate || undefined,
+      })
+      setMassiveResult(res.data)
+      fetchObligations()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error en asignación masiva')
+    } finally {
+      setSavingMassive(false)
+    }
+  }
 
   const filteredObligations = obligations.filter(obl => {
     if (!search) return true
@@ -106,7 +180,7 @@ export default function Obligations() {
             </div>
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => setShowMassiveModal(true)}
+                onClick={openMassiveModal}
                 className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 flex items-center gap-2"
               >
                 <Users className="w-4 h-4" />
@@ -279,45 +353,105 @@ export default function Obligations() {
         </div>
       </div>
 
-      {/* Massive Assignment Modal - Placeholder */}
+      {/* Massive Assignment Modal */}
       {showMassiveModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Asignación Masiva</h2>
-            <p className="text-gray-500 mb-4">
-              Asigna un concepto de cobro a múltiples estudiantes de un grado o grupo.
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Asignación Masiva</h2>
+            <p className="text-gray-500 mb-4 text-sm">
+              Asigna un concepto de cobro a todos los estudiantes de un grado o grupo.
             </p>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Concepto</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                  <option>Seleccionar concepto...</option>
-                </select>
+            {loadingMassive ? (
+              <div className="py-8 text-center"><Loader2 className="w-8 h-8 animate-spin text-purple-500 mx-auto" /></div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Concepto de Cobro *</label>
+                  <select value={massiveForm.conceptId} onChange={e => handleConceptChangeMassive(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    <option value="">Seleccionar concepto...</option>
+                    {concepts.map((c: any) => (
+                      <option key={c.id} value={c.id}>{c.name} - ${Number(c.defaultAmount).toLocaleString('es-CO')}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Asignar a</label>
+                  <select value={massiveForm.targetType}
+                    onChange={e => setMassiveForm(f => ({ ...f, targetType: e.target.value as 'GRADE' | 'GROUP', targetId: '' }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    <option value="GRADE">Por Grado</option>
+                    <option value="GROUP">Por Grupo</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {massiveForm.targetType === 'GRADE' ? 'Grado' : 'Grupo'} *
+                  </label>
+                  <select value={massiveForm.targetId}
+                    onChange={e => setMassiveForm(f => ({ ...f, targetId: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    <option value="">Seleccionar...</option>
+                    {massiveForm.targetType === 'GRADE'
+                      ? grades.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)
+                      : groups.map((g: any) => <option key={g.id} value={g.id}>{g.name} ({g.grade?.name})</option>)
+                    }
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Monto</label>
+                    <input type="number" value={massiveForm.amount}
+                      onChange={e => setMassiveForm(f => ({ ...f, amount: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      placeholder="Valor del concepto" />
+                    <p className="text-xs text-gray-400 mt-1">Vacío = valor del concepto</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Vencimiento</label>
+                    <input type="date" value={massiveForm.dueDate}
+                      onChange={e => setMassiveForm(f => ({ ...f, dueDate: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Descuento</label>
+                    <input type="number" value={massiveForm.discountAmount}
+                      onChange={e => setMassiveForm(f => ({ ...f, discountAmount: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="0" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Motivo Descuento</label>
+                    <input type="text" value={massiveForm.discountReason}
+                      onChange={e => setMassiveForm(f => ({ ...f, discountReason: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Ej: Beca..." />
+                  </div>
+                </div>
+                {massiveResult && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
+                    <p className="font-medium text-green-800">Resultado:</p>
+                    <p className="text-green-700">Creadas: {massiveResult.created} | Omitidas (ya existían): {massiveResult.skipped}</p>
+                    {massiveResult.errors?.length > 0 && (
+                      <p className="text-red-600 mt-1">Errores: {massiveResult.errors.length}</p>
+                    )}
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Asignar a</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                  <option value="GRADE">Por Grado</option>
-                  <option value="GROUP">Por Grupo</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Seleccionar</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                  <option>Seleccionar...</option>
-                </select>
-              </div>
-            </div>
+            )}
             <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => setShowMassiveModal(false)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
-              >
-                Cancelar
+              <button onClick={() => setShowMassiveModal(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
+                {massiveResult ? 'Cerrar' : 'Cancelar'}
               </button>
-              <button className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600">
-                Generar Obligaciones
-              </button>
+              {!massiveResult && (
+                <button onClick={handleSubmitMassive}
+                  disabled={savingMassive || !massiveForm.conceptId || !massiveForm.targetId}
+                  className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 flex items-center gap-2 disabled:opacity-50">
+                  {savingMassive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
+                  {savingMassive ? 'Generando...' : 'Generar Obligaciones'}
+                </button>
+              )}
             </div>
           </div>
         </div>

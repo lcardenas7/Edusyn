@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Settings as SettingsIcon, Save, RefreshCw, Plus, Trash2 } from 'lucide-react'
-import { financeSettingsApi } from '../../lib/api'
+import { ArrowLeft, Settings as SettingsIcon, Save, RefreshCw, Plus, Trash2, Upload, Image } from 'lucide-react'
+import { financeSettingsApi, storageApi } from '../../lib/api'
 
 interface BankAccount {
   bankName: string
@@ -21,6 +21,18 @@ interface FinancialSettingsData {
   bankAccounts: BankAccount[] | null
   sendPaymentReminders: boolean
   reminderDaysBefore: number
+  // Invoice config
+  invoiceLogoUrl: string | null
+  invoiceResolution: string | null
+  invoiceResolutionDate: string | null
+  invoiceRangeFrom: number | null
+  invoiceRangeTo: number | null
+  invoiceFooterText: string | null
+  invoicePageSize: string
+  invoiceCity: string | null
+  invoicePhone: string | null
+  invoiceEmail: string | null
+  economicActivity: string | null
 }
 
 export default function FinanceSettings() {
@@ -43,6 +55,9 @@ export default function FinanceSettings() {
 
   useEffect(() => { fetchSettings() }, [])
 
+  const logoInputRef = useRef<HTMLInputElement>(null)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+
   const handleSave = async () => {
     if (!settings) return
     setSaving(true)
@@ -59,6 +74,17 @@ export default function FinanceSettings() {
         bankAccounts: settings.bankAccounts,
         sendPaymentReminders: settings.sendPaymentReminders,
         reminderDaysBefore: settings.reminderDaysBefore,
+        invoiceLogoUrl: settings.invoiceLogoUrl || undefined,
+        invoiceResolution: settings.invoiceResolution || undefined,
+        invoiceResolutionDate: settings.invoiceResolutionDate || undefined,
+        invoiceRangeFrom: settings.invoiceRangeFrom ?? undefined,
+        invoiceRangeTo: settings.invoiceRangeTo ?? undefined,
+        invoiceFooterText: settings.invoiceFooterText || undefined,
+        invoicePageSize: settings.invoicePageSize,
+        invoiceCity: settings.invoiceCity || undefined,
+        invoicePhone: settings.invoicePhone || undefined,
+        invoiceEmail: settings.invoiceEmail || undefined,
+        economicActivity: settings.economicActivity || undefined,
       }
       await financeSettingsApi.update(payload)
       setSaved(true)
@@ -67,6 +93,23 @@ export default function FinanceSettings() {
       alert(err.response?.data?.message || 'Error al guardar')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !settings) return
+    setUploadingLogo(true)
+    try {
+      const res = await storageApi.uploadGalleryImage(file, '', 'invoice-logo')
+      const url = res.data?.url || res.data?.publicUrl
+      if (url) {
+        setSettings({ ...settings, invoiceLogoUrl: url })
+      }
+    } catch (err: any) {
+      alert('Error al subir logo: ' + (err.response?.data?.message || err.message))
+    } finally {
+      setUploadingLogo(false)
     }
   }
 
@@ -201,6 +244,124 @@ export default function FinanceSettings() {
                   <option value="NO_RESPONSABLE">No responsable de IVA</option>
                 </select>
               </div>
+            </div>
+          </div>
+
+          {/* Configuración de Factura */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Configuración de Factura</h2>
+            
+            {/* Logo */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Logo / Escudo para Facturas</label>
+              <div className="flex items-center gap-4">
+                {settings.invoiceLogoUrl ? (
+                  <div className="relative">
+                    <img src={settings.invoiceLogoUrl} alt="Logo factura" className="w-16 h-16 object-contain border border-gray-200 rounded-lg" />
+                    <button onClick={() => setSettings({ ...settings, invoiceLogoUrl: null })}
+                      className="absolute -top-2 -right-2 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600">
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                    <Image className="w-6 h-6 text-gray-400" />
+                  </div>
+                )}
+                <div>
+                  <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                  <button onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo}
+                    className="px-3 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-1 text-sm disabled:opacity-50">
+                    <Upload className="w-4 h-4" /> {uploadingLogo ? 'Subiendo...' : 'Subir Logo'}
+                  </button>
+                  <p className="text-xs text-gray-400 mt-1">Escudo o logo de la institución. PNG o JPG.</p>
+                </div>
+              </div>
+              <div className="mt-2">
+                <label className="block text-xs text-gray-500 mb-1">O pegar URL directa:</label>
+                <input type="text" value={settings.invoiceLogoUrl || ''} onChange={e => setSettings({ ...settings, invoiceLogoUrl: e.target.value || null })}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm" placeholder="https://..." />
+              </div>
+            </div>
+
+            {/* Tamaño de página */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tamaño de Página</label>
+              <div className="flex gap-4">
+                <label className={`flex-1 p-3 border-2 rounded-lg cursor-pointer text-center transition-colors ${settings.invoicePageSize === 'LETTER' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <input type="radio" name="pageSize" value="LETTER" checked={settings.invoicePageSize === 'LETTER'}
+                    onChange={() => setSettings({ ...settings, invoicePageSize: 'LETTER' })} className="sr-only" />
+                  <p className="font-medium text-gray-900">Carta Completa</p>
+                  <p className="text-xs text-gray-500">8.5" × 11" (Letter)</p>
+                </label>
+                <label className={`flex-1 p-3 border-2 rounded-lg cursor-pointer text-center transition-colors ${settings.invoicePageSize === 'HALF_LETTER' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <input type="radio" name="pageSize" value="HALF_LETTER" checked={settings.invoicePageSize === 'HALF_LETTER'}
+                    onChange={() => setSettings({ ...settings, invoicePageSize: 'HALF_LETTER' })} className="sr-only" />
+                  <p className="font-medium text-gray-900">Media Carta</p>
+                  <p className="text-xs text-gray-500">5.5" × 8.5" (Half Letter)</p>
+                </label>
+              </div>
+            </div>
+
+            {/* Datos de contacto facturación */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
+                <input type="text" value={settings.invoiceCity || ''} onChange={e => setSettings({ ...settings, invoiceCity: e.target.value || null })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Ej: Bogotá D.C." />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Actividad Económica</label>
+                <input type="text" value={settings.economicActivity || ''} onChange={e => setSettings({ ...settings, economicActivity: e.target.value || null })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Ej: Educación formal" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono Facturación</label>
+                <input type="text" value={settings.invoicePhone || ''} onChange={e => setSettings({ ...settings, invoicePhone: e.target.value || null })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Ej: (601) 123-4567" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email Facturación</label>
+                <input type="email" value={settings.invoiceEmail || ''} onChange={e => setSettings({ ...settings, invoiceEmail: e.target.value || null })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="facturacion@colegio.edu.co" />
+              </div>
+            </div>
+
+            {/* Resolución DIAN */}
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-800 mb-3">Resolución de Facturación (DIAN)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Resolución</label>
+                  <input type="text" value={settings.invoiceResolution || ''} onChange={e => setSettings({ ...settings, invoiceResolution: e.target.value || null })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Resolución DIAN No. 18764000001234" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Resolución</label>
+                  <input type="date" value={settings.invoiceResolutionDate?.split('T')[0] || ''} onChange={e => setSettings({ ...settings, invoiceResolutionDate: e.target.value || null })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Desde N°</label>
+                    <input type="number" value={settings.invoiceRangeFrom ?? ''} onChange={e => setSettings({ ...settings, invoiceRangeFrom: e.target.value ? Number(e.target.value) : null })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="1" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Hasta N°</label>
+                    <input type="number" value={settings.invoiceRangeTo ?? ''} onChange={e => setSettings({ ...settings, invoiceRangeTo: e.target.value ? Number(e.target.value) : null })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="10000" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pie de página */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Texto Legal / Pie de Página</label>
+              <textarea value={settings.invoiceFooterText || ''} onChange={e => setSettings({ ...settings, invoiceFooterText: e.target.value || null })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg" rows={3}
+                placeholder="Ej: Esta factura se asimila en todos sus efectos a una letra de cambio según Art. 774 del Código de Comercio..." />
             </div>
           </div>
 

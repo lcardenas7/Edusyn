@@ -11,8 +11,11 @@ import {
   Banknote,
   Smartphone,
   Building,
+  XCircle,
+  FileDown,
+  Loader2,
 } from 'lucide-react'
-import { financePaymentsApi } from '../../lib/api'
+import { financePaymentsApi, financeThirdPartiesApi, financeObligationsApi } from '../../lib/api'
 
 type PaymentMethod = 'CASH' | 'TRANSFER' | 'CARD' | 'PSE' | 'NEQUI' | 'DAVIPLATA' | 'OTHER'
 
@@ -25,6 +28,20 @@ interface Payment {
   receiptNumber?: string
   paymentDate: string
   receivedBy: { firstName: string; lastName: string }
+  voidedAt?: string
+}
+
+interface ThirdPartyOption {
+  id: string
+  name: string
+  type: string
+}
+
+interface ObligationOption {
+  id: string
+  concept: { name: string }
+  balance: number
+  reference?: string
 }
 
 const methodConfig: Record<PaymentMethod, { label: string; icon: React.ReactNode; color: string }> = {
@@ -52,6 +69,20 @@ export default function Payments() {
   const [methodFilter, setMethodFilter] = useState<PaymentMethod | ''>('')
   const [showNewPaymentModal, setShowNewPaymentModal] = useState(false)
 
+  // Modal state
+  const [thirdParties, setThirdParties] = useState<ThirdPartyOption[]>([])
+  const [obligations, setObligations] = useState<ObligationOption[]>([])
+  const [loadingModal, setLoadingModal] = useState(false)
+  const [savingPayment, setSavingPayment] = useState(false)
+  const [paymentForm, setPaymentForm] = useState({
+    thirdPartyId: '',
+    obligationId: '',
+    amount: '',
+    paymentMethod: 'CASH' as PaymentMethod,
+    transactionRef: '',
+    notes: '',
+  })
+
   const fetchPayments = async () => {
     setLoading(true)
     try {
@@ -69,6 +100,91 @@ export default function Payments() {
   useEffect(() => {
     fetchPayments()
   }, [methodFilter])
+
+  const openNewPaymentModal = async () => {
+    setShowNewPaymentModal(true)
+    setLoadingModal(true)
+    setPaymentForm({ thirdPartyId: '', obligationId: '', amount: '', paymentMethod: 'CASH', transactionRef: '', notes: '' })
+    try {
+      const tpRes = await financeThirdPartiesApi.getAll({ isActive: 'true' })
+      setThirdParties(tpRes.data)
+    } catch (err) {
+      console.error('Error loading third parties:', err)
+    } finally {
+      setLoadingModal(false)
+    }
+  }
+
+  const handleThirdPartyChange = async (tpId: string) => {
+    setPaymentForm(f => ({ ...f, thirdPartyId: tpId, obligationId: '', amount: '' }))
+    setObligations([])
+    if (!tpId) return
+    try {
+      const res = await financeObligationsApi.getAll({ thirdPartyId: tpId, status: 'PENDING' })
+      const pending = res.data.filter((o: any) => ['PENDING', 'PARTIAL', 'OVERDUE'].includes(o.status))
+      setObligations(pending)
+    } catch (err) {
+      console.error('Error loading obligations:', err)
+    }
+  }
+
+  const handleObligationChange = (oblId: string) => {
+    const obl = obligations.find(o => o.id === oblId)
+    setPaymentForm(f => ({
+      ...f,
+      obligationId: oblId,
+      amount: obl ? String(Number(obl.balance)) : f.amount,
+    }))
+  }
+
+  const handleSubmitPayment = async () => {
+    if (!paymentForm.thirdPartyId || !paymentForm.amount || Number(paymentForm.amount) <= 0) {
+      alert('Tercero y monto son requeridos')
+      return
+    }
+    setSavingPayment(true)
+    try {
+      await financePaymentsApi.create({
+        thirdPartyId: paymentForm.thirdPartyId,
+        obligationId: paymentForm.obligationId || undefined,
+        amount: Number(paymentForm.amount),
+        paymentMethod: paymentForm.paymentMethod,
+        transactionRef: paymentForm.transactionRef || undefined,
+        notes: paymentForm.notes || undefined,
+      })
+      setShowNewPaymentModal(false)
+      fetchPayments()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al registrar pago')
+    } finally {
+      setSavingPayment(false)
+    }
+  }
+
+  const handleVoidPayment = async (id: string) => {
+    const reason = prompt('Motivo de anulación:')
+    if (!reason) return
+    try {
+      await financePaymentsApi.void(id, reason)
+      fetchPayments()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al anular pago')
+    }
+  }
+
+  const handleDownloadReceipt = async (id: string, receiptNumber?: string) => {
+    try {
+      const response = await financePaymentsApi.downloadReceipt(id)
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `recibo-${receiptNumber || id.slice(0, 8)}.pdf`
+      link.click()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      alert('Error al descargar recibo')
+    }
+  }
 
   const filteredPayments = payments.filter(p => {
     if (!search) return true
@@ -109,7 +225,7 @@ export default function Payments() {
                 <p className="text-lg font-bold text-green-700">{formatCurrency(todayTotal)}</p>
               </div>
               <button
-                onClick={() => setShowNewPaymentModal(true)}
+                onClick={openNewPaymentModal}
                 className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
@@ -182,6 +298,7 @@ export default function Payments() {
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Método</th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recibido por</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -223,6 +340,20 @@ export default function Payments() {
                         <td className="px-6 py-4 text-sm text-gray-500">
                           {payment.receivedBy.firstName} {payment.receivedBy.lastName}
                         </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button onClick={() => handleDownloadReceipt(payment.id, payment.receiptNumber)} title="Descargar Recibo"
+                              className="p-1.5 text-gray-500 hover:bg-gray-100 rounded">
+                              <FileDown className="w-4 h-4" />
+                            </button>
+                            {!payment.voidedAt && (
+                              <button onClick={() => handleVoidPayment(payment.id)} title="Anular Pago"
+                                className="p-1.5 text-red-400 hover:bg-red-50 rounded">
+                                <XCircle className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     )
                   })}
@@ -233,53 +364,87 @@ export default function Payments() {
         </div>
       </div>
 
-      {/* New Payment Modal - Placeholder */}
+      {/* New Payment Modal */}
       {showNewPaymentModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Registrar Pago</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tercero</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                  <option>Seleccionar tercero...</option>
-                </select>
+            {loadingModal ? (
+              <div className="py-8 text-center"><Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto" /></div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tercero *</label>
+                  <select value={paymentForm.thirdPartyId} onChange={e => handleThirdPartyChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">Seleccionar tercero...</option>
+                    {thirdParties.map(tp => (
+                      <option key={tp.id} value={tp.id}>{tp.name} ({tp.type})</option>
+                    ))}
+                  </select>
+                </div>
+                {obligations.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Obligación (opcional)</label>
+                    <select value={paymentForm.obligationId} onChange={e => handleObligationChange(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                      <option value="">Pago general (sin obligación)</option>
+                      {obligations.map(obl => (
+                        <option key={obl.id} value={obl.id}>
+                          {obl.concept.name} - Saldo: {formatCurrency(Number(obl.balance))}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Monto *</label>
+                  <input type="number" value={paymentForm.amount}
+                    onChange={e => setPaymentForm(f => ({ ...f, amount: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="0" min="1" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
+                  <select value={paymentForm.paymentMethod}
+                    onChange={e => setPaymentForm(f => ({ ...f, paymentMethod: e.target.value as PaymentMethod }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="CASH">Efectivo</option>
+                    <option value="TRANSFER">Transferencia</option>
+                    <option value="CARD">Tarjeta</option>
+                    <option value="PSE">PSE</option>
+                    <option value="NEQUI">Nequi</option>
+                    <option value="DAVIPLATA">Daviplata</option>
+                    <option value="OTHER">Otro</option>
+                  </select>
+                </div>
+                {paymentForm.paymentMethod !== 'CASH' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Referencia de transacción</label>
+                    <input type="text" value={paymentForm.transactionRef}
+                      onChange={e => setPaymentForm(f => ({ ...f, transactionRef: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="N° transferencia, aprobación..." />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+                  <textarea value={paymentForm.notes}
+                    onChange={e => setPaymentForm(f => ({ ...f, notes: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    rows={2} placeholder="Observaciones..." />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Obligación (opcional)</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                  <option>Seleccionar obligación...</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Monto</label>
-                <input
-                  type="number"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                  <option value="CASH">Efectivo</option>
-                  <option value="TRANSFER">Transferencia</option>
-                  <option value="CARD">Tarjeta</option>
-                  <option value="PSE">PSE</option>
-                  <option value="NEQUI">Nequi</option>
-                  <option value="DAVIPLATA">Daviplata</option>
-                </select>
-              </div>
-            </div>
+            )}
             <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => setShowNewPaymentModal(false)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
-              >
+              <button onClick={() => setShowNewPaymentModal(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
                 Cancelar
               </button>
-              <button className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">
-                Registrar Pago
+              <button onClick={handleSubmitPayment} disabled={savingPayment || !paymentForm.thirdPartyId || !paymentForm.amount}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-2 disabled:opacity-50">
+                {savingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                {savingPayment ? 'Registrando...' : 'Registrar Pago'}
               </button>
             </div>
           </div>

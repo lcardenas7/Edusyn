@@ -143,7 +143,9 @@ export default function FinanceReports() {
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID Tercero</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tercero</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Documento</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Tipo</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo pendiente</th>
                     </tr>
                   </thead>
@@ -151,7 +153,11 @@ export default function FinanceReports() {
                     {data.map((item: any, idx: number) => (
                       <tr key={item.thirdPartyId} className="hover:bg-gray-50">
                         <td className="px-6 py-4 text-gray-500">{idx + 1}</td>
-                        <td className="px-6 py-4 font-mono text-sm">{item.thirdPartyId}</td>
+                        <td className="px-6 py-4 font-medium text-gray-900">{item.thirdPartyName || item.thirdPartyId}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500">{item.thirdPartyDocument || '-'}</td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs">{item.thirdPartyType || '-'}</span>
+                        </td>
                         <td className="px-6 py-4 text-right font-bold text-red-600">
                           {formatCurrency(Number(item._sum?.balance || 0))}
                         </td>

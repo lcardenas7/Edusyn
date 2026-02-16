@@ -1245,7 +1245,7 @@ export const financeReportsApi = {
 
 export const financeSettingsApi = {
   get: () => api.get('/finance/settings'),
-  update: (data: { invoicePrefix?: string; receiptPrefix?: string; defaultLateFeeType?: string; defaultLateFeeValue?: number; defaultGracePeriodDays?: number; taxId?: string; taxRegime?: string; bankAccounts?: any; sendPaymentReminders?: boolean; reminderDaysBefore?: number }) => 
+  update: (data: { invoicePrefix?: string; receiptPrefix?: string; defaultLateFeeType?: string; defaultLateFeeValue?: number; defaultGracePeriodDays?: number; taxId?: string; taxRegime?: string; bankAccounts?: any; sendPaymentReminders?: boolean; reminderDaysBefore?: number; invoiceLogoUrl?: string; invoiceResolution?: string; invoiceResolutionDate?: string; invoiceRangeFrom?: number; invoiceRangeTo?: number; invoiceFooterText?: string; invoicePageSize?: string; invoiceCity?: string; invoicePhone?: string; invoiceEmail?: string; economicActivity?: string }) => 
     api.put('/finance/settings', data),
 }
 

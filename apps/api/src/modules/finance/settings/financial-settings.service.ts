@@ -31,22 +31,35 @@ export class FinancialSettingsService {
     bankAccounts?: any;
     sendPaymentReminders?: boolean;
     reminderDaysBefore?: number;
+    invoiceLogoUrl?: string;
+    invoiceResolution?: string;
+    invoiceResolutionDate?: string;
+    invoiceRangeFrom?: number;
+    invoiceRangeTo?: number;
+    invoiceFooterText?: string;
+    invoicePageSize?: string;
+    invoiceCity?: string;
+    invoicePhone?: string;
+    invoiceEmail?: string;
+    economicActivity?: string;
   }) {
+    const { defaultLateFeeValue, invoiceResolutionDate, ...rest } = data;
+
+    const updateData: any = { ...rest };
+    if (defaultLateFeeValue !== undefined) {
+      updateData.defaultLateFeeValue = defaultLateFeeValue ? new Prisma.Decimal(defaultLateFeeValue) : null;
+    }
+    if (invoiceResolutionDate !== undefined) {
+      updateData.invoiceResolutionDate = invoiceResolutionDate ? new Date(invoiceResolutionDate) : null;
+    }
+
     return this.prisma.financialSettings.upsert({
       where: { institutionId },
       create: {
         institutionId,
-        ...data,
-        defaultLateFeeValue: data.defaultLateFeeValue 
-          ? new Prisma.Decimal(data.defaultLateFeeValue) 
-          : null,
+        ...updateData,
       },
-      update: {
-        ...data,
-        defaultLateFeeValue: data.defaultLateFeeValue !== undefined
-          ? (data.defaultLateFeeValue ? new Prisma.Decimal(data.defaultLateFeeValue) : null)
-          : undefined,
-      },
+      update: updateData,
     });
   }
 }

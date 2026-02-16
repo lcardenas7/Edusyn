@@ -68,14 +68,19 @@ import {
   FinanceHub,
   FinanceDashboard,
   ThirdParties,
+  ThirdPartyDetail,
   Concepts,
   Obligations,
+  ObligationDetail,
   Payments,
   Expenses,
   Categories,
   Invoices,
   FinanceReports,
   FinanceSettings,
+  NewInvoice,
+  NewObligation,
+  NewThirdParty,
 } from './pages/finance'
 
 function ProtectedRoute({ children, allowChangePassword = false }: { children: React.ReactNode; allowChangePassword?: boolean }) {
@@ -287,12 +292,17 @@ function App() {
                   <Route path="/finance" element={<FinanceHub />} />
                   <Route path="/finance/dashboard" element={<FinanceDashboard />} />
                   <Route path="/finance/third-parties" element={<ThirdParties />} />
+                  <Route path="/finance/third-parties/new" element={<NewThirdParty />} />
+                  <Route path="/finance/third-parties/:id" element={<ThirdPartyDetail />} />
                   <Route path="/finance/concepts" element={<Concepts />} />
                   <Route path="/finance/obligations" element={<Obligations />} />
+                  <Route path="/finance/obligations/new" element={<NewObligation />} />
+                  <Route path="/finance/obligations/:id" element={<ObligationDetail />} />
                   <Route path="/finance/payments" element={<Payments />} />
                   <Route path="/finance/expenses" element={<Expenses />} />
                   <Route path="/finance/categories" element={<Categories />} />
                   <Route path="/finance/invoices" element={<Invoices />} />
+                  <Route path="/finance/invoices/new" element={<NewInvoice />} />
                   <Route path="/finance/reports" element={<FinanceReports />} />
                   <Route path="/finance/settings" element={<FinanceSettings />} />
                   
