@@ -2805,13 +2805,13 @@ model ElectionProcess {
   name            String   // "Elecciones Gobierno Escolar 2026"
   description     String?
   
-  // Fechas del proceso general
-  registrationStart DateTime  // Inicio inscripción candidatos
-  registrationEnd   DateTime  // Fin inscripción candidatos
-  campaignStart     DateTime  // Inicio campaña
-  campaignEnd       DateTime  // Fin campaña
-  votingStart       DateTime  // Inicio votación
-  votingEnd         DateTime  // Fin votación
+  // Fechas del proceso general (opcionales en DRAFT, se definen antes de avanzar)
+  registrationStart DateTime?  // Inicio inscripción candidatos
+  registrationEnd   DateTime?  // Fin inscripción candidatos
+  campaignStart     DateTime?  // Inicio campaña
+  campaignEnd       DateTime?  // Fin campaña
+  votingStart       DateTime?  // Inicio votación
+  votingEnd         DateTime?  // Fin votación
   
   status          ElectionProcessStatus @default(DRAFT)
   

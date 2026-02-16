@@ -26,12 +26,12 @@ export class ElectionsService {
     academicYearId: string;
     name: string;
     description?: string;
-    registrationStart: Date;
-    registrationEnd: Date;
-    campaignStart: Date;
-    campaignEnd: Date;
-    votingStart: Date;
-    votingEnd: Date;
+    registrationStart?: Date | null;
+    registrationEnd?: Date | null;
+    campaignStart?: Date | null;
+    campaignEnd?: Date | null;
+    votingStart?: Date | null;
+    votingEnd?: Date | null;
     enablePersonero?: boolean;
     enableContralor?: boolean;
     enableRepresentanteGrado?: boolean;
@@ -47,12 +47,12 @@ export class ElectionsService {
         createdBy: { connect: { id: data.createdById } },
         name: data.name,
         description: data.description,
-        registrationStart: data.registrationStart,
-        registrationEnd: data.registrationEnd,
-        campaignStart: data.campaignStart,
-        campaignEnd: data.campaignEnd,
-        votingStart: data.votingStart,
-        votingEnd: data.votingEnd,
+        registrationStart: data.registrationStart || undefined,
+        registrationEnd: data.registrationEnd || undefined,
+        campaignStart: data.campaignStart || undefined,
+        campaignEnd: data.campaignEnd || undefined,
+        votingStart: data.votingStart || undefined,
+        votingEnd: data.votingEnd || undefined,
         enablePersonero: data.enablePersonero ?? true,
         enableContralor: data.enableContralor ?? true,
         enableRepresentanteGrado: data.enableRepresentanteGrado ?? true,
@@ -310,9 +310,9 @@ export class ElectionsService {
           );
         }
 
-        // Validar fecha de votación
+        // Validar fecha de votación (si está configurada)
         const now = new Date();
-        if (now < process.votingStart) {
+        if (process.votingStart && now < process.votingStart) {
           throw new BadRequestException(
             `No se puede iniciar votación antes de la fecha configurada: ${process.votingStart.toLocaleDateString()}.`,
           );
