@@ -1295,7 +1295,7 @@ export default function Grades() {
       <>
       <div className="flex gap-4 mb-6 flex-wrap">
         {/* 1️⃣ GRUPO (primero) */}
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <select
             value={selectedGroupId}
             onChange={(e) => {
@@ -1308,7 +1308,7 @@ export default function Grades() {
                 setSelectedSubjectId('')
               }
             }}
-            className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full sm:w-auto appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           >
             <option value="">Seleccionar curso</option>
             {uniqueGroups.map((group) => (
@@ -1319,12 +1319,12 @@ export default function Grades() {
         </div>
 
         {/* 2️⃣ ASIGNATURA / DIMENSIÓN (segundo, filtrado por grupo) */}
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <select
             value={selectedSubjectId}
             onChange={(e) => setSelectedSubjectId(e.target.value)}
             disabled={!selectedGroupId}
-            className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
           >
             <option value="">Seleccionar {subjectLabel.toLowerCase()}</option>
             {filteredSubjects.map((subject) => (
@@ -1334,7 +1334,7 @@ export default function Grades() {
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
         </div>
 
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <select
             value={selectedSourceType === 'final_component' ? `fc_${selectedFinalComponentId}` : selectedPeriod}
             onChange={(e) => {
@@ -1349,7 +1349,7 @@ export default function Grades() {
                 setSelectedPeriod(val)
               }
             }}
-            className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full sm:w-auto appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           >
             {periods.map((period) => (
               <option key={period.id} value={period.id}>{period.name}</option>
@@ -1365,7 +1365,7 @@ export default function Grades() {
         </div>
 
         {selectedSourceType === 'period' && !isQualitative && (
-        <div className="flex bg-slate-100 rounded-lg p-1">
+        <div className="flex flex-wrap bg-slate-100 rounded-lg p-1">
           <button
             onClick={() => setViewMode('detailed')}
             className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${viewMode === 'detailed' ? 'bg-white shadow-sm' : 'text-slate-600'}`}
