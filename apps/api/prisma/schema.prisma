@@ -2850,7 +2850,7 @@ model ElectionProcess {
   elections       Election[]
   auditLogs       ElectionAuditLog[]
   
-  @@unique([institutionId, academicYearId])
+  @@index([institutionId, academicYearId])
 }
 
 enum ElectionProcessStatus {
@@ -2894,10 +2894,15 @@ model Election {
 }
 
 enum ElectionType {
+  // Elecciones estudiantiles
   PERSONERO             // Personero estudiantil (toda la institución)
   CONTRALOR             // Contralor estudiantil (toda la institución)
   REPRESENTANTE_GRADO   // Representante de grado (por grado)
   REPRESENTANTE_CURSO   // Representante de curso (por grupo)
+  
+  // Elecciones de docentes
+  REPRESENTANTE_DOCENTES  // Representante de docentes ante el consejo directivo
+  COMITE_CONVIVENCIA_DOC  // Representante docente al comité de convivencia
 }
 
 enum ElectionStatus {

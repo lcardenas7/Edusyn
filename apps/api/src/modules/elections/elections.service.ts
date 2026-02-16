@@ -39,21 +39,7 @@ export class ElectionsService {
     allowBlankVote?: boolean;
     createdById: string;
   }) {
-    // Verificar que no exista proceso para este año
-    const existing = await this.prisma.electionProcess.findUnique({
-      where: {
-        institutionId_academicYearId: {
-          institutionId: data.institutionId,
-          academicYearId: data.academicYearId,
-        },
-      },
-    });
-
-    if (existing) {
-      throw new BadRequestException('Ya existe un proceso electoral para este año académico');
-    }
-
-    // Crear proceso electoral
+    // Crear proceso electoral (se permiten múltiples procesos por año)
     const process = await this.prisma.electionProcess.create({
       data: {
         institutionId: data.institutionId,
@@ -199,6 +185,37 @@ export class ElectionsService {
           },
         },
       },
+    });
+  }
+
+  /**
+   * Eliminar un proceso electoral que NO esté en VOTING o CLOSED
+   * Solo se pueden eliminar procesos en DRAFT, REGISTRATION, CAMPAIGN o CANCELLED
+   */
+  async deleteProcess(processId: string, institutionId: string) {
+    const process = await this.prisma.electionProcess.findUnique({
+      where: { id: processId },
+    });
+
+    if (!process) {
+      throw new NotFoundException('Proceso electoral no encontrado');
+    }
+
+    if (process.institutionId !== institutionId) {
+      throw new BadRequestException('No tiene permisos para eliminar este proceso electoral');
+    }
+
+    // No permitir eliminar procesos en VOTING o CLOSED
+    const nonDeletableStatuses = ['VOTING', 'CLOSED'];
+    if (nonDeletableStatuses.includes(process.status)) {
+      throw new BadRequestException(
+        `No se puede eliminar un proceso en estado ${process.status}. Solo se pueden eliminar procesos en DRAFT, REGISTRATION, CAMPAIGN o CANCELLED.`,
+      );
+    }
+
+    // Eliminar en cascada (elections, candidates, votes, audit logs)
+    return this.prisma.electionProcess.delete({
+      where: { id: processId },
     });
   }
 

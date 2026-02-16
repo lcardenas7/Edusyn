@@ -75,8 +75,24 @@ export class ElectionsController {
 
   @Post('process/:id/close')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async closeProcess(@Param('id') id: string) {
-    return this.electionsService.closeProcess(id);
+  async closeProcess(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.electionsService.closeProcess(id, instId, req.user.id);
+  }
+
+  @Put('process/:id/delete')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async deleteProcess(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.electionsService.deleteProcess(id, instId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
