@@ -24,7 +24,8 @@ import {
   academicActsApi,
   teacherAssignmentsApi,
   periodFinalGradesApi,
-  recoveryPeriodConfigApi
+  recoveryPeriodConfigApi,
+  groupsApi
 } from '../lib/api'
 
 type TabType = 'period' | 'final' | 'config' | 'acts'
@@ -219,19 +220,34 @@ export default function Recoveries() {
     const loadGroupsAndSubjects = async () => {
       if (!selectedYearId) return
       try {
-        // Cargar asignaciones del docente o todas si es admin/coordinador
+        const uniqueGroups = new Map<string, any>()
+        const uniqueSubjects = new Map<string, any>()
+
+        if (isAdminOrCoordinator) {
+          // Admin/Coordinador: cargar TODOS los grupos de la institución
+          const groupsRes = await groupsApi.getAll({ institutionId })
+          const allGroups = groupsRes.data || []
+          allGroups.forEach((g: any) => {
+            // Excluir grupos DIMENSIONS
+            if (g.grade?.academicStructure === 'DIMENSIONS') return
+            if (!uniqueGroups.has(g.id)) {
+              uniqueGroups.set(g.id, {
+                id: g.id,
+                name: g.name,
+                gradeName: g.grade?.name
+              })
+            }
+          })
+        }
+
+        // Cargar asignaciones (para docentes es la fuente principal, para admin complementa con asignaturas)
         const assignmentsRes = await teacherAssignmentsApi.getAll({ academicYearId: selectedYearId })
         const assignments = assignmentsRes.data || []
         setTeacherAssignments(assignments)
         
-        // Extraer grupos únicos
-        const uniqueGroups = new Map<string, any>()
-        // Extraer asignaturas únicas
-        const uniqueSubjects = new Map<string, any>()
-        
         assignments.forEach((assignment: any) => {
-          if (assignment.group && !uniqueGroups.has(assignment.group.id)) {
-            // Excluir grupos con estructura DIMENSIONS (preescolar) — no manejan recuperación
+          if (!isAdminOrCoordinator && assignment.group && !uniqueGroups.has(assignment.group.id)) {
+            // Docente: extraer grupos de sus asignaciones
             const academicStructure = assignment.group.grade?.academicStructure
             if (academicStructure === 'DIMENSIONS') return
             uniqueGroups.set(assignment.group.id, {
@@ -241,7 +257,6 @@ export default function Recoveries() {
             })
           }
           if (assignment.subject && !uniqueSubjects.has(assignment.subject.id)) {
-            // Solo agregar asignaturas de grupos NO-DIMENSIONS
             const academicStructure = assignment.group?.grade?.academicStructure
             if (academicStructure === 'DIMENSIONS') return
             uniqueSubjects.set(assignment.subject.id, {
@@ -251,7 +266,6 @@ export default function Recoveries() {
               groupIds: [assignment.group?.id].filter(Boolean)
             })
           } else if (assignment.subject && uniqueSubjects.has(assignment.subject.id)) {
-            // Track which groups this subject belongs to
             const existing = uniqueSubjects.get(assignment.subject.id)
             if (assignment.group?.id && !existing.groupIds?.includes(assignment.group.id)) {
               existing.groupIds = [...(existing.groupIds || []), assignment.group.id]
@@ -281,7 +295,7 @@ export default function Recoveries() {
       }
     }
     loadGroupsAndSubjects()
-  }, [selectedYearId, isAdminOrCoordinator])
+  }, [selectedYearId, isAdminOrCoordinator, institutionId])
 
   // Cargar estudiantes que perdieron cuando cambian los filtros
   useEffect(() => {

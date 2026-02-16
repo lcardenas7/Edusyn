@@ -22,6 +22,7 @@ import {
   teacherAssignmentsApi,
   academicStudentsApi,
   pedagogicalSupportApi,
+  groupsApi,
 } from '../lib/api'
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; icon: any; label: string }> = {
@@ -116,20 +117,40 @@ export default function PedagogicalSupport() {
     if (!selectedYearId) return
     const load = async () => {
       try {
-        const res = await teacherAssignmentsApi.getAll({ academicYearId: selectedYearId })
-        const assignments = res.data || []
         const uniqueGroups = new Map<string, any>()
-        assignments.forEach((a: any) => {
-          if (a.group && !uniqueGroups.has(a.group.id)) {
-            uniqueGroups.set(a.group.id, {
-              id: a.group.id,
-              name: a.group.name,
-              gradeName: a.group.grade?.name,
-              gradeStage: a.group.grade?.stage,
-              academicStructure: a.group.grade?.academicStructure,
-            })
-          }
-        })
+
+        if (isAdminOrCoordinator) {
+          // Admin/Coordinador: cargar TODOS los grupos de la institución
+          const res = await groupsApi.getAll({ institutionId })
+          const allGroups = res.data || []
+          allGroups.forEach((g: any) => {
+            if (!uniqueGroups.has(g.id)) {
+              uniqueGroups.set(g.id, {
+                id: g.id,
+                name: g.name,
+                gradeName: g.grade?.name,
+                gradeStage: g.grade?.stage,
+                academicStructure: g.grade?.academicStructure,
+              })
+            }
+          })
+        } else {
+          // Docente: cargar solo grupos de sus asignaciones
+          const res = await teacherAssignmentsApi.getAll({ academicYearId: selectedYearId })
+          const assignments = res.data || []
+          assignments.forEach((a: any) => {
+            if (a.group && !uniqueGroups.has(a.group.id)) {
+              uniqueGroups.set(a.group.id, {
+                id: a.group.id,
+                name: a.group.name,
+                gradeName: a.group.grade?.name,
+                gradeStage: a.group.grade?.stage,
+                academicStructure: a.group.grade?.academicStructure,
+              })
+            }
+          })
+        }
+
         // Filter only DIMENSIONS groups
         const dimensionsGroups = Array.from(uniqueGroups.values()).filter(
           g => g.academicStructure === 'DIMENSIONS' || g.gradeStage === 'PREESCOLAR'
@@ -146,7 +167,7 @@ export default function PedagogicalSupport() {
       }
     }
     load()
-  }, [selectedYearId])
+  }, [selectedYearId, isAdminOrCoordinator, institutionId])
 
   // ── Load plans when filters change ──
   useEffect(() => {

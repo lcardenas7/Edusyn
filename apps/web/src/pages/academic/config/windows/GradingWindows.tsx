@@ -185,9 +185,14 @@ export default function GradingWindows() {
     }
   }
 
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
   // Guardar configuración de un período
   const saveGradingPeriodConfig = async (periodId: string, config: Partial<GradingPeriodConfig>) => {
     setSavingPeriod(periodId)
+    setSaveMessage(null)
+    // Snapshot para rollback
+    const previousPeriods = [...gradingPeriods]
     try {
       await gradingPeriodConfigApi.updateConfig(periodId, {
         isOpen: config.isOpen ?? false,
@@ -196,8 +201,15 @@ export default function GradingWindows() {
         allowLateEntry: config.allowLateEntry ?? false,
         lateEntryDays: config.lateEntryDays ?? 0,
       })
-    } catch (err) {
+      setSaveMessage({ type: 'success', text: 'Configuración guardada correctamente' })
+      setTimeout(() => setSaveMessage(null), 3000)
+    } catch (err: any) {
       console.error('Error saving grading period config:', err)
+      // Rollback UI state
+      setGradingPeriods(previousPeriods)
+      const msg = err.response?.data?.message || 'Error al guardar la configuración. Intente de nuevo.'
+      setSaveMessage({ type: 'error', text: msg })
+      setTimeout(() => setSaveMessage(null), 5000)
     } finally {
       setSavingPeriod(null)
     }
@@ -243,6 +255,14 @@ export default function GradingWindows() {
               Fuera de estas fechas, la planilla de notas aparecerá bloqueada.
             </p>
           </div>
+
+          {saveMessage && (
+            <div className={`mb-4 p-3 rounded-lg text-sm font-medium ${
+              saveMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+            }`}>
+              {saveMessage.text}
+            </div>
+          )}
 
           {loadingGradingPeriods ? (
             <div className="flex items-center justify-center py-12">
@@ -346,7 +366,12 @@ export default function GradingWindows() {
                           <input
                             type="checkbox"
                             checked={period.isOpen}
-                            onChange={(e) => saveGradingPeriodConfig(period.id, { ...period, isOpen: e.target.checked })}
+                            onChange={(e) => {
+                              const newIsOpen = e.target.checked
+                              const updatedPeriod = { ...period, isOpen: newIsOpen }
+                              setGradingPeriods(prev => prev.map(p => p.id === period.id ? updatedPeriod : p))
+                              saveGradingPeriodConfig(period.id, updatedPeriod)
+                            }}
                             disabled={savingPeriod === period.id}
                             className="sr-only peer"
                           />
