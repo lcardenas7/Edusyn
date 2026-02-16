@@ -64,10 +64,13 @@ export class ElectionsController {
   @Put('process/:id/status')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async updateProcessStatus(
+    @Request() req: any,
     @Param('id') id: string,
     @Body('status') status: string,
+    @Query('institutionId') institutionId?: string,
   ) {
-    return this.electionsService.updateProcessStatus(id, status);
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.electionsService.updateProcessStatus(id, status, instId);
   }
 
   @Post('process/:id/close')
