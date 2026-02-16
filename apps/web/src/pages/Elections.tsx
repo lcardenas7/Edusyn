@@ -233,6 +233,20 @@ export default function Elections() {
     }
   }
 
+  const handleDeleteProcess = async (processId: string) => {
+    if (!confirm('¿Eliminar este proceso electoral? Esta acción no se puede deshacer.')) return
+    try {
+      setActionLoading(true)
+      await api.put(`/elections/process/${processId}/delete`)
+      setSelectedProcess(null)
+      loadProcesses()
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al eliminar proceso')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   const handleApproveCandidate = async (candidateId: string) => {
     try {
       await api.put(`/elections/candidate/${candidateId}/approve`)
@@ -548,6 +562,17 @@ export default function Elections() {
                         Informe Participación
                       </a>
                     </>
+                  )}
+                  {/* Botón eliminar - solo para DRAFT, REGISTRATION, CAMPAIGN, CANCELLED */}
+                  {['DRAFT', 'REGISTRATION', 'CAMPAIGN', 'CANCELLED'].includes(selectedProcess.status) && (
+                    <button
+                      onClick={() => handleDeleteProcess(selectedProcess.id)}
+                      disabled={actionLoading}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 border border-red-300 rounded-lg text-sm hover:bg-red-200"
+                    >
+                      <XCircle className="w-4 h-4" />
+                      Eliminar Proceso
+                    </button>
                   )}
                 </div>
               </div>
