@@ -7,12 +7,13 @@ export class FinancialReportsService {
 
   // Cartera por grado - Resumen simplificado
   async getPortfolioByGrade(institutionId: string) {
-    // Obtener todas las obligaciones pendientes agrupadas
+    // Obtener todas las obligaciones con saldo pendiente
+    // Incluye: PARTIAL, OVERDUE, y PENDING (con o sin vencimiento)
     const obligations = await this.prisma.financialObligation.groupBy({
       by: ['thirdPartyId'],
       where: { 
-        institutionId, 
-        status: { in: ['PENDING', 'PARTIAL', 'OVERDUE'] } 
+        institutionId,
+        status: { notIn: ['PAID', 'CANCELLED'] },
       },
       _sum: { balance: true, totalAmount: true },
       _count: true,
@@ -31,10 +32,21 @@ export class FinancialReportsService {
   }
 
   // Top morosos
+  // Prioriza obligaciones vencidas (OVERDUE o PENDING con dueDate < now)
   async getTopDebtors(institutionId: string, limit = 20) {
+    const now = new Date();
+    // Obtener morosos: obligaciones vencidas o con saldo pendiente
     return this.prisma.financialObligation.groupBy({
       by: ['thirdPartyId'],
-      where: { institutionId, status: { in: ['PENDING', 'PARTIAL', 'OVERDUE'] } },
+      where: {
+        institutionId,
+        status: { notIn: ['PAID', 'CANCELLED'] },
+        OR: [
+          { status: 'OVERDUE' },
+          { status: 'PARTIAL' },
+          { status: 'PENDING', dueDate: { lt: now } },
+        ],
+      },
       _sum: { balance: true },
       orderBy: { _sum: { balance: 'desc' } },
       take: limit,

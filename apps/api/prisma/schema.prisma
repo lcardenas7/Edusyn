@@ -3537,11 +3537,11 @@ model FinancialPayment {
   receivedBy    User            @relation("PaymentReceivedBy", fields: [receivedById], references: [id])
   voidedBy      User?           @relation("PaymentVoidedBy", fields: [voidedById], references: [id])
 
+  @@unique([institutionId, receiptNumber])
   @@index([institutionId])
   @@index([obligationId])
   @@index([thirdPartyId])
   @@index([paymentDate])
-  @@index([receiptNumber])
 }
 
 // Egreso/Gasto

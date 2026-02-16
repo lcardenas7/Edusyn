@@ -91,28 +91,55 @@ export class PaymentsService {
 
     const receiptNumber = await this.generateReceiptNumber(institutionId);
 
-    const payment = await this.prisma.financialPayment.create({
-      data: {
-        institutionId,
-        thirdPartyId: data.thirdPartyId,
-        obligationId: data.obligationId,
-        amount: new Prisma.Decimal(data.amount),
-        paymentMethod: data.paymentMethod,
-        transactionRef: data.transactionRef,
-        receiptNumber,
-        notes: data.notes,
-        receivedById: userId,
-      },
-      include: {
-        thirdParty: true,
-        obligation: true,
-      },
-    });
+    // Transacción atómica: crear pago + actualizar obligación + actualizar factura
+    const payment = await this.prisma.$transaction(async (tx) => {
+      const createdPayment = await tx.financialPayment.create({
+        data: {
+          institutionId,
+          thirdPartyId: data.thirdPartyId,
+          obligationId: data.obligationId,
+          amount: new Prisma.Decimal(data.amount),
+          paymentMethod: data.paymentMethod,
+          transactionRef: data.transactionRef,
+          receiptNumber,
+          notes: data.notes,
+          receivedById: userId,
+        },
+        include: {
+          thirdParty: true,
+          obligation: true,
+        },
+      });
 
-    // Actualizar saldo de la obligación si aplica
-    if (data.obligationId) {
-      await this.obligationsService.updateBalance(data.obligationId, data.amount);
-    }
+      // Actualizar saldo de la obligación si aplica
+      if (data.obligationId) {
+        // Inline updateBalance logic dentro de la transacción
+        const obligation = await tx.financialObligation.findUnique({
+          where: { id: data.obligationId },
+        });
+
+        if (obligation) {
+          const newPaidAmount = Number(obligation.paidAmount) + data.amount;
+          const newBalance = Number(obligation.totalAmount) - newPaidAmount;
+          const newStatus = newBalance <= 0 ? 'PAID' : (newPaidAmount > 0 ? 'PARTIAL' : obligation.status);
+
+          await tx.financialObligation.update({
+            where: { id: data.obligationId },
+            data: {
+              paidAmount: new Prisma.Decimal(newPaidAmount),
+              balance: new Prisma.Decimal(Math.max(0, newBalance)),
+              status: newStatus,
+              paidDate: newStatus === 'PAID' ? new Date() : null,
+            },
+          });
+
+          // Verificar si hay facturas asociadas y marcarlas como PAID
+          await this.checkAndUpdateInvoiceStatusTx(tx, data.obligationId);
+        }
+      }
+
+      return createdPayment;
+    });
 
     return payment;
   }
@@ -271,26 +298,61 @@ export class PaymentsService {
     };
   }
 
+  private async checkAndUpdateInvoiceStatusTx(
+    tx: Prisma.TransactionClient,
+    obligationId: string,
+  ): Promise<void> {
+    // Buscar items de factura que referencian esta obligación
+    const invoiceItems = await tx.financialInvoiceItem.findMany({
+      where: { obligationId },
+      select: { invoiceId: true },
+    });
+
+    if (invoiceItems.length === 0) return;
+
+    // Obtener IDs únicos de facturas
+    const invoiceIds = [...new Set(invoiceItems.map(item => item.invoiceId))];
+
+    for (const invoiceId of invoiceIds) {
+      // Obtener todas las obligaciones vinculadas a esta factura
+      const allItems = await tx.financialInvoiceItem.findMany({
+        where: { invoiceId, obligationId: { not: null } },
+        include: { obligation: { select: { status: true } } },
+      });
+
+      // Si todas las obligaciones están PAID, marcar factura como PAID
+      const allPaid = allItems.every(item => item.obligation?.status === 'PAID');
+
+      if (allPaid) {
+        await tx.financialInvoice.update({
+          where: { id: invoiceId },
+          data: { status: 'PAID', paidDate: new Date() },
+        });
+      }
+    }
+  }
+
   private async generateReceiptNumber(institutionId: string): Promise<string> {
-    const settings = await this.prisma.financialSettings.findUnique({
-      where: { institutionId },
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Ensure settings exist with default values
+      await tx.financialSettings.upsert({
+        where: { institutionId },
+        create: { institutionId, receiptNextNumber: 1 },
+        update: {},
+      });
+
+      // Atomic increment and return updated record
+      const updated = await tx.financialSettings.update({
+        where: { institutionId },
+        data: { receiptNextNumber: { increment: 1 } },
+      });
+
+      return {
+        prefix: updated.receiptPrefix || 'REC',
+        number: updated.receiptNextNumber,
+      };
     });
 
-    const prefix = settings?.receiptPrefix || 'REC';
-    const nextNumber = settings?.receiptNextNumber || 1;
-
-    // Actualizar el siguiente número
-    await this.prisma.financialSettings.upsert({
-      where: { institutionId },
-      create: {
-        institutionId,
-        receiptNextNumber: nextNumber + 1,
-      },
-      update: {
-        receiptNextNumber: nextNumber + 1,
-      },
-    });
-
-    return `${prefix}-${String(nextNumber).padStart(6, '0')}`;
+    return `${result.prefix}-${String(result.number).padStart(6, '0')}`;
   }
 }
