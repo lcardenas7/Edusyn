@@ -332,6 +332,9 @@ model User {
   // Snapshot legal de boletines
   snapshotsGenerated          TermReportCardSnapshot[] @relation("SnapshotGeneratedBy")
   termsReopened               TermReopeningRecord[]    @relation("TermReopenedBy")
+  
+  // Acompañamiento pedagógico
+  pedagogicalSupportsCompleted PedagogicalSupportPlan[] @relation("PedagogicalSupportCompletedBy")
 }
 
 model Role {
@@ -480,6 +483,7 @@ model Institution {
   rlsSubjectPerformances      SubjectPerformance[]      @relation("RlsInstitutionSP")
   rlsPerformanceManualEdits   PerformanceManualEdit[]   @relation("RlsInstitutionPME")
   rlsPreventiveAlerts         PreventiveAlert[]         @relation("RlsInstitutionPA")
+  rlsPedagogicalSupportPlans  PedagogicalSupportPlan[]  @relation("RlsInstitutionPSP")
 }
 
 // Módulos habilitados por institución
@@ -961,6 +965,7 @@ model AcademicTerm {
   attitudinalAchievements AttitudinalAchievement[]
   reportCardSnapshots TermReportCardSnapshot[]
   reopeningRecords TermReopeningRecord[]
+  pedagogicalSupportPlans PedagogicalSupportPlan[]
 
   @@unique([academicYearId, order])
 }
@@ -1437,6 +1442,9 @@ model StudentEnrollment {
   
   // Snapshot legal de boletines por período
   reportCardSnapshots  TermReportCardSnapshot[]
+  
+  // Acompañamiento pedagógico (DIMENSIONS)
+  pedagogicalSupportPlans PedagogicalSupportPlan[]
 
   @@unique([studentId, academicYearId])
 }
@@ -2544,6 +2552,7 @@ model Achievement {
   academicTerm          AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
   studentAchievements   StudentAchievement[]
   attitudinalAchievements AttitudinalAchievement[]
+  pedagogicalSupportPlans PedagogicalSupportPlan[]
 
   @@unique([teacherAssignmentId, academicTermId, orderNumber, isPromotional])
   @@unique([code, teacherAssignmentId]) // Código único por asignación
@@ -2556,6 +2565,13 @@ enum AchievementType {
   ACADEMIC      // Logro académico
   ATTITUDINAL   // Logro actitudinal
   PROMOTIONAL   // Logro promocional
+}
+
+// Estado de plan de acompañamiento pedagógico (DIMENSIONS)
+enum SupportStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
 }
 
 // Logro actitudinal (puede ser general o asociado a un logro académico)
@@ -3990,4 +4006,43 @@ model InstitutionRoleCapability {
   @@unique([institutionId, role, capabilityKey])
   @@index([institutionId])
   @@index([institutionId, role])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ACOMPAÑAMIENTO PEDAGÓGICO (solo para estructura DIMENSIONS / preescolar)
+// Planes de apoyo pedagógico para estudiantes con desempeño BAJO.
+// NO modifica notas, NO recalcula promedios, NO impacta promoción.
+// ═══════════════════════════════════════════════════════════════════════════
+
+model PedagogicalSupportPlan {
+  id                  String        @id @default(uuid())
+  institutionId       String
+  studentEnrollmentId String
+  achievementId       String?       // dimensión específica (opcional)
+  academicTermId      String
+
+  supportStrategy     String        @db.Text
+  familyCommitment    String?       @db.Text
+  followUpDate        DateTime?
+  observations        String?       @db.Text
+
+  status              SupportStatus @default(ACTIVE)
+
+  // Trazabilidad de cierre
+  completedAt         DateTime?
+  completedById       String?
+
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  institution         Institution       @relation("RlsInstitutionPSP", fields: [institutionId], references: [id])
+  studentEnrollment   StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id])
+  achievement         Achievement?      @relation(fields: [achievementId], references: [id])
+  academicTerm        AcademicTerm      @relation(fields: [academicTermId], references: [id])
+  completedBy         User?             @relation("PedagogicalSupportCompletedBy", fields: [completedById], references: [id])
+
+  @@index([institutionId])
+  @@index([studentEnrollmentId])
+  @@index([academicTermId])
+  @@index([status])
 }

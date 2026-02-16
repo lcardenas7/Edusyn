@@ -1450,3 +1450,33 @@ export const capabilitiesApi = {
   checkCapability: (capabilityKey: string) =>
     api.get(`/capabilities/check/${capabilityKey}`),
 }
+
+// ============================================
+// ACOMPAÑAMIENTO PEDAGÓGICO (DIMENSIONS)
+// ============================================
+
+export const pedagogicalSupportApi = {
+  create: (data: {
+    studentEnrollmentId: string;
+    achievementId?: string;
+    academicTermId: string;
+    supportStrategy: string;
+    familyCommitment?: string;
+    followUpDate?: string;
+    observations?: string;
+  }) => api.post('/pedagogical-support', data),
+  update: (id: string, data: {
+    supportStrategy?: string;
+    familyCommitment?: string;
+    followUpDate?: string;
+    observations?: string;
+    status?: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  }) => api.patch(`/pedagogical-support/${id}`, data),
+  markCompleted: (id: string, observations?: string) =>
+    api.patch(`/pedagogical-support/${id}/complete`, { observations }),
+  getByStudent: (studentEnrollmentId: string, academicTermId?: string) =>
+    api.get(`/pedagogical-support/by-student/${studentEnrollmentId}`, { params: { academicTermId } }),
+  getByGroup: (groupId: string, academicTermId: string, status?: string) =>
+    api.get(`/pedagogical-support/by-group/${groupId}`, { params: { academicTermId, status } }),
+  getById: (id: string) => api.get(`/pedagogical-support/${id}`),
+}

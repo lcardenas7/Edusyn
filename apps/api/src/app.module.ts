@@ -30,6 +30,7 @@ import { FinanceModule } from './modules/finance/finance.module';
 import { TimetablingModule } from './modules/timetabling/timetabling.module';
 import { CapabilitiesModule } from './modules/capabilities/capabilities.module';
 import { InstitutionContextModule } from './modules/institution-context/institution-context.module';
+import { PedagogicalSupportModule } from './modules/pedagogical-support/pedagogical-support.module';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 
 @Module({
@@ -67,6 +68,7 @@ import { TenantContextInterceptor } from './common/interceptors/tenant-context.i
     FinanceModule,
     TimetablingModule,
     CapabilitiesModule,
+    PedagogicalSupportModule,
   ],
   controllers: [AppController],
   providers: [

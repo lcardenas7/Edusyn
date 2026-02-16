@@ -45,6 +45,7 @@ import {
   DollarSign,
   Clock,
   Shield,
+  Heart,
 } from 'lucide-react'
 
 type Role = 'SUPER_ADMIN' | 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE' | 'SECRETARIA'
@@ -162,6 +163,7 @@ const institutionalNavigation: NavItem[] = [
       { name: 'Nota Final Período', href: '/period-final-grades', icon: FileText, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
       { name: 'Logros y Juicios', href: '/achievements', icon: Target, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'PERFORMANCE' },
       { name: 'Recuperaciones', href: '/recoveries', icon: RefreshCw, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'RECOVERY' },
+      { name: 'Acompañamiento', href: '/pedagogical-support', icon: Heart, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'ACADEMIC' },
     ]
   },
   

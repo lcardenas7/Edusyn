@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useAcademic } from '../contexts/AcademicContext'
 import {
@@ -231,6 +231,9 @@ export default function Recoveries() {
         
         assignments.forEach((assignment: any) => {
           if (assignment.group && !uniqueGroups.has(assignment.group.id)) {
+            // Excluir grupos con estructura DIMENSIONS (preescolar) — no manejan recuperación
+            const academicStructure = assignment.group.grade?.academicStructure
+            if (academicStructure === 'DIMENSIONS') return
             uniqueGroups.set(assignment.group.id, {
               id: assignment.group.id,
               name: assignment.group.name,
@@ -238,11 +241,21 @@ export default function Recoveries() {
             })
           }
           if (assignment.subject && !uniqueSubjects.has(assignment.subject.id)) {
+            // Solo agregar asignaturas de grupos NO-DIMENSIONS
+            const academicStructure = assignment.group?.grade?.academicStructure
+            if (academicStructure === 'DIMENSIONS') return
             uniqueSubjects.set(assignment.subject.id, {
               id: assignment.subject.id,
               name: assignment.subject.name,
-              areaName: assignment.subject.area?.name
+              areaName: assignment.subject.area?.name,
+              groupIds: [assignment.group?.id].filter(Boolean)
             })
+          } else if (assignment.subject && uniqueSubjects.has(assignment.subject.id)) {
+            // Track which groups this subject belongs to
+            const existing = uniqueSubjects.get(assignment.subject.id)
+            if (assignment.group?.id && !existing.groupIds?.includes(assignment.group.id)) {
+              existing.groupIds = [...(existing.groupIds || []), assignment.group.id]
+            }
           }
         })
         
@@ -324,8 +337,8 @@ export default function Recoveries() {
         
         allGrades.forEach((grade: any) => {
           const score = Number(grade.finalScore)
-          // Solo considerar notas menores a 3.0 (nota mínima aprobatoria)
-          if (score < 3.0) {
+          // Solo considerar notas menores a la nota mínima aprobatoria (dinámico)
+          if (score < config.minPassingScore) {
             const enrollmentId = grade.studentEnrollmentId
             const student = grade.studentEnrollment?.student
             const studentName = student ? `${student.firstName} ${student.lastName}` : 'Estudiante'
@@ -473,12 +486,39 @@ export default function Recoveries() {
     )
   }
 
+  // Filtrar asignaturas por grupo seleccionado
+  const filteredSubjects = useMemo(() => {
+    if (!selectedGroupId || selectedGroupId === 'all') return subjects
+    return subjects.filter((s: any) => {
+      if (s.id === 'all') return true
+      return s.groupIds?.includes(selectedGroupId)
+    })
+  }, [subjects, selectedGroupId])
+
   const tabs = [
     { id: 'period' as TabType, label: 'Recuperación por Período', icon: Calendar },
     { id: 'final' as TabType, label: 'Recuperación Final', icon: BookOpen },
     { id: 'acts' as TabType, label: 'Actas', icon: FileText },
     ...(isAdmin ? [{ id: 'config' as TabType, label: 'Configuración', icon: Settings }] : []),
   ]
+
+  // Si no hay grupos (todos son DIMENSIONS), mostrar mensaje
+  if (!loading && groups.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto mt-12">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
+          <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-amber-800 mb-2">
+            Este nivel no maneja recuperación académica
+          </h2>
+          <p className="text-amber-600">
+            Los grupos con estructura de <strong>Dimensiones</strong> (preescolar) no utilizan el sistema de recuperaciones.
+            Para el seguimiento pedagógico de estos niveles, utilice el módulo de <strong>Acompañamiento Pedagógico</strong>.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
@@ -550,11 +590,11 @@ export default function Recoveries() {
                 <select
                   value={selectedSubjectId}
                   onChange={(e) => setSelectedSubjectId(e.target.value)}
-                  disabled={!selectedYearId}
+                  disabled={!selectedYearId || !selectedGroupId}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
                 >
                   <option value="">Seleccionar...</option>
-                  {subjects.map(subject => (
+                  {filteredSubjects.map(subject => (
                     <option key={subject.id} value={subject.id}>{subject.name}</option>
                   ))}
                 </select>
