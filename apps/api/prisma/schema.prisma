@@ -278,6 +278,8 @@ model User {
   
   // Elecciones
   electionProcessesCreated  ElectionProcess[] @relation("ElectionProcessCreatedBy")
+  electionProcessesLocked   ElectionProcess[] @relation("ElectionProcessLockedBy")
+  electionProcessesClosed   ElectionProcess[] @relation("ElectionProcessClosedBy")
   candidatesApproved        Candidate[]       @relation("CandidateApprovedBy")
   
   // Documentos validados
@@ -2822,6 +2824,20 @@ model ElectionProcess {
   // Configuración de votación
   allowBlankVote  Boolean @default(true)
   
+  // Enterprise: Soft-lock y seguridad
+  isLocked        Boolean   @default(false)  // Soft-lock durante VOTING
+  lockedAt        DateTime?                  // Timestamp de bloqueo
+  lockedById      String?                    // Quién bloqueó
+  
+  // Enterprise: Cierre firmado
+  closedAt        DateTime?                  // Timestamp oficial de cierre
+  closedById      String?                    // Quién cerró
+  closureSignature String?                   // Firma digital del cierre (hash)
+  
+  // Enterprise: Integridad verificable
+  finalSnapshot   Json?                      // Snapshot de resultados finales
+  finalHash       String?                    // SHA-256 del snapshot
+  
   createdById     String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -2829,7 +2845,10 @@ model ElectionProcess {
   institution     Institution   @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   academicYear    AcademicYear  @relation(fields: [academicYearId], references: [id])
   createdBy       User          @relation("ElectionProcessCreatedBy", fields: [createdById], references: [id])
+  lockedBy        User?         @relation("ElectionProcessLockedBy", fields: [lockedById], references: [id])
+  closedBy        User?         @relation("ElectionProcessClosedBy", fields: [closedById], references: [id])
   elections       Election[]
+  auditLogs       ElectionAuditLog[]
   
   @@unique([institutionId, academicYearId])
 }
@@ -2962,6 +2981,66 @@ model ElectionResult {
   candidate     Candidate? @relation(fields: [candidateId], references: [id])
   
   @@unique([electionId, candidateId])
+}
+
+// Log de auditoría electoral inmutable
+model ElectionAuditLog {
+  id              String   @id @default(cuid())
+  processId       String
+  electionId      String?
+  
+  // Acción realizada
+  action          ElectionAuditAction
+  
+  // Quién realizó la acción
+  actorId         String?  // userId (null para acciones del sistema)
+  actorType       String   // 'USER', 'STUDENT', 'SYSTEM'
+  actorIp         String?  // IP del actor
+  
+  // Datos de la acción (inmutables)
+  payload         Json?    // Datos relevantes de la acción
+  previousState   Json?    // Estado anterior (para cambios de estado)
+  newState        Json?    // Nuevo estado
+  
+  // Integridad
+  checksum        String   // SHA-256 del contenido para verificar integridad
+  previousLogId   String?  // Referencia al log anterior (cadena)
+  
+  createdAt       DateTime @default(now())
+  
+  process         ElectionProcess @relation(fields: [processId], references: [id], onDelete: Cascade)
+  
+  @@index([processId])
+  @@index([electionId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+enum ElectionAuditAction {
+  // Proceso
+  PROCESS_CREATED
+  PROCESS_STATUS_CHANGED
+  PROCESS_LOCKED
+  PROCESS_CLOSED
+  
+  // Candidatos
+  CANDIDATE_REGISTERED
+  CANDIDATE_APPROVED
+  CANDIDATE_REJECTED
+  CANDIDATE_UPDATED
+  
+  // Votación
+  VOTE_CAST
+  VOTE_ATTEMPTED_DUPLICATE
+  VOTE_ATTEMPTED_INVALID
+  
+  // Resultados
+  RESULTS_CALCULATED
+  RESULTS_SNAPSHOT_CREATED
+  
+  // Seguridad
+  UNAUTHORIZED_ACCESS_ATTEMPT
+  INTEGRITY_CHECK_FAILED
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
