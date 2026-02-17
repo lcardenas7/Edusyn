@@ -3606,11 +3606,24 @@ model FinancialPayment {
   
   notes         String?         @db.Text
   
+  // PDF interno generado
+  pdfUrl        String?         // URL del PDF generado (cache)
+  pdfGeneratedAt DateTime?      // Fecha de generación del PDF
+  verificationHash String?      // Hash para verificación QR
+  
   // Auditoría
   receivedById  String          // Quién recibió el pago
   voidedAt      DateTime?       // Si fue anulado
   voidedById    String?
   voidReason    String?
+  
+  // Facturación electrónica (futuro - nullable)
+  externalInvoiceId   String?   // ID de factura en proveedor externo
+  cufe                String?   // Código Único de Factura Electrónica
+  dianStatus          String?   // PENDING | ACCEPTED | REJECTED | NOT_APPLICABLE
+  electronicProvider  String?   // Proveedor usado (siigo, alegra, etc.)
+  electronicXmlUrl    String?   // URL del XML UBL generado
+  electronicPdfUrl    String?   // URL del PDF legal del proveedor
   
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
@@ -3768,22 +3781,37 @@ model FinancialSettings {
   defaultLateFeeValue Decimal?  @db.Decimal(15, 2)
   defaultGracePeriodDays Int    @default(5)
   
-  // Datos fiscales
-  taxId         String?         // NIT para facturación
-  taxRegime     String?         // Régimen tributario
+  // Modo de facturación
+  billingMode   String          @default("INTERNAL_ONLY") // INTERNAL_ONLY | EXTERNAL_ELECTRONIC_PROVIDER
   
-  // Configuración de factura
-  invoiceLogoUrl        String?   // URL del logo/escudo para facturas
+  // Datos fiscales / DIAN
+  taxId         String?         // NIT de la institución
+  businessName  String?         // Razón social completa
+  taxRegime     String?         // RESPONSABLE_IVA | NO_RESPONSABLE | REGIMEN_SIMPLE
+  ciiu          String?         // Código CIIU actividad económica
+  economicActivity String?      // Descripción actividad económica
+  
+  // Resolución de facturación DIAN (preparación)
   invoiceResolution     String?   // "Resolución DIAN No. 18764..."
   invoiceResolutionDate DateTime? // Fecha de resolución
+  invoiceResolutionPrefix String? // Prefijo autorizado (ej: "SETT")
   invoiceRangeFrom      Int?      // Numeración autorizada desde
   invoiceRangeTo        Int?      // Numeración autorizada hasta
+  
+  // Configuración visual del documento
+  invoiceLogoUrl        String?   // URL del logo/escudo institucional
+  invoicePageSize       String    @default("LETTER") // LETTER | HALF_LETTER
+  invoicePrimaryColor   String?   @default("#1E40AF") // Color primario bordes/encabezados
+  invoiceSecondaryColor String?   @default("#F0F9FF") // Color secundario fondo
   invoiceFooterText     String?   @db.Text // Texto legal pie de página
-  invoicePageSize       String    @default("LETTER") // LETTER o HALF_LETTER
-  invoiceCity           String?   // Ciudad para facturación
-  invoicePhone          String?   // Teléfono para facturación
-  invoiceEmail          String?   // Email para facturación
-  economicActivity      String?   // Actividad económica
+  invoiceShowQR         Boolean   @default(true) // Mostrar QR en documento
+  invoiceShowBankAccounts Boolean @default(true) // Mostrar cuentas bancarias
+  
+  // Datos de contacto para documentos
+  invoiceCity           String?   // Ciudad
+  invoiceAddress        String?   // Dirección completa
+  invoicePhone          String?   // Teléfono
+  invoiceEmail          String?   // Email
   
   // Cuentas bancarias
   bankAccounts  Json?           // Array de cuentas bancarias
@@ -3791,6 +3819,11 @@ model FinancialSettings {
   // Notificaciones
   sendPaymentReminders Boolean  @default(true)
   reminderDaysBefore Int        @default(3)
+  
+  // Proveedor electrónico (futuro)
+  electronicProvider    String?   // Nombre del proveedor (siigo, alegra, loggro, etc.)
+  electronicProviderKey String?   // API Key del proveedor (encriptada)
+  electronicProviderUrl String?   // URL base del proveedor
   
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt

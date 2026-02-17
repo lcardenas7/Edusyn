@@ -21,27 +21,49 @@ export class FinancialSettingsService {
   }
 
   async update(institutionId: string, data: {
+    // Numeración
     invoicePrefix?: string;
     receiptPrefix?: string;
+    // Mora
     defaultLateFeeType?: string;
     defaultLateFeeValue?: number;
     defaultGracePeriodDays?: number;
+    // Modo facturación
+    billingMode?: string;
+    // Datos fiscales / DIAN
     taxId?: string;
+    businessName?: string;
     taxRegime?: string;
-    bankAccounts?: any;
-    sendPaymentReminders?: boolean;
-    reminderDaysBefore?: number;
-    invoiceLogoUrl?: string;
+    ciiu?: string;
+    economicActivity?: string;
+    // Resolución DIAN
     invoiceResolution?: string;
     invoiceResolutionDate?: string;
+    invoiceResolutionPrefix?: string;
     invoiceRangeFrom?: number;
     invoiceRangeTo?: number;
-    invoiceFooterText?: string;
+    // Visual
+    invoiceLogoUrl?: string;
     invoicePageSize?: string;
+    invoicePrimaryColor?: string;
+    invoiceSecondaryColor?: string;
+    invoiceFooterText?: string;
+    invoiceShowQR?: boolean;
+    invoiceShowBankAccounts?: boolean;
+    // Contacto
     invoiceCity?: string;
+    invoiceAddress?: string;
     invoicePhone?: string;
     invoiceEmail?: string;
-    economicActivity?: string;
+    // Cuentas bancarias
+    bankAccounts?: any;
+    // Notificaciones
+    sendPaymentReminders?: boolean;
+    reminderDaysBefore?: number;
+    // Proveedor electrónico (futuro)
+    electronicProvider?: string;
+    electronicProviderKey?: string;
+    electronicProviderUrl?: string;
   }) {
     const { defaultLateFeeValue, invoiceResolutionDate, ...rest } = data;
 
