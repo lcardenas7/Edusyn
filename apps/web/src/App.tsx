@@ -81,6 +81,7 @@ import {
   NewInvoice,
   NewObligation,
   NewThirdParty,
+  NewConcept,
 } from './pages/finance'
 
 function ProtectedRoute({ children, allowChangePassword = false }: { children: React.ReactNode; allowChangePassword?: boolean }) {
@@ -289,12 +290,13 @@ function App() {
                   {/* ═══════════════════════════════════════════════════════════ */}
                   {/* MÓDULO FINANCIERO                                            */}
                   {/* ═══════════════════════════════════════════════════════════ */}
-                  <Route path="/finance" element={<FinanceHub />} />
-                  <Route path="/finance/dashboard" element={<FinanceDashboard />} />
+                  <Route path="/finance" element={<FinanceDashboard />} />
+                  <Route path="/finance/hub" element={<FinanceHub />} />
                   <Route path="/finance/third-parties" element={<ThirdParties />} />
                   <Route path="/finance/third-parties/new" element={<NewThirdParty />} />
                   <Route path="/finance/third-parties/:id" element={<ThirdPartyDetail />} />
                   <Route path="/finance/concepts" element={<Concepts />} />
+                  <Route path="/finance/concepts/new" element={<NewConcept />} />
                   <Route path="/finance/obligations" element={<Obligations />} />
                   <Route path="/finance/obligations/new" element={<NewObligation />} />
                   <Route path="/finance/obligations/:id" element={<ObligationDetail />} />

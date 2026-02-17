@@ -9,6 +9,15 @@ import {
   Clock,
   CheckCircle,
   RefreshCw,
+  Users,
+  FileText,
+  Wallet,
+  Receipt,
+  PieChart,
+  Settings,
+  ChevronDown,
+  ChevronUp,
+  BarChart3,
 } from 'lucide-react'
 import { financeDashboardApi } from '../../lib/api'
 
@@ -44,10 +53,23 @@ const formatCurrency = (value: number) => {
   }).format(value)
 }
 
+const financeNavItems = [
+  { title: 'Terceros', description: 'Estudiantes, acudientes, proveedores', icon: <Users className="w-5 h-5" />, path: '/finance/third-parties', color: 'bg-purple-500' },
+  { title: 'Conceptos de Cobro', description: 'Configurar conceptos y tarifas', icon: <FileText className="w-5 h-5" />, path: '/finance/concepts', color: 'bg-indigo-500' },
+  { title: 'Obligaciones', description: 'Cobros asignados y cartera', icon: <DollarSign className="w-5 h-5" />, path: '/finance/obligations', color: 'bg-green-500' },
+  { title: 'Caja / Recaudos', description: 'Registrar pagos y recibos', icon: <Wallet className="w-5 h-5" />, path: '/finance/payments', color: 'bg-emerald-500' },
+  { title: 'Egresos', description: 'Gastos y pagos a proveedores', icon: <TrendingDown className="w-5 h-5" />, path: '/finance/expenses', color: 'bg-red-500' },
+  { title: 'Facturas', description: 'Generar y gestionar facturas', icon: <Receipt className="w-5 h-5" />, path: '/finance/invoices', color: 'bg-orange-500' },
+  { title: 'Categorías', description: 'Clasificación de ingresos y gastos', icon: <PieChart className="w-5 h-5" />, path: '/finance/categories', color: 'bg-cyan-500' },
+  { title: 'Reportes', description: 'Informes y análisis financiero', icon: <BarChart3 className="w-5 h-5" />, path: '/finance/reports', color: 'bg-amber-500' },
+  { title: 'Configuración', description: 'Numeración, mora, cuentas bancarias', icon: <Settings className="w-5 h-5" />, path: '/finance/settings', color: 'bg-gray-500' },
+]
+
 export default function FinanceDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showNav, setShowNav] = useState(false)
 
   const fetchDashboard = async () => {
     setLoading(true)
@@ -94,24 +116,64 @@ export default function FinanceDashboard() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <Link
-            to="/finance"
+            to="/dashboard"
             className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
-            Volver a Finanzas
+            Volver al inicio
           </Link>
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard Financiero</h1>
-            <button
-              onClick={fetchDashboard}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
-            >
-              <RefreshCw className="w-5 h-5" />
-            </button>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-green-100 rounded-xl">
+                <DollarSign className="w-8 h-8 text-green-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Módulo Financiero</h1>
+                <p className="text-gray-500">Gestión de cobros, pagos, egresos y reportes</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowNav(!showNav)}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2"
+              >
+                {showNav ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                Panel Financiero
+              </button>
+              <button
+                onClick={fetchDashboard}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Collapsible Navigation Panel */}
+        {showNav && (
+          <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              {financeNavItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className="group flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className={`p-2 rounded-lg ${item.color} text-white group-hover:scale-110 transition-transform`}>
+                    {item.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900 text-sm group-hover:text-blue-600 truncate">{item.title}</p>
+                    <p className="text-xs text-gray-500 truncate hidden lg:block">{item.description}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

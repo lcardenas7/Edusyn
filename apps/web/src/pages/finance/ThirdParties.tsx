@@ -113,10 +113,13 @@ export default function ThirdParties() {
                 <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
                 Sincronizar
               </button>
-              <button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2">
+              <Link
+                to="/finance/third-parties/new"
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2"
+              >
                 <Plus className="w-4 h-4" />
                 Nuevo Tercero
-              </button>
+              </Link>
             </div>
           </div>
         </div>
