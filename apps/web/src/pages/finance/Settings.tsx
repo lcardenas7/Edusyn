@@ -40,14 +40,41 @@ export default function FinanceSettings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchSettings = async () => {
     setLoading(true)
+    setError(null)
     try {
       const response = await financeSettingsApi.get()
-      setSettings(response.data)
-    } catch (err) {
+      // Ensure we have default values for required fields
+      const data = response.data || {}
+      setSettings({
+        invoicePrefix: data.invoicePrefix || 'FAC',
+        receiptPrefix: data.receiptPrefix || 'REC',
+        defaultLateFeeType: data.defaultLateFeeType || null,
+        defaultLateFeeValue: data.defaultLateFeeValue ?? null,
+        defaultGracePeriodDays: data.defaultGracePeriodDays ?? 0,
+        taxId: data.taxId || null,
+        taxRegime: data.taxRegime || null,
+        bankAccounts: data.bankAccounts || [],
+        sendPaymentReminders: data.sendPaymentReminders ?? false,
+        reminderDaysBefore: data.reminderDaysBefore ?? 3,
+        invoiceLogoUrl: data.invoiceLogoUrl || null,
+        invoiceResolution: data.invoiceResolution || null,
+        invoiceResolutionDate: data.invoiceResolutionDate || null,
+        invoiceRangeFrom: data.invoiceRangeFrom ?? null,
+        invoiceRangeTo: data.invoiceRangeTo ?? null,
+        invoiceFooterText: data.invoiceFooterText || null,
+        invoicePageSize: data.invoicePageSize || 'LETTER',
+        invoiceCity: data.invoiceCity || null,
+        invoicePhone: data.invoicePhone || null,
+        invoiceEmail: data.invoiceEmail || null,
+        economicActivity: data.economicActivity || null,
+      })
+    } catch (err: any) {
       console.error('Error fetching settings:', err)
+      setError(err.response?.data?.message || err.message || 'Error al cargar configuración')
     } finally {
       setLoading(false)
     }
@@ -139,6 +166,22 @@ export default function FinanceSettings() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <RefreshCw className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="p-4 bg-red-100 rounded-full inline-block mb-4">
+            <RefreshCw className="w-8 h-8 text-red-500" />
+          </div>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button onClick={fetchSettings} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+            Reintentar
+          </button>
+        </div>
       </div>
     )
   }
