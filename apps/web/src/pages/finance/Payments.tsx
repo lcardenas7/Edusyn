@@ -14,6 +14,8 @@ import {
   XCircle,
   FileDown,
   Loader2,
+  Eye,
+  X,
 } from 'lucide-react'
 import { financePaymentsApi, financeThirdPartiesApi, financeObligationsApi } from '../../lib/api'
 
@@ -174,6 +176,9 @@ export default function Payments() {
     }
   }
 
+  const [previewUrl, setPreviewUrl] = useState<string>('')
+  const [previewTitle, setPreviewTitle] = useState('')
+
   const handleDownloadReceipt = async (id: string, receiptNumber?: string) => {
     try {
       const response = await financePaymentsApi.downloadReceipt(id)
@@ -186,6 +191,24 @@ export default function Payments() {
     } catch (err: any) {
       alert('Error al descargar recibo')
     }
+  }
+
+  const handlePreviewReceipt = async (id: string, receiptNumber?: string) => {
+    try {
+      const response = await financePaymentsApi.downloadReceipt(id)
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      setPreviewUrl(url)
+      setPreviewTitle(`Recibo ${receiptNumber || id.slice(0, 8)}`)
+    } catch (err: any) {
+      alert('Error al generar vista previa')
+    }
+  }
+
+  const closePreview = () => {
+    if (previewUrl) window.URL.revokeObjectURL(previewUrl)
+    setPreviewUrl('')
+    setPreviewTitle('')
   }
 
   const filteredPayments = payments.filter(p => {
@@ -344,6 +367,10 @@ export default function Payments() {
                         </td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center gap-1">
+                            <button onClick={() => handlePreviewReceipt(payment.id, payment.receiptNumber)} title="Vista Previa"
+                              className="p-1.5 text-blue-500 hover:bg-blue-50 rounded">
+                              <Eye className="w-4 h-4" />
+                            </button>
                             <button onClick={() => handleDownloadReceipt(payment.id, payment.receiptNumber)} title="Descargar Recibo"
                               className="p-1.5 text-gray-500 hover:bg-gray-100 rounded">
                               <FileDown className="w-4 h-4" />
@@ -448,6 +475,28 @@ export default function Payments() {
                 {savingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 {savingPayment ? 'Registrando...' : 'Registrar Pago'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* PDF Preview Modal */}
+      {previewUrl && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <h3 className="font-semibold text-gray-800">{previewTitle}</h3>
+              <div className="flex items-center gap-2">
+                <a href={previewUrl} download={`${previewTitle}.pdf`}
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1 text-sm">
+                  <FileDown className="w-4 h-4" /> Descargar
+                </a>
+                <button onClick={closePreview} className="p-1.5 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <iframe src={previewUrl} className="w-full h-full border-0" title="Vista previa del recibo" />
             </div>
           </div>
         </div>

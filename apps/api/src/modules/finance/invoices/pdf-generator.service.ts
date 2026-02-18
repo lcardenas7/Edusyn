@@ -362,10 +362,23 @@ export class PdfGeneratorService {
       // ── Top colored bar ──
       doc.rect(0, 0, doc.page.width, 4).fill(colors.primary);
 
-      // ── Header (centered, no logo for receipt) ──
+      // ── Header with logo ──
       let y = m;
-      doc.fillColor(colors.primary).fontSize((hl ? 12 : 14) * fs).font('Helvetica-Bold');
-      doc.text(settings?.businessName || payment.institution.name, m, y, { width: w, align: 'center' });
+      const logoSize = hl ? 35 : 45;
+      const hasLogo = !!logoBuffer;
+      let textX = m;
+      let textW = w;
+
+      if (hasLogo) {
+        try {
+          doc.image(logoBuffer, m, y, { width: logoSize, height: logoSize });
+        } catch { /* logo failed */ }
+        textX = m + logoSize + 8;
+        textW = w - logoSize - 8;
+      }
+
+      doc.fillColor(colors.primary).fontSize((hl ? 11 : 14) * fs).font('Helvetica-Bold');
+      doc.text(settings?.businessName || payment.institution.name, textX, y, { width: textW, align: hasLogo ? undefined : 'center' });
       
       doc.fillColor(colors.text).fontSize((hl ? 6 : 7) * fs).font('Helvetica');
       const infoLines: string[] = [];
@@ -378,10 +391,10 @@ export class PdfGeneratorService {
       if (contactParts.length) infoLines.push(contactParts.join(' | '));
       
       infoLines.forEach(line => {
-        doc.text(line, m, doc.y, { width: w, align: 'center' });
+        doc.text(line, textX, doc.y, { width: textW, align: hasLogo ? undefined : 'center' });
       });
 
-      y = doc.y + 4;
+      y = Math.max(doc.y, m + logoSize) + 4;
       doc.moveTo(m, y).lineTo(m + w, y).lineWidth(0.5).stroke(colors.primary);
       y += 4;
 
@@ -497,9 +510,13 @@ export class PdfGeneratorService {
       doc.text(this.formatCurrency(obligationAmount), cx, cy + (tblRowH - tblFontSize) / 2 - 1, { width: totalW - 6, align: 'right' });
       cy += tblRowH;
 
-      // Add one empty row for visual spacing
-      doc.rect(m, cy - 1, w, tblRowH).fill('#FFFFFF');
-      cy += tblRowH;
+      // Add empty rows to fill product area (more for letter, fewer for half-letter)
+      const emptyRows = hl ? 2 : 5;
+      for (let i = 0; i < emptyRows; i++) {
+        const bgColor = i % 2 === 0 ? '#FFFFFF' : colors.secondary;
+        doc.rect(m, cy - 1, w, tblRowH).fill(bgColor);
+        cy += tblRowH;
+      }
 
       // Bottom border of table
       doc.moveTo(m, cy).lineTo(m + w, cy).lineWidth(0.5).stroke(colors.border);
@@ -542,17 +559,15 @@ export class PdfGeneratorService {
       doc.text(`Recibido por: ${payment.receivedBy.firstName} ${payment.receivedBy.lastName}`, sigX, y + 3, { width: sigLineW, align: 'center' });
       doc.fillColor(colors.text);
 
-      // ── Footer (fixed at bottom) ──
-      const footerY = pageH - (hl ? 25 : 32);
-      doc.moveTo(m, footerY - 4).lineTo(m + w, footerY - 4).lineWidth(0.3).stroke(colors.border);
-      doc.fontSize(5).font('Helvetica').fillColor(colors.lightText);
-      doc.text(
-        `Documento generado el ${new Date().toLocaleString('es-CO')} | Documento interno - No constituye factura electrónica`,
-        m, footerY, { width: w, align: 'center' },
-      );
+      // ── Footer (fixed at bottom, single block to avoid page overflow) ──
+      const footerY = pageH - (hl ? 18 : 22);
+      doc.moveTo(m, footerY - 3).lineTo(m + w, footerY - 3).lineWidth(0.3).stroke(colors.border);
+      let footerText = `Documento generado el ${new Date().toLocaleString('es-CO')} | Documento interno - No constituye factura electrónica`;
       if (settings?.billingMode === 'INTERNAL_ONLY') {
-        doc.text('Para factura electrónica válida ante la DIAN, solicítela a su contador.', m, footerY + 8, { width: w, align: 'center' });
+        footerText += ' | Para factura electrónica válida ante la DIAN, solicítela a su contador.';
       }
+      doc.fontSize(hl ? 4.5 : 5).font('Helvetica').fillColor(colors.lightText);
+      doc.text(footerText, m, footerY, { width: w, align: 'center', lineBreak: false });
       doc.fillColor(colors.text);
 
       // ── Bottom colored bar ──
