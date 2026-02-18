@@ -4076,9 +4076,13 @@ model ReportCardConfig {
   // Encabezado
   showLogo              Boolean @default(true)
   showShield            Boolean @default(false)
+  logoUrl               String?   // URL del escudo/logo institucional para el boletín
   headerResolution      String?
   headerMunicipality    String?
   headerDepartment      String?
+  
+  // Colores personalizables
+  primaryColor          String?   @default("#1E3A8A") // Color primario (encabezados, barras)
 
   // Tipo de evaluación — DEPRECADO: el sistema lo deduce de academicStructure del nivel
   // Se mantiene por compatibilidad con datos existentes, pero NO se usa para decidir layout

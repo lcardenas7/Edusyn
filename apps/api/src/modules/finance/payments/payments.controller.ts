@@ -30,11 +30,15 @@ export class PaymentsController {
     @Query('thirdPartyId') thirdPartyId?: string,
     @Query('obligationId') obligationId?: string,
     @Query('paymentMethod') paymentMethod?: PaymentMethod,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     return this.paymentsService.findAll(req.user.institutionId, {
       thirdPartyId,
       obligationId,
       paymentMethod,
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
     });
   }
 

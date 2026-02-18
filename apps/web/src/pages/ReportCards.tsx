@@ -47,9 +47,11 @@ interface SignatureEntry {
 interface ReportConfig {
   showLogo: boolean
   showShield: boolean
+  logoUrl: string
   headerResolution: string
   headerMunicipality: string
   headerDepartment: string
+  primaryColor: string
   evaluationType: string
   showNumericGrade: boolean
   showPerformanceLevel: boolean
@@ -72,9 +74,11 @@ interface ReportConfig {
 const defaultConfig: ReportConfig = {
   showLogo: true,
   showShield: false,
+  logoUrl: '',
   headerResolution: '',
   headerMunicipality: '',
   headerDepartment: '',
+  primaryColor: '#1E3A8A',
   evaluationType: 'NUMERIC',
   showNumericGrade: true,
   showPerformanceLevel: true,
@@ -552,11 +556,15 @@ export default function ReportCards() {
                 <div className="bg-white border-2 border-slate-400 rounded-lg p-8 max-w-4xl mx-auto shadow-lg">
                   {/* Encabezado Institucional */}
                   <div className="text-center border-b-2 border-slate-300 pb-4 mb-4">
-                    {config.showLogo && institution?.name && (
+                    {config.showLogo && (
                       <div className="flex items-center justify-center gap-4 mb-2">
-                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
-                          <GraduationCap className="w-8 h-8 text-slate-400" />
-                        </div>
+                        {config.logoUrl ? (
+                          <img src={config.logoUrl} alt="Escudo" className="w-16 h-16 object-contain" />
+                        ) : (
+                          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
+                            <GraduationCap className="w-8 h-8 text-slate-400" />
+                          </div>
+                        )}
                       </div>
                     )}
                     <h2 className="text-xl font-bold text-slate-900 uppercase">{previewData.institution?.name || institution?.name || ''}</h2>
@@ -568,7 +576,7 @@ export default function ReportCards() {
                   </div>
 
                   {/* Titulo */}
-                  <div className="text-center bg-blue-800 text-white py-2 rounded mb-4">
+                  <div className="text-center text-white py-2 rounded mb-4" style={{ backgroundColor: config.primaryColor || '#1E3A8A' }}>
                     <h3 className="text-lg font-bold">INFORME ACADEMICO - {selectedTermName}</h3>
                     <p className="text-sm">Ano Lectivo {selectedYearName}</p>
                   </div>
@@ -590,7 +598,7 @@ export default function ReportCards() {
                   {/* Tabla de Calificaciones por Area */}
                   <div className="border border-slate-300 rounded overflow-hidden mb-4">
                     <table className="w-full text-xs">
-                      <thead className="bg-blue-800 text-white">
+                      <thead className="text-white" style={{ backgroundColor: config.primaryColor || '#1E3A8A' }}>
                         <tr>
                           <th className="px-2 py-2 text-left font-medium w-28">{isQualitative ? 'Dimension' : isFlat ? 'Asignatura' : 'Area / Asignatura'}</th>
                           {showAchiev && <th className="px-2 py-2 text-left font-medium">{isQualitative ? 'Observacion' : 'Logro'}</th>}
@@ -672,11 +680,11 @@ export default function ReportCards() {
                         ))}
                       </tbody>
                       {showGenAvg && (
-                        <tfoot className="bg-blue-100">
+                        <tfoot style={{ backgroundColor: `${config.primaryColor || '#1E3A8A'}20` }}>
                           <tr>
                             <td className="px-2 py-2 font-bold" colSpan={showAchiev ? 2 : 1}>PROMEDIO GENERAL</td>
                             {showNumeric && (
-                              <td className="px-1 py-2 text-center font-bold text-lg text-blue-800">
+                              <td className="px-1 py-2 text-center font-bold text-lg" style={{ color: config.primaryColor || '#1E3A8A' }}>
                                 {previewData.subjectGrades?.filter((s: any) => s.grade !== null).length > 0
                                   ? (previewData.subjectGrades.filter((s: any) => s.grade !== null).reduce((sum: number, s: any) => sum + s.grade, 0) / previewData.subjectGrades.filter((s: any) => s.grade !== null).length).toFixed(1)
                                   : '-'}
@@ -780,13 +788,27 @@ export default function ReportCards() {
                   <div className="flex items-center gap-4">
                     <label className="flex items-center gap-2 text-sm">
                       <input type="checkbox" checked={configDraft.showLogo} onChange={(e) => setConfigDraft({...configDraft, showLogo: e.target.checked})} className="w-4 h-4 rounded" />
-                      Mostrar logo institucional
-                    </label>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" checked={configDraft.showShield} onChange={(e) => setConfigDraft({...configDraft, showShield: e.target.checked})} className="w-4 h-4 rounded" />
-                      Mostrar escudo
+                      Mostrar logo/escudo
                     </label>
                   </div>
+                  
+                  {/* Logo URL */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">URL del Escudo/Logo</label>
+                      <input type="text" value={configDraft.logoUrl || ''} onChange={(e) => setConfigDraft({...configDraft, logoUrl: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="https://..." />
+                      <p className="text-xs text-slate-400 mt-1">Imagen que aparece en el encabezado del boletin</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Color Principal</label>
+                      <div className="flex items-center gap-2">
+                        <input type="color" value={configDraft.primaryColor || '#1E3A8A'} onChange={(e) => setConfigDraft({...configDraft, primaryColor: e.target.value})} className="w-10 h-10 rounded border border-slate-300 cursor-pointer" />
+                        <input type="text" value={configDraft.primaryColor || '#1E3A8A'} onChange={(e) => setConfigDraft({...configDraft, primaryColor: e.target.value})} className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="#1E3A8A" />
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">Color de encabezados y barras del boletin</p>
+                    </div>
+                  </div>
+                  
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-slate-600 mb-1">Resolucion de aprobacion</label>

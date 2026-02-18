@@ -24,11 +24,15 @@ export class ObligationsController {
     @Query('thirdPartyId') thirdPartyId?: string,
     @Query('conceptId') conceptId?: string,
     @Query('status') status?: ObligationStatus,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     return this.obligationsService.findAll(req.user.institutionId, {
       thirdPartyId,
       conceptId,
       status,
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
     });
   }
 

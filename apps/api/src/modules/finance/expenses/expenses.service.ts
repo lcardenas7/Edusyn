@@ -11,27 +11,42 @@ export class ExpensesService {
     providerId?: string;
     dateFrom?: Date;
     dateTo?: Date;
+    page?: number;
+    limit?: number;
   }) {
-    return this.prisma.financialExpense.findMany({
-      where: {
-        institutionId,
-        voidedAt: null,
-        ...(filters?.categoryId && { categoryId: filters.categoryId }),
-        ...(filters?.providerId && { providerId: filters.providerId }),
-        ...(filters?.dateFrom || filters?.dateTo ? {
-          expenseDate: {
-            ...(filters.dateFrom && { gte: filters.dateFrom }),
-            ...(filters.dateTo && { lte: filters.dateTo }),
-          },
-        } : {}),
-      },
-      include: {
-        category: true,
-        provider: true,
-        registeredBy: { select: { id: true, firstName: true, lastName: true } },
-      },
-      orderBy: { expenseDate: 'desc' },
-    });
+    const page = filters?.page || 1;
+    const limit = Math.min(filters?.limit || 100, 500);
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.FinancialExpenseWhereInput = {
+      institutionId,
+      voidedAt: null,
+      ...(filters?.categoryId && { categoryId: filters.categoryId }),
+      ...(filters?.providerId && { providerId: filters.providerId }),
+      ...(filters?.dateFrom || filters?.dateTo ? {
+        expenseDate: {
+          ...(filters.dateFrom && { gte: filters.dateFrom }),
+          ...(filters.dateTo && { lte: filters.dateTo }),
+        },
+      } : {}),
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.financialExpense.findMany({
+        where,
+        include: {
+          category: { select: { id: true, name: true } },
+          provider: { select: { id: true, name: true } },
+          registeredBy: { select: { id: true, firstName: true, lastName: true } },
+        },
+        orderBy: { expenseDate: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.financialExpense.count({ where }),
+    ]);
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async findOne(id: string, institutionId: string) {

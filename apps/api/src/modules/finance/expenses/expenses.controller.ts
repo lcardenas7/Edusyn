@@ -22,8 +22,15 @@ export class ExpensesController {
     @Request() req,
     @Query('categoryId') categoryId?: string,
     @Query('providerId') providerId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.expensesService.findAll(req.user.institutionId, { categoryId, providerId });
+    return this.expensesService.findAll(req.user.institutionId, {
+      categoryId,
+      providerId,
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+    });
   }
 
   @Get('stats')

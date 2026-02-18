@@ -10,21 +10,36 @@ export class InvoicesService {
     thirdPartyId?: string;
     status?: string;
     type?: string;
+    page?: number;
+    limit?: number;
   }) {
-    return this.prisma.financialInvoice.findMany({
-      where: {
-        institutionId,
-        ...(filters?.thirdPartyId && { thirdPartyId: filters.thirdPartyId }),
-        ...(filters?.status && { status: filters.status as any }),
-        ...(filters?.type && { type: filters.type as any }),
-      },
-      include: {
-        thirdParty: true,
-        items: true,
-        createdBy: { select: { id: true, firstName: true, lastName: true } },
-      },
-      orderBy: { issueDate: 'desc' },
-    });
+    const page = filters?.page || 1;
+    const limit = Math.min(filters?.limit || 50, 200);
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.FinancialInvoiceWhereInput = {
+      institutionId,
+      ...(filters?.thirdPartyId && { thirdPartyId: filters.thirdPartyId }),
+      ...(filters?.status && { status: filters.status as any }),
+      ...(filters?.type && { type: filters.type as any }),
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.financialInvoice.findMany({
+        where,
+        include: {
+          thirdParty: { select: { id: true, name: true, document: true } },
+          _count: { select: { items: true } },
+          createdBy: { select: { id: true, firstName: true, lastName: true } },
+        },
+        orderBy: { issueDate: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.financialInvoice.count({ where }),
+    ]);
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async findOne(id: string, institutionId: string) {

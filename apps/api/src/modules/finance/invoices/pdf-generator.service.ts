@@ -97,8 +97,21 @@ export class PdfGeneratorService {
     const colors = this.getColors(settings);
     const logoBuffer = await this.resolveLogoBuffer(settings, invoice.institution);
 
+    // Generate QR for invoice verification
+    let qrBuffer: Buffer | null = null;
+    if (settings?.invoiceShowQR !== false) {
+      const qrData = JSON.stringify({
+        type: 'INVOICE',
+        id: invoice.id,
+        number: invoice.invoiceNumber,
+        total: Number(invoice.total),
+        date: invoice.issueDate.toISOString().split('T')[0],
+      });
+      qrBuffer = await this.generateQRBuffer(qrData);
+    }
+
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: pc.size, margin: pc.margin, bufferPages: true });
+      const doc = new PDFDocument({ size: pc.size, margin: pc.margin });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -106,71 +119,137 @@ export class PdfGeneratorService {
 
       const m = pc.margin;
       const w = pc.contentWidth;
+      const pageH = doc.page.height;
+      const fs = pc.isHalfLetter ? 0.85 : 1;
 
       // ── Top colored bar ──
-      doc.rect(0, 0, doc.page.width, 6).fill(colors.primary);
-      doc.y = m + 6;
+      doc.rect(0, 0, doc.page.width, 4).fill(colors.primary);
 
-      // ── Header ──
-      this.drawProfessionalHeader(doc, invoice.institution, settings, logoBuffer, colors, m, w);
+      // ── Compact Header ──
+      let y = m;
+      const logoSize = pc.isHalfLetter ? 35 : 45;
+      
+      if (logoBuffer) {
+        try {
+          doc.image(logoBuffer, m, y, { width: logoSize, height: logoSize });
+        } catch { /* logo failed */ }
+      }
 
-      // ── Document title bar ──
-      const titleY = doc.y;
-      doc.rect(m, titleY, w, 28).fill(colors.primary);
-      doc.fillColor('#FFFFFF').fontSize(12).font('Helvetica-Bold');
-      doc.text(
-        invoice.type === 'INCOME' ? 'FACTURA DE VENTA' : 'FACTURA DE COMPRA',
-        m + 10, titleY + 7, { width: w / 2 - 10 },
-      );
-      doc.text(`N° ${invoice.invoiceNumber}`, m + w / 2, titleY + 7, { width: w / 2 - 10, align: 'right' });
+      const textX = logoBuffer ? m + logoSize + 8 : m;
+      const textW = logoBuffer ? w - logoSize - 8 : w;
+      const align = logoBuffer ? undefined : 'center' as const;
+
+      doc.fillColor(colors.primary).fontSize(12 * fs).font('Helvetica-Bold');
+      doc.text(settings?.businessName || invoice.institution.name, textX, y, { width: textW, align });
+      
+      doc.fillColor(colors.text).fontSize(6.5 * fs).font('Helvetica');
+      const infoLines: string[] = [];
+      if (settings?.taxId) infoLines.push(`NIT: ${settings.taxId}`);
+      if (settings?.taxRegime) infoLines.push(this.getTaxRegimeLabel(settings.taxRegime));
+      if (settings?.invoiceAddress || invoice.institution.address) infoLines.push(settings?.invoiceAddress || invoice.institution.address || '');
+      const contactParts: string[] = [];
+      if (settings?.invoicePhone || invoice.institution.phone) contactParts.push(`Tel: ${settings?.invoicePhone || invoice.institution.phone}`);
+      if (settings?.invoiceEmail || invoice.institution.email) contactParts.push(settings?.invoiceEmail || invoice.institution.email || '');
+      if (contactParts.length) infoLines.push(contactParts.join(' | '));
+      
+      infoLines.forEach(line => {
+        doc.text(line, textX, doc.y, { width: textW, align });
+      });
+
+      y = Math.max(doc.y, m + logoSize) + 4;
+      doc.moveTo(m, y).lineTo(m + w, y).lineWidth(0.5).stroke(colors.primary);
+      y += 4;
+
+      // ── Title bar ──
+      const titleH = pc.isHalfLetter ? 18 : 22;
+      doc.rect(m, y, w, titleH).fill(colors.primary);
+      doc.fillColor('#FFFFFF').fontSize(9 * fs).font('Helvetica-Bold');
+      doc.text(invoice.type === 'INCOME' ? 'FACTURA DE VENTA' : 'FACTURA DE COMPRA', m + 8, y + (titleH - 9 * fs) / 2, { width: w / 2 - 8 });
+      doc.text(`N° ${invoice.invoiceNumber}`, m + w / 2, y + (titleH - 9 * fs) / 2, { width: w / 2 - 8, align: 'right' });
       doc.fillColor(colors.text);
-      doc.y = titleY + 34;
+      y += titleH + 2;
 
-      // ── DIAN Resolution ──
+      // ── DIAN Resolution (compact) ──
       if (settings?.invoiceResolution) {
-        doc.fontSize(7).font('Helvetica').fillColor(colors.lightText);
+        doc.fontSize(5.5 * fs).font('Helvetica').fillColor(colors.lightText);
         let resText = settings.invoiceResolution;
         if (settings.invoiceResolutionDate) resText += ` del ${new Date(settings.invoiceResolutionDate).toLocaleDateString('es-CO')}`;
         if (settings.invoiceResolutionPrefix) resText += ` Prefijo: ${settings.invoiceResolutionPrefix}`;
         if (settings.invoiceRangeFrom != null && settings.invoiceRangeTo != null) resText += ` Del ${settings.invoiceRangeFrom} al ${settings.invoiceRangeTo}`;
-        doc.text(resText, m, doc.y, { width: w, align: 'center' });
+        doc.text(resText, m, y, { width: w, align: 'center' });
         doc.fillColor(colors.text);
+        y += 10;
+      } else {
+        y += 4;
       }
-      doc.y += 6;
 
-      // ── Invoice meta + client info (two columns) ──
-      const metaY = doc.y;
-      const halfW = (w - 10) / 2;
+      // ── Two-column: Client info (left) + Invoice meta + QR (right) ──
+      const qrSize = pc.isHalfLetter ? 50 : 60;
+      const colGap = 8;
+      const leftW = qrBuffer ? w * 0.55 : w * 0.5;
+      const rightW = w - leftW - colGap;
+      const boxH = pc.isHalfLetter ? 60 : 70;
 
-      // Left: Invoice info
-      doc.rect(m, metaY, halfW, 60).lineWidth(0.5).stroke(colors.border);
-      doc.fontSize(8).font('Helvetica-Bold').text('Fecha emisión:', m + 6, metaY + 6);
-      doc.font('Helvetica').text(new Date(invoice.issueDate).toLocaleDateString('es-CO'), m + 80, metaY + 6);
+      // Left: Client info
+      doc.rect(m, y, leftW, boxH).lineWidth(0.5).stroke(colors.border);
+      doc.rect(m, y, leftW, 11).fill(colors.secondary);
+      doc.fillColor(colors.text).fontSize(6.5 * fs).font('Helvetica-Bold').text('DATOS DEL CLIENTE', m + 4, y + 2);
+      
+      let clientY = y + 14;
+      const clientRowH = pc.isHalfLetter ? 8 : 9;
+      doc.fontSize(6 * fs).font('Helvetica-Bold').text('Nombre:', m + 4, clientY);
+      doc.font('Helvetica').text(invoice.thirdParty.name, m + 45, clientY, { width: leftW - 50 });
+      clientY += clientRowH;
+      if (invoice.thirdParty.document) {
+        doc.font('Helvetica-Bold').text('Documento:', m + 4, clientY);
+        doc.font('Helvetica').text(invoice.thirdParty.document, m + 45, clientY);
+        clientY += clientRowH;
+      }
+      if (invoice.thirdParty.phone) {
+        doc.font('Helvetica-Bold').text('Teléfono:', m + 4, clientY);
+        doc.font('Helvetica').text(invoice.thirdParty.phone, m + 45, clientY);
+        clientY += clientRowH;
+      }
+      if (invoice.thirdParty.email) {
+        doc.font('Helvetica-Bold').text('Email:', m + 4, clientY);
+        doc.font('Helvetica').text(invoice.thirdParty.email, m + 45, clientY, { width: leftW - 50 });
+      }
+
+      // Right: Invoice meta + QR
+      const rightX = m + leftW + colGap;
+      doc.rect(rightX, y, rightW, boxH).lineWidth(0.5).stroke(colors.border);
+      doc.rect(rightX, y, rightW, 11).fill(colors.secondary);
+      doc.fillColor(colors.text).fontSize(6.5 * fs).font('Helvetica-Bold').text('DATOS DE LA FACTURA', rightX + 4, y + 2);
+
+      const metaW = qrBuffer ? rightW - qrSize - 8 : rightW;
+      let metaY = y + 14;
+      doc.fontSize(6 * fs);
+      doc.font('Helvetica-Bold').text('Fecha:', rightX + 4, metaY);
+      doc.font('Helvetica').text(new Date(invoice.issueDate).toLocaleDateString('es-CO'), rightX + 35, metaY);
+      metaY += clientRowH;
       if (invoice.dueDate) {
-        doc.font('Helvetica-Bold').text('Vencimiento:', m + 6, metaY + 20);
-        doc.font('Helvetica').text(new Date(invoice.dueDate).toLocaleDateString('es-CO'), m + 80, metaY + 20);
+        doc.font('Helvetica-Bold').text('Vence:', rightX + 4, metaY);
+        doc.font('Helvetica').text(new Date(invoice.dueDate).toLocaleDateString('es-CO'), rightX + 35, metaY);
+        metaY += clientRowH;
       }
-      doc.font('Helvetica-Bold').text('Estado:', m + 6, metaY + 34);
+      doc.font('Helvetica-Bold').text('Estado:', rightX + 4, metaY);
       const statusColor = invoice.status === 'PAID' ? '#059669' : invoice.status === 'CANCELLED' ? '#DC2626' : colors.primary;
-      doc.fillColor(statusColor).font('Helvetica-Bold').text(this.getStatusLabel(invoice.status), m + 80, metaY + 34);
+      doc.fillColor(statusColor).font('Helvetica-Bold').text(this.getStatusLabel(invoice.status), rightX + 35, metaY);
       doc.fillColor(colors.text);
 
-      // Right: Client info
-      const rightX = m + halfW + 10;
-      doc.rect(rightX, metaY, halfW, 60).lineWidth(0.5).stroke(colors.border);
-      doc.rect(rightX, metaY, halfW, 14).fill(colors.secondary);
-      doc.fillColor(colors.text).fontSize(8).font('Helvetica-Bold').text('DATOS DEL CLIENTE', rightX + 6, metaY + 3);
-      doc.font('Helvetica').fontSize(7);
-      let clientY = metaY + 18;
-      doc.text(invoice.thirdParty.name, rightX + 6, clientY, { width: halfW - 12 });
-      clientY += 10;
-      if (invoice.thirdParty.document) { doc.text(`Doc: ${invoice.thirdParty.document}`, rightX + 6, clientY); clientY += 10; }
-      if (invoice.thirdParty.phone) { doc.text(`Tel: ${invoice.thirdParty.phone}`, rightX + 6, clientY); clientY += 10; }
-      if (invoice.thirdParty.email) { doc.text(invoice.thirdParty.email, rightX + 6, clientY); }
+      // QR in right box
+      if (qrBuffer) {
+        const qrX = rightX + rightW - qrSize - 4;
+        const qrY = y + 14;
+        try {
+          doc.image(qrBuffer, qrX, qrY, { width: qrSize - 8, height: qrSize - 8 });
+        } catch { /* QR failed */ }
+      }
 
-      doc.y = metaY + 68;
+      y += boxH + 6;
 
       // ── Items Table ──
+      doc.y = y;
       this.drawProfessionalItemsTable(doc, invoice.items, colors, m, w);
 
       // ── Totals ──
@@ -181,23 +260,33 @@ export class PdfGeneratorService {
         total: Number(invoice.total),
       }, colors, m, w);
 
-      // ── Bank accounts ──
-      if (settings?.invoiceShowBankAccounts !== false && settings?.bankAccounts) {
+      // ── Bank accounts (compact) ──
+      if (settings?.invoiceShowBankAccounts !== false && settings?.bankAccounts && doc.y < pageH - 80) {
         this.drawBankAccounts(doc, settings.bankAccounts, colors, m, w);
       }
 
-      // ── Footer ──
-      this.drawProfessionalFooter(doc, invoice.institution, settings, colors, m, w, null);
+      // ── Footer (fixed at bottom) ──
+      const footerY = pageH - (pc.isHalfLetter ? 28 : 35);
+      doc.moveTo(m, footerY - 4).lineTo(m + w, footerY - 4).lineWidth(0.3).stroke(colors.border);
+      doc.fontSize(5).font('Helvetica').fillColor(colors.lightText);
+      doc.text(
+        `Documento generado el ${new Date().toLocaleString('es-CO')} | Documento interno - No constituye factura electrónica`,
+        m, footerY, { width: w, align: 'center' },
+      );
+      if (settings?.billingMode === 'INTERNAL_ONLY') {
+        doc.text('Para factura electrónica válida ante la DIAN, solicítela a su contador.', m, footerY + 8, { width: w, align: 'center' });
+      }
+      doc.fillColor(colors.text);
 
       // ── Bottom colored bar ──
-      doc.rect(0, doc.page.height - 6, doc.page.width, 6).fill(colors.primary);
+      doc.rect(0, pageH - 4, doc.page.width, 4).fill(colors.primary);
 
       doc.end();
     });
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // RECEIPT PDF (Recibo de Pago)
+  // RECEIPT PDF (Recibo de Pago) - Optimizado para una sola página
   // ═══════════════════════════════════════════════════════════════
 
   async generateReceiptPdf(paymentId: string, institutionId: string): Promise<Buffer> {
@@ -247,7 +336,8 @@ export class PdfGeneratorService {
     }
 
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: pc.size, margin: pc.margin, bufferPages: true });
+      // Disable auto page breaks to keep everything on one page
+      const doc = new PDFDocument({ size: pc.size, margin: pc.margin, autoFirstPage: true });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -255,122 +345,134 @@ export class PdfGeneratorService {
 
       const m = pc.margin;
       const w = pc.contentWidth;
-      const fs = pc.isHalfLetter ? 0.85 : 1; // font scale
+      const pageH = doc.page.height;
+      const fs = pc.isHalfLetter ? 0.8 : 1; // font scale
 
       // ── Top colored bar ──
-      doc.rect(0, 0, doc.page.width, 6).fill(colors.primary);
-      doc.y = m + 6;
+      doc.rect(0, 0, doc.page.width, 4).fill(colors.primary);
 
-      // ── Header ──
-      this.drawProfessionalHeader(doc, payment.institution, settings, logoBuffer, colors, m, w);
+      // ── Compact Header ──
+      let y = m;
+      const logoSize = pc.isHalfLetter ? 35 : 45;
+      
+      if (logoBuffer) {
+        try {
+          doc.image(logoBuffer, m, y, { width: logoSize, height: logoSize });
+        } catch { /* logo failed */ }
+      }
 
-      // ── Document title bar ──
-      const titleY = doc.y;
-      doc.rect(m, titleY, w, 26).fill(colors.primary);
-      doc.fillColor('#FFFFFF').fontSize(11 * fs).font('Helvetica-Bold');
-      doc.text('RECIBO DE PAGO', m + 10, titleY + 7, { width: w / 2 - 10 });
-      doc.text(`N° ${payment.receiptNumber || 'S/N'}`, m + w / 2, titleY + 7, { width: w / 2 - 10, align: 'right' });
+      const textX = logoBuffer ? m + logoSize + 8 : m;
+      const textW = logoBuffer ? w - logoSize - 8 : w;
+      const align = logoBuffer ? undefined : 'center' as const;
+
+      doc.fillColor(colors.primary).fontSize(12 * fs).font('Helvetica-Bold');
+      doc.text(settings?.businessName || payment.institution.name, textX, y, { width: textW, align });
+      
+      doc.fillColor(colors.text).fontSize(6.5 * fs).font('Helvetica');
+      const infoLines: string[] = [];
+      if (settings?.taxId) infoLines.push(`NIT: ${settings.taxId}`);
+      if (settings?.taxRegime) infoLines.push(this.getTaxRegimeLabel(settings.taxRegime));
+      if (settings?.invoiceAddress || payment.institution.address) infoLines.push(settings?.invoiceAddress || payment.institution.address || '');
+      const contactParts: string[] = [];
+      if (settings?.invoicePhone || payment.institution.phone) contactParts.push(`Tel: ${settings?.invoicePhone || payment.institution.phone}`);
+      if (settings?.invoiceEmail || payment.institution.email) contactParts.push(settings?.invoiceEmail || payment.institution.email || '');
+      if (contactParts.length) infoLines.push(contactParts.join(' | '));
+      
+      infoLines.forEach(line => {
+        doc.text(line, textX, doc.y, { width: textW, align });
+      });
+
+      y = Math.max(doc.y, m + logoSize) + 6;
+      doc.moveTo(m, y).lineTo(m + w, y).lineWidth(0.5).stroke(colors.primary);
+      y += 4;
+
+      // ── Title bar with receipt number ──
+      const titleH = pc.isHalfLetter ? 18 : 22;
+      doc.rect(m, y, w, titleH).fill(colors.primary);
+      doc.fillColor('#FFFFFF').fontSize(9 * fs).font('Helvetica-Bold');
+      doc.text('RECIBO DE PAGO', m + 8, y + (titleH - 9 * fs) / 2, { width: w / 2 - 8 });
+      doc.text(`N° ${payment.receiptNumber || 'S/N'}`, m + w / 2, y + (titleH - 9 * fs) / 2, { width: w / 2 - 8, align: 'right' });
       doc.fillColor(colors.text);
-      doc.y = titleY + 32;
+      y += titleH + 6;
 
-      // ── Payment details box ──
-      const detailY = doc.y;
-      doc.rect(m, detailY, w, pc.isHalfLetter ? 100 : 110).lineWidth(0.5).stroke(colors.border);
-      doc.rect(m, detailY, w, 14).fill(colors.secondary);
-      doc.fillColor(colors.text).fontSize(8 * fs).font('Helvetica-Bold').text('INFORMACIÓN DEL PAGO', m + 6, detailY + 3);
+      // ── Two-column layout: Client info (left) + QR (right) ──
+      const qrSize = pc.isHalfLetter ? 55 : 70;
+      const infoW = qrBuffer ? w - qrSize - 15 : w;
+      const boxH = pc.isHalfLetter ? 70 : 85;
 
-      const labelW = pc.isHalfLetter ? 85 : 110;
-      const col1X = m + 6;
-      const col1ValX = m + 6 + labelW;
-      const col2X = m + w / 2 + 6;
-      const col2ValX = m + w / 2 + 6 + labelW;
-      let rowY = detailY + 20;
-      const rowH = pc.isHalfLetter ? 12 : 14;
+      // Client info box
+      doc.rect(m, y, infoW, boxH).lineWidth(0.5).stroke(colors.border);
+      doc.rect(m, y, infoW, 12).fill(colors.secondary);
+      doc.fillColor(colors.text).fontSize(7 * fs).font('Helvetica-Bold').text('INFORMACIÓN DEL PAGO', m + 4, y + 2);
 
-      doc.fontSize(7.5 * fs);
+      const labelW = pc.isHalfLetter ? 55 : 70;
+      let rowY = y + 15;
+      const rowH = pc.isHalfLetter ? 9 : 11;
+      doc.fontSize(6.5 * fs);
 
-      // Row 1
-      doc.font('Helvetica-Bold').text('Fecha:', col1X, rowY);
-      doc.font('Helvetica').text(new Date(payment.paymentDate).toLocaleDateString('es-CO'), col1ValX, rowY);
-      doc.font('Helvetica-Bold').text('Método:', col2X, rowY);
-      doc.font('Helvetica').text(this.getPaymentMethodLabel(payment.paymentMethod), col2ValX, rowY);
-      rowY += rowH;
+      // Payment details
+      const details = [
+        { label: 'Fecha:', value: new Date(payment.paymentDate).toLocaleDateString('es-CO') },
+        { label: 'Recibido de:', value: payment.thirdParty.name },
+        { label: 'Documento:', value: payment.thirdParty.document || '-' },
+        { label: 'Concepto:', value: payment.obligation?.concept?.name || 'Pago general' },
+        { label: 'Método:', value: this.getPaymentMethodLabel(payment.paymentMethod) },
+      ];
+      if (payment.transactionRef) details.push({ label: 'Referencia:', value: payment.transactionRef });
 
-      // Row 2
-      doc.font('Helvetica-Bold').text('Recibido de:', col1X, rowY);
-      doc.font('Helvetica').text(payment.thirdParty.name, col1ValX, rowY, { width: w / 2 - labelW - 12 });
-      if (payment.thirdParty.document) {
-        doc.font('Helvetica-Bold').text('Documento:', col2X, rowY);
-        doc.font('Helvetica').text(payment.thirdParty.document, col2ValX, rowY);
-      }
-      rowY += rowH;
-
-      // Row 3
-      doc.font('Helvetica-Bold').text('Concepto:', col1X, rowY);
-      doc.font('Helvetica').text(payment.obligation?.concept?.name || 'Pago general', col1ValX, rowY, { width: w - labelW - 12 });
-      rowY += rowH;
-
-      // Row 4
-      if (payment.transactionRef) {
-        doc.font('Helvetica-Bold').text('Referencia:', col1X, rowY);
-        doc.font('Helvetica').text(payment.transactionRef, col1ValX, rowY);
+      details.forEach(d => {
+        doc.font('Helvetica-Bold').text(d.label, m + 4, rowY, { continued: false });
+        doc.font('Helvetica').text(d.value, m + 4 + labelW, rowY, { width: infoW - labelW - 8 });
         rowY += rowH;
-      }
-      if (payment.notes) {
-        doc.font('Helvetica-Bold').text('Observaciones:', col1X, rowY);
-        doc.font('Helvetica').text(payment.notes, col1ValX, rowY, { width: w - labelW - 12 });
-        rowY += rowH;
+      });
+
+      // QR Code (right side)
+      if (qrBuffer) {
+        const qrX = m + infoW + 10;
+        const qrY = y + (boxH - qrSize - 12) / 2;
+        try {
+          doc.image(qrBuffer, qrX, qrY, { width: qrSize, height: qrSize });
+          doc.fontSize(5).font('Helvetica').fillColor(colors.lightText);
+          doc.text(`Hash: ${hash.substring(0, 12)}...`, qrX, qrY + qrSize + 2, { width: qrSize, align: 'center' });
+          doc.fillColor(colors.text);
+        } catch { /* QR failed */ }
       }
 
-      doc.y = detailY + (pc.isHalfLetter ? 106 : 116);
+      y += boxH + 8;
 
       // ── Amount box ──
-      const amtY = doc.y;
-      doc.rect(m, amtY, w, pc.isHalfLetter ? 36 : 44).fill(colors.secondary);
-      doc.rect(m, amtY, w, pc.isHalfLetter ? 36 : 44).lineWidth(1).stroke(colors.primary);
-      doc.fillColor(colors.text).fontSize(9 * fs).font('Helvetica-Bold').text('VALOR RECIBIDO:', m + 10, amtY + (pc.isHalfLetter ? 4 : 6));
-      doc.fillColor(colors.primary).fontSize(pc.isHalfLetter ? 16 : 20).font('Helvetica-Bold');
-      doc.text(this.formatCurrency(Number(payment.amount)), m + 10, amtY + (pc.isHalfLetter ? 16 : 20));
+      const amtH = pc.isHalfLetter ? 32 : 40;
+      doc.rect(m, y, w, amtH).fill(colors.secondary);
+      doc.rect(m, y, w, amtH).lineWidth(1).stroke(colors.primary);
+      doc.fillColor(colors.text).fontSize(7 * fs).font('Helvetica-Bold').text('VALOR RECIBIDO:', m + 8, y + 4);
+      doc.fillColor(colors.primary).fontSize(pc.isHalfLetter ? 14 : 18).font('Helvetica-Bold');
+      doc.text(this.formatCurrency(Number(payment.amount)), m + 8, y + (pc.isHalfLetter ? 14 : 16));
+      doc.fillColor(colors.text);
+      y += amtH + 10;
+
+      // ── Signature line ──
+      const sigLineW = pc.isHalfLetter ? 140 : 180;
+      const sigX = m + w - sigLineW;
+      doc.fontSize(6.5 * fs).font('Helvetica').fillColor(colors.lightText);
+      doc.moveTo(sigX, y + 15).lineTo(sigX + sigLineW, y + 15).lineWidth(0.5).stroke(colors.border);
+      doc.text(`Recibido por: ${payment.receivedBy.firstName} ${payment.receivedBy.lastName}`, sigX, y + 18, { width: sigLineW, align: 'center' });
       doc.fillColor(colors.text);
 
-      doc.y = amtY + (pc.isHalfLetter ? 42 : 52);
-
-      // ── QR + Signature area ──
-      const bottomY = doc.y;
-      const sigWidth = qrBuffer ? w - 110 : w;
-
-      // QR Code (left)
-      if (qrBuffer) {
-        try {
-          doc.image(qrBuffer, m, bottomY, { width: 80, height: 80 });
-          doc.fontSize(5.5).font('Helvetica').fillColor(colors.lightText);
-          doc.text(`Hash: ${hash}`, m, bottomY + 82, { width: 90, align: 'center' });
-          doc.fillColor(colors.text);
-        } catch { /* QR failed, skip */ }
-      }
-
-      // Signature (right)
-      const sigX = qrBuffer ? m + 110 : m;
-      const sigY = bottomY + (pc.isHalfLetter ? 30 : 40);
-      doc.fontSize(8 * fs).font('Helvetica').fillColor(colors.lightText);
-      doc.text('_'.repeat(35), sigX + sigWidth - 220, sigY, { width: 200, align: 'center' });
+      // ── Footer (fixed at bottom, no new page) ──
+      const footerY = pageH - (pc.isHalfLetter ? 28 : 35);
+      doc.moveTo(m, footerY - 4).lineTo(m + w, footerY - 4).lineWidth(0.3).stroke(colors.border);
+      doc.fontSize(5).font('Helvetica').fillColor(colors.lightText);
       doc.text(
-        `Recibido por: ${payment.receivedBy.firstName} ${payment.receivedBy.lastName}`,
-        sigX + sigWidth - 220, sigY + 10, { width: 200, align: 'center' },
+        `Documento generado el ${new Date().toLocaleString('es-CO')} | Documento interno - No constituye factura electrónica`,
+        m, footerY, { width: w, align: 'center' },
       );
-      doc.fillColor(colors.text);
-
-      // ── Bank accounts ──
-      if (settings?.invoiceShowBankAccounts !== false && settings?.bankAccounts) {
-        doc.y = bottomY + (pc.isHalfLetter ? 70 : 90);
-        this.drawBankAccounts(doc, settings.bankAccounts, colors, m, w);
+      if (settings?.billingMode === 'INTERNAL_ONLY') {
+        doc.text('Para factura electrónica válida ante la DIAN, solicítela a su contador.', m, footerY + 8, { width: w, align: 'center' });
       }
-
-      // ── Footer ──
-      this.drawProfessionalFooter(doc, payment.institution, settings, colors, m, w, qrBuffer ? null : null);
+      doc.fillColor(colors.text);
 
       // ── Bottom colored bar ──
-      doc.rect(0, doc.page.height - 6, doc.page.width, 6).fill(colors.primary);
+      doc.rect(0, pageH - 4, doc.page.width, 4).fill(colors.primary);
 
       doc.end();
     });

@@ -30,8 +30,16 @@ export class InvoicesController {
     @Query('thirdPartyId') thirdPartyId?: string,
     @Query('status') status?: string,
     @Query('type') type?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.invoicesService.findAll(req.user.institutionId, { thirdPartyId, status, type });
+    return this.invoicesService.findAll(req.user.institutionId, {
+      thirdPartyId,
+      status,
+      type,
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+    });
   }
 
   @Get(':id')

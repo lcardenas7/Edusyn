@@ -12,27 +12,42 @@ export class ObligationsService {
     status?: ObligationStatus;
     dueDateFrom?: Date;
     dueDateTo?: Date;
+    page?: number;
+    limit?: number;
   }) {
-    return this.prisma.financialObligation.findMany({
-      where: {
-        institutionId,
-        ...(filters?.thirdPartyId && { thirdPartyId: filters.thirdPartyId }),
-        ...(filters?.conceptId && { conceptId: filters.conceptId }),
-        ...(filters?.status && { status: filters.status }),
-        ...(filters?.dueDateFrom || filters?.dueDateTo ? {
-          dueDate: {
-            ...(filters.dueDateFrom && { gte: filters.dueDateFrom }),
-            ...(filters.dueDateTo && { lte: filters.dueDateTo }),
-          },
-        } : {}),
-      },
-      include: {
-        thirdParty: true,
-        concept: { include: { category: true } },
-        _count: { select: { payments: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const page = filters?.page || 1;
+    const limit = Math.min(filters?.limit || 100, 500); // Max 500 records
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.FinancialObligationWhereInput = {
+      institutionId,
+      ...(filters?.thirdPartyId && { thirdPartyId: filters.thirdPartyId }),
+      ...(filters?.conceptId && { conceptId: filters.conceptId }),
+      ...(filters?.status && { status: filters.status }),
+      ...(filters?.dueDateFrom || filters?.dueDateTo ? {
+        dueDate: {
+          ...(filters.dueDateFrom && { gte: filters.dueDateFrom }),
+          ...(filters.dueDateTo && { lte: filters.dueDateTo }),
+        },
+      } : {}),
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.financialObligation.findMany({
+        where,
+        include: {
+          thirdParty: { select: { id: true, name: true, document: true, type: true } },
+          concept: { select: { id: true, name: true, categoryId: true } },
+          _count: { select: { payments: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.financialObligation.count({ where }),
+    ]);
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async findOne(id: string, institutionId: string) {

@@ -1895,9 +1895,11 @@ export class ReportsService {
       data: {
         showLogo: data.showLogo,
         showShield: data.showShield,
+        logoUrl: data.logoUrl,
         headerResolution: data.headerResolution,
         headerMunicipality: data.headerMunicipality,
         headerDepartment: data.headerDepartment,
+        primaryColor: data.primaryColor,
         evaluationType: data.evaluationType,
         showNumericGrade: data.showNumericGrade,
         showPerformanceLevel: data.showPerformanceLevel,

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Settings as SettingsIcon, Save, RefreshCw, Plus, Trash2, Upload, Image, ChevronDown, ChevronRight, FileText, Building2, Palette, CreditCard, Bell, Shield } from 'lucide-react'
 import { financeSettingsApi, storageApi } from '../../lib/api'
+import { useAuth } from '../../contexts/AuthContext'
 
 interface BankAccount {
   bankName: string
@@ -57,6 +58,7 @@ interface FinancialSettingsData {
 }
 
 export default function FinanceSettings() {
+  const { institution } = useAuth()
   const [settings, setSettings] = useState<FinancialSettingsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -170,10 +172,10 @@ export default function FinanceSettings() {
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file || !settings) return
+    if (!file || !settings || !institution?.id) return
     setUploadingLogo(true)
     try {
-      const res = await storageApi.uploadGalleryImage(file, '', 'invoice-logo')
+      const res = await storageApi.uploadGalleryImage(file, institution.id, 'invoice-logo')
       const url = res.data?.url || res.data?.publicUrl
       if (url) {
         setSettings({ ...settings, invoiceLogoUrl: url })

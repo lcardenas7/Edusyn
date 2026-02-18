@@ -16,28 +16,43 @@ export class PaymentsService {
     paymentMethod?: PaymentMethod;
     dateFrom?: Date;
     dateTo?: Date;
+    page?: number;
+    limit?: number;
   }) {
-    return this.prisma.financialPayment.findMany({
-      where: {
-        institutionId,
-        voidedAt: null,
-        ...(filters?.thirdPartyId && { thirdPartyId: filters.thirdPartyId }),
-        ...(filters?.obligationId && { obligationId: filters.obligationId }),
-        ...(filters?.paymentMethod && { paymentMethod: filters.paymentMethod }),
-        ...(filters?.dateFrom || filters?.dateTo ? {
-          paymentDate: {
-            ...(filters.dateFrom && { gte: filters.dateFrom }),
-            ...(filters.dateTo && { lte: filters.dateTo }),
-          },
-        } : {}),
-      },
-      include: {
-        thirdParty: true,
-        obligation: { include: { concept: true } },
-        receivedBy: { select: { id: true, firstName: true, lastName: true } },
-      },
-      orderBy: { paymentDate: 'desc' },
-    });
+    const page = filters?.page || 1;
+    const limit = Math.min(filters?.limit || 100, 500);
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.FinancialPaymentWhereInput = {
+      institutionId,
+      voidedAt: null,
+      ...(filters?.thirdPartyId && { thirdPartyId: filters.thirdPartyId }),
+      ...(filters?.obligationId && { obligationId: filters.obligationId }),
+      ...(filters?.paymentMethod && { paymentMethod: filters.paymentMethod }),
+      ...(filters?.dateFrom || filters?.dateTo ? {
+        paymentDate: {
+          ...(filters.dateFrom && { gte: filters.dateFrom }),
+          ...(filters.dateTo && { lte: filters.dateTo }),
+        },
+      } : {}),
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.financialPayment.findMany({
+        where,
+        include: {
+          thirdParty: { select: { id: true, name: true, document: true } },
+          obligation: { select: { id: true, conceptId: true, concept: { select: { id: true, name: true } } } },
+          receivedBy: { select: { id: true, firstName: true, lastName: true } },
+        },
+        orderBy: { paymentDate: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.financialPayment.count({ where }),
+    ]);
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async findOne(id: string, institutionId: string) {
