@@ -579,7 +579,7 @@ export default function ReportCards() {
                 return (
                 <div className="bg-white border-2 border-slate-400 rounded-lg p-8 max-w-4xl mx-auto shadow-lg">
                   {/* Encabezado Institucional */}
-                  <div className="flex items-center border-b-2 border-slate-300 pb-4 mb-4 gap-4">
+                  <div className="flex items-center border-b-2 border-slate-300 pb-4 mb-4 gap-2">
                     {config.showLogo && (
                       <div className="flex-shrink-0">
                         {config.logoUrl ? (

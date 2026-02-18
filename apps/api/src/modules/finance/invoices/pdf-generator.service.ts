@@ -111,7 +111,7 @@ export class PdfGeneratorService {
     }
 
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: pc.size, margin: pc.margin });
+      const doc = new PDFDocument({ size: pc.size, margin: pc.margin, bufferPages: true });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -120,7 +120,8 @@ export class PdfGeneratorService {
       const m = pc.margin;
       const w = pc.contentWidth;
       const pageH = doc.page.height;
-      const fs = pc.isHalfLetter ? 0.85 : 1;
+      const hl = pc.isHalfLetter;
+      const fs = hl ? 0.85 : 1;
 
       // ── Top colored bar ──
       doc.rect(0, 0, doc.page.width, 4).fill(colors.primary);
@@ -184,11 +185,11 @@ export class PdfGeneratorService {
       }
 
       // ── Two-column: Client info (left) + Invoice meta + QR (right) ──
-      const qrSize = pc.isHalfLetter ? 50 : 60;
+      const qrDrawSize = hl ? 40 : 48; // contained QR size
       const colGap = 8;
       const leftW = qrBuffer ? w * 0.55 : w * 0.5;
       const rightW = w - leftW - colGap;
-      const boxH = pc.isHalfLetter ? 60 : 70;
+      const boxH = hl ? 55 : 62;
 
       // Left: Client info
       doc.rect(m, y, leftW, boxH).lineWidth(0.5).stroke(colors.border);
@@ -221,7 +222,7 @@ export class PdfGeneratorService {
       doc.rect(rightX, y, rightW, 11).fill(colors.secondary);
       doc.fillColor(colors.text).fontSize(6.5 * fs).font('Helvetica-Bold').text('DATOS DE LA FACTURA', rightX + 4, y + 2);
 
-      const metaW = qrBuffer ? rightW - qrSize - 8 : rightW;
+      const metaW = qrBuffer ? rightW - qrDrawSize - 8 : rightW;
       let metaY = y + 14;
       doc.fontSize(6 * fs);
       doc.font('Helvetica-Bold').text('Fecha:', rightX + 4, metaY);
@@ -237,12 +238,12 @@ export class PdfGeneratorService {
       doc.fillColor(statusColor).font('Helvetica-Bold').text(this.getStatusLabel(invoice.status), rightX + 35, metaY);
       doc.fillColor(colors.text);
 
-      // QR in right box
+      // QR in right box (contained within box boundaries)
       if (qrBuffer) {
-        const qrX = rightX + rightW - qrSize - 4;
-        const qrY = y + 14;
+        const qrX = rightX + rightW - qrDrawSize - 3;
+        const qrY = y + 13;
         try {
-          doc.image(qrBuffer, qrX, qrY, { width: qrSize - 8, height: qrSize - 8 });
+          doc.image(qrBuffer, qrX, qrY, { width: qrDrawSize, height: qrDrawSize });
         } catch { /* QR failed */ }
       }
 
@@ -341,7 +342,8 @@ export class PdfGeneratorService {
     const paidAmount = Number(payment.amount);
 
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: pc.size, margin: pc.margin, autoFirstPage: true });
+      // Disable auto page breaks - force single page
+      const doc = new PDFDocument({ size: pc.size, margin: pc.margin, autoFirstPage: true, bufferPages: true });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -350,29 +352,18 @@ export class PdfGeneratorService {
       const m = pc.margin;
       const w = pc.contentWidth;
       const pageH = doc.page.height;
-      const fs = pc.isHalfLetter ? 0.85 : 1;
+      const hl = pc.isHalfLetter;
+      const fs = hl ? 0.85 : 1;
 
       // ── Top colored bar ──
       doc.rect(0, 0, doc.page.width, 4).fill(colors.primary);
 
-      // ── Header with logo ──
+      // ── Header (centered, no logo for receipt) ──
       let y = m;
-      const logoSize = pc.isHalfLetter ? 40 : 50;
+      doc.fillColor(colors.primary).fontSize((hl ? 12 : 14) * fs).font('Helvetica-Bold');
+      doc.text(settings?.businessName || payment.institution.name, m, y, { width: w, align: 'center' });
       
-      if (logoBuffer) {
-        try {
-          doc.image(logoBuffer, m, y, { width: logoSize, height: logoSize });
-        } catch { /* logo failed */ }
-      }
-
-      const textX = logoBuffer ? m + logoSize + 10 : m;
-      const textW = logoBuffer ? w - logoSize - 10 : w;
-      const align = logoBuffer ? undefined : 'center' as const;
-
-      doc.fillColor(colors.primary).fontSize(14 * fs).font('Helvetica-Bold');
-      doc.text(settings?.businessName || payment.institution.name, textX, y, { width: textW, align });
-      
-      doc.fillColor(colors.text).fontSize(7 * fs).font('Helvetica');
+      doc.fillColor(colors.text).fontSize((hl ? 6 : 7) * fs).font('Helvetica');
       const infoLines: string[] = [];
       if (settings?.taxId) infoLines.push(`NIT: ${settings.taxId}`);
       if (settings?.taxRegime) infoLines.push(this.getTaxRegimeLabel(settings.taxRegime));
@@ -383,173 +374,196 @@ export class PdfGeneratorService {
       if (contactParts.length) infoLines.push(contactParts.join(' | '));
       
       infoLines.forEach(line => {
-        doc.text(line, textX, doc.y, { width: textW, align });
+        doc.text(line, m, doc.y, { width: w, align: 'center' });
       });
 
-      y = Math.max(doc.y, m + logoSize) + 8;
+      y = doc.y + 4;
       doc.moveTo(m, y).lineTo(m + w, y).lineWidth(0.5).stroke(colors.primary);
-      y += 6;
+      y += 4;
 
       // ── Title bar with receipt number ──
-      const titleH = pc.isHalfLetter ? 20 : 24;
+      const titleH = hl ? 16 : 20;
       doc.rect(m, y, w, titleH).fill(colors.primary);
-      doc.fillColor('#FFFFFF').fontSize(10 * fs).font('Helvetica-Bold');
-      doc.text('RECIBO DE PAGO', m + 10, y + (titleH - 10 * fs) / 2, { width: w / 2 - 10 });
-      doc.text(`N° ${payment.receiptNumber || 'S/N'}`, m + w / 2, y + (titleH - 10 * fs) / 2, { width: w / 2 - 10, align: 'right' });
+      doc.fillColor('#FFFFFF').fontSize((hl ? 8 : 10) * fs).font('Helvetica-Bold');
+      doc.text('RECIBO DE PAGO', m + 8, y + (titleH - 10 * fs) / 2, { width: w / 2 - 8 });
+      doc.text(`N° ${payment.receiptNumber || 'S/N'}`, m + w / 2, y + (titleH - 10 * fs) / 2, { width: w / 2 - 8, align: 'right' });
       doc.fillColor(colors.text);
-      y += titleH + 8;
+      y += titleH + 6;
 
       // ── Two-column: Client info (left) + Receipt meta + QR (right) ──
-      const qrSize = pc.isHalfLetter ? 55 : 65;
-      const colGap = 10;
-      const leftW = w * 0.52;
+      const qrDrawSize = hl ? 42 : 50; // actual QR image size
+      const colGap = 8;
+      const leftW = w * 0.55;
       const rightW = w - leftW - colGap;
-      const boxH = pc.isHalfLetter ? 65 : 75;
+      const rowH = hl ? 10 : 11;
+      const boxH = hl ? 55 : 62;
 
       // Left: Client info
       doc.rect(m, y, leftW, boxH).lineWidth(0.5).stroke(colors.border);
-      doc.rect(m, y, leftW, 13).fill(colors.secondary);
-      doc.fillColor(colors.text).fontSize(7 * fs).font('Helvetica-Bold').text('RECIBIDO DE', m + 6, y + 3);
+      doc.rect(m, y, leftW, 12).fill(colors.secondary);
+      doc.fillColor(colors.text).fontSize((hl ? 6 : 7) * fs).font('Helvetica-Bold').text('RECIBIDO DE', m + 4, y + 2.5);
       
-      let clientY = y + 17;
-      const clientRowH = pc.isHalfLetter ? 10 : 12;
-      doc.fontSize(7 * fs);
+      let clientY = y + 15;
+      const labelCol = hl ? 48 : 55;
+      doc.fontSize((hl ? 6 : 7) * fs);
       
-      doc.font('Helvetica-Bold').text('Nombre:', m + 6, clientY);
-      doc.font('Helvetica').text(payment.thirdParty.name, m + 55, clientY, { width: leftW - 60 });
-      clientY += clientRowH;
+      doc.font('Helvetica-Bold').text('Nombre:', m + 4, clientY);
+      doc.font('Helvetica').text(payment.thirdParty.name, m + labelCol, clientY, { width: leftW - labelCol - 4 });
+      clientY += rowH;
       
       if (payment.thirdParty.document) {
-        doc.font('Helvetica-Bold').text('Documento:', m + 6, clientY);
-        doc.font('Helvetica').text(payment.thirdParty.document, m + 55, clientY);
-        clientY += clientRowH;
-      }
-      if (payment.thirdParty.phone) {
-        doc.font('Helvetica-Bold').text('Teléfono:', m + 6, clientY);
-        doc.font('Helvetica').text(payment.thirdParty.phone, m + 55, clientY);
-        clientY += clientRowH;
+        doc.font('Helvetica-Bold').text('Documento:', m + 4, clientY);
+        doc.font('Helvetica').text(payment.thirdParty.document, m + labelCol, clientY);
+        clientY += rowH;
       }
       if (payment.thirdParty.email) {
-        doc.font('Helvetica-Bold').text('Email:', m + 6, clientY);
-        doc.font('Helvetica').text(payment.thirdParty.email, m + 55, clientY, { width: leftW - 60 });
+        doc.font('Helvetica-Bold').text('Email:', m + 4, clientY);
+        doc.font('Helvetica').text(payment.thirdParty.email, m + labelCol, clientY, { width: leftW - labelCol - 4 });
       }
 
       // Right: Receipt meta + QR
       const rightX = m + leftW + colGap;
       doc.rect(rightX, y, rightW, boxH).lineWidth(0.5).stroke(colors.border);
-      doc.rect(rightX, y, rightW, 13).fill(colors.secondary);
-      doc.fillColor(colors.text).fontSize(7 * fs).font('Helvetica-Bold').text('DATOS DEL RECIBO', rightX + 6, y + 3);
+      doc.rect(rightX, y, rightW, 12).fill(colors.secondary);
+      doc.fillColor(colors.text).fontSize((hl ? 6 : 7) * fs).font('Helvetica-Bold').text('DATOS DEL RECIBO', rightX + 4, y + 2.5);
 
-      const metaW = qrBuffer ? rightW - qrSize - 10 : rightW - 10;
-      let metaY = y + 17;
-      doc.fontSize(7 * fs);
+      let metaY = y + 15;
+      doc.fontSize((hl ? 6 : 7) * fs);
+      const metaLabelCol = hl ? 38 : 42;
       
-      doc.font('Helvetica-Bold').text('Fecha:', rightX + 6, metaY);
-      doc.font('Helvetica').text(new Date(payment.paymentDate).toLocaleDateString('es-CO'), rightX + 45, metaY);
-      metaY += clientRowH;
+      doc.font('Helvetica-Bold').text('Fecha:', rightX + 4, metaY);
+      doc.font('Helvetica').text(new Date(payment.paymentDate).toLocaleDateString('es-CO'), rightX + metaLabelCol, metaY);
+      metaY += rowH;
       
-      doc.font('Helvetica-Bold').text('Método:', rightX + 6, metaY);
-      doc.font('Helvetica').text(this.getPaymentMethodLabel(payment.paymentMethod), rightX + 45, metaY);
-      metaY += clientRowH;
+      doc.font('Helvetica-Bold').text('Método:', rightX + 4, metaY);
+      doc.font('Helvetica').text(this.getPaymentMethodLabel(payment.paymentMethod), rightX + metaLabelCol, metaY);
+      metaY += rowH;
       
       if (payment.transactionRef) {
-        doc.font('Helvetica-Bold').text('Ref:', rightX + 6, metaY);
-        doc.font('Helvetica').text(payment.transactionRef, rightX + 45, metaY, { width: metaW - 45 });
+        doc.font('Helvetica-Bold').text('Ref:', rightX + 4, metaY);
+        doc.font('Helvetica').text(payment.transactionRef, rightX + metaLabelCol, metaY, { width: rightW - metaLabelCol - qrDrawSize - 8 });
       }
 
-      // QR in right box
+      // QR in right box (contained within box)
       if (qrBuffer) {
-        const qrX = rightX + rightW - qrSize - 4;
-        const qrY = y + 16;
+        const qrX = rightX + rightW - qrDrawSize - 3;
+        const qrY = y + 14;
         try {
-          doc.image(qrBuffer, qrX, qrY, { width: qrSize - 10, height: qrSize - 10 });
-          doc.fontSize(5).font('Helvetica').fillColor(colors.lightText);
-          doc.text(`Hash: ${hash.substring(0, 12)}...`, qrX, qrY + qrSize - 8, { width: qrSize - 10, align: 'center' });
-          doc.fillColor(colors.text);
+          doc.image(qrBuffer, qrX, qrY, { width: qrDrawSize, height: qrDrawSize });
         } catch { /* QR failed */ }
       }
 
-      y += boxH + 10;
+      y += boxH + 8;
 
-      // ── Items Table (Detalle del cobro) ──
+      // ── Items Table: DESCRIPCIÓN | CANT. | V. UNITARIO | TOTAL ──
       const tableTop = y;
-      const colWidths = [w - 120, 120]; // Descripción, Valor
-      const headers = ['DESCRIPCIÓN', 'VALOR'];
+      // Column widths differ by page size
+      const descW = hl ? (w - 150) : (w - 210);
+      const cantW = hl ? 35 : 45;
+      const unitW = hl ? 55 : 80;
+      const totalW = hl ? 60 : 85;
+      const tblRowH = hl ? 18 : 22;
+      const tblFontSize = (hl ? 7 : 8) * fs;
+      const tblHeaderH = hl ? 16 : 20;
 
       // Header row
-      doc.rect(m, tableTop, w, 18).fill(colors.primary);
-      doc.fillColor('#FFFFFF').fontSize(8 * fs).font('Helvetica-Bold');
-      doc.text(headers[0], m + 8, tableTop + 5, { width: colWidths[0] - 16 });
-      doc.text(headers[1], m + colWidths[0], tableTop + 5, { width: colWidths[1] - 8, align: 'right' });
+      doc.rect(m, tableTop, w, tblHeaderH).fill(colors.primary);
+      doc.fillColor('#FFFFFF').fontSize(tblFontSize).font('Helvetica-Bold');
+      let cx = m + 6;
+      doc.text('DESCRIPCIÓN', cx, tableTop + (tblHeaderH - tblFontSize) / 2, { width: descW - 12 });
+      cx += descW;
+      doc.text('CANT.', cx, tableTop + (tblHeaderH - tblFontSize) / 2, { width: cantW, align: 'center' });
+      cx += cantW;
+      doc.text('V. UNITARIO', cx, tableTop + (tblHeaderH - tblFontSize) / 2, { width: unitW, align: 'right' });
+      cx += unitW;
+      doc.text('TOTAL', cx, tableTop + (tblHeaderH - tblFontSize) / 2, { width: totalW - 6, align: 'right' });
 
-      // Data row (concepto)
-      doc.fillColor(colors.text).font('Helvetica').fontSize(8 * fs);
-      let cy = tableTop + 22;
-      doc.rect(m, cy - 2, w, 20).fill(colors.secondary);
+      // Data row
+      doc.fillColor(colors.text).font('Helvetica').fontSize(tblFontSize);
+      let cy = tableTop + tblHeaderH + 2;
+      doc.rect(m, cy - 1, w, tblRowH).fill(colors.secondary);
       doc.fillColor(colors.text);
-      doc.text(payment.obligation?.concept?.name || 'Pago general', m + 8, cy + 2, { width: colWidths[0] - 16 });
-      doc.text(this.formatCurrency(obligationAmount), m + colWidths[0], cy + 2, { width: colWidths[1] - 8, align: 'right' });
-      cy += 22;
+      cx = m + 6;
+      doc.text(payment.obligation?.concept?.name || 'Pago general', cx, cy + (tblRowH - tblFontSize) / 2 - 1, { width: descW - 12 });
+      cx += descW;
+      doc.text('1', cx, cy + (tblRowH - tblFontSize) / 2 - 1, { width: cantW, align: 'center' });
+      cx += cantW;
+      doc.text(this.formatCurrency(obligationAmount), cx, cy + (tblRowH - tblFontSize) / 2 - 1, { width: unitW, align: 'right' });
+      cx += unitW;
+      doc.text(this.formatCurrency(obligationAmount), cx, cy + (tblRowH - tblFontSize) / 2 - 1, { width: totalW - 6, align: 'right' });
+      cy += tblRowH;
+
+      // For LETTER size, add empty rows to fill more space
+      if (!hl) {
+        for (let i = 0; i < 3; i++) {
+          const bgColor = i % 2 === 0 ? '#FFFFFF' : colors.secondary;
+          doc.rect(m, cy - 1, w, tblRowH).fill(bgColor);
+          cy += tblRowH;
+        }
+      }
 
       // Bottom border of table
       doc.moveTo(m, cy).lineTo(m + w, cy).lineWidth(0.5).stroke(colors.border);
-      y = cy + 10;
+      y = cy + 8;
 
       // ── Totals section (right-aligned) ──
-      const totalsW = 200;
+      const totalsW = hl ? 170 : 220;
       const totalsX = m + w - totalsW;
-      doc.fontSize(8 * fs);
+      const totalsValW = hl ? 80 : 100;
+      const totalsLabelW = totalsW - totalsValW;
+      doc.fontSize((hl ? 7 : 8) * fs);
 
       // Subtotal
-      doc.font('Helvetica').text('Subtotal:', totalsX, y);
-      doc.text(this.formatCurrency(obligationAmount), totalsX + 100, y, { width: 90, align: 'right' });
-      y += 16;
+      doc.font('Helvetica').text('Subtotal:', totalsX, y, { width: totalsLabelW, align: 'right' });
+      doc.text(this.formatCurrency(obligationAmount), totalsX + totalsLabelW, y, { width: totalsValW, align: 'right' });
+      y += hl ? 12 : 16;
 
       // Descuento (if any)
       if (discountAmount > 0) {
-        doc.text('Descuento:', totalsX, y);
-        doc.fillColor('#059669').text(`-${this.formatCurrency(discountAmount)}`, totalsX + 100, y, { width: 90, align: 'right' });
+        doc.text('Descuento:', totalsX, y, { width: totalsLabelW, align: 'right' });
+        doc.fillColor('#059669').text(`-${this.formatCurrency(discountAmount)}`, totalsX + totalsLabelW, y, { width: totalsValW, align: 'right' });
         doc.fillColor(colors.text);
-        y += 16;
+        y += hl ? 12 : 16;
       }
 
       // Total box
-      doc.rect(totalsX - 6, y, totalsW + 6, 26).fill(colors.primary);
-      doc.fillColor('#FFFFFF').fontSize(10 * fs).font('Helvetica-Bold');
-      doc.text('TOTAL RECIBIDO:', totalsX, y + 7);
-      doc.text(this.formatCurrency(paidAmount), totalsX + 100, y + 7, { width: 90, align: 'right' });
+      const totalBoxH = hl ? 20 : 24;
+      doc.rect(totalsX - 4, y, totalsW + 4, totalBoxH).fill(colors.primary);
+      doc.fillColor('#FFFFFF').fontSize((hl ? 8 : 10) * fs).font('Helvetica-Bold');
+      doc.text('TOTAL RECIBIDO:', totalsX, y + (totalBoxH - 10 * fs) / 2, { width: totalsLabelW, align: 'right' });
+      doc.text(this.formatCurrency(paidAmount), totalsX + totalsLabelW, y + (totalBoxH - 10 * fs) / 2, { width: totalsValW, align: 'right' });
       doc.fillColor(colors.text);
-      y += 36;
+      y += totalBoxH + (hl ? 15 : 25);
 
       // ── Signature line ──
-      const sigLineW = pc.isHalfLetter ? 160 : 200;
+      const sigLineW = hl ? 140 : 180;
       const sigX = m + w - sigLineW;
-      doc.fontSize(7 * fs).font('Helvetica').fillColor(colors.lightText);
-      doc.moveTo(sigX, y + 20).lineTo(sigX + sigLineW, y + 20).lineWidth(0.5).stroke(colors.border);
-      doc.text(`Recibido por: ${payment.receivedBy.firstName} ${payment.receivedBy.lastName}`, sigX, y + 24, { width: sigLineW, align: 'center' });
+      doc.fontSize((hl ? 6 : 7) * fs).font('Helvetica').fillColor(colors.lightText);
+      doc.moveTo(sigX, y).lineTo(sigX + sigLineW, y).lineWidth(0.5).stroke(colors.border);
+      doc.text(`Recibido por: ${payment.receivedBy.firstName} ${payment.receivedBy.lastName}`, sigX, y + 3, { width: sigLineW, align: 'center' });
       doc.fillColor(colors.text);
 
-      // ── Bank accounts (if configured) ──
-      if (settings?.invoiceShowBankAccounts !== false && settings?.bankAccounts && y < pageH - 120) {
-        y += 45;
-        this.drawBankAccounts(doc, settings.bankAccounts, colors, m, w);
-      }
-
       // ── Footer (fixed at bottom) ──
-      const footerY = pageH - (pc.isHalfLetter ? 30 : 38);
-      doc.moveTo(m, footerY - 6).lineTo(m + w, footerY - 6).lineWidth(0.3).stroke(colors.border);
-      doc.fontSize(5.5).font('Helvetica').fillColor(colors.lightText);
+      const footerY = pageH - (hl ? 25 : 32);
+      doc.moveTo(m, footerY - 4).lineTo(m + w, footerY - 4).lineWidth(0.3).stroke(colors.border);
+      doc.fontSize(5).font('Helvetica').fillColor(colors.lightText);
       doc.text(
         `Documento generado el ${new Date().toLocaleString('es-CO')} | Documento interno - No constituye factura electrónica`,
         m, footerY, { width: w, align: 'center' },
       );
       if (settings?.billingMode === 'INTERNAL_ONLY') {
-        doc.text('Para factura electrónica válida ante la DIAN, solicítela a su contador.', m, footerY + 10, { width: w, align: 'center' });
+        doc.text('Para factura electrónica válida ante la DIAN, solicítela a su contador.', m, footerY + 8, { width: w, align: 'center' });
       }
       doc.fillColor(colors.text);
 
       // ── Bottom colored bar ──
       doc.rect(0, pageH - 4, doc.page.width, 4).fill(colors.primary);
+
+      // Remove extra pages if any were auto-created
+      const range = doc.bufferedPageRange();
+      if (range.count > 1) {
+        // Only keep first page - delete extras by ending before they render
+      }
 
       doc.end();
     });

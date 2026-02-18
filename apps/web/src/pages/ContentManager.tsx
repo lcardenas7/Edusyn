@@ -63,6 +63,7 @@ export default function ContentManager() {
   const [showModal, setShowModal] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [uploading, setUploading] = useState(false)
+  const [uploadPreviewUrl, setUploadPreviewUrl] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const galleryFileInputRef = useRef<HTMLInputElement>(null)
   
@@ -133,12 +134,17 @@ export default function ContentManager() {
         ? await storageApi.uploadGalleryImage(file, institution.id, galleryForm.category || undefined)
         : await storageApi.uploadAnnouncementImage(file, institution.id)
       
-      const imageUrl = response.data?.data?.path || response.data?.data?.url
-      if (imageUrl) {
+      const data = response.data?.data
+      // path = key para guardar en DB, url = URL firmada para mostrar
+      const pathToSave = data?.path || data?.url || ''
+      const urlToShow = data?.url || data?.path || ''
+      if (pathToSave) {
         if (type === 'gallery') {
-          setGalleryForm(prev => ({ ...prev, imageUrl }))
+          setGalleryForm(prev => ({ ...prev, imageUrl: pathToSave }))
+          setUploadPreviewUrl(urlToShow)
         } else {
-          setAnnouncementForm(prev => ({ ...prev, imageUrl }))
+          setAnnouncementForm(prev => ({ ...prev, imageUrl: pathToSave }))
+          setUploadPreviewUrl(urlToShow)
         }
       }
     } catch (err: any) {
@@ -169,6 +175,7 @@ export default function ContentManager() {
 
   const openCreateModal = () => {
     setEditingItem(null)
+    setUploadPreviewUrl('')
     if (activeTab === 'announcements') {
       setAnnouncementForm({ title: '', content: '', imageUrl: '', priority: 0, expiresAt: '', visibleToRoles: [] })
     } else if (activeTab === 'gallery') {
@@ -571,7 +578,7 @@ export default function ContentManager() {
                       </div>
                       {announcementForm.imageUrl && (
                         <div className="relative">
-                          <img src={announcementForm.imageUrl} alt="Preview" className="w-full h-32 object-cover rounded-lg" />
+                          <img src={uploadPreviewUrl || announcementForm.imageUrl} alt="Preview" className="w-full h-32 object-cover rounded-lg" />
                           <button
                             type="button"
                             onClick={() => setAnnouncementForm({ ...announcementForm, imageUrl: '' })}
@@ -692,7 +699,7 @@ export default function ContentManager() {
                       </div>
                       {galleryForm.imageUrl && (
                         <div className="relative">
-                          <img src={galleryForm.imageUrl} alt="Preview" className="w-full h-40 object-contain bg-slate-100 rounded-lg" />
+                          <img src={uploadPreviewUrl || galleryForm.imageUrl} alt="Preview" className="w-full h-40 object-contain bg-slate-100 rounded-lg" />
                           <button
                             type="button"
                             onClick={() => setGalleryForm({ ...galleryForm, imageUrl: '' })}
