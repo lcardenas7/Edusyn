@@ -166,6 +166,7 @@ export default function ReportCards() {
   const [isGeneratingBulk, setIsGeneratingBulk] = useState(false)
 
   const [uploadingSignature, setUploadingSignature] = useState<string | null>(null)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
 
   // Reglas institucionales
   const [rulesCtx, setRulesCtx] = useState<{ minGradeValue: number; maxGradeValue: number; minPassingGrade: number; performanceLevels: any[] }>(
@@ -181,9 +182,9 @@ export default function ReportCards() {
     if (!institution?.id) return
     setLoading(true)
     Promise.all([
-      groupsApi.getAll({ institutionId: institution.id }),
-      academicYearsApi.getAll(institution.id),
-      reportsApi.getReportCardConfig(),
+      groupsApi.getAll({ institutionId: institution.id }).catch(() => ({ data: [] })),
+      academicYearsApi.getAll(institution.id).catch(() => ({ data: [] })),
+      reportsApi.getReportCardConfig().catch(() => ({ data: null })),
       capabilitiesApi.getMyCapabilities().catch(() => ({ data: null })),
       institutionConfigApi.getRulesContext().catch(() => ({ data: null })),
     ]).then(([grpRes, yearRes, cfgRes, capsRes, rulesRes]) => {
@@ -294,6 +295,22 @@ export default function ReportCards() {
     if (avg >= rulesCtx.minPassingGrade && failedSubjects === 0) return 'Buen trabajo. Te animamos a seguir mejorando en todas las areas.'
     if (avg >= rulesCtx.minPassingGrade) return 'Debes reforzar las areas con dificultades. Con dedicacion puedes superar los retos pendientes.'
     return 'Es necesario un mayor compromiso academico. Busca apoyo de tus docentes y dedica mas tiempo al estudio.'
+  }
+
+  const handleLogoUpload = async (file: File) => {
+    if (!institution?.id) return
+    setUploadingLogo(true)
+    try {
+      const res = await storageApi.uploadGalleryImage(file, institution.id, 'report-card-logo')
+      const url = res.data?.data?.url || res.data?.data?.path || ''
+      if (url) {
+        setConfigDraft({ ...configDraft, logoUrl: url })
+      }
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Error al subir el escudo. Verifique que sea PNG/JPG.')
+    } finally {
+      setUploadingLogo(false)
+    }
   }
 
   const handleSignatureUpload = async (idx: number, file: File) => {
@@ -792,12 +809,26 @@ export default function ReportCards() {
                     </label>
                   </div>
                   
-                  {/* Logo URL */}
+                  {/* Logo Upload + Color */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">URL del Escudo/Logo</label>
-                      <input type="text" value={configDraft.logoUrl || ''} onChange={(e) => setConfigDraft({...configDraft, logoUrl: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="https://..." />
-                      <p className="text-xs text-slate-400 mt-1">Imagen que aparece en el encabezado del boletin</p>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Escudo / Logo Institucional</label>
+                      {configDraft.logoUrl ? (
+                        <div className="flex items-center gap-3 mb-2">
+                          <img src={configDraft.logoUrl} alt="Escudo" className="w-14 h-14 object-contain rounded border border-slate-200" />
+                          <button type="button" onClick={() => setConfigDraft({...configDraft, logoUrl: ''})} className="text-xs text-red-500 hover:text-red-700">Eliminar</button>
+                        </div>
+                      ) : null}
+                      <label className={`cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 border border-slate-300 rounded-lg text-sm hover:bg-slate-50 transition-colors ${uploadingLogo ? 'opacity-50 pointer-events-none' : ''}`}>
+                        {uploadingLogo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                        {configDraft.logoUrl ? 'Cambiar escudo' : 'Subir escudo'}
+                        <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) handleLogoUpload(file)
+                          e.target.value = ''
+                        }} />
+                      </label>
+                      <p className="text-xs text-slate-400 mt-1">PNG o JPG. Aparece en el encabezado del boletin</p>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-600 mb-1">Color Principal</label>
