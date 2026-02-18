@@ -576,10 +576,10 @@ export default function ReportCards() {
                     {config.showLogo && (
                       <div className="flex-shrink-0">
                         {config.logoUrl ? (
-                          <img src={config.logoUrl} alt="Escudo" className="w-20 h-20 object-contain" />
+                          <img src={config.logoUrl} alt="Escudo" className="w-28 h-28 object-contain" />
                         ) : (
-                          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center">
-                            <GraduationCap className="w-10 h-10 text-slate-400" />
+                          <div className="w-28 h-28 bg-slate-100 rounded-full flex items-center justify-center">
+                            <GraduationCap className="w-14 h-14 text-slate-400" />
                           </div>
                         )}
                       </div>
