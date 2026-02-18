@@ -122,6 +122,8 @@ export default function FinanceSettings() {
 
   const logoInputRef = useRef<HTMLInputElement>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string>('')
+  const [logoError, setLogoError] = useState<string>('')
 
   const handleSave = async () => {
     if (!settings) return
@@ -176,17 +178,42 @@ export default function FinanceSettings() {
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !settings || !institution?.id) return
+    setLogoError('')
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png']
+    if (!allowedTypes.includes(file.type)) {
+      setLogoError('Solo se permiten archivos JPG o PNG.')
+      return
+    }
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoError('El archivo no debe superar 2MB.')
+      return
+    }
+
+    // Immediate local preview
+    const localUrl = URL.createObjectURL(file)
+    setLogoPreviewUrl(localUrl)
+
     setUploadingLogo(true)
     try {
       const res = await storageApi.uploadGalleryImage(file, institution.id, 'invoice-logo')
-      const url = res.data?.url || res.data?.publicUrl
+      const data = res.data?.data || res.data
+      const url = data?.url || data?.publicUrl || data?.path || ''
       if (url) {
         setSettings({ ...settings, invoiceLogoUrl: url })
+      } else {
+        setLogoError('No se recibió URL del servidor. Intente de nuevo.')
+        setLogoPreviewUrl('')
       }
     } catch (err: any) {
-      alert('Error al subir logo: ' + (err.response?.data?.message || err.message))
+      setLogoError('Error al subir logo: ' + (err.response?.data?.message || err.message))
+      setLogoPreviewUrl('')
     } finally {
       setUploadingLogo(false)
+      // Reset input so same file can be re-selected
+      if (logoInputRef.current) logoInputRef.current.value = ''
     }
   }
 
@@ -430,10 +457,11 @@ export default function FinanceSettings() {
             <div className="mb-5">
               <label className="block text-sm font-medium text-gray-700 mb-2">Logo / Escudo Institucional</label>
               <div className="flex items-center gap-4">
-                {settings.invoiceLogoUrl ? (
+                {(logoPreviewUrl || settings.invoiceLogoUrl) ? (
                   <div className="relative">
-                    <img src={settings.invoiceLogoUrl} alt="Logo factura" className="w-16 h-16 object-contain border border-gray-200 rounded-lg bg-white" />
-                    <button onClick={() => setSettings({ ...settings, invoiceLogoUrl: null })}
+                    <img src={logoPreviewUrl || settings.invoiceLogoUrl || ''} alt="Logo factura" className="w-16 h-16 object-contain border border-gray-200 rounded-lg bg-white"
+                      onError={(e) => { e.currentTarget.src = ''; e.currentTarget.alt = 'Error al cargar' }} />
+                    <button onClick={() => { setSettings({ ...settings, invoiceLogoUrl: null }); setLogoPreviewUrl(''); setLogoError('') }}
                       className="absolute -top-2 -right-2 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600">
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -444,17 +472,20 @@ export default function FinanceSettings() {
                   </div>
                 )}
                 <div>
-                  <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                  <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/jpg" onChange={handleLogoUpload} className="hidden" />
                   <button onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo}
                     className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1 text-sm disabled:opacity-50">
                     <Upload className="w-4 h-4" /> {uploadingLogo ? 'Subiendo...' : 'Subir Logo'}
                   </button>
-                  <p className="text-xs text-gray-400 mt-1">PNG o JPG. Se muestra en facturas y recibos.</p>
+                  <p className="text-xs text-gray-400 mt-1">PNG o JPG, max 2MB. Se muestra en facturas y recibos.</p>
+                  {logoError && <p className="text-xs text-red-500 mt-1 font-medium">{logoError}</p>}
+                  {uploadingLogo && <p className="text-xs text-blue-500 mt-1">Subiendo imagen...</p>}
+                  {!uploadingLogo && settings.invoiceLogoUrl && !logoError && <p className="text-xs text-green-600 mt-1">Logo cargado correctamente</p>}
                 </div>
               </div>
               <div className="mt-2">
                 <label className="block text-xs text-gray-500 mb-1">O pegar URL directa:</label>
-                <input type="text" value={settings.invoiceLogoUrl || ''} onChange={e => setSettings({ ...settings, invoiceLogoUrl: e.target.value || null })}
+                <input type="text" value={settings.invoiceLogoUrl || ''} onChange={e => { setSettings({ ...settings, invoiceLogoUrl: e.target.value || null }); setLogoPreviewUrl(''); setLogoError('') }}
                   className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm" placeholder="https://..." />
               </div>
             </div>
