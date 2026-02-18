@@ -4,6 +4,7 @@ import { EnrollmentStatus } from '@prisma/client';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { StudentsService } from '../academic/students.service';
+import { AcademicYearLifecycleService } from '../academic/academic-year-lifecycle.service';
 import { GenerateReportDto, PromotionReportDto } from './dto/men-reports.dto';
 
 @Injectable()
@@ -11,6 +12,7 @@ export class MenReportsService {
   constructor(
     private readonly prisma: PrismaService, // Solo para consultas que aún no tienen servicio
     private readonly studentsService: StudentsService,
+    private readonly academicYearService: AcademicYearLifecycleService,
   ) {}
 
   async generateSimatExport(dto: GenerateReportDto) {
@@ -102,40 +104,67 @@ export class MenReportsService {
   }
 
   async generatePromotionReport(dto: PromotionReportDto) {
+    // Obtener nota mínima aprobatoria dinámica (no hardcoded 3.0)
+    const passingGrade = await this.academicYearService.getPassingGrade(dto.institutionId);
+
     // Delegar a StudentsService para obtener matrículas activas
     const enrollments = await this.studentsService.getEnrollmentsForMenReport({
       academicYearId: dto.academicYearId,
       status: EnrollmentStatus.ACTIVE,
     });
 
-    const allGrades = await this.prisma.studentGrade.findMany({
+    // Usar PeriodFinalGrade (fuente correcta) en vez de StudentGrade (tabla legacy)
+    const allGrades = await this.prisma.periodFinalGrade.findMany({
       where: {
         studentEnrollmentId: { in: enrollments.map(e => e.id) },
+        academicTerm: { academicYearId: dto.academicYearId },
+      },
+      select: {
+        studentEnrollmentId: true,
+        subjectId: true,
+        finalScore: true,
       },
     });
 
-    const gradesByEnrollment = new Map<string, typeof allGrades>();
+    // Agrupar por matrícula → por asignatura → promedio anual por asignatura
+    const gradesByEnrollment = new Map<string, Map<string, number[]>>();
     for (const g of allGrades) {
       if (!gradesByEnrollment.has(g.studentEnrollmentId)) {
-        gradesByEnrollment.set(g.studentEnrollmentId, []);
+        gradesByEnrollment.set(g.studentEnrollmentId, new Map());
       }
-      gradesByEnrollment.get(g.studentEnrollmentId)!.push(g);
+      const subjectMap = gradesByEnrollment.get(g.studentEnrollmentId)!;
+      if (!subjectMap.has(g.subjectId)) subjectMap.set(g.subjectId, []);
+      subjectMap.get(g.subjectId)!.push(Number(g.finalScore));
     }
 
     const results = enrollments.map((enrollment) => {
-      const grades = gradesByEnrollment.get(enrollment.id) || [];
-      const avgFinal = grades.length > 0
-        ? grades.reduce((acc, g) => acc + Number(g.score), 0) / grades.length
-        : 0;
-
-      const failedSubjects = avgFinal < 3.0 ? 1 : 0;
-
-      let promotionStatus: 'PROMOTED' | 'FAILED' | 'PENDING' = 'PENDING';
-      if (grades.length > 0) {
-        promotionStatus = failedSubjects <= 2 ? 'PROMOTED' : 'FAILED';
+      const subjectMap = gradesByEnrollment.get(enrollment.id);
+      if (!subjectMap || subjectMap.size === 0) {
+        return {
+          studentId: enrollment.studentId,
+          studentName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
+          documentNumber: enrollment.student.documentNumber,
+          gradeName: enrollment.group.gradeName,
+          groupName: enrollment.group.name,
+          finalAverage: 0,
+          failedSubjects: 0,
+          promotionStatus: 'PENDING' as const,
+        };
       }
 
-      // Usar propiedades del DTO EnrollmentForMenReport
+      // Calcular promedio por asignatura y contar reprobadas
+      let totalScore = 0;
+      let failedCount = 0;
+      for (const [, scores] of subjectMap) {
+        const subjectAvg = scores.reduce((a, b) => a + b, 0) / scores.length;
+        totalScore += subjectAvg;
+        if (subjectAvg < passingGrade) failedCount++;
+      }
+      const avgFinal = Math.round((totalScore / subjectMap.size) * 10) / 10;
+
+      // Criterio de promoción: máximo 2 áreas perdidas (configurable en futuro)
+      let promotionStatus: 'PROMOTED' | 'FAILED' | 'PENDING' = failedCount <= 2 ? 'PROMOTED' : 'FAILED';
+
       return {
         studentId: enrollment.studentId,
         studentName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
@@ -143,7 +172,7 @@ export class MenReportsService {
         gradeName: enrollment.group.gradeName,
         groupName: enrollment.group.name,
         finalAverage: avgFinal,
-        failedSubjects,
+        failedSubjects: failedCount,
         promotionStatus,
       };
     });
@@ -154,6 +183,7 @@ export class MenReportsService {
       failed: results.filter((r) => r.promotionStatus === 'FAILED').length,
       pending: results.filter((r) => r.promotionStatus === 'PENDING').length,
       promotionRate: 0,
+      passingGrade,
     };
 
     summary.promotionRate = summary.total > 0

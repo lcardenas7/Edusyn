@@ -167,6 +167,7 @@ export default function ReportCards() {
 
   const [uploadingSignature, setUploadingSignature] = useState<string | null>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [dataMeta, setDataMeta] = useState<{ source?: string; termStatus?: string; wasReopened?: boolean; snapshotVersion?: number | null } | null>(null)
 
   // Reglas institucionales
   const [rulesCtx, setRulesCtx] = useState<{ minGradeValue: number; maxGradeValue: number; minPassingGrade: number; performanceLevels: any[] }>(
@@ -245,8 +246,18 @@ export default function ReportCards() {
     if (!selectedGroupId || !selectedTermId || !selectedYearId) return
     setLoadingStudents(true)
     reportsApi.getGroupReportCardList(selectedGroupId, selectedTermId, selectedYearId)
-      .then(res => setStudents(res.data || []))
-      .catch(() => setStudents([]))
+      .then(res => {
+        const body = res.data
+        // Support both new shape { meta, data: [...] } and legacy flat array
+        if (Array.isArray(body)) {
+          setStudents(body)
+          setDataMeta(null)
+        } else {
+          setStudents(body?.data || [])
+          setDataMeta(body?.meta || null)
+        }
+      })
+      .catch(() => { setStudents([]); setDataMeta(null) })
       .finally(() => setLoadingStudents(false))
   }, [selectedGroupId, selectedTermId, selectedYearId])
 
@@ -440,6 +451,20 @@ export default function ReportCards() {
           </div>
         </div>
       </div>
+
+      {/* Banners de estado del periodo */}
+      {dataMeta?.wasReopened && (
+        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
+          <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+          <p className="text-sm text-amber-800">Este periodo fue reabierto. Los datos pueden diferir del boletin impreso anterior.</p>
+        </div>
+      )}
+      {dataMeta?.source === 'snapshot' && (
+        <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4">
+          <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
+          <p className="text-sm text-blue-800">Periodo finalizado — mostrando datos congelados (snapshot v{dataMeta.snapshotVersion}).</p>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-6">
