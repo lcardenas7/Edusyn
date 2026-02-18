@@ -54,7 +54,8 @@ export default function Invoices() {
       if (statusFilter) params.status = statusFilter
       if (typeFilter) params.type = typeFilter
       const response = await financeInvoicesApi.getAll(params)
-      setInvoices(response.data)
+      const result = response.data
+      setInvoices(Array.isArray(result) ? result : result.data || [])
     } catch (err) {
       console.error('Error fetching invoices:', err)
     } finally {

@@ -81,7 +81,8 @@ export default function Obligations() {
       const params: any = {}
       if (statusFilter) params.status = statusFilter
       const response = await financeObligationsApi.getAll(params)
-      setObligations(response.data)
+      const oblResult = Array.isArray(response.data) ? response.data : response.data.data || []
+      setObligations(oblResult)
     } catch (err) {
       console.error('Error fetching obligations:', err)
     } finally {

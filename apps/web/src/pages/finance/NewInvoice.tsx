@@ -37,7 +37,7 @@ export default function NewInvoice() {
     const loadData = async () => {
       try {
         const res = await financeThirdPartiesApi.getAll()
-        setThirdParties(res.data)
+        setThirdParties(Array.isArray(res.data) ? res.data : res.data.data || [])
       } catch (err) {
         console.error('Error loading third parties:', err)
       } finally {

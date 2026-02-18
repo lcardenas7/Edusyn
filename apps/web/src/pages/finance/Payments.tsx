@@ -89,7 +89,8 @@ export default function Payments() {
       const params: any = {}
       if (methodFilter) params.paymentMethod = methodFilter
       const response = await financePaymentsApi.getAll(params)
-      setPayments(response.data)
+      const result = response.data
+      setPayments(Array.isArray(result) ? result : result.data || [])
     } catch (err) {
       console.error('Error fetching payments:', err)
     } finally {
@@ -107,7 +108,7 @@ export default function Payments() {
     setPaymentForm({ thirdPartyId: '', obligationId: '', amount: '', paymentMethod: 'CASH', transactionRef: '', notes: '' })
     try {
       const tpRes = await financeThirdPartiesApi.getAll({ isActive: 'true' })
-      setThirdParties(tpRes.data)
+      setThirdParties(Array.isArray(tpRes.data) ? tpRes.data : tpRes.data.data || [])
     } catch (err) {
       console.error('Error loading third parties:', err)
     } finally {
@@ -121,7 +122,8 @@ export default function Payments() {
     if (!tpId) return
     try {
       const res = await financeObligationsApi.getAll({ thirdPartyId: tpId, status: 'PENDING' })
-      const pending = res.data.filter((o: any) => ['PENDING', 'PARTIAL', 'OVERDUE'].includes(o.status))
+      const oblArr = Array.isArray(res.data) ? res.data : res.data.data || []
+      const pending = oblArr.filter((o: any) => ['PENDING', 'PARTIAL', 'OVERDUE'].includes(o.status))
       setObligations(pending)
     } catch (err) {
       console.error('Error loading obligations:', err)

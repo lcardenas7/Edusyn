@@ -11,6 +11,7 @@ import { InstitutionContextService } from '../institution-context/institution-co
 import { getPerformanceLevel, isFailing } from '../../engines/academic-rules.engine';
 import { getReportCardMode, getDisplayConfig } from '../../engines/report-card.engine';
 import type { AcademicStructureType } from '../../engines/AcademicStructure';
+import { SupabaseStorageService } from '../storage/supabase-storage.service';
 
 @Injectable()
 export class ReportsService {
@@ -21,6 +22,7 @@ export class ReportsService {
     private readonly studentsService: StudentsService,
     private readonly academicYearService: AcademicYearLifecycleService,
     private readonly institutionContext: InstitutionContextService,
+    private readonly storageService: SupabaseStorageService,
   ) {}
 
   /**
@@ -1881,6 +1883,13 @@ export class ReportsService {
           ],
         },
       });
+    }
+
+    // Resolver logoUrl a URL firmada si es una key de R2
+    if (config.logoUrl) {
+      try {
+        config = { ...config, logoUrl: await this.storageService.resolveFileUrl(config.logoUrl, 3600) };
+      } catch { /* mantener valor original */ }
     }
 
     return config;

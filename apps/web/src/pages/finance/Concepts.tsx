@@ -43,7 +43,8 @@ export default function Concepts() {
     setLoading(true)
     try {
       const response = await financeConceptsApi.getAll()
-      setConcepts(response.data)
+      const result = response.data
+      setConcepts(Array.isArray(result) ? result : result.data || [])
     } catch (err) {
       console.error('Error fetching concepts:', err)
     } finally {

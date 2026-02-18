@@ -42,7 +42,8 @@ export default function ObligationDetail() {
           financePaymentsApi.getAll({ obligationId: id }),
         ])
         setObligation(oblRes.data)
-        setPayments(payRes.data)
+        const payResult = payRes.data
+        setPayments(Array.isArray(payResult) ? payResult : payResult.data || [])
       } catch (err) {
         console.error('Error loading obligation:', err)
       } finally {

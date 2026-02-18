@@ -44,7 +44,8 @@ export default function Expenses() {
     setLoading(true)
     try {
       const response = await financeExpensesApi.getAll()
-      setExpenses(response.data)
+      const result = response.data
+      setExpenses(Array.isArray(result) ? result : result.data || [])
     } catch (err) {
       console.error('Error fetching expenses:', err)
     } finally {

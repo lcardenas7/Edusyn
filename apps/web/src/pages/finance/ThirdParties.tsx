@@ -48,7 +48,8 @@ export default function ThirdParties() {
       if (search) params.search = search
       if (typeFilter) params.type = typeFilter
       const response = await financeThirdPartiesApi.getAll(params)
-      setThirdParties(response.data)
+      const result = response.data
+      setThirdParties(Array.isArray(result) ? result : result.data || [])
     } catch (err) {
       console.error('Error fetching third parties:', err)
     } finally {

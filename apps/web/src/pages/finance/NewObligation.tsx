@@ -41,8 +41,8 @@ export default function NewObligation() {
           financeThirdPartiesApi.getAll(),
           financeConceptsApi.getAll({ isActive: 'true' }),
         ])
-        setThirdParties(tpRes.data)
-        setConcepts(conceptsRes.data)
+        setThirdParties(Array.isArray(tpRes.data) ? tpRes.data : tpRes.data.data || [])
+        setConcepts(Array.isArray(conceptsRes.data) ? conceptsRes.data : conceptsRes.data.data || [])
       } catch (err) {
         console.error('Error loading data:', err)
       } finally {

@@ -572,24 +572,26 @@ export default function ReportCards() {
                 return (
                 <div className="bg-white border-2 border-slate-400 rounded-lg p-8 max-w-4xl mx-auto shadow-lg">
                   {/* Encabezado Institucional */}
-                  <div className="text-center border-b-2 border-slate-300 pb-4 mb-4">
+                  <div className="flex items-center border-b-2 border-slate-300 pb-4 mb-4 gap-4">
                     {config.showLogo && (
-                      <div className="flex items-center justify-center gap-4 mb-2">
+                      <div className="flex-shrink-0">
                         {config.logoUrl ? (
-                          <img src={config.logoUrl} alt="Escudo" className="w-16 h-16 object-contain" />
+                          <img src={config.logoUrl} alt="Escudo" className="w-20 h-20 object-contain" />
                         ) : (
-                          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
-                            <GraduationCap className="w-8 h-8 text-slate-400" />
+                          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center">
+                            <GraduationCap className="w-10 h-10 text-slate-400" />
                           </div>
                         )}
                       </div>
                     )}
-                    <h2 className="text-xl font-bold text-slate-900 uppercase">{previewData.institution?.name || institution?.name || ''}</h2>
-                    {config.headerResolution && <p className="text-xs text-slate-600">{config.headerResolution}</p>}
-                    <p className="text-xs text-slate-600">
-                      NIT: {previewData.institution?.nit || ''} {institution?.daneCode ? `- DANE: ${institution.daneCode}` : ''}
-                    </p>
-                    {config.headerMunicipality && <p className="text-xs text-slate-600">{config.headerMunicipality}{config.headerDepartment ? `, ${config.headerDepartment}` : ''}</p>}
+                    <div className="flex-1 text-center">
+                      <h2 className="text-xl font-bold text-slate-900 uppercase">{previewData.institution?.name || institution?.name || ''}</h2>
+                      {config.headerResolution && <p className="text-xs text-slate-600">{config.headerResolution}</p>}
+                      <p className="text-xs text-slate-600">
+                        NIT: {previewData.institution?.nit || ''} {institution?.daneCode ? `- DANE: ${institution.daneCode}` : ''}
+                      </p>
+                      {config.headerMunicipality && <p className="text-xs text-slate-600">{config.headerMunicipality}{config.headerDepartment ? `, ${config.headerDepartment}` : ''}</p>}
+                    </div>
                   </div>
 
                   {/* Titulo */}
