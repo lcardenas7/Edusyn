@@ -699,7 +699,7 @@ export default function ReportCards() {
                                     ) : '-'}
                                   </td>
                                 )}
-                                {showAttend && <td className="px-1 py-1.5 text-center">-</td>}
+                                {showAttend && <td className="px-1 py-1.5 text-center">{sg.absences !== undefined ? sg.absences : '-'}</td>}
                               </tr>
                             ))}
                           </React.Fragment>

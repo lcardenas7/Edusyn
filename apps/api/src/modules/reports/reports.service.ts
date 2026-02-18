@@ -1541,14 +1541,23 @@ export class ReportsService {
       },
     });
 
-    // Map<enrollmentId, AttendanceSummary>
+    // Map<enrollmentId, AttendanceSummary> — totales por estudiante
     const attendanceMap = new Map<string, { total: number; present: number; absent: number; late: number; excused: number; attendanceRate: number }>();
+    // Map<enrollmentId_teacherAssignmentId, absences> — fallas por asignatura
+    const subjectAbsencesMap = new Map<string, number>();
+
     // Agrupar por enrollmentId
     const attByEnrollment = new Map<string, (typeof allAttendance)>();
     for (const rec of allAttendance) {
       const list = attByEnrollment.get(rec.studentEnrollmentId) || [];
       list.push(rec);
       attByEnrollment.set(rec.studentEnrollmentId, list);
+
+      // Contar fallas por asignatura (teacherAssignmentId)
+      if (rec.status === 'ABSENT') {
+        const key = `${rec.studentEnrollmentId}_${rec.teacherAssignmentId}`;
+        subjectAbsencesMap.set(key, (subjectAbsencesMap.get(key) || 0) + 1);
+      }
     }
     for (const enrollmentId of enrollmentIds) {
       const records = attByEnrollment.get(enrollmentId) || [];
@@ -1710,6 +1719,10 @@ export class ReportsService {
             ? this.studentGradesService.getPerformanceLevelFromScale(scaleArray, termGrade.grade)
             : null;
 
+          // Lookup absences for this subject
+          const absencesKey = subject.teacherAssignmentId ? `${enrollmentId}_${subject.teacherAssignmentId}` : null;
+          const absences = absencesKey ? (subjectAbsencesMap.get(absencesKey) || 0) : 0;
+
           return {
             subject: subject.name,
             subjectCode: subject.code,
@@ -1718,6 +1731,7 @@ export class ReportsService {
             weightPercentage: subject.weightPercentage,
             performanceLevel: performanceResult?.level || null,
             components: termGrade.components,
+            absences,
             achievement: null as string | null,
             achievementObservation: null as string | null,
             judgment: null as string | null,
