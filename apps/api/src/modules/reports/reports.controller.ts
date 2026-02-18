@@ -5,6 +5,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ReportsService } from './reports.service';
+import { ReportsExportService } from './reports-export.service';
+import { AcademicPdfService } from './academic-pdf.service';
 import { GenerateReportCardDto, GenerateBulkReportCardsDto } from './dto/generate-report-card.dto';
 import { CapabilitiesService } from '../capabilities/capabilities.service';
 
@@ -13,6 +15,8 @@ import { CapabilitiesService } from '../capabilities/capabilities.service';
 export class ReportsController {
   constructor(
     private readonly reportsService: ReportsService,
+    private readonly reportsExportService: ReportsExportService,
+    private readonly academicPdfService: AcademicPdfService,
     private readonly capabilitiesService: CapabilitiesService,
   ) {}
 
@@ -341,5 +345,201 @@ export class ReportsController {
       }
     }
     return this.reportsService.getGroupReportCardList(groupId, academicTermId, academicYearId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EXPORTACIONES EXCEL
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('export/consolidated')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async exportConsolidated(
+    @Request() req,
+    @Res() res: Response,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId: string,
+    @Query('termId') termId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    const workbook = await this.reportsExportService.exportConsolidatedGradeSheet(
+      institutionId, academicYearId, groupId, termId,
+    );
+    this.sendExcel(res, workbook, 'sabana-academica');
+  }
+
+  @Get('export/grade-distribution')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async exportGradeDistribution(
+    @Request() req,
+    @Res() res: Response,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId: string,
+    @Query('subjectId') subjectId?: string,
+    @Query('termId') termId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    const workbook = await this.reportsExportService.exportGradeDistribution(
+      institutionId, academicYearId, groupId, subjectId, termId,
+    );
+    this.sendExcel(res, workbook, 'distribucion-desempeno');
+  }
+
+  @Get('export/teacher-performance')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async exportTeacherPerformance(
+    @Request() req,
+    @Res() res: Response,
+    @Query('academicYearId') academicYearId: string,
+    @Query('teacherId') teacherId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    const workbook = await this.reportsExportService.exportTeacherPerformance(
+      institutionId, academicYearId, teacherId,
+    );
+    this.sendExcel(res, workbook, 'rendimiento-docente');
+  }
+
+  @Get('export/student-ranking')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async exportStudentRanking(
+    @Request() req,
+    @Res() res: Response,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId: string,
+    @Query('termId') termId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    const workbook = await this.reportsExportService.exportStudentRanking(
+      institutionId, academicYearId, groupId, termId,
+    );
+    this.sendExcel(res, workbook, 'ranking-estudiantes');
+  }
+
+  @Get('export/failed-subjects')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async exportFailedSubjects(
+    @Request() req,
+    @Res() res: Response,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId: string,
+    @Query('termId') termId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    const workbook = await this.reportsExportService.exportFailedSubjects(
+      institutionId, academicYearId, groupId, termId,
+    );
+    this.sendExcel(res, workbook, 'asignaturas-reprobadas');
+  }
+
+  @Get('export/recovery-list')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async exportRecoveryList(
+    @Request() req,
+    @Res() res: Response,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId: string,
+    @Query('termId') termId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    const workbook = await this.reportsExportService.exportRecoveryList(
+      institutionId, academicYearId, groupId, termId,
+    );
+    this.sendExcel(res, workbook, 'listado-recuperacion');
+  }
+
+  @Get('export/promotion-projection')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async exportPromotionProjection(
+    @Request() req,
+    @Res() res: Response,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    const workbook = await this.reportsExportService.exportPromotionProjection(
+      institutionId, academicYearId, groupId,
+    );
+    this.sendExcel(res, workbook, 'proyeccion-promocion');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PDFs FORMALES
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('pdf/recovery-certificate')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async pdfRecoveryCertificate(
+    @Request() req,
+    @Res() res: Response,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId: string,
+    @Query('termId') termId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    const buffer = await this.academicPdfService.generateRecoveryCertificate(
+      institutionId, academicYearId, groupId, termId,
+    );
+    this.sendPdf(res, buffer, 'certificado-recuperacion');
+  }
+
+  @Get('pdf/non-promoted')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async pdfNonPromoted(
+    @Request() req,
+    @Res() res: Response,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    const buffer = await this.academicPdfService.generateNonPromotedReport(
+      institutionId, academicYearId, groupId,
+    );
+    this.sendPdf(res, buffer, 'acta-no-promovidos');
+  }
+
+  @Get('pdf/statistical-summary')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async pdfStatisticalSummary(
+    @Request() req,
+    @Res() res: Response,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId: string,
+    @Query('termId') termId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    const buffer = await this.academicPdfService.generateStatisticalSummary(
+      institutionId, academicYearId, groupId, termId,
+    );
+    this.sendPdf(res, buffer, 'consolidado-estadistico');
+  }
+
+  @Get('pdf/student-history/:studentId')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async pdfStudentHistory(
+    @Param('studentId') studentId: string,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.academicPdfService.generateStudentHistoryCertificate(studentId);
+    this.sendPdf(res, buffer, `certificado-historico-${studentId}`);
+  }
+
+  // ─── Helpers para enviar archivos ─────────────────────────────────────────
+  private sendPdf(res: Response, buffer: Buffer, filename: string) {
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}.pdf"`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
+  }
+
+  private async sendExcel(res: Response, workbook: any, filename: string) {
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}.xlsx"`);
+    await workbook.xlsx.write(res);
+    res.end();
   }
 }

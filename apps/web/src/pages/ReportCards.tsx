@@ -308,6 +308,26 @@ export default function ReportCards() {
     return 'Es necesario un mayor compromiso academico. Busca apoyo de tus docentes y dedica mas tiempo al estudio.'
   }
 
+  // Descargar Excel de sábana académica
+  const [exportingExcel, setExportingExcel] = useState(false)
+  const handleExportConsolidated = async () => {
+    if (!selectedYearId || !selectedGroupId) return
+    setExportingExcel(true)
+    try {
+      const res = await reportsApi.exportConsolidated(selectedYearId, selectedGroupId, selectedTermId || undefined)
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'sabana-academica.xlsx'
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Error al exportar Excel')
+    } finally {
+      setExportingExcel(false)
+    }
+  }
+
   // Estado para URL firmada temporal (para mostrar inmediatamente después de subir)
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string>('')
 
@@ -411,6 +431,14 @@ export default function ReportCards() {
           <p className="text-slate-500">Generacion y gestion de boletines de calificaciones</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleExportConsolidated}
+            disabled={!selectedGroupId || !selectedYearId || exportingExcel}
+            className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm"
+          >
+            {exportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            Sabana Excel
+          </button>
           <button
             onClick={() => { setConfigDraft({...config}); setShowConfigModal(true) }}
             className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm"

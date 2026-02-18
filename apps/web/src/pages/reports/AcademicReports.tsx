@@ -2,12 +2,20 @@ import { useState } from 'react'
 import {
   BookOpen, Users, GraduationCap, ClipboardList, BarChart3, Download, Printer,
   ArrowLeft, ChevronLeft, Calculator, TrendingUp, FileText, AlertTriangle,
-  History, UserCheck
+  History, UserCheck, FileSpreadsheet
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  PieChart, Pie, Cell,
+  LineChart, Line,
+} from 'recharts'
 import { useReportsData } from '../../hooks/useReportsData'
 import { useAuth } from '../../contexts/AuthContext'
 import { teacherAssignmentsApi, periodFinalGradesApi, reportsApi } from '../../lib/api'
+
+const CHART_COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6']
+const PROMOTION_COLORS = { promoted: '#22c55e', atRisk: '#f59e0b', notPromoted: '#ef4444' }
 
 interface ReportItem { id: string; name: string; description: string; icon: any }
 interface ReportBlock { id: string; title: string; description: string; color: string; icon: any; reports: ReportItem[] }
@@ -646,6 +654,7 @@ export default function AcademicReports() {
       const bestSubj = avgResults.reduce((best: any, r: any) => (!best || (r.average || 0) > (best.average || 0)) ? r : best, null)
       const worstSubj = avgResults.reduce((worst: any, r: any) => (!worst || (r.average || 0) < (worst.average || 0)) ? r : worst, null)
       const avgApproval = totalSubj > 0 ? (avgResults.reduce((s: number, r: any) => s + (r.approvalRate || 0), 0) / totalSubj) : 0
+      const chartData = avgResults.map((r: any) => ({ name: r.subjectName?.length > 12 ? r.subjectName.substring(0, 12) + '…' : r.subjectName, Promedio: r.average, 'Aprobación %': r.approvalRate }))
       return (
         <div className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -654,6 +663,22 @@ export default function AcademicReports() {
             <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center"><p className="text-xs text-green-500 uppercase font-medium">Mejor Asignatura</p><p className="text-lg font-bold text-green-700">{bestSubj?.subjectName || '-'}</p><p className="text-xs text-green-600">{bestSubj?.average?.toFixed(1)}</p></div>
             <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center"><p className="text-xs text-red-500 uppercase font-medium">Menor Rendimiento</p><p className="text-lg font-bold text-red-700">{worstSubj?.subjectName || '-'}</p><p className="text-xs text-red-600">{worstSubj?.average?.toFixed(1)}</p></div>
           </div>
+          {chartData.length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4">
+              <h4 className="text-sm font-medium text-slate-700 mb-3">Promedio por Asignatura</h4>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-35} textAnchor="end" interval={0} />
+                  <YAxis domain={[0, scaleMax]} tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="Promedio" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  {/* Reference line for passing grade */}
+                  <CartesianGrid horizontal={false} vertical={false} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-100"><tr>
@@ -723,6 +748,7 @@ export default function AcademicReports() {
     // ── Distribución de notas ──
     if (selectedReport === 'grade-distribution' && reportData?.distribution) {
       const max = Math.max(...reportData.distribution.map((d: any) => d.count), 1)
+      const pieData = reportData.distribution.filter((d: any) => d.count > 0).map((d: any) => ({ name: d.range, value: d.count }))
       return (
         <div className="space-y-4">
           {reportData.summary && (
@@ -731,6 +757,19 @@ export default function AcademicReports() {
               <div className="bg-slate-50 rounded-lg p-3 text-center"><p className="text-xs text-slate-500">Mediana</p><p className="text-lg font-bold">{reportData.summary.median?.toFixed(2)}</p></div>
               <div className="bg-slate-50 rounded-lg p-3 text-center"><p className="text-xs text-slate-500">Total</p><p className="text-lg font-bold">{reportData.summary.total}</p></div>
               <div className="bg-slate-50 rounded-lg p-3 text-center"><p className="text-xs text-slate-500">Desv. Estándar</p><p className="text-lg font-bold">{reportData.summary.stdDev?.toFixed(2)}</p></div>
+            </div>
+          )}
+          {pieData.length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4">
+              <h4 className="text-sm font-medium text-slate-700 mb-3">Distribución de Desempeño</h4>
+              <ResponsiveContainer width="100%" height={260}>
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={100} paddingAngle={3} dataKey="value" label={({ name, percent }: any) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}>
+                    {pieData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
           )}
           <div className="space-y-2">
@@ -891,6 +930,11 @@ export default function AcademicReports() {
 
     // ── Proyección de promoción ──
     if (selectedReport === 'promotion-projection' && reportData?.results) {
+      const promPieData = reportData.summary ? [
+        { name: 'Promueven', value: reportData.summary.promoted, color: PROMOTION_COLORS.promoted },
+        { name: 'En riesgo', value: reportData.summary.atRisk, color: PROMOTION_COLORS.atRisk },
+        { name: 'No promueven', value: reportData.summary.notPromoted, color: PROMOTION_COLORS.notPromoted },
+      ].filter(d => d.value > 0) : []
       return (
         <div className="space-y-3">
           {reportData.summary && (
@@ -899,6 +943,19 @@ export default function AcademicReports() {
               <div className="bg-amber-50 rounded-lg p-3 text-center"><p className="text-xs text-amber-500">En riesgo</p><p className="text-lg font-bold text-amber-700">{reportData.summary.atRisk}</p></div>
               <div className="bg-red-50 rounded-lg p-3 text-center"><p className="text-xs text-red-500">No promueven</p><p className="text-lg font-bold text-red-700">{reportData.summary.notPromoted}</p></div>
               <div className="bg-slate-50 rounded-lg p-3 text-center"><p className="text-xs text-slate-500">Total</p><p className="text-lg font-bold">{reportData.summary.total}</p></div>
+            </div>
+          )}
+          {promPieData.length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4">
+              <h4 className="text-sm font-medium text-slate-700 mb-3">Proyección de Promoción</h4>
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie data={promPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={4} dataKey="value" label={({ name, percent }: any) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}>
+                    {promPieData.map((d: any, i: number) => <Cell key={i} fill={d.color} />)}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
           )}
           <div className="overflow-x-auto">
@@ -932,7 +989,27 @@ export default function AcademicReports() {
     // ── Comparativo de períodos ──
     if (selectedReport === 'comparative' && reportData?.results) {
       const termNames: string[] = reportData.termNames || []
+      // Line chart: group averages per term
+      const compLineData = (reportData.terms || []).map((t: any, i: number) => ({
+        name: t.name,
+        'Promedio Grupo': reportData.groupAverages?.[i] ?? null,
+      }))
       return (
+        <div className="space-y-4">
+          {compLineData.length > 1 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4">
+              <h4 className="text-sm font-medium text-slate-700 mb-3">Evolución del Promedio por Período</h4>
+              <ResponsiveContainer width="100%" height={240}>
+                <LineChart data={compLineData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis domain={[0, scaleMax]} tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="Promedio Grupo" stroke="#3b82f6" strokeWidth={2} dot={{ r: 5 }} activeDot={{ r: 7 }} connectNulls />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-100"><tr>
@@ -952,6 +1029,7 @@ export default function AcademicReports() {
               ))}
             </tbody>
           </table>
+        </div>
         </div>
       )
     }

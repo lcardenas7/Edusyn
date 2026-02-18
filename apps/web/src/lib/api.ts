@@ -385,6 +385,30 @@ export const reportsApi = {
     api.post(`/reports/terms/${termId}/finalize`),
   reopenTerm: (termId: string, reason: string) =>
     api.post(`/reports/terms/${termId}/reopen`, { reason }),
+  // Exportaciones Excel
+  exportConsolidated: (academicYearId: string, groupId: string, termId?: string) =>
+    api.get('/reports/export/consolidated', { params: { academicYearId, groupId, termId }, responseType: 'blob' }),
+  exportGradeDistribution: (academicYearId: string, groupId: string, params?: { subjectId?: string; termId?: string }) =>
+    api.get('/reports/export/grade-distribution', { params: { academicYearId, groupId, ...params }, responseType: 'blob' }),
+  exportTeacherPerformance: (academicYearId: string, teacherId?: string) =>
+    api.get('/reports/export/teacher-performance', { params: { academicYearId, teacherId }, responseType: 'blob' }),
+  exportStudentRanking: (academicYearId: string, groupId: string, termId?: string) =>
+    api.get('/reports/export/student-ranking', { params: { academicYearId, groupId, termId }, responseType: 'blob' }),
+  exportFailedSubjects: (academicYearId: string, groupId: string, termId?: string) =>
+    api.get('/reports/export/failed-subjects', { params: { academicYearId, groupId, termId }, responseType: 'blob' }),
+  exportRecoveryList: (academicYearId: string, groupId: string, termId?: string) =>
+    api.get('/reports/export/recovery-list', { params: { academicYearId, groupId, termId }, responseType: 'blob' }),
+  exportPromotionProjection: (academicYearId: string, groupId: string) =>
+    api.get('/reports/export/promotion-projection', { params: { academicYearId, groupId }, responseType: 'blob' }),
+  // PDFs formales
+  pdfRecoveryCertificate: (academicYearId: string, groupId: string, termId?: string) =>
+    api.get('/reports/pdf/recovery-certificate', { params: { academicYearId, groupId, termId }, responseType: 'blob' }),
+  pdfNonPromoted: (academicYearId: string, groupId: string) =>
+    api.get('/reports/pdf/non-promoted', { params: { academicYearId, groupId }, responseType: 'blob' }),
+  pdfStatisticalSummary: (academicYearId: string, groupId: string, termId?: string) =>
+    api.get('/reports/pdf/statistical-summary', { params: { academicYearId, groupId, termId }, responseType: 'blob' }),
+  pdfStudentHistory: (studentId: string) =>
+    api.get(`/reports/pdf/student-history/${studentId}`, { responseType: 'blob' }),
 }
 
 // Communications

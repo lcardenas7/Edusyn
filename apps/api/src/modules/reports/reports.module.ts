@@ -7,11 +7,13 @@ import { AcademicModule } from '../academic/academic.module';
 import { ReportsController } from './reports.controller';
 import { ReportsService } from './reports.service';
 import { AcademicDataSourceService } from './academic-data-source.service';
+import { ReportsExportService } from './reports-export.service';
+import { AcademicPdfService } from './academic-pdf.service';
 
 @Module({
   imports: [PrismaModule, EvaluationModule, AttendanceModule, AcademicModule],
   controllers: [ReportsController],
-  providers: [ReportsService, AcademicDataSourceService],
-  exports: [ReportsService, AcademicDataSourceService],
+  providers: [ReportsService, AcademicDataSourceService, ReportsExportService, AcademicPdfService],
+  exports: [ReportsService, AcademicDataSourceService, ReportsExportService, AcademicPdfService],
 })
 export class ReportsModule {}
