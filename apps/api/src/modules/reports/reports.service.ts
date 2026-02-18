@@ -1339,6 +1339,226 @@ export class ReportsService {
     };
   }
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // BLOQUE 5 — REPORTES INSTITUCIONALES
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Reporte 13: Consolidado estadístico institucional
+   * Agrega estadísticas de TODOS los grupos por nivel educativo (stage).
+   * Retorna: promedio por nivel, tasa aprobación, distribución, ranking de grupos.
+   */
+  async getInstitutionalStatistics(institutionId: string, academicYearId: string, termId?: string) {
+    const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
+    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, termId });
+
+    // Obtener todos los grupos del año con su stage (via enrollments activos)
+    const groups = await this.prisma.group.findMany({
+      where: {
+        studentEnrollments: { some: { academicYearId, status: 'ACTIVE' } },
+      },
+      include: { grade: { select: { id: true, name: true, stage: true } } },
+    });
+    const groupStageMap = new Map<string, string>();
+    const groupNameMap = new Map<string, string>();
+    for (const g of groups) {
+      groupStageMap.set(g.id, g.grade?.stage || 'SIN_NIVEL');
+      groupNameMap.set(g.id, `${g.grade?.name || ''} ${g.name}`.trim());
+    }
+
+    const STAGE_LABELS: Record<string, string> = {
+      PREESCOLAR: 'Preescolar',
+      BASICA_PRIMARIA: 'Básica Primaria',
+      BASICA_SECUNDARIA: 'Básica Secundaria',
+      MEDIA: 'Media',
+      SIN_NIVEL: 'Sin nivel',
+    };
+
+    // ── Agrupar por stage ──
+    const stageMap = new Map<string, { scores: number[]; groupScores: Map<string, number[]> }>();
+    for (const g of grades) {
+      const stage = groupStageMap.get(g.groupId) || 'SIN_NIVEL';
+      if (!stageMap.has(stage)) stageMap.set(stage, { scores: [], groupScores: new Map() });
+      const entry = stageMap.get(stage)!;
+      entry.scores.push(g.finalScore);
+      if (!entry.groupScores.has(g.groupId)) entry.groupScores.set(g.groupId, []);
+      entry.groupScores.get(g.groupId)!.push(g.finalScore);
+    }
+
+    // ── Estadísticas por nivel ──
+    const stageResults = Array.from(stageMap.entries()).map(([stage, data]) => {
+      const { scores } = data;
+      const avg = scores.length > 0 ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10 : 0;
+      const approved = scores.filter(s => s >= passingGrade).length;
+      const approvalRate = scores.length > 0 ? Math.round((approved / scores.length) * 1000) / 10 : 0;
+
+      // Ranking de grupos dentro del nivel
+      const groupRanking = Array.from(data.groupScores.entries()).map(([gId, gScores]) => {
+        const gAvg = gScores.length > 0 ? Math.round((gScores.reduce((a, b) => a + b, 0) / gScores.length) * 10) / 10 : 0;
+        const gApproved = gScores.filter(s => s >= passingGrade).length;
+        return {
+          groupId: gId,
+          groupName: groupNameMap.get(gId) || gId,
+          average: gAvg,
+          approvalRate: gScores.length > 0 ? Math.round((gApproved / gScores.length) * 1000) / 10 : 0,
+          totalStudents: new Set(grades.filter(gr => gr.groupId === gId).map(gr => gr.studentEnrollmentId)).size,
+          totalGrades: gScores.length,
+        };
+      }).sort((a, b) => b.average - a.average);
+
+      return {
+        stage,
+        stageLabel: STAGE_LABELS[stage] || stage,
+        average: avg,
+        approvalRate,
+        failRate: Math.round((100 - approvalRate) * 10) / 10,
+        totalGrades: scores.length,
+        totalStudents: new Set(grades.filter(g => (groupStageMap.get(g.groupId) || 'SIN_NIVEL') === stage).map(g => g.studentEnrollmentId)).size,
+        totalGroups: data.groupScores.size,
+        bestGroup: groupRanking[0] || null,
+        worstGroup: groupRanking[groupRanking.length - 1] || null,
+        groupRanking,
+      };
+    });
+
+    // ── Resumen institucional global ──
+    const allScores = grades.map(g => g.finalScore);
+    const institutionalAvg = allScores.length > 0 ? Math.round((allScores.reduce((a, b) => a + b, 0) / allScores.length) * 10) / 10 : 0;
+    const totalApproved = allScores.filter(s => s >= passingGrade).length;
+    const institutionalApprovalRate = allScores.length > 0 ? Math.round((totalApproved / allScores.length) * 1000) / 10 : 0;
+    const uniqueStudents = new Set(grades.map(g => g.studentEnrollmentId)).size;
+
+    return {
+      meta,
+      passingGrade,
+      institutional: {
+        average: institutionalAvg,
+        approvalRate: institutionalApprovalRate,
+        failRate: Math.round((100 - institutionalApprovalRate) * 10) / 10,
+        totalStudents: uniqueStudents,
+        totalGroups: groups.length,
+        totalGrades: allScores.length,
+      },
+      stages: stageResults.sort((a, b) => {
+        const order = ['PREESCOLAR', 'BASICA_PRIMARIA', 'BASICA_SECUNDARIA', 'MEDIA'];
+        return (order.indexOf(a.stage) ?? 99) - (order.indexOf(b.stage) ?? 99);
+      }),
+    };
+  }
+
+  /**
+   * Reporte 14: Comparativo institucional anual
+   * Compara métricas clave entre 2+ años académicos.
+   * Retorna: promedio, tasa aprobación, total estudiantes por año.
+   */
+  async getAnnualComparison(institutionId: string, academicYearIds: string[]) {
+    if (academicYearIds.length < 1) return { results: [] };
+
+    const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
+
+    const yearResults: Array<{
+      academicYearId: string;
+      yearName: string;
+      year: number;
+      average: number;
+      approvalRate: number;
+      failRate: number;
+      totalStudents: number;
+      totalGroups: number;
+      totalGrades: number;
+      stageBreakdown: Array<{
+        stage: string;
+        stageLabel: string;
+        average: number;
+        approvalRate: number;
+        totalStudents: number;
+      }>;
+    }> = [];
+
+    for (const yearId of academicYearIds) {
+      const academicYear = await this.prisma.academicYear.findUnique({
+        where: { id: yearId },
+        select: { id: true, year: true, name: true },
+      });
+      if (!academicYear) continue;
+
+      const groups = await this.prisma.group.findMany({
+        where: {
+          studentEnrollments: { some: { academicYearId: yearId, status: 'ACTIVE' } },
+        },
+        include: { grade: { select: { stage: true } } },
+      });
+      const groupStageMap = new Map<string, string>();
+      for (const g of groups) groupStageMap.set(g.id, g.grade?.stage || 'SIN_NIVEL');
+
+      // Obtener notas del año (via motor centralizado)
+      const { grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId: yearId });
+
+      const allScores = grades.map(g => g.finalScore);
+      const avg = allScores.length > 0 ? Math.round((allScores.reduce((a, b) => a + b, 0) / allScores.length) * 10) / 10 : 0;
+      const approved = allScores.filter(s => s >= passingGrade).length;
+      const approvalRate = allScores.length > 0 ? Math.round((approved / allScores.length) * 1000) / 10 : 0;
+      const uniqueStudents = new Set(grades.map(g => g.studentEnrollmentId)).size;
+
+      // Breakdown por stage
+      const STAGE_LABELS: Record<string, string> = {
+        PREESCOLAR: 'Preescolar', BASICA_PRIMARIA: 'Básica Primaria',
+        BASICA_SECUNDARIA: 'Básica Secundaria', MEDIA: 'Media', SIN_NIVEL: 'Sin nivel',
+      };
+      const stageScores = new Map<string, { scores: number[]; students: Set<string> }>();
+      for (const g of grades) {
+        const stage = groupStageMap.get(g.groupId) || 'SIN_NIVEL';
+        if (!stageScores.has(stage)) stageScores.set(stage, { scores: [], students: new Set() });
+        const entry = stageScores.get(stage)!;
+        entry.scores.push(g.finalScore);
+        entry.students.add(g.studentEnrollmentId);
+      }
+
+      const stageBreakdown = Array.from(stageScores.entries()).map(([stage, data]) => {
+        const sAvg = data.scores.length > 0 ? Math.round((data.scores.reduce((a, b) => a + b, 0) / data.scores.length) * 10) / 10 : 0;
+        const sApproved = data.scores.filter(s => s >= passingGrade).length;
+        return {
+          stage,
+          stageLabel: STAGE_LABELS[stage] || stage,
+          average: sAvg,
+          approvalRate: data.scores.length > 0 ? Math.round((sApproved / data.scores.length) * 1000) / 10 : 0,
+          totalStudents: data.students.size,
+        };
+      }).sort((a, b) => {
+        const order = ['PREESCOLAR', 'BASICA_PRIMARIA', 'BASICA_SECUNDARIA', 'MEDIA'];
+        return (order.indexOf(a.stage) ?? 99) - (order.indexOf(b.stage) ?? 99);
+      });
+
+      yearResults.push({
+        academicYearId: yearId,
+        yearName: academicYear.name || `${academicYear.year}`,
+        year: academicYear.year,
+        average: avg,
+        approvalRate,
+        failRate: Math.round((100 - approvalRate) * 10) / 10,
+        totalStudents: uniqueStudents,
+        totalGroups: groups.length,
+        totalGrades: allScores.length,
+        stageBreakdown,
+      });
+    }
+
+    // Calcular variaciones entre años consecutivos
+    const sortedResults = yearResults.sort((a, b) => a.year - b.year);
+    const variations = sortedResults.map((yr, i) => {
+      if (i === 0) return { ...yr, avgVariation: null, approvalVariation: null, studentVariation: null };
+      const prev = sortedResults[i - 1];
+      return {
+        ...yr,
+        avgVariation: Math.round((yr.average - prev.average) * 10) / 10,
+        approvalVariation: Math.round((yr.approvalRate - prev.approvalRate) * 10) / 10,
+        studentVariation: yr.totalStudents - prev.totalStudents,
+      };
+    });
+
+    return { passingGrade, results: variations };
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // BOLETINES BATCH — buildGroupReportCards()
   // Reduce ~1,100 queries por grupo a ~8 queries usando precarga en batch.

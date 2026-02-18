@@ -523,6 +523,32 @@ export class ReportsController {
     this.sendPdf(res, buffer, `certificado-historico-${studentId}`);
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // REPORTES INSTITUCIONALES
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('institutional-statistics')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async getInstitutionalStatistics(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('termId') termId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getInstitutionalStatistics(institutionId, academicYearId, termId);
+  }
+
+  @Get('annual-comparison')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async getAnnualComparison(
+    @Request() req,
+    @Query('academicYearIds') academicYearIds: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    const ids = academicYearIds ? academicYearIds.split(',').filter(Boolean) : [];
+    return this.reportsService.getAnnualComparison(institutionId, ids);
+  }
+
   // ─── Helpers para enviar archivos ─────────────────────────────────────────
   private sendPdf(res: Response, buffer: Buffer, filename: string) {
     res.set({

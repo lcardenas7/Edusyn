@@ -16,6 +16,7 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -74,6 +75,8 @@ export interface TermGradeDataResult {
 
 @Injectable()
 export class AcademicDataSourceService {
+  private readonly logger = new Logger(AcademicDataSourceService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -104,12 +107,20 @@ export class AcademicDataSourceService {
       }
 
       if (groupSnapshots.size === 0) {
+        this.logger.error(
+          `[INTEGRITY] FINALIZED term ${academicTermId} has NO snapshots for group ${groupId}. ` +
+          'This indicates data corruption — a finalized term must always have snapshots.',
+        );
         throw new ConflictException(
           `Período finalizado pero no se encontraron snapshots para el grupo ${groupId}. ` +
           'Posible causa: el grupo fue creado después de la finalización. ' +
           'Reabra el período y vuelva a finalizar.',
         );
       }
+
+      this.logger.log(
+        `Snapshot v${version} used for group ${groupId}, term ${academicTermId} (${groupSnapshots.size} students)`,
+      );
 
       // Reconstruir estructura compatible con buildGroupReportCards output
       const firstSnapshot = groupSnapshots.values().next().value;
@@ -176,12 +187,20 @@ export class AcademicDataSourceService {
       );
 
       if (!snapshot) {
+        this.logger.error(
+          `[INTEGRITY] FINALIZED term ${academicTermId} has NO snapshot for student ${studentEnrollmentId}. ` +
+          'This indicates data corruption — a finalized term must always have snapshots for all enrolled students.',
+        );
         throw new ConflictException(
           'Período finalizado pero no se encontró snapshot para este estudiante. ' +
           'Posible causa: el estudiante fue matriculado después de la finalización. ' +
           'Reabra el período y vuelva a finalizar.',
         );
       }
+
+      this.logger.log(
+        `Snapshot v${version} used for student ${studentEnrollmentId}, term ${academicTermId}`,
+      );
 
       return {
         meta: this.buildMeta('snapshot', termInfo, version),
@@ -395,11 +414,19 @@ export class AcademicDataSourceService {
       const { snapshots, version } = await this.loadSnapshotsForTerm(termId);
 
       if (snapshots.size === 0) {
+        this.logger.error(
+          `[INTEGRITY] FINALIZED term ${termId} has ZERO snapshots. ` +
+          'This is a critical integrity violation — the term was finalized without generating snapshots.',
+        );
         throw new ConflictException(
           `Período ${termId} está finalizado pero no tiene snapshots. ` +
           'Reabra el período y vuelva a finalizar.',
         );
       }
+
+      this.logger.log(
+        `Snapshot v${version} used for analytical grades, term ${termId} (${snapshots.size} students)`,
+      );
 
       // Extraer notas planas del snapshot
       const grades = this.extractGradeRowsFromSnapshots(snapshots, termId, params);
@@ -532,6 +559,21 @@ export class AcademicDataSourceService {
       finalScore: Number(r.finalScore),
     }));
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // VISIÓN FUTURA (no implementado)
+  // ═══════════════════════════════════════════════════════════════════════════
+  //
+  // Actualmente los snapshots son estudiante-céntricos (un registro por estudiante).
+  // Las estadísticas institucionales/grupales se recalculan desde datos base.
+  //
+  // A mediano-largo plazo (3-5 años) considerar:
+  //   - SnapshotGroupStats: promedio grupo, distribución, tasa aprobación congelados
+  //   - SnapshotInstitutionStats: estadísticas agregadas por año/nivel
+  //
+  // Esto evitaría recalcular estadísticas históricas y permitiría dashboards
+  // institucionales instantáneos sobre datos de años anteriores.
+  // ═══════════════════════════════════════════════════════════════════════════
 
   /**
    * Construye el objeto meta estándar.

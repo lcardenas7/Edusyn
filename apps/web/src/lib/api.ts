@@ -409,6 +409,11 @@ export const reportsApi = {
     api.get('/reports/pdf/statistical-summary', { params: { academicYearId, groupId, termId }, responseType: 'blob' }),
   pdfStudentHistory: (studentId: string) =>
     api.get(`/reports/pdf/student-history/${studentId}`, { responseType: 'blob' }),
+  // Reportes institucionales
+  getInstitutionalStatistics: (academicYearId: string, termId?: string) =>
+    api.get('/reports/institutional-statistics', { params: { academicYearId, termId } }),
+  getAnnualComparison: (academicYearIds: string[]) =>
+    api.get('/reports/annual-comparison', { params: { academicYearIds: academicYearIds.join(',') } }),
 }
 
 // Communications

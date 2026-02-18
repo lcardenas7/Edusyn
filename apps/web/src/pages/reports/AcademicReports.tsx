@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   BookOpen, Users, GraduationCap, ClipboardList, BarChart3, Download, Printer,
   ArrowLeft, ChevronLeft, Calculator, TrendingUp, FileText, AlertTriangle,
-  History, UserCheck, FileSpreadsheet
+  History, UserCheck, FileSpreadsheet, Building
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
@@ -57,6 +57,14 @@ const reportBlocks: ReportBlock[] = [
       { id: 'teacher-performance', name: 'Rendimiento por docente', description: '¿Cómo rinden los grupos con cada docente?', icon: Users },
     ],
   },
+  {
+    id: 'institucional', title: 'Institucional',
+    description: 'Estadísticas globales y comparativos anuales', color: 'blue', icon: Building,
+    reports: [
+      { id: 'institutional-stats', name: 'Consolidado institucional', description: 'Estadísticas de todos los grupos por nivel educativo', icon: BarChart3 },
+      { id: 'annual-comparison', name: 'Comparativo anual', description: 'Evolución de métricas entre años académicos', icon: TrendingUp },
+    ],
+  },
 ]
 
 const allReports = reportBlocks.flatMap(b => b.reports.map(r => ({ ...r, blockId: b.id, blockColor: b.color })))
@@ -102,6 +110,7 @@ export default function AcademicReports() {
   const [studentsGradesData, setStudentsGradesData] = useState<any[]>([])
   const [minimumGradeData, setMinimumGradeData] = useState<any>(null)
   const [minimumGradeGroupData, setMinimumGradeGroupData] = useState<any[]>([])
+  const [comparisonYearIds, setComparisonYearIds] = useState<string[]>([])
 
   const currentMeta = allReports.find(r => r.id === selectedReport)
   const style = currentMeta ? BLOCK_STYLES[currentMeta.blockColor] : BLOCK_STYLES.green
@@ -310,6 +319,17 @@ export default function AcademicReports() {
         }
         case 'teacher-performance': {
           const res = await reportsApi.getTeacherPerformance(filterYear, filterTeacher !== 'all' ? filterTeacher : undefined)
+          setReportData(res.data)
+          break
+        }
+        case 'institutional-stats': {
+          const res = await reportsApi.getInstitutionalStatistics(filterYear, filterPeriod || undefined)
+          setReportData(res.data)
+          break
+        }
+        case 'annual-comparison': {
+          if (comparisonYearIds.length < 1) break
+          const res = await reportsApi.getAnnualComparison(comparisonYearIds)
           setReportData(res.data)
           break
         }
@@ -558,6 +578,28 @@ export default function AcademicReports() {
 
       case 'teacher-performance':
         return wrap(<><SelectYear /><SelectTeacher /><BtnSearch /></>, 3)
+
+      case 'institutional-stats':
+        return wrap(<><SelectYear /><SelectTerm /><BtnSearch /></>, 3)
+
+      case 'annual-comparison':
+        return wrap(
+          <div className="col-span-full space-y-3">
+            <label className="block text-xs font-medium text-slate-600">Seleccione los años a comparar</label>
+            <div className="flex flex-wrap gap-2">
+              {academicYears.map(y => {
+                const selected = comparisonYearIds.includes(y.id)
+                return (
+                  <button key={y.id} onClick={() => setComparisonYearIds(prev => selected ? prev.filter(id => id !== y.id) : [...prev, y.id])}
+                    className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${selected ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-300 hover:border-blue-400'}`}>
+                    {y.year}{y.status === 'ACTIVE' ? ' ✓' : ''}
+                  </button>
+                )
+              })}
+            </div>
+            {comparisonYearIds.length > 0 && <p className="text-xs text-slate-500">{comparisonYearIds.length} año(s) seleccionado(s)</p>}
+            <BtnSearch label="Comparar" />
+          </div>, 1)
 
       default:
         return wrap(<><SelectYear /><SelectGroup /><SelectTerm /><BtnSearch /></>, 4)
@@ -1132,6 +1174,146 @@ export default function AcademicReports() {
               ))}
             </tbody>
           </table>
+        </div>
+      )
+    }
+
+    // ── Consolidado institucional ──
+    if (selectedReport === 'institutional-stats' && reportData?.institutional) {
+      const inst = reportData.institutional
+      const stageChartData = (reportData.stages || []).map((s: any) => ({ name: s.stageLabel, Promedio: s.average, 'Aprobación %': s.approvalRate }))
+      return (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"><p className="text-xs text-blue-500 uppercase font-medium">Promedio Institucional</p><p className="text-2xl font-bold text-blue-700">{inst.average}</p></div>
+            <div className={`${inst.approvalRate >= 70 ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'} border rounded-xl p-3 text-center`}><p className="text-xs text-slate-500 uppercase font-medium">Aprobación</p><p className={`text-2xl font-bold ${inst.approvalRate >= 70 ? 'text-green-700' : 'text-amber-700'}`}>{inst.approvalRate}%</p></div>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center"><p className="text-xs text-slate-500 uppercase font-medium">Estudiantes</p><p className="text-2xl font-bold text-slate-700">{inst.totalStudents}</p></div>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center"><p className="text-xs text-slate-500 uppercase font-medium">Grupos</p><p className="text-2xl font-bold text-slate-700">{inst.totalGroups}</p></div>
+          </div>
+          {stageChartData.length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4">
+              <h4 className="text-sm font-medium text-slate-700 mb-3">Promedio por Nivel Educativo</h4>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={stageChartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis domain={[0, scaleMax]} tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="Promedio" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Aprobación %" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          {(reportData.stages || []).map((stage: any) => (
+            <div key={stage.stage} className="border border-slate-200 rounded-xl overflow-hidden">
+              <div className="bg-slate-100 px-4 py-2 flex items-center justify-between">
+                <span className="font-medium text-slate-800">{stage.stageLabel}</span>
+                <div className="flex items-center gap-4 text-xs text-slate-500">
+                  <span>Prom: <strong className="text-slate-700">{stage.average}</strong></span>
+                  <span>Aprob: <strong className="text-green-700">{stage.approvalRate}%</strong></span>
+                  <span>{stage.totalStudents} est. · {stage.totalGroups} grupos</span>
+                </div>
+              </div>
+              <table className="w-full text-sm">
+                <thead><tr className="bg-slate-50">
+                  <th className="px-3 py-1.5 text-left text-xs">Pos.</th>
+                  <th className="px-3 py-1.5 text-left text-xs">Grupo</th>
+                  <th className="px-3 py-1.5 text-center text-xs">Promedio</th>
+                  <th className="px-3 py-1.5 text-center text-xs">Aprobación %</th>
+                  <th className="px-3 py-1.5 text-center text-xs">Estudiantes</th>
+                </tr></thead>
+                <tbody>
+                  {(stage.groupRanking || []).map((g: any, i: number) => (
+                    <tr key={g.groupId} className={`border-t ${i === 0 ? 'bg-green-50' : ''}`}>
+                      <td className="px-3 py-1.5 font-bold text-xs">{i + 1}</td>
+                      <td className="px-3 py-1.5 font-medium">{g.groupName}</td>
+                      <td className="px-3 py-1.5 text-center">{g.average}</td>
+                      <td className="px-3 py-1.5 text-center">{g.approvalRate}%</td>
+                      <td className="px-3 py-1.5 text-center">{g.totalStudents}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )
+    }
+
+    // ── Comparativo anual ──
+    if (selectedReport === 'annual-comparison' && reportData?.results?.length > 0) {
+      const lineData = reportData.results.map((yr: any) => ({ name: yr.yearName, Promedio: yr.average, 'Aprobación %': yr.approvalRate }))
+      return (
+        <div className="space-y-4">
+          {lineData.length > 1 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4">
+              <h4 className="text-sm font-medium text-slate-700 mb-3">Evolución Institucional</h4>
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={lineData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis domain={[0, scaleMax]} tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="Promedio" stroke="#3b82f6" strokeWidth={2} dot={{ r: 5 }} />
+                  <Line type="monotone" dataKey="Aprobación %" stroke="#22c55e" strokeWidth={2} dot={{ r: 5 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-100"><tr>
+                <th className="px-3 py-2 text-left">Año</th>
+                <th className="px-3 py-2 text-center">Promedio</th>
+                <th className="px-3 py-2 text-center">Δ Prom.</th>
+                <th className="px-3 py-2 text-center">Aprobación %</th>
+                <th className="px-3 py-2 text-center">Δ Aprob.</th>
+                <th className="px-3 py-2 text-center">Estudiantes</th>
+                <th className="px-3 py-2 text-center">Δ Est.</th>
+                <th className="px-3 py-2 text-center">Grupos</th>
+              </tr></thead>
+              <tbody>
+                {reportData.results.map((yr: any, i: number) => (
+                  <tr key={yr.academicYearId} className="border-b hover:bg-slate-50">
+                    <td className="px-3 py-2 font-medium">{yr.yearName}</td>
+                    <td className="px-3 py-2 text-center font-medium">{yr.average}</td>
+                    <td className="px-3 py-2 text-center">{yr.avgVariation !== null ? <span className={yr.avgVariation > 0 ? 'text-green-600' : yr.avgVariation < 0 ? 'text-red-600' : 'text-slate-500'}>{yr.avgVariation > 0 ? '+' : ''}{yr.avgVariation}</span> : '-'}</td>
+                    <td className="px-3 py-2 text-center">{yr.approvalRate}%</td>
+                    <td className="px-3 py-2 text-center">{yr.approvalVariation !== null ? <span className={yr.approvalVariation > 0 ? 'text-green-600' : yr.approvalVariation < 0 ? 'text-red-600' : 'text-slate-500'}>{yr.approvalVariation > 0 ? '+' : ''}{yr.approvalVariation}%</span> : '-'}</td>
+                    <td className="px-3 py-2 text-center">{yr.totalStudents}</td>
+                    <td className="px-3 py-2 text-center">{yr.studentVariation !== null ? <span className={yr.studentVariation > 0 ? 'text-green-600' : yr.studentVariation < 0 ? 'text-red-600' : 'text-slate-500'}>{yr.studentVariation > 0 ? '+' : ''}{yr.studentVariation}</span> : '-'}</td>
+                    <td className="px-3 py-2 text-center">{yr.totalGroups}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {reportData.results.map((yr: any) => yr.stageBreakdown?.length > 0 && (
+            <div key={yr.academicYearId} className="border border-slate-200 rounded-xl overflow-hidden">
+              <div className="bg-slate-100 px-4 py-2 font-medium text-slate-800">{yr.yearName} — Desglose por nivel</div>
+              <table className="w-full text-sm">
+                <thead><tr className="bg-slate-50">
+                  <th className="px-3 py-1.5 text-left text-xs">Nivel</th>
+                  <th className="px-3 py-1.5 text-center text-xs">Promedio</th>
+                  <th className="px-3 py-1.5 text-center text-xs">Aprobación %</th>
+                  <th className="px-3 py-1.5 text-center text-xs">Estudiantes</th>
+                </tr></thead>
+                <tbody>
+                  {yr.stageBreakdown.map((s: any) => (
+                    <tr key={s.stage} className="border-t">
+                      <td className="px-3 py-1.5 font-medium">{s.stageLabel}</td>
+                      <td className="px-3 py-1.5 text-center">{s.average}</td>
+                      <td className="px-3 py-1.5 text-center">{s.approvalRate}%</td>
+                      <td className="px-3 py-1.5 text-center">{s.totalStudents}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
         </div>
       )
     }
