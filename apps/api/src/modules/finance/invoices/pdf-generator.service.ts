@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { SupabaseStorageService } from '../../storage/supabase-storage.service';
 import PDFDocument from 'pdfkit';
 import * as QRCode from 'qrcode';
 import * as crypto from 'crypto';
@@ -23,7 +24,10 @@ interface DocColors {
 
 @Injectable()
 export class PdfGeneratorService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private storageService: SupabaseStorageService,
+  ) {}
 
   private async fetchImage(url: string): Promise<Buffer | null> {
     try {
@@ -111,7 +115,7 @@ export class PdfGeneratorService {
     }
 
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: pc.size, margin: pc.margin, bufferPages: true });
+      const doc = new PDFDocument({ size: pc.size, margins: { top: pc.margin, bottom: 15, left: pc.margin, right: pc.margin }, bufferPages: true });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -342,8 +346,8 @@ export class PdfGeneratorService {
     const paidAmount = Number(payment.amount);
 
     return new Promise((resolve, reject) => {
-      // Disable auto page breaks - force single page
-      const doc = new PDFDocument({ size: pc.size, margin: pc.margin, autoFirstPage: true, bufferPages: true });
+      // Use small bottom margin to prevent footer from triggering auto page breaks
+      const doc = new PDFDocument({ size: pc.size, margins: { top: pc.margin, bottom: 15, left: pc.margin, right: pc.margin }, autoFirstPage: true, bufferPages: true });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -493,14 +497,9 @@ export class PdfGeneratorService {
       doc.text(this.formatCurrency(obligationAmount), cx, cy + (tblRowH - tblFontSize) / 2 - 1, { width: totalW - 6, align: 'right' });
       cy += tblRowH;
 
-      // For LETTER size, add empty rows to fill more space
-      if (!hl) {
-        for (let i = 0; i < 3; i++) {
-          const bgColor = i % 2 === 0 ? '#FFFFFF' : colors.secondary;
-          doc.rect(m, cy - 1, w, tblRowH).fill(bgColor);
-          cy += tblRowH;
-        }
-      }
+      // Add one empty row for visual spacing
+      doc.rect(m, cy - 1, w, tblRowH).fill('#FFFFFF');
+      cy += tblRowH;
 
       // Bottom border of table
       doc.moveTo(m, cy).lineTo(m + w, cy).lineWidth(0.5).stroke(colors.border);
@@ -559,12 +558,6 @@ export class PdfGeneratorService {
       // ── Bottom colored bar ──
       doc.rect(0, pageH - 4, doc.page.width, 4).fill(colors.primary);
 
-      // Remove extra pages if any were auto-created
-      const range = doc.bufferedPageRange();
-      if (range.count > 1) {
-        // Only keep first page - delete extras by ending before they render
-      }
-
       doc.end();
     });
   }
@@ -574,9 +567,32 @@ export class PdfGeneratorService {
   // ═══════════════════════════════════════════════════════════════
 
   private async resolveLogoBuffer(settings: any, institution: any): Promise<Buffer | null> {
-    if (settings?.invoiceLogoUrl) return this.fetchImage(settings.invoiceLogoUrl);
-    if (institution?.logoUrl) return this.fetchImage(institution.logoUrl);
+    // Try invoice logo from settings
+    if (settings?.invoiceLogoUrl) {
+      const url = await this.resolveStorageUrl(settings.invoiceLogoUrl);
+      if (url) {
+        const buf = await this.fetchImage(url);
+        if (buf) return buf;
+      }
+    }
+    // Fallback to institution logo
+    if (institution?.logoUrl) {
+      const url = await this.resolveStorageUrl(institution.logoUrl);
+      if (url) {
+        const buf = await this.fetchImage(url);
+        if (buf) return buf;
+      }
+    }
     return null;
+  }
+
+  private async resolveStorageUrl(storedValue: string): Promise<string | null> {
+    if (!storedValue) return null;
+    try {
+      return await this.storageService.resolveFileUrl(storedValue, 600);
+    } catch {
+      return storedValue.startsWith('http') ? storedValue : null;
+    }
   }
 
   private drawProfessionalHeader(

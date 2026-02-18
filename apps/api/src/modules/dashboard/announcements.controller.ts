@@ -3,17 +3,21 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { AnnouncementsService } from './announcements.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
 @Controller('announcements')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AnnouncementsController {
-  constructor(private readonly announcementsService: AnnouncementsService) {}
+  constructor(
+    private readonly announcementsService: AnnouncementsService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async create(@Body() data: any, @Req() req: any) {
-    // Use institutionId from authenticated user if available, otherwise from body
-    const institutionId = req.user.institutionId || data.institutionId;
+    const institutionId = await requireInstitutionId(this.prisma as any, req, data.institutionId);
     
     return this.announcementsService.create({
       ...data,
@@ -25,10 +29,12 @@ export class AnnouncementsController {
   @Get()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async list(
+    @Req() req: any,
     @Query('institutionId') institutionId?: string,
     @Query('onlyActive') onlyActive?: string,
   ) {
-    return this.announcementsService.list(institutionId, onlyActive !== 'false');
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.announcementsService.list(instId, onlyActive !== 'false');
   }
 
   @Patch(':id')

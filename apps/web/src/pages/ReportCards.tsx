@@ -577,34 +577,34 @@ export default function ReportCards() {
                 const showAreaRows = dc.showAreaAverages !== false // false for SUBJECTS_ONLY
 
                 return (
-                <div className="bg-white border-2 border-slate-400 rounded-lg p-8 max-w-4xl mx-auto shadow-lg">
+                <div className="bg-white border-2 border-slate-400 rounded-lg p-5 max-w-4xl mx-auto shadow-lg">
                   {/* Encabezado Institucional */}
-                  <div className="flex items-center border-b-2 border-slate-300 pb-2 mb-2 gap-3">
+                  <div className="flex items-center border-b-2 border-slate-300 pb-1.5 mb-1.5 gap-2">
                     {config.showLogo && (
                       <div className="flex-shrink-0">
                         {config.logoUrl ? (
-                          <img src={logoPreviewUrl || config.logoUrl} alt="Escudo" className="w-20 h-20 object-contain" />
+                          <img src={logoPreviewUrl || config.logoUrl} alt="Escudo" className="w-14 h-14 object-contain" />
                         ) : (
-                          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center">
-                            <GraduationCap className="w-10 h-10 text-slate-400" />
+                          <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center">
+                            <GraduationCap className="w-7 h-7 text-slate-400" />
                           </div>
                         )}
                       </div>
                     )}
                     <div className="flex-1 text-center leading-tight">
-                      <h2 className="text-lg font-bold text-slate-900 uppercase mb-0.5">{previewData.institution?.name || institution?.name || ''}</h2>
-                      {config.headerResolution && <p className="text-[11px] text-slate-600 leading-snug">{config.headerResolution}</p>}
-                      <p className="text-[11px] text-slate-600 leading-snug">
+                      <h2 className="text-base font-bold text-slate-900 uppercase">{previewData.institution?.name || institution?.name || ''}</h2>
+                      {config.headerResolution && <p className="text-[10px] text-slate-600 leading-tight">{config.headerResolution}</p>}
+                      <p className="text-[10px] text-slate-600 leading-tight">
                         NIT: {previewData.institution?.nit || ''} {institution?.daneCode ? `- DANE: ${institution.daneCode}` : ''}
                       </p>
-                      {config.headerMunicipality && <p className="text-[11px] text-slate-600 leading-snug">{config.headerMunicipality}{config.headerDepartment ? `, ${config.headerDepartment}` : ''}</p>}
+                      {config.headerMunicipality && <p className="text-[10px] text-slate-600 leading-tight">{config.headerMunicipality}{config.headerDepartment ? `, ${config.headerDepartment}` : ''}</p>}
                     </div>
                   </div>
 
                   {/* Titulo */}
-                  <div className="text-center text-white py-1.5 rounded mb-3" style={{ backgroundColor: config.primaryColor || '#1E3A8A' }}>
-                    <h3 className="text-base font-bold leading-tight">INFORME ACADEMICO - {selectedTermName}</h3>
-                    <p className="text-xs leading-tight">Ano Lectivo {selectedYearName}</p>
+                  <div className="text-center text-white py-1 rounded mb-2" style={{ backgroundColor: config.primaryColor || '#1E3A8A' }}>
+                    <h3 className="text-sm font-bold leading-tight">INFORME ACADEMICO - {selectedTermName}</h3>
+                    <p className="text-[11px] leading-tight">Ano Lectivo {selectedYearName}</p>
                   </div>
 
                   {/* Datos del Estudiante */}

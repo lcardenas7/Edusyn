@@ -105,7 +105,7 @@ export class SupabaseStorageService {
       throw new BadRequestException('Storage no configurado');
     }
 
-    this.validateFile(file, ['image/jpeg', 'image/png', 'image/webp'], 0.5); // Max 500KB
+    this.validateFile(file, ['image/jpeg', 'image/png', 'image/webp'], 2); // Max 2MB
 
     const ext = this.getFileExtension(file.originalname);
     const categoryPath = category ? `${category}/` : '';

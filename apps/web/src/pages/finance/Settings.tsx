@@ -200,9 +200,10 @@ export default function FinanceSettings() {
     try {
       const res = await storageApi.uploadGalleryImage(file, institution.id, 'invoice-logo')
       const data = res.data?.data || res.data
-      const url = data?.url || data?.publicUrl || data?.path || ''
-      if (url) {
-        setSettings({ ...settings, invoiceLogoUrl: url })
+      // Save the permanent path (R2 key) to DB, not the signed URL which expires
+      const pathToSave = data?.path || data?.url || ''
+      if (pathToSave) {
+        setSettings({ ...settings, invoiceLogoUrl: pathToSave })
       } else {
         setLogoError('No se recibió URL del servidor. Intente de nuevo.')
         setLogoPreviewUrl('')
