@@ -37,7 +37,7 @@ export class ObligationsService {
         where,
         include: {
           thirdParty: { select: { id: true, name: true, document: true, type: true } },
-          concept: { select: { id: true, name: true, categoryId: true } },
+          concept: { select: { id: true, name: true, category: { select: { id: true, name: true } } } },
           _count: { select: { payments: true } },
         },
         orderBy: { createdAt: 'desc' },
