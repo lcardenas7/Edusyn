@@ -115,7 +115,7 @@ export class PdfGeneratorService {
     }
 
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: pc.size, margins: { top: pc.margin, bottom: 15, left: pc.margin, right: pc.margin }, bufferPages: true });
+      const doc = new PDFDocument({ size: pc.size, margins: { top: pc.margin, bottom: 0, left: pc.margin, right: pc.margin }, bufferPages: true });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -271,20 +271,25 @@ export class PdfGeneratorService {
       }
 
       // ── Footer (fixed at bottom) ──
-      const footerY = pageH - (pc.isHalfLetter ? 28 : 35);
-      doc.moveTo(m, footerY - 4).lineTo(m + w, footerY - 4).lineWidth(0.3).stroke(colors.border);
-      doc.fontSize(5).font('Helvetica').fillColor(colors.lightText);
-      doc.text(
-        `Documento generado el ${new Date().toLocaleString('es-CO')} | Documento interno - No constituye factura electrónica`,
-        m, footerY, { width: w, align: 'center' },
-      );
+      // Temporarily block PDFKit from adding pages when drawing near the bottom
+      const _addPage = doc.addPage.bind(doc);
+      doc.addPage = () => doc as any;
+
+      const footerY = pageH - (pc.isHalfLetter ? 16 : 20);
+      doc.moveTo(m, footerY - 3).lineTo(m + w, footerY - 3).lineWidth(0.3).stroke(colors.border);
+      let invoiceFooterText = `Documento generado el ${new Date().toLocaleString('es-CO')} | Documento interno - No constituye factura electrónica`;
       if (settings?.billingMode === 'INTERNAL_ONLY') {
-        doc.text('Para factura electrónica válida ante la DIAN, solicítela a su contador.', m, footerY + 8, { width: w, align: 'center' });
+        invoiceFooterText += ' | Para factura electrónica válida ante la DIAN, solicítela a su contador.';
       }
+      doc.fontSize(pc.isHalfLetter ? 4 : 5).font('Helvetica').fillColor(colors.lightText);
+      doc.text(invoiceFooterText, m, footerY, { width: w, align: 'center', lineBreak: false });
       doc.fillColor(colors.text);
 
       // ── Bottom colored bar ──
       doc.rect(0, pageH - 4, doc.page.width, 4).fill(colors.primary);
+
+      // Restore addPage
+      doc.addPage = _addPage;
 
       doc.end();
     });
@@ -347,7 +352,7 @@ export class PdfGeneratorService {
 
     return new Promise((resolve, reject) => {
       // Use small bottom margin to prevent footer from triggering auto page breaks
-      const doc = new PDFDocument({ size: pc.size, margins: { top: pc.margin, bottom: 15, left: pc.margin, right: pc.margin }, autoFirstPage: true, bufferPages: true });
+      const doc = new PDFDocument({ size: pc.size, margins: { top: pc.margin, bottom: 0, left: pc.margin, right: pc.margin }, autoFirstPage: true, bufferPages: true });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -559,19 +564,26 @@ export class PdfGeneratorService {
       doc.text(`Recibido por: ${payment.receivedBy.firstName} ${payment.receivedBy.lastName}`, sigX, y + 3, { width: sigLineW, align: 'center' });
       doc.fillColor(colors.text);
 
-      // ── Footer (fixed at bottom, single block to avoid page overflow) ──
-      const footerY = pageH - (hl ? 18 : 22);
+      // ── Footer (fixed at bottom) ──
+      // Temporarily block PDFKit from adding pages when drawing near the bottom
+      const _addPage = doc.addPage.bind(doc);
+      doc.addPage = () => doc as any;
+
+      const footerY = pageH - (hl ? 16 : 20);
       doc.moveTo(m, footerY - 3).lineTo(m + w, footerY - 3).lineWidth(0.3).stroke(colors.border);
       let footerText = `Documento generado el ${new Date().toLocaleString('es-CO')} | Documento interno - No constituye factura electrónica`;
       if (settings?.billingMode === 'INTERNAL_ONLY') {
         footerText += ' | Para factura electrónica válida ante la DIAN, solicítela a su contador.';
       }
-      doc.fontSize(hl ? 4.5 : 5).font('Helvetica').fillColor(colors.lightText);
+      doc.fontSize(hl ? 4 : 5).font('Helvetica').fillColor(colors.lightText);
       doc.text(footerText, m, footerY, { width: w, align: 'center', lineBreak: false });
       doc.fillColor(colors.text);
 
       // ── Bottom colored bar ──
       doc.rect(0, pageH - 4, doc.page.width, 4).fill(colors.primary);
+
+      // Restore addPage
+      doc.addPage = _addPage;
 
       doc.end();
     });

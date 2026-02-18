@@ -583,10 +583,10 @@ export default function ReportCards() {
                     {config.showLogo && (
                       <div className="flex-shrink-0">
                         {config.logoUrl ? (
-                          <img src={logoPreviewUrl || config.logoUrl} alt="Escudo" className="w-16 h-16 object-contain" />
+                          <img src={logoPreviewUrl || config.logoUrl} alt="Escudo" className="w-20 h-20 object-contain" />
                         ) : (
-                          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
-                            <GraduationCap className="w-8 h-8 text-slate-400" />
+                          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center">
+                            <GraduationCap className="w-10 h-10 text-slate-400" />
                           </div>
                         )}
                       </div>
