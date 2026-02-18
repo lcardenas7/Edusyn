@@ -44,9 +44,21 @@ export class StorageController {
       category,
     );
 
+    // Generar URL firmada para mostrar inmediatamente después de subir
+    let signedUrl = result.url;
+    if (result.path && !result.path.startsWith('http')) {
+      try {
+        signedUrl = await this.storageService.resolveFileUrl(result.path, 3600);
+      } catch { /* usar url original */ }
+    }
+
     return {
       success: true,
-      data: result,
+      data: {
+        ...result,
+        url: signedUrl, // URL firmada para mostrar inmediatamente
+        path: result.path, // Key para guardar en DB
+      },
     };
   }
 

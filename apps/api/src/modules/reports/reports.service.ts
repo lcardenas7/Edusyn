@@ -1888,8 +1888,12 @@ export class ReportsService {
     // Resolver logoUrl a URL firmada si es una key de R2
     if (config.logoUrl) {
       try {
-        config = { ...config, logoUrl: await this.storageService.resolveFileUrl(config.logoUrl, 3600) };
-      } catch { /* mantener valor original */ }
+        const resolvedUrl = await this.storageService.resolveFileUrl(config.logoUrl, 3600);
+        config = { ...config, logoUrl: resolvedUrl };
+      } catch (err) {
+        console.error('Error resolving logoUrl:', config.logoUrl, err);
+        // mantener valor original
+      }
     }
 
     return config;

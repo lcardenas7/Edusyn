@@ -64,6 +64,9 @@ export default function FinanceSettings() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    billing: true, fiscal: true, visual: true, resolution: false, bank: true, notifications: false, electronic: false,
+  })
 
   const fetchSettings = async () => {
     setLoading(true)
@@ -233,9 +236,6 @@ export default function FinanceSettings() {
     )
   }
 
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    billing: true, fiscal: true, visual: true, resolution: false, bank: true, notifications: false, electronic: false,
-  })
   const toggleSection = (key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
 
   if (!settings) return null

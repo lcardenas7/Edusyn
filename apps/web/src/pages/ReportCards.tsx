@@ -297,14 +297,21 @@ export default function ReportCards() {
     return 'Es necesario un mayor compromiso academico. Busca apoyo de tus docentes y dedica mas tiempo al estudio.'
   }
 
+  // Estado para URL firmada temporal (para mostrar inmediatamente después de subir)
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string>('')
+
   const handleLogoUpload = async (file: File) => {
     if (!institution?.id) return
     setUploadingLogo(true)
     try {
       const res = await storageApi.uploadGalleryImage(file, institution.id, 'report-card-logo')
-      const url = res.data?.data?.url || res.data?.data?.path || ''
-      if (url) {
-        setConfigDraft({ ...configDraft, logoUrl: url })
+      const data = res.data?.data
+      // path = key para guardar en DB, url = URL firmada para mostrar
+      const pathToSave = data?.path || data?.url || ''
+      const urlToShow = data?.url || data?.path || ''
+      if (pathToSave) {
+        setConfigDraft({ ...configDraft, logoUrl: pathToSave })
+        setLogoPreviewUrl(urlToShow) // URL firmada para mostrar inmediatamente
       }
     } catch (err: any) {
       alert(err?.response?.data?.message || 'Error al subir el escudo. Verifique que sea PNG/JPG.')
@@ -576,7 +583,7 @@ export default function ReportCards() {
                     {config.showLogo && (
                       <div className="flex-shrink-0">
                         {config.logoUrl ? (
-                          <img src={config.logoUrl} alt="Escudo" className="w-28 h-28 object-contain" />
+                          <img src={logoPreviewUrl || config.logoUrl} alt="Escudo" className="w-28 h-28 object-contain" />
                         ) : (
                           <div className="w-28 h-28 bg-slate-100 rounded-full flex items-center justify-center">
                             <GraduationCap className="w-14 h-14 text-slate-400" />
@@ -817,8 +824,8 @@ export default function ReportCards() {
                       <label className="block text-xs font-medium text-slate-600 mb-1">Escudo / Logo Institucional</label>
                       {configDraft.logoUrl ? (
                         <div className="flex items-center gap-3 mb-2">
-                          <img src={configDraft.logoUrl} alt="Escudo" className="w-14 h-14 object-contain rounded border border-slate-200" />
-                          <button type="button" onClick={() => setConfigDraft({...configDraft, logoUrl: ''})} className="text-xs text-red-500 hover:text-red-700">Eliminar</button>
+                          <img src={logoPreviewUrl || config.logoUrl || configDraft.logoUrl} alt="Escudo" className="w-14 h-14 object-contain rounded border border-slate-200" />
+                          <button type="button" onClick={() => { setConfigDraft({...configDraft, logoUrl: ''}); setLogoPreviewUrl(''); }} className="text-xs text-red-500 hover:text-red-700">Eliminar</button>
                         </div>
                       ) : null}
                       <label className={`cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 border border-slate-300 rounded-lg text-sm hover:bg-slate-50 transition-colors ${uploadingLogo ? 'opacity-50 pointer-events-none' : ''}`}>
