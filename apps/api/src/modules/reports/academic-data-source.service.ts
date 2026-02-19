@@ -449,6 +449,10 @@ export class AcademicDataSourceService {
   /**
    * Extrae GradeRow[] desde snapshots congelados.
    * Aplica filtros opcionales (groupId, subjectId, stage).
+   *
+   * Usa areaGrades (jerárquico: área → asignaturas) en vez de subjectGrades
+   * (plano) para preservar areaId/areaName y subjectId que no están en la
+   * lista plana de snapshots legacy.
    */
   private extractGradeRowsFromSnapshots(
     snapshots: Map<string, any>,
@@ -465,38 +469,76 @@ export class AcademicDataSourceService {
       // Filtro por grupo
       if (filters.groupId && snap.group?.id !== filters.groupId) continue;
 
-      // Filtro por stage (si el snapshot tiene info de grado)
-      // stage no está directamente en el snapshot, pero podemos inferirlo del grupo
-      // Por ahora, si se filtra por stage y no hay info, incluimos todo
-
       const termName = snap.term?.name ?? '';
       const termData = snap.term ?? {};
 
-      // Extraer notas de subjectGrades (lista plana de asignaturas)
-      const subjectGrades: any[] = snap.subjectGrades || [];
-      for (const sg of subjectGrades) {
-        if (sg.grade === null || sg.grade === undefined) continue;
+      // Preferir areaGrades (tiene contexto de área) sobre subjectGrades (plano, sin area info)
+      const areaGrades: any[] = snap.areaGrades || [];
 
-        // Filtro por asignatura
-        if (filters.subjectId && sg.subjectId !== filters.subjectId) continue;
+      if (areaGrades.length > 0) {
+        // Extraer desde estructura jerárquica: área → asignaturas
+        for (const ag of areaGrades) {
+          const areaName = ag.area ?? null;
+          const areaCode = ag.areaCode ?? null;
+          // Generar areaId determinístico desde el nombre si no existe explícitamente
+          const areaId = ag.areaId ?? (areaName ? `area:${areaName}` : null);
 
-        rows.push({
-          studentEnrollmentId: enrollmentId,
-          studentFirstName: snap.student?.firstName ?? '',
-          studentLastName: snap.student?.lastName ?? '',
-          groupId: snap.group?.id ?? '',
-          groupName: `${snap.group?.gradeLevel ?? ''} ${snap.group?.name ?? ''}`.trim(),
-          gradeName: snap.group?.gradeLevel ?? '',
-          academicTermId: termId,
-          termName,
-          termWeight: termData.weightPercentage ?? 0,
-          termOrder: termData.order ?? 0,
-          subjectId: sg.subjectId ?? '',
-          subjectName: sg.subject ?? '',
-          areaId: sg.areaId ?? null,
-          areaName: sg.areaName ?? null,
-          finalScore: Number(sg.grade),
-        });
+          const subjects: any[] = ag.subjects || [];
+          for (const sg of subjects) {
+            if (sg.grade === null || sg.grade === undefined) continue;
+
+            // subjectId: usar campo explícito, o generar desde nombre
+            const subjectId = sg.subjectId ?? `subj:${sg.subject ?? 'unknown'}`;
+
+            // Filtro por asignatura
+            if (filters.subjectId && subjectId !== filters.subjectId) continue;
+
+            rows.push({
+              studentEnrollmentId: enrollmentId,
+              studentFirstName: snap.student?.firstName ?? '',
+              studentLastName: snap.student?.lastName ?? '',
+              groupId: snap.group?.id ?? '',
+              groupName: `${snap.group?.gradeLevel ?? ''} ${snap.group?.name ?? ''}`.trim(),
+              gradeName: snap.group?.gradeLevel ?? '',
+              academicTermId: termId,
+              termName,
+              termWeight: termData.weightPercentage ?? 0,
+              termOrder: termData.order ?? 0,
+              subjectId,
+              subjectName: sg.subject ?? '',
+              areaId,
+              areaName,
+              finalScore: Number(sg.grade),
+            });
+          }
+        }
+      } else {
+        // Fallback: subjectGrades plano (snapshots muy antiguos o sin areaGrades)
+        const subjectGrades: any[] = snap.subjectGrades || [];
+        for (const sg of subjectGrades) {
+          if (sg.grade === null || sg.grade === undefined) continue;
+
+          const subjectId = sg.subjectId ?? `subj:${sg.subject ?? 'unknown'}`;
+          if (filters.subjectId && subjectId !== filters.subjectId) continue;
+
+          rows.push({
+            studentEnrollmentId: enrollmentId,
+            studentFirstName: snap.student?.firstName ?? '',
+            studentLastName: snap.student?.lastName ?? '',
+            groupId: snap.group?.id ?? '',
+            groupName: `${snap.group?.gradeLevel ?? ''} ${snap.group?.name ?? ''}`.trim(),
+            gradeName: snap.group?.gradeLevel ?? '',
+            academicTermId: termId,
+            termName,
+            termWeight: termData.weightPercentage ?? 0,
+            termOrder: termData.order ?? 0,
+            subjectId,
+            subjectName: sg.subject ?? '',
+            areaId: sg.areaId ?? null,
+            areaName: sg.areaName ?? null,
+            finalScore: Number(sg.grade),
+          });
+        }
       }
     }
 

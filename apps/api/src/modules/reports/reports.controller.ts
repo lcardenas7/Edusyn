@@ -343,6 +343,27 @@ export class ReportsController {
     return this.reportsService.reopenFinalizedTerm(termId, body.reason, userId);
   }
 
+  @Post('terms/:termId/re-snapshot')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async reSnapshotTerm(
+    @Param('termId') termId: string,
+    @Request() req,
+  ) {
+    const userId = req.user.sub || req.user.id;
+    return this.reportsService.reSnapshotTerm(termId, userId);
+  }
+
+  @Get('academic/completeness-status')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async getCompletenessStatus(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('termId') termId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getCompletenessStatus(institutionId, academicYearId, termId);
+  }
+
   @Get('report-cards/group/:groupId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getGroupReportCardList(

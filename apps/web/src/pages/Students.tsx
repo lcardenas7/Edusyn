@@ -163,6 +163,18 @@ export default function Students() {
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
   const [processingCredentials, setProcessingCredentials] = useState(false)
 
+  // Estados para Listados por Grupo
+  const [showListModal, setShowListModal] = useState(false)
+  const [listGroupId, setListGroupId] = useState('')
+  const [listTitle, setListTitle] = useState('')
+  const [listTemplate, setListTemplate] = useState<'clean' | 'grades' | 'attendance' | 'full' | 'custom'>('clean')
+  const [listColumns, setListColumns] = useState<Record<string, boolean>>({
+    document: false, birthDate: false, age: false, guardian: false, phone: false, eps: false, bloodType: false,
+  })
+  const [listEmptyCols, setListEmptyCols] = useState(4)
+  const [listEmptyLabels, setListEmptyLabels] = useState<string[]>(['', '', '', '', '', '', '', '', '', ''])
+  const [listOrientation, setListOrientation] = useState<'portrait' | 'landscape'>('landscape')
+
   // Grupos únicos de los estudiantes de credenciales (debe estar antes de cualquier early return)
   const credentialGroups = useMemo(() => {
     const uniqueGroups = new Set(credentialStudents.map(s => s.group).filter(Boolean))
@@ -1164,6 +1176,235 @@ export default function Students() {
     XLSX.writeFile(wb, 'Listado_Estudiantes.xlsx')
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LISTADOS POR GRUPO — Generador de listas imprimibles
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const applyListTemplate = (tpl: typeof listTemplate) => {
+    setListTemplate(tpl)
+    switch (tpl) {
+      case 'clean':
+        setListColumns({ document: false, birthDate: false, age: false, guardian: false, phone: false, eps: false, bloodType: false })
+        setListEmptyCols(4)
+        setListEmptyLabels(['', '', '', '', '', '', '', '', '', ''])
+        break
+      case 'grades':
+        setListColumns({ document: true, birthDate: false, age: false, guardian: false, phone: false, eps: false, bloodType: false })
+        setListEmptyCols(4)
+        setListEmptyLabels(['P1', 'P2', 'P3', 'P4', '', '', '', '', '', ''])
+        break
+      case 'attendance':
+        setListColumns({ document: false, birthDate: false, age: false, guardian: false, phone: false, eps: false, bloodType: false })
+        setListEmptyCols(5)
+        setListEmptyLabels(['L', 'M', 'Mi', 'J', 'V', '', '', '', '', ''])
+        break
+      case 'full':
+        setListColumns({ document: true, birthDate: false, age: true, guardian: true, phone: true, eps: false, bloodType: false })
+        setListEmptyCols(0)
+        setListEmptyLabels(['', '', '', '', '', '', '', '', '', ''])
+        break
+      case 'custom':
+        break
+    }
+  }
+
+  const getListStudents = () => {
+    if (!listGroupId) return []
+    const group = availableGroups.find(g => g.id === listGroupId)
+    if (!group) return []
+    const groupFullName = group.grade ? `${group.grade.name} ${group.name}`.trim() : group.name
+    return rawStudents
+      .filter((s: any) => {
+        const enrollment = s.enrollments?.[0]
+        if (!enrollment || enrollment.status !== 'ACTIVE') return false
+        return enrollment.groupId === listGroupId
+      })
+      .sort((a: any, b: any) => {
+        const nameA = `${a.lastName || ''} ${a.secondLastName || ''} ${a.firstName || ''}`.trim().toLowerCase()
+        const nameB = `${b.lastName || ''} ${b.secondLastName || ''} ${b.firstName || ''}`.trim().toLowerCase()
+        return nameA.localeCompare(nameB)
+      })
+  }
+
+  const getListGroupName = () => {
+    const group = availableGroups.find(g => g.id === listGroupId)
+    if (!group) return ''
+    return group.grade ? `${group.grade.name} ${group.name}`.trim() : group.name
+  }
+
+  const handleListExcelDownload = () => {
+    const listStudents = getListStudents()
+    if (listStudents.length === 0) return
+    const rows = listStudents.map((s: any, idx: number) => {
+      const row: Record<string, any> = { 'Nro': idx + 1 }
+      row['Estudiante'] = `${s.lastName || ''} ${s.secondLastName || ''} ${s.firstName || ''} ${s.secondName || ''}`.replace(/\s+/g, ' ').trim()
+      if (listColumns.document) row['Documento'] = s.documentNumber || ''
+      if (listColumns.birthDate) row['Fecha Nac.'] = s.birthDate ? new Date(s.birthDate).toISOString().split('T')[0] : ''
+      if (listColumns.age) row['Edad'] = s.birthDate ? String(calculateAge(s.birthDate)) : ''
+      if (listColumns.guardian) {
+        const g = s.guardians?.[0]?.guardian
+        row['Acudiente'] = g ? `${g.firstName || ''} ${g.lastName || ''}`.trim() : ''
+      }
+      if (listColumns.phone) row['Teléfono'] = s.phone || ''
+      if (listColumns.eps) row['EPS'] = s.eps || ''
+      if (listColumns.bloodType) row['RH'] = s.bloodType || ''
+      for (let i = 0; i < listEmptyCols; i++) {
+        const label = listEmptyLabels[i] || `Col ${i + 1}`
+        row[label] = ''
+      }
+      return row
+    })
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const colWidths = Object.keys(rows[0] || {}).map((h, i) => ({ wch: i === 0 ? 5 : i === 1 ? 30 : Math.max(h.length + 2, 10) }))
+    ws['!cols'] = colWidths
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Listado')
+    const groupName = getListGroupName().replace(/\s+/g, '_')
+    XLSX.writeFile(wb, `Listado_${groupName}.xlsx`)
+  }
+
+  const handleListPdfDownload = () => {
+    const listStudents = getListStudents()
+    if (listStudents.length === 0) return
+    const jsPDFLib = (window as any).jspdf?.jsPDF
+    if (!jsPDFLib) {
+      // Fallback: use dynamic import
+      import('jspdf').then(mod => {
+        const jsPDF = mod.default || mod.jsPDF
+        generateListPdf(jsPDF, listStudents)
+      })
+      return
+    }
+    generateListPdf(jsPDFLib, listStudents)
+  }
+
+  const generateListPdf = (jsPDF: any, listStudents: any[]) => {
+    const isLandscape = listOrientation === 'landscape'
+    const doc = new jsPDF({ orientation: listOrientation, unit: 'mm', format: 'letter' })
+    const pageW = isLandscape ? 279.4 : 215.9
+    const pageH = isLandscape ? 215.9 : 279.4
+    const margin = 12
+    const contentW = pageW - margin * 2
+
+    // Build column definitions
+    const cols: { label: string; width: number; key: string; align?: string }[] = []
+    cols.push({ label: 'Nro', width: 8, key: 'nro', align: 'center' })
+    cols.push({ label: 'Estudiante', width: 0, key: 'name' }) // flex width
+    if (listColumns.document) cols.push({ label: 'Documento', width: 22, key: 'doc', align: 'center' })
+    if (listColumns.birthDate) cols.push({ label: 'F. Nac.', width: 18, key: 'birth', align: 'center' })
+    if (listColumns.age) cols.push({ label: 'Edad', width: 10, key: 'age', align: 'center' })
+    if (listColumns.guardian) cols.push({ label: 'Acudiente', width: 35, key: 'guardian' })
+    if (listColumns.phone) cols.push({ label: 'Teléfono', width: 20, key: 'phone', align: 'center' })
+    if (listColumns.eps) cols.push({ label: 'EPS', width: 18, key: 'eps' })
+    if (listColumns.bloodType) cols.push({ label: 'RH', width: 10, key: 'rh', align: 'center' })
+    for (let i = 0; i < listEmptyCols; i++) {
+      const label = listEmptyLabels[i] || ''
+      cols.push({ label, width: 14, key: `empty_${i}`, align: 'center' })
+    }
+
+    // Calculate flex width for name column
+    const fixedWidth = cols.filter(c => c.key !== 'name').reduce((s, c) => s + c.width, 0)
+    const nameCol = cols.find(c => c.key === 'name')!
+    nameCol.width = Math.max(contentW - fixedWidth, 40)
+
+    const rowH = 6
+    const headerH = 7
+    const fontSize = 7
+    const headerFontSize = 7
+
+    // Title
+    const groupName = getListGroupName()
+    const title = listTitle || `Listado - ${groupName}`
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text(title, pageW / 2, margin + 4, { align: 'center' })
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.text(institution?.name || '', pageW / 2, margin + 9, { align: 'center' })
+
+    let y = margin + 14
+
+    // Header row
+    const drawHeader = () => {
+      doc.setFillColor(51, 65, 85) // slate-700
+      doc.rect(margin, y, contentW, headerH, 'F')
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(headerFontSize)
+      doc.setFont('helvetica', 'bold')
+      let x = margin
+      for (const col of cols) {
+        const textX = col.align === 'center' ? x + col.width / 2 : x + 1.5
+        doc.text(col.label, textX, y + headerH - 2, { align: col.align === 'center' ? 'center' : 'left', maxWidth: col.width - 2 })
+        x += col.width
+      }
+      doc.setTextColor(0, 0, 0)
+      y += headerH
+    }
+
+    drawHeader()
+
+    // Data rows
+    listStudents.forEach((s: any, idx: number) => {
+      if (y + rowH > pageH - margin - 5) {
+        doc.addPage()
+        y = margin + 4
+        drawHeader()
+      }
+
+      // Alternate row background
+      if (idx % 2 === 0) {
+        doc.setFillColor(248, 250, 252) // slate-50
+        doc.rect(margin, y, contentW, rowH, 'F')
+      }
+
+      // Grid lines
+      doc.setDrawColor(203, 213, 225) // slate-300
+      doc.setLineWidth(0.2)
+      let x = margin
+      for (const col of cols) {
+        doc.rect(x, y, col.width, rowH, 'S')
+        x += col.width
+      }
+
+      // Cell data
+      doc.setFontSize(fontSize)
+      doc.setFont('helvetica', 'normal')
+      x = margin
+      const fullName = `${s.lastName || ''} ${s.secondLastName || ''} ${s.firstName || ''} ${s.secondName || ''}`.replace(/\s+/g, ' ').trim()
+      const guardian = s.guardians?.[0]?.guardian
+      const guardianName = guardian ? `${guardian.firstName || ''} ${guardian.lastName || ''}`.trim() : ''
+
+      for (const col of cols) {
+        let val = ''
+        switch (col.key) {
+          case 'nro': val = String(idx + 1); break
+          case 'name': val = fullName; break
+          case 'doc': val = s.documentNumber || ''; break
+          case 'birth': val = s.birthDate ? new Date(s.birthDate).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: '2-digit' }) : ''; break
+          case 'age': val = s.birthDate ? String(calculateAge(s.birthDate)) : ''; break
+          case 'guardian': val = guardianName; break
+          case 'phone': val = s.phone || ''; break
+          case 'eps': val = s.eps || ''; break
+          case 'rh': val = s.bloodType || ''; break
+          default: val = ''; break // empty columns
+        }
+        const textX = col.align === 'center' ? x + col.width / 2 : x + 1.5
+        doc.text(val, textX, y + rowH - 1.8, { align: col.align === 'center' ? 'center' : 'left', maxWidth: col.width - 2 })
+        x += col.width
+      }
+
+      y += rowH
+    })
+
+    // Footer
+    doc.setFontSize(6)
+    doc.setTextColor(150, 150, 150)
+    doc.text(`Total: ${listStudents.length} estudiantes | Generado: ${new Date().toLocaleDateString('es-CO')}`, margin, pageH - 5)
+
+    const groupFileName = groupName.replace(/\s+/g, '_')
+    doc.save(`Listado_${groupFileName}.pdf`)
+  }
+
   const closeImportModal = () => {
     setShowImportModal(false)
     setImportResult(null)
@@ -1198,6 +1439,10 @@ export default function Students() {
                 <Trash2 className="w-4 h-4" />
                 Limpiar
               </button> */}
+              <button onClick={() => setShowListModal(true)} className="flex items-center gap-2 px-3 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm">
+                <Printer className="w-4 h-4" />
+                Listados
+              </button>
               <button onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm">
                 <Upload className="w-4 h-4" />
                 Importar
@@ -2100,6 +2345,284 @@ export default function Students() {
                   </button>
                 </>
               ) : null}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Modal: Listados por Grupo ═══ */}
+      {showListModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Printer className="w-5 h-5 text-teal-600" />
+                  Generador de Listados
+                </h2>
+                <p className="text-sm text-slate-500 mt-0.5">Configura y descarga listas imprimibles por grupo</p>
+              </div>
+              <button onClick={() => setShowListModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-4 overflow-y-auto flex-1 space-y-5">
+
+              {/* Grupo + Título */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Grupo *</label>
+                  <select
+                    value={listGroupId}
+                    onChange={e => setListGroupId(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  >
+                    <option value="">Seleccionar grupo...</option>
+                    {availableGroups
+                      .sort((a: any, b: any) => {
+                        const nameA = `${a.grade?.name || ''} ${a.name}`.trim()
+                        const nameB = `${b.grade?.name || ''} ${b.name}`.trim()
+                        return nameA.localeCompare(nameB, 'es', { numeric: true })
+                      })
+                      .map((g: any) => (
+                        <option key={g.id} value={g.id}>
+                          {g.grade ? `${g.grade.name} ${g.name}` : g.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Título del listado (opcional)</label>
+                  <input
+                    type="text"
+                    value={listTitle}
+                    onChange={e => setListTitle(e.target.value)}
+                    placeholder={listGroupId ? `Listado - ${getListGroupName()}` : 'Ej: Lista de asistencia'}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  />
+                </div>
+              </div>
+
+              {/* Plantillas predefinidas */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Plantilla</label>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {[
+                    { id: 'clean' as const, label: 'Limpia', desc: 'Nombre + columnas vacías', icon: '📋' },
+                    { id: 'grades' as const, label: 'Notas', desc: 'Doc + P1, P2, P3, P4', icon: '📝' },
+                    { id: 'attendance' as const, label: 'Asistencia', desc: 'L, M, Mi, J, V', icon: '✅' },
+                    { id: 'full' as const, label: 'Completa', desc: 'Doc + Edad + Acudiente', icon: '📄' },
+                    { id: 'custom' as const, label: 'Personalizada', desc: 'Configura todo', icon: '⚙️' },
+                  ].map(tpl => (
+                    <button
+                      key={tpl.id}
+                      onClick={() => applyListTemplate(tpl.id)}
+                      className={`p-3 rounded-xl border-2 text-left transition-all ${
+                        listTemplate === tpl.id
+                          ? 'border-teal-500 bg-teal-50 ring-1 ring-teal-200'
+                          : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="text-lg mb-1">{tpl.icon}</div>
+                      <div className="text-xs font-semibold text-slate-800">{tpl.label}</div>
+                      <div className="text-[10px] text-slate-500 leading-tight">{tpl.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Columnas de datos */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Columnas con datos del estudiante</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: 'document', label: 'Documento' },
+                    { key: 'birthDate', label: 'Fecha Nac.' },
+                    { key: 'age', label: 'Edad' },
+                    { key: 'guardian', label: 'Acudiente' },
+                    { key: 'phone', label: 'Teléfono' },
+                    { key: 'eps', label: 'EPS' },
+                    { key: 'bloodType', label: 'RH' },
+                  ].map(col => (
+                    <label
+                      key={col.key}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer text-sm transition-all ${
+                        listColumns[col.key]
+                          ? 'border-teal-400 bg-teal-50 text-teal-800'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={listColumns[col.key]}
+                        onChange={e => {
+                          setListColumns(prev => ({ ...prev, [col.key]: e.target.checked }))
+                          setListTemplate('custom')
+                        }}
+                        className="sr-only"
+                      />
+                      <CheckCircle2 className={`w-3.5 h-3.5 ${listColumns[col.key] ? 'text-teal-600' : 'text-slate-300'}`} />
+                      {col.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Columnas vacías (cuadriculadas) */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-slate-700">Columnas vacías (cuadriculadas)</label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => { setListEmptyCols(Math.max(0, listEmptyCols - 1)); setListTemplate('custom') }}
+                      className="w-7 h-7 rounded-lg border border-slate-300 flex items-center justify-center text-slate-600 hover:bg-slate-100 text-sm font-bold"
+                    >−</button>
+                    <span className="text-sm font-semibold text-slate-800 w-6 text-center">{listEmptyCols}</span>
+                    <button
+                      onClick={() => { setListEmptyCols(Math.min(10, listEmptyCols + 1)); setListTemplate('custom') }}
+                      className="w-7 h-7 rounded-lg border border-slate-300 flex items-center justify-center text-slate-600 hover:bg-slate-100 text-sm font-bold"
+                    >+</button>
+                  </div>
+                </div>
+                {listEmptyCols > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from({ length: listEmptyCols }).map((_, i) => (
+                      <input
+                        key={i}
+                        type="text"
+                        value={listEmptyLabels[i] || ''}
+                        onChange={e => {
+                          const newLabels = [...listEmptyLabels]
+                          newLabels[i] = e.target.value
+                          setListEmptyLabels(newLabels)
+                        }}
+                        placeholder={`Col ${i + 1}`}
+                        className="w-16 border border-slate-300 rounded-lg px-2 py-1 text-xs text-center focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                        maxLength={10}
+                      />
+                    ))}
+                    <span className="text-[10px] text-slate-400 self-center ml-1">Etiquetas de encabezado</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Orientación */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Orientación del PDF</label>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setListOrientation('landscape')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 text-sm transition-all ${
+                      listOrientation === 'landscape' ? 'border-teal-500 bg-teal-50 text-teal-800' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="w-6 h-4 border-2 border-current rounded-sm" />
+                    Horizontal
+                  </button>
+                  <button
+                    onClick={() => setListOrientation('portrait')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 text-sm transition-all ${
+                      listOrientation === 'portrait' ? 'border-teal-500 bg-teal-50 text-teal-800' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="w-4 h-6 border-2 border-current rounded-sm" />
+                    Vertical
+                  </button>
+                </div>
+              </div>
+
+              {/* Vista previa resumida */}
+              {listGroupId && (
+                <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-slate-700">Vista previa</h4>
+                    <span className="text-xs text-slate-500">{getListStudents().length} estudiantes</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[10px] border-collapse">
+                      <thead>
+                        <tr className="bg-slate-700 text-white">
+                          <th className="px-1.5 py-1 text-center border border-slate-500">Nro</th>
+                          <th className="px-1.5 py-1 text-left border border-slate-500">Estudiante</th>
+                          {listColumns.document && <th className="px-1.5 py-1 text-center border border-slate-500">Documento</th>}
+                          {listColumns.birthDate && <th className="px-1.5 py-1 text-center border border-slate-500">F. Nac.</th>}
+                          {listColumns.age && <th className="px-1.5 py-1 text-center border border-slate-500">Edad</th>}
+                          {listColumns.guardian && <th className="px-1.5 py-1 text-left border border-slate-500">Acudiente</th>}
+                          {listColumns.phone && <th className="px-1.5 py-1 text-center border border-slate-500">Teléfono</th>}
+                          {listColumns.eps && <th className="px-1.5 py-1 text-left border border-slate-500">EPS</th>}
+                          {listColumns.bloodType && <th className="px-1.5 py-1 text-center border border-slate-500">RH</th>}
+                          {Array.from({ length: listEmptyCols }).map((_, i) => (
+                            <th key={i} className="px-1.5 py-1 text-center border border-slate-500 min-w-[40px]">
+                              {listEmptyLabels[i] || ''}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {getListStudents().slice(0, 5).map((s: any, idx: number) => {
+                          const guardian = s.guardians?.[0]?.guardian
+                          return (
+                            <tr key={s.id} className={idx % 2 === 0 ? 'bg-slate-50' : 'bg-white'}>
+                              <td className="px-1.5 py-0.5 text-center border border-slate-200">{idx + 1}</td>
+                              <td className="px-1.5 py-0.5 border border-slate-200 whitespace-nowrap">
+                                {`${s.lastName || ''} ${s.secondLastName || ''} ${s.firstName || ''} ${s.secondName || ''}`.replace(/\s+/g, ' ').trim()}
+                              </td>
+                              {listColumns.document && <td className="px-1.5 py-0.5 text-center border border-slate-200">{s.documentNumber || ''}</td>}
+                              {listColumns.birthDate && <td className="px-1.5 py-0.5 text-center border border-slate-200">{s.birthDate ? new Date(s.birthDate).toLocaleDateString('es-CO') : ''}</td>}
+                              {listColumns.age && <td className="px-1.5 py-0.5 text-center border border-slate-200">{s.birthDate ? calculateAge(s.birthDate) : ''}</td>}
+                              {listColumns.guardian && <td className="px-1.5 py-0.5 border border-slate-200">{guardian ? `${guardian.firstName || ''} ${guardian.lastName || ''}`.trim() : ''}</td>}
+                              {listColumns.phone && <td className="px-1.5 py-0.5 text-center border border-slate-200">{s.phone || ''}</td>}
+                              {listColumns.eps && <td className="px-1.5 py-0.5 border border-slate-200">{s.eps || ''}</td>}
+                              {listColumns.bloodType && <td className="px-1.5 py-0.5 text-center border border-slate-200">{s.bloodType || ''}</td>}
+                              {Array.from({ length: listEmptyCols }).map((_, i) => (
+                                <td key={i} className="px-1.5 py-0.5 border border-slate-200 min-w-[40px]">&nbsp;</td>
+                              ))}
+                            </tr>
+                          )
+                        })}
+                        {getListStudents().length > 5 && (
+                          <tr>
+                            <td colSpan={99} className="px-1.5 py-1 text-center text-slate-400 text-[9px] border border-slate-200">
+                              ... y {getListStudents().length - 5} estudiantes más
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+              <div className="text-xs text-slate-500">
+                {listGroupId ? `${getListStudents().length} estudiantes en ${getListGroupName()}` : 'Selecciona un grupo para continuar'}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setShowListModal(false)} className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm">
+                  Cerrar
+                </button>
+                <button
+                  onClick={handleListExcelDownload}
+                  disabled={!listGroupId || getListStudents().length === 0}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Excel
+                </button>
+                <button
+                  onClick={handleListPdfDownload}
+                  disabled={!listGroupId || getListStudents().length === 0}
+                  className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  <Download className="w-4 h-4" />
+                  PDF
+                </button>
+              </div>
             </div>
           </div>
         </div>

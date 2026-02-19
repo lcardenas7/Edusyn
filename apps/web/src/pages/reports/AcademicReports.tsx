@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import {
   BookOpen, Users, GraduationCap, ClipboardList, BarChart3, Download, Printer,
   ArrowLeft, ChevronLeft, Calculator, TrendingUp, FileText, AlertTriangle,
-  History, UserCheck, FileSpreadsheet, Building
+  History, UserCheck, FileSpreadsheet, Building, CheckCircle, Eye, ChevronDown, ChevronUp, RefreshCw
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
@@ -68,6 +68,13 @@ const reportBlocks: ReportBlock[] = [
       { id: 'annual-comparison', name: 'Comparativo anual', description: 'Evolución de métricas entre años académicos', icon: TrendingUp },
     ],
   },
+  {
+    id: 'gestion', title: 'Gestión y Seguimiento',
+    description: 'Estado de completitud, faltantes de notas y logros', color: 'purple', icon: CheckCircle,
+    reports: [
+      { id: 'completeness-status', name: 'Estado de Completitud', description: 'Identifica qué grupos/asignaturas faltan por notas y logros', icon: Eye },
+    ],
+  },
 ]
 
 const allReports = reportBlocks.flatMap(b => b.reports.map(r => ({ ...r, blockId: b.id, blockColor: b.color })))
@@ -114,6 +121,9 @@ export default function AcademicReports() {
   const [minimumGradeData, setMinimumGradeData] = useState<any>(null)
   const [minimumGradeGroupData, setMinimumGradeGroupData] = useState<any[]>([])
   const [comparisonYearIds, setComparisonYearIds] = useState<string[]>([])
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set())
+  const [reSnapshotLoading, setReSnapshotLoading] = useState(false)
 
   const currentMeta = allReports.find(r => r.id === selectedReport)
   const style = currentMeta ? BLOCK_STYLES[currentMeta.blockColor] : BLOCK_STYLES.green
@@ -344,6 +354,13 @@ export default function AcademicReports() {
           if (!filterGrade || filterGrade === 'all') break
           const res = await reportsApi.getMinGradeConsolidated(filterYear, filterGrade)
           setReportData(res.data)
+          break
+        }
+        case 'completeness-status': {
+          const res = await reportsApi.getCompletenessStatus(filterYear, filterPeriod || undefined)
+          setReportData(res.data)
+          setExpandedGroups(new Set())
+          setExpandedSubjects(new Set())
           break
         }
         case 'institutional-stats': {
@@ -609,6 +626,9 @@ export default function AcademicReports() {
 
       case 'min-grade-consolidated':
         return wrap(<><SelectYear /><SelectGroup required /><BtnSearch /></>, 3)
+
+      case 'completeness-status':
+        return wrap(<><SelectYear /><SelectTerm /><BtnSearch label="Consultar" /></>, 3)
 
       case 'institutional-stats':
         return wrap(<><SelectYear /><SelectTerm /><BtnSearch /></>, 3)
@@ -1633,6 +1653,153 @@ export default function AcademicReports() {
               </table>
             </div>
           ))}
+        </div>
+      )
+    }
+
+    // ── Estado de Completitud Académica ──
+    if (selectedReport === 'completeness-status' && reportData?.groups) {
+      const { summary: cSummary, groups: cGroups, terms: cTerms } = reportData
+      const toggleGroup = (gid: string) => setExpandedGroups(prev => {
+        const n = new Set(prev); n.has(gid) ? n.delete(gid) : n.add(gid); return n
+      })
+      const toggleSubject = (key: string) => setExpandedSubjects(prev => {
+        const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n
+      })
+      const cColor = (pct: number) => pct >= 100 ? 'text-green-700 bg-green-100' : pct >= 75 ? 'text-amber-700 bg-amber-100' : pct >= 50 ? 'text-orange-700 bg-orange-100' : 'text-red-700 bg-red-100'
+      const cBar = (pct: number) => pct >= 100 ? 'bg-green-500' : pct >= 75 ? 'bg-amber-500' : pct >= 50 ? 'bg-orange-500' : 'bg-red-500'
+
+      const handleReSnapshot = async (termId: string) => {
+        if (!confirm('¿Regenerar snapshots para este período? Se creará una nueva versión con datos actualizados.')) return
+        setReSnapshotLoading(true)
+        try {
+          const res = await reportsApi.reSnapshotTerm(termId)
+          alert(`Snapshots regenerados: ${res.data.totalSnapshots} estudiantes en ${res.data.totalGroups} grupos (v${res.data.version})`)
+        } catch (err: any) {
+          alert('Error: ' + (err.response?.data?.message || err.message))
+        } finally { setReSnapshotLoading(false) }
+      }
+
+      return (
+        <div className="space-y-5">
+          {/* Resumen ejecutivo */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"><p className="text-xs text-blue-500 uppercase font-medium">Grupos</p><p className="text-2xl font-bold text-blue-700">{cSummary.totalGroups}</p></div>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center"><p className="text-xs text-slate-500 uppercase font-medium">Estudiantes</p><p className="text-2xl font-bold text-slate-700">{cSummary.totalStudents}</p></div>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center"><p className="text-xs text-slate-500 uppercase font-medium">Asignaciones</p><p className="text-2xl font-bold text-slate-700">{cSummary.totalSubjects}</p></div>
+            <div className={`border rounded-xl p-3 text-center ${cSummary.overallGradeCompleteness >= 100 ? 'bg-green-50 border-green-200' : cSummary.overallGradeCompleteness >= 75 ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+              <p className="text-xs text-slate-500 uppercase font-medium">Notas</p>
+              <p className={`text-2xl font-bold ${cSummary.overallGradeCompleteness >= 100 ? 'text-green-700' : cSummary.overallGradeCompleteness >= 75 ? 'text-amber-700' : 'text-red-700'}`}>{cSummary.overallGradeCompleteness}%</p>
+            </div>
+            <div className={`border rounded-xl p-3 text-center ${cSummary.overallAchievementCompleteness >= 100 ? 'bg-green-50 border-green-200' : cSummary.overallAchievementCompleteness >= 75 ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+              <p className="text-xs text-slate-500 uppercase font-medium">Logros</p>
+              <p className={`text-2xl font-bold ${cSummary.overallAchievementCompleteness >= 100 ? 'text-green-700' : cSummary.overallAchievementCompleteness >= 75 ? 'text-amber-700' : 'text-red-700'}`}>{cSummary.overallAchievementCompleteness}%</p>
+            </div>
+          </div>
+
+          {/* Re-snapshot por período finalizado */}
+          {cTerms && cTerms.some((t: any) => t.status === 'FINALIZED') && (
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <RefreshCw className="w-4 h-4 text-purple-600" />
+                <span className="text-sm font-medium text-purple-700">Regenerar Snapshots (períodos finalizados)</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {cTerms.filter((t: any) => t.status === 'FINALIZED').map((t: any) => (
+                  <button key={t.id} onClick={() => handleReSnapshot(t.id)} disabled={reSnapshotLoading}
+                    className="px-3 py-1.5 bg-purple-600 text-white text-xs rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-1">
+                    <RefreshCw className={`w-3 h-3 ${reSnapshotLoading ? 'animate-spin' : ''}`} /> {t.name}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-purple-500 mt-2">Crea una nueva versión de snapshots con datos corregidos sin cambiar el estado del período.</p>
+            </div>
+          )}
+
+          {/* Tabla por grupo con drill-down */}
+          <div className="space-y-3">
+            {cGroups.map((g: any) => {
+              const isGExpanded = expandedGroups.has(g.groupId)
+              return (
+                <div key={g.groupId} className="border border-slate-200 rounded-xl overflow-hidden">
+                  {/* Cabecera del grupo */}
+                  <div className="px-4 py-3 bg-slate-50 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => toggleGroup(g.groupId)}>
+                    <div className="flex items-center gap-3">
+                      {isGExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                      <span className="font-semibold text-sm text-slate-800">{g.groupName}</span>
+                      <span className="text-xs text-slate-500">{g.studentCount} est. · {g.subjectCount} asig.</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-slate-500">Notas:</span>
+                        <div className="w-16 bg-slate-200 rounded-full h-2 overflow-hidden"><div className={`h-full rounded-full ${cBar(g.gradeCompleteness)}`} style={{ width: `${Math.min(g.gradeCompleteness, 100)}%` }} /></div>
+                        <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${cColor(g.gradeCompleteness)}`}>{g.gradeCompleteness}%</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-slate-500">Logros:</span>
+                        <div className="w-16 bg-slate-200 rounded-full h-2 overflow-hidden"><div className={`h-full rounded-full ${cBar(g.achievementCompleteness)}`} style={{ width: `${Math.min(g.achievementCompleteness, 100)}%` }} /></div>
+                        <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${cColor(g.achievementCompleteness)}`}>{g.achievementCompleteness}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Detalle de asignaturas del grupo */}
+                  {isGExpanded && g.subjects && (
+                    <div className="divide-y divide-slate-100">
+                      {g.subjects.map((subj: any) => {
+                        const sKey = `${g.groupId}-${subj.subjectId}`
+                        const isSExpanded = expandedSubjects.has(sKey)
+                        const hasIssues = subj.gradeCompleteness < 100 || subj.achievementCompleteness < 100
+                        return (
+                          <div key={sKey}>
+                            <div className={`px-6 py-2 flex items-center justify-between ${hasIssues ? 'cursor-pointer hover:bg-red-50/50' : ''}`}
+                              onClick={() => hasIssues && toggleSubject(sKey)}>
+                              <div className="flex items-center gap-2">
+                                {hasIssues && (isSExpanded ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-slate-400" />)}
+                                {!hasIssues && <CheckCircle className="w-3 h-3 text-green-500" />}
+                                <span className="text-sm text-slate-700">{subj.subjectName}</span>
+                                {subj.teacherName && <span className="text-xs text-slate-400">({subj.teacherName})</span>}
+                              </div>
+                              <div className="flex items-center gap-4 text-xs">
+                                <span>Notas: <strong className={subj.gradeCompleteness < 100 ? 'text-red-600' : 'text-green-600'}>{subj.gradesRegistered}/{subj.gradesExpected}</strong></span>
+                                <span>Logros: <strong className={subj.achievementCompleteness < 100 ? 'text-red-600' : 'text-green-600'}>{subj.achievementsRegistered}/{subj.achievementsExpected}</strong></span>
+                              </div>
+                            </div>
+
+                            {/* Lista de estudiantes faltantes */}
+                            {isSExpanded && hasIssues && (
+                              <div className="bg-red-50/30 px-8 py-2 space-y-2">
+                                {subj.missingGrades && subj.missingGrades.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-medium text-red-700 mb-1">Sin nota ({subj.missingGrades.length}):</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {subj.missingGrades.map((st: any) => (
+                                        <span key={st.studentId || st.enrollmentId} className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">{st.studentName}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {subj.missingAchievements && subj.missingAchievements.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-medium text-amber-700 mb-1">Sin logros ({subj.missingAchievements.length}):</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {subj.missingAchievements.map((st: any) => (
+                                        <span key={st.studentId || st.enrollmentId} className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">{st.studentName}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
       )
     }

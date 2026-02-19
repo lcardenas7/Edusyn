@@ -395,6 +395,10 @@ export const reportsApi = {
     api.post(`/reports/terms/${termId}/finalize`),
   reopenTerm: (termId: string, reason: string) =>
     api.post(`/reports/terms/${termId}/reopen`, { reason }),
+  reSnapshotTerm: (termId: string) =>
+    api.post(`/reports/terms/${termId}/re-snapshot`),
+  getCompletenessStatus: (academicYearId: string, termId?: string) =>
+    api.get('/reports/academic/completeness-status', { params: { academicYearId, termId } }),
   // Exportaciones Excel
   exportConsolidated: (academicYearId: string, groupId: string, termId?: string) =>
     api.get('/reports/export/consolidated', { params: { academicYearId, groupId, termId }, responseType: 'blob' }),
