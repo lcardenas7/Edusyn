@@ -46,6 +46,7 @@ import {
   Clock,
   Shield,
   Heart,
+  FileDown,
 } from 'lucide-react'
 
 type Role = 'SUPER_ADMIN' | 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE' | 'SECRETARIA'
@@ -97,6 +98,7 @@ const superAdminNavigation: NavItem[] = [
     children: [
       { name: 'Recalcular Académico', href: '/superadmin/recalculate', icon: RefreshCw, roles: ['SUPER_ADMIN', 'SUPERADMIN'] },
       { name: 'Clonar Configuración', href: '/superadmin/clone-config', icon: Layers, roles: ['SUPER_ADMIN', 'SUPERADMIN'] },
+      { name: 'Portafolio Institucional', href: '/superadmin/portfolio', icon: FileDown, roles: ['SUPER_ADMIN', 'SUPERADMIN'] },
     ]
   },
 ]

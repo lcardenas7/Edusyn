@@ -1302,10 +1302,16 @@ export default function Students() {
       cols.push({ label, width: 14, key: `empty_${i}`, align: 'center' })
     }
 
-    // Calculate flex width for name column
+    // Calculate flex width for name column, then scale all if overflowing
     const fixedWidth = cols.filter(c => c.key !== 'name').reduce((s, c) => s + c.width, 0)
     const nameCol = cols.find(c => c.key === 'name')!
     nameCol.width = Math.max(contentW - fixedWidth, 40)
+    const totalW = cols.reduce((s, c) => s + c.width, 0)
+    if (totalW > contentW) {
+      const scale = contentW / totalW
+      for (const col of cols) col.width = Math.round(col.width * scale * 100) / 100
+    }
+    const tableW = cols.reduce((s, c) => s + c.width, 0)
 
     const rowH = 6
     const headerH = 7
@@ -1327,7 +1333,7 @@ export default function Students() {
     // Header row
     const drawHeader = () => {
       doc.setFillColor(51, 65, 85) // slate-700
-      doc.rect(margin, y, contentW, headerH, 'F')
+      doc.rect(margin, y, tableW, headerH, 'F')
       doc.setTextColor(255, 255, 255)
       doc.setFontSize(headerFontSize)
       doc.setFont('helvetica', 'bold')
@@ -1354,7 +1360,7 @@ export default function Students() {
       // Alternate row background
       if (idx % 2 === 0) {
         doc.setFillColor(248, 250, 252) // slate-50
-        doc.rect(margin, y, contentW, rowH, 'F')
+        doc.rect(margin, y, tableW, rowH, 'F')
       }
 
       // Grid lines
