@@ -60,6 +60,7 @@ import AlertsReports from './pages/reports/AlertsReports'
 import BulletinsReports from './pages/reports/BulletinsReports'
 import EvaluationReports from './pages/reports/EvaluationReports'
 import SystemConfig from './pages/admin/SystemConfig'
+import InstitutionalPortfolio from './pages/InstitutionalPortfolio'
 
 // Módulo Financiero
 import Timetabling from './pages/Timetabling'
@@ -198,6 +199,7 @@ function App() {
                   <Route path="/user-activity" element={<SuperAdminDashboard />} />
                   <Route path="/recalculate" element={<SuperAdminDashboard />} />
                   <Route path="/clone-config" element={<SuperAdminDashboard />} />
+                  <Route path="/portfolio" element={<InstitutionalPortfolio />} />
                 </Routes>
               </Layout>
             </SuperAdminRoute>
