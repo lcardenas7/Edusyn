@@ -150,6 +150,31 @@ export class ReportsController {
     return this.reportsService.getSubjectAverages(institutionId, academicYearId, groupId, termId, stage);
   }
 
+  @Get('academic/area-averages')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getAreaAverages(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId?: string,
+    @Query('termId') termId?: string,
+    @Query('stage') stage?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getAreaAverages(institutionId, academicYearId, groupId, termId, stage);
+  }
+
+  @Get('academic/area-consolidated')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getAreaConsolidated(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId: string,
+    @Query('termId') termId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getAreaConsolidated(institutionId, academicYearId, groupId, termId);
+  }
+
   @Get('academic/student-ranking')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getStudentRanking(
@@ -547,6 +572,17 @@ export class ReportsController {
     const institutionId = req.user.institutionId;
     const ids = academicYearIds ? academicYearIds.split(',').filter(Boolean) : [];
     return this.reportsService.getAnnualComparison(institutionId, ids);
+  }
+
+  @Get('min-grade-consolidated')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getMinGradeConsolidated(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getMinGradeConsolidated(institutionId, groupId, academicYearId);
   }
 
   // ─── Helpers para enviar archivos ─────────────────────────────────────────

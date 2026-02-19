@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import {
   BookOpen, Users, GraduationCap, ClipboardList, BarChart3, Download, Printer,
   ArrowLeft, ChevronLeft, Calculator, TrendingUp, FileText, AlertTriangle,
@@ -26,7 +26,9 @@ const reportBlocks: ReportBlock[] = [
     description: 'Promedios, consolidados y análisis de desempeño', color: 'green', icon: BarChart3,
     reports: [
       { id: 'cons-subjects', name: 'Consolidado por asignaturas', description: 'Notas de todas las materias por estudiante', icon: ClipboardList },
+      { id: 'cons-areas', name: 'Consolidado por áreas', description: 'Promedio por área de cada estudiante en vista matricial', icon: FileSpreadsheet },
       { id: 'avg-subject', name: 'Promedio por asignatura', description: '¿Qué asignatura tiene mejor o peor rendimiento?', icon: BookOpen },
+      { id: 'avg-area', name: 'Promedio por áreas', description: '¿Qué área tiene mejor o peor rendimiento?', icon: FileSpreadsheet },
       { id: 'ranking-students', name: 'Ranking de estudiantes', description: '¿Quiénes son los mejores y peores del grupo?', icon: TrendingUp },
       { id: 'grade-distribution', name: 'Distribución de notas', description: '¿Cómo se distribuyen las calificaciones?', icon: BarChart3 },
     ],
@@ -36,6 +38,7 @@ const reportBlocks: ReportBlock[] = [
     description: 'Alertas, reprobaciones y proyecciones de riesgo', color: 'amber', icon: AlertTriangle,
     reports: [
       { id: 'min-grade', name: 'Nota mínima requerida', description: 'Nota necesaria en períodos restantes para aprobar', icon: Calculator },
+      { id: 'min-grade-consolidated', name: 'Consolidado nota mínima', description: 'Matriz de todas las asignaturas por estudiante con notas necesarias', icon: ClipboardList },
       { id: 'failed-subjects', name: 'Asignaturas reprobadas', description: '¿Qué materias perdió cada estudiante?', icon: ClipboardList },
       { id: 'recovery-list', name: 'Listado de recuperación', description: '¿Quién puede recuperar y en qué asignaturas?', icon: FileText },
       { id: 'promotion-projection', name: 'Proyección de promoción', description: 'Si mantiene tendencia, ¿aprueba el año?', icon: GraduationCap },
@@ -220,8 +223,23 @@ export default function AcademicReports() {
           setStudentsGradesData(showOnlyFailed ? studentsData.filter(s => s.failedCount > 0 || s.average < minPassingGrade) : studentsData)
           break
         }
+        case 'cons-areas': {
+          if (filterGrade === 'all') break
+          const res = await reportsApi.getAreaConsolidated(filterYear, filterGrade, filterPeriod || undefined)
+          setReportData(res.data)
+          break
+        }
         case 'avg-subject': {
           const res = await reportsApi.getSubjectAverages(filterYear, {
+            groupId: filterGrade !== 'all' ? filterGrade : undefined,
+            termId: filterPeriod || undefined,
+            stage: filterLevel !== 'all' ? filterLevel : undefined,
+          })
+          setReportData(res.data)
+          break
+        }
+        case 'avg-area': {
+          const res = await reportsApi.getAreaAverages(filterYear, {
             groupId: filterGrade !== 'all' ? filterGrade : undefined,
             termId: filterPeriod || undefined,
             stage: filterLevel !== 'all' ? filterLevel : undefined,
@@ -322,6 +340,12 @@ export default function AcademicReports() {
           setReportData(res.data)
           break
         }
+        case 'min-grade-consolidated': {
+          if (!filterGrade || filterGrade === 'all') break
+          const res = await reportsApi.getMinGradeConsolidated(filterYear, filterGrade)
+          setReportData(res.data)
+          break
+        }
         case 'institutional-stats': {
           const res = await reportsApi.getInstitutionalStatistics(filterYear, filterPeriod || undefined)
           setReportData(res.data)
@@ -372,9 +396,9 @@ export default function AcademicReports() {
       reportData.results.forEach((r: any) => {
         csvContent += `"${r.subjectName}","${r.areaName}",${r.average},${r.approvalRate},${r.failRate},${r.bestGrade},${r.worstGrade},${r.totalStudents}\n`
       })
-    } else if (selectedReport === 'ranking-students' && Array.isArray(reportData)) {
+    } else if (selectedReport === 'ranking-students' && reportData?.results) {
       csvContent = 'Posición,Estudiante,Grupo,Promedio,Asignaturas,Desempeño\n'
-      reportData.forEach((r: any) => {
+      reportData.results.forEach((r: any) => {
         csvContent += `${r.position},"${r.studentName}","${r.group}",${r.average},${r.subjectCount},"${r.performance}"\n`
       })
     } else if (selectedReport === 'grade-distribution' && reportData?.distribution) {
@@ -542,7 +566,11 @@ export default function AcademicReports() {
             </label>
           </div>)
 
+      case 'cons-areas':
+        return wrap(<><SelectYear /><SelectGroup required /><SelectTerm /><BtnSearch /></>, 4)
+
       case 'avg-subject':
+      case 'avg-area':
         return wrap(<><SelectYear /><SelectGroup /><SelectTerm /><SelectStage /><BtnSearch /></>, 5)
 
       case 'ranking-students':
@@ -578,6 +606,9 @@ export default function AcademicReports() {
 
       case 'teacher-performance':
         return wrap(<><SelectYear /><SelectTeacher /><BtnSearch /></>, 3)
+
+      case 'min-grade-consolidated':
+        return wrap(<><SelectYear /><SelectGroup required /><BtnSearch /></>, 3)
 
       case 'institutional-stats':
         return wrap(<><SelectYear /><SelectTerm /><BtnSearch /></>, 3)
@@ -748,12 +779,149 @@ export default function AcademicReports() {
       )
     }
 
+    // ── Promedio por áreas ──
+    if (selectedReport === 'avg-area' && reportData?.results) {
+      const areaResults = reportData.results as any[]
+      const totalAreas = areaResults.length
+      const generalAvg = totalAreas > 0 ? (areaResults.reduce((s: number, r: any) => s + (r.average || 0), 0) / totalAreas) : 0
+      const bestArea = areaResults.reduce((best: any, r: any) => (!best || (r.average || 0) > (best.average || 0)) ? r : best, null)
+      const worstArea = areaResults.reduce((worst: any, r: any) => (!worst || (r.average || 0) < (worst.average || 0)) ? r : worst, null)
+      const chartData = areaResults.map((r: any) => ({ name: r.areaName?.length > 15 ? r.areaName.substring(0, 15) + '…' : r.areaName, Promedio: r.average, 'Aprobación %': r.approvalRate }))
+      return (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"><p className="text-xs text-blue-500 uppercase font-medium">Áreas</p><p className="text-2xl font-bold text-blue-700">{totalAreas}</p></div>
+            <div className={`${generalAvg >= minPassingGrade ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-xl p-3 text-center`}><p className="text-xs text-slate-500 uppercase font-medium">Promedio General</p><p className={`text-2xl font-bold ${generalAvg >= minPassingGrade ? 'text-green-700' : 'text-red-700'}`}>{generalAvg.toFixed(1)}</p></div>
+            <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center"><p className="text-xs text-green-500 uppercase font-medium">Mejor Área</p><p className="text-sm font-bold text-green-700 truncate">{bestArea?.areaName || '-'}</p><p className="text-xs text-green-600">{bestArea?.average?.toFixed(1)}</p></div>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center"><p className="text-xs text-red-500 uppercase font-medium">Menor Rendimiento</p><p className="text-sm font-bold text-red-700 truncate">{worstArea?.areaName || '-'}</p><p className="text-xs text-red-600">{worstArea?.average?.toFixed(1)}</p></div>
+          </div>
+          {chartData.length > 1 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4">
+              <h4 className="text-sm font-medium text-slate-700 mb-3">Promedio por Área</h4>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-25} textAnchor="end" interval={0} />
+                  <YAxis domain={[0, scaleMax]} tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="Promedio" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          {/* Tabla de áreas con detalle de asignaturas */}
+          <div className="space-y-3">
+            {areaResults.map((area: any) => (
+              <div key={area.areaId} className="border border-slate-200 rounded-xl overflow-hidden">
+                <div className={`px-4 py-2 flex items-center justify-between ${area.average >= minPassingGrade ? 'bg-green-50' : 'bg-red-50'}`}>
+                  <div>
+                    <span className="font-semibold text-sm">{area.areaName}</span>
+                    <span className="text-xs text-slate-500 ml-2">({area.subjectCount} asignatura{area.subjectCount !== 1 ? 's' : ''})</span>
+                  </div>
+                  <div className="flex gap-4 text-xs">
+                    <span>Prom: <strong className={area.average >= minPassingGrade ? 'text-green-700' : 'text-red-700'}>{area.average?.toFixed(1)}</strong></span>
+                    <span>Aprob: <strong className="text-green-600">{area.approvalRate?.toFixed(1)}%</strong></span>
+                    <span>Reprob: <strong className="text-red-600">{area.failRate?.toFixed(1)}%</strong></span>
+                  </div>
+                </div>
+                {area.subjects && area.subjects.length > 0 && (
+                  <table className="w-full text-xs">
+                    <thead className="bg-slate-50"><tr>
+                      <th className="px-3 py-1.5 text-left">Asignatura</th>
+                      <th className="px-3 py-1.5 text-center">Promedio</th>
+                      <th className="px-3 py-1.5 text-center">Aprobación %</th>
+                      <th className="px-3 py-1.5 text-center">Estudiantes</th>
+                    </tr></thead>
+                    <tbody>
+                      {area.subjects.map((s: any) => (
+                        <tr key={s.subjectId} className="border-t border-slate-100 hover:bg-slate-50">
+                          <td className="px-3 py-1.5 font-medium">{s.subjectName}</td>
+                          <td className={`px-3 py-1.5 text-center font-medium ${s.average >= minPassingGrade ? '' : 'text-red-600'}`}>{s.average?.toFixed(1)}</td>
+                          <td className="px-3 py-1.5 text-center text-green-600">{s.approvalRate?.toFixed(1)}%</td>
+                          <td className="px-3 py-1.5 text-center">{s.totalStudents}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    // ── Consolidado por áreas (vista matricial) ──
+    if (selectedReport === 'cons-areas' && reportData?.students) {
+      const { passingGrade: caPassing, areaCols: caCols, areaSummary: caSummary, students: caStudents, summary: caSumm } = reportData
+      const passing = caPassing ?? minPassingGrade
+      return (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"><p className="text-xs text-blue-500 uppercase font-medium">Estudiantes</p><p className="text-2xl font-bold text-blue-700">{caSumm?.totalStudents ?? 0}</p></div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center"><p className="text-xs text-amber-500 uppercase font-medium">Con áreas reprobadas</p><p className="text-2xl font-bold text-amber-700">{caSumm?.studentsWithFailedAreas ?? 0}</p></div>
+            <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center"><p className="text-xs text-green-500 uppercase font-medium">Sin áreas reprobadas</p><p className="text-2xl font-bold text-green-700">{(caSumm?.totalStudents ?? 0) - (caSumm?.studentsWithFailedAreas ?? 0)}</p></div>
+          </div>
+          <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <table className="text-xs whitespace-nowrap">
+              <thead>
+                <tr className="bg-slate-200">
+                  <th className="px-2 py-1.5 text-left sticky left-0 bg-slate-200 z-10 min-w-[40px]">Nro</th>
+                  <th className="px-2 py-1.5 text-left sticky left-[40px] bg-slate-200 z-10 min-w-[160px]">Estudiante</th>
+                  {(caCols || []).map((col: any) => (
+                    <th key={col.areaId} className="px-3 py-1.5 text-center border-l border-slate-300 min-w-[90px]">
+                      <div className="text-[10px] font-semibold leading-tight">{col.areaName}</div>
+                    </th>
+                  ))}
+                  <th className="px-3 py-1.5 text-center border-l border-slate-300 min-w-[65px] bg-slate-300 font-bold">Prom.</th>
+                  <th className="px-3 py-1.5 text-center border-l border-slate-300 min-w-[50px] bg-slate-300 font-bold">Rep.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(caStudents || []).map((st: any, idx: number) => (
+                  <tr key={st.enrollmentId} className={`border-t ${st.failedAreas > 0 ? 'bg-red-50/40' : 'hover:bg-slate-50'}`}>
+                    <td className="px-2 py-1.5 text-center sticky left-0 bg-white z-10 border-r border-slate-100 font-medium">{idx + 1}</td>
+                    <td className="px-2 py-1.5 sticky left-[40px] bg-white z-10 border-r border-slate-100 font-medium truncate max-w-[180px]">{st.studentName}</td>
+                    {(st.areaGrades || []).map((ag: any, ai: number) => (
+                      <td key={ai} className={`px-3 py-1.5 text-center border-l border-slate-100 font-medium ${ag.average === null ? 'text-slate-300' : ag.average < passing ? 'text-red-600 bg-red-50' : 'text-slate-800'}`}>
+                        {ag.average !== null ? ag.average.toFixed(1) : '—'}
+                      </td>
+                    ))}
+                    <td className={`px-3 py-1.5 text-center border-l border-slate-300 font-bold ${st.generalAverage !== null && st.generalAverage < passing ? 'text-red-600' : 'text-slate-800'}`}>
+                      {st.generalAverage?.toFixed(1) ?? '—'}
+                    </td>
+                    <td className={`px-3 py-1.5 text-center border-l border-slate-300 font-bold ${st.failedAreas > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {st.failedAreas}
+                    </td>
+                  </tr>
+                ))}
+                {/* Fila resumen de promedios por área */}
+                {caSummary && caSummary.length > 0 && (
+                  <tr className="border-t-2 border-slate-400 bg-slate-100 font-bold">
+                    <td colSpan={2} className="px-2 py-1.5 text-right sticky left-0 bg-slate-100 z-10 text-xs uppercase text-slate-600">Promedio del grupo</td>
+                    {caSummary.map((as: any, ai: number) => (
+                      <td key={ai} className={`px-3 py-1.5 text-center border-l border-slate-300 ${as.average !== null && as.average < passing ? 'text-red-600' : 'text-slate-800'}`}>
+                        {as.average?.toFixed(1) ?? '—'}
+                      </td>
+                    ))}
+                    <td className="px-3 py-1.5 text-center border-l border-slate-300">—</td>
+                    <td className="px-3 py-1.5 text-center border-l border-slate-300">—</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )
+    }
+
     // ── Ranking de estudiantes ──
-    if (selectedReport === 'ranking-students' && Array.isArray(reportData) && reportData.length > 0) {
-      const rkTotal = reportData.length
-      const rkAvg = rkTotal > 0 ? (reportData.reduce((s: number, r: any) => s + (r.average || 0), 0) / rkTotal) : 0
-      const rkTop = reportData[0]
-      const rkAbovePass = reportData.filter((r: any) => (r.average || 0) >= minPassingGrade).length
+    if (selectedReport === 'ranking-students' && reportData?.results?.length > 0) {
+      const rkData = reportData.results as any[]
+      const rkTotal = rkData.length
+      const rkAvg = rkTotal > 0 ? (rkData.reduce((s: number, r: any) => s + (r.average || 0), 0) / rkTotal) : 0
+      const rkTop = rkData[0]
+      const rkAbovePass = rkData.filter((r: any) => (r.average || 0) >= minPassingGrade).length
       return (
         <div className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -770,7 +938,7 @@ export default function AcademicReports() {
               <th className="px-3 py-2 text-center">Asignaturas</th><th className="px-3 py-2 text-center">Desempeño</th>
             </tr></thead>
             <tbody>
-              {reportData.map((r: any, i: number) => (
+              {rkData.map((r: any, i: number) => (
                 <tr key={i} className={`border-b hover:bg-slate-50 ${i < 3 ? 'bg-green-50' : ''}`}>
                   <td className="px-3 py-2 text-center font-bold">{r.position}</td>
                   <td className="px-3 py-2 font-medium">{r.studentName}</td>
@@ -897,34 +1065,60 @@ export default function AcademicReports() {
       )
     }
 
-    // ── Asignaturas reprobadas ──
+    // ── Asignaturas reprobadas (vista matricial) ──
     if (selectedReport === 'failed-subjects' && reportData?.results) {
+      // Agrupar por estudiante → asignaturas como columnas
+      const failResults = reportData.results as any[]
+      const failStudentMap = new Map<string, { name: string; subjects: Map<string, { grade: number; deficit: number; termName: string; recoverable: boolean; areaName: string }> }>()
+      const failAllSubjects = new Set<string>()
+      for (const r of failResults) {
+        if (!failStudentMap.has(r.studentName)) failStudentMap.set(r.studentName, { name: r.studentName, subjects: new Map() })
+        failStudentMap.get(r.studentName)!.subjects.set(r.subjectName, { grade: r.grade, deficit: r.deficit, termName: r.termName, recoverable: r.recoverable, areaName: r.areaName })
+        failAllSubjects.add(r.subjectName)
+      }
+      const failSubjectCols = Array.from(failAllSubjects).sort()
+      const failStudentRows = Array.from(failStudentMap.values()).sort((a, b) => b.subjects.size - a.subjects.size || a.name.localeCompare(b.name))
+
       return (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {reportData.summary && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <div className="bg-red-50 rounded-lg p-3 text-center"><p className="text-xs text-red-500">Total reprobadas</p><p className="text-lg font-bold text-red-700">{reportData.summary.totalFailed}</p></div>
-              <div className="bg-amber-50 rounded-lg p-3 text-center"><p className="text-xs text-amber-500">Estudiantes afectados</p><p className="text-lg font-bold text-amber-700">{reportData.summary.studentsAffected}</p></div>
-              <div className="bg-slate-50 rounded-lg p-3 text-center"><p className="text-xs text-slate-500">Tasa reprobación</p><p className="text-lg font-bold">{reportData.summary.failRate?.toFixed(1)}%</p></div>
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center"><p className="text-xs text-red-500 uppercase font-medium">Total reprobadas</p><p className="text-2xl font-bold text-red-700">{reportData.summary.totalFailed}</p></div>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center"><p className="text-xs text-amber-500 uppercase font-medium">Estudiantes afectados</p><p className="text-2xl font-bold text-amber-700">{reportData.summary.studentsAffected}</p></div>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center"><p className="text-xs text-slate-500 uppercase font-medium">Tasa reprobación</p><p className="text-2xl font-bold text-slate-700">{reportData.summary.failRate?.toFixed(1)}%</p></div>
             </div>
           )}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-100"><tr>
-                <th className="px-3 py-2 text-left">Estudiante</th><th className="px-3 py-2 text-left">Asignatura</th>
-                <th className="px-3 py-2 text-left">Área</th><th className="px-3 py-2 text-center">Nota</th>
-                <th className="px-3 py-2 text-center">Período</th><th className="px-3 py-2 text-center">Déficit</th>
-                <th className="px-3 py-2 text-center">Recuperable</th>
-              </tr></thead>
+          <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <table className="text-xs whitespace-nowrap">
+              <thead>
+                <tr className="bg-slate-200">
+                  <th className="px-2 py-1.5 text-left sticky left-0 bg-slate-200 z-10 min-w-[40px]">Nro</th>
+                  <th className="px-2 py-1.5 text-left sticky left-[40px] bg-slate-200 z-10 min-w-[160px]">Estudiante</th>
+                  {failSubjectCols.map(s => (
+                    <th key={s} className="px-2 py-1.5 text-center border-l border-slate-300 min-w-[80px]">
+                      <div className="text-[10px] font-medium leading-tight">{s}</div>
+                    </th>
+                  ))}
+                  <th className="px-2 py-1.5 text-center border-l border-slate-300 min-w-[50px]">Total</th>
+                </tr>
+              </thead>
               <tbody>
-                {reportData.results.map((r: any, i: number) => (
-                  <tr key={i} className="border-b hover:bg-slate-50">
-                    <td className="px-3 py-2 font-medium">{r.studentName}</td><td className="px-3 py-2">{r.subjectName}</td>
-                    <td className="px-3 py-2 text-xs text-slate-500">{r.areaName}</td>
-                    <td className="px-3 py-2 text-center text-red-600 font-medium">{r.grade?.toFixed(1)}</td>
-                    <td className="px-3 py-2 text-center">{r.termName}</td>
-                    <td className="px-3 py-2 text-center">{r.deficit?.toFixed(1)}</td>
-                    <td className="px-3 py-2 text-center">{r.recoverable ? <span className="text-green-600">Sí</span> : <span className="text-red-600">No</span>}</td>
+                {failStudentRows.map((st, idx) => (
+                  <tr key={st.name} className="border-t hover:bg-slate-50">
+                    <td className="px-2 py-1.5 text-center sticky left-0 bg-white z-10 border-r border-slate-100 font-medium">{idx + 1}</td>
+                    <td className="px-2 py-1.5 sticky left-[40px] bg-white z-10 border-r border-slate-100 font-medium truncate max-w-[180px]">{st.name}</td>
+                    {failSubjectCols.map(s => {
+                      const cell = st.subjects.get(s)
+                      if (!cell) return <td key={s} className="px-2 py-1.5 text-center border-l border-slate-100 text-slate-300">—</td>
+                      return (
+                        <td key={s} className="px-2 py-1.5 text-center border-l border-slate-100">
+                          <span className="text-red-600 font-semibold">{cell.grade?.toFixed(1)}</span>
+                          <span className="text-[9px] text-slate-500 block">-{cell.deficit?.toFixed(1)}</span>
+                          {cell.recoverable && <span className="text-[8px] text-green-600 block">Recup.</span>}
+                        </td>
+                      )
+                    })}
+                    <td className="px-2 py-1.5 text-center border-l border-slate-300 font-bold text-red-600">{st.subjects.size}</td>
                   </tr>
                 ))}
               </tbody>
@@ -934,12 +1128,25 @@ export default function AcademicReports() {
       )
     }
 
-    // ── Listado de recuperación ──
+    // ── Listado de recuperación (vista matricial) ──
     if (selectedReport === 'recovery-list' && reportData?.results) {
       const recResults = reportData.results as any[]
       const recTotal = recResults.length
       const recStudents = new Set(recResults.map((r: any) => r.studentName)).size
       const recAvgDeficit = recTotal > 0 ? (recResults.reduce((s: number, r: any) => s + (r.deficit || 0), 0) / recTotal) : 0
+
+      // Agrupar por estudiante
+      const studentMap = new Map<string, { name: string; subjects: Map<string, { grade: number; deficit: number; termName: string }> }>()
+      const allSubjects = new Set<string>()
+      for (const r of recResults) {
+        if (!studentMap.has(r.studentName)) studentMap.set(r.studentName, { name: r.studentName, subjects: new Map() })
+        const key = `${r.subjectName}`
+        studentMap.get(r.studentName)!.subjects.set(key, { grade: r.grade, deficit: r.deficit, termName: r.termName })
+        allSubjects.add(key)
+      }
+      const subjectCols = Array.from(allSubjects).sort()
+      const studentRows = Array.from(studentMap.values()).sort((a, b) => a.name.localeCompare(b.name))
+
       return (
         <div className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -947,24 +1154,40 @@ export default function AcademicReports() {
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"><p className="text-xs text-blue-500 uppercase font-medium">Estudiantes</p><p className="text-2xl font-bold text-blue-700">{recStudents}</p></div>
             <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center"><p className="text-xs text-red-500 uppercase font-medium">Deficit Promedio</p><p className="text-2xl font-bold text-red-700">{recAvgDeficit.toFixed(1)}</p></div>
           </div>
-          <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-100"><tr>
-              <th className="px-3 py-2 text-left">Estudiante</th><th className="px-3 py-2 text-left">Asignatura</th>
-              <th className="px-3 py-2 text-center">Nota</th><th className="px-3 py-2 text-center">Período</th>
-              <th className="px-3 py-2 text-center">Déficit</th>
-            </tr></thead>
-            <tbody>
-              {reportData.results.map((r: any, i: number) => (
-                <tr key={i} className="border-b hover:bg-slate-50">
-                  <td className="px-3 py-2 font-medium">{r.studentName}</td><td className="px-3 py-2">{r.subjectName}</td>
-                  <td className="px-3 py-2 text-center text-amber-600 font-medium">{r.grade?.toFixed(1)}</td>
-                  <td className="px-3 py-2 text-center">{r.termName}</td>
-                  <td className="px-3 py-2 text-center">{r.deficit?.toFixed(1)}</td>
+          <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <table className="text-xs whitespace-nowrap">
+              <thead>
+                <tr className="bg-slate-200">
+                  <th className="px-2 py-1.5 text-left sticky left-0 bg-slate-200 z-10 min-w-[40px]">Nro</th>
+                  <th className="px-2 py-1.5 text-left sticky left-[40px] bg-slate-200 z-10 min-w-[160px]">Estudiante</th>
+                  {subjectCols.map(s => (
+                    <th key={s} className="px-2 py-1.5 text-center border-l border-slate-300 min-w-[80px]">
+                      <div className="text-[10px] font-medium leading-tight">{s}</div>
+                    </th>
+                  ))}
+                  <th className="px-2 py-1.5 text-center border-l border-slate-300 min-w-[50px]">Total</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {studentRows.map((st, idx) => (
+                  <tr key={st.name} className="border-t hover:bg-slate-50">
+                    <td className="px-2 py-1.5 text-center sticky left-0 bg-white z-10 border-r border-slate-100 font-medium">{idx + 1}</td>
+                    <td className="px-2 py-1.5 sticky left-[40px] bg-white z-10 border-r border-slate-100 font-medium truncate max-w-[180px]">{st.name}</td>
+                    {subjectCols.map(s => {
+                      const cell = st.subjects.get(s)
+                      if (!cell) return <td key={s} className="px-2 py-1.5 text-center border-l border-slate-100 text-slate-300">—</td>
+                      return (
+                        <td key={s} className="px-2 py-1.5 text-center border-l border-slate-100">
+                          <span className="text-amber-700 font-semibold">{cell.grade?.toFixed(1)}</span>
+                          <span className="text-[9px] text-red-500 block">-{cell.deficit?.toFixed(1)}</span>
+                        </td>
+                      )
+                    })}
+                    <td className="px-2 py-1.5 text-center border-l border-slate-300 font-bold text-red-600">{st.subjects.size}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )
@@ -1174,6 +1397,102 @@ export default function AcademicReports() {
               ))}
             </tbody>
           </table>
+        </div>
+      )
+    }
+
+    // ── Consolidado nota mínima (matriz) ──
+    if (selectedReport === 'min-grade-consolidated' && reportData?.students) {
+      const { scale, terms: rTerms, areaGroups: rAreas, subjectColumns: rSubjects, students: rStudents, summary } = reportData
+      const { minGrade: sMin, maxGrade: sMax, passingGrade: sPassing } = scale || { minGrade: 0, maxGrade: 5, passingGrade: 3 }
+      // Color de nota existente
+      const gradeColor = (g: number | null) => {
+        if (g === null) return ''
+        return g < sPassing ? 'text-red-600 font-semibold' : ''
+      }
+      // Color de "Necesita"
+      const needColor = (min: number | null, status: string) => {
+        if (status === 'approved' || min === null) return 'text-green-600'
+        if (status === 'impossible') return 'bg-red-100 text-red-700 font-bold'
+        // at_risk: gradiente según qué tan alta es la nota requerida
+        const midpoint = sPassing + (sMax - sPassing) * 0.6
+        if (min > midpoint) return 'bg-amber-100 text-amber-800 font-semibold'
+        return 'text-amber-600'
+      }
+      return (
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center"><p className="text-xs text-slate-500 uppercase font-medium">Estudiantes</p><p className="text-2xl font-bold text-slate-700">{summary.totalStudents}</p></div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center"><p className="text-xs text-amber-500 uppercase font-medium">En riesgo</p><p className="text-2xl font-bold text-amber-700">{summary.studentsAtRisk}</p></div>
+            <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center"><p className="text-xs text-green-500 uppercase font-medium">Sin riesgo</p><p className="text-2xl font-bold text-green-700">{summary.studentsClean}</p></div>
+          </div>
+          <div className="text-xs text-slate-500 flex flex-wrap gap-4">
+            <span>Escala: <strong>{sMin} - {sMax}</strong></span>
+            <span>Aprobatorio: <strong>≥ {sPassing}</strong></span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-100 border border-red-300 inline-block" /> Imposible</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-300 inline-block" /> Riesgo alto</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded text-amber-600 inline-block">⚠</span> Riesgo</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded text-green-600 inline-block">✓</span> Aprobado</span>
+          </div>
+          <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <table className="text-xs whitespace-nowrap">
+              {/* Header nivel 1: Áreas */}
+              <thead>
+                <tr className="bg-slate-200">
+                  <th rowSpan={3} className="px-2 py-1 text-left sticky left-0 bg-slate-200 z-10 min-w-[40px]">Nro</th>
+                  <th rowSpan={3} className="px-2 py-1 text-left sticky left-[40px] bg-slate-200 z-10 min-w-[140px]">Estudiante</th>
+                  {(rAreas || []).map((a: any) => (
+                    <th key={a.areaId} colSpan={a.subjectCount * (rTerms.length + 1)} className="px-2 py-1 text-center border-l border-slate-300 bg-blue-100 text-blue-800">{a.areaName}</th>
+                  ))}
+                  <th rowSpan={3} className="px-2 py-1 text-center border-l border-slate-300 min-w-[60px]">Prom.</th>
+                  <th rowSpan={3} className="px-2 py-1 text-center border-l border-slate-300 min-w-[50px]">Rep.</th>
+                </tr>
+                {/* Header nivel 2: Asignaturas */}
+                <tr className="bg-slate-100">
+                  {(rSubjects || []).map((s: any) => (
+                    <th key={s.subjectId} colSpan={rTerms.length + 1} className="px-1 py-1 text-center border-l border-slate-300 text-[10px] font-medium">{s.subjectName}</th>
+                  ))}
+                </tr>
+                {/* Header nivel 3: Períodos + Necesita */}
+                <tr className="bg-slate-50">
+                  {(rSubjects || []).map((s: any) => (
+                    <React.Fragment key={`h3-${s.subjectId}`}>
+                      {rTerms.map((t: any) => (
+                        <th key={`${s.subjectId}-${t.id}`} className="px-1 py-0.5 text-center border-l border-slate-200 text-[9px] text-slate-500 min-w-[38px]">{t.name}</th>
+                      ))}
+                      <th className="px-1 py-0.5 text-center border-l border-slate-300 text-[9px] text-amber-700 font-bold min-w-[45px]">Necesita</th>
+                    </React.Fragment>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(rStudents || []).map((st: any, idx: number) => (
+                  <tr key={st.enrollmentId} className={`border-t ${st.totalFailed > 0 ? 'bg-red-50/40' : 'hover:bg-slate-50'}`}>
+                    <td className="px-2 py-1 text-center sticky left-0 bg-white z-10 border-r border-slate-100 font-medium">{idx + 1}</td>
+                    <td className="px-2 py-1 sticky left-[40px] bg-white z-10 border-r border-slate-100 font-medium truncate max-w-[160px]">{st.studentName}</td>
+                    {(st.subjects || []).map((subj: any, si: number) => (
+                      <React.Fragment key={`${st.enrollmentId}-${si}`}>
+                        {subj.termGrades.map((tg: any, ti: number) => (
+                          <td key={`${st.enrollmentId}-${si}-${ti}`} className={`px-1 py-1 text-center border-l border-slate-100 ${gradeColor(tg.grade)}`}>
+                            {tg.grade !== null ? tg.grade.toFixed(1) : '-'}
+                          </td>
+                        ))}
+                        <td className={`px-1 py-1 text-center border-l border-slate-200 ${needColor(subj.minimumRequired, subj.status)}`}>
+                          {subj.status === 'approved' ? '—' : subj.status === 'impossible' ? (subj.minimumRequired?.toFixed(1) ?? 'X') : subj.minimumRequired?.toFixed(1) ?? '-'}
+                        </td>
+                      </React.Fragment>
+                    ))}
+                    <td className={`px-2 py-1 text-center border-l border-slate-300 font-bold ${st.generalAverage !== null && st.generalAverage < sPassing ? 'text-red-600' : 'text-slate-800'}`}>
+                      {st.generalAverage?.toFixed(1) ?? '-'}
+                    </td>
+                    <td className={`px-2 py-1 text-center border-l border-slate-300 font-bold ${st.totalFailed > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {st.totalFailed}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )
     }

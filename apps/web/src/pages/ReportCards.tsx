@@ -328,6 +328,67 @@ export default function ReportCards() {
     }
   }
 
+  // Descargar PDF individual de un estudiante
+  const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null)
+  const handleDownloadPdf = async (student: StudentRow) => {
+    if (!selectedTermId) return
+    setDownloadingPdf(student.enrollmentId)
+    try {
+      const res = await reportsApi.downloadReportCardPdf(student.enrollmentId, selectedTermId)
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `boletin-${student.studentName.replace(/\s+/g, '-')}.pdf`
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Error al descargar el boletín PDF')
+    } finally {
+      setDownloadingPdf(null)
+    }
+  }
+
+  // Descargar PDFs en lote (seleccionados o todos)
+  const handleBulkDownload = async (enrollmentIds?: string[]) => {
+    if (!selectedTermId || !selectedGroupId || !selectedYearId) return
+    const ids = enrollmentIds || selectedCards
+    if (ids.length === 0) {
+      alert('Seleccione al menos un estudiante')
+      return
+    }
+    setIsGeneratingBulk(true)
+    try {
+      // Descargar uno por uno y combinar
+      let downloadCount = 0
+      for (const enrollmentId of ids) {
+        try {
+          const student = students.find(s => s.enrollmentId === enrollmentId)
+          const res = await reportsApi.downloadReportCardPdf(enrollmentId, selectedTermId)
+          const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `boletin-${student?.studentName?.replace(/\s+/g, '-') || enrollmentId}.pdf`
+          a.click()
+          window.URL.revokeObjectURL(url)
+          downloadCount++
+          // Pequeña pausa para no saturar el navegador
+          await new Promise(r => setTimeout(r, 300))
+        } catch (err) {
+          console.error(`Error descargando boletín de ${enrollmentId}:`, err)
+        }
+      }
+      if (downloadCount > 0) {
+        alert(`Se descargaron ${downloadCount} de ${ids.length} boletines`)
+      } else {
+        alert('No se pudo descargar ningún boletín. Verifique que existan notas registradas.')
+      }
+    } catch (err: any) {
+      alert('Error al generar los boletines')
+    } finally {
+      setIsGeneratingBulk(false)
+    }
+  }
+
   // Estado para URL firmada temporal (para mostrar inmediatamente después de subir)
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string>('')
 
@@ -439,6 +500,26 @@ export default function ReportCards() {
             {exportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             Sabana Excel
           </button>
+          {selectedCards.length > 0 && (
+            <button
+              onClick={() => handleBulkDownload()}
+              disabled={isGeneratingBulk}
+              className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
+            >
+              {isGeneratingBulk ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+              PDF Seleccionados ({selectedCards.length})
+            </button>
+          )}
+          {isManager && filteredStudents.length > 0 && (
+            <button
+              onClick={() => handleBulkDownload(filteredStudents.map(s => s.enrollmentId))}
+              disabled={isGeneratingBulk}
+              className="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-sm"
+            >
+              {isGeneratingBulk ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              PDF Todos
+            </button>
+          )}
           <button
             onClick={() => { setConfigDraft({...config}); setShowConfigModal(true) }}
             className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm"
@@ -587,6 +668,14 @@ export default function ReportCards() {
                           <button onClick={() => handlePreview(s)} className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-blue-600" title="Vista previa">
                             <Eye className="w-4 h-4" />
                           </button>
+                          <button
+                            onClick={() => handleDownloadPdf(s)}
+                            disabled={downloadingPdf === s.enrollmentId}
+                            className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-green-600 disabled:opacity-50"
+                            title="Descargar PDF"
+                          >
+                            {downloadingPdf === s.enrollmentId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -632,32 +721,32 @@ export default function ReportCards() {
                 return (
                 <div className="bg-white border-2 border-slate-400 rounded-lg p-6 max-w-4xl mx-auto shadow-lg">
                   {/* Encabezado Institucional */}
-                  <div className="flex items-center justify-center border-b-2 border-slate-300 pb-2 mb-2 gap-3">
+                  <div className="flex items-center justify-center border-b-2 border-slate-300 pb-3 mb-3 gap-4">
                     {config.showLogo && (
                       <div className="flex-shrink-0">
                         {config.logoUrl ? (
-                          <img src={logoPreviewUrl || config.logoUrl} alt="Escudo" className="w-20 h-20 object-contain" />
+                          <img src={logoPreviewUrl || config.logoUrl} alt="Escudo" className="w-24 h-24 object-contain" />
                         ) : (
-                          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center">
-                            <GraduationCap className="w-10 h-10 text-slate-400" />
+                          <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center">
+                            <GraduationCap className="w-12 h-12 text-slate-400" />
                           </div>
                         )}
                       </div>
                     )}
                     <div className="text-center leading-tight">
-                      <h2 className="text-base font-bold text-slate-900 uppercase">{previewData.institution?.name || institution?.name || ''}</h2>
-                      {config.headerResolution && <p className="text-[10px] text-slate-600 leading-snug">{config.headerResolution}</p>}
-                      <p className="text-[10px] text-slate-600 leading-snug">
+                      <h2 className="text-lg font-bold text-slate-900 uppercase">{previewData.institution?.name || institution?.name || ''}</h2>
+                      {config.headerResolution && <p className="text-[11px] text-slate-600 leading-snug">{config.headerResolution}</p>}
+                      <p className="text-[11px] text-slate-600 leading-snug">
                         NIT: {previewData.institution?.nit || ''} {institution?.daneCode ? `- DANE: ${institution.daneCode}` : ''}
                       </p>
-                      {config.headerMunicipality && <p className="text-[10px] text-slate-600 leading-snug">{config.headerMunicipality}{config.headerDepartment ? `, ${config.headerDepartment}` : ''}</p>}
+                      {config.headerMunicipality && <p className="text-[11px] text-slate-600 leading-snug">{config.headerMunicipality}{config.headerDepartment ? `, ${config.headerDepartment}` : ''}</p>}
                     </div>
                   </div>
 
                   {/* Titulo */}
                   <div className="text-center text-white py-1 rounded mb-2" style={{ backgroundColor: config.primaryColor || '#1E3A8A' }}>
-                    <h3 className="text-sm font-bold leading-tight">INFORME ACADEMICO - {selectedTermName}</h3>
-                    <p className="text-[11px] leading-tight">Ano Lectivo {selectedYearName}</p>
+                    <h3 className="text-base font-bold leading-tight">INFORME ACADEMICO - {selectedTermName}</h3>
+                    <p className="text-xs leading-tight">Ano Lectivo {selectedYearName}</p>
                   </div>
 
                   {/* Datos del Estudiante */}

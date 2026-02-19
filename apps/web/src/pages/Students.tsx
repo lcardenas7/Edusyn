@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, GraduationCap, FileText, AlertTriangle, Phone, Mail, MapPin, Users, CheckCircle2, XCircle, FileSpreadsheet, Heart, UserPlus, Loader2, Key, Shield, Printer, RefreshCw, EyeOff, Lock, Unlock } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import { generateTemplate, parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
 import api, { studentsApi, guardiansApi, academicYearLifecycleApi, groupsApi, enrollmentsApi, observerApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -79,6 +80,7 @@ const statusLabels: Record<StudentStatus, { label: string, color: string }> = {
 export default function Students() {
   const { institution } = useAuth()
   const [students, setStudents] = useState<Student[]>([])
+  const [rawStudents, setRawStudents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
@@ -197,7 +199,9 @@ export default function Students() {
       setError(null)
       try {
         const response = await studentsApi.getAll({ institutionId: institution.id })
-        const apiStudents: Student[] = (response.data || []).map((s: any) => ({
+        const rawData = response.data || []
+        setRawStudents(rawData)
+        const apiStudents: Student[] = rawData.map((s: any) => ({
           id: s.id,
           firstName: s.firstName || '',
           lastName: `${s.lastName || ''} ${s.secondLastName || ''}`.trim(),
@@ -1118,19 +1122,46 @@ export default function Students() {
   }
 
   const handleExport = () => {
-    const columns = [
-      { header: 'Documento', key: 'documentNumber' },
-      { header: 'Tipo Doc', key: 'documentType' },
-      { header: 'Nombres', key: 'firstName' },
-      { header: 'Apellidos', key: 'lastName' },
-      { header: 'Grupo', key: 'group' },
-      { header: 'Estado', key: 'status' },
-      { header: 'Telefono', key: 'phone' },
-      { header: 'Email', key: 'email' },
-      { header: 'Acudiente', key: 'parentName' },
-      { header: 'Tel Acudiente', key: 'parentPhone' },
-    ]
-    exportToExcel(students, columns, 'Listado_Estudiantes.xlsx')
+    // Exportar en formato compatible con la plantilla de importación
+    // para que el usuario pueda modificar y reimportar
+    const exportData = rawStudents.map((s: any) => {
+      const enrollment = s.enrollments?.[0]
+      const group = enrollment?.group
+      const grade = group?.grade
+      const guardian = s.guardians?.[0]?.guardian
+      const birthDate = s.birthDate ? new Date(s.birthDate).toISOString().split('T')[0] : ''
+      return {
+        'Tipo Documento': s.documentType || 'TI',
+        'Numero Documento': s.documentNumber || '',
+        'Primer Nombre': s.firstName || '',
+        'Segundo Nombre': s.secondName || '',
+        'Primer Apellido': s.lastName || '',
+        'Segundo Apellido': s.secondLastName || '',
+        'Fecha Nacimiento': birthDate,
+        'Genero': s.gender || '',
+        'Direccion': s.address || '',
+        'Telefono': s.phone || '',
+        'Email': s.email || '',
+        'Grupo': group ? `${grade?.name || ''} ${group.name}`.trim() : '',
+        'Grado': grade?.name || '',
+        'Seccion': group?.name || '',
+        'Nombre Acudiente': guardian ? `${guardian.firstName || ''} ${guardian.lastName || ''}`.trim() : '',
+        'Telefono Acudiente': guardian?.phone || '',
+        'Email Acudiente': guardian?.email || '',
+        'Documento Acudiente': guardian?.documentNumber || '',
+        'Parentesco': s.guardians?.[0]?.relationship || '',
+        'EPS': s.eps || '',
+        'Tipo Sangre': s.bloodType || '',
+        'Estado': enrollment?.status || '',
+      }
+    })
+    const ws = XLSX.utils.json_to_sheet(exportData)
+    // Ajustar anchos de columna
+    const colWidths = Object.keys(exportData[0] || {}).map(h => ({ wch: Math.max(h.length + 3, 15) }))
+    ws['!cols'] = colWidths
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Estudiantes')
+    XLSX.writeFile(wb, 'Listado_Estudiantes.xlsx')
   }
 
   const closeImportModal = () => {
@@ -1158,15 +1189,15 @@ export default function Students() {
                 <Key className="w-4 h-4" />
                 Credenciales
               </button>
-              {/* Botón temporal para borrar estudiantes sin registros - Solo admin */}
-              <button 
+              {/* Botón temporal para borrar estudiantes sin registros - DESHABILITADO hasta nueva orden */}
+              {/* <button 
                 onClick={handleBulkDeleteWithoutRecords}
                 className="flex items-center gap-2 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 text-sm"
                 title="Eliminar estudiantes sin registros académicos"
               >
                 <Trash2 className="w-4 h-4" />
                 Limpiar
-              </button>
+              </button> */}
               <button onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm">
                 <Upload className="w-4 h-4" />
                 Importar

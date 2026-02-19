@@ -112,6 +112,12 @@ export class StudentsService {
           },
           take: 1,
         },
+        guardians: {
+          include: {
+            guardian: { select: { id: true, firstName: true, lastName: true, documentNumber: true, phone: true, email: true } },
+          },
+          take: 1,
+        },
       },
       orderBy: {
         lastName: 'asc',

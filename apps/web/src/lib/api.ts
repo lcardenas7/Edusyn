@@ -352,6 +352,10 @@ export const reportsApi = {
   // Reportes académicos institucionales
   getSubjectAverages: (academicYearId: string, params?: { groupId?: string; termId?: string; stage?: string }) =>
     api.get('/reports/academic/subject-averages', { params: { academicYearId, ...params } }),
+  getAreaAverages: (academicYearId: string, params?: { groupId?: string; termId?: string; stage?: string }) =>
+    api.get('/reports/academic/area-averages', { params: { academicYearId, ...params } }),
+  getAreaConsolidated: (academicYearId: string, groupId: string, termId?: string) =>
+    api.get('/reports/academic/area-consolidated', { params: { academicYearId, groupId, termId } }),
   getStudentRanking: (academicYearId: string, groupId: string, termId?: string) =>
     api.get('/reports/academic/student-ranking', { params: { academicYearId, groupId, termId } }),
   getGradeDistribution: (academicYearId: string, groupId: string, params?: { subjectId?: string; termId?: string }) =>
@@ -376,6 +380,12 @@ export const reportsApi = {
   // Lista de boletines por grupo
   getGroupReportCardList: (groupId: string, academicTermId: string, academicYearId: string) =>
     api.get(`/reports/report-cards/group/${groupId}`, { params: { academicTermId, academicYearId } }),
+  // PDF de boletín individual
+  downloadReportCardPdf: (studentEnrollmentId: string, academicTermId: string) =>
+    api.get(`/reports/report-card/${studentEnrollmentId}/pdf`, { params: { academicTermId }, responseType: 'blob' }),
+  // PDF bulk (todos los del grupo)
+  generateBulkReportCards: (groupId: string, academicTermId: string, academicYearId: string) =>
+    api.post('/reports/report-cards/bulk', { groupId, academicTermId, academicYearId }),
   // Ciclo de vida de períodos
   validateTermGrades: (termId: string) =>
     api.get(`/reports/terms/${termId}/validate-grades`),
@@ -414,6 +424,8 @@ export const reportsApi = {
     api.get('/reports/institutional-statistics', { params: { academicYearId, termId } }),
   getAnnualComparison: (academicYearIds: string[]) =>
     api.get('/reports/annual-comparison', { params: { academicYearIds: academicYearIds.join(',') } }),
+  getMinGradeConsolidated: (academicYearId: string, groupId: string) =>
+    api.get('/reports/min-grade-consolidated', { params: { academicYearId, groupId } }),
 }
 
 // Communications
