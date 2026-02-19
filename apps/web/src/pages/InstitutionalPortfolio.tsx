@@ -50,34 +50,31 @@ const PAGE: React.CSSProperties = {
 }
 const LAST_PAGE: React.CSSProperties = { ...PAGE, pageBreakAfter: 'auto' as const }
 
-// ─── SVG Logo EduSyn (fiel al original) ─────────────────────────────────────
+// ─── Logo EduSyn (idéntico al sidebar: cuadrado azul + GraduationCap de Lucide) ──
 function EdusynLogo({ size = 64 }: { size?: number }) {
-  const r = size * 0.22
+  // Lucide GraduationCap paths (viewBox 0 0 24 24), scaled inside a blue rounded square
+  const pad = size * 0.2 // padding inside the square
+  const iconSize = size - pad * 2
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="64" height="64" rx="14" fill="url(#logoGrad)" />
-      <path d="M32 18L18 26v4l14 8 14-8v-4L32 18z" fill="#ffffff" opacity="0.95" />
-      <path d="M18 30v8l14 8 14-8v-8l-14 8-14-8z" fill="#ffffff" opacity="0.7" />
-      <circle cx="46" cy="30" r="1.5" fill="#ffffff" />
-      <line x1="46" y1="30" x2="46" y2="40" stroke="#ffffff" strokeWidth="1.5" opacity="0.7" />
-      <circle cx="46" cy="42" r="2" fill="#ffffff" opacity="0.7" />
-      <defs>
-        <linearGradient id="logoGrad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#2563eb" />
-          <stop offset="1" stopColor="#1d4ed8" />
-        </linearGradient>
-      </defs>
-    </svg>
+    <div style={{ width: size, height: size, borderRadius: size * 0.22, background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" />
+        <path d="M22 10v6" />
+        <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" />
+      </svg>
+    </div>
   )
 }
 
 function EdusynLogoSmall() {
   return (
-    <svg width="24" height="24" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="64" height="64" rx="14" fill={C.primary} />
-      <path d="M32 18L18 26v4l14 8 14-8v-4L32 18z" fill="#fff" opacity="0.95" />
-      <path d="M18 30v8l14 8 14-8v-8l-14 8-14-8z" fill="#fff" opacity="0.7" />
-    </svg>
+    <div style={{ width: 24, height: 24, borderRadius: 6, background: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" />
+        <path d="M22 10v6" />
+        <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" />
+      </svg>
+    </div>
   )
 }
 
@@ -273,8 +270,8 @@ export default function InstitutionalPortfolio() {
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 24px', background: C.lighter, borderRadius: '8px', border: `1px solid ${C.border}` }}>
               {Icon.user(C.muted)}
               <div style={{ textAlign: 'left' }}>
-                <p style={{ fontSize: '13px', fontWeight: 600, color: C.text, margin: 0 }}>Luis Carlos Cárdenas Granja</p>
-                <p style={{ fontSize: '11px', color: C.muted, margin: 0 }}>Ingeniero de Sistemas · Desarrollador Full Stack</p>
+                <p style={{ fontSize: '13px', fontWeight: 600, color: C.text, margin: 0 }}>Luis Alberto Cárdenas Pernett</p>
+                <p style={{ fontSize: '11px', color: C.muted, margin: 0 }}>Ingeniero · Desarrollador Full Stack</p>
               </div>
             </div>
             <p style={{ fontSize: '26px', color: C.border, fontWeight: 300, marginTop: '20px', letterSpacing: '4px' }}>2025</p>
@@ -404,9 +401,9 @@ export default function InstitutionalPortfolio() {
           <div style={{ width: '100%', maxWidth: '420px', textAlign: 'left' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               {[
-                { icon: Icon.user(C.primary), label: 'Desarrollador', value: 'Luis Carlos Cárdenas Granja' },
-                { icon: Icon.mail(C.primary), label: 'Correo electrónico', value: 'lcardenas.dev@gmail.com' },
-                { icon: Icon.phone(C.primary), label: 'Teléfono', value: '+57 300 000 0000' },
+                { icon: Icon.user(C.primary), label: 'Desarrollador', value: 'Luis Alberto Cárdenas Pernett' },
+                { icon: Icon.mail(C.primary), label: 'Correo electrónico', value: 'lcardenas7@hotmail.es' },
+                { icon: Icon.phone(C.primary), label: 'Teléfono', value: '+57 310 401 9732' },
                 { icon: Icon.mapPin(C.primary), label: 'Ubicación', value: 'Colombia' },
               ].map((c, i) => (
                 <div key={i} style={{ display: 'flex', gap: '10px', padding: '14px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.light }}>
