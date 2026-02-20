@@ -26,7 +26,7 @@ export default function Attendance() {
   }, [user?.roles])
   
   const isTeacher = userRoles.includes('DOCENTE')
-  const isAdmin = userRoles.includes('ADMIN_INSTITUTIONAL') || userRoles.includes('SUPERADMIN') || userRoles.includes('COORDINADOR')
+  const isAdmin = userRoles.includes('ADMIN_INSTITUTIONAL') || userRoles.includes('SUPERADMIN') || userRoles.includes('COORDINADOR') || userRoles.includes('RECTOR')
 
   // ─── Tutoría state ───
   const [activeTab, setActiveTab] = useState<'subject' | 'tutoring'>('subject')

@@ -77,7 +77,7 @@ export default function AdminReports() {
           if (!teacherMap.has(teacherId)) {
             teacherMap.set(teacherId, {
               id: teacherId,
-              name: a.teacher ? `${a.teacher.firstName} ${a.teacher.lastName}`.toUpperCase() : 'Sin nombre',
+              name: a.teacher ? [a.teacher.lastName, a.teacher.secondLastName, a.teacher.firstName, a.teacher.secondName].filter(Boolean).join(' ').toUpperCase() : 'Sin nombre',
               subjects: new Set(),
               groups: new Set(),
               hours: 0

@@ -19,18 +19,32 @@ export class TutoringAttendanceController {
    * Verifica si la tutoría está habilitada y retorna los grupos que dirige el docente
    */
   @Get('status')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async getStatus(@Request() req: any, @Query('institutionId') institutionId?: string) {
     const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
     if (!instId) throw new BadRequestException('No se pudo determinar la institución');
     const enabled = await this.tutoringService.isTutoringEnabled(instId);
-    const groups = enabled
-      ? await this.tutoringService.getDirectedGroups(req.user.id, instId)
-      : [];
+
+    // Admin/Rector/Coordinador ven TODOS los grupos; docentes solo sus grupos dirigidos
+    const userRoles: string[] = (req.user.roles || []).map((r: any) => typeof r === 'string' ? r : (r.role?.name || r.name || ''));
+    const isAdmin = userRoles.some((r: string) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(r));
+
+    let groups: any[] = [];
+    if (enabled) {
+      if (isAdmin) {
+        groups = await this.prisma.group.findMany({
+          where: { campus: { institutionId: instId } },
+          include: { grade: true, shift: true, campus: true },
+          orderBy: [{ grade: { name: 'asc' } }, { name: 'asc' }],
+        });
+      } else {
+        groups = await this.tutoringService.getDirectedGroups(req.user.id, instId);
+      }
+    }
 
     return {
       enabled,
-      directedGroups: groups.map((g) => ({
+      directedGroups: groups.map((g: any) => ({
         id: g.id,
         name: g.name,
         gradeName: g.grade?.name,
@@ -44,7 +58,7 @@ export class TutoringAttendanceController {
    * Registra asistencia de tutoría en bulk
    */
   @Post('record')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async recordBulk(
     @Request() req: any,
     @Body()
@@ -70,7 +84,7 @@ export class TutoringAttendanceController {
    * Obtiene registros de tutoría por grupo y fecha
    */
   @Get('by-group')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async getByGroupAndDate(
     @Query('groupId') groupId: string,
     @Query('date') date: string,
@@ -82,7 +96,7 @@ export class TutoringAttendanceController {
    * Resumen de asistencia de tutoría por estudiante
    */
   @Get('student-summary')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async getStudentSummary(
     @Query('studentEnrollmentId') studentEnrollmentId: string,
     @Query('startDate') startDate?: string,
@@ -95,7 +109,7 @@ export class TutoringAttendanceController {
    * Reporte de asistencia de tutoría por grupo
    */
   @Get('report-by-group')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async getReportByGroup(
     @Query('groupId') groupId: string,
     @Query('academicYearId') academicYearId: string,

@@ -101,6 +101,20 @@ export class CommunicationsController {
     return this.communicationsService.getById(id);
   }
 
+  @Post(':id/reply')
+  reply(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() body: { content: string },
+  ) {
+    return this.communicationsService.reply(id, req.user.id, body.content);
+  }
+
+  @Get(':id/replies')
+  getReplies(@Param('id') id: string) {
+    return this.communicationsService.getReplies(id);
+  }
+
   @Post(':id/read')
   markAsRead(@Param('id') id: string, @Request() req) {
     return this.communicationsService.markAsRead(id, req.user.id);

@@ -16,7 +16,9 @@
 export interface StudentForReport {
   id: string;
   firstName: string;
+  secondName: string | null;
   lastName: string;
+  secondLastName: string | null;
   documentType: string;
   documentNumber: string;
   birthDate: Date | null;
@@ -67,7 +69,9 @@ export interface EnrollmentForGroupList {
   studentId: string;
   studentName: string;
   studentFirstName: string;
+  studentSecondName: string;
   studentLastName: string;
+  studentSecondLastName: string;
   documentNumber: string;
   status: string;
   groupId: string;

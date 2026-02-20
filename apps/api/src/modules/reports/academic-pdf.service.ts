@@ -277,7 +277,7 @@ export class AcademicPdfService {
       doc.moveDown(0.5);
       doc.fontSize(9).font('Helvetica-Bold').text('DATOS DEL ESTUDIANTE', m);
       doc.font('Helvetica').fontSize(8);
-      doc.text(`Nombre: ${student?.firstName || ''} ${student?.lastName || ''}`);
+      doc.text(`Nombre: ${[student?.lastName, student?.secondLastName, student?.firstName, student?.secondName].filter(Boolean).join(' ')}`);
       doc.text(`Documento: ${student?.documentType || 'CC'} ${student?.documentNumber || ''}`);
       doc.moveDown(0.5);
 

@@ -105,11 +105,61 @@ export class CommunicationsService {
         attachments: {
           select: { id: true, fileName: true, fileSize: true, mimeType: true, createdAt: true },
         },
+        replies: {
+          where: { status: 'SENT' },
+          include: {
+            author: { select: { id: true, firstName: true, lastName: true } },
+            attachments: { select: { id: true, fileName: true, fileSize: true, mimeType: true } },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
       },
     });
 
     if (!message) throw new NotFoundException('Message not found');
     return message;
+  }
+
+  async reply(parentId: string, authorId: string, content: string) {
+    const parent = await this.prisma.message.findUnique({
+      where: { id: parentId },
+      include: { author: true },
+    });
+    if (!parent) throw new NotFoundException('Mensaje original no encontrado');
+
+    // Crear la respuesta como mensaje directo al autor del mensaje original
+    const reply = await this.prisma.message.create({
+      data: {
+        institutionId: parent.institutionId,
+        authorId,
+        parentId,
+        type: parent.type,
+        subject: parent.subject.startsWith('Re: ') ? parent.subject : `Re: ${parent.subject}`,
+        content,
+        status: 'SENT',
+        sentAt: new Date(),
+        recipients: {
+          create: [{ recipientType: 'USER', recipientId: parent.authorId }],
+        },
+      },
+      include: {
+        author: { select: { id: true, firstName: true, lastName: true } },
+        attachments: { select: { id: true, fileName: true, fileSize: true, mimeType: true } },
+      },
+    });
+
+    return reply;
+  }
+
+  async getReplies(messageId: string) {
+    return this.prisma.message.findMany({
+      where: { parentId: messageId, status: 'SENT' },
+      include: {
+        author: { select: { id: true, firstName: true, lastName: true } },
+        attachments: { select: { id: true, fileName: true, fileSize: true, mimeType: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
   }
 
   async markAsRead(messageId: string, recipientId: string) {

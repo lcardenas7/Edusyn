@@ -139,7 +139,7 @@ export default function BulletinsReports() {
             <select value={filterStudentId} onChange={(e) => setFilterStudentId(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" disabled={filterGrade === 'all'}>
               <option value="all">Todos los estudiantes</option>
               {students.map(s => (
-                <option key={s.enrollmentId || s.id} value={s.enrollmentId || s.id}>{s.lastName} {s.firstName}</option>
+                <option key={s.enrollmentId || s.id} value={s.enrollmentId || s.id}>{[s.lastName, s.secondLastName, s.firstName, s.secondName].filter(Boolean).join(' ')}</option>
               ))}
             </select>
           </div>

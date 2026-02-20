@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, Plus, X, Send, Mail, Bell, Users, Calendar, Eye, Trash2, FileText, MessageSquare, Megaphone, Loader2, Inbox, CheckCheck, Paperclip, Download, AlertTriangle } from 'lucide-react'
+import { Search, Plus, X, Send, Mail, Bell, Users, Calendar, Eye, Trash2, FileText, MessageSquare, Megaphone, Loader2, Inbox, CheckCheck, Paperclip, Download, AlertTriangle, Reply, CornerDownRight } from 'lucide-react'
 import { communicationsApi, groupsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -80,6 +80,11 @@ export default function Communications() {
   const [searchingRecipients, setSearchingRecipients] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [uploadingFiles, setUploadingFiles] = useState(false)
+  const [replies, setReplies] = useState<any[]>([])
+  const [loadingReplies, setLoadingReplies] = useState(false)
+  const [replyContent, setReplyContent] = useState('')
+  const [sendingReply, setSendingReply] = useState(false)
+  const [showReplyForm, setShowReplyForm] = useState(false)
 
   const MAX_FILE_SIZE_MB = 5
   const MAX_ATTACHMENTS = 3
@@ -278,9 +283,40 @@ export default function Communications() {
     }
   }
 
-  const handleView = (comm: Communication) => {
+  const handleView = async (comm: Communication) => {
     setSelectedCommunication(comm)
     setShowViewModal(true)
+    setReplies([])
+    setReplyContent('')
+    setShowReplyForm(false)
+    loadReplies(comm.id)
+  }
+
+  const loadReplies = async (messageId: string) => {
+    setLoadingReplies(true)
+    try {
+      const res = await communicationsApi.getReplies(messageId)
+      setReplies(res.data || [])
+    } catch (err) {
+      console.error('Error loading replies:', err)
+    } finally {
+      setLoadingReplies(false)
+    }
+  }
+
+  const handleReply = async () => {
+    if (!replyContent.trim() || !selectedCommunication) return
+    setSendingReply(true)
+    try {
+      await communicationsApi.reply(selectedCommunication.id, replyContent.trim())
+      setReplyContent('')
+      setShowReplyForm(false)
+      loadReplies(selectedCommunication.id)
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al enviar respuesta')
+    } finally {
+      setSendingReply(false)
+    }
   }
 
   // Mapear recipientType a formato de API (backend espera {type, recipientId?})
@@ -899,6 +935,83 @@ export default function Communications() {
                     </div>
                     <span className="text-sm text-slate-600">{selectedCommunication.readCount} de {selectedCommunication.totalRecipients} ({Math.round((selectedCommunication.readCount / (selectedCommunication.totalRecipients || 1)) * 100)}%)</span>
                   </div>
+                </div>
+              )}
+
+              {/* Hilo de respuestas */}
+              {(replies.length > 0 || loadingReplies) && (
+                <div className="mt-6 border-t border-slate-200 pt-4">
+                  <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-3">
+                    <MessageSquare className="w-4 h-4" />
+                    Respuestas ({replies.length})
+                  </h4>
+                  {loadingReplies ? (
+                    <div className="flex items-center gap-2 text-slate-400 text-sm py-2">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Cargando respuestas...
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {replies.map((r: any) => (
+                        <div key={r.id} className="flex gap-3">
+                          <CornerDownRight className="w-4 h-4 text-slate-300 mt-1 flex-shrink-0" />
+                          <div className="flex-1 bg-slate-50 rounded-lg p-3 border border-slate-100">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-medium text-slate-800">
+                                {r.author ? `${r.author.firstName} ${r.author.lastName}` : 'Usuario'}
+                              </span>
+                              <span className="text-xs text-slate-400">
+                                {r.sentAt ? new Date(r.sentAt).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-600 whitespace-pre-wrap">{r.content}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Formulario de respuesta */}
+              {selectedCommunication.status === 'SENT' && (
+                <div className="mt-4 border-t border-slate-200 pt-4">
+                  {!showReplyForm ? (
+                    <button
+                      onClick={() => setShowReplyForm(true)}
+                      className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      <Reply className="w-4 h-4" />
+                      Responder
+                    </button>
+                  ) : (
+                    <div className="space-y-3">
+                      <textarea
+                        value={replyContent}
+                        onChange={(e) => setReplyContent(e.target.value)}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        placeholder="Escribe tu respuesta..."
+                        autoFocus
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => { setShowReplyForm(false); setReplyContent('') }}
+                          disabled={sendingReply}
+                          className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={handleReply}
+                          disabled={sendingReply || !replyContent.trim()}
+                          className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                          {sendingReply ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                          Enviar respuesta
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

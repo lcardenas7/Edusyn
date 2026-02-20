@@ -517,7 +517,7 @@ export default function AcademicReports() {
       <label className="block text-xs font-medium text-slate-600 mb-1">Estudiante</label>
       <select value={filterStudentId} onChange={(e) => setFilterStudentId(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" disabled={filterGrade === 'all'}>
         <option value="all">Todos</option>
-        {students.map(s => <option key={s.enrollmentId || s.id} value={s.enrollmentId || s.id}>{s.lastName} {s.firstName}</option>)}
+        {students.map(s => <option key={s.enrollmentId || s.id} value={s.enrollmentId || s.id}>{[s.lastName, s.secondLastName, s.firstName, s.secondName].filter(Boolean).join(' ')}</option>)}
       </select>
     </div>
   )
@@ -1023,7 +1023,7 @@ export default function AcademicReports() {
       return (
         <div className="space-y-4">
           <div className="bg-purple-50 rounded-lg p-4">
-            <h4 className="font-medium text-purple-800 mb-2">Estudiante: {minimumGradeData.student?.lastName} {minimumGradeData.student?.firstName}</h4>
+            <h4 className="font-medium text-purple-800 mb-2">Estudiante: {[minimumGradeData.student?.lastName, minimumGradeData.student?.secondLastName, minimumGradeData.student?.firstName, minimumGradeData.student?.secondName].filter(Boolean).join(' ')}</h4>
             <p className="text-sm text-purple-600">Grupo: {minimumGradeData.group?.gradeName} {minimumGradeData.group?.name}</p>
             <div className="flex gap-4 mt-2 text-xs">
               <span className="bg-green-100 text-green-700 px-2 py-1 rounded">Aprobadas: {minimumGradeData.summary?.approved || 0}</span>

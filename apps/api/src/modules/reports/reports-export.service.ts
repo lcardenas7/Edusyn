@@ -55,7 +55,7 @@ export class ReportsExportService {
       subjectMap.set(g.subjectId, g.subjectName);
       if (!studentMap.has(g.studentEnrollmentId)) {
         studentMap.set(g.studentEnrollmentId, {
-          name: `${g.studentLastName} ${g.studentFirstName}`,
+          name: g.studentFullName || `${g.studentLastName} ${g.studentFirstName}`,
           doc: '',
         });
       }

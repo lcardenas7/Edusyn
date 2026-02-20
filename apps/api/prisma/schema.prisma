@@ -2040,6 +2040,7 @@ model Message {
   id            String        @id @default(cuid())
   institutionId String
   authorId      String
+  parentId      String?
   type          MessageType
   subject       String
   content       String
@@ -2051,11 +2052,14 @@ model Message {
 
   institution Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   author      User           @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  parent      Message?       @relation("MessageThread", fields: [parentId], references: [id], onDelete: SetNull)
+  replies     Message[]      @relation("MessageThread")
   recipients  MessageRecipient[]
   attachments MessageAttachment[]
 
   @@index([institutionId])
   @@index([authorId])
+  @@index([parentId])
   @@index([status])
 }
 

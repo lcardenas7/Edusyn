@@ -49,6 +49,9 @@ export interface GradeRow {
   studentEnrollmentId: string;
   studentFirstName: string;
   studentLastName: string;
+  studentSecondName: string;
+  studentSecondLastName: string;
+  studentFullName: string;
   groupId: string;
   groupName: string;
   gradeName: string;
@@ -497,6 +500,9 @@ export class AcademicDataSourceService {
               studentEnrollmentId: enrollmentId,
               studentFirstName: snap.student?.firstName ?? '',
               studentLastName: snap.student?.lastName ?? '',
+              studentSecondName: snap.student?.secondName ?? '',
+              studentSecondLastName: snap.student?.secondLastName ?? '',
+              studentFullName: [snap.student?.lastName, snap.student?.secondLastName, snap.student?.firstName, snap.student?.secondName].filter(Boolean).join(' '),
               groupId: snap.group?.id ?? '',
               groupName: `${snap.group?.gradeLevel ?? ''} ${snap.group?.name ?? ''}`.trim(),
               gradeName: snap.group?.gradeLevel ?? '',
@@ -525,6 +531,9 @@ export class AcademicDataSourceService {
             studentEnrollmentId: enrollmentId,
             studentFirstName: snap.student?.firstName ?? '',
             studentLastName: snap.student?.lastName ?? '',
+            studentSecondName: snap.student?.secondName ?? '',
+            studentSecondLastName: snap.student?.secondLastName ?? '',
+            studentFullName: [snap.student?.lastName, snap.student?.secondLastName, snap.student?.firstName, snap.student?.secondName].filter(Boolean).join(' '),
             groupId: snap.group?.id ?? '',
             groupName: `${snap.group?.gradeLevel ?? ''} ${snap.group?.name ?? ''}`.trim(),
             gradeName: snap.group?.gradeLevel ?? '',
@@ -573,7 +582,7 @@ export class AcademicDataSourceService {
       include: {
         studentEnrollment: {
           include: {
-            student: { select: { id: true, firstName: true, lastName: true } },
+            student: { select: { id: true, firstName: true, secondName: true, lastName: true, secondLastName: true } },
             group: { include: { grade: true } },
           },
         },
@@ -587,6 +596,9 @@ export class AcademicDataSourceService {
       studentEnrollmentId: r.studentEnrollmentId,
       studentFirstName: r.studentEnrollment.student.firstName,
       studentLastName: r.studentEnrollment.student.lastName,
+      studentSecondName: (r.studentEnrollment.student as any).secondName ?? '',
+      studentSecondLastName: (r.studentEnrollment.student as any).secondLastName ?? '',
+      studentFullName: [r.studentEnrollment.student.lastName, (r.studentEnrollment.student as any).secondLastName, r.studentEnrollment.student.firstName, (r.studentEnrollment.student as any).secondName].filter(Boolean).join(' '),
       groupId: r.studentEnrollment.groupId,
       groupName: `${r.studentEnrollment.group.grade?.name ?? ''} ${r.studentEnrollment.group.name}`.trim(),
       gradeName: r.studentEnrollment.group.grade?.name ?? '',

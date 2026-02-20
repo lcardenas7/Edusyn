@@ -96,7 +96,7 @@ export default function Timetabling() {
   const { user, institution } = useAuth()
   const isManager = user?.roles?.some((r: any) => {
     const roleName = r.role?.name || r.name || ''
-    return roleName.includes('ADMIN') || roleName.includes('COORDINADOR') || roleName.includes('SUPERADMIN')
+    return roleName.includes('ADMIN') || roleName.includes('COORDINADOR') || roleName.includes('SUPERADMIN') || roleName.includes('RECTOR')
   }) ?? false
   const [activeTab, setActiveTab] = useState<'blocks' | 'rooms' | 'config' | 'schedule' | 'conflicts' | 'generator' | 'viewer'>('schedule')
   const [loading, setLoading] = useState(false)
@@ -375,6 +375,9 @@ export default function Timetabling() {
       {activeTab === 'viewer' && (
         <ScheduleViewerTab
           academicYearId={academicYearId}
+          isManager={isManager}
+          user={user}
+          userCaps={userCaps}
         />
       )}
     </div>
@@ -2062,8 +2065,14 @@ const VIEW_MODES = [
   { key: 'by-area', label: 'Por Área/Depto', icon: Building2 },
 ] as const
 
-function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
-  const [viewMode, setViewMode] = useState<'total' | 'by-grade' | 'by-day' | 'by-teacher' | 'by-subject' | 'by-area'>('by-grade')
+function ScheduleViewerTab({ academicYearId, isManager, user, userCaps }: { academicYearId: string; isManager?: boolean; user?: any; userCaps?: any }) {
+  // Para docentes: solo mostrar su horario y el de sus grupos asignados/tutor
+  const allowedGroupIds = !isManager && userCaps
+    ? new Set<string>([...(userCaps.teacherAssignmentGroupIds || []), ...(userCaps.tutorGroupIds || [])])
+    : null // null = sin restricción
+
+  const defaultView = isManager ? 'by-grade' : 'by-teacher'
+  const [viewMode, setViewMode] = useState<'total' | 'by-grade' | 'by-day' | 'by-teacher' | 'by-subject' | 'by-area'>(defaultView)
   const [viewData, setViewData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [selectedFilter, setSelectedFilter] = useState<string>('')
@@ -2611,10 +2620,23 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
       }
 
       case 'by-grade': {
+        // Para docentes: filtrar solo los grupos asignados/tutor
+        const filteredGrades = (viewData.grades || []).map((grade: any) => ({
+          ...grade,
+          groups: allowedGroupIds
+            ? (grade.groups || []).filter((g: any) => allowedGroupIds.has(g.groupId))
+            : (grade.groups || []),
+        })).filter((grade: any) => grade.groups.length > 0)
+
         return (
           <div>
-            <p className="text-sm text-gray-500 mb-4">{viewData.totalEntries} entradas • {viewData.grades?.length || 0} grados</p>
-            {(viewData.grades || []).map((grade: any) => (
+            {!isManager && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700">
+                Mostrando solo los horarios de tus grupos asignados y de tutoría.
+              </div>
+            )}
+            <p className="text-sm text-gray-500 mb-4">{filteredGrades.reduce((s: number, g: any) => s + g.groups.reduce((s2: number, gr: any) => s2 + (gr.entries?.length || 0), 0), 0)} entradas • {filteredGrades.length} grado{filteredGrades.length !== 1 ? 's' : ''}</p>
+            {filteredGrades.map((grade: any) => (
               <div key={grade.gradeId} className="mb-8">
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                   <Layers className="w-5 h-5 text-indigo-600" />
@@ -2626,6 +2648,12 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
                 ))}
               </div>
             ))}
+            {filteredGrades.length === 0 && (
+              <div className="text-center py-12 text-gray-400">
+                <Layers className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="font-medium">No tienes grupos asignados</p>
+              </div>
+            )}
           </div>
         )
       }
@@ -2871,12 +2899,21 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
       }
 
       case 'by-teacher': {
-        const teachers = viewData.teachers || []
+        const allTeachers = viewData.teachers || []
+        // Para docentes: solo mostrar su propio horario
+        const teachers = !isManager && user?.id
+          ? allTeachers.filter((t: any) => t.teacherId === user.id)
+          : allTeachers
         return (
           <div>
-            <p className="text-sm text-gray-500 mb-4">{viewData.totalEntries} entradas • {teachers.length} docentes</p>
-            {/* Selector de docente */}
-            {teachers.length > 5 && (
+            {!isManager && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700">
+                Mostrando tu horario personal.
+              </div>
+            )}
+            <p className="text-sm text-gray-500 mb-4">{teachers.reduce((s: number, t: any) => s + (t.entries?.length || 0), 0)} entradas • {teachers.length} docente{teachers.length !== 1 ? 's' : ''}</p>
+            {/* Selector de docente - solo para managers */}
+            {isManager && allTeachers.length > 5 && (
               <div className="mb-4">
                 <select
                   value={selectedFilter}
@@ -2889,7 +2926,7 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
                   className="border rounded-lg px-3 py-2 text-sm w-full max-w-md"
                 >
                   <option value="">Todos los docentes</option>
-                  {teachers.map((t: any) => (
+                  {allTeachers.map((t: any) => (
                     <option key={t.teacherId} value={t.teacherId}>{t.teacherName} ({t.entries.length} entradas)</option>
                   ))}
                 </select>
@@ -2908,6 +2945,13 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
                   {renderScheduleGrid(teacher.entries, '')}
                 </div>
               ))}
+            {teachers.length === 0 && (
+              <div className="text-center py-12 text-gray-400">
+                <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="font-medium">No se encontró tu horario</p>
+                <p className="text-sm mt-1">Contacta al coordinador si crees que esto es un error.</p>
+              </div>
+            )}
           </div>
         )
       }
@@ -2993,7 +3037,11 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
       {/* Barra de vistas */}
       <div className="bg-white border rounded-xl p-4">
         <div className="flex items-center gap-2 flex-wrap">
-          {VIEW_MODES.map(vm => {
+          {VIEW_MODES.filter(vm => {
+            // Docentes solo ven: Por Docente y Por Grado (sus grupos)
+            if (isManager) return true
+            return vm.key === 'by-teacher' || vm.key === 'by-grade'
+          }).map(vm => {
             const Icon = vm.icon
             const isActive = viewMode === vm.key
             return (
@@ -3012,7 +3060,8 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
             )
           })}
           <div className="ml-auto flex items-center gap-1">
-            {/* Exportar */}
+            {/* Exportar - solo managers */}
+            {isManager && (
             <div className="relative group">
               <button
                 disabled={exporting || !viewData || viewData.totalEntries === 0}
@@ -3038,6 +3087,7 @@ function ScheduleViewerTab({ academicYearId }: { academicYearId: string }) {
                 </button>
               </div>
             </div>
+            )}
             <button
               onClick={() => loadView()}
               className="text-gray-400 hover:text-gray-600 p-2"

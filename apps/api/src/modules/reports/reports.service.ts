@@ -401,7 +401,7 @@ export class ReportsService {
     studentEnrollmentId: string,
     academicYearId: string,
   ): Promise<{
-    student: { id: string; firstName: string; lastName: string };
+    student: { id: string; firstName: string; secondName: string | null; lastName: string; secondLastName: string | null };
     group: { id: string; name: string; gradeName: string };
     passingGrade: number;
     subjects: Array<{
@@ -619,7 +619,9 @@ export class ReportsService {
       student: {
         id: enrollment.student.id,
         firstName: enrollment.student.firstName,
+        secondName: enrollment.student.secondName,
         lastName: enrollment.student.lastName,
+        secondLastName: enrollment.student.secondLastName,
       },
       group: {
         id: enrollment.group.id,
@@ -700,14 +702,14 @@ export class ReportsService {
         // Usar propiedades del DTO EnrollmentForGroupList
         results.push({
           studentId: enrollment.studentId,
-          studentName: `${enrollment.studentLastName} ${enrollment.studentFirstName}`,
+          studentName: enrollment.studentName || `${enrollment.studentLastName} ${enrollment.studentFirstName}`,
           summary: data.summary,
           criticalSubjects,
         });
       } catch (error) {
         results.push({
           studentId: enrollment.studentId,
-          studentName: `${enrollment.studentLastName} ${enrollment.studentFirstName}`,
+          studentName: enrollment.studentName || `${enrollment.studentLastName} ${enrollment.studentFirstName}`,
           summary: { totalSubjects: 0, approved: 0, atRisk: 0, impossible: 0, pending: 0 },
           criticalSubjects: [],
         });
@@ -834,7 +836,7 @@ export class ReportsService {
         students.push({
           studentId: enrollment.studentId,
           enrollmentId: enrollment.id,
-          studentName: `${enrollment.studentLastName} ${enrollment.studentFirstName}`,
+          studentName: enrollment.studentName || `${enrollment.studentLastName} ${enrollment.studentFirstName}`,
           subjects: subjectsRow,
           generalAverage,
           totalFailed,
@@ -843,7 +845,7 @@ export class ReportsService {
         students.push({
           studentId: enrollment.studentId,
           enrollmentId: enrollment.id,
-          studentName: `${enrollment.studentLastName} ${enrollment.studentFirstName}`,
+          studentName: enrollment.studentName || `${enrollment.studentLastName} ${enrollment.studentFirstName}`,
           subjects: subjectColumns.map(col => ({
             subjectId: col.subjectId,
             termGrades: terms.map(t => ({ termId: t.id, grade: null as number | null })),
@@ -911,7 +913,7 @@ export class ReportsService {
       include: {
         studentEnrollment: {
           include: {
-            student: { select: { id: true, firstName: true, lastName: true } },
+            student: { select: { id: true, firstName: true, secondName: true, lastName: true, secondLastName: true } },
             group: { include: { grade: true } },
           },
         },
@@ -1063,7 +1065,7 @@ export class ReportsService {
       if (!studentMap.has(key)) {
         studentMap.set(key, {
           enrollmentId: key,
-          name: `${g.studentLastName} ${g.studentFirstName}`,
+          name: g.studentFullName || `${g.studentLastName} ${g.studentFirstName}`,
           areas: new Map(),
         });
       }
@@ -1129,7 +1131,7 @@ export class ReportsService {
       const key = g.studentEnrollmentId;
       if (!studentMap.has(key)) {
         studentMap.set(key, {
-          name: `${g.studentLastName} ${g.studentFirstName}`,
+          name: g.studentFullName || `${g.studentLastName} ${g.studentFirstName}`,
           group: g.groupName,
           scores: [],
         });
@@ -1208,7 +1210,7 @@ export class ReportsService {
     const failed = grades
       .filter(g => g.finalScore < passingGrade)
       .map(g => ({
-        studentName: `${g.studentLastName} ${g.studentFirstName}`,
+        studentName: g.studentFullName || `${g.studentLastName} ${g.studentFirstName}`,
         group: g.groupName,
         subjectName: g.subjectName,
         areaName: g.areaName || '',
@@ -1241,7 +1243,7 @@ export class ReportsService {
         return g.finalScore >= effectiveMin && g.finalScore < passingGrade && g.finalScore <= effectiveMax;
       })
       .map(g => ({
-        studentName: `${g.studentLastName} ${g.studentFirstName}`,
+        studentName: g.studentFullName || `${g.studentLastName} ${g.studentFirstName}`,
         group: g.groupName,
         subjectName: g.subjectName,
         grade: g.finalScore,
@@ -1275,7 +1277,7 @@ export class ReportsService {
       const sKey = g.studentEnrollmentId;
       if (!studentMap.has(sKey)) {
         studentMap.set(sKey, {
-          name: `${g.studentLastName} ${g.studentFirstName}`,
+          name: g.studentFullName || `${g.studentLastName} ${g.studentFirstName}`,
           group: g.groupName,
           subjects: new Map(),
         });
@@ -1451,7 +1453,7 @@ export class ReportsService {
     for (const g of grades) {
       const key = g.studentEnrollmentId;
       if (!studentMap.has(key)) {
-        studentMap.set(key, { name: `${g.studentLastName} ${g.studentFirstName}`, termAvgs: new Map() });
+        studentMap.set(key, { name: g.studentFullName || `${g.studentLastName} ${g.studentFirstName}`, termAvgs: new Map() });
       }
       const data = studentMap.get(key)!;
       if (!data.termAvgs.has(g.academicTermId)) data.termAvgs.set(g.academicTermId, []);
@@ -2614,7 +2616,7 @@ export class ReportsService {
       // Estudiantes activos en este grupo
       const enrollments = await this.prisma.studentEnrollment.findMany({
         where: { groupId: group.id, academicYearId: term.academicYearId, status: 'ACTIVE' },
-        select: { id: true, student: { select: { firstName: true, lastName: true } } },
+        select: { id: true, student: { select: { firstName: true, secondName: true, lastName: true, secondLastName: true } } },
       });
 
       if (enrollments.length === 0 || subjectIds.length === 0) continue;
@@ -2642,7 +2644,7 @@ export class ReportsService {
           } else {
             missing.push({
               group: group.name,
-              student: `${enrollment.student.lastName} ${enrollment.student.firstName}`,
+              student: [enrollment.student.lastName, (enrollment.student as any).secondLastName, enrollment.student.firstName, (enrollment.student as any).secondName].filter(Boolean).join(' '),
               subject: subjectNames.get(subjectId) || subjectId,
             });
           }
@@ -3198,7 +3200,7 @@ export class ReportsService {
       select: {
         id: true,
         groupId: true,
-        student: { select: { id: true, firstName: true, lastName: true } },
+        student: { select: { id: true, firstName: true, secondName: true, lastName: true, secondLastName: true } },
       },
       orderBy: { student: { lastName: 'asc' } },
     });
@@ -3236,12 +3238,12 @@ export class ReportsService {
           // Estudiantes faltantes de nota
           const missingGradeStudents = groupEnrollments
             .filter(e => !gradeIndex.get(gradeKey)?.has(e.id))
-            .map(e => ({ enrollmentId: e.id, name: `${e.student.lastName} ${e.student.firstName}` }));
+            .map(e => ({ enrollmentId: e.id, name: [e.student.lastName, (e.student as any).secondLastName, e.student.firstName, (e.student as any).secondName].filter(Boolean).join(' ') }));
 
           // Estudiantes faltantes de logro
           const missingAchievementStudents = groupEnrollments
             .filter(e => !achievementIndex.get(achievementKey)?.has(e.id))
-            .map(e => ({ enrollmentId: e.id, name: `${e.student.lastName} ${e.student.firstName}` }));
+            .map(e => ({ enrollmentId: e.id, name: [e.student.lastName, (e.student as any).secondLastName, e.student.firstName, (e.student as any).secondName].filter(Boolean).join(' ') }));
 
           return {
             termId: term.id,

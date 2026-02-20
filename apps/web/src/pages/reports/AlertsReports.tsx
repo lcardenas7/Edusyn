@@ -79,7 +79,7 @@ export default function AlertsReports() {
               const student = g.studentEnrollment?.student
               if (!studentGrades.has(studentId)) {
                 studentGrades.set(studentId, {
-                  name: student ? `${student.lastName} ${student.firstName}`.toUpperCase() : 'Estudiante',
+                  name: student ? [student.lastName, student.secondLastName, student.firstName, student.secondName].filter(Boolean).join(' ').toUpperCase() : 'Estudiante',
                   group: g.studentEnrollment?.group?.name || '',
                   grades: [],
                   failedCount: 0
