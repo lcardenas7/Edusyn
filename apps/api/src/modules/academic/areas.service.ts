@@ -243,4 +243,38 @@ export class AreasService {
   async getSubjectsOfArea(areaId: string) {
     return this.listSubjectsByArea(areaId);
   }
+
+  /**
+   * Mueve una asignatura de un área a otra sin eliminarla.
+   * Preserva todas las relaciones (TeacherAssignment, PeriodFinalGrade, etc.)
+   * Solo cambia el areaId de la asignatura.
+   */
+  async moveSubjectToArea(subjectId: string, newAreaId: string) {
+    const subject = await this.findSubjectById(subjectId);
+    
+    if (subject.areaId === newAreaId) {
+      throw new BadRequestException('La asignatura ya pertenece a esta área');
+    }
+
+    // Verificar que el área destino exista
+    await this.findAreaById(newAreaId);
+
+    // Verificar que no exista una asignatura con el mismo nombre en el área destino
+    const existing = await this.prisma.subject.findUnique({
+      where: { areaId_name: { areaId: newAreaId, name: subject.name } },
+    });
+
+    if (existing) {
+      throw new BadRequestException(
+        `Ya existe una asignatura "${subject.name}" en el área destino. Renómbrela primero si desea moverla.`
+      );
+    }
+
+    // Mover: solo cambia el areaId
+    return this.prisma.subject.update({
+      where: { id: subjectId },
+      data: { areaId: newAreaId },
+      include: { area: true },
+    });
+  }
 }

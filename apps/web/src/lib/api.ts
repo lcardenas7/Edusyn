@@ -113,6 +113,7 @@ export const areasApi = {
   updateSubject: (subjectId: string, data: { name?: string; code?: string; description?: string; subjectType?: string; order?: number; isActive?: boolean }) => 
     api.put(`/areas/subjects/${subjectId}`, data),
   deleteSubject: (subjectId: string) => api.delete(`/areas/subjects/${subjectId}`),
+  moveSubject: (subjectId: string, newAreaId: string) => api.put(`/areas/subjects/${subjectId}/move`, { newAreaId }),
 }
 
 // Subjects

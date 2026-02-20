@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, BookOpen, Layers, Save, Loader2, AlertTriangle } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, BookOpen, Layers, Save, Loader2, AlertTriangle, ArrowRightLeft } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { areasApi } from '../lib/api'
 
@@ -44,6 +44,7 @@ export default function AcademicCatalog() {
   const [editingArea, setEditingArea] = useState<Area | null>(null)
   const [editingSubject, setEditingSubject] = useState<{ areaId: string; subject: Subject | null } | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'area' | 'subject'; id: string; name: string } | null>(null)
+  const [moveSubjectData, setMoveSubjectData] = useState<{ subjectId: string; subjectName: string; currentAreaId: string; newAreaId: string } | null>(null)
 
   // Formularios
   const [areaForm, setAreaForm] = useState({ name: '', code: '', description: '' })
@@ -189,6 +190,20 @@ export default function AcademicCatalog() {
       setDeleteConfirm(null)
     } catch (error: any) {
       alert(error.response?.data?.message || 'Error al eliminar asignatura')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const moveSubject = async () => {
+    if (!moveSubjectData || !moveSubjectData.newAreaId) return
+    setSaving(true)
+    try {
+      await areasApi.moveSubject(moveSubjectData.subjectId, moveSubjectData.newAreaId)
+      await loadAreas()
+      setMoveSubjectData(null)
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Error al mover asignatura')
     } finally {
       setSaving(false)
     }
@@ -352,6 +367,13 @@ export default function AcademicCatalog() {
                             </div>
                           </div>
                           <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setMoveSubjectData({ subjectId: subject.id, subjectName: subject.name, currentAreaId: area.id, newAreaId: '' })}
+                              className="p-1.5 text-purple-600 hover:bg-purple-50 rounded"
+                              title="Mover a otra área"
+                            >
+                              <ArrowRightLeft className="w-3.5 h-3.5" />
+                            </button>
                             <button
                               onClick={() => openSubjectModal(area.id, subject)}
                               className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
@@ -527,6 +549,66 @@ export default function AcademicCatalog() {
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Mover Asignatura */}
+      {moveSubjectData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">Mover Asignatura</h2>
+              <button onClick={() => setMoveSubjectData(null)} className="p-1 hover:bg-gray-100 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                <p className="text-sm text-purple-800">
+                  <strong>Asignatura:</strong> {moveSubjectData.subjectName}
+                </p>
+                <p className="text-sm text-purple-600 mt-1">
+                  <strong>Área actual:</strong> {areas.find(a => a.id === moveSubjectData.currentAreaId)?.name}
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mover al área *
+                </label>
+                <select
+                  value={moveSubjectData.newAreaId}
+                  onChange={(e) => setMoveSubjectData({ ...moveSubjectData, newAreaId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                >
+                  <option value="">Seleccionar área destino...</option>
+                  {areas.filter(a => a.id !== moveSubjectData.currentAreaId).map(a => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-700">
+                  <strong>Nota:</strong> Mover la asignatura preserva todas las asignaciones docentes, calificaciones y demás datos asociados. Solo cambia el área a la que pertenece.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 p-4 border-t bg-gray-50">
+              <button
+                onClick={() => setMoveSubjectData(null)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={moveSubject}
+                disabled={saving || !moveSubjectData.newAreaId}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />}
+                Mover
               </button>
             </div>
           </div>

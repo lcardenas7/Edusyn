@@ -73,8 +73,9 @@ export class ManagementTasksController {
     @Body() dto: CreateTaskDto,
     @Request() req: any,
   ) {
-    // Verificar si el docente es líder para poder crear tareas
-    const userRoles = req.user.roles?.map((r: any) => r.role?.name || r.name) || [];
+    // Verificar si el usuario puede crear tareas
+    // req.user.roles es un array de strings desde el JWT (ej: ['RECTOR'])
+    const userRoles: string[] = (req.user.roles || []).map((r: any) => typeof r === 'string' ? r : (r.role?.name || r.name || ''));
     const isAdmin = userRoles.some((r: string) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(r));
     
     if (!isAdmin) {

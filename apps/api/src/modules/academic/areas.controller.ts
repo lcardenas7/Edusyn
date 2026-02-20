@@ -144,4 +144,13 @@ export class AreasController {
   async deleteSubject(@Param('subjectId') subjectId: string) {
     return this.areasService.deleteSubject(subjectId);
   }
+
+  @Put('subjects/:subjectId/move')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async moveSubject(
+    @Param('subjectId') subjectId: string,
+    @Body() body: { newAreaId: string },
+  ) {
+    return this.areasService.moveSubjectToArea(subjectId, body.newAreaId);
+  }
 }

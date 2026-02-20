@@ -545,16 +545,21 @@ export default function ReportCards() {
     const html2pdf = (await import('html2pdf.js')).default
     const container = document.createElement('div')
     container.innerHTML = html
-    container.style.position = 'absolute'
-    container.style.left = '-9999px'
+    container.style.position = 'fixed'
     container.style.top = '0'
+    container.style.left = '0'
+    container.style.width = '816px'
+    container.style.opacity = '0'
+    container.style.zIndex = '-9999'
+    container.style.pointerEvents = 'none'
+    container.style.background = '#fff'
     document.body.appendChild(container)
     try {
       const opts: any = {
         margin: [8, 8, 8, 8],
         filename,
         image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true, width: 816, windowWidth: 816 },
         jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
       }

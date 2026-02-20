@@ -215,7 +215,7 @@ export default function AcademicReports() {
               if (!studentGradesMap.has(studentId)) {
                 studentGradesMap.set(studentId, {
                   id: studentId,
-                  name: student ? `${student.lastName} ${student.firstName}`.toUpperCase() : 'Estudiante',
+                  name: student ? [student.lastName, student.secondLastName, student.firstName, student.secondName].filter(Boolean).join(' ').toUpperCase() : 'Estudiante',
                   group: g.studentEnrollment?.group?.name || '',
                   grades: {}
                 })

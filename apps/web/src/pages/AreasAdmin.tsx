@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, BookOpen, Settings, Star, Lock, Save, AlertTriangle, Loader2 } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, BookOpen, Settings, Star, Lock, Save, AlertTriangle, Loader2, ArrowRightLeft } from 'lucide-react'
 import { useAcademic, AreaType, AreaCalculationMethod, AreaApprovalCriteria, AreaRecoveryType, AcademicLevel } from '../contexts/AcademicContext'
 import { useAuth } from '../contexts/AuthContext'
 import { areasApi, academicGradesApi } from '../lib/api'
@@ -135,6 +135,7 @@ export default function AreasAdmin() {
   const [editingArea, setEditingArea] = useState<Area | null>(null)
   const [editingSubject, setEditingSubject] = useState<{ areaId: string; subject: Subject | null }>({ areaId: '', subject: null })
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'area' | 'subject'; id: string; name: string } | null>(null)
+  const [moveSubjectData, setMoveSubjectData] = useState<{ subjectId: string; subjectName: string; currentAreaId: string; newAreaId: string } | null>(null)
   
   // Filtro por nivel académico
   const [selectedLevel, setSelectedLevel] = useState<string>('TODOS')
@@ -322,6 +323,20 @@ export default function AreasAdmin() {
     } catch (error: any) {
       console.error('Error saving subject:', error)
       alert(error.response?.data?.message || 'Error al guardar la asignatura')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const moveSubject = async () => {
+    if (!moveSubjectData || !moveSubjectData.newAreaId) return
+    setSaving(true)
+    try {
+      await areasApi.moveSubject(moveSubjectData.subjectId, moveSubjectData.newAreaId)
+      await loadAreas()
+      setMoveSubjectData(null)
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Error al mover asignatura')
     } finally {
       setSaving(false)
     }
@@ -739,6 +754,9 @@ export default function AreasAdmin() {
                             <button onClick={() => openSubjectModal(area.id, item.subject, item.config)} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600">
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
+                            <button onClick={() => setMoveSubjectData({ subjectId: item.subject.id, subjectName: item.subject.name, currentAreaId: area.id, newAreaId: '' })} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-purple-600" title="Mover a otra área">
+                              <ArrowRightLeft className="w-3.5 h-3.5" />
+                            </button>
                             <button onClick={() => setDeleteConfirm({ type: 'subject', id: item.subject.id, name: item.subject.name })} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-red-600">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -1072,6 +1090,57 @@ export default function AreasAdmin() {
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
                 {editingConfig ? 'Guardar' : 'Crear'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Mover Asignatura */}
+      {moveSubjectData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-900">Mover Asignatura</h3>
+              <button onClick={() => setMoveSubjectData(null)} className="p-1 hover:bg-slate-100 rounded">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                <p className="text-sm text-purple-800"><strong>Asignatura:</strong> {moveSubjectData.subjectName}</p>
+                <p className="text-sm text-purple-600 mt-1"><strong>Área actual:</strong> {areas.find(a => a.id === moveSubjectData.currentAreaId)?.name}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Mover al área *</label>
+                <select
+                  value={moveSubjectData.newAreaId}
+                  onChange={(e) => setMoveSubjectData({ ...moveSubjectData, newAreaId: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                >
+                  <option value="">Seleccionar área destino...</option>
+                  {areas.filter(a => a.id !== moveSubjectData.currentAreaId).map(a => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-700">
+                  <strong>Nota:</strong> Mover la asignatura preserva todas las asignaciones docentes, calificaciones y demás datos. Solo cambia el área.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 p-6 border-t border-slate-200 bg-slate-50">
+              <button onClick={() => setMoveSubjectData(null)} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-100">
+                Cancelar
+              </button>
+              <button
+                onClick={moveSubject}
+                disabled={!moveSubjectData.newAreaId || saving}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                Mover
               </button>
             </div>
           </div>
