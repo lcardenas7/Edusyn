@@ -36,12 +36,8 @@ export class ReportsController {
     if (!term?.bulletinsReleasedForTeachers) {
       throw new ForbiddenException('Los boletines de este período aún no han sido liberados por el coordinador.');
     }
-    // Also check capabilities
-    const canViewOwnCourse = userCaps.capabilities.includes('VIEW_OWN_COURSE_REPORTS');
-    const canViewTutorGroup = userCaps.capabilities.includes('VIEW_TUTOR_GROUP_REPORTS');
-    if (!canViewOwnCourse && !canViewTutorGroup) {
-      throw new ForbiddenException('No tienes permiso para ver reportes de estudiantes');
-    }
+    // If bulletins are released, any DOCENTE can view individual report cards
+    // (group-level access is already checked in getGroupReportCardList)
   }
 
   @Get('report-card/:studentEnrollmentId')
@@ -300,7 +296,7 @@ export class ReportsController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('report-card-config')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getReportCardConfig(@Request() req) {
     const institutionId = req.user.institutionId;
     return this.reportsService.getReportCardConfig(institutionId);
@@ -397,11 +393,10 @@ export class ReportsController {
         if (!term?.bulletinsReleasedForTeachers) {
           throw new ForbiddenException('Los boletines de este período aún no han sido liberados por el coordinador.');
         }
-        const canViewOwnCourse = userCaps.capabilities.includes('VIEW_OWN_COURSE_REPORTS');
-        const canViewTutorGroup = userCaps.capabilities.includes('VIEW_TUTOR_GROUP_REPORTS');
+        // Teacher must have carga académica or be tutor of this group
         const isOwnGroup = userCaps.teacherAssignmentGroupIds.includes(groupId);
         const isTutorGroup = userCaps.tutorGroupIds.includes(groupId);
-        if (!(canViewOwnCourse && isOwnGroup) && !(canViewTutorGroup && isTutorGroup)) {
+        if (!isOwnGroup && !isTutorGroup) {
           throw new ForbiddenException('No tienes permiso para ver boletines de este grupo');
         }
       }
