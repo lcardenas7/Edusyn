@@ -47,13 +47,29 @@ export class AcademicYearLifecycleController {
   @Get('institution/:institutionId')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA')
   async getYearsByInstitution(@Param('institutionId') institutionId: string) {
-    return this.yearService.getYearsByInstitution(institutionId);
+    try {
+      console.log('[AcademicYearLifecycle] getYearsByInstitution called for:', institutionId);
+      const result = await this.yearService.getYearsByInstitution(institutionId);
+      console.log('[AcademicYearLifecycle] getYearsByInstitution returned', result?.length, 'years');
+      return result;
+    } catch (error) {
+      console.error('[AcademicYearLifecycle] getYearsByInstitution ERROR:', error?.message || error);
+      throw error;
+    }
   }
 
   @Get('institution/:institutionId/current')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA', 'ESTUDIANTE')
   async getCurrentYear(@Param('institutionId') institutionId: string) {
-    return this.yearService.getCurrentYear(institutionId);
+    try {
+      console.log('[AcademicYearLifecycle] getCurrentYear called for:', institutionId);
+      const result = await this.yearService.getCurrentYear(institutionId);
+      console.log('[AcademicYearLifecycle] getCurrentYear returned:', result?.id || 'null');
+      return result;
+    } catch (error) {
+      console.error('[AcademicYearLifecycle] getCurrentYear ERROR:', error?.message || error);
+      throw error;
+    }
   }
 
   @Get(':yearId')
