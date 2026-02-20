@@ -479,7 +479,8 @@ function ScheduleTab({ grades, selectedGroup, setSelectedGroup, gridData, loadin
 
   // Filtrar grupos según capabilities para no-managers: solo grupo de tutoría
   const allGroups = (() => {
-    if (isManager || !userCaps) return allGroupsRaw
+    if (isManager) return allGroupsRaw
+    if (!userCaps) return [] // esperar a que carguen las capabilities
     const tutorIds = new Set<string>(userCaps.tutorGroupIds || [])
     if (tutorIds.size === 0) return [] // docente sin grupo de tutoría no ve selector de grupos
     return allGroupsRaw.filter((g: any) => tutorIds.has(g.id))

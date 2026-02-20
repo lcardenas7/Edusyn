@@ -158,6 +158,12 @@ export default function Achievements() {
   const [filterLevel, setFilterLevel] = useState<PerformanceLevel | 'ALL'>('ALL')
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set())
 
+  // Duplicar logros a otros grupos
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false)
+  const [duplicatingAchievement, setDuplicatingAchievement] = useState<Achievement | null>(null)
+  const [duplicateTargetIds, setDuplicateTargetIds] = useState<Set<string>>(new Set())
+  const [duplicating, setDuplicating] = useState(false)
+
   // Banco de logros
   const [showBank, setShowBank] = useState(false)
   const [bankItems, setBankItems] = useState<any[]>([])
@@ -529,6 +535,49 @@ export default function Achievements() {
     }
   }
 
+  // Duplicate achievement to other groups
+  const handleDuplicateAchievement = async () => {
+    if (!duplicatingAchievement || duplicateTargetIds.size === 0 || !selectedTermId) return
+    setDuplicating(true)
+    let successCount = 0
+    let errorCount = 0
+    for (const targetAssignmentId of duplicateTargetIds) {
+      try {
+        // Get existing achievements for target to determine orderNumber
+        const existingRes = await achievementsApi.getByAssignment(targetAssignmentId, selectedTermId)
+        const existingCount = (existingRes.data || []).length
+        await achievementsApi.create({
+          teacherAssignmentId: targetAssignmentId,
+          academicTermId: selectedTermId,
+          orderNumber: existingCount + 1,
+          baseDescription: duplicatingAchievement.baseDescription,
+        })
+        successCount++
+      } catch (err) {
+        console.error('Error duplicating to assignment:', targetAssignmentId, err)
+        errorCount++
+      }
+    }
+    setDuplicating(false)
+    setShowDuplicateModal(false)
+    setDuplicatingAchievement(null)
+    setDuplicateTargetIds(new Set())
+    if (successCount > 0) {
+      setMessage({ type: 'success', text: `Logro duplicado a ${successCount} grupo(s)${errorCount > 0 ? ` (${errorCount} error(es))` : ''}` })
+    } else {
+      setMessage({ type: 'error', text: 'Error al duplicar el logro' })
+    }
+    setTimeout(() => setMessage(null), 3000)
+  }
+
+  // Get other assignments with the same subject for duplication targets
+  const duplicateTargets = useMemo(() => {
+    if (!selectedAssignment?.subject?.id) return []
+    return teacherAssignments.filter(a =>
+      a.subject?.id === selectedAssignment.subject.id && a.id !== selectedAssignmentId
+    )
+  }, [teacherAssignments, selectedAssignment, selectedAssignmentId])
+
   // Delete achievement
   const handleDeleteAchievement = async (id: string) => {
     if (!confirm('¿Estás seguro de eliminar este logro?')) return
@@ -881,6 +930,20 @@ export default function Achievements() {
                         </div>
                         {editingAchievement !== achievement.id && (
                           <div className="flex gap-1">
+                            {duplicateTargets.length > 0 && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setDuplicatingAchievement(achievement)
+                                  setDuplicateTargetIds(new Set())
+                                  setShowDuplicateModal(true)
+                                }}
+                                className="p-1 hover:bg-indigo-100 rounded"
+                                title="Duplicar a otros grupos"
+                              >
+                                <Copy className="w-4 h-4 text-indigo-400" />
+                              </button>
+                            )}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -1359,6 +1422,84 @@ export default function Achievements() {
                 <Save className="w-4 h-4" />
                 {saving ? 'Guardando...' : 'Guardar Configuración'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Duplicar logro a otros grupos */}
+      {showDuplicateModal && duplicatingAchievement && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl w-full max-w-md mx-4 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-slate-900">Duplicar Logro</h2>
+              <button onClick={() => setShowDuplicateModal(false)} className="p-2 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <p className="text-xs text-slate-500 mb-1">Logro a duplicar:</p>
+              <p className="text-sm text-slate-700">{duplicatingAchievement.baseDescription}</p>
+            </div>
+
+            <p className="text-sm font-medium text-slate-700 mb-3">Seleccione los grupos destino:</p>
+            <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
+              {duplicateTargets.map(target => {
+                const isChecked = duplicateTargetIds.has(target.id)
+                return (
+                  <label key={target.id} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${isChecked ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 hover:bg-slate-50'}`}>
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => {
+                        setDuplicateTargetIds(prev => {
+                          const next = new Set(prev)
+                          if (next.has(target.id)) next.delete(target.id)
+                          else next.add(target.id)
+                          return next
+                        })
+                      }}
+                      className="w-4 h-4 text-indigo-600 rounded"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-slate-800">{target.subject?.name}</span>
+                      <span className="text-sm text-slate-500"> — {target.group?.grade?.name} {target.group?.name}</span>
+                    </div>
+                  </label>
+                )
+              })}
+              {duplicateTargets.length === 0 && (
+                <p className="text-sm text-slate-500 text-center py-4">No hay otros grupos con la misma asignatura</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => {
+                  const allIds = new Set(duplicateTargets.map(t => t.id))
+                  setDuplicateTargetIds(prev => prev.size === allIds.size ? new Set() : allIds)
+                }}
+                className="text-sm text-indigo-600 hover:text-indigo-700"
+              >
+                {duplicateTargetIds.size === duplicateTargets.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowDuplicateModal(false)}
+                  className="px-4 py-2 border border-slate-300 rounded-lg text-sm hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDuplicateAchievement}
+                  disabled={duplicating || duplicateTargetIds.size === 0}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  <Copy className="w-4 h-4" />
+                  {duplicating ? 'Duplicando...' : `Duplicar a ${duplicateTargetIds.size} grupo(s)`}
+                </button>
+              </div>
             </div>
           </div>
         </div>

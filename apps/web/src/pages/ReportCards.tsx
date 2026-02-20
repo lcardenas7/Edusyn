@@ -544,32 +544,40 @@ export default function ReportCards() {
   }
 
   const generatePdfFromHtml = async (html: string, filename: string) => {
-    const html2pdf = (await import('html2pdf.js')).default
-    const container = document.createElement('div')
-    container.innerHTML = html
-    container.style.position = 'absolute'
-    container.style.left = '0'
-    container.style.top = '0'
-    container.style.width = '816px'
-    container.style.background = '#fff'
-    container.style.zIndex = '99999'
-    // Ocultar scroll del body mientras se genera
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    document.body.appendChild(container)
-    try {
-      const opts: any = {
-        margin: [8, 8, 8, 8],
-        filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true, width: 816, windowWidth: 816, scrollX: 0, scrollY: 0 },
-        jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-      }
-      await html2pdf().set(opts).from(container).save()
-    } finally {
-      document.body.removeChild(container)
-      document.body.style.overflow = prevOverflow
+    // Usar ventana emergente + print nativo del navegador (el más confiable, funciona siempre)
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      alert('Por favor permite las ventanas emergentes para descargar el boletín como PDF')
+      return
+    }
+    printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>${filename.replace('.pdf', '')}</title>
+  <style>
+    @page { size: letter; margin: 8mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; background: #fff; }
+    @media print {
+      body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    }
+  </style>
+</head>
+<body>${html}</body>
+</html>`)
+    printWindow.document.close()
+    // Esperar a que carguen imágenes y fuentes, luego abrir diálogo de impresión
+    const triggerPrint = () => {
+      printWindow.focus()
+      printWindow.print()
+    }
+    // Intentar con onload; fallback con timeout
+    if (printWindow.document.readyState === 'complete') {
+      setTimeout(triggerPrint, 300)
+    } else {
+      printWindow.onload = () => setTimeout(triggerPrint, 300)
+      // Fallback por si onload no dispara
+      setTimeout(triggerPrint, 2000)
     }
   }
 

@@ -221,8 +221,12 @@ export default function Recoveries() {
       if (!selectedYearId) return
       setLoadingGroups(true)
       try {
-        // teacherAssignmentsApi ya resuelve institutionId en backend para admin/coordinador
-        const assignmentsRes = await teacherAssignmentsApi.getAll({ academicYearId: selectedYearId })
+        // Para docente, filtrar solo sus asignaciones; admin/coordinador ve todas
+        const params: any = { academicYearId: selectedYearId }
+        if (isTeacher && !isAdminOrCoordinator && user?.id) {
+          params.teacherId = user.id
+        }
+        const assignmentsRes = await teacherAssignmentsApi.getAll(params)
         const assignments = assignmentsRes.data || []
         setTeacherAssignments(assignments)
         console.log('[Recoveries] assignments loaded:', assignments.length)

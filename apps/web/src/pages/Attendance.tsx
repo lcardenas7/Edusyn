@@ -343,12 +343,13 @@ export default function Attendance() {
         </button>
       </div>
 
-      {/* Banner para admin: habilitar tutoría */}
+      {/* Banner para admin: habilitar/deshabilitar tutoría */}
       {isAdmin && !tutoringEnabled && (
         <div className="mb-4 p-4 rounded-lg bg-purple-50 border border-purple-200 flex items-center justify-between">
           <div>
             <p className="font-medium text-purple-800">Asistencia de Tutoría</p>
             <p className="text-sm text-purple-600">Habilitar esta función permite a los directores de grupo tomar asistencia diaria de tutoría.</p>
+            <p className="text-xs text-purple-500 mt-1">Para asignar un director de grupo, vaya a <strong>Gestión Académica → Carga Académica</strong> y edite el grupo para asignarle un director.</p>
           </div>
           <button
             onClick={async () => {
@@ -369,6 +370,36 @@ export default function Attendance() {
             className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 text-sm whitespace-nowrap"
           >
             {togglingTutoring ? 'Habilitando...' : 'Habilitar Tutoría'}
+          </button>
+        </div>
+      )}
+
+      {/* Banner admin: tutoría habilitada — opción de deshabilitar */}
+      {isAdmin && tutoringEnabled && (
+        <div className="mb-4 p-4 rounded-lg bg-green-50 border border-green-200 flex items-center justify-between">
+          <div>
+            <p className="font-medium text-green-800">✓ Asistencia de Tutoría habilitada</p>
+            <p className="text-xs text-green-600 mt-1">Los directores de grupo pueden tomar asistencia diaria de tutoría. Para asignar un director, vaya a <strong>Gestión Académica → Carga Académica</strong> y edite el grupo.</p>
+          </div>
+          <button
+            onClick={async () => {
+              if (!confirm('¿Desea deshabilitar la asistencia de tutoría?')) return
+              setTogglingTutoring(true)
+              try {
+                await tutoringAttendanceApi.toggle(false)
+                setTutoringEnabled(false)
+                setDirectedGroups([])
+                setActiveTab('subject')
+              } catch (err: any) {
+                alert(err.response?.data?.message || 'Error al deshabilitar')
+              } finally {
+                setTogglingTutoring(false)
+              }
+            }}
+            disabled={togglingTutoring}
+            className="px-3 py-1.5 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 text-xs whitespace-nowrap"
+          >
+            {togglingTutoring ? 'Deshabilitando...' : 'Deshabilitar'}
           </button>
         </div>
       )}
