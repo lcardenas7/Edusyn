@@ -298,7 +298,7 @@ export default function VotingPortal() {
               </div>
               
               <h3 className="text-xl font-bold text-gray-800 mb-1">
-                {candidate.student.firstName} {candidate.student.lastName}
+                {candidate.student.lastName} {candidate.student.firstName}
               </h3>
               
               {candidate.slogan && (

@@ -2234,7 +2234,7 @@ export default function Reports() {
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="font-bold text-lg text-purple-900">
-                            {minimumGradeData.student?.firstName} {minimumGradeData.student?.lastName}
+                            {minimumGradeData.student?.lastName} {minimumGradeData.student?.firstName}
                           </h3>
                           <p className="text-sm text-purple-700">
                             {minimumGradeData.group?.gradeName} - {minimumGradeData.group?.name}

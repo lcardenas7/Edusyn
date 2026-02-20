@@ -235,7 +235,7 @@ export class ReportsService {
       // Student Info
       doc.fontSize(10).font('Helvetica-Bold').text('INFORMACIÓN DEL ESTUDIANTE');
       doc.font('Helvetica');
-      doc.text(`Nombre: ${data.student.firstName} ${data.student.lastName}`);
+      doc.text(`Nombre: ${data.student.lastName} ${data.student.firstName}`);
       doc.text(`Documento: ${data.student.documentType} ${data.student.documentNumber}`);
       doc.text(`Grado: ${data.group.gradeLevel} - Grupo: ${data.group.name}`);
       doc.moveDown();
@@ -2368,8 +2368,8 @@ export class ReportsService {
         enrollmentId,
         student: {
           id: enrollment.student.id,
-          firstName: enrollment.student.firstName,
-          lastName: enrollment.student.lastName,
+          firstName: [enrollment.student.firstName, (enrollment.student as any).secondName].filter(Boolean).join(' '),
+          lastName: [enrollment.student.lastName, (enrollment.student as any).secondLastName].filter(Boolean).join(' '),
           documentType: enrollment.student.documentType,
           documentNumber: enrollment.student.documentNumber,
         },
@@ -2514,7 +2514,7 @@ export class ReportsService {
         return {
           enrollmentId: card.enrollmentId,
           studentId: card.student.id,
-          studentName: `${card.student.lastName} ${card.student.firstName}`,
+          studentName: `${card.student.lastName} ${card.student.firstName}`.trim(),
           documentNumber: card.student.documentNumber || '',
           groupName: `${card.group.gradeLevel} ${card.group.name}`,
           average: card.generalAverage,
@@ -2540,7 +2540,7 @@ export class ReportsService {
       return {
         enrollmentId: card.enrollmentId,
         studentId: card.student.id,
-        studentName: `${card.student.lastName} ${card.student.firstName}`,
+        studentName: `${card.student.lastName} ${card.student.firstName}`.trim(),
         documentNumber: card.student.documentNumber || '',
         groupName: `${card.group.gradeLevel} ${card.group.name}`,
         average: generalAvg,

@@ -616,7 +616,7 @@ export default function Students() {
       { header: 'Contraseña Inicial', key: 'initialPassword' },
     ]
     const data = studentsWithAccess.map(u => ({
-      fullName: `${u.firstName} ${u.lastName}`,
+      fullName: `${u.lastName} ${u.firstName}`,
       documentNumber: u.documentNumber,
       group: u.group,
       username: u.username,
@@ -667,7 +667,7 @@ export default function Students() {
               ${studentsWithAccess.map((u, i) => `
                 <tr>
                   <td>${i + 1}</td>
-                  <td>${u.firstName} ${u.lastName}</td>
+                  <td>${u.lastName} ${u.firstName}</td>
                   <td>${u.documentNumber}</td>
                   <td>${u.group}</td>
                   <td><span class="username">${u.username}</span></td>
@@ -1556,10 +1556,10 @@ export default function Students() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
-                            <span className="text-sm font-medium text-slate-600">{student.firstName[0]}{student.lastName[0]}</span>
+                            <span className="text-sm font-medium text-slate-600">{student.lastName[0]}{student.firstName[0]}</span>
                           </div>
                           <div>
-                            <p className="font-medium text-slate-900">{student.firstName} {student.lastName}</p>
+                            <p className="font-medium text-slate-900">{student.lastName} {student.firstName}</p>
                             <p className="text-xs text-slate-500">{calculateAge(student.birthDate)} anos - {student.gender === 'M' ? 'Masculino' : 'Femenino'}</p>
                           </div>
                         </div>
@@ -1608,10 +1608,10 @@ export default function Students() {
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
               <div className="flex items-center gap-6">
                 <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center">
-                  <span className="text-3xl font-bold">{selectedStudent.firstName[0]}{selectedStudent.lastName[0]}</span>
+                  <span className="text-3xl font-bold">{selectedStudent.lastName[0]}{selectedStudent.firstName[0]}</span>
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold">{selectedStudent.firstName} {selectedStudent.lastName}</h2>
+                  <h2 className="text-2xl font-bold">{selectedStudent.lastName} {selectedStudent.firstName}</h2>
                   <p className="text-blue-100">{selectedStudent.documentType}: {selectedStudent.documentNumber}</p>
                   <div className="flex items-center gap-4 mt-2">
                     <span className="px-3 py-1 bg-white/20 rounded-full text-sm">{selectedStudent.group}</span>
@@ -2158,7 +2158,7 @@ export default function Students() {
                     {filteredCredentialStudents.map((student) => (
                       <tr key={student.id} className="hover:bg-slate-50">
                         <td className="px-4 py-3">
-                          <p className="font-medium text-slate-900 text-sm">{student.firstName} {student.lastName}</p>
+                          <p className="font-medium text-slate-900 text-sm">{student.lastName} {student.firstName}</p>
                         </td>
                         <td className="px-4 py-3 text-sm text-slate-600">{student.documentNumber}</td>
                         <td className="px-4 py-3">

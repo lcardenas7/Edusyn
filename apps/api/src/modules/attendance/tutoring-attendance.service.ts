@@ -219,7 +219,7 @@ export class TutoringAttendanceService {
       const attendanceRate = total > 0 ? Math.round(((present + late + excused) / total) * 100) : 100;
 
       return {
-        studentName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
+        studentName: [enrollment.student.lastName, (enrollment.student as any).secondLastName, enrollment.student.firstName, (enrollment.student as any).secondName].filter(Boolean).join(' '),
         groupName: `${enrollment.group.grade?.name || ''} ${enrollment.group.name}`,
         totalDays: total,
         present,

@@ -275,7 +275,7 @@ export default function ElectionResults() {
                   <div className="flex-1">
                     <p className="text-white font-bold text-lg">
                       {result.candidate 
-                        ? `${result.candidate.student.firstName} ${result.candidate.student.lastName}`
+                        ? `${result.candidate.student.lastName} ${result.candidate.student.firstName}`
                         : 'Voto en Blanco'
                       }
                     </p>
@@ -343,7 +343,7 @@ export default function ElectionResults() {
                     <Trophy className="w-6 h-6 text-yellow-400" />
                     <div>
                       <p className="text-white font-medium">
-                        {winner.candidate?.student.firstName} {winner.candidate?.student.lastName}
+                        {winner.candidate?.student.lastName} {winner.candidate?.student.firstName}
                       </p>
                       <p className="text-green-300 text-sm">
                         {winner.votes} votos ({winner.percentage.toFixed(1)}%)
@@ -362,7 +362,7 @@ export default function ElectionResults() {
                     <div className="flex justify-between text-xs text-gray-400 mb-1">
                       <span>
                         {result.candidate 
-                          ? `${result.candidate.student.firstName.charAt(0)}. ${result.candidate.student.lastName}`
+                          ? `${result.candidate.student.lastName} ${result.candidate.student.firstName.charAt(0)}.`
                           : 'Blanco'
                         }
                       </span>

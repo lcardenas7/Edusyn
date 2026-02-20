@@ -120,7 +120,7 @@ export default function Alerts() {
 
             return {
               id: g.id,
-              student: student ? `${student.firstName} ${student.lastName}` : 'Estudiante',
+              student: student ? `${student.lastName} ${student.firstName}` : 'Estudiante',
               enrollmentId: g.studentEnrollmentId,
               group: g.studentEnrollment?.group?.name || '',
               subject: g.subject?.name || 'Asignatura',

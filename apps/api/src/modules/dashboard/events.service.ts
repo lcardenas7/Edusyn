@@ -156,7 +156,7 @@ export class EventsService {
         const dayInfo = daysToCheck.find(d => d.month === bdMonth && d.day === bdDay);
         return {
           id: s.id,
-          name: `${s.firstName} ${s.lastName}`,
+          name: `${s.lastName} ${s.firstName}`,
           birthDate: s.birthDate,
           type: 'ESTUDIANTE' as const,
           detail: s.enrollments[0] 
@@ -183,7 +183,7 @@ export class EventsService {
         const dayInfo = daysToCheck.find(d => d.month === bdMonth && d.day === bdDay);
         return {
           id: t.id,
-          name: `${t.firstName} ${t.lastName}`,
+          name: `${t.lastName} ${t.firstName}`,
           birthDate: t.birthDate,
           type: 'DOCENTE' as const,
           detail: 'Docente',

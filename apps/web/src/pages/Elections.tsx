@@ -653,7 +653,7 @@ export default function Elections() {
                             <div key={result.id} className="flex items-center justify-between text-sm">
                               <span className={result.isWinner ? 'font-bold text-green-600' : 'text-gray-600'}>
                                 {result.position}° {result.candidate 
-                                  ? `${result.candidate.student.firstName} ${result.candidate.student.lastName}`
+                                  ? `${result.candidate.student.lastName} ${result.candidate.student.firstName}`
                                   : 'Voto en blanco'
                                 }
                               </span>
@@ -893,7 +893,7 @@ export default function Elections() {
                               className="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold"
                               style={{ backgroundColor: candidate.color || '#6366f1' }}
                             >
-                              {candidate.student.firstName[0]}{candidate.student.lastName[0]}
+                              {candidate.student.lastName[0]}{candidate.student.firstName[0]}
                             </div>
                           )}
                           <div>
@@ -904,7 +904,7 @@ export default function Elections() {
                                 </span>
                               )}
                               <h4 className="font-medium text-gray-800">
-                                {candidate.student.firstName} {candidate.student.lastName}
+                                {candidate.student.lastName} {candidate.student.firstName}
                               </h4>
                             </div>
                             {candidate.slogan && (
@@ -983,7 +983,7 @@ export default function Elections() {
               </h2>
               <p className="text-gray-500 text-sm">
                 {editingCandidate 
-                  ? `${editingCandidate.student.firstName} ${editingCandidate.student.lastName}`
+                  ? `${editingCandidate.student.lastName} ${editingCandidate.student.firstName}`
                   : getElectionTitle(selectedElection!)}
               </p>
             </div>
@@ -1025,7 +1025,7 @@ export default function Elections() {
                           }`}
                         >
                           <div className="font-medium text-gray-800">
-                            {student.firstName} {student.lastName}
+                            {student.lastName} {student.firstName}
                           </div>
                           <div className="text-sm text-gray-500">
                             {student.documentNumber} • {student.enrollments[0]?.group?.grade?.name} {student.enrollments[0]?.group?.name}

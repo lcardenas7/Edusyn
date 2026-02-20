@@ -552,7 +552,7 @@ const Enrollments: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-slate-900">
-                            {enrollment.student.firstName} {enrollment.student.lastName}
+                            {enrollment.student.lastName} {enrollment.student.firstName}
                           </div>
                           {enrollment.student.email && (
                             <div className="text-xs text-slate-500">{enrollment.student.email}</div>
@@ -673,7 +673,7 @@ const Enrollments: React.FC = () => {
             
             <div className="mb-4">
               <p className="text-sm text-slate-600 mb-2">
-                <strong>Estudiante:</strong> {selectedEnrollment.student.firstName} {selectedEnrollment.student.lastName}
+                <strong>Estudiante:</strong> {selectedEnrollment.student.lastName} {selectedEnrollment.student.firstName}
               </p>
               <p className="text-sm text-slate-600">
                 <strong>Grupo actual:</strong> {selectedEnrollment.group.name}
@@ -753,7 +753,7 @@ const Enrollments: React.FC = () => {
             
             <div className="mb-4">
               <p className="text-sm text-slate-600 mb-2">
-                <strong>Estudiante:</strong> {selectedEnrollment.student.firstName} {selectedEnrollment.student.lastName}
+                <strong>Estudiante:</strong> {selectedEnrollment.student.lastName} {selectedEnrollment.student.firstName}
               </p>
               <p className="text-sm text-slate-600">
                 <strong>Grupo actual:</strong> {selectedEnrollment.group.name}
@@ -846,7 +846,7 @@ const Enrollments: React.FC = () => {
             
             <div className="mb-4">
               <p className="text-sm text-slate-600 mb-2">
-                <strong>Estudiante:</strong> {selectedEnrollment.student.firstName} {selectedEnrollment.student.lastName}
+                <strong>Estudiante:</strong> {selectedEnrollment.student.lastName} {selectedEnrollment.student.firstName}
               </p>
               <p className="text-sm text-slate-600">
                 <strong>Grupo actual:</strong> {selectedEnrollment.group.name} ({selectedEnrollment.group.grade.name})
@@ -1031,7 +1031,7 @@ const Enrollments: React.FC = () => {
             
             <div className="mb-4">
               <p className="text-sm text-slate-600 mb-2">
-                <strong>Estudiante:</strong> {selectedEnrollment.student.firstName} {selectedEnrollment.student.lastName}
+                <strong>Estudiante:</strong> {selectedEnrollment.student.lastName} {selectedEnrollment.student.firstName}
               </p>
               <p className="text-sm text-slate-600">
                 <strong>Documento:</strong> {selectedEnrollment.student.documentType} {selectedEnrollment.student.documentNumber}

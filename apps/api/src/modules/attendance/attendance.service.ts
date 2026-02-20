@@ -269,7 +269,7 @@ export class AttendanceService {
       else if (attendanceRate < 85) status = 'Alerta';
 
       return {
-        studentName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
+        studentName: [enrollment.student.lastName, (enrollment.student as any).secondLastName, enrollment.student.firstName, (enrollment.student as any).secondName].filter(Boolean).join(' '),
         groupName: `${enrollment.group.grade?.name || ''} ${enrollment.group.name}`,
         totalClasses: total,
         present,
@@ -644,7 +644,7 @@ export class AttendanceService {
       date: record.date,
       status: record.status,
       observations: record.observations,
-      studentName: `${record.studentEnrollment.student.firstName} ${record.studentEnrollment.student.lastName}`,
+      studentName: [record.studentEnrollment.student.lastName, (record.studentEnrollment.student as any).secondLastName, record.studentEnrollment.student.firstName, (record.studentEnrollment.student as any).secondName].filter(Boolean).join(' '),
       groupName: `${record.studentEnrollment.group.grade?.name || ''} ${record.studentEnrollment.group.name}`,
       subjectName: record.teacherAssignment.subject.name,
       teacherName: `${record.teacherAssignment.teacher.firstName} ${record.teacherAssignment.teacher.lastName}`,

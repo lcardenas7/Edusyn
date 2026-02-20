@@ -136,7 +136,7 @@ export default function ReportCards() {
   const { user, institution } = useAuth()
   const isManager = user?.roles?.some((r: any) => {
     const roleName = r.role?.name || r.name || ''
-    return roleName.includes('ADMIN') || roleName.includes('COORDINADOR') || roleName.includes('SUPERADMIN')
+    return roleName.includes('ADMIN') || roleName.includes('COORDINADOR') || roleName.includes('SUPERADMIN') || roleName.includes('RECTOR')
   }) ?? false
 
   // Datos de API
@@ -168,6 +168,7 @@ export default function ReportCards() {
   const [uploadingSignature, setUploadingSignature] = useState<string | null>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [dataMeta, setDataMeta] = useState<{ source?: string; termStatus?: string; wasReopened?: boolean; snapshotVersion?: number | null } | null>(null)
+  const [togglingBulletins, setTogglingBulletins] = useState(false)
 
   // Reglas institucionales
   const [rulesCtx, setRulesCtx] = useState<{ minGradeValue: number; maxGradeValue: number; minPassingGrade: number; performanceLevels: any[] }>(
@@ -497,7 +498,7 @@ export default function ReportCards() {
       <!-- Student info -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;border:1px solid #cbd5e1;border-radius:6px;padding:10px;margin-bottom:12px;background:#f8fafc;font-size:11px;">
         <div>
-          <p style="margin:2px 0;"><strong>Estudiante:</strong> ${data.student?.firstName} ${data.student?.lastName}</p>
+          <p style="margin:2px 0;"><strong>Estudiante:</strong> ${data.student?.lastName} ${data.student?.firstName}</p>
           <p style="margin:2px 0;"><strong>Documento:</strong> ${data.student?.documentNumber}</p>
         </div>
         <div>
@@ -712,7 +713,6 @@ export default function ReportCards() {
   const selectedTermName = selectedTerm?.name || ''
   const selectedYearName = academicYears.find(y => y.id === selectedYearId)?.name || ''
 
-  const [togglingBulletins, setTogglingBulletins] = useState(false)
   const handleToggleBulletins = async () => {
     if (!selectedTermId) return
     const current = selectedTerm?.bulletinsReleasedForTeachers ?? false
@@ -1038,7 +1038,7 @@ export default function ReportCards() {
                   {/* Datos del Estudiante */}
                   <div className="grid grid-cols-2 gap-4 text-sm border border-slate-300 rounded p-3 mb-4 bg-slate-50">
                     <div>
-                      <p><span className="font-semibold">Estudiante:</span> {previewData.student?.firstName} {previewData.student?.lastName}</p>
+                      <p><span className="font-semibold">Estudiante:</span> {previewData.student?.lastName} {previewData.student?.firstName}</p>
                       <p><span className="font-semibold">Documento:</span> {previewData.student?.documentNumber}</p>
                     </div>
                     <div>

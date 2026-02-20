@@ -48,7 +48,7 @@ const canDeleteObs = (roles: string[]) => roles.some(r => ['ADMIN_INSTITUTIONAL'
 const canViewAll = (roles: string[]) => roles.some(r => ['ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR'].includes(r))
 
 // Helpers
-const fullName = (s: any) => s ? [s.firstName, s.secondName, s.lastName, s.secondLastName].filter(Boolean).join(' ') : ''
+const fullName = (s: any) => s ? [s.lastName, s.secondLastName, s.firstName, s.secondName].filter(Boolean).join(' ') : ''
 const authorName = (a: any) => a ? `${a.firstName || ''} ${a.lastName || ''}`.trim() : ''
 
 // Diagnóstico visual del estudiante basado en observaciones

@@ -850,14 +850,14 @@ export class StudentsService {
       },
     });
 
-    // Mapear a formato académico simple (nombre completo con los 4 campos)
+    // Mapear a formato académico simple (nombre completo: apellido1 apellido2 nombre1 nombre2)
     return enrollments.map((enrollment) => ({
       id: enrollment.student.id,
       name: [
-        enrollment.student.firstName,
-        enrollment.student.secondName,
         enrollment.student.lastName,
         enrollment.student.secondLastName,
+        enrollment.student.firstName,
+        enrollment.student.secondName,
       ].filter(Boolean).join(' '),
       enrollmentId: enrollment.id,
       documentNumber: enrollment.student.documentNumber || undefined,
@@ -912,10 +912,10 @@ export class StudentsService {
       result[enrollment.groupId].push({
         id: enrollment.student.id,
         name: [
-          enrollment.student.firstName,
-          enrollment.student.secondName,
           enrollment.student.lastName,
           enrollment.student.secondLastName,
+          enrollment.student.firstName,
+          enrollment.student.secondName,
         ].filter(Boolean).join(' '),
         enrollmentId: enrollment.id,
         documentNumber: enrollment.student.documentNumber || undefined,
@@ -1025,7 +1025,7 @@ export class StudentsService {
     return enrollments.map(e => ({
       id: e.id,
       studentId: e.student.id,
-      studentName: `${e.student.firstName} ${e.student.lastName}`,
+      studentName: [e.student.lastName, e.student.secondLastName, e.student.firstName, e.student.secondName].filter(Boolean).join(' '),
       studentFirstName: e.student.firstName,
       studentLastName: e.student.lastName,
       documentNumber: e.student.documentNumber,

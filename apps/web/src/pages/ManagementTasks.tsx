@@ -204,10 +204,7 @@ export default function ManagementTasks() {
   const loadTeachers = async () => {
     try {
       const response = await staffApi.getAll()
-      const teachersList = (response.data || []).filter((u: any) => 
-        u.roles?.some((r: any) => (r.role?.name || r.name) === 'DOCENTE')
-      )
-      setTeachers(teachersList)
+      setTeachers(response.data || [])
     } catch (error) {
       console.error('Error loading teachers:', error)
     }
@@ -215,7 +212,7 @@ export default function ManagementTasks() {
 
   const handleCreateTask = async () => {
     if (!taskForm.title || taskForm.assigneeIds.length === 0) {
-      alert('Complete el título y seleccione al menos un docente')
+      alert('Complete el título y seleccione al menos un usuario')
       return
     }
 
@@ -336,7 +333,7 @@ export default function ManagementTasks() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Gestión de Tareas</h1>
-          <p className="text-slate-500">Asignación y seguimiento de actividades docentes</p>
+          <p className="text-slate-500">Asignación y seguimiento de actividades institucionales</p>
         </div>
         {canManageTasks && (
           <button
@@ -754,7 +751,7 @@ export default function ManagementTasks() {
                     </label>
                   ))}
                 </div>
-                <p className="text-xs text-slate-500 mt-1">{taskForm.assigneeIds.length} docente(s) seleccionado(s)</p>
+                <p className="text-xs text-slate-500 mt-1">{taskForm.assigneeIds.length} usuario(s) seleccionado(s)</p>
               </div>
             </div>
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-200">

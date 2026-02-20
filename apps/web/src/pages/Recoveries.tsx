@@ -343,7 +343,7 @@ export default function Recoveries() {
           if (score < config.minPassingScore) {
             const enrollmentId = grade.studentEnrollmentId
             const student = grade.studentEnrollment?.student
-            const studentName = student ? `${student.firstName} ${student.lastName}` : 'Estudiante'
+            const studentName = student ? `${student.lastName} ${student.firstName}` : 'Estudiante'
             const subjectName = grade.subject?.name || 'Asignatura'
             const subjectId = grade.subjectId
             const groupName = grade.studentEnrollment?.group?.name || ''
@@ -820,7 +820,7 @@ export default function Recoveries() {
                         <td className="px-6 py-4">
                           <div>
                             <p className="font-medium text-slate-900">
-                              {recovery.studentEnrollment?.student?.firstName} {recovery.studentEnrollment?.student?.lastName}
+                              {recovery.studentEnrollment?.student?.lastName} {recovery.studentEnrollment?.student?.firstName}
                             </p>
                             <p className="text-xs text-slate-500">
                               {recovery.studentEnrollment?.group?.grade?.name} - {recovery.studentEnrollment?.group?.name}
@@ -937,7 +937,7 @@ export default function Recoveries() {
                         <td className="px-6 py-4">
                           <div>
                             <p className="font-medium text-slate-900">
-                              {plan.studentEnrollment?.student?.firstName} {plan.studentEnrollment?.student?.lastName}
+                              {plan.studentEnrollment?.student?.lastName} {plan.studentEnrollment?.student?.firstName}
                             </p>
                             <p className="text-xs text-slate-500">
                               {plan.studentEnrollment?.group?.grade?.name} - {plan.studentEnrollment?.group?.name}
@@ -1006,7 +1006,7 @@ export default function Recoveries() {
                       <h3 className="font-medium text-slate-900 mt-1">{act.title}</h3>
                       {act.studentEnrollment && (
                         <p className="text-sm text-slate-500 mt-1">
-                          Estudiante: {act.studentEnrollment.student?.firstName} {act.studentEnrollment.student?.lastName}
+                          Estudiante: {act.studentEnrollment.student?.lastName} {act.studentEnrollment.student?.firstName}
                         </p>
                       )}
                     </div>

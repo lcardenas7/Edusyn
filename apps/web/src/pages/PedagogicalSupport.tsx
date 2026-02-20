@@ -498,7 +498,7 @@ export default function PedagogicalSupport() {
                 {plans.map((plan: any) => {
                   const student = plan.studentEnrollment?.student
                   const studentName = student
-                    ? `${student.firstName} ${student.lastName}`
+                    ? `${student.lastName} ${student.firstName}`
                     : 'Estudiante'
                   const isExpanded = expandedPlanId === plan.id
 
