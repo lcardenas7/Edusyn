@@ -33,7 +33,7 @@ export class AcademicYearLifecycleController {
 
   // Endpoint con query param (para compatibilidad con frontend)
   @Get()
-  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'SECRETARIA')
+  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA')
   async getYears(@Query('institutionId') institutionId: string) {
     console.log('[AcademicYearController] getYears called with institutionId:', institutionId);
     if (!institutionId) {
@@ -45,19 +45,19 @@ export class AcademicYearLifecycleController {
   }
 
   @Get('institution/:institutionId')
-  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE')
+  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA')
   async getYearsByInstitution(@Param('institutionId') institutionId: string) {
     return this.yearService.getYearsByInstitution(institutionId);
   }
 
   @Get('institution/:institutionId/current')
-  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
+  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA', 'ESTUDIANTE')
   async getCurrentYear(@Param('institutionId') institutionId: string) {
     return this.yearService.getCurrentYear(institutionId);
   }
 
   @Get(':yearId')
-  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE')
+  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA')
   async getYearById(@Param('yearId') yearId: string) {
     return this.yearService.getYearById(yearId);
   }
@@ -157,7 +157,7 @@ export class AcademicYearLifecycleController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get(':yearId/permissions')
-  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE')
+  @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA')
   async getYearPermissions(@Param('yearId') yearId: string) {
     const [canEditStructure, canRecordGrades, canEnrollStudents, canModify] =
       await Promise.all([

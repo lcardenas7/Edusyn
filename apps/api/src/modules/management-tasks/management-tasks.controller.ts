@@ -42,7 +42,7 @@ export class ManagementTasksController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Post('leaders')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async createLeader(
     @Body() dto: CreateLeaderDto,
     @Request() req: any,
@@ -51,14 +51,14 @@ export class ManagementTasksController {
   }
 
   @Get('leaders')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async getLeaders(@Request() req: any, @Query('institutionId') institutionId?: string) {
     const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
     return this.tasksService.getLeaders(instId);
   }
 
   @Delete('leaders/:id')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async removeLeader(@Param('id') id: string) {
     return this.tasksService.removeLeader(id);
   }
@@ -68,14 +68,14 @@ export class ManagementTasksController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Post()
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async createTask(
     @Body() dto: CreateTaskDto,
     @Request() req: any,
   ) {
     // Verificar si el docente es líder para poder crear tareas
     const userRoles = req.user.roles?.map((r: any) => r.role?.name || r.name) || [];
-    const isAdmin = userRoles.some((r: string) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'].includes(r));
+    const isAdmin = userRoles.some((r: string) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(r));
     
     if (!isAdmin) {
       const isLeader = await this.tasksService.isUserLeader(req.user.id, dto.institutionId);
@@ -88,7 +88,7 @@ export class ManagementTasksController {
   }
 
   @Get()
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async getTasks(
     @Request() req: any,
     @Query('institutionId') institutionId?: string,
@@ -102,7 +102,7 @@ export class ManagementTasksController {
   }
 
   @Get('my-tasks')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async getMyTasks(
     @Request() req: any,
     @Query('status') status?: TaskAssignmentStatus,
@@ -111,14 +111,14 @@ export class ManagementTasksController {
   }
 
   @Get('my-pending-count')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async getMyPendingCount(@Request() req: any) {
     const count = await this.tasksService.getMyPendingCount(req.user.id);
     return { count };
   }
 
   @Get('pending-verifications')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async getPendingVerifications(
     @Request() req: any,
     @Query('institutionId') institutionId?: string,
@@ -128,19 +128,19 @@ export class ManagementTasksController {
   }
 
   @Get('enums')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async getEnums() {
     return this.tasksService.getEnums();
   }
 
   @Get(':id')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async getTask(@Param('id') id: string) {
     return this.tasksService.getTaskById(id);
   }
 
   @Put(':id')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async updateTask(
     @Param('id') id: string,
     @Body() dto: UpdateTaskDto,
@@ -150,7 +150,7 @@ export class ManagementTasksController {
   }
 
   @Delete(':id')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async deleteTask(
     @Param('id') id: string,
     @Request() req: any,
@@ -163,7 +163,7 @@ export class ManagementTasksController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Post('assignments/:id/start')
-  @Roles('DOCENTE', 'COORDINADOR', 'ADMIN_INSTITUTIONAL', 'SUPERADMIN')
+  @Roles('DOCENTE', 'COORDINADOR', 'ADMIN_INSTITUTIONAL', 'RECTOR', 'SUPERADMIN')
   async startTask(
     @Param('id') id: string,
     @Request() req: any,
@@ -172,7 +172,7 @@ export class ManagementTasksController {
   }
 
   @Post('assignments/:id/submit')
-  @Roles('DOCENTE', 'COORDINADOR', 'ADMIN_INSTITUTIONAL', 'SUPERADMIN')
+  @Roles('DOCENTE', 'COORDINADOR', 'ADMIN_INSTITUTIONAL', 'RECTOR', 'SUPERADMIN')
   @UseInterceptors(FileInterceptor('evidence'))
   async submitEvidence(
     @Param('id') id: string,
@@ -184,7 +184,7 @@ export class ManagementTasksController {
   }
 
   @Post('assignments/:id/complete')
-  @Roles('DOCENTE', 'COORDINADOR', 'ADMIN_INSTITUTIONAL', 'SUPERADMIN')
+  @Roles('DOCENTE', 'COORDINADOR', 'ADMIN_INSTITUTIONAL', 'RECTOR', 'SUPERADMIN')
   async markAsCompleted(
     @Param('id') id: string,
     @Body('responseNote') responseNote: string,
@@ -194,7 +194,7 @@ export class ManagementTasksController {
   }
 
   @Post('assignments/:id/verify')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async verifyTask(
     @Param('id') id: string,
     @Body() dto: VerifyTaskDto,
