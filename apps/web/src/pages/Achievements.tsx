@@ -570,6 +570,48 @@ export default function Achievements() {
     setTimeout(() => setMessage(null), 3000)
   }
 
+  // Duplicate ALL achievements to other groups at once
+  const handleDuplicateAll = async () => {
+    if (achievements.length === 0 || duplicateTargetIds.size === 0 || !selectedTermId) return
+    setDuplicating(true)
+    let successCount = 0
+    let errorCount = 0
+    for (const targetAssignmentId of duplicateTargetIds) {
+      try {
+        const existingRes = await achievementsApi.getByAssignment(targetAssignmentId, selectedTermId)
+        let existingCount = (existingRes.data || []).length
+        for (const ach of achievements) {
+          try {
+            await achievementsApi.create({
+              teacherAssignmentId: targetAssignmentId,
+              academicTermId: selectedTermId,
+              orderNumber: existingCount + 1,
+              baseDescription: ach.baseDescription,
+            })
+            existingCount++
+            successCount++
+          } catch (err) {
+            console.error('Error duplicating achievement:', ach.id, err)
+            errorCount++
+          }
+        }
+      } catch (err) {
+        console.error('Error getting existing achievements for:', targetAssignmentId, err)
+        errorCount += achievements.length
+      }
+    }
+    setDuplicating(false)
+    setShowDuplicateModal(false)
+    setDuplicatingAchievement(null)
+    setDuplicateTargetIds(new Set())
+    if (successCount > 0) {
+      setMessage({ type: 'success', text: `${successCount} logro(s) duplicado(s) a ${duplicateTargetIds.size} grupo(s)${errorCount > 0 ? ` (${errorCount} error(es))` : ''}` })
+    } else {
+      setMessage({ type: 'error', text: 'Error al duplicar los logros' })
+    }
+    setTimeout(() => setMessage(null), 3000)
+  }
+
   // Get other assignments with the same subject for duplication targets
   const duplicateTargets = useMemo(() => {
     if (!selectedAssignment?.subject?.id) return []
@@ -871,9 +913,25 @@ export default function Achievements() {
                     <Target className="w-5 h-5 text-blue-600" />
                     <h3 className="font-semibold text-slate-900">Logros del Período</h3>
                   </div>
-                  <span className="text-sm text-slate-500">
-                    {achievements.length} / {config.achievementsPerPeriod} requeridos
-                  </span>
+                  <div className="flex items-center gap-3">
+                    {duplicateTargets.length > 0 && achievements.length > 0 && (
+                      <button
+                        onClick={() => {
+                          setDuplicatingAchievement(null)
+                          setDuplicateTargetIds(new Set())
+                          setShowDuplicateModal(true)
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+                        title="Duplicar todos los logros a otros grupos con la misma asignatura"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        Duplicar todos
+                      </button>
+                    )}
+                    <span className="text-sm text-slate-500">
+                      {achievements.length} / {config.achievementsPerPeriod} requeridos
+                    </span>
+                  </div>
                 </div>
 
                 <div className="p-4 space-y-3">
@@ -930,6 +988,16 @@ export default function Achievements() {
                         </div>
                         {editingAchievement !== achievement.id && (
                           <div className="flex gap-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                saveToBank(achievement.baseDescription)
+                              }}
+                              className="p-1 hover:bg-green-100 rounded"
+                              title="Guardar en banco de logros"
+                            >
+                              <Library className="w-4 h-4 text-green-500" />
+                            </button>
                             {duplicateTargets.length > 0 && (
                               <button
                                 onClick={(e) => {
@@ -1427,20 +1495,38 @@ export default function Achievements() {
         </div>
       )}
 
-      {/* Modal: Duplicar logro a otros grupos */}
-      {showDuplicateModal && duplicatingAchievement && (
+      {/* Modal: Duplicar logro(s) a otros grupos */}
+      {showDuplicateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl w-full max-w-md mx-4 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-900">Duplicar Logro</h2>
+              <h2 className="text-lg font-bold text-slate-900">
+                {duplicatingAchievement ? 'Duplicar Logro' : 'Duplicar Todos los Logros'}
+              </h2>
               <button onClick={() => setShowDuplicateModal(false)} className="p-2 hover:bg-slate-100 rounded-lg">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
-              <p className="text-xs text-slate-500 mb-1">Logro a duplicar:</p>
-              <p className="text-sm text-slate-700">{duplicatingAchievement.baseDescription}</p>
+              {duplicatingAchievement ? (
+                <>
+                  <p className="text-xs text-slate-500 mb-1">Logro a duplicar:</p>
+                  <p className="text-sm text-slate-700">{duplicatingAchievement.baseDescription}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-slate-500 mb-1">Se duplicarán {achievements.length} logro(s):</p>
+                  <ul className="space-y-1 mt-1">
+                    {achievements.map((a, i) => (
+                      <li key={a.id} className="text-sm text-slate-700 flex gap-2">
+                        <span className="text-slate-400 font-medium">{i + 1}.</span>
+                        <span className="line-clamp-1">{a.baseDescription}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
             </div>
 
             <p className="text-sm font-medium text-slate-700 mb-3">Seleccione los grupos destino:</p>
@@ -1463,8 +1549,8 @@ export default function Achievements() {
                       className="w-4 h-4 text-indigo-600 rounded"
                     />
                     <div>
-                      <span className="text-sm font-medium text-slate-800">{target.subject?.name}</span>
-                      <span className="text-sm text-slate-500"> — {target.group?.grade?.name} {target.group?.name}</span>
+                      <span className="text-sm font-medium text-slate-800">{target.group?.grade?.name} {target.group?.name}</span>
+                      <span className="text-xs text-slate-400 ml-1">({target.subject?.name})</span>
                     </div>
                   </label>
                 )
@@ -1492,7 +1578,7 @@ export default function Achievements() {
                   Cancelar
                 </button>
                 <button
-                  onClick={handleDuplicateAchievement}
+                  onClick={duplicatingAchievement ? handleDuplicateAchievement : handleDuplicateAll}
                   disabled={duplicating || duplicateTargetIds.size === 0}
                   className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50"
                 >
