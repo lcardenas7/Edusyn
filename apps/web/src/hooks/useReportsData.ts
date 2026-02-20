@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { academicYearsApi, academicTermsApi, teacherAssignmentsApi, groupsApi, subjectsApi, studentsApi, institutionConfigApi } from '../lib/api'
+import { academicYearsApi, academicYearLifecycleApi, academicTermsApi, teacherAssignmentsApi, groupsApi, subjectsApi, studentsApi, institutionConfigApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
 export interface PerformanceLevelConfig {
@@ -106,8 +106,11 @@ export function useReportsData() {
     const loadInitial = async () => {
       try {
         // Cargar config institucional + años en paralelo
-        const [yearsRes, gradingRes, levelsRes, rulesRes] = await Promise.allSettled([
-          academicYearsApi.getAll(),
+        // Pasar institutionId explícitamente para asegurar resolución correcta
+        const instId = institution?.id
+        const [yearsRes, yearsLifecycleRes, gradingRes, levelsRes, rulesRes] = await Promise.allSettled([
+          academicYearsApi.getAll(instId),
+          instId ? academicYearLifecycleApi.getByInstitution(instId) : Promise.resolve({ data: [] }),
           institutionConfigApi.getGradingConfig(),
           institutionConfigApi.getAcademicLevels(),
           institutionConfigApi.getRulesContext(),
@@ -118,13 +121,24 @@ export function useReportsData() {
           setRulesContext(rulesRes.value.data)
         }
 
-        // Años académicos
+        // Años académicos — combinar ambas fuentes y deduplicar
+        let years: any[] = []
         if (yearsRes.status === 'fulfilled') {
-          const years = yearsRes.value.data || []
-          setAcademicYears(years)
-          const activeYear = years.find((y: any) => y.status === 'ACTIVE') || years[0]
-          if (activeYear) setFilterYear(activeYear.id)
+          years = yearsRes.value.data || []
         }
+        if (yearsLifecycleRes.status === 'fulfilled') {
+          const lifecycleYears = (yearsLifecycleRes.value as any).data || []
+          // Agregar años del lifecycle que no estén ya en la lista
+          const existingIds = new Set(years.map((y: any) => y.id))
+          lifecycleYears.forEach((y: any) => {
+            if (!existingIds.has(y.id)) years.push(y)
+          })
+        }
+        // Ordenar por año descendente
+        years.sort((a: any, b: any) => (b.year || 0) - (a.year || 0))
+        setAcademicYears(years)
+        const activeYear = years.find((y: any) => y.status === 'ACTIVE') || years[0]
+        if (activeYear) setFilterYear(activeYear.id)
 
         // Configuración de calificación
         const gradingConfig = gradingRes.status === 'fulfilled' ? gradingRes.value.data : null
@@ -160,7 +174,7 @@ export function useReportsData() {
       }
     }
     loadInitial()
-  }, [])
+  }, [institution?.id])
 
   // Cargar datos cuando cambia el año
   useEffect(() => {

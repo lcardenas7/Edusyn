@@ -123,7 +123,7 @@ export default function ManagementTasks() {
 
   const userRoles = user?.roles?.map((r: any) => r.role?.name || r.name) || []
   const isAdmin = userRoles.some((r: string) => 
-    ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'].includes(r)
+    ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(r)
   )
   const [isLeader, setIsLeader] = useState(false)
 
@@ -721,6 +721,21 @@ export default function ManagementTasks() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Asignar a *</label>
                 <div className="max-h-48 overflow-y-auto border border-slate-300 rounded-lg p-2 space-y-1">
+                  <label className="flex items-center gap-2 p-2 hover:bg-blue-50 rounded cursor-pointer border-b border-slate-200 mb-1 font-medium">
+                    <input
+                      type="checkbox"
+                      checked={taskForm.assigneeIds.length === teachers.length && teachers.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setTaskForm({ ...taskForm, assigneeIds: teachers.map(t => t.id) })
+                        } else {
+                          setTaskForm({ ...taskForm, assigneeIds: [] })
+                        }
+                      }}
+                      className="rounded"
+                    />
+                    <span className="text-sm text-blue-700">Seleccionar todos ({teachers.length})</span>
+                  </label>
                   {teachers.map((teacher) => (
                     <label key={teacher.id} className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded cursor-pointer">
                       <input
