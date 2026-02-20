@@ -39,7 +39,6 @@ export default function ReportsHub() {
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
       borderColor: 'border-blue-200',
-      feature: 'RPT_ADMIN',
       reportCount: 8
     },
     {
@@ -51,7 +50,6 @@ export default function ReportsHub() {
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       borderColor: 'border-green-200',
-      feature: 'RPT_ACAD',
       reportCount: 14
     },
     {
@@ -63,7 +61,6 @@ export default function ReportsHub() {
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-200',
-      feature: 'RPT_EVAL',
       reportCount: 6
     },
     {
@@ -75,7 +72,6 @@ export default function ReportsHub() {
       color: 'text-amber-600',
       bgColor: 'bg-amber-50',
       borderColor: 'border-amber-200',
-      feature: 'RPT_ATT',
       reportCount: 6
     },
     {
@@ -87,7 +83,6 @@ export default function ReportsHub() {
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-50',
       borderColor: 'border-indigo-200',
-      feature: 'RPT_BULLETIN',
       reportCount: 5
     },
     {
@@ -99,7 +94,6 @@ export default function ReportsHub() {
       color: 'text-red-600',
       bgColor: 'bg-red-50',
       borderColor: 'border-red-200',
-      feature: 'RPT_STAT',
       reportCount: 3
     },
   ]
