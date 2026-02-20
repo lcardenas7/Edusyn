@@ -477,15 +477,12 @@ function ScheduleTab({ grades, selectedGroup, setSelectedGroup, gridData, loadin
 
   const allGroupsRaw = grades.flatMap((g: any) => g.groups?.map((gr: any) => ({ ...gr, gradeName: g.name })) || [])
 
-  // Filtrar grupos según capabilities para no-managers
+  // Filtrar grupos según capabilities para no-managers: solo grupo de tutoría
   const allGroups = (() => {
     if (isManager || !userCaps) return allGroupsRaw
-    const allowedIds = new Set<string>([
-      ...(userCaps.teacherAssignmentGroupIds || []),
-      ...(userCaps.tutorGroupIds || []),
-    ])
-    if (allowedIds.size === 0) return allGroupsRaw // fallback si no hay caps cargadas
-    return allGroupsRaw.filter((g: any) => allowedIds.has(g.id))
+    const tutorIds = new Set<string>(userCaps.tutorGroupIds || [])
+    if (tutorIds.size === 0) return [] // docente sin grupo de tutoría no ve selector de grupos
+    return allGroupsRaw.filter((g: any) => tutorIds.has(g.id))
   })()
 
   return (
@@ -2066,9 +2063,9 @@ const VIEW_MODES = [
 ] as const
 
 function ScheduleViewerTab({ academicYearId, isManager, user, userCaps }: { academicYearId: string; isManager?: boolean; user?: any; userCaps?: any }) {
-  // Para docentes: solo mostrar su horario y el de sus grupos asignados/tutor
+  // Para docentes: solo mostrar su grupo de tutoría (no todos los que enseña)
   const allowedGroupIds = !isManager && userCaps
-    ? new Set<string>([...(userCaps.teacherAssignmentGroupIds || []), ...(userCaps.tutorGroupIds || [])])
+    ? new Set<string>(userCaps.tutorGroupIds || [])
     : null // null = sin restricción
 
   const defaultView = isManager ? 'by-grade' : 'by-teacher'

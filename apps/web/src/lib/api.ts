@@ -1004,6 +1004,7 @@ export const staffApi = {
   delete: (id: string) => api.delete(`/iam/staff/${id}`),
   resetPassword: (userId: string, opts?: { newPassword?: string; mustChangePassword?: boolean }) => api.post(`/iam/users/${userId}/reset-password`, opts || {}),
   bulkResetPassword: (userIds?: string[]) => api.post('/iam/users/bulk-reset-password', { userIds }),
+  updateUsername: (userId: string, username: string) => api.post(`/iam/users/${userId}/update-username`, { username }),
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

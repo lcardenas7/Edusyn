@@ -450,6 +450,50 @@ export class UsersController {
   }
 
   /**
+   * Actualizar username de un usuario
+   */
+  @Post('users/:id/update-username')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async updateUsername(
+    @Request() req: any,
+    @Param('id') userId: string,
+    @Body() body: { username: string },
+  ) {
+    const institutionUser = await this.prisma.institutionUser.findFirst({
+      where: { userId: req.user.id },
+    });
+    if (!institutionUser) {
+      throw new BadRequestException('Usuario no asociado a ninguna institución');
+    }
+
+    const targetInst = await this.prisma.institutionUser.findFirst({
+      where: { userId, institutionId: institutionUser.institutionId },
+    });
+    if (!targetInst) {
+      throw new ForbiddenException('No tiene acceso a este usuario');
+    }
+
+    const newUsername = (body.username || '').trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+
+    if (!newUsername || newUsername.length < 3) {
+      throw new BadRequestException('El nombre de usuario debe tener al menos 3 caracteres');
+    }
+
+    const existing = await this.prisma.user.findUnique({ where: { username: newUsername } });
+    if (existing && existing.id !== userId) {
+      throw new BadRequestException(`El nombre de usuario "${newUsername}" ya está en uso`);
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { username: newUsername },
+    });
+
+    return { userId, username: newUsername, message: 'Nombre de usuario actualizado correctamente' };
+  }
+
+  /**
    * Resetear contraseña de un usuario (docente, coordinador, etc.)
    * Si tiene número de documento, la contraseña se pone como el documento.
    * Si no tiene, se genera una contraseña temporal aleatoria.

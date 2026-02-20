@@ -37,6 +37,7 @@ export default function Attendance() {
   const [loadingTutoringStudents, setLoadingTutoringStudents] = useState(false)
   const [savingTutoring, setSavingTutoring] = useState(false)
   const [tutoringMessage, setTutoringMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [togglingTutoring, setTogglingTutoring] = useState(false)
   
   const [assignments, setAssignments] = useState<TeacherAssignment[]>([])
   const [selectedAssignment, setSelectedAssignment] = useState<TeacherAssignment | null>(null)
@@ -341,6 +342,36 @@ export default function Attendance() {
           {(activeTab === 'tutoring' ? savingTutoring : saving) ? 'Guardando...' : 'Guardar Asistencia'}
         </button>
       </div>
+
+      {/* Banner para admin: habilitar tutoría */}
+      {isAdmin && !tutoringEnabled && (
+        <div className="mb-4 p-4 rounded-lg bg-purple-50 border border-purple-200 flex items-center justify-between">
+          <div>
+            <p className="font-medium text-purple-800">Asistencia de Tutoría</p>
+            <p className="text-sm text-purple-600">Habilitar esta función permite a los directores de grupo tomar asistencia diaria de tutoría.</p>
+          </div>
+          <button
+            onClick={async () => {
+              setTogglingTutoring(true)
+              try {
+                await tutoringAttendanceApi.toggle(true)
+                setTutoringEnabled(true)
+                const res = await tutoringAttendanceApi.getStatus()
+                setDirectedGroups(res.data.directedGroups || [])
+                if (res.data.directedGroups?.length > 0) setSelectedTutoringGroupId(res.data.directedGroups[0].id)
+              } catch (err: any) {
+                alert(err.response?.data?.message || 'Error al habilitar')
+              } finally {
+                setTogglingTutoring(false)
+              }
+            }}
+            disabled={togglingTutoring}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 text-sm whitespace-nowrap"
+          >
+            {togglingTutoring ? 'Habilitando...' : 'Habilitar Tutoría'}
+          </button>
+        </div>
+      )}
 
       {/* Tabs: Asignatura / Tutoría */}
       {showTutoringTab && (

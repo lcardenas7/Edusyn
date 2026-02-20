@@ -87,6 +87,11 @@ export default function StaffManagement() {
   const [mustChangeOnLogin, setMustChangeOnLogin] = useState(true)
   const [resetting, setResetting] = useState(false)
   const [resetResult, setResetResult] = useState<{ password: string; username: string } | null>(null)
+  
+  // Username editing
+  const [editingUsernameId, setEditingUsernameId] = useState<string | null>(null)
+  const [editingUsernameValue, setEditingUsernameValue] = useState('')
+  const [savingUsername, setSavingUsername] = useState(false)
 
   // Load users
   useEffect(() => {
@@ -888,9 +893,73 @@ export default function StaffManagement() {
                           {user.email}
                         </td>
                         <td className="px-4 py-3">
-                          <code className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-sm font-mono">
-                            {user.username}
-                          </code>
+                          {editingUsernameId === user.id ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                value={editingUsernameValue}
+                                onChange={(e) => setEditingUsernameValue(e.target.value)}
+                                className="px-2 py-1 border border-blue-300 rounded text-sm font-mono w-36 focus:ring-1 focus:ring-blue-500 outline-none"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    (async () => {
+                                      setSavingUsername(true)
+                                      try {
+                                        await staffApi.updateUsername(user.id, editingUsernameValue)
+                                        setAllUsers(prev => prev.map(u => u.id === user.id ? { ...u, username: editingUsernameValue.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '') } : u))
+                                        setEditingUsernameId(null)
+                                      } catch (err: any) {
+                                        alert(err.response?.data?.message || 'Error al actualizar username')
+                                      } finally {
+                                        setSavingUsername(false)
+                                      }
+                                    })()
+                                  }
+                                  if (e.key === 'Escape') setEditingUsernameId(null)
+                                }}
+                              />
+                              <button
+                                disabled={savingUsername}
+                                onClick={async () => {
+                                  setSavingUsername(true)
+                                  try {
+                                    await staffApi.updateUsername(user.id, editingUsernameValue)
+                                    setAllUsers(prev => prev.map(u => u.id === user.id ? { ...u, username: editingUsernameValue.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '') } : u))
+                                    setEditingUsernameId(null)
+                                  } catch (err: any) {
+                                    alert(err.response?.data?.message || 'Error al actualizar username')
+                                  } finally {
+                                    setSavingUsername(false)
+                                  }
+                                }}
+                                className="p-1 text-green-600 hover:bg-green-50 rounded disabled:opacity-50"
+                                title="Guardar"
+                              >
+                                {savingUsername ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                              </button>
+                              <button
+                                onClick={() => setEditingUsernameId(null)}
+                                className="p-1 text-slate-400 hover:bg-slate-100 rounded"
+                                title="Cancelar"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <code className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-sm font-mono">
+                                {user.username}
+                              </code>
+                              <button
+                                onClick={() => { setEditingUsernameId(user.id); setEditingUsernameValue(user.username || '') }}
+                                className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                title="Editar usuario"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">

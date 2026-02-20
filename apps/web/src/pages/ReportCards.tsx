@@ -465,28 +465,21 @@ export default function ReportCards() {
     // Signatures
     const enabledSigs = config.signatureConfig.filter(s => s.enabled)
     const sigWidth = enabledSigs.length > 0 ? Math.floor(100 / enabledSigs.length) : 33
-    const sigsHtml = enabledSigs.map(sig => `
-      <div style="width:${sigWidth}%;text-align:center;">
-        <div style="height:50px;border-bottom:2px solid #94a3b8;margin-bottom:4px;display:flex;align-items:flex-end;justify-content:center;">
-          ${sig.signatureImageUrl ? `<img src="${sig.signatureImageUrl}" style="height:45px;object-fit:contain;" />` : '<span style="color:#cbd5e1;font-size:9px;margin-bottom:4px;">Firma</span>'}
-        </div>
-        <p style="font-weight:700;font-size:10px;margin:2px 0;">${sig.name || '_______________'}</p>
-        <p style="color:#64748b;font-size:9px;margin:0;">${sig.label}</p>
-      </div>
-    `).join('')
 
     return `
     <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:720px;margin:0 auto;padding:20px;color:#0f172a;">
       <!-- Header -->
-      <div style="display:flex;align-items:center;justify-content:center;border-bottom:2px solid #cbd5e1;padding-bottom:10px;margin-bottom:10px;gap:12px;">
-        ${config.showLogo && config.logoUrl ? `<img src="${config.logoUrl}" style="width:80px;height:80px;object-fit:contain;" />` : ''}
-        <div style="text-align:center;line-height:1.3;">
-          <h2 style="font-size:15px;font-weight:700;text-transform:uppercase;margin:0;color:#0f172a;">${data.institution?.name || institution?.name || ''}</h2>
-          ${config.headerResolution ? `<p style="font-size:10px;color:#475569;margin:1px 0;">${config.headerResolution}</p>` : ''}
-          <p style="font-size:10px;color:#475569;margin:1px 0;">NIT: ${data.institution?.nit || ''}${institution?.daneCode ? ` - DANE: ${institution.daneCode}` : ''}</p>
-          ${config.headerMunicipality ? `<p style="font-size:10px;color:#475569;margin:1px 0;">${config.headerMunicipality}${config.headerDepartment ? `, ${config.headerDepartment}` : ''}</p>` : ''}
-        </div>
-      </div>
+      <table style="width:100%;border-bottom:2px solid #cbd5e1;padding-bottom:10px;margin-bottom:10px;border-collapse:collapse;">
+        <tr>
+          ${config.showLogo && config.logoUrl ? `<td style="width:80px;padding-right:12px;vertical-align:middle;"><img src="${config.logoUrl}" style="width:80px;height:80px;object-fit:contain;" /></td>` : ''}
+          <td style="text-align:center;line-height:1.3;vertical-align:middle;">
+            <h2 style="font-size:15px;font-weight:700;text-transform:uppercase;margin:0;color:#0f172a;">${data.institution?.name || institution?.name || ''}</h2>
+            ${config.headerResolution ? `<p style="font-size:10px;color:#475569;margin:1px 0;">${config.headerResolution}</p>` : ''}
+            <p style="font-size:10px;color:#475569;margin:1px 0;">NIT: ${data.institution?.nit || ''}${institution?.daneCode ? ` - DANE: ${institution.daneCode}` : ''}</p>
+            ${config.headerMunicipality ? `<p style="font-size:10px;color:#475569;margin:1px 0;">${config.headerMunicipality}${config.headerDepartment ? `, ${config.headerDepartment}` : ''}</p>` : ''}
+          </td>
+        </tr>
+      </table>
 
       <!-- Title bar -->
       <div style="text-align:center;color:#fff;padding:5px 0;border-radius:4px;margin-bottom:8px;background:${pc};">
@@ -495,16 +488,18 @@ export default function ReportCards() {
       </div>
 
       <!-- Student info -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;border:1px solid #cbd5e1;border-radius:6px;padding:10px;margin-bottom:12px;background:#f8fafc;font-size:11px;">
-        <div>
-          <p style="margin:2px 0;"><strong>Estudiante:</strong> ${[data.student?.lastName, data.student?.secondLastName, data.student?.firstName, data.student?.secondName].filter(Boolean).join(' ')}</p>
-          <p style="margin:2px 0;"><strong>Documento:</strong> ${data.student?.documentNumber}</p>
-        </div>
-        <div>
-          <p style="margin:2px 0;"><strong>Grado:</strong> ${data.group?.gradeLevel} - ${data.group?.name}</p>
-          ${showRank && student.rank ? `<p style="margin:2px 0;"><strong>Puesto:</strong> ${student.rank} de ${student.totalStudents}</p>` : ''}
-        </div>
-      </div>
+      <table style="width:100%;border:1px solid #cbd5e1;border-radius:6px;border-collapse:collapse;margin-bottom:12px;background:#f8fafc;font-size:11px;">
+        <tr>
+          <td style="padding:8px 10px;width:50%;vertical-align:top;">
+            <p style="margin:2px 0;"><strong>Estudiante:</strong> ${[data.student?.lastName, data.student?.secondLastName, data.student?.firstName, data.student?.secondName].filter(Boolean).join(' ')}</p>
+            <p style="margin:2px 0;"><strong>Documento:</strong> ${data.student?.documentNumber}</p>
+          </td>
+          <td style="padding:8px 10px;width:50%;vertical-align:top;">
+            <p style="margin:2px 0;"><strong>Grado:</strong> ${data.group?.gradeLevel} - ${data.group?.name}</p>
+            ${showRank && student.rank ? `<p style="margin:2px 0;"><strong>Puesto:</strong> ${student.rank} de ${student.totalStudents}</p>` : ''}
+          </td>
+        </tr>
+      </table>
 
       <!-- Grades table -->
       <div style="border:1px solid #cbd5e1;border-radius:6px;overflow:hidden;margin-bottom:12px;">
@@ -528,9 +523,17 @@ export default function ReportCards() {
       ${obsHtml}
 
       <!-- Signatures -->
-      <div style="display:flex;gap:16px;margin-top:30px;">
-        ${sigsHtml}
-      </div>
+      <table style="width:100%;margin-top:30px;border-collapse:collapse;">
+        <tr>${enabledSigs.map(sig => `
+          <td style="width:${sigWidth}%;text-align:center;padding:0 8px;vertical-align:bottom;">
+            <div style="height:50px;border-bottom:2px solid #94a3b8;margin-bottom:4px;text-align:center;">
+              ${sig.signatureImageUrl ? `<img src="${sig.signatureImageUrl}" style="height:45px;object-fit:contain;" />` : '<span style="color:#cbd5e1;font-size:9px;">Firma</span>'}
+            </div>
+            <p style="font-weight:700;font-size:10px;margin:2px 0;">${sig.name || '_______________'}</p>
+            <p style="color:#64748b;font-size:9px;margin:0;">${sig.label}</p>
+          </td>
+        `).join('')}</tr>
+      </table>
 
       <!-- Footer -->
       <div style="margin-top:20px;padding-top:8px;border-top:1px solid #cbd5e1;text-align:center;font-size:9px;color:#94a3b8;">
@@ -544,26 +547,29 @@ export default function ReportCards() {
     const html2pdf = (await import('html2pdf.js')).default
     const container = document.createElement('div')
     container.innerHTML = html
-    container.style.position = 'fixed'
-    container.style.top = '-9999px'
-    container.style.left = '-9999px'
+    container.style.position = 'absolute'
+    container.style.left = '0'
+    container.style.top = '0'
     container.style.width = '816px'
-    container.style.zIndex = '-9999'
-    container.style.pointerEvents = 'none'
     container.style.background = '#fff'
+    container.style.zIndex = '99999'
+    // Ocultar scroll del body mientras se genera
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     document.body.appendChild(container)
     try {
       const opts: any = {
         margin: [8, 8, 8, 8],
         filename,
-        image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true, width: 816, windowWidth: 816 },
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true, width: 816, windowWidth: 816, scrollX: 0, scrollY: 0 },
         jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
       }
       await html2pdf().set(opts).from(container).save()
     } finally {
       document.body.removeChild(container)
+      document.body.style.overflow = prevOverflow
     }
   }
 
