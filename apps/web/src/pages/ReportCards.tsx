@@ -200,12 +200,15 @@ export default function ReportCards() {
         grade: g.grade,
       }))
 
-      // Filtrar grupos para DOCENTE: solo grupos donde es tutor (director de grupo)
+      // Filtrar grupos para DOCENTE: grupos de tutoría + grupos de su carga académica
       if (!isManager && capsRes.data) {
         const caps = capsRes.data
-        const tutorIds = new Set<string>(caps.tutorGroupIds || [])
-        if (tutorIds.size > 0) {
-          grps = grps.filter((g: any) => tutorIds.has(g.id))
+        const allowedIds = new Set<string>([
+          ...(caps.tutorGroupIds || []),
+          ...(caps.teacherAssignmentGroupIds || []),
+        ])
+        if (allowedIds.size > 0) {
+          grps = grps.filter((g: any) => allowedIds.has(g.id))
         } else {
           grps = []
         }

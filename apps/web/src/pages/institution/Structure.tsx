@@ -18,7 +18,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAcademic } from '../../contexts/AcademicContext'
 import { usePermissions, PERMISSIONS } from '../../hooks/usePermissions'
-import { academicGradesApi } from '../../lib/api'
+import { academicGradesApi, groupsApi, teachersApi } from '../../lib/api'
 
 // Nivel educativo para visualización (derivado de AcademicLevel)
 interface EducationLevel {
@@ -35,6 +35,8 @@ interface Group {
   shift: 'MAÑANA' | 'TARDE' | 'NOCHE' | 'ÚNICA'
   capacity: number
   director?: string
+  directorId?: string
+  directorName?: string
 }
 
 interface Grade {
@@ -138,7 +140,22 @@ export default function Structure() {
   // Modal states para grupos
   const [showGroupModal, setShowGroupModal] = useState(false)
   const [editingGroup, setEditingGroup] = useState<{ gradeId: string; group: Group | null } | null>(null)
-  const [groupForm, setGroupForm] = useState({ name: '', shift: 'MAÑANA' as Group['shift'], capacity: 35, director: '' })
+  const [groupForm, setGroupForm] = useState({ name: '', shift: 'MAÑANA' as Group['shift'], capacity: 35, directorId: '' })
+  const [teachers, setTeachers] = useState<any[]>([])
+  const [savingGroup, setSavingGroup] = useState(false)
+
+  // Cargar docentes
+  useEffect(() => {
+    const loadTeachers = async () => {
+      try {
+        const res = await teachersApi.getAll({ isActive: true })
+        setTeachers(res.data || [])
+      } catch (err) {
+        console.error('[Structure] Error loading teachers:', err)
+      }
+    }
+    if (authInstitution?.id) loadTeachers()
+  }, [authInstitution?.id])
 
   // Cargar grados y grupos desde la API (base de datos real)
   const loadGradesFromAPI = useCallback(async () => {
@@ -165,7 +182,8 @@ export default function Structure() {
                  : gr.shift?.type === 'NIGHT' ? 'NOCHE'
                  : 'ÚNICA',
             capacity: gr.maxCapacity || 35,
-            director: undefined,
+            directorId: gr.director?.id || undefined,
+            directorName: gr.director ? `${gr.director.firstName} ${gr.director.lastName}` : undefined,
           })),
         }))
 
@@ -299,32 +317,49 @@ export default function Structure() {
   const openGroupModal = (gradeId: string, group?: Group) => {
     if (group) {
       setEditingGroup({ gradeId, group })
-      setGroupForm({ name: group.name, shift: group.shift, capacity: group.capacity, director: group.director || '' })
+      setGroupForm({ name: group.name, shift: group.shift, capacity: group.capacity, directorId: group.directorId || '' })
     } else {
       setEditingGroup({ gradeId, group: null })
-      setGroupForm({ name: '', shift: 'MAÑANA', capacity: 35, director: '' })
+      setGroupForm({ name: '', shift: 'MAÑANA', capacity: 35, directorId: '' })
     }
     setShowGroupModal(true)
   }
 
-  const saveGroup = () => {
+  const saveGroup = async () => {
     if (!editingGroup || !groupForm.name.trim()) return
     
     const { gradeId, group } = editingGroup
     
     if (group) {
-      setGrades(grades.map(g => 
-        g.id === gradeId 
-          ? { ...g, groups: g.groups.map(gr => gr.id === group.id ? { ...gr, ...groupForm } : gr) }
-          : g
-      ))
+      // Grupo existente: actualizar en BD
+      setSavingGroup(true)
+      try {
+        await groupsApi.update(group.id, {
+          name: groupForm.name,
+          maxCapacity: groupForm.capacity,
+          directorId: groupForm.directorId || null,
+        })
+        // Encontrar nombre del director seleccionado
+        const selTeacher = teachers.find(t => t.id === groupForm.directorId)
+        const directorName = selTeacher ? `${selTeacher.firstName} ${selTeacher.lastName}` : undefined
+        setGrades(grades.map(g => 
+          g.id === gradeId 
+            ? { ...g, groups: g.groups.map(gr => gr.id === group.id ? { ...gr, name: groupForm.name, capacity: groupForm.capacity, shift: groupForm.shift, directorId: groupForm.directorId || undefined, directorName } : gr) }
+            : g
+        ))
+      } catch (err) {
+        console.error('[Structure] Error updating group:', err)
+        alert('Error al actualizar el grupo')
+      } finally {
+        setSavingGroup(false)
+      }
     } else {
       const newGroup: Group = {
         id: `group-${Date.now()}`,
         name: groupForm.name,
         shift: groupForm.shift,
         capacity: groupForm.capacity,
-        director: groupForm.director || undefined
+        directorId: groupForm.directorId || undefined
       }
       setGrades(grades.map(g => 
         g.id === gradeId ? { ...g, groups: [...g.groups, newGroup] } : g
@@ -524,7 +559,7 @@ export default function Structure() {
                                       <span className="font-medium text-slate-700">{grade.name} {group.name}</span>
                                       <span className="text-xs px-2 py-0.5 bg-slate-100 rounded text-slate-500">{group.shift}</span>
                                       <span className="text-xs text-slate-500">Cap: {group.capacity}</span>
-                                      {group.director && <span className="text-xs text-slate-500">Dir: {group.director}</span>}
+                                      {group.directorName && <span className="text-xs px-2 py-0.5 bg-purple-50 text-purple-600 rounded border border-purple-200">Tutor: {group.directorName}</span>}
                                       {canEditGrades && (
                                         <div className="ml-auto flex items-center gap-1">
                                           <button
@@ -778,14 +813,18 @@ export default function Structure() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Director de grupo (opcional)</label>
-                <input
-                  type="text"
-                  value={groupForm.director}
-                  onChange={(e) => setGroupForm({ ...groupForm, director: e.target.value })}
-                  placeholder="Nombre del docente"
+                <label className="block text-sm font-medium text-slate-700 mb-1">Director de grupo (Tutor)</label>
+                <select
+                  value={groupForm.directorId}
+                  onChange={(e) => setGroupForm({ ...groupForm, directorId: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
-                />
+                >
+                  <option value="">— Sin director asignado —</option>
+                  {teachers.map((t: any) => (
+                    <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-400 mt-1">El director podrá tomar asistencia de tutoría para este grupo.</p>
               </div>
             </div>
 
@@ -798,10 +837,10 @@ export default function Structure() {
               </button>
               <button
                 onClick={saveGroup}
-                disabled={!groupForm.name.trim()}
+                disabled={!groupForm.name.trim() || savingGroup}
                 className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
               >
-                {editingGroup?.group ? 'Guardar Cambios' : 'Crear Grupo'}
+                {savingGroup ? 'Guardando...' : editingGroup?.group ? 'Guardar Cambios' : 'Crear Grupo'}
               </button>
             </div>
           </div>

@@ -245,18 +245,11 @@ export class CapabilitiesService {
     if (roleNames.includes('DOCENTE')) {
       effectiveRoles.push('DOCENTE');
 
-      // ¿Es director de algún grupo en el año activo? → DOCENTE_TUTOR
+      // ¿Es director de algún grupo en esta institución? → DOCENTE_TUTOR
       const directedGroups = await this.prisma.group.count({
         where: {
           directorId: userId,
-          teacherAssignments: {
-            some: {
-              academicYear: {
-                institutionId,
-                status: 'ACTIVE',
-              },
-            },
-          },
+          campus: { institutionId },
         },
       });
 
@@ -350,18 +343,11 @@ export class CapabilitiesService {
     if (roleNames.includes('DOCENTE')) {
       effectiveRoles.push('DOCENTE');
 
-      // Grupos donde es director (año activo)
+      // Grupos donde es director (de esta institución)
       const directedGroups = await this.prisma.group.findMany({
         where: {
           directorId: userId,
-          teacherAssignments: {
-            some: {
-              academicYear: {
-                institutionId,
-                status: 'ACTIVE',
-              },
-            },
-          },
+          campus: { institutionId },
         },
         select: { id: true },
       });

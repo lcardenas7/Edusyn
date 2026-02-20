@@ -47,6 +47,7 @@ export class GradesService {
           include: {
             campus: true,
             shift: true,
+            director: { select: { id: true, firstName: true, lastName: true } },
           }
         }
       },

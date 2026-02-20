@@ -42,6 +42,7 @@ export class GroupsService {
             institution: true
           }
         },
+        director: { select: { id: true, firstName: true, lastName: true } },
       },
       orderBy: [
         { grade: { number: 'asc' } },
@@ -61,5 +62,16 @@ export class GroupsService {
     }
     
     return groups;
+  }
+
+  async update(id: string, data: { directorId?: string | null; maxCapacity?: number; name?: string }) {
+    return this.prisma.group.update({
+      where: { id },
+      data,
+      include: {
+        grade: true,
+        director: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
   }
 }

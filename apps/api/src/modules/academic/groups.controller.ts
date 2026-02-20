@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseGuards, Request } from '@nestjs/common';
+import { Body, Controller, Get, Post, Patch, Param, Query, UseGuards, Request } from '@nestjs/common';
 
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -20,6 +20,15 @@ export class GroupsController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
   async create(@Body() dto: CreateGroupDto) {
     return this.groupsService.create(dto);
+  }
+
+  @Patch(':id')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
+  async update(
+    @Param('id') id: string,
+    @Body() body: { directorId?: string | null; maxCapacity?: number; name?: string },
+  ) {
+    return this.groupsService.update(id, body);
   }
 
   @Get()
