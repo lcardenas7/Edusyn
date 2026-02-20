@@ -50,6 +50,7 @@ export class TutoringAttendanceService {
     groupId: string;
     teacherId: string;
     date: string;
+    userRoles?: string[];
     records: Array<{
       studentEnrollmentId: string;
       status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED';
@@ -73,8 +74,9 @@ export class TutoringAttendanceService {
       throw new ForbiddenException('La asistencia de tutoría no está habilitada para esta institución');
     }
 
-    // Verificar que el docente es director de este grupo
-    if (group.directorId !== dto.teacherId) {
+    // Admin/Rector/Coordinador pueden registrar en cualquier grupo; docente solo en su grupo dirigido
+    const isAdmin = (dto.userRoles || []).some(r => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(r));
+    if (!isAdmin && group.directorId !== dto.teacherId) {
       throw new ForbiddenException('Solo el director de grupo puede registrar asistencia de tutoría');
     }
 

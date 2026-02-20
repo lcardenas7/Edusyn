@@ -200,15 +200,14 @@ export default function ReportCards() {
         grade: g.grade,
       }))
 
-      // Filtrar grupos para DOCENTE según capabilities
+      // Filtrar grupos para DOCENTE: solo grupos donde es tutor (director de grupo)
       if (!isManager && capsRes.data) {
         const caps = capsRes.data
-        const allowedIds = new Set<string>([
-          ...(caps.teacherAssignmentGroupIds || []),
-          ...(caps.tutorGroupIds || []),
-        ])
-        if (allowedIds.size > 0) {
-          grps = grps.filter((g: any) => allowedIds.has(g.id))
+        const tutorIds = new Set<string>(caps.tutorGroupIds || [])
+        if (tutorIds.size > 0) {
+          grps = grps.filter((g: any) => tutorIds.has(g.id))
+        } else {
+          grps = []
         }
       }
 
@@ -498,7 +497,7 @@ export default function ReportCards() {
       <!-- Student info -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;border:1px solid #cbd5e1;border-radius:6px;padding:10px;margin-bottom:12px;background:#f8fafc;font-size:11px;">
         <div>
-          <p style="margin:2px 0;"><strong>Estudiante:</strong> ${data.student?.lastName} ${data.student?.firstName}</p>
+          <p style="margin:2px 0;"><strong>Estudiante:</strong> ${[data.student?.lastName, data.student?.secondLastName, data.student?.firstName, data.student?.secondName].filter(Boolean).join(' ')}</p>
           <p style="margin:2px 0;"><strong>Documento:</strong> ${data.student?.documentNumber}</p>
         </div>
         <div>
@@ -546,10 +545,9 @@ export default function ReportCards() {
     const container = document.createElement('div')
     container.innerHTML = html
     container.style.position = 'fixed'
-    container.style.top = '0'
-    container.style.left = '0'
+    container.style.top = '-9999px'
+    container.style.left = '-9999px'
     container.style.width = '816px'
-    container.style.opacity = '0'
     container.style.zIndex = '-9999'
     container.style.pointerEvents = 'none'
     container.style.background = '#fff'
@@ -1043,7 +1041,7 @@ export default function ReportCards() {
                   {/* Datos del Estudiante */}
                   <div className="grid grid-cols-2 gap-4 text-sm border border-slate-300 rounded p-3 mb-4 bg-slate-50">
                     <div>
-                      <p><span className="font-semibold">Estudiante:</span> {previewData.student?.lastName} {previewData.student?.firstName}</p>
+                      <p><span className="font-semibold">Estudiante:</span> {[previewData.student?.lastName, previewData.student?.secondLastName, previewData.student?.firstName, previewData.student?.secondName].filter(Boolean).join(' ')}</p>
                       <p><span className="font-semibold">Documento:</span> {previewData.student?.documentNumber}</p>
                     </div>
                     <div>

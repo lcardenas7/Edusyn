@@ -72,10 +72,12 @@ export class TutoringAttendanceController {
       }>;
     },
   ) {
+    const userRoles: string[] = (req.user.roles || []).map((r: any) => typeof r === 'string' ? r : (r.role?.name || r.name || ''));
     return this.tutoringService.recordBulk({
       groupId: body.groupId,
       teacherId: req.user.id,
       date: body.date,
+      userRoles,
       records: body.records,
     });
   }
