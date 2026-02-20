@@ -1949,12 +1949,12 @@ export class ReportsService {
     const term = await this.academicYearService.getTermById(academicTermId);
     if (!term) throw new NotFoundException('Período académico no encontrado');
 
-    // ─── QUERY 2: Matrículas del grupo con estudiante + grupo + año ──────
+    // ─── QUERY 2: Matrículas del grupo con estudiante + grupo + año + director ──
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: { groupId, status: 'ACTIVE' },
       include: {
         student: true,
-        group: { include: { grade: true } },
+        group: { include: { grade: true, director: { select: { id: true, firstName: true, lastName: true, signatureImageUrl: true } } } },
         academicYear: { include: { institution: true } },
       },
       orderBy: { student: { lastName: 'asc' } },
@@ -2379,6 +2379,11 @@ export class ReportsService {
           id: enrollment.group.id,
           name: enrollment.group.name,
           gradeLevel: enrollment.group.grade?.name || '',
+          director: (enrollment.group as any).director ? {
+            firstName: (enrollment.group as any).director.firstName,
+            lastName: (enrollment.group as any).director.lastName,
+            signatureImageUrl: (enrollment.group as any).director.signatureImageUrl,
+          } : null,
         },
         areaGrades,
         subjectGrades,

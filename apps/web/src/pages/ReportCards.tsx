@@ -200,15 +200,12 @@ export default function ReportCards() {
         grade: g.grade,
       }))
 
-      // Filtrar grupos para DOCENTE: grupos de tutoría + grupos de su carga académica
+      // Filtrar grupos para DOCENTE: solo grupos donde es tutor (director de grupo)
       if (!isManager && capsRes.data) {
         const caps = capsRes.data
-        const allowedIds = new Set<string>([
-          ...(caps.tutorGroupIds || []),
-          ...(caps.teacherAssignmentGroupIds || []),
-        ])
-        if (allowedIds.size > 0) {
-          grps = grps.filter((g: any) => allowedIds.has(g.id))
+        const tutorIds = new Set<string>(caps.tutorGroupIds || [])
+        if (tutorIds.size > 0) {
+          grps = grps.filter((g: any) => tutorIds.has(g.id))
         } else {
           grps = []
         }
@@ -465,8 +462,15 @@ export default function ReportCards() {
       </div>`
     }
 
-    // Signatures
-    const enabledSigs = config.signatureConfig.filter(s => s.enabled)
+    // Signatures — dynamic director info
+    const director = data.group?.director
+    const directorShortName = director ? `${director.firstName.split(' ')[0]} ${director.lastName.split(' ')[0]}`.toUpperCase() : ''
+    const enabledSigs = config.signatureConfig.filter(s => s.enabled).map(sig => {
+      if (sig.role === 'TEACHER' && director) {
+        return { ...sig, name: directorShortName, signatureImageUrl: director.signatureImageUrl || sig.signatureImageUrl }
+      }
+      return sig
+    })
     const sigWidth = enabledSigs.length > 0 ? Math.floor(100 / enabledSigs.length) : 33
 
     return `
@@ -1214,21 +1218,33 @@ export default function ReportCards() {
                   )}
 
                   {/* Firmas Configurables */}
-                  <div className={`grid grid-cols-${config.signatureConfig.filter(s => s.enabled).length || 3} gap-4 text-center text-xs mt-8`}>
-                    {config.signatureConfig.filter(s => s.enabled).map((sig) => (
-                      <div key={sig.role}>
-                        <div className="h-16 border-b-2 border-slate-400 mb-1 flex items-end justify-center">
-                          {sig.signatureImageUrl ? (
-                            <img src={sig.signatureImageUrl} alt={`Firma ${sig.label}`} className="h-14 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; const span = document.createElement('span'); span.className = 'text-slate-300 text-[10px]'; span.textContent = 'Firma'; e.currentTarget.parentElement?.appendChild(span) }} />
-                          ) : (
-                            <span className="text-slate-300 text-[10px] mb-1">Firma</span>
-                          )}
+                  {(() => {
+                    const pvDirector = previewData?.group?.director
+                    const pvDirName = pvDirector ? `${pvDirector.firstName.split(' ')[0]} ${pvDirector.lastName.split(' ')[0]}`.toUpperCase() : ''
+                    const pvSigs = config.signatureConfig.filter(s => s.enabled).map(sig => {
+                      if (sig.role === 'TEACHER' && pvDirector) {
+                        return { ...sig, name: pvDirName, signatureImageUrl: pvDirector.signatureImageUrl || sig.signatureImageUrl }
+                      }
+                      return sig
+                    })
+                    return (
+                    <div className={`grid grid-cols-${pvSigs.length || 3} gap-4 text-center text-xs mt-8`}>
+                      {pvSigs.map((sig) => (
+                        <div key={sig.role}>
+                          <div className="h-16 border-b-2 border-slate-400 mb-1 flex items-end justify-center">
+                            {sig.signatureImageUrl ? (
+                              <img src={sig.signatureImageUrl} alt={`Firma ${sig.label}`} className="h-14 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; const span = document.createElement('span'); span.className = 'text-slate-300 text-[10px]'; span.textContent = 'Firma'; e.currentTarget.parentElement?.appendChild(span) }} />
+                            ) : (
+                              <span className="text-slate-300 text-[10px] mb-1">Firma</span>
+                            )}
+                          </div>
+                          <p className="font-bold">{sig.name || '_______________'}</p>
+                          <p className="text-slate-500">{sig.label}</p>
                         </div>
-                        <p className="font-bold">{sig.name || '_______________'}</p>
-                        <p className="text-slate-500">{sig.label}</p>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                    )
+                  })()}
 
                   {/* Pie de pagina */}
                   <div className="mt-6 pt-3 border-t border-slate-300 text-center text-[10px] text-slate-500">
@@ -1446,7 +1462,10 @@ export default function ReportCards() {
                           )}
                         </div>
                         {sig.role === 'TEACHER' && (
-                          <p className="text-xs text-blue-600 italic">El docente tutor puede adjuntar su firma desde su perfil de usuario. Se asigna dinamicamente al grupo del cual es tutor.</p>
+                          <p className="text-xs text-blue-600 italic">El nombre y firma del director de grupo se asignan automaticamente desde Asistencia → Tutoria. Cada tutor sube su firma y aparece en los boletines de su grupo.</p>
+                        )}
+                        {sig.role === 'COORDINATOR' && (
+                          <p className="text-xs text-purple-600 italic">Configure el nombre del coordinador que firma los boletines. Si necesita diferentes coordinadores por grado o nivel, agregue firmantes personalizados con "+ Agregar firmante".</p>
                         )}
                       </div>
                     </div>

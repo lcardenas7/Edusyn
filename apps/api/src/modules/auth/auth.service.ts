@@ -105,6 +105,7 @@ export class AuthService {
       institution,
       isSuperAdmin: user.isSuperAdmin === true,
       mustChangePassword: user.mustChangePassword === true,
+      signatureImageUrl: user.signatureImageUrl || null,
     };
   }
 

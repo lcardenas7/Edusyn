@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Calendar, Check, X, Clock, FileText, ChevronDown, AlertTriangle, Save, Users } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { teacherAssignmentsApi, academicStudentsApi, attendanceApi, tutoringAttendanceApi, academicYearsApi } from '../lib/api'
+import { teacherAssignmentsApi, academicStudentsApi, attendanceApi, tutoringAttendanceApi, academicYearsApi, storageApi } from '../lib/api'
 
 interface TeacherAssignment {
   id: string
@@ -38,6 +38,8 @@ export default function Attendance() {
   const [savingTutoring, setSavingTutoring] = useState(false)
   const [tutoringMessage, setTutoringMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [togglingTutoring, setTogglingTutoring] = useState(false)
+  const [mySignatureUrl, setMySignatureUrl] = useState<string | null>(null)
+  const [uploadingSignature, setUploadingSignature] = useState(false)
   
   const [assignments, setAssignments] = useState<TeacherAssignment[]>([])
   const [selectedAssignment, setSelectedAssignment] = useState<TeacherAssignment | null>(null)
@@ -113,6 +115,8 @@ export default function Attendance() {
       }
     }
     fetchTutoringStatus()
+    // Load user's existing signature
+    if (user?.signatureImageUrl) setMySignatureUrl(user.signatureImageUrl)
   }, [])
 
   // Cargar estudiantes de tutoría cuando cambia el grupo seleccionado
@@ -515,6 +519,62 @@ export default function Attendance() {
               </div>
             </div>
           </div>
+
+          {/* Firma del tutor */}
+          {!isAdmin && directedGroups.length > 0 && (
+            <div className="mb-6 bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+              <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-purple-600" />
+                Mi Firma (Director de Grupo)
+              </h3>
+              <p className="text-xs text-slate-500 mb-3">Esta firma aparecerá automáticamente en los boletines de tu grupo.</p>
+              <div className="flex items-center gap-4">
+                {mySignatureUrl ? (
+                  <div className="flex items-center gap-4">
+                    <div className="border border-slate-200 rounded-lg p-2 bg-slate-50">
+                      <img src={mySignatureUrl} alt="Mi firma" className="h-16 object-contain" />
+                    </div>
+                    <button
+                      onClick={() => document.getElementById('signature-upload')?.click()}
+                      disabled={uploadingSignature}
+                      className="px-3 py-1.5 text-sm border border-purple-300 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors disabled:opacity-50"
+                    >
+                      {uploadingSignature ? 'Subiendo...' : 'Cambiar firma'}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => document.getElementById('signature-upload')?.click()}
+                    disabled={uploadingSignature}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 text-sm"
+                  >
+                    {uploadingSignature ? 'Subiendo...' : 'Subir mi firma'}
+                  </button>
+                )}
+                <input
+                  id="signature-upload"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    setUploadingSignature(true)
+                    try {
+                      const res = await storageApi.uploadMySignature(file)
+                      const url = res.data?.data?.url || res.data?.data?.path || ''
+                      if (url) setMySignatureUrl(url)
+                    } catch (err: any) {
+                      alert(err?.response?.data?.message || 'Error al subir la firma')
+                    } finally {
+                      setUploadingSignature(false)
+                      e.target.value = ''
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
             <div className="px-6 py-4 border-b border-slate-200">

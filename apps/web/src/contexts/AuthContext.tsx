@@ -23,6 +23,7 @@ interface User {
   roles: { role: { name: string } }[]
   institution?: Institution
   isSuperAdmin?: boolean
+  signatureImageUrl?: string
 }
 
 interface AuthContextType {
