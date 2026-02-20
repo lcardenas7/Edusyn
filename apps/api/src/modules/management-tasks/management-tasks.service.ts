@@ -129,7 +129,7 @@ export class ManagementTasksService {
         description: dto.description,
         category: dto.category,
         priority: dto.priority || 'NORMAL',
-        dueDate: dto.dueDate,
+        dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
         createdById,
         leaderId: leader?.id,
       },
@@ -251,7 +251,7 @@ export class ManagementTasksService {
         description: dto.description,
         category: dto.category,
         priority: dto.priority,
-        dueDate: dto.dueDate,
+        dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
         isActive: dto.isActive,
       },
       include: {

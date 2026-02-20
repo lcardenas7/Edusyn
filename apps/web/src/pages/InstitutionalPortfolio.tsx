@@ -197,7 +197,7 @@ function MetricCard({ value, label, icon, color, bg }: { value: string; label: s
 }
 
 // ─── Componente principal ───────────────────────────────────────────────────
-const TOTAL_PAGES = 7
+const TOTAL_PAGES = 8
 
 export default function InstitutionalPortfolio() {
   const contentRef = useRef<HTMLDivElement>(null)
@@ -252,29 +252,44 @@ export default function InstitutionalPortfolio() {
       <div ref={contentRef}>
 
         {/* ═══════════════════ PÁGINA 1: PORTADA ═══════════════════ */}
-        <div style={{ ...PAGE, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+        <div style={{ ...PAGE, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 20mm' }}>
+          {/* Top gradient bar */}
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '6px', background: `linear-gradient(90deg, ${C.primary}, ${C.accent}, ${C.primary})` }} />
-          <div style={{ marginBottom: '24px' }}><EdusynLogo size={90} /></div>
-          <h1 style={{ fontSize: '48px', fontWeight: 800, color: C.dark, margin: '0 0 8px 0', letterSpacing: '-1.5px' }}>Edusyn</h1>
-          <p style={{ fontSize: '16px', fontWeight: 600, color: C.primary, margin: '0 0 6px 0', letterSpacing: '3px', textTransform: 'uppercase' }}>Sistema Académico</p>
-          <div style={{ width: '50px', height: '3px', background: C.primary, margin: '16px auto 24px auto', borderRadius: '2px' }} />
-          <p style={{ fontSize: '16px', color: C.sub, maxWidth: '440px', margin: '0 auto', lineHeight: 1.7 }}>
-            ERP académico diseñado por docentes para instituciones educativas. Centraliza notas, boletines, observador, reportes y más en una sola plataforma.
+
+          {/* Subtle side accent */}
+          <div style={{ position: 'absolute', left: 0, top: '30%', width: '4px', height: '40%', background: `linear-gradient(180deg, transparent, ${C.primary}40, transparent)`, borderRadius: '0 4px 4px 0' }} />
+
+          <div style={{ marginBottom: '20px' }}><EdusynLogo size={80} /></div>
+
+          <h1 style={{ fontSize: '44px', fontWeight: 800, color: C.dark, margin: '0 0 16px 0', letterSpacing: '-1.5px', lineHeight: 1.15 }}>
+            Transformando la gestión<br />académica desde el aula<br />hasta la rectoría.
+          </h1>
+
+          <div style={{ width: '50px', height: '3px', background: C.primary, margin: '0 auto 20px auto', borderRadius: '2px' }} />
+
+          <p style={{ fontSize: '15px', color: C.sub, maxWidth: '460px', margin: '0 auto', lineHeight: 1.7 }}>
+            Sistema académico integrado diseñado por docentes para instituciones educativas. Una sola plataforma para notas, boletines, observador, reportes y más.
           </p>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '32px' }}>
-            {['Multi-institución', 'Boletines automáticos', 'Reportes en tiempo real', 'Observador integrado'].map(f => (
-              <span key={f} style={{ padding: '6px 14px', background: C.primaryLight, color: C.primaryDark, fontSize: '11px', fontWeight: 600, borderRadius: '20px' }}>{f}</span>
+
+          {/* Feature pills */}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '28px' }}>
+            {['Fuente única de verdad', 'Automatización real', 'Multi-institución', 'Reportes en tiempo real'].map(f => (
+              <span key={f} style={{ padding: '7px 16px', background: C.primaryLight, color: C.primaryDark, fontSize: '11px', fontWeight: 600, borderRadius: '20px', letterSpacing: '0.2px' }}>{f}</span>
             ))}
           </div>
-          <div style={{ position: 'absolute', bottom: '50mm', textAlign: 'center', width: '100%' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 24px', background: C.lighter, borderRadius: '8px', border: `1px solid ${C.border}` }}>
-              {Icon.user(C.muted)}
+
+          {/* Author card */}
+          <div style={{ position: 'absolute', bottom: '44mm', textAlign: 'center', width: '100%' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', padding: '14px 28px', background: '#fff', borderRadius: '12px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: C.primaryLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {Icon.user(C.primary)}
+              </div>
               <div style={{ textAlign: 'left' }}>
-                <p style={{ fontSize: '13px', fontWeight: 600, color: C.text, margin: 0 }}>Luis Alberto Cárdenas Pernett</p>
-                <p style={{ fontSize: '11px', color: C.muted, margin: 0 }}>Ingeniero · Desarrollador Full Stack</p>
+                <p style={{ fontSize: '13px', fontWeight: 700, color: C.dark, margin: 0 }}>Luis Alberto Cárdenas Pernett</p>
+                <p style={{ fontSize: '11px', color: C.muted, margin: '2px 0 0 0' }}>Ingeniero de Sistemas · Docente · Desarrollador Full Stack</p>
               </div>
             </div>
-            <p style={{ fontSize: '26px', color: C.border, fontWeight: 300, marginTop: '20px', letterSpacing: '4px' }}>2025</p>
+            <p style={{ fontSize: '22px', color: C.border, fontWeight: 300, marginTop: '16px', letterSpacing: '6px' }}>2025</p>
           </div>
           <PageFooterBar num={1} total={TOTAL_PAGES} />
         </div>

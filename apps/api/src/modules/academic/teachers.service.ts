@@ -7,17 +7,19 @@ import * as bcryptjs from 'bcryptjs';
 export class TeachersService {
   constructor(private prisma: PrismaService) {}
 
-  // Generar username: primeraLetraNombre + primerApellido + 4últimosDigitos + d (docente)
-  private async generateUsername(firstName: string, lastName: string, documentNumber: string): Promise<string> {
+  // Generar username: inicialNombre + apellido (ej: lcardenas)
+  private async generateUsername(firstName: string, lastName: string, _documentNumber: string): Promise<string> {
     const firstLetter = firstName.toLowerCase().charAt(0);
-    const cleanLastName = lastName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
-    const last4Digits = documentNumber.slice(-4);
-    const baseUsername = `${firstLetter}${cleanLastName}${last4Digits}d`;
+    const cleanLastName = lastName.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '')
+      .replace(/[^a-z]/g, '');
+    const baseUsername = `${firstLetter}${cleanLastName}`;
     
     let username = baseUsername;
     let counter = 1;
     
-    // Si ya existe, agregar contador
     while (await this.prisma.user.findUnique({ where: { username } })) {
       username = `${baseUsername}${counter}`;
       counter++;
@@ -209,8 +211,10 @@ export class TeachersService {
     let updateData: any = {
       ...(dto.firstName && { firstName: dto.firstName }),
       ...(dto.lastName && { lastName: dto.lastName }),
+      ...(dto.email && { email: dto.email.toLowerCase() }),
       ...(dto.documentType && { documentType: dto.documentType as any }),
       ...(dto.documentNumber && { documentNumber: dto.documentNumber }),
+      ...(dto.phone !== undefined && { phone: dto.phone }),
       ...(dto.isActive !== undefined && { isActive: dto.isActive }),
     };
 

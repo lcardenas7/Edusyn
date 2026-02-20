@@ -40,6 +40,10 @@ export class UpdateTeacherDto {
   lastName?: string;
 
   @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @IsOptional()
   @IsString()
   documentType?: string;
 

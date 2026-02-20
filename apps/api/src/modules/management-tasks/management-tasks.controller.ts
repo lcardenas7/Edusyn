@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFile,
   Request,
+  ForbiddenException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -79,7 +80,7 @@ export class ManagementTasksController {
     if (!isAdmin) {
       const isLeader = await this.tasksService.isUserLeader(req.user.id, dto.institutionId);
       if (!isLeader) {
-        throw new Error('Solo los líderes de gestión pueden crear tareas');
+        throw new ForbiddenException('Solo los líderes de gestión pueden crear tareas');
       }
     }
     

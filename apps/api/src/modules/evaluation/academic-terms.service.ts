@@ -149,4 +149,11 @@ export class AcademicTermsService {
 
     return { synced: results.length, terms: results };
   }
+
+  async toggleBulletinsRelease(termId: string, released: boolean) {
+    return this.prisma.academicTerm.update({
+      where: { id: termId },
+      data: { bulletinsReleasedForTeachers: released },
+    });
+  }
 }

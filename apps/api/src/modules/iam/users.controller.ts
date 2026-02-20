@@ -379,25 +379,16 @@ export class UsersController {
   }
 
   // Helpers
-  // Generar username: primeraLetraNombre + primerApellido + 4últimosDigitos + letraRol
-  private async generateUsername(firstName: string, lastName: string, documentNumber?: string, roleName?: string): Promise<string> {
+  // Generar username: inicialNombre + apellido (ej: lcardenas)
+  private async generateUsername(firstName: string, lastName: string, _documentNumber?: string, _roleName?: string): Promise<string> {
     const firstLetter = firstName.toLowerCase().charAt(0);
     const cleanLastName = lastName.toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
-      .replace(/\s+/g, '');
-    const last4Digits = (documentNumber || '0000').slice(-4);
+      .replace(/\s+/g, '')
+      .replace(/[^a-z]/g, '');
     
-    // Determinar letra del rol
-    let roleLetter = 'u'; // default user
-    if (roleName === 'COORDINADOR') roleLetter = 'c';
-    else if (roleName === 'SECRETARIA') roleLetter = 's';
-    else if (roleName === 'ORIENTADOR') roleLetter = 'o';
-    else if (roleName === 'BIBLIOTECARIO') roleLetter = 'b';
-    else if (roleName === 'AUXILIAR') roleLetter = 'x';
-    else if (roleName === 'ADMIN_INSTITUTIONAL') roleLetter = 'a';
-    
-    const baseUsername = `${firstLetter}${cleanLastName}${last4Digits}${roleLetter}`;
+    const baseUsername = `${firstLetter}${cleanLastName}`;
 
     let username = baseUsername;
     let counter = 1;

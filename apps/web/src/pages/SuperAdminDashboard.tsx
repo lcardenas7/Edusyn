@@ -158,6 +158,7 @@ const AVAILABLE_MODULES: ModuleConfig[] = [
       { id: 'ATTENDANCE_REGISTER', name: 'Registrar Asistencia', description: 'Tomar asistencia diaria' },
       { id: 'ATTENDANCE_REPORTS', name: 'Reportes Asistencia', description: 'Ver reportes de asistencia' },
       { id: 'ATTENDANCE_ALERTS', name: 'Alertas Inasistencia', description: 'Alertas por inasistencia crítica' },
+      { id: 'TUTORING_ATTENDANCE', name: 'Asistencia de Tutoría', description: 'Permite al director de grupo tomar asistencia diaria de tutoría (independiente de asignaturas)' },
     ]
   },
   { 

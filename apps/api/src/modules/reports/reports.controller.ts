@@ -9,6 +9,7 @@ import { ReportsExportService } from './reports-export.service';
 import { AcademicPdfService } from './academic-pdf.service';
 import { GenerateReportCardDto, GenerateBulkReportCardsDto } from './dto/generate-report-card.dto';
 import { CapabilitiesService } from '../capabilities/capabilities.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Controller('reports')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -18,7 +19,30 @@ export class ReportsController {
     private readonly reportsExportService: ReportsExportService,
     private readonly academicPdfService: AcademicPdfService,
     private readonly capabilitiesService: CapabilitiesService,
+    private readonly prisma: PrismaService,
   ) {}
+
+  private async guardBulletinAccess(req: any, academicTermId: string) {
+    const userId = req.user.sub || req.user.id;
+    const institutionId = req.user.institutionId;
+    if (!institutionId) return;
+    const userCaps = await this.capabilitiesService.getUserCapabilities(userId, institutionId);
+    const isFullAccess = userCaps.effectiveRoles.some(r =>
+      ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'].includes(r),
+    );
+    if (isFullAccess) return;
+    // DOCENTE: check if bulletins are released for this term
+    const term = await this.prisma.academicTerm.findUnique({ where: { id: academicTermId }, select: { bulletinsReleasedForTeachers: true } });
+    if (!term?.bulletinsReleasedForTeachers) {
+      throw new ForbiddenException('Los boletines de este período aún no han sido liberados por el coordinador.');
+    }
+    // Also check capabilities
+    const canViewOwnCourse = userCaps.capabilities.includes('VIEW_OWN_COURSE_REPORTS');
+    const canViewTutorGroup = userCaps.capabilities.includes('VIEW_TUTOR_GROUP_REPORTS');
+    if (!canViewOwnCourse && !canViewTutorGroup) {
+      throw new ForbiddenException('No tienes permiso para ver reportes de estudiantes');
+    }
+  }
 
   @Get('report-card/:studentEnrollmentId')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
@@ -27,32 +51,19 @@ export class ReportsController {
     @Param('studentEnrollmentId') studentEnrollmentId: string,
     @Query('academicTermId') academicTermId: string,
   ) {
-    // Validar capability para DOCENTE
-    const userId = req.user.sub || req.user.id;
-    const institutionId = req.user.institutionId;
-    if (institutionId) {
-      const userCaps = await this.capabilitiesService.getUserCapabilities(userId, institutionId);
-      const isFullAccess = userCaps.effectiveRoles.some(r =>
-        ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'].includes(r),
-      );
-      if (!isFullAccess) {
-        const canViewOwnCourse = userCaps.capabilities.includes('VIEW_OWN_COURSE_REPORTS');
-        const canViewTutorGroup = userCaps.capabilities.includes('VIEW_TUTOR_GROUP_REPORTS');
-        if (!canViewOwnCourse && !canViewTutorGroup) {
-          throw new ForbiddenException('No tienes permiso para ver reportes de estudiantes');
-        }
-      }
-    }
+    await this.guardBulletinAccess(req, academicTermId);
     return this.reportsService.getReportCardData(studentEnrollmentId, academicTermId);
   }
 
   @Get('report-card/:studentEnrollmentId/pdf')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
   async downloadReportCardPdf(
+    @Request() req,
     @Param('studentEnrollmentId') studentEnrollmentId: string,
     @Query('academicTermId') academicTermId: string,
     @Res() res: Response,
   ) {
+    await this.guardBulletinAccess(req, academicTermId);
     const pdfBuffer = await this.reportsService.generateReportCardPdf(
       studentEnrollmentId,
       academicTermId,
@@ -381,6 +392,11 @@ export class ReportsController {
         ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'].includes(r),
       );
       if (!isFullAccess) {
+        // Check bulletin release for this term
+        const term = await this.prisma.academicTerm.findUnique({ where: { id: academicTermId }, select: { bulletinsReleasedForTeachers: true } });
+        if (!term?.bulletinsReleasedForTeachers) {
+          throw new ForbiddenException('Los boletines de este período aún no han sido liberados por el coordinador.');
+        }
         const canViewOwnCourse = userCaps.capabilities.includes('VIEW_OWN_COURSE_REPORTS');
         const canViewTutorGroup = userCaps.capabilities.includes('VIEW_TUTOR_GROUP_REPORTS');
         const isOwnGroup = userCaps.teacherAssignmentGroupIds.includes(groupId);

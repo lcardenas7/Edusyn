@@ -202,6 +202,8 @@ export const academicTermsApi = {
   create: (data: { academicYearId: string; type: string; name: string; order: number; weightPercentage: number }) => api.post('/academic-terms', data),
   syncPeriods: (academicYearId: string, periods: Array<{ name: string; weight: number; order?: number; startDate?: string; endDate?: string }>) =>
     api.post('/academic-terms/sync', { academicYearId, periods }),
+  toggleBulletinsRelease: (termId: string, released: boolean) =>
+    api.patch(`/academic-terms/${termId}/toggle-bulletins`, { released }),
 }
 
 // Teacher Assignments (Carga Academica)
@@ -296,6 +298,20 @@ export const attendanceApi = {
   getConsolidatedReport: (params: { academicYearId: string; startDate?: string; endDate?: string; subjectId?: string }) =>
     api.get('/attendance/report/consolidated', { params }),
   deleteAll: () => api.delete('/attendance/all'),
+}
+
+// Tutoring Attendance (Asistencia de tutoría / dirección de grupo)
+export const tutoringAttendanceApi = {
+  getStatus: () => api.get('/tutoring-attendance/status'),
+  record: (data: { groupId: string; date: string; records: Array<{ studentEnrollmentId: string; status: string; observations?: string }> }) =>
+    api.post('/tutoring-attendance/record', data),
+  getByGroup: (groupId: string, date: string) =>
+    api.get('/tutoring-attendance/by-group', { params: { groupId, date } }),
+  getStudentSummary: (studentEnrollmentId: string, params?: { startDate?: string; endDate?: string }) =>
+    api.get('/tutoring-attendance/student-summary', { params: { studentEnrollmentId, ...params } }),
+  getReportByGroup: (groupId: string, academicYearId: string, params?: { startDate?: string; endDate?: string }) =>
+    api.get('/tutoring-attendance/report-by-group', { params: { groupId, academicYearId, ...params } }),
+  toggle: (enabled: boolean) => api.post('/tutoring-attendance/toggle', { enabled }),
 }
 
 // Observer (Observador del estudiante)
@@ -505,7 +521,7 @@ export const teachersApi = {
   getAll: (params?: { isActive?: boolean }) => api.get('/teachers', { params }),
   getById: (id: string) => api.get(`/teachers/${id}`),
   create: (data: { email: string; password: string; firstName: string; lastName: string; documentType?: string; documentNumber?: string; phone?: string }) => api.post('/teachers', data),
-  update: (id: string, data: { firstName?: string; lastName?: string; documentType?: string; documentNumber?: string; phone?: string; isActive?: boolean }) => api.put(`/teachers/${id}`, data),
+  update: (id: string, data: { firstName?: string; lastName?: string; email?: string; documentType?: string; documentNumber?: string; phone?: string; isActive?: boolean }) => api.put(`/teachers/${id}`, data),
   delete: (id: string) => api.delete(`/teachers/${id}`),
   getAssignments: (teacherId: string, academicYearId?: string) => api.get(`/teachers/${teacherId}/assignments`, { params: { academicYearId } }),
 }

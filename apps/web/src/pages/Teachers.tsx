@@ -145,12 +145,15 @@ export default function Teachers() {
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
-  // Generar nombre de usuario: primeraLetraNombre + primerApellido + 4últimosDigitos + d (docente)
-  const generateUsername = (firstName: string, lastName: string, documentNumber: string) => {
+  // Generar nombre de usuario: inicialNombre + apellido (ej: lcardenas)
+  const generateUsername = (firstName: string, lastName: string, _documentNumber: string) => {
     const firstLetter = firstName.charAt(0).toLowerCase()
-    const cleanLastName = lastName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '')
-    const last4Digits = documentNumber.slice(-4)
-    return `${firstLetter}${cleanLastName}${last4Digits}d`
+    const cleanLastName = lastName.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '')
+      .replace(/[^a-z]/g, '')
+    return `${firstLetter}${cleanLastName}`
   }
 
   const handleSave = async () => {
@@ -168,8 +171,10 @@ export default function Teachers() {
         await teachersApi.update(editingTeacher.id, {
           firstName: form.firstName,
           lastName: form.firstLastName,
+          email: form.email,
           documentType: form.documentType,
           documentNumber: form.documentNumber,
+          phone: form.mobile,
           isActive: form.status === 'ACTIVE'
         })
         

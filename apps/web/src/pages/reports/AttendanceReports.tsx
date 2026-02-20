@@ -6,7 +6,7 @@ import {
 import { Link } from 'react-router-dom'
 import { useReportsData } from '../../hooks/useReportsData'
 import { useAuth } from '../../contexts/AuthContext'
-import { attendanceApi, groupsApi } from '../../lib/api'
+import { attendanceApi, groupsApi, tutoringAttendanceApi } from '../../lib/api'
 import AttendanceReportLayout, {
   KPICard, kpiColorFromPct, sortByRisk, getRowBg, getStatusBadge,
   getPctColor, EmptyState, THRESHOLDS, setAttendanceThresholds,
@@ -22,6 +22,7 @@ const attendanceReports: ReportItem[] = [
   { id: 'att-teacher', name: 'Asistencia por docente', description: 'Control institucional del registro de clases', icon: UserCheck, feature: 'RPT_ATT_TEACHER' },
   { id: 'att-critical', name: 'Inasistencias criticas', description: 'Detectar estudiantes en riesgo por inasistencia', icon: AlertTriangle, feature: 'RPT_ATT_CRITICAL' },
   { id: 'att-consolidated', name: 'Consolidado institucional', description: 'Datos macro para informes oficiales', icon: BarChart3, feature: 'RPT_ATT_CONSOLIDATED' },
+  { id: 'att-tutoring', name: 'Asistencia de tutoría', description: 'Reporte de asistencia diaria por dirección de grupo (tutoría)', icon: Calendar, feature: 'TUTORING_ATTENDANCE' },
 ]
 
 // ─── Shared filter components ──────────────────────────────────────────
@@ -105,6 +106,7 @@ export default function AttendanceReports() {
   const [teacherComplianceData, setTeacherComplianceData] = useState<any[]>([])
   const [criticalAbsencesData, setCriticalAbsencesData] = useState<any[]>([])
   const [consolidatedData, setConsolidatedData] = useState<{ byGrade: any[]; bySubject: any[]; byPeriod: any[] }>({ byGrade: [], bySubject: [], byPeriod: [] })
+  const [tutoringData, setTutoringData] = useState<any[]>([])
 
   const filteredReports = attendanceReports.filter(r => !r.feature || hasFeature(r.feature))
 
@@ -176,6 +178,20 @@ export default function AttendanceReports() {
         const mr = (item: any, idx: number) => ({ nro: idx + 1, grade: item.name || item.grade || '', subject: item.name || item.subject || '', totalClasses: item.total || item.totalClasses || 0, totalAttended: item.present || item.totalAttended || 0, totalAbsent: item.absent || item.totalAbsent || 0, totalLate: item.late || 0, totalExcused: item.excused || 0, pct: item.attendanceRate || item.pct || 0 })
         setConsolidatedData({ byGrade: (res.data?.byGrade || []).map(mr), bySubject: (res.data?.bySubject || []).map(mr), byPeriod: [] })
       }
+      if (reportId === 'att-tutoring') {
+        if (filterGrade && filterGrade !== 'all') {
+          const res = await tutoringAttendanceApi.getReportByGroup(filterGrade, filterYear, { startDate: bp.startDate, endDate: bp.endDate })
+          const mapped = (res.data || []).map((item: any, idx: number) => ({ nro: idx + 1, name: item.studentName, group: item.groupName, totalClasses: item.totalDays || 0, attended: item.present || 0, absent: item.absent || 0, late: item.late || 0, excused: item.excused || 0, pct: item.attendanceRate || 0, status: item.status || 'Normal' }))
+          setTutoringData(sortByRisk(mapped))
+        } else {
+          const gRes = await groupsApi.getAll()
+          const allData: any[] = []
+          const results = await Promise.allSettled((gRes.data || []).map((g: any) => tutoringAttendanceApi.getReportByGroup(g.id, filterYear, { startDate: bp.startDate, endDate: bp.endDate })))
+          results.forEach(r => { if (r.status === 'fulfilled') allData.push(...(r.value.data || [])) })
+          const mapped = allData.map((item: any, idx: number) => ({ nro: idx + 1, name: item.studentName, group: item.groupName, totalClasses: item.totalDays || 0, attended: item.present || 0, absent: item.absent || 0, late: item.late || 0, excused: item.excused || 0, pct: item.attendanceRate || 0, status: item.status || 'Normal' }))
+          setTutoringData(sortByRisk(mapped))
+        }
+      }
     } catch (err) { console.error('Error loading report data:', err) }
     finally { setLoadingReport(false) }
   }
@@ -189,6 +205,7 @@ export default function AttendanceReports() {
     else if (selectedReport === 'att-teacher') { fn = 'por_docente'; csv = buildCSV(instName, 'Asistencia por Docente', 'Nro,Docente,Programadas,Registradas,Faltantes,% Cumplimiento', teacherComplianceData.map((r, i) => `${i+1},"${r.teacher}",${r.classesScheduled},${r.classesRegistered},${r.classesNotRegistered},${r.complianceRate}%`).join('\n')) }
     else if (selectedReport === 'att-critical') { fn = 'criticas'; csv = buildCSV(instName, 'Inasistencias Criticas', 'Nro,Estudiante,Grupo,Total,Fallas,%,Estado', criticalAbsencesData.map((r, i) => `${i+1},"${r.name}","${r.group}",${r.totalClasses},${r.absent},${r.pct}%,${r.status}`).join('\n')) }
     else if (selectedReport === 'att-consolidated') { fn = 'consolidado'; let body = 'POR GRADO\nNro,Grado,Total,Presentes,Ausentes,Tardanzas,Excusas,%\n' + consolidatedData.byGrade.map((g, i) => `${i+1},"${g.grade}",${g.totalClasses},${g.totalAttended},${g.totalAbsent},${g.totalLate},${g.totalExcused},${g.pct}%`).join('\n') + '\n\nPOR ASIGNATURA\nNro,Asignatura,Total,Presentes,Ausentes,Tardanzas,Excusas,%\n' + consolidatedData.bySubject.map((s, i) => `${i+1},"${s.subject}",${s.totalClasses},${s.totalAttended},${s.totalAbsent},${s.totalLate},${s.totalExcused},${s.pct}%`).join('\n'); csv = buildCSV(instName, 'Consolidado Institucional', '', body) }
+    else if (selectedReport === 'att-tutoring') { fn = 'tutoria'; csv = buildCSV(instName, 'Asistencia de Tutoria', 'Nro,Estudiante,Grupo,Total,Asist.,Fallas,Tardanzas,Excusas,%,Estado', tutoringData.map((r, i) => `${i+1},"${r.name}","${r.group}",${r.totalClasses},${r.attended},${r.absent},${r.late},${r.excused},${r.pct}%,${r.status}`).join('\n')) }
     if (!csv) { alert('No hay datos para exportar'); return }
     downloadCSV(csv, fn)
   }
@@ -269,6 +286,20 @@ export default function AttendanceReports() {
     </>)
   }, [criticalAbsencesData])
 
+  const tutoringKPIs = useMemo(() => {
+    if (!tutoringData.length) return null
+    const avg = Math.round(tutoringData.reduce((s, r) => s + r.pct, 0) / tutoringData.length)
+    const alertC = tutoringData.filter(r => r.status === 'Alerta').length
+    const riskC = tutoringData.filter(r => r.status === 'Riesgo').length
+    const totalDays = tutoringData[0]?.totalClasses || 0
+    return (<>
+      <KPICard label="Promedio tutoría" value={`${avg}%`} color={kpiColorFromPct(avg)} sub={`${tutoringData.length} estudiantes`} />
+      <KPICard label="En alerta" value={alertC} color={alertC > 0 ? 'amber' : 'green'} sub="estudiantes" />
+      <KPICard label="En riesgo" value={riskC} color={riskC > 0 ? 'red' : 'green'} sub="estudiantes" />
+      <KPICard label="Días registrados" value={totalDays} color="blue" sub="sesiones de tutoría" />
+    </>)
+  }, [tutoringData])
+
   const consolidatedKPIs = useMemo(() => {
     const g = consolidatedData.byGrade; if (!g.length) return null
     const tR = g.reduce((s, x) => s + x.totalClasses, 0), tP = g.reduce((s, x) => s + x.totalAttended, 0), tA = g.reduce((s, x) => s + x.totalAbsent, 0)
@@ -293,6 +324,7 @@ export default function AttendanceReports() {
     if (selectedReport === 'att-teacher') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Docente" value={filterTeacher} onChange={setFilterTeacher} options={teachOpts} /><FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><div /><SearchBtn onClick={() => loadReportData('att-teacher')} loading={loadingReport} /></div></W>
     if (selectedReport === 'att-critical') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><div><label className="block text-xs font-medium text-slate-600 mb-1">% Umbral</label><input type="number" value={filterMinPercent} onChange={e => setFilterMinPercent(e.target.value)} className="w-full px-2.5 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-300" /></div><FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={[{ value: 'all', label: 'Todos' }, { value: 'Alerta', label: 'Alerta' }, { value: 'Riesgo', label: 'Riesgo' }]} /><SearchBtn onClick={() => loadReportData('att-critical')} loading={loadingReport} /></div></W>
     if (selectedReport === 'att-consolidated') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} /><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><SearchBtn onClick={() => loadReportData('att-consolidated')} loading={loadingReport} /></div></W>
+    if (selectedReport === 'att-tutoring') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={statOpts} /><div /><div /><SearchBtn onClick={() => loadReportData('att-tutoring')} loading={loadingReport} /></div></W>
     return null
   }
 
@@ -402,6 +434,11 @@ export default function AttendanceReports() {
       </div>)
     }
 
+    if (selectedReport === 'att-tutoring') {
+      if (!tutoringData.length) return <EmptyState icon={<Calendar className="w-12 h-12" />} message="No se encontraron registros de asistencia de tutoría" />
+      return <GroupTable data={tutoringData} />
+    }
+
     return <EmptyState icon={<Calendar className="w-12 h-12" />} />
   }
 
@@ -442,6 +479,7 @@ export default function AttendanceReports() {
   const kpiMap: Record<string, React.ReactNode> = {
     'att-group': groupKPIs, 'att-student': studentKPIs, 'att-subject': subjectKPIs,
     'att-teacher': teacherKPIs, 'att-critical': criticalKPIs, 'att-consolidated': consolidatedKPIs,
+    'att-tutoring': tutoringKPIs,
   }
 
   return (
@@ -453,7 +491,7 @@ export default function AttendanceReports() {
       onExport={exportToCSV}
       filters={renderFilters()}
       kpis={selectedReport ? kpiMap[selectedReport] : null}
-      hasData={!loadingReport && (attendanceData.length > 0 || attendanceDetailData.length > 0 || attendanceBySubjectData.length > 0 || teacherComplianceData.length > 0 || criticalAbsencesData.length > 0 || consolidatedData.byGrade.length > 0)}
+      hasData={!loadingReport && (attendanceData.length > 0 || attendanceDetailData.length > 0 || attendanceBySubjectData.length > 0 || teacherComplianceData.length > 0 || criticalAbsencesData.length > 0 || consolidatedData.byGrade.length > 0 || tutoringData.length > 0)}
     >
       {renderTable()}
     </AttendanceReportLayout>

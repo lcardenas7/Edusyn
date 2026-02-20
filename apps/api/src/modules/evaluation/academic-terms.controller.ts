@@ -81,4 +81,13 @@ export class AcademicTermsController {
   async delete(@Param('id') id: string) {
     return this.academicTermsService.delete(id);
   }
+
+  @Patch(':id/toggle-bulletins')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async toggleBulletinsRelease(
+    @Param('id') id: string,
+    @Body() body: { released: boolean },
+  ) {
+    return this.academicTermsService.toggleBulletinsRelease(id, body.released);
+  }
 }

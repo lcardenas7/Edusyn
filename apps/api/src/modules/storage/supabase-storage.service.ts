@@ -366,7 +366,7 @@ export class SupabaseStorageService {
   }
 
   /**
-   * Elimina un archivo
+   * Elimina un archivo por bucket + path (agrega prefijo de bucket)
    */
   async deleteFile(bucket: string, path: string): Promise<void> {
     if (!this.isConfigured()) {
@@ -374,6 +374,16 @@ export class SupabaseStorageService {
     }
 
     const key = this.buildKey(bucket, path);
+    await this.storage.delete(key);
+  }
+
+  /**
+   * Elimina un archivo por su key completa de R2 (sin agregar prefijo)
+   */
+  async deleteByKey(key: string): Promise<void> {
+    if (!this.isConfigured()) {
+      throw new BadRequestException('Storage no configurado');
+    }
     await this.storage.delete(key);
   }
 

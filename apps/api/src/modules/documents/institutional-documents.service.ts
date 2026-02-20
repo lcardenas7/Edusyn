@@ -93,7 +93,7 @@ export class InstitutionalDocumentsService {
       console.error('[InstitutionalDocuments] Error creating document in DB:', error);
       // Intentar eliminar el archivo subido si falla la BD
       try {
-        await this.storageService.deleteFile('documentos', uploadResult.url);
+        await this.storageService.deleteByKey(uploadResult.path);
       } catch (deleteError) {
         console.error('[InstitutionalDocuments] Error cleaning up file:', deleteError);
       }
@@ -191,11 +191,16 @@ export class InstitutionalDocumentsService {
   }
 
   async delete(id: string) {
-    const document = await this.findOne(id);
+    // Leer raw de la DB para obtener la key original (sin resolver URL)
+    const document = await this.prisma.institutionalDocument.findUnique({
+      where: { id },
+      select: { id: true, fileUrl: true, fileSize: true, institutionId: true },
+    });
+    if (!document) throw new NotFoundException('Documento no encontrado');
     
-    // Eliminar archivo de Supabase
+    // Eliminar archivo de R2 — fileUrl ya es la key completa (ej: documentos/institucion/xxx/...)
     try {
-      await this.storageService.deleteFile('documentos', document.fileUrl);
+      await this.storageService.deleteByKey(document.fileUrl);
     } catch (error) {
       console.error('[InstitutionalDocuments] Error deleting file:', error);
     }
@@ -452,22 +457,25 @@ export class InstitutionalDocumentsService {
    * Esto es necesario porque el bucket 'documentos' no es público
    */
   async getDownloadUrl(id: string): Promise<{ url: string; expiresIn: number }> {
-    const document = await this.findOne(id);
-    
-    // Extraer el path del fileUrl (quitar la parte base de Supabase)
-    // El fileUrl guardado es la URL pública, necesitamos extraer el path
-    const urlParts = document.fileUrl.split('/storage/v1/object/public/documentos/');
-    const path = urlParts.length > 1 ? urlParts[1] : document.fileUrl;
-    
+    // Leer directamente de la DB para obtener la key/url original sin resolver
+    const document = await this.prisma.institutionalDocument.findUnique({
+      where: { id },
+      select: { fileUrl: true },
+    });
+
+    if (!document) {
+      throw new NotFoundException('Documento no encontrado');
+    }
+
     try {
-      const signedUrl = await this.storageService.getSignedUrl('documentos', path, 900); // 15 minutos
+      // resolveFileUrl maneja correctamente tanto keys de R2 como URLs antiguas de Supabase
+      const signedUrl = await this.storageService.resolveFileUrl(document.fileUrl, 900);
       return {
         url: signedUrl,
         expiresIn: 900,
       };
     } catch (error) {
       console.error('[InstitutionalDocuments] Error generating signed URL:', error);
-      // Fallback: devolver la URL original (por si el bucket es público)
       return {
         url: document.fileUrl,
         expiresIn: 0,

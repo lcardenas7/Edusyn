@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Calendar, Check, X, Clock, FileText, ChevronDown, AlertTriangle, Save } from 'lucide-react'
+import { Calendar, Check, X, Clock, FileText, ChevronDown, AlertTriangle, Save, Users } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { teacherAssignmentsApi, academicStudentsApi, attendanceApi } from '../lib/api'
+import { teacherAssignmentsApi, academicStudentsApi, attendanceApi, tutoringAttendanceApi, academicYearsApi } from '../lib/api'
 
 interface TeacherAssignment {
   id: string
@@ -27,6 +27,16 @@ export default function Attendance() {
   
   const isTeacher = userRoles.includes('DOCENTE')
   const isAdmin = userRoles.includes('ADMIN_INSTITUTIONAL') || userRoles.includes('SUPERADMIN') || userRoles.includes('COORDINADOR')
+
+  // ─── Tutoría state ───
+  const [activeTab, setActiveTab] = useState<'subject' | 'tutoring'>('subject')
+  const [tutoringEnabled, setTutoringEnabled] = useState(false)
+  const [directedGroups, setDirectedGroups] = useState<Array<{ id: string; name: string; gradeName?: string }>>([]) 
+  const [selectedTutoringGroupId, setSelectedTutoringGroupId] = useState<string>('')
+  const [tutoringStudents, setTutoringStudents] = useState<Array<{ id: string; name: string; enrollmentId: string; status: string }>>([])
+  const [loadingTutoringStudents, setLoadingTutoringStudents] = useState(false)
+  const [savingTutoring, setSavingTutoring] = useState(false)
+  const [tutoringMessage, setTutoringMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   
   const [assignments, setAssignments] = useState<TeacherAssignment[]>([])
   const [selectedAssignment, setSelectedAssignment] = useState<TeacherAssignment | null>(null)
@@ -87,6 +97,103 @@ export default function Attendance() {
     }
   }, [selectedSubjectId, selectedGroupId, assignments])
   
+  // Cargar estado de tutoría
+  useEffect(() => {
+    const fetchTutoringStatus = async () => {
+      try {
+        const response = await tutoringAttendanceApi.getStatus()
+        setTutoringEnabled(response.data.enabled)
+        setDirectedGroups(response.data.directedGroups || [])
+        if (response.data.directedGroups?.length > 0) {
+          setSelectedTutoringGroupId(response.data.directedGroups[0].id)
+        }
+      } catch {
+        setTutoringEnabled(false)
+      }
+    }
+    fetchTutoringStatus()
+  }, [])
+
+  // Cargar estudiantes de tutoría cuando cambia el grupo seleccionado
+  useEffect(() => {
+    if (activeTab !== 'tutoring' || !selectedTutoringGroupId) return
+    const fetchTutoringStudents = async () => {
+      setLoadingTutoringStudents(true)
+      try {
+        // Obtener academicYearId del primer assignment o del año activo
+        let yearId = assignments[0]?.academicYear?.id
+        if (!yearId) {
+          const yearsRes = await academicYearsApi.getAll()
+          const activeYear = (yearsRes.data || []).find((y: any) => y.status === 'ACTIVE')
+          if (!activeYear) { setTutoringStudents([]); setLoadingTutoringStudents(false); return }
+          yearId = activeYear.id
+        }
+        const res = await academicStudentsApi.getByGroup({ groupId: selectedTutoringGroupId, academicYearId: yearId })
+        const mapped = (res.data || []).map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          enrollmentId: s.enrollmentId,
+          status: 'PRESENT',
+        }))
+        setTutoringStudents(mapped)
+
+        // Cargar registros guardados para esta fecha
+        try {
+          const savedRes = await tutoringAttendanceApi.getByGroup(selectedTutoringGroupId, date)
+          const saved = savedRes.data || []
+          if (saved.length > 0) {
+            setTutoringStudents(prev => prev.map(student => {
+              const record = saved.find((r: any) => r.studentEnrollmentId === student.enrollmentId)
+              return record ? { ...student, status: record.status } : student
+            }))
+          }
+        } catch { /* sin registros previos */ }
+      } catch (err) {
+        console.error('Error loading tutoring students:', err)
+        setTutoringStudents([])
+      } finally {
+        setLoadingTutoringStudents(false)
+      }
+    }
+    fetchTutoringStudents()
+  }, [activeTab, selectedTutoringGroupId, date])
+
+  const saveTutoringAttendance = async () => {
+    if (!selectedTutoringGroupId) return
+    setSavingTutoring(true)
+    setTutoringMessage(null)
+    try {
+      await tutoringAttendanceApi.record({
+        groupId: selectedTutoringGroupId,
+        date,
+        records: tutoringStudents.map(s => ({
+          studentEnrollmentId: s.enrollmentId,
+          status: s.status,
+        })),
+      })
+      setTutoringMessage({ type: 'success', text: 'Asistencia de tutoría guardada correctamente' })
+      setTimeout(() => setTutoringMessage(null), 3000)
+    } catch (err: any) {
+      setTutoringMessage({ type: 'error', text: err.response?.data?.message || 'Error al guardar la asistencia de tutoría' })
+      setTimeout(() => setTutoringMessage(null), 5000)
+    } finally {
+      setSavingTutoring(false)
+    }
+  }
+
+  const updateTutoringStatus = (studentId: string, status: string) => {
+    setTutoringStudents(prev => prev.map(s => s.id === studentId ? { ...s, status } : s))
+  }
+
+  const tutoringSummary = {
+    present: tutoringStudents.filter(s => s.status === 'PRESENT').length,
+    absent: tutoringStudents.filter(s => s.status === 'ABSENT').length,
+    late: tutoringStudents.filter(s => s.status === 'LATE').length,
+    excused: tutoringStudents.filter(s => s.status === 'EXCUSED').length,
+  }
+
+  const showTutoringTab = tutoringEnabled && directedGroups.length > 0
+
   // Cargar asignaciones - docente solo ve las suyas, admin/coord ve todas
   useEffect(() => {
     const fetchAssignments = async () => {
@@ -226,14 +333,38 @@ export default function Attendance() {
           <p className="text-sm sm:text-base text-slate-500 mt-1">Control de asistencia diaria</p>
         </div>
         <button 
-          onClick={saveAttendance}
-          disabled={saving || !selectedAssignment || !canEdit}
+          onClick={activeTab === 'tutoring' ? saveTutoringAttendance : saveAttendance}
+          disabled={activeTab === 'tutoring' ? (savingTutoring || !selectedTutoringGroupId || !canEdit) : (saving || !selectedAssignment || !canEdit)}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Save className="w-4 h-4" />
-          {saving ? 'Guardando...' : 'Guardar Asistencia'}
+          {(activeTab === 'tutoring' ? savingTutoring : saving) ? 'Guardando...' : 'Guardar Asistencia'}
         </button>
       </div>
+
+      {/* Tabs: Asignatura / Tutoría */}
+      {showTutoringTab && (
+        <div className="flex gap-1 mb-6 bg-slate-100 rounded-lg p-1 w-fit">
+          <button
+            onClick={() => setActiveTab('subject')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'subject' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            Por Asignatura
+          </button>
+          <button
+            onClick={() => setActiveTab('tutoring')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'tutoring' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            Tutoría
+          </button>
+        </div>
+      )}
 
       {/* Mensaje de advertencia para docentes */}
       {!canEdit && !isAdmin && (
@@ -244,13 +375,137 @@ export default function Attendance() {
       )}
 
       {/* Mensaje de guardado */}
-      {saveMessage && (
-        <div className={`mb-4 p-4 rounded-lg ${saveMessage.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
-          {saveMessage.text}
+      {(activeTab === 'subject' ? saveMessage : tutoringMessage) && (
+        <div className={`mb-4 p-4 rounded-lg ${(activeTab === 'subject' ? saveMessage : tutoringMessage)?.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+          {(activeTab === 'subject' ? saveMessage : tutoringMessage)?.text}
         </div>
       )}
 
-      {loading ? (
+      {/* ═══ TAB: TUTORÍA ═══ */}
+      {activeTab === 'tutoring' && showTutoringTab ? (
+        <>
+          <div className="flex gap-4 mb-6 flex-wrap">
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+            />
+            <div className="relative">
+              <select
+                value={selectedTutoringGroupId}
+                onChange={(e) => setSelectedTutoringGroupId(e.target.value)}
+                className="appearance-none pl-4 pr-10 py-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none min-w-[200px]"
+              >
+                {directedGroups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.gradeName} {g.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Check className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-900">{tutoringSummary.present}</p>
+                  <p className="text-sm text-slate-500">Presentes</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                  <X className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-900">{tutoringSummary.absent}</p>
+                  <p className="text-sm text-slate-500">Ausentes</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-900">{tutoringSummary.late}</p>
+                  <p className="text-sm text-slate-500">Tardanzas</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-900">{tutoringSummary.excused}</p>
+                  <p className="text-sm text-slate-500">Excusas</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+            <div className="px-6 py-4 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <Users className="w-5 h-5 text-purple-600" />
+                <h2 className="font-semibold text-slate-900">Lista de Estudiantes — Tutoría</h2>
+              </div>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {loadingTutoringStudents ? (
+                <div className="px-6 py-8 text-center text-slate-500">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
+                    Cargando estudiantes...
+                  </div>
+                </div>
+              ) : tutoringStudents.length === 0 ? (
+                <div className="px-6 py-8 text-center text-slate-500">
+                  No hay estudiantes matriculados en este grupo
+                </div>
+              ) : tutoringStudents.map((student) => (
+                <div key={student.id} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-medium text-purple-600">
+                        {student.name.split(' ').map((n: string) => n[0]).join('')}
+                      </span>
+                    </div>
+                    <span className="font-medium text-slate-900">{student.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {Object.entries(statusConfig).map(([status, cfg]) => (
+                      <button
+                        key={status}
+                        onClick={() => canEdit && updateTutoringStatus(student.id, status)}
+                        disabled={!canEdit}
+                        className={`p-2 rounded-lg border transition-colors ${
+                          student.status === status
+                            ? cfg.color
+                            : 'border-slate-200 text-slate-400 hover:border-slate-300'
+                        } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        title={canEdit ? cfg.label : 'No puedes modificar la asistencia de este día'}
+                      >
+                        <cfg.icon className="w-4 h-4" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : loading ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>

@@ -151,22 +151,17 @@ export default function StaffManagement() {
     }
   }
 
-  // Generate username based on the rule
-  const generateUsernameFromData = (firstName: string, lastName: string, documentNumber: string, roles: any[]) => {
+  // Generate username preview based on the rule: inicialNombre + apellido (ej: lcardenas)
+  const generateUsernameFromData = (firstName: string, lastName: string, _documentNumber: string, _roles: any[]) => {
     if (!firstName || !lastName) return 'N/A'
     const firstLetter = firstName.charAt(0).toLowerCase()
-    const cleanLastName = lastName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '')
-    const last4Digits = (documentNumber || '0000').slice(-4)
+    const cleanLastName = lastName.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '')
+      .replace(/[^a-z]/g, '')
     
-    // Determine role letter
-    let roleLetter = 'u' // default user
-    if (roles?.some((r: any) => r.role?.name === 'DOCENTE')) roleLetter = 'd'
-    else if (roles?.some((r: any) => r.role?.name === 'ESTUDIANTE')) roleLetter = 'e'
-    else if (roles?.some((r: any) => r.role?.name === 'COORDINADOR')) roleLetter = 'c'
-    else if (roles?.some((r: any) => r.role?.name === 'SECRETARIA')) roleLetter = 's'
-    else if (roles?.some((r: any) => r.role?.name === 'ADMIN_INSTITUTIONAL')) roleLetter = 'a'
-    
-    return `${firstLetter}${cleanLastName}${last4Digits}${roleLetter}`
+    return `${firstLetter}${cleanLastName}`
   }
 
   // Load credentials when tab changes (solo si es admin)

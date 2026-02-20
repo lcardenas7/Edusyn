@@ -142,7 +142,7 @@ export default function ReportCards() {
   // Datos de API
   const [groups, setGroups] = useState<Array<{ id: string; name: string; grade?: any }>>([])
   const [academicYears, setAcademicYears] = useState<Array<{ id: string; year: number; name: string }>>([])
-  const [terms, setTerms] = useState<Array<{ id: string; name: string; type: string; order: number }>>([])
+  const [terms, setTerms] = useState<Array<{ id: string; name: string; type: string; order: number; bulletinsReleasedForTeachers?: boolean }>>([])
   const [students, setStudents] = useState<StudentRow[]>([])
   const [config, setConfig] = useState<ReportConfig>(defaultConfig)
   const [configDraft, setConfigDraft] = useState<ReportConfig>(defaultConfig)
@@ -235,16 +235,19 @@ export default function ReportCards() {
   useEffect(() => {
     if (!selectedYearId) return
     academicTermsApi.getByAcademicYear(selectedYearId).then(res => {
-      const t = (res.data || []).map((t: any) => ({ id: t.id, name: t.name, type: t.type, order: t.order }))
+      const t = (res.data || []).map((t: any) => ({ id: t.id, name: t.name, type: t.type, order: t.order, bulletinsReleasedForTeachers: t.bulletinsReleasedForTeachers ?? false }))
       setTerms(t)
       if (t.length > 0) setSelectedTermId(t[0].id)
     }).catch(console.error)
   }, [selectedYearId])
 
+  const [bulletinsBlocked, setBulletinsBlocked] = useState(false)
+
   // Cargar lista de estudiantes cuando cambia grupo o período
   useEffect(() => {
     if (!selectedGroupId || !selectedTermId || !selectedYearId) return
     setLoadingStudents(true)
+    setBulletinsBlocked(false)
     reportsApi.getGroupReportCardList(selectedGroupId, selectedTermId, selectedYearId)
       .then(res => {
         const body = res.data
@@ -257,7 +260,12 @@ export default function ReportCards() {
           setDataMeta(body?.meta || null)
         }
       })
-      .catch(() => { setStudents([]); setDataMeta(null) })
+      .catch((err: any) => {
+        setStudents([]); setDataMeta(null)
+        if (err?.response?.status === 403) {
+          setBulletinsBlocked(true)
+        }
+      })
       .finally(() => setLoadingStudents(false))
   }, [selectedGroupId, selectedTermId, selectedYearId])
 
@@ -328,21 +336,245 @@ export default function ReportCards() {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PDF GENERATION — renders same HTML as preview via html2pdf.js
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const buildReportCardHtml = (data: any, student: StudentRow) => {
+    const dc = data.displayConfig || {}
+    const isQualitative = dc.mode === 'QUALITATIVE'
+    const isFlat = dc.mode === 'QUANTITATIVE_FLAT'
+    const showNumeric = (dc.showNumericGrades !== false) && config.showNumericGrade
+    const showPerf = config.showPerformanceLevel
+    const showAchiev = config.showAchievements
+    const showAreaAvg = (dc.showAreaAverages !== false) && config.showAreaAverages
+    const showGenAvg = (dc.showAverages !== false) && config.showGeneralAverage
+    const showRank = (dc.showRanking !== false) && config.showRanking
+    const showAttend = config.showAttendance
+    const showAreaRows = dc.showAreaAverages !== false
+    const pc = config.primaryColor || '#1E3A8A'
+
+    const perfBadge = (level: string | null) => {
+      if (!level) return '-'
+      const cfg = performanceConfig[level as keyof typeof performanceConfig]
+      if (!cfg) return level
+      return `<span style="padding:1px 4px;border-radius:3px;font-size:9px;font-weight:600;">${cfg.label}</span>`
+    }
+
+    // Grades table rows
+    let gradesRows = ''
+    for (const area of (data.areaGrades || [])) {
+      if (showAreaRows) {
+        gradesRows += `<tr style="background:#e2e8f0;">
+          <td colspan="5" style="padding:4px 6px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-weight:700;text-transform:uppercase;font-size:10px;color:#1e293b;">${area.area}</span>
+              ${showAreaAvg && area.areaAverage !== null ? `<span style="font-size:9px;color:#475569;">Promedio: <strong style="color:${area.areaAverage >= rulesCtx.minPassingGrade ? '#15803d' : '#dc2626'}">${area.areaAverage?.toFixed(1)}</strong></span>` : ''}
+            </div>
+          </td>
+        </tr>`
+      }
+      for (let idx = 0; idx < (area.subjects || []).length; idx++) {
+        const sg = area.subjects[idx]
+        const bg = idx % 2 === 0 ? '#fff' : '#f8fafc'
+        let achievCell = ''
+        if (showAchiev) {
+          let content = '-'
+          if (isQualitative) {
+            content = sg.qualitativeObservation || sg.achievement || '-'
+          } else {
+            content = sg.achievement || '-'
+          }
+          let extra = ''
+          if (sg.achievementObservation) extra += `<p style="color:#64748b;margin-top:2px;font-size:9px;">${sg.achievementObservation}</p>`
+          if (sg.judgment) extra += `<p style="color:#b45309;font-style:italic;margin-top:2px;font-size:9px;">${sg.judgment}</p>`
+          if (config.showRecommendations && sg.recommendation) extra += `<p style="color:#dc2626;font-style:italic;margin-top:2px;font-size:9px;">* ${sg.recommendation}</p>`
+          achievCell = `<td style="padding:4px 6px;color:#334155;font-size:10px;">${content}${extra}</td>`
+        }
+        let numCell = ''
+        if (showNumeric) {
+          const color = sg.grade !== null && sg.grade < rulesCtx.minPassingGrade ? '#dc2626' : '#15803d'
+          numCell = `<td style="padding:4px 2px;text-align:center;font-weight:700;font-size:11px;color:${color}">${sg.grade !== null ? sg.grade.toFixed(1) : '-'}</td>`
+        }
+        let perfCell = ''
+        if (showPerf) perfCell = `<td style="padding:4px 2px;text-align:center;font-size:10px;">${perfBadge(sg.performanceLevel)}</td>`
+        let attendCell = ''
+        if (showAttend) attendCell = `<td style="padding:4px 2px;text-align:center;font-size:10px;">${sg.absences !== undefined ? sg.absences : '-'}</td>`
+
+        gradesRows += `<tr style="background:${bg};">
+          <td style="padding:4px 6px;padding-left:12px;font-weight:500;color:#0f172a;font-size:10px;border-left:2px solid #93c5fd;">${sg.subject}</td>
+          ${achievCell}${numCell}${perfCell}${attendCell}
+        </tr>`
+      }
+    }
+
+    // General average footer
+    let avgFooter = ''
+    if (showGenAvg) {
+      const grades = (data.subjectGrades || []).filter((s: any) => s.grade !== null)
+      const avg = grades.length > 0 ? (grades.reduce((sum: number, s: any) => sum + s.grade, 0) / grades.length).toFixed(1) : '-'
+      avgFooter = `<tfoot style="background:${pc}20;">
+        <tr>
+          <td style="padding:6px;font-weight:700;" colspan="${showAchiev ? 2 : 1}">PROMEDIO GENERAL</td>
+          ${showNumeric ? `<td style="padding:6px;text-align:center;font-weight:700;font-size:13px;color:${pc}">${avg}</td>` : ''}
+          ${showPerf ? '<td style="padding:6px;text-align:center;">-</td>' : ''}
+          ${showAttend ? '<td style="padding:6px;text-align:center;">-</td>' : ''}
+        </tr>
+      </tfoot>`
+    }
+
+    // Motivational message
+    let motivationalHtml = ''
+    if (config.showMotivationalMsg) {
+      const grades = (data.subjectGrades || []).filter((s: any) => s.grade !== null)
+      const generalAvg = grades.length > 0 ? grades.reduce((sum: number, s: any) => sum + s.grade, 0) / grades.length : null
+      const failed = (data.subjectGrades || []).filter((s: any) => s.grade !== null && s.grade < rulesCtx.minPassingGrade).length
+      const msg = getMotivationalMessage(generalAvg, failed)
+      if (msg) {
+        motivationalHtml = `<div style="padding:8px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;margin-bottom:12px;font-size:10px;color:#1e40af;font-style:italic;">
+          <strong>Nota:</strong> ${msg}
+        </div>`
+      }
+    }
+
+    // Scale
+    let scaleHtml = ''
+    if (config.showScale) {
+      const items = Object.entries(performanceConfig).map(([, cfg]) =>
+        `<span style="margin-right:10px;"><strong>${cfg.label}</strong> ${cfg.min.toFixed(1)} - ${cfg.max.toFixed(1)}</span>`
+      ).join('')
+      scaleHtml = `<div style="border:1px solid #cbd5e1;border-radius:6px;padding:8px 10px;margin-bottom:12px;font-size:10px;">
+        <h4 style="font-weight:700;color:#0f172a;margin:0 0 6px;border-bottom:1px solid #e2e8f0;padding-bottom:4px;">ESCALA DE VALORACION</h4>
+        <div>${items}</div>
+      </div>`
+    }
+
+    // Observations
+    let obsHtml = ''
+    if (config.showObservations && data.observations?.length > 0) {
+      const items = data.observations.map((obs: any) => {
+        const d = obs.date ? new Date(obs.date).toLocaleDateString('es-CO') : ''
+        return `<p style="font-size:10px;color:#334155;margin:2px 0;"><strong>${d}</strong> - ${obs.description}${obs.author ? ` <span style="color:#94a3b8;">(${obs.author})</span>` : ''}</p>`
+      }).join('')
+      obsHtml = `<div style="border:1px solid #cbd5e1;border-radius:6px;padding:8px 10px;margin-bottom:12px;">
+        <h4 style="font-weight:700;color:#0f172a;margin:0 0 6px;font-size:10px;border-bottom:1px solid #e2e8f0;padding-bottom:4px;">OBSERVACIONES</h4>
+        ${items}
+      </div>`
+    }
+
+    // Signatures
+    const enabledSigs = config.signatureConfig.filter(s => s.enabled)
+    const sigWidth = enabledSigs.length > 0 ? Math.floor(100 / enabledSigs.length) : 33
+    const sigsHtml = enabledSigs.map(sig => `
+      <div style="width:${sigWidth}%;text-align:center;">
+        <div style="height:50px;border-bottom:2px solid #94a3b8;margin-bottom:4px;display:flex;align-items:flex-end;justify-content:center;">
+          ${sig.signatureImageUrl ? `<img src="${sig.signatureImageUrl}" style="height:45px;object-fit:contain;" />` : '<span style="color:#cbd5e1;font-size:9px;margin-bottom:4px;">Firma</span>'}
+        </div>
+        <p style="font-weight:700;font-size:10px;margin:2px 0;">${sig.name || '_______________'}</p>
+        <p style="color:#64748b;font-size:9px;margin:0;">${sig.label}</p>
+      </div>
+    `).join('')
+
+    return `
+    <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:720px;margin:0 auto;padding:20px;color:#0f172a;">
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:center;border-bottom:2px solid #cbd5e1;padding-bottom:10px;margin-bottom:10px;gap:12px;">
+        ${config.showLogo && config.logoUrl ? `<img src="${config.logoUrl}" style="width:80px;height:80px;object-fit:contain;" />` : ''}
+        <div style="text-align:center;line-height:1.3;">
+          <h2 style="font-size:15px;font-weight:700;text-transform:uppercase;margin:0;color:#0f172a;">${data.institution?.name || institution?.name || ''}</h2>
+          ${config.headerResolution ? `<p style="font-size:10px;color:#475569;margin:1px 0;">${config.headerResolution}</p>` : ''}
+          <p style="font-size:10px;color:#475569;margin:1px 0;">NIT: ${data.institution?.nit || ''}${institution?.daneCode ? ` - DANE: ${institution.daneCode}` : ''}</p>
+          ${config.headerMunicipality ? `<p style="font-size:10px;color:#475569;margin:1px 0;">${config.headerMunicipality}${config.headerDepartment ? `, ${config.headerDepartment}` : ''}</p>` : ''}
+        </div>
+      </div>
+
+      <!-- Title bar -->
+      <div style="text-align:center;color:#fff;padding:5px 0;border-radius:4px;margin-bottom:8px;background:${pc};">
+        <h3 style="font-size:13px;font-weight:700;margin:0;">INFORME ACADEMICO - ${selectedTermName}</h3>
+        <p style="font-size:10px;margin:0;">Ano Lectivo ${selectedYearName}</p>
+      </div>
+
+      <!-- Student info -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;border:1px solid #cbd5e1;border-radius:6px;padding:10px;margin-bottom:12px;background:#f8fafc;font-size:11px;">
+        <div>
+          <p style="margin:2px 0;"><strong>Estudiante:</strong> ${data.student?.firstName} ${data.student?.lastName}</p>
+          <p style="margin:2px 0;"><strong>Documento:</strong> ${data.student?.documentNumber}</p>
+        </div>
+        <div>
+          <p style="margin:2px 0;"><strong>Grado:</strong> ${data.group?.gradeLevel} - ${data.group?.name}</p>
+          ${showRank && student.rank ? `<p style="margin:2px 0;"><strong>Puesto:</strong> ${student.rank} de ${student.totalStudents}</p>` : ''}
+        </div>
+      </div>
+
+      <!-- Grades table -->
+      <div style="border:1px solid #cbd5e1;border-radius:6px;overflow:hidden;margin-bottom:12px;">
+        <table style="width:100%;border-collapse:collapse;font-size:10px;">
+          <thead>
+            <tr style="background:${pc};color:#fff;">
+              <th style="padding:6px;text-align:left;font-weight:500;width:120px;">${isQualitative ? 'Dimension' : isFlat ? 'Asignatura' : 'Area / Asignatura'}</th>
+              ${showAchiev ? `<th style="padding:6px;text-align:left;font-weight:500;">${isQualitative ? 'Observacion' : 'Logro'}</th>` : ''}
+              ${showNumeric ? '<th style="padding:6px 2px;text-align:center;font-weight:500;width:40px;">Nota</th>' : ''}
+              ${showPerf ? '<th style="padding:6px 2px;text-align:center;font-weight:500;width:60px;">Desempeno</th>' : ''}
+              ${showAttend ? '<th style="padding:6px 2px;text-align:center;font-weight:500;width:40px;">Fallas</th>' : ''}
+            </tr>
+          </thead>
+          <tbody>${gradesRows}</tbody>
+          ${avgFooter}
+        </table>
+      </div>
+
+      ${motivationalHtml}
+      ${scaleHtml}
+      ${obsHtml}
+
+      <!-- Signatures -->
+      <div style="display:flex;gap:16px;margin-top:30px;">
+        ${sigsHtml}
+      </div>
+
+      <!-- Footer -->
+      <div style="margin-top:20px;padding-top:8px;border-top:1px solid #cbd5e1;text-align:center;font-size:9px;color:#94a3b8;">
+        <p style="margin:1px 0;">Documento generado el ${new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+        <p style="margin:1px 0;">${data.institution?.name || institution?.name || ''}</p>
+      </div>
+    </div>`
+  }
+
+  const generatePdfFromHtml = async (html: string, filename: string) => {
+    const html2pdf = (await import('html2pdf.js')).default
+    const container = document.createElement('div')
+    container.innerHTML = html
+    container.style.position = 'absolute'
+    container.style.left = '-9999px'
+    container.style.top = '0'
+    document.body.appendChild(container)
+    try {
+      const opts: any = {
+        margin: [8, 8, 8, 8],
+        filename,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+      }
+      await html2pdf().set(opts).from(container).save()
+    } finally {
+      document.body.removeChild(container)
+    }
+  }
+
   // Descargar PDF individual de un estudiante
   const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null)
   const handleDownloadPdf = async (student: StudentRow) => {
     if (!selectedTermId) return
     setDownloadingPdf(student.enrollmentId)
     try {
-      const res = await reportsApi.downloadReportCardPdf(student.enrollmentId, selectedTermId)
-      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `boletin-${student.studentName.replace(/\s+/g, '-')}.pdf`
-      a.click()
-      window.URL.revokeObjectURL(url)
+      const res = await reportsApi.getReportCard(student.enrollmentId, selectedTermId)
+      const data = res.data
+      const html = buildReportCardHtml({ ...data, rank: student.rank, totalStudents: student.totalStudents }, student)
+      await generatePdfFromHtml(html, `boletin-${student.studentName.replace(/\s+/g, '-')}.pdf`)
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Error al descargar el boletín PDF')
+      alert(err?.response?.data?.message || 'Error al descargar el boletin PDF')
     } finally {
       setDownloadingPdf(null)
     }
@@ -358,29 +590,25 @@ export default function ReportCards() {
     }
     setIsGeneratingBulk(true)
     try {
-      // Descargar uno por uno y combinar
       let downloadCount = 0
       for (const enrollmentId of ids) {
         try {
           const student = students.find(s => s.enrollmentId === enrollmentId)
-          const res = await reportsApi.downloadReportCardPdf(enrollmentId, selectedTermId)
-          const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
-          const a = document.createElement('a')
-          a.href = url
-          a.download = `boletin-${student?.studentName?.replace(/\s+/g, '-') || enrollmentId}.pdf`
-          a.click()
-          window.URL.revokeObjectURL(url)
+          if (!student) continue
+          const res = await reportsApi.getReportCard(enrollmentId, selectedTermId)
+          const data = res.data
+          const html = buildReportCardHtml({ ...data, rank: student.rank, totalStudents: student.totalStudents }, student)
+          await generatePdfFromHtml(html, `boletin-${student.studentName.replace(/\s+/g, '-')}.pdf`)
           downloadCount++
-          // Pequeña pausa para no saturar el navegador
-          await new Promise(r => setTimeout(r, 300))
+          await new Promise(r => setTimeout(r, 500))
         } catch (err) {
-          console.error(`Error descargando boletín de ${enrollmentId}:`, err)
+          console.error(`Error descargando boletin de ${enrollmentId}:`, err)
         }
       }
       if (downloadCount > 0) {
         alert(`Se descargaron ${downloadCount} de ${ids.length} boletines`)
       } else {
-        alert('No se pudo descargar ningún boletín. Verifique que existan notas registradas.')
+        alert('No se pudo descargar ningun boletin. Verifique que existan notas registradas.')
       }
     } catch (err: any) {
       alert('Error al generar los boletines')
@@ -480,8 +708,24 @@ export default function ReportCards() {
     )
   }
 
-  const selectedTermName = terms.find(t => t.id === selectedTermId)?.name || ''
+  const selectedTerm = terms.find(t => t.id === selectedTermId)
+  const selectedTermName = selectedTerm?.name || ''
   const selectedYearName = academicYears.find(y => y.id === selectedYearId)?.name || ''
+
+  const [togglingBulletins, setTogglingBulletins] = useState(false)
+  const handleToggleBulletins = async () => {
+    if (!selectedTermId) return
+    const current = selectedTerm?.bulletinsReleasedForTeachers ?? false
+    setTogglingBulletins(true)
+    try {
+      await academicTermsApi.toggleBulletinsRelease(selectedTermId, !current)
+      setTerms(prev => prev.map(t => t.id === selectedTermId ? { ...t, bulletinsReleasedForTeachers: !current } : t))
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Error al cambiar visibilidad de boletines')
+    } finally {
+      setTogglingBulletins(false)
+    }
+  }
 
   return (
     <div>
@@ -572,6 +816,48 @@ export default function ReportCards() {
         <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4">
           <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
           <p className="text-sm text-blue-800">Periodo finalizado — mostrando datos congelados (snapshot v{dataMeta.snapshotVersion}).</p>
+        </div>
+      )}
+
+      {/* Blocked banner for teachers */}
+      {bulletinsBlocked && !isManager && (
+        <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4">
+          <AlertTriangle className="w-6 h-6 text-orange-500 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-orange-800">Boletines no disponibles</p>
+            <p className="text-xs text-orange-600">Los boletines de este período aún no han sido liberados por el coordinador. Comuníquese con coordinación si necesita acceso.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Bulletin release toggle for managers */}
+      {isManager && selectedTermId && (
+        <div className={`flex items-center justify-between gap-3 rounded-xl p-3 mb-4 border ${selectedTerm?.bulletinsReleasedForTeachers ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'}`}>
+          <div className="flex items-center gap-3">
+            <Mail className={`w-5 h-5 flex-shrink-0 ${selectedTerm?.bulletinsReleasedForTeachers ? 'text-green-600' : 'text-slate-400'}`} />
+            <div>
+              <p className={`text-sm font-medium ${selectedTerm?.bulletinsReleasedForTeachers ? 'text-green-800' : 'text-slate-700'}`}>
+                {selectedTerm?.bulletinsReleasedForTeachers ? 'Boletines liberados para docentes' : 'Boletines no visibles para docentes'}
+              </p>
+              <p className="text-xs text-slate-500">
+                {selectedTerm?.bulletinsReleasedForTeachers
+                  ? 'Los docentes pueden ver y descargar los boletines de este período.'
+                  : 'Active esta opción cuando desee que los docentes puedan ver los boletines de este período.'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleToggleBulletins}
+            disabled={togglingBulletins}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              selectedTerm?.bulletinsReleasedForTeachers
+                ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                : 'bg-green-600 text-white hover:bg-green-700'
+            } disabled:opacity-50`}
+          >
+            {togglingBulletins ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {selectedTerm?.bulletinsReleasedForTeachers ? 'Ocultar' : 'Liberar'}
+          </button>
         </div>
       )}
 
