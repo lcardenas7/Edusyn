@@ -109,28 +109,62 @@ export class ObligationsService {
       .map(o => o.thirdParty.referenceId as string);
 
     let enrollmentMap: Record<string, { groupName: string; gradeName: string }> = {};
-    if (studentRefIds.length > 0) {
-      const enrollments = await this.prisma.studentEnrollment.findMany({
-        where: {
-          studentId: { in: [...new Set(studentRefIds)] },
-          status: 'ACTIVE',
-        },
-        select: {
-          studentId: true,
-          group: {
-            select: {
-              name: true,
-              grade: { select: { name: true } },
+    const uniqueStudentIds = [...new Set(studentRefIds)];
+    if (uniqueStudentIds.length > 0) {
+      const [enrollments, students] = await Promise.all([
+        this.prisma.studentEnrollment.findMany({
+          where: {
+            studentId: { in: uniqueStudentIds },
+            status: 'ACTIVE',
+          },
+          select: {
+            studentId: true,
+            group: {
+              select: {
+                name: true,
+                grade: { select: { name: true } },
+              },
             },
           },
-        },
-      });
+        }),
+        this.prisma.student.findMany({
+          where: { id: { in: uniqueStudentIds } },
+          select: { id: true, firstName: true, secondName: true, lastName: true, secondLastName: true },
+        }),
+      ]);
 
       for (const e of enrollments) {
         enrollmentMap[e.studentId] = {
           groupName: e.group.name,
           gradeName: e.group.grade.name,
         };
+      }
+
+      // Sync third party names to full institutional format
+      const studentMap = new Map(students.map(s => [s.id, s]));
+      const namesToUpdate: { id: string; name: string }[] = [];
+      for (const o of rawData) {
+        if (o.thirdParty.type === 'STUDENT' && o.thirdParty.referenceId) {
+          const student = studentMap.get(o.thirdParty.referenceId);
+          if (student) {
+            const fullName = this.formatStudentName(student);
+            if (o.thirdParty.name !== fullName) {
+              namesToUpdate.push({ id: o.thirdParty.id, name: fullName });
+              o.thirdParty.name = fullName; // Update in-memory for this response
+            }
+          }
+        }
+      }
+      // Fire-and-forget batch name sync (non-blocking)
+      if (namesToUpdate.length > 0) {
+        Promise.all(
+          namesToUpdate.map(u =>
+            this.prisma.financialThirdParty.update({
+              where: { id: u.id },
+              data: { name: u.name },
+            })
+          )
+        ).catch(err => console.error('Error syncing third party names:', err));
       }
     }
 
@@ -430,26 +464,33 @@ export class ObligationsService {
       where: { institutionId, type: type as any, referenceId },
     });
 
-    if (!thirdParty) {
-      // Obtener datos del estudiante
-      const student = await this.prisma.student.findUnique({
-        where: { id: referenceId },
-      });
+    const student = await this.prisma.student.findUnique({
+      where: { id: referenceId },
+    });
 
-      if (student) {
-        thirdParty = await this.prisma.financialThirdParty.create({
-          data: {
-            institutionId,
-            type: 'STUDENT',
-            referenceId,
-            name: this.formatStudentName(student),
-            document: student.documentNumber,
-            documentType: student.documentType as DocumentType,
-            email: student.email,
-            phone: student.phone,
-          },
-        });
-      }
+    if (!student) return thirdParty;
+
+    const fullName = this.formatStudentName(student);
+
+    if (!thirdParty) {
+      thirdParty = await this.prisma.financialThirdParty.create({
+        data: {
+          institutionId,
+          type: 'STUDENT',
+          referenceId,
+          name: fullName,
+          document: student.documentNumber,
+          documentType: student.documentType as DocumentType,
+          email: student.email,
+          phone: student.phone,
+        },
+      });
+    } else if (thirdParty.name !== fullName) {
+      // Sync name if student data changed
+      thirdParty = await this.prisma.financialThirdParty.update({
+        where: { id: thirdParty.id },
+        data: { name: fullName },
+      });
     }
 
     return thirdParty;

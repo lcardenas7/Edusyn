@@ -15,6 +15,8 @@ import {
   ChevronLeft,
   ChevronRight,
   GraduationCap,
+  Ban,
+  Eye,
 } from 'lucide-react'
 import { financeObligationsApi, financeConceptsApi, academicGradesApi, groupsApi } from '../../lib/api'
 
@@ -202,6 +204,17 @@ export default function Obligations() {
     }
   }
 
+  const handleCancelObligation = async (id: string, reference?: string) => {
+    const reason = prompt(`¿Motivo para cancelar la obligación ${reference || id.slice(0, 8)}?`)
+    if (!reason) return
+    try {
+      await financeObligationsApi.cancel(id, reason)
+      fetchObligations(currentPage)
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al cancelar obligación')
+    }
+  }
+
   const filteredGroups = gradeFilter
     ? filterGroups.filter((g: any) => g.gradeId === gradeFilter || g.grade?.id === gradeFilter)
     : filterGroups
@@ -371,6 +384,7 @@ export default function Obligations() {
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Vence</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -427,6 +441,21 @@ export default function Obligations() {
                           {obl.dueDate
                             ? new Date(obl.dueDate).toLocaleDateString('es-CO')
                             : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Link to={`/finance/obligations/${obl.id}`} title="Ver detalle"
+                              className="p-1.5 text-blue-500 hover:bg-blue-50 rounded">
+                              <Eye className="w-4 h-4" />
+                            </Link>
+                            {!['PAID', 'CANCELLED'].includes(obl.status) && (
+                              <button onClick={() => handleCancelObligation(obl.id, obl.reference)}
+                                title="Cancelar obligación"
+                                className="p-1.5 text-red-400 hover:bg-red-50 rounded">
+                                <Ban className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     )
