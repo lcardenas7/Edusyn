@@ -133,6 +133,72 @@ export class FinancialReportsService {
     return result.sort((a, b) => b.profit - a.profit);
   }
 
+  // Recaudo por usuario (para delegación de recaudo a docentes)
+  async getCollectionByUser(institutionId: string, filters?: {
+    userId?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+  }) {
+    const where: any = {
+      institutionId,
+      voidedAt: null,
+    };
+
+    if (filters?.userId) where.receivedById = filters.userId;
+    if (filters?.dateFrom || filters?.dateTo) {
+      where.paymentDate = {};
+      if (filters.dateFrom) where.paymentDate.gte = filters.dateFrom;
+      if (filters.dateTo) where.paymentDate.lte = filters.dateTo;
+    }
+
+    const payments = await this.prisma.financialPayment.findMany({
+      where,
+      include: {
+        thirdParty: { select: { id: true, name: true } },
+        obligation: { select: { id: true, concept: { select: { name: true } } } },
+        receivedBy: { select: { id: true, firstName: true, lastName: true } },
+      },
+      orderBy: { paymentDate: 'desc' },
+    });
+
+    // Group by receivedBy
+    const byUser: Record<string, {
+      userId: string;
+      userName: string;
+      totalAmount: number;
+      paymentCount: number;
+      payments: typeof payments;
+    }> = {};
+
+    for (const p of payments) {
+      const uid = p.receivedById;
+      if (!byUser[uid]) {
+        byUser[uid] = {
+          userId: uid,
+          userName: `${p.receivedBy.firstName} ${p.receivedBy.lastName}`,
+          totalAmount: 0,
+          paymentCount: 0,
+          payments: [],
+        };
+      }
+      byUser[uid].totalAmount += Number(p.amount);
+      byUser[uid].paymentCount++;
+      byUser[uid].payments.push(p);
+    }
+
+    return {
+      summary: Object.values(byUser).map(u => ({
+        userId: u.userId,
+        userName: u.userName,
+        totalAmount: u.totalAmount,
+        paymentCount: u.paymentCount,
+      })),
+      details: Object.values(byUser),
+      grandTotal: payments.reduce((sum, p) => sum + Number(p.amount), 0),
+      totalPayments: payments.length,
+    };
+  }
+
   // Historial financiero de un estudiante
   async getStudentFinancialHistory(institutionId: string, studentId: string) {
     const thirdParty = await this.prisma.financialThirdParty.findFirst({

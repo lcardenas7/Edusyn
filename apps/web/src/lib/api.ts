@@ -1247,7 +1247,7 @@ export const financeConceptsApi = {
 }
 
 export const financeObligationsApi = {
-  getAll: (params?: { thirdPartyId?: string; conceptId?: string; status?: string }) => 
+  getAll: (params?: { thirdPartyId?: string; conceptId?: string; status?: string; gradeId?: string; groupId?: string; search?: string; page?: number; limit?: number }) => 
     api.get('/finance/obligations', { params }),
   getById: (id: string) => api.get(`/finance/obligations/${id}`),
   getStats: () => api.get('/finance/obligations/stats'),

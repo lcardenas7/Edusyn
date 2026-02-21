@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -16,8 +16,9 @@ import {
   Loader2,
   Eye,
   X,
+  CheckCircle2,
 } from 'lucide-react'
-import { financePaymentsApi, financeThirdPartiesApi, financeObligationsApi } from '../../lib/api'
+import { financePaymentsApi, financeThirdPartiesApi, financeObligationsApi, academicGradesApi, groupsApi } from '../../lib/api'
 
 type PaymentMethod = 'CASH' | 'TRANSFER' | 'CARD' | 'PSE' | 'NEQUI' | 'DAVIPLATA' | 'OTHER'
 
@@ -41,9 +42,13 @@ interface ThirdPartyOption {
 
 interface ObligationOption {
   id: string
-  concept: { name: string }
+  concept: { name: string; category?: { name: string } }
+  totalAmount: number
+  paidAmount: number
   balance: number
   reference?: string
+  dueDate?: string
+  status: string
 }
 
 const methodConfig: Record<PaymentMethod, { label: string; icon: React.ReactNode; color: string }> = {
@@ -85,6 +90,15 @@ export default function Payments() {
     notes: '',
   })
 
+  // Modal filter state
+  const [modalGrades, setModalGrades] = useState<any[]>([])
+  const [modalGroups, setModalGroups] = useState<any[]>([])
+  const [modalGradeFilter, setModalGradeFilter] = useState('')
+  const [modalGroupFilter, setModalGroupFilter] = useState('')
+  const [modalSearch, setModalSearch] = useState('')
+  const [loadingThirdParties, setLoadingThirdParties] = useState(false)
+  const modalFiltersLoaded = useRef(false)
+
   const fetchPayments = async () => {
     setLoading(true)
     try {
@@ -108,13 +122,58 @@ export default function Payments() {
     setShowNewPaymentModal(true)
     setLoadingModal(true)
     setPaymentForm({ thirdPartyId: '', obligationId: '', amount: '', paymentMethod: 'CASH', transactionRef: '', notes: '' })
+    setObligations([])
+    setModalGradeFilter('')
+    setModalGroupFilter('')
+    setModalSearch('')
     try {
-      const tpRes = await financeThirdPartiesApi.getAll({ isActive: 'true' })
+      const [tpRes, ...filterData] = await Promise.all([
+        financeThirdPartiesApi.getAll({ isActive: 'true' }),
+        ...(modalFiltersLoaded.current ? [] : [academicGradesApi.getAll(), groupsApi.getAll()]),
+      ])
       setThirdParties(Array.isArray(tpRes.data) ? tpRes.data : tpRes.data.data || [])
+      if (!modalFiltersLoaded.current && filterData.length === 2) {
+        setModalGrades(Array.isArray(filterData[0].data) ? filterData[0].data : filterData[0].data.data || [])
+        setModalGroups(Array.isArray(filterData[1].data) ? filterData[1].data : filterData[1].data.data || [])
+        modalFiltersLoaded.current = true
+      }
     } catch (err) {
-      console.error('Error loading third parties:', err)
+      console.error('Error loading modal data:', err)
     } finally {
       setLoadingModal(false)
+    }
+  }
+
+  // Filter third parties by grade/group using obligations endpoint
+  const searchThirdParties = async () => {
+    if (!modalGradeFilter && !modalGroupFilter && !modalSearch) {
+      // Reset: load all
+      try {
+        const tpRes = await financeThirdPartiesApi.getAll({ isActive: 'true' })
+        setThirdParties(Array.isArray(tpRes.data) ? tpRes.data : tpRes.data.data || [])
+      } catch (err) { console.error(err) }
+      return
+    }
+    setLoadingThirdParties(true)
+    try {
+      const params: any = { limit: 50 }
+      if (modalGradeFilter) params.gradeId = modalGradeFilter
+      if (modalGroupFilter) params.groupId = modalGroupFilter
+      if (modalSearch) params.search = modalSearch
+      const res = await financeObligationsApi.getAll(params)
+      const oblArr = Array.isArray(res.data) ? res.data : res.data.data || []
+      // Extract unique third parties from obligations
+      const tpMap = new Map<string, ThirdPartyOption>()
+      for (const o of oblArr) {
+        if (o.thirdParty && !tpMap.has(o.thirdParty.id)) {
+          tpMap.set(o.thirdParty.id, { id: o.thirdParty.id, name: o.thirdParty.name, type: o.thirdParty.type || 'STUDENT' })
+        }
+      }
+      setThirdParties([...tpMap.values()])
+    } catch (err) {
+      console.error('Error filtering third parties:', err)
+    } finally {
+      setLoadingThirdParties(false)
     }
   }
 
@@ -123,7 +182,7 @@ export default function Payments() {
     setObligations([])
     if (!tpId) return
     try {
-      const res = await financeObligationsApi.getAll({ thirdPartyId: tpId, status: 'PENDING' })
+      const res = await financeObligationsApi.getAll({ thirdPartyId: tpId, limit: 50 })
       const oblArr = Array.isArray(res.data) ? res.data : res.data.data || []
       const pending = oblArr.filter((o: any) => ['PENDING', 'PARTIAL', 'OVERDUE'].includes(o.status))
       setObligations(pending)
@@ -132,13 +191,18 @@ export default function Payments() {
     }
   }
 
-  const handleObligationChange = (oblId: string) => {
+  const handleSelectObligation = (oblId: string) => {
     const obl = obligations.find(o => o.id === oblId)
-    setPaymentForm(f => ({
-      ...f,
-      obligationId: oblId,
-      amount: obl ? String(Number(obl.balance)) : f.amount,
-    }))
+    if (paymentForm.obligationId === oblId) {
+      // Deselect
+      setPaymentForm(f => ({ ...f, obligationId: '', amount: '' }))
+    } else {
+      setPaymentForm(f => ({
+        ...f,
+        obligationId: oblId,
+        amount: obl ? String(Number(obl.balance)) : f.amount,
+      }))
+    }
   }
 
   const handleSubmitPayment = async () => {
@@ -396,73 +460,167 @@ export default function Payments() {
       {/* New Payment Modal */}
       {showNewPaymentModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-6">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Registrar Pago</h2>
             {loadingModal ? (
               <div className="py-8 text-center"><Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto" /></div>
             ) : (
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tercero *</label>
+                {/* Step 1: Find student */}
+                <fieldset className="border border-gray-200 rounded-lg p-3">
+                  <legend className="text-xs font-semibold text-gray-500 px-1">1. Buscar estudiante</legend>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    <select value={modalGradeFilter}
+                      onChange={e => { setModalGradeFilter(e.target.value); setModalGroupFilter('') }}
+                      className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm flex-1 min-w-[120px]">
+                      <option value="">Grado</option>
+                      {modalGrades.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
+                    <select value={modalGroupFilter}
+                      onChange={e => setModalGroupFilter(e.target.value)}
+                      className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm flex-1 min-w-[120px]">
+                      <option value="">Grupo</option>
+                      {(modalGradeFilter
+                        ? modalGroups.filter((g: any) => g.gradeId === modalGradeFilter || g.grade?.id === modalGradeFilter)
+                        : modalGroups
+                      ).map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
+                    <div className="relative flex-1 min-w-[160px]">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                      <input type="text" value={modalSearch}
+                        onChange={e => setModalSearch(e.target.value)}
+                        placeholder="Nombre o documento..."
+                        className="w-full pl-7 pr-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+                    </div>
+                    <button onClick={searchThirdParties}
+                      disabled={loadingThirdParties}
+                      className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 disabled:opacity-50 flex items-center gap-1">
+                      {loadingThirdParties ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                      Filtrar
+                    </button>
+                  </div>
                   <select value={paymentForm.thirdPartyId} onChange={e => handleThirdPartyChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <option value="">Seleccionar tercero...</option>
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                    <option value="">Seleccionar estudiante... ({thirdParties.length} disponibles)</option>
                     {thirdParties.map(tp => (
-                      <option key={tp.id} value={tp.id}>{tp.name} ({tp.type})</option>
+                      <option key={tp.id} value={tp.id}>{tp.name}</option>
                     ))}
                   </select>
-                </div>
-                {obligations.length > 0 && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Obligación (opcional)</label>
-                    <select value={paymentForm.obligationId} onChange={e => handleObligationChange(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                      <option value="">Pago general (sin obligación)</option>
-                      {obligations.map(obl => (
-                        <option key={obl.id} value={obl.id}>
-                          {obl.concept.name} - Saldo: {formatCurrency(Number(obl.balance))}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                </fieldset>
+
+                {/* Step 2: Select obligation */}
+                {paymentForm.thirdPartyId && (
+                  <fieldset className="border border-gray-200 rounded-lg p-3">
+                    <legend className="text-xs font-semibold text-gray-500 px-1">2. Seleccionar obligación</legend>
+                    {obligations.length === 0 ? (
+                      <p className="text-sm text-gray-400 py-2">Este tercero no tiene obligaciones pendientes.</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-xs text-gray-500 border-b">
+                              <th className="py-1.5 text-left"></th>
+                              <th className="py-1.5 text-left">Concepto</th>
+                              <th className="py-1.5 text-left">Ref.</th>
+                              <th className="py-1.5 text-right">Total</th>
+                              <th className="py-1.5 text-right">Pagado</th>
+                              <th className="py-1.5 text-right">Saldo</th>
+                              <th className="py-1.5 text-center">Vence</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {obligations.map(obl => {
+                              const selected = paymentForm.obligationId === obl.id
+                              return (
+                                <tr key={obl.id}
+                                  onClick={() => handleSelectObligation(obl.id)}
+                                  className={`cursor-pointer border-b last:border-0 transition-colors ${
+                                    selected ? 'bg-blue-50' : 'hover:bg-gray-50'
+                                  }`}>
+                                  <td className="py-2 pr-1">
+                                    {selected
+                                      ? <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                                      : <div className="w-4 h-4 border-2 border-gray-300 rounded-full" />}
+                                  </td>
+                                  <td className="py-2">
+                                    <span className="font-medium">{obl.concept.name}</span>
+                                    {obl.concept.category?.name && (
+                                      <span className="text-xs text-gray-400 ml-1">({obl.concept.category.name})</span>
+                                    )}
+                                  </td>
+                                  <td className="py-2 font-mono text-xs text-gray-500">{obl.reference || '-'}</td>
+                                  <td className="py-2 text-right">{formatCurrency(Number(obl.totalAmount))}</td>
+                                  <td className="py-2 text-right text-green-600">{formatCurrency(Number(obl.paidAmount))}</td>
+                                  <td className="py-2 text-right font-bold">{formatCurrency(Number(obl.balance))}</td>
+                                  <td className="py-2 text-center text-xs text-gray-500">
+                                    {obl.dueDate ? new Date(obl.dueDate).toLocaleDateString('es-CO') : '-'}
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </fieldset>
                 )}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Monto *</label>
-                  <input type="number" value={paymentForm.amount}
-                    onChange={e => setPaymentForm(f => ({ ...f, amount: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="0" min="1" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
-                  <select value={paymentForm.paymentMethod}
-                    onChange={e => setPaymentForm(f => ({ ...f, paymentMethod: e.target.value as PaymentMethod }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <option value="CASH">Efectivo</option>
-                    <option value="TRANSFER">Transferencia</option>
-                    <option value="CARD">Tarjeta</option>
-                    <option value="PSE">PSE</option>
-                    <option value="NEQUI">Nequi</option>
-                    <option value="DAVIPLATA">Daviplata</option>
-                    <option value="OTHER">Otro</option>
-                  </select>
-                </div>
-                {paymentForm.paymentMethod !== 'CASH' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Referencia de transacción</label>
-                    <input type="text" value={paymentForm.transactionRef}
-                      onChange={e => setPaymentForm(f => ({ ...f, transactionRef: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      placeholder="N° transferencia, aprobación..." />
-                  </div>
+
+                {/* Step 3: Payment details */}
+                {paymentForm.thirdPartyId && (
+                  <fieldset className="border border-gray-200 rounded-lg p-3">
+                    <legend className="text-xs font-semibold text-gray-500 px-1">3. Datos del pago</legend>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Monto *</label>
+                        <input type="number" value={paymentForm.amount}
+                          onChange={e => setPaymentForm(f => ({ ...f, amount: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="0" min="1" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Método de Pago</label>
+                        <select value={paymentForm.paymentMethod}
+                          onChange={e => setPaymentForm(f => ({ ...f, paymentMethod: e.target.value as PaymentMethod }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                          <option value="CASH">Efectivo</option>
+                          <option value="TRANSFER">Transferencia</option>
+                          <option value="CARD">Tarjeta</option>
+                          <option value="PSE">PSE</option>
+                          <option value="NEQUI">Nequi</option>
+                          <option value="DAVIPLATA">Daviplata</option>
+                          <option value="OTHER">Otro</option>
+                        </select>
+                      </div>
+                    </div>
+                    {paymentForm.paymentMethod !== 'CASH' && (
+                      <div className="mt-3">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Referencia de transacción</label>
+                        <input type="text" value={paymentForm.transactionRef}
+                          onChange={e => setPaymentForm(f => ({ ...f, transactionRef: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="N° transferencia, aprobación..." />
+                      </div>
+                    )}
+                    <div className="mt-3">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Notas</label>
+                      <textarea value={paymentForm.notes}
+                        onChange={e => setPaymentForm(f => ({ ...f, notes: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                        rows={2} placeholder="Observaciones..." />
+                    </div>
+
+                    {/* Payment summary */}
+                    {paymentForm.obligationId && paymentForm.amount && (
+                      <div className="mt-3 p-2 bg-blue-50 rounded-lg text-sm">
+                        <p className="text-blue-800">
+                          <strong>Concepto:</strong> {obligations.find(o => o.id === paymentForm.obligationId)?.concept.name}
+                          {' | '}
+                          <strong>Monto:</strong> {formatCurrency(Number(paymentForm.amount))}
+                        </p>
+                      </div>
+                    )}
+                  </fieldset>
                 )}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
-                  <textarea value={paymentForm.notes}
-                    onChange={e => setPaymentForm(f => ({ ...f, notes: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    rows={2} placeholder="Observaciones..." />
-                </div>
               </div>
             )}
             <div className="flex justify-end gap-2 mt-6">

@@ -48,6 +48,8 @@ interface FinancialSettingsData {
   invoiceEmail: string | null
   // Cuentas bancarias
   bankAccounts: BankAccount[] | null
+  // Delegación de recaudo
+  allowTeacherCollection: boolean
   // Notificaciones
   sendPaymentReminders: boolean
   reminderDaysBefore: number
@@ -65,7 +67,7 @@ export default function FinanceSettings() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    billing: true, fiscal: true, visual: true, resolution: false, bank: true, notifications: false, electronic: false,
+    billing: true, fiscal: true, visual: true, resolution: false, bank: true, collection: false, notifications: false, electronic: false,
   })
 
   const fetchSettings = async () => {
@@ -104,6 +106,7 @@ export default function FinanceSettings() {
         invoicePhone: data.invoicePhone || null,
         invoiceEmail: data.invoiceEmail || null,
         bankAccounts: data.bankAccounts || [],
+        allowTeacherCollection: data.allowTeacherCollection ?? false,
         sendPaymentReminders: data.sendPaymentReminders ?? false,
         reminderDaysBefore: data.reminderDaysBefore ?? 3,
         electronicProvider: data.electronicProvider || null,
@@ -159,6 +162,7 @@ export default function FinanceSettings() {
         invoicePhone: settings.invoicePhone || undefined,
         invoiceEmail: settings.invoiceEmail || undefined,
         bankAccounts: settings.bankAccounts,
+        allowTeacherCollection: settings.allowTeacherCollection,
         sendPaymentReminders: settings.sendPaymentReminders,
         reminderDaysBefore: settings.reminderDaysBefore,
         electronicProvider: settings.electronicProvider || undefined,
@@ -614,6 +618,17 @@ export default function FinanceSettings() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </SectionCard>
+
+          {/* ═══ DELEGACIÓN DE RECAUDO ═══ */}
+          <SectionCard id="collection" icon={Shield} title="Delegación de Recaudo" subtitle="Permitir que docentes registren pagos">
+            <Toggle value={settings.allowTeacherCollection} onChange={v => setSettings({ ...settings, allowTeacherCollection: v })}
+              label="Habilitar recaudo por docentes" description="Permite a los docentes registrar pagos en nombre de la institución. El coordinador podrá ver un reporte de recaudo por usuario." />
+            {settings.allowTeacherCollection && (
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-xs">
+                Los docentes podrán acceder al módulo de Caja/Recaudos para registrar pagos. Todos los pagos quedarán registrados con el nombre del docente que los recibió. Use el reporte "Recaudo por usuario" para conciliar.
               </div>
             )}
           </SectionCard>

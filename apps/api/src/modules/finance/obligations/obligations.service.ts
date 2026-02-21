@@ -10,18 +10,74 @@ export class ObligationsService {
     thirdPartyId?: string;
     conceptId?: string;
     status?: ObligationStatus;
+    gradeId?: string;
+    groupId?: string;
+    search?: string;
     dueDateFrom?: Date;
     dueDateTo?: Date;
     page?: number;
     limit?: number;
   }) {
     const page = filters?.page || 1;
-    const limit = Math.min(filters?.limit || 100, 500); // Max 500 records
+    const limit = Math.min(filters?.limit || 25, 50);
     const skip = (page - 1) * limit;
+
+    // Build thirdPartyId filter from gradeId/groupId/search if needed
+    let thirdPartyIdFilter: string | undefined = filters?.thirdPartyId;
+    let thirdPartyIdsFromFilter: string[] | undefined;
+
+    if (filters?.gradeId || filters?.groupId || filters?.search) {
+      // Find students matching grade/group/search, then map to thirdParty IDs
+      const enrollmentWhere: any = { status: 'ACTIVE' };
+
+      if (filters.groupId) {
+        enrollmentWhere.groupId = filters.groupId;
+      } else if (filters.gradeId) {
+        enrollmentWhere.group = { gradeId: filters.gradeId };
+      }
+
+      if (filters.search) {
+        const searchTerm = filters.search.trim();
+        enrollmentWhere.student = {
+          OR: [
+            { firstName: { contains: searchTerm, mode: 'insensitive' } },
+            { secondName: { contains: searchTerm, mode: 'insensitive' } },
+            { lastName: { contains: searchTerm, mode: 'insensitive' } },
+            { secondLastName: { contains: searchTerm, mode: 'insensitive' } },
+            { documentNumber: { contains: searchTerm, mode: 'insensitive' } },
+          ],
+        };
+      }
+
+      const enrollments = await this.prisma.studentEnrollment.findMany({
+        where: enrollmentWhere,
+        select: { studentId: true },
+      });
+
+      const studentIds = enrollments.map(e => e.studentId);
+
+      // Map studentIds to thirdParty IDs
+      const thirdParties = await this.prisma.financialThirdParty.findMany({
+        where: {
+          institutionId,
+          type: 'STUDENT',
+          referenceId: { in: studentIds },
+        },
+        select: { id: true },
+      });
+
+      thirdPartyIdsFromFilter = thirdParties.map(tp => tp.id);
+
+      // If no matches found, return empty result immediately
+      if (thirdPartyIdsFromFilter.length === 0) {
+        return { data: [], meta: { total: 0, page, totalPages: 0, limit } };
+      }
+    }
 
     const where: Prisma.FinancialObligationWhereInput = {
       institutionId,
-      ...(filters?.thirdPartyId && { thirdPartyId: filters.thirdPartyId }),
+      ...(thirdPartyIdFilter && { thirdPartyId: thirdPartyIdFilter }),
+      ...(thirdPartyIdsFromFilter && !thirdPartyIdFilter && { thirdPartyId: { in: thirdPartyIdsFromFilter } }),
       ...(filters?.conceptId && { conceptId: filters.conceptId }),
       ...(filters?.status && { status: filters.status }),
       ...(filters?.dueDateFrom || filters?.dueDateTo ? {
@@ -32,11 +88,11 @@ export class ObligationsService {
       } : {}),
     };
 
-    const [data, total] = await Promise.all([
+    const [rawData, total] = await Promise.all([
       this.prisma.financialObligation.findMany({
         where,
         include: {
-          thirdParty: { select: { id: true, name: true, document: true, type: true } },
+          thirdParty: { select: { id: true, name: true, document: true, type: true, referenceId: true } },
           concept: { select: { id: true, name: true, category: { select: { id: true, name: true } } } },
           _count: { select: { payments: true } },
         },
@@ -47,7 +103,49 @@ export class ObligationsService {
       this.prisma.financialObligation.count({ where }),
     ]);
 
-    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+    // Enrich with student enrollment info (group/grade) — batch query to avoid N+1
+    const studentRefIds = rawData
+      .filter(o => o.thirdParty.type === 'STUDENT' && o.thirdParty.referenceId)
+      .map(o => o.thirdParty.referenceId as string);
+
+    let enrollmentMap: Record<string, { groupName: string; gradeName: string }> = {};
+    if (studentRefIds.length > 0) {
+      const enrollments = await this.prisma.studentEnrollment.findMany({
+        where: {
+          studentId: { in: [...new Set(studentRefIds)] },
+          status: 'ACTIVE',
+        },
+        select: {
+          studentId: true,
+          group: {
+            select: {
+              name: true,
+              grade: { select: { name: true } },
+            },
+          },
+        },
+      });
+
+      for (const e of enrollments) {
+        enrollmentMap[e.studentId] = {
+          groupName: e.group.name,
+          gradeName: e.group.grade.name,
+        };
+      }
+    }
+
+    const data = rawData.map(o => {
+      const enrollment = o.thirdParty.referenceId
+        ? enrollmentMap[o.thirdParty.referenceId]
+        : undefined;
+      return {
+        ...o,
+        studentGroup: enrollment?.groupName || null,
+        studentGrade: enrollment?.gradeName || null,
+      };
+    });
+
+    return { data, meta: { total, page, totalPages: Math.ceil(total / limit), limit } };
   }
 
   async findOne(id: string, institutionId: string) {
@@ -318,6 +416,15 @@ export class ObligationsService {
     return `OBL-${year}-${String(count + 1).padStart(6, '0')}`;
   }
 
+  private formatStudentName(student: { lastName: string; secondLastName?: string | null; firstName: string; secondName?: string | null }): string {
+    return [
+      student.lastName,
+      student.secondLastName,
+      student.firstName,
+      student.secondName,
+    ].filter(Boolean).join(' ').toUpperCase();
+  }
+
   private async getOrCreateThirdParty(institutionId: string, type: string, referenceId: string) {
     let thirdParty = await this.prisma.financialThirdParty.findFirst({
       where: { institutionId, type: type as any, referenceId },
@@ -335,7 +442,7 @@ export class ObligationsService {
             institutionId,
             type: 'STUDENT',
             referenceId,
-            name: `${student.firstName} ${student.lastName}`,
+            name: this.formatStudentName(student),
             document: student.documentNumber,
             documentType: student.documentType as DocumentType,
             email: student.email,

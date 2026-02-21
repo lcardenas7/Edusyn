@@ -57,6 +57,8 @@ export class FinancialSettingsService {
     invoiceEmail?: string;
     // Cuentas bancarias
     bankAccounts?: any;
+    // Delegación de recaudo
+    allowTeacherCollection?: boolean;
     // Notificaciones
     sendPaymentReminders?: boolean;
     reminderDaysBefore?: number;

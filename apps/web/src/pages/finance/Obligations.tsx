@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -6,13 +6,15 @@ import {
   Search,
   Plus,
   RefreshCw,
-  Filter,
   Clock,
   CheckCircle,
   AlertTriangle,
   XCircle,
   Users,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
+  GraduationCap,
 } from 'lucide-react'
 import { financeObligationsApi, financeConceptsApi, academicGradesApi, groupsApi } from '../../lib/api'
 
@@ -30,6 +32,15 @@ interface Obligation {
   status: ObligationStatus
   dueDate?: string
   reference?: string
+  studentGroup?: string | null
+  studentGrade?: string | null
+}
+
+interface PaginationMeta {
+  total: number
+  page: number
+  totalPages: number
+  limit: number
 }
 
 const statusConfig: Record<ObligationStatus, { label: string; icon: React.ReactNode; color: string }> = {
@@ -51,12 +62,24 @@ const formatCurrency = (value: number) => {
 export default function Obligations() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [obligations, setObligations] = useState<Obligation[]>([])
+  const [meta, setMeta] = useState<PaginationMeta>({ total: 0, page: 1, totalPages: 0, limit: 25 })
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<ObligationStatus | ''>(
     (searchParams.get('status') as ObligationStatus) || ''
   )
+  const [gradeFilter, setGradeFilter] = useState('')
+  const [groupFilter, setGroupFilter] = useState('')
+  const [conceptFilter, setConceptFilter] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
   const [showMassiveModal, setShowMassiveModal] = useState(false)
+
+  // Filter options (loaded once)
+  const [filterGrades, setFilterGrades] = useState<any[]>([])
+  const [filterGroups, setFilterGroups] = useState<any[]>([])
+  const [filterConcepts, setFilterConcepts] = useState<any[]>([])
+  const filtersLoaded = useRef(false)
 
   // Massive modal state
   const [concepts, setConcepts] = useState<any[]>([])
@@ -75,24 +98,53 @@ export default function Obligations() {
     dueDate: '',
   })
 
-  const fetchObligations = async () => {
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search)
+      setCurrentPage(1)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  // Load filter options once
+  useEffect(() => {
+    if (filtersLoaded.current) return
+    filtersLoaded.current = true
+    Promise.all([
+      academicGradesApi.getAll(),
+      groupsApi.getAll(),
+      financeConceptsApi.getAll({ isActive: 'true' }),
+    ]).then(([gRes, grRes, cRes]) => {
+      setFilterGrades(Array.isArray(gRes.data) ? gRes.data : gRes.data.data || [])
+      setFilterGroups(Array.isArray(grRes.data) ? grRes.data : grRes.data.data || [])
+      setFilterConcepts(Array.isArray(cRes.data) ? cRes.data : cRes.data.data || [])
+    }).catch(err => console.error('Error loading filter options:', err))
+  }, [])
+
+  const fetchObligations = useCallback(async (page = currentPage) => {
     setLoading(true)
     try {
-      const params: any = {}
+      const params: any = { page, limit: 25 }
       if (statusFilter) params.status = statusFilter
+      if (gradeFilter) params.gradeId = gradeFilter
+      if (groupFilter) params.groupId = groupFilter
+      if (conceptFilter) params.conceptId = conceptFilter
+      if (debouncedSearch) params.search = debouncedSearch
       const response = await financeObligationsApi.getAll(params)
-      const oblResult = Array.isArray(response.data) ? response.data : response.data.data || []
-      setObligations(oblResult)
+      const result = response.data
+      setObligations(Array.isArray(result) ? result : result.data || [])
+      if (result.meta) setMeta(result.meta)
     } catch (err) {
       console.error('Error fetching obligations:', err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [statusFilter, gradeFilter, groupFilter, conceptFilter, debouncedSearch, currentPage])
 
   useEffect(() => {
-    fetchObligations()
-  }, [statusFilter])
+    fetchObligations(currentPage)
+  }, [statusFilter, gradeFilter, groupFilter, conceptFilter, debouncedSearch, currentPage])
 
   const openMassiveModal = async () => {
     setShowMassiveModal(true)
@@ -150,15 +202,35 @@ export default function Obligations() {
     }
   }
 
-  const filteredObligations = obligations.filter(obl => {
-    if (!search) return true
-    const searchLower = search.toLowerCase()
-    return (
-      obl.thirdParty.name.toLowerCase().includes(searchLower) ||
-      obl.concept.name.toLowerCase().includes(searchLower) ||
-      obl.reference?.toLowerCase().includes(searchLower)
-    )
-  })
+  const filteredGroups = gradeFilter
+    ? filterGroups.filter((g: any) => g.gradeId === gradeFilter || g.grade?.id === gradeFilter)
+    : filterGroups
+
+  const handleGradeChange = (val: string) => {
+    setGradeFilter(val)
+    setGroupFilter('')
+    setCurrentPage(1)
+  }
+
+  const handleGroupChange = (val: string) => {
+    setGroupFilter(val)
+    setCurrentPage(1)
+  }
+
+  const handleConceptChange = (val: string) => {
+    setConceptFilter(val)
+    setCurrentPage(1)
+  }
+
+  const handleStatusChange = (val: ObligationStatus | '') => {
+    setStatusFilter(val)
+    setCurrentPage(1)
+    if (val) {
+      setSearchParams({ status: val })
+    } else {
+      setSearchParams({})
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -200,77 +272,78 @@ export default function Obligations() {
 
         {/* Filters */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
+          <div className="flex flex-wrap gap-3">
+            <div className="flex-1 min-w-[220px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Buscar por tercero, concepto, referencia..."
+                  placeholder="Nombre, apellido o N° documento..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 />
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-400" />
-              <select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value as ObligationStatus | '')
-                  if (e.target.value) {
-                    setSearchParams({ status: e.target.value })
-                  } else {
-                    setSearchParams({})
-                  }
-                }}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Todos los estados</option>
-                <option value="PENDING">Pendientes</option>
-                <option value="PARTIAL">Parciales</option>
-                <option value="OVERDUE">Vencidas</option>
-                <option value="PAID">Pagadas</option>
-                <option value="CANCELLED">Canceladas</option>
-              </select>
-            </div>
+            <select
+              value={gradeFilter}
+              onChange={(e) => handleGradeChange(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm min-w-[140px]"
+            >
+              <option value="">Todos los grados</option>
+              {filterGrades.map((g: any) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+            <select
+              value={groupFilter}
+              onChange={(e) => handleGroupChange(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm min-w-[140px]"
+            >
+              <option value="">Todos los grupos</option>
+              {filteredGroups.map((g: any) => (
+                <option key={g.id} value={g.id}>{g.name}{g.grade ? ` (${g.grade.name})` : ''}</option>
+              ))}
+            </select>
+            <select
+              value={conceptFilter}
+              onChange={(e) => handleConceptChange(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm min-w-[160px]"
+            >
+              <option value="">Todos los conceptos</option>
+              {filterConcepts.map((c: any) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => handleStatusChange(e.target.value as ObligationStatus | '')}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm min-w-[140px]"
+            >
+              <option value="">Todos los estados</option>
+              <option value="PENDING">Pendientes</option>
+              <option value="PARTIAL">Parciales</option>
+              <option value="OVERDUE">Vencidas</option>
+              <option value="PAID">Pagadas</option>
+              <option value="CANCELLED">Canceladas</option>
+            </select>
             <button
-              onClick={fetchObligations}
+              onClick={() => fetchObligations(currentPage)}
               className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+              title="Refrescar"
             >
               <RefreshCw className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {(['PENDING', 'PARTIAL', 'OVERDUE', 'PAID'] as ObligationStatus[]).map(status => {
-            const config = statusConfig[status]
-            const count = obligations.filter(o => o.status === status).length
-            const total = obligations
-              .filter(o => o.status === status)
-              .reduce((sum, o) => sum + Number(o.balance), 0)
-            return (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(statusFilter === status ? '' : status)}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  statusFilter === status
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 bg-white hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`p-1 rounded ${config.color}`}>{config.icon}</span>
-                  <span className="text-sm font-medium text-gray-700">{config.label}</span>
-                </div>
-                <p className="text-xl font-bold text-gray-900">{count}</p>
-                <p className="text-xs text-gray-500">{formatCurrency(total)}</p>
-              </button>
-            )
-          })}
+        {/* Info bar */}
+        <div className="flex items-center justify-between mb-4 px-1">
+          <p className="text-sm text-gray-500">
+            {meta.total > 0
+              ? `Mostrando ${(meta.page - 1) * meta.limit + 1}–${Math.min(meta.page * meta.limit, meta.total)} de ${meta.total} obligaciones`
+              : 'Sin resultados'}
+          </p>
         </div>
 
         {/* Table */}
@@ -279,7 +352,7 @@ export default function Obligations() {
             <div className="p-8 text-center">
               <RefreshCw className="w-8 h-8 animate-spin text-blue-500 mx-auto" />
             </div>
-          ) : filteredObligations.length === 0 ? (
+          ) : obligations.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
               <DollarSign className="w-12 h-12 mx-auto mb-4 text-gray-300" />
               <p>No hay obligaciones registradas</p>
@@ -289,57 +362,68 @@ export default function Obligations() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Referencia</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tercero</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Pagado</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Vence</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ref.</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estudiante</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Grupo</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Pagado</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Vence</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {filteredObligations.map((obl) => {
+                  {obligations.map((obl) => {
                     const config = statusConfig[obl.status]
                     return (
                       <tr key={obl.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-3">
                           <Link
                             to={`/finance/obligations/${obl.id}`}
-                            className="font-mono text-sm text-blue-600 hover:text-blue-700"
+                            className="font-mono text-xs text-blue-600 hover:text-blue-700"
                           >
                             {obl.reference || obl.id.slice(0, 8)}
                           </Link>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-3">
                           <Link
                             to={`/finance/third-parties/${obl.thirdParty.id}`}
-                            className="font-medium text-gray-900 hover:text-blue-600"
+                            className="font-medium text-sm text-gray-900 hover:text-blue-600"
                           >
                             {obl.thirdParty.name}
                           </Link>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="text-gray-900">{obl.concept.name}</div>
-                          <div className="text-xs text-gray-500">{obl.concept.category.name}</div>
+                        <td className="px-4 py-3">
+                          {obl.studentGroup ? (
+                            <div className="flex items-center gap-1">
+                              <GraduationCap className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                              <span className="text-sm text-gray-700">{obl.studentGroup}</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                          )}
                         </td>
-                        <td className="px-6 py-4 text-right font-medium text-gray-900">
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-900">{obl.concept.name}</div>
+                          <div className="text-xs text-gray-400">{obl.concept.category?.name}</div>
+                        </td>
+                        <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
                           {formatCurrency(Number(obl.totalAmount))}
                         </td>
-                        <td className="px-6 py-4 text-right text-green-600">
+                        <td className="px-4 py-3 text-right text-sm text-green-600">
                           {formatCurrency(Number(obl.paidAmount))}
                         </td>
-                        <td className="px-6 py-4 text-right font-bold text-gray-900">
+                        <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
                           {formatCurrency(Number(obl.balance))}
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
                             {config.icon}
                             {config.label}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-center text-sm text-gray-500">
+                        <td className="px-4 py-3 text-center text-xs text-gray-500">
                           {obl.dueDate
                             ? new Date(obl.dueDate).toLocaleDateString('es-CO')
                             : '-'}
@@ -349,6 +433,28 @@ export default function Obligations() {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+          {/* Pagination */}
+          {meta.totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-200 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" /> Anterior
+              </button>
+              <span className="text-sm text-gray-600">
+                Página <strong>{meta.page}</strong> de <strong>{meta.totalPages}</strong>
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(meta.totalPages, p + 1))}
+                disabled={currentPage >= meta.totalPages}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-200 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Siguiente <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           )}
         </div>

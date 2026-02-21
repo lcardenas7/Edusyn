@@ -16,13 +16,13 @@ import AttendanceReportLayout, {
 interface ReportItem { id: string; name: string; description: string; icon: any; feature?: string }
 
 const attendanceReports: ReportItem[] = [
-  { id: 'att-group', name: 'Asistencia por grupo', description: 'Estado general de asistencia de un grupo o curso', icon: GraduationCap, feature: 'RPT_ATT_GROUP' },
-  { id: 'att-student', name: 'Asistencia por estudiante', description: 'Seguimiento individual de asistencia (casos especiales)', icon: Users, feature: 'RPT_ATT_STUDENT' },
-  { id: 'att-subject', name: 'Asistencia por asignatura', description: 'Analizar comportamiento por materia', icon: ClipboardList, feature: 'RPT_ATT_SUBJECT' },
-  { id: 'att-teacher', name: 'Asistencia por docente', description: 'Control institucional del registro de clases', icon: UserCheck, feature: 'RPT_ATT_TEACHER' },
-  { id: 'att-critical', name: 'Inasistencias criticas', description: 'Detectar estudiantes en riesgo por inasistencia', icon: AlertTriangle, feature: 'RPT_ATT_CRITICAL' },
-  { id: 'att-consolidated', name: 'Consolidado institucional', description: 'Datos macro para informes oficiales', icon: BarChart3, feature: 'RPT_ATT_CONSOLIDATED' },
-  { id: 'att-tutoring', name: 'Asistencia de tutoría', description: 'Reporte de asistencia diaria por dirección de grupo (tutoría)', icon: Calendar, feature: 'TUTORING_ATTENDANCE' },
+  { id: 'att-group', name: 'Asistencia por grupo', description: 'Estado general de asistencia de un grupo o curso', icon: GraduationCap },
+  { id: 'att-student', name: 'Asistencia por estudiante', description: 'Seguimiento individual de asistencia (casos especiales)', icon: Users },
+  { id: 'att-subject', name: 'Asistencia por asignatura', description: 'Analizar comportamiento por materia', icon: ClipboardList },
+  { id: 'att-teacher', name: 'Asistencia por docente', description: 'Control institucional del registro de clases', icon: UserCheck },
+  { id: 'att-critical', name: 'Inasistencias criticas', description: 'Detectar estudiantes en riesgo por inasistencia', icon: AlertTriangle },
+  { id: 'att-consolidated', name: 'Consolidado institucional', description: 'Datos macro para informes oficiales', icon: BarChart3 },
+  { id: 'att-tutoring', name: 'Asistencia de tutoría', description: 'Reporte de asistencia diaria por dirección de grupo (tutoría)', icon: Calendar },
 ]
 
 // ─── Shared filter components ──────────────────────────────────────────

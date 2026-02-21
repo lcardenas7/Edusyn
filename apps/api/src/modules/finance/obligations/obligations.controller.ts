@@ -24,6 +24,9 @@ export class ObligationsController {
     @Query('thirdPartyId') thirdPartyId?: string,
     @Query('conceptId') conceptId?: string,
     @Query('status') status?: ObligationStatus,
+    @Query('gradeId') gradeId?: string,
+    @Query('groupId') groupId?: string,
+    @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
@@ -31,6 +34,9 @@ export class ObligationsController {
       thirdPartyId,
       conceptId,
       status,
+      gradeId,
+      groupId,
+      search,
       page: page ? parseInt(page, 10) : undefined,
       limit: limit ? parseInt(limit, 10) : undefined,
     });

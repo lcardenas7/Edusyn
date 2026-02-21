@@ -27,6 +27,20 @@ export class FinancialReportsController {
     return this.reportsService.getProfitabilityByConcept(req.user.institutionId);
   }
 
+  @Get('collection-by-user')
+  async getCollectionByUser(
+    @Request() req,
+    @Query('userId') userId?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.reportsService.getCollectionByUser(req.user.institutionId, {
+      userId,
+      dateFrom: dateFrom ? new Date(dateFrom) : undefined,
+      dateTo: dateTo ? new Date(dateTo) : undefined,
+    });
+  }
+
   @Get('student/:studentId')
   async getStudentFinancialHistory(@Request() req, @Param('studentId') studentId: string) {
     return this.reportsService.getStudentFinancialHistory(req.user.institutionId, studentId);

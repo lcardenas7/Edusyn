@@ -3858,6 +3858,9 @@ model FinancialSettings {
   // Cuentas bancarias
   bankAccounts  Json?           // Array de cuentas bancarias
   
+  // Delegación de recaudo
+  allowTeacherCollection Boolean @default(false) // Permite a docentes registrar pagos
+  
   // Notificaciones
   sendPaymentReminders Boolean  @default(true)
   reminderDaysBefore Int        @default(3)
