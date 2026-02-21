@@ -119,8 +119,12 @@ export default function Payments() {
   const [showGeneralModal, setShowGeneralModal] = useState(false)
   const [allThirdParties, setAllThirdParties] = useState<any[]>([])
   const [loadingGeneralModal, setLoadingGeneralModal] = useState(false)
+  const [generalTpSearch, setGeneralTpSearch] = useState('')
+  const [selectedGeneralTp, setSelectedGeneralTp] = useState<any>(null)
+  const [generalConcepts, setGeneralConcepts] = useState<any[]>([])
   const [generalForm, setGeneralForm] = useState({
     thirdPartyId: '',
+    conceptLabel: '',
     amount: '',
     paymentMethod: 'CASH' as PaymentMethod,
     transactionRef: '',
@@ -238,12 +242,18 @@ export default function Payments() {
   const openGeneralModal = async () => {
     setShowGeneralModal(true)
     setLoadingGeneralModal(true)
-    setGeneralForm({ thirdPartyId: '', amount: '', paymentMethod: 'CASH', transactionRef: '', notes: '' })
+    setGeneralForm({ thirdPartyId: '', conceptLabel: '', amount: '', paymentMethod: 'CASH', transactionRef: '', notes: '' })
+    setGeneralTpSearch('')
+    setSelectedGeneralTp(null)
     try {
-      const res = await financeThirdPartiesApi.getAll({ isActive: 'true' })
-      setAllThirdParties(Array.isArray(res.data) ? res.data : res.data.data || [])
+      const [tpRes, cRes] = await Promise.all([
+        financeThirdPartiesApi.getAll({ isActive: 'true' }),
+        financeConceptsApi.getAll({ isActive: 'true' }),
+      ])
+      setAllThirdParties(Array.isArray(tpRes.data) ? tpRes.data : tpRes.data.data || [])
+      setGeneralConcepts(Array.isArray(cRes.data) ? cRes.data : cRes.data.data || [])
     } catch (err) {
-      console.error('Error loading third parties:', err)
+      console.error('Error loading general modal data:', err)
     } finally {
       setLoadingGeneralModal(false)
     }
@@ -257,12 +267,16 @@ export default function Payments() {
     }
     setSavingPayment(true)
     try {
+      // Build notes with concept label prefix for traceability
+      let finalNotes = ''
+      if (generalForm.conceptLabel) finalNotes += `[${generalForm.conceptLabel}] `
+      if (generalForm.notes) finalNotes += generalForm.notes
       await financePaymentsApi.create({
         thirdPartyId: generalForm.thirdPartyId,
         amount: Number(generalForm.amount),
         paymentMethod: generalForm.paymentMethod,
         transactionRef: generalForm.transactionRef || undefined,
-        notes: generalForm.notes || undefined,
+        notes: finalNotes.trim() || undefined,
       })
       setShowGeneralModal(false)
       if (mainTab === 'history') fetchPayments()
@@ -272,6 +286,14 @@ export default function Payments() {
       setSavingPayment(false)
     }
   }
+
+  // ═══ FILTERED THIRD PARTIES FOR GENERAL MODAL ═══
+  const filteredGeneralTp = generalTpSearch.trim()
+    ? allThirdParties.filter((tp: any) => {
+        const s = generalTpSearch.toLowerCase()
+        return tp.name?.toLowerCase().includes(s) || tp.document?.toLowerCase().includes(s)
+      })
+    : allThirdParties
 
   // ═══ VOID PAYMENT ═══
   const handleVoidPayment = async (id: string) => {
@@ -744,7 +766,7 @@ export default function Payments() {
       {/* ═══ MODAL: PAGO GENERAL (sin obligación) ═══ */}
       {showGeneralModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
             <div className="px-5 pt-5 pb-3">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-gray-900">Pago General</h2>
@@ -761,17 +783,62 @@ export default function Payments() {
                 <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin text-amber-500 mx-auto" /></div>
               ) : (
                 <div className="space-y-3">
+                  {/* Third party search */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Tercero / Pagador *</label>
-                    <select value={generalForm.thirdPartyId}
-                      onChange={e => setGeneralForm(f => ({ ...f, thirdPartyId: e.target.value }))}
+                    {selectedGeneralTp ? (
+                      <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        <div>
+                          <p className="text-sm font-semibold text-amber-900">{selectedGeneralTp.name}</p>
+                          {selectedGeneralTp.document && <p className="text-xs text-amber-600">{selectedGeneralTp.document}</p>}
+                        </div>
+                        <button onClick={() => { setSelectedGeneralTp(null); setGeneralForm(f => ({ ...f, thirdPartyId: '' })); setGeneralTpSearch('') }}
+                          className="text-xs text-amber-500 hover:text-amber-700 font-medium">Cambiar</button>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input type="text" value={generalTpSearch}
+                            onChange={e => setGeneralTpSearch(e.target.value)}
+                            placeholder="Buscar por nombre o documento..."
+                            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm" />
+                        </div>
+                        <div className="border border-gray-200 rounded-lg mt-1 max-h-36 overflow-y-auto divide-y divide-gray-100">
+                          {filteredGeneralTp.length === 0 ? (
+                            <p className="text-xs text-gray-400 py-3 text-center">Sin resultados</p>
+                          ) : filteredGeneralTp.slice(0, 30).map((tp: any) => (
+                            <button key={tp.id}
+                              onClick={() => { setSelectedGeneralTp(tp); setGeneralForm(f => ({ ...f, thirdPartyId: tp.id })) }}
+                              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-amber-50 transition-colors text-left">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">{tp.name}</p>
+                                {tp.document && <p className="text-xs text-gray-400">{tp.document}</p>}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Concept selector */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Concepto / Categoría</label>
+                    <select value={generalForm.conceptLabel}
+                      onChange={e => setGeneralForm(f => ({ ...f, conceptLabel: e.target.value }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm">
-                      <option value="">Seleccionar tercero...</option>
-                      {allThirdParties.map((tp: any) => (
-                        <option key={tp.id} value={tp.id}>{tp.name} {tp.document ? `(${tp.document})` : ''}</option>
+                      <option value="">Sin concepto específico</option>
+                      {generalConcepts.map((c: any) => (
+                        <option key={c.id} value={c.name}>{c.name} {c.category?.name ? `(${c.category.name})` : ''}</option>
                       ))}
+                      <option value="Venta de uniformes">Venta de uniformes</option>
+                      <option value="Donación">Donación</option>
+                      <option value="Evento">Evento</option>
+                      <option value="Otro">Otro</option>
                     </select>
                   </div>
+
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">Monto *</label>
@@ -805,11 +872,11 @@ export default function Payments() {
                     </div>
                   )}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Concepto / Notas *</label>
-                    <textarea value={generalForm.notes}
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Notas adicionales</label>
+                    <input type="text" value={generalForm.notes}
                       onChange={e => setGeneralForm(f => ({ ...f, notes: e.target.value }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm"
-                      rows={2} placeholder="Describa el concepto (ej: Venta de uniforme, Donación...)" />
+                      placeholder="Observaciones opcionales..." />
                   </div>
                 </div>
               )}
