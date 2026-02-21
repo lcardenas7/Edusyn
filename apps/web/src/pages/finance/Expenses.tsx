@@ -9,8 +9,12 @@ import {
   Filter,
   CheckCircle,
   XCircle,
+  X,
+  Loader2,
+  Building,
+  UserPlus,
 } from 'lucide-react'
-import { financeExpensesApi } from '../../lib/api'
+import { financeExpensesApi, financeCategoriesApi, financeThirdPartiesApi } from '../../lib/api'
 
 interface Expense {
   id: string
@@ -39,6 +43,27 @@ export default function Expenses() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [showNewExpenseModal, setShowNewExpenseModal] = useState(false)
+
+  // Modal state
+  const [expenseCategories, setExpenseCategories] = useState<any[]>([])
+  const [providers, setProviders] = useState<any[]>([])
+  const [loadingModal, setLoadingModal] = useState(false)
+  const [savingExpense, setSavingExpense] = useState(false)
+  const [providerSearch, setProviderSearch] = useState('')
+  const [selectedProvider, setSelectedProvider] = useState<any>(null)
+  const [showQuickProvider, setShowQuickProvider] = useState(false)
+  const [quickProviderName, setQuickProviderName] = useState('')
+  const [quickProviderDoc, setQuickProviderDoc] = useState('')
+  const [savingProvider, setSavingProvider] = useState(false)
+  const [expenseForm, setExpenseForm] = useState({
+    categoryId: '',
+    description: '',
+    amount: '',
+    expenseDate: new Date().toISOString().split('T')[0],
+    invoiceNumber: '',
+    paymentMethod: 'CASH',
+    notes: '',
+  })
 
   const fetchExpenses = async () => {
     setLoading(true)
@@ -76,6 +101,83 @@ export default function Expenses() {
     })
     .reduce((sum, e) => sum + Number(e.amount), 0)
 
+  const openExpenseModal = async () => {
+    setShowNewExpenseModal(true)
+    setLoadingModal(true)
+    setExpenseForm({ categoryId: '', description: '', amount: '', expenseDate: new Date().toISOString().split('T')[0], invoiceNumber: '', paymentMethod: 'CASH', notes: '' })
+    setSelectedProvider(null)
+    setProviderSearch('')
+    setShowQuickProvider(false)
+    try {
+      const [catRes, provRes] = await Promise.all([
+        financeCategoriesApi.getAll('EXPENSE'),
+        financeThirdPartiesApi.getAll({ type: 'PROVIDER' }),
+      ])
+      setExpenseCategories(Array.isArray(catRes.data) ? catRes.data : catRes.data.data || [])
+      const provData = Array.isArray(provRes.data) ? provRes.data : provRes.data.data || []
+      setProviders(provData)
+    } catch (err) {
+      console.error('Error loading expense modal data:', err)
+    } finally {
+      setLoadingModal(false)
+    }
+  }
+
+  const handleSubmitExpense = async () => {
+    if (!expenseForm.categoryId || !expenseForm.description.trim() || !expenseForm.amount || Number(expenseForm.amount) <= 0) {
+      alert('Categoría, descripción y monto son requeridos')
+      return
+    }
+    setSavingExpense(true)
+    try {
+      await financeExpensesApi.create({
+        categoryId: expenseForm.categoryId,
+        providerId: selectedProvider?.id || undefined,
+        description: expenseForm.description.trim(),
+        amount: Number(expenseForm.amount),
+        expenseDate: expenseForm.expenseDate || undefined,
+        invoiceNumber: expenseForm.invoiceNumber.trim() || undefined,
+        paymentMethod: expenseForm.paymentMethod || undefined,
+        notes: expenseForm.notes.trim() || undefined,
+      })
+      setShowNewExpenseModal(false)
+      fetchExpenses()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al registrar egreso')
+    } finally {
+      setSavingExpense(false)
+    }
+  }
+
+  const handleQuickCreateProvider = async () => {
+    if (!quickProviderName.trim()) return
+    setSavingProvider(true)
+    try {
+      const res = await financeThirdPartiesApi.create({
+        type: 'PROVIDER',
+        name: quickProviderName.trim(),
+        document: quickProviderDoc.trim() || undefined,
+      })
+      const newProvider = res.data
+      setProviders(prev => [...prev, newProvider])
+      setSelectedProvider(newProvider)
+      setShowQuickProvider(false)
+      setQuickProviderName('')
+      setQuickProviderDoc('')
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al crear proveedor')
+    } finally {
+      setSavingProvider(false)
+    }
+  }
+
+  const filteredProviders = providerSearch.trim()
+    ? providers.filter((p: any) => {
+        const s = providerSearch.toLowerCase()
+        return p.name?.toLowerCase().includes(s) || p.document?.toLowerCase().includes(s)
+      })
+    : providers
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -101,7 +203,7 @@ export default function Expenses() {
                 <p className="text-lg font-bold text-red-700">{formatCurrency(monthTotal)}</p>
               </div>
               <button
-                onClick={() => setShowNewExpenseModal(true)}
+                onClick={openExpenseModal}
                 className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
@@ -212,67 +314,186 @@ export default function Expenses() {
         </div>
       </div>
 
-      {/* New Expense Modal - Placeholder */}
+      {/* New Expense Modal */}
       {showNewExpenseModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Registrar Egreso</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                  <option>Seleccionar categoría...</option>
-                </select>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="px-5 pt-5 pb-3">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900">Registrar Egreso</h2>
+                <button onClick={() => setShowNewExpenseModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor (opcional)</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                  <option>Seleccionar proveedor...</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  placeholder="Descripción del gasto"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Monto</label>
-                  <input
-                    type="number"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    placeholder="0"
-                  />
+
+              {loadingModal ? (
+                <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin text-red-500 mx-auto" /></div>
+              ) : (
+                <div className="space-y-3">
+                  {/* Category */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Categoría *</label>
+                    {expenseCategories.length === 0 ? (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+                        No hay categorías de egreso creadas. Ve a{' '}
+                        <Link to="/finance/categories" className="font-semibold underline">Categorías</Link>{' '}
+                        y crea al menos una categoría tipo <strong>Egreso</strong>.
+                      </div>
+                    ) : (
+                      <select value={expenseForm.categoryId}
+                        onChange={e => setExpenseForm(f => ({ ...f, categoryId: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-sm">
+                        <option value="">Seleccionar categoría...</option>
+                        {expenseCategories.map((c: any) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Descripción *</label>
+                    <input type="text" value={expenseForm.description}
+                      onChange={e => setExpenseForm(f => ({ ...f, description: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-sm"
+                      placeholder="Descripción del gasto" />
+                  </div>
+
+                  {/* Provider search */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Proveedor (opcional)</label>
+                    {selectedProvider ? (
+                      <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <Building className="w-4 h-4 text-orange-500" />
+                          <div>
+                            <p className="text-sm font-semibold text-orange-900">{selectedProvider.name}</p>
+                            {selectedProvider.document && <p className="text-xs text-orange-600">{selectedProvider.document}</p>}
+                          </div>
+                        </div>
+                        <button onClick={() => { setSelectedProvider(null); setProviderSearch('') }}
+                          className="text-xs text-orange-500 hover:text-orange-700 font-medium">Cambiar</button>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input type="text" value={providerSearch}
+                            onChange={e => setProviderSearch(e.target.value)}
+                            placeholder="Buscar proveedor por nombre o NIT..."
+                            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-sm" />
+                        </div>
+                        {(providerSearch.trim() || providers.length > 0) && (
+                          <div className="border border-gray-200 rounded-lg mt-1 max-h-32 overflow-y-auto divide-y divide-gray-100">
+                            {filteredProviders.length === 0 ? (
+                              <p className="text-xs text-gray-400 py-3 text-center">Sin resultados</p>
+                            ) : filteredProviders.slice(0, 20).map((p: any) => (
+                              <button key={p.id}
+                                onClick={() => { setSelectedProvider(p); setProviderSearch('') }}
+                                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-orange-50 transition-colors text-left">
+                                <Building className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
+                                  {p.document && <p className="text-xs text-gray-400">{p.document}</p>}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {/* Quick create provider */}
+                        {!showQuickProvider ? (
+                          <button onClick={() => setShowQuickProvider(true)}
+                            className="mt-1 inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium">
+                            <UserPlus className="w-3.5 h-3.5" />
+                            Crear proveedor nuevo
+                          </button>
+                        ) : (
+                          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                            <p className="text-xs font-semibold text-blue-800">Nuevo proveedor</p>
+                            <input type="text" value={quickProviderName}
+                              onChange={e => setQuickProviderName(e.target.value)}
+                              placeholder="Nombre del proveedor *"
+                              className="w-full px-3 py-1.5 border border-blue-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+                            <input type="text" value={quickProviderDoc}
+                              onChange={e => setQuickProviderDoc(e.target.value)}
+                              placeholder="NIT / Documento (opcional)"
+                              className="w-full px-3 py-1.5 border border-blue-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+                            <div className="flex gap-2">
+                              <button onClick={() => { setShowQuickProvider(false); setQuickProviderName(''); setQuickProviderDoc('') }}
+                                className="px-3 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+                              <button onClick={handleQuickCreateProvider}
+                                disabled={savingProvider || !quickProviderName.trim()}
+                                className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 flex items-center gap-1">
+                                {savingProvider ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                                Crear
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Amount, Date, Payment Method */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Monto *</label>
+                      <input type="number" value={expenseForm.amount}
+                        onChange={e => setExpenseForm(f => ({ ...f, amount: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-sm"
+                        placeholder="0" min="1" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Fecha</label>
+                      <input type="date" value={expenseForm.expenseDate}
+                        onChange={e => setExpenseForm(f => ({ ...f, expenseDate: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Método</label>
+                      <select value={expenseForm.paymentMethod}
+                        onChange={e => setExpenseForm(f => ({ ...f, paymentMethod: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-sm">
+                        <option value="CASH">Efectivo</option>
+                        <option value="TRANSFER">Transferencia</option>
+                        <option value="CARD">Tarjeta</option>
+                        <option value="OTHER">Otro</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Invoice number */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">N° Factura (opcional)</label>
+                    <input type="text" value={expenseForm.invoiceNumber}
+                      onChange={e => setExpenseForm(f => ({ ...f, invoiceNumber: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-sm"
+                      placeholder="Número de factura del proveedor" />
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Notas (opcional)</label>
+                    <input type="text" value={expenseForm.notes}
+                      onChange={e => setExpenseForm(f => ({ ...f, notes: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-sm"
+                      placeholder="Observaciones adicionales..." />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
-                  <input
-                    type="date"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">N° Factura (opcional)</label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  placeholder="Número de factura"
-                />
-              </div>
+              )}
             </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => setShowNewExpenseModal(false)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
-              >
+
+            <div className="px-5 py-4 border-t border-gray-200 flex justify-end gap-2">
+              <button onClick={() => setShowNewExpenseModal(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm">
                 Cancelar
               </button>
-              <button className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
-                Registrar Egreso
+              <button onClick={handleSubmitExpense}
+                disabled={savingExpense || !expenseForm.categoryId || !expenseForm.description.trim() || !expenseForm.amount || Number(expenseForm.amount) <= 0}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center gap-2 disabled:opacity-50 text-sm">
+                {savingExpense ? <Loader2 className="w-4 h-4 animate-spin" /> : <TrendingDown className="w-4 h-4" />}
+                {savingExpense ? 'Registrando...' : 'Registrar Egreso'}
               </button>
             </div>
           </div>
