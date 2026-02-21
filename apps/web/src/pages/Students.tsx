@@ -118,6 +118,7 @@ export default function Students() {
   const [showModal, setShowModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
   const [editingStudent, setEditingStudent] = useState<Student | null>(null)
+  const [editingRawStudent, setEditingRawStudent] = useState<any>(null)
   const [detailTab, setDetailTab] = useState<'info' | 'academic' | 'observer' | 'guardians'>('info')
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const [importing, setImporting] = useState(false)
@@ -331,6 +332,9 @@ export default function Students() {
   const handleEdit = (student: Student) => {
     setEditingStudent(student)
     setFormData(student)
+    // Find raw student data to get guardian ID for updates
+    const raw = rawStudents.find((s: any) => s.id === student.id)
+    setEditingRawStudent(raw || null)
     setShowModal(true)
   }
 
@@ -351,7 +355,7 @@ export default function Students() {
 
     try {
       if (editingStudent) {
-        // Actualizar estudiante existente
+        // Actualizar estudiante existente - enviar TODOS los campos
         await studentsApi.update(editingStudent.id, {
           firstName: formData.firstName,
           lastName: formData.lastName,
@@ -361,8 +365,47 @@ export default function Students() {
           gender: formData.gender,
           address: formData.address,
           phone: formData.phone,
-          email: formData.email
+          email: formData.email,
+          bloodType: formData.bloodType || null,
+          eps: formData.eps || null,
+          observations: formData.observations || null,
         })
+
+        // Actualizar o crear acudiente si hay datos
+        if (formData.parentName || formData.parentPhone || formData.parentEmail) {
+          const guardianId = editingRawStudent?.guardians?.[0]?.guardian?.id
+          const nameParts = (formData.parentName || '').trim().split(' ')
+          const guardianFirstName = nameParts[0] || ''
+          const guardianLastName = nameParts.slice(1).join(' ') || ''
+          if (guardianId) {
+            // Actualizar acudiente existente
+            try {
+              await guardiansApi.update(guardianId, {
+                firstName: guardianFirstName,
+                lastName: guardianLastName,
+                phone: formData.parentPhone || '',
+                email: formData.parentEmail || '',
+              })
+            } catch (err) {
+              console.error('Error updating guardian:', err)
+            }
+          } else {
+            // Crear acudiente y vincularlo
+            try {
+              await guardiansApi.createWithLink({
+                studentId: editingStudent.id,
+                firstName: guardianFirstName,
+                lastName: guardianLastName,
+                phone: formData.parentPhone || '',
+                email: formData.parentEmail || '',
+                relationship: 'PARENT',
+                isPrimary: true,
+              })
+            } catch (err) {
+              console.error('Error creating guardian:', err)
+            }
+          }
+        }
         
         setStudents(students.map(s => s.id === editingStudent.id ? { ...s, ...formData } as Student : s))
         setSaveMessage({ type: 'success', text: 'Estudiante actualizado correctamente' })
@@ -1864,43 +1907,56 @@ export default function Students() {
               <h3 className="text-lg font-semibold">{editingStudent ? 'Editar Estudiante' : 'Nuevo Estudiante'}</h3>
               <button onClick={() => setShowModal(false)} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-5">
+              {/* ── Identificación ── */}
+              <fieldset className="border border-slate-200 rounded-lg p-4">
+                <legend className="px-2 text-sm font-semibold text-slate-700 flex items-center gap-1.5"><User className="w-4 h-4 text-blue-500" /> Identificación</legend>
+                <div className="grid grid-cols-2 gap-3 mt-1">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Nombres *</label>
-                  <input type="text" value={formData.firstName || ''} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Nombres *</label>
+                  <input type="text" value={formData.firstName || ''} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Apellidos *</label>
-                  <input type="text" value={formData.lastName || ''} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Apellidos *</label>
+                  <input type="text" value={formData.lastName || ''} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Tipo Documento</label>
-                  <select value={formData.documentType || 'TI'} onChange={(e) => setFormData({ ...formData, documentType: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Tipo Documento</label>
+                  <select value={formData.documentType || 'TI'} onChange={(e) => setFormData({ ...formData, documentType: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
                     <option value="TI">Tarjeta de Identidad</option>
-                    <option value="CC">Cedula de Ciudadania</option>
+                    <option value="CC">Cédula de Ciudadanía</option>
                     <option value="RC">Registro Civil</option>
-                    <option value="CE">Cedula de Extranjeria</option>
+                    <option value="CE">Cédula de Extranjería</option>
+                    <option value="NUIP">NUIP</option>
+                    <option value="PEP">PEP</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Numero Documento *</label>
-                  <input type="text" value={formData.documentNumber || ''} onChange={(e) => setFormData({ ...formData, documentNumber: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Número Documento *</label>
+                  <input type="text" value={formData.documentNumber || ''} onChange={(e) => setFormData({ ...formData, documentNumber: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Nacimiento *</label>
-                  <input type="date" value={formData.birthDate || ''} onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Nacimiento *</label>
+                  <input type="date" value={formData.birthDate ? formData.birthDate.substring(0, 10) : ''} onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Genero</label>
-                  <select value={formData.gender || 'M'} onChange={(e) => setFormData({ ...formData, gender: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Género</label>
+                  <select value={formData.gender || 'M'} onChange={(e) => setFormData({ ...formData, gender: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
                     <option value="M">Masculino</option>
                     <option value="F">Femenino</option>
                   </select>
                 </div>
+                {editingStudent && formData.group && (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Grupo Actual</label>
+                    <input type="text" value={formData.group} disabled className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 text-sm" />
+                  </div>
+                )}
+                </div>
+              </fieldset>
                 {/* Sección de Matrícula Inmediata - Solo para nuevos estudiantes */}
                 {!editingStudent && (
-                  <div className="col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <div className="flex items-center gap-3 mb-3">
                       <input
                         type="checkbox"
@@ -1916,11 +1972,11 @@ export default function Students() {
                     {enrollNow && (
                       <div className="grid grid-cols-2 gap-4 mt-3">
                         <div>
-                          <label className="block text-sm font-medium text-blue-800 mb-1">Grupo *</label>
+                          <label className="block text-xs font-medium text-blue-800 mb-1">Grupo *</label>
                           <select 
                             value={selectedGroupId} 
                             onChange={(e) => setSelectedGroupId(e.target.value)} 
-                            className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500"
                           >
                             <option value="">Seleccionar grupo...</option>
                             {availableGroups.map(g => (
@@ -1931,8 +1987,8 @@ export default function Students() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-blue-800 mb-1">Tipo de Matrícula</label>
-                          <select className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white">
+                          <label className="block text-xs font-medium text-blue-800 mb-1">Tipo de Matrícula</label>
+                          <select className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-sm">
                             <option value="NEW">Nuevo</option>
                             <option value="RENEWAL">Antiguo</option>
                             <option value="TRANSFER">Traslado</option>
@@ -1947,60 +2003,73 @@ export default function Students() {
                     )}
                   </div>
                 )}
-                
-                {/* Grupo solo lectura para edición */}
-                {editingStudent && formData.group && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Grupo Actual</label>
-                    <input type="text" value={formData.group} disabled className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-500" />
+
+              {/* ── Contacto ── */}
+              <fieldset className="border border-slate-200 rounded-lg p-4">
+                <legend className="px-2 text-sm font-semibold text-slate-700 flex items-center gap-1.5"><MapPin className="w-4 h-4 text-green-500" /> Contacto</legend>
+                <div className="grid grid-cols-2 gap-3 mt-1">
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Dirección</label>
+                    <input type="text" value={formData.address || ''} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                   </div>
-                )}
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Direccion</label>
-                  <input type="text" value={formData.address || ''} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Teléfono</label>
+                    <input type="text" value={formData.phone || ''} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Correo Electrónico</label>
+                    <input type="email" value={formData.email || ''} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Telefono</label>
-                  <input type="text" value={formData.phone || ''} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+              </fieldset>
+
+              {/* ── Acudiente ── */}
+              <fieldset className="border border-slate-200 rounded-lg p-4">
+                <legend className="px-2 text-sm font-semibold text-slate-700 flex items-center gap-1.5"><Users className="w-4 h-4 text-purple-500" /> Acudiente Principal</legend>
+                <div className="grid grid-cols-2 gap-3 mt-1">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Nombre Completo *</label>
+                    <input type="text" value={formData.parentName || ''} onChange={(e) => setFormData({ ...formData, parentName: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="Nombre y apellidos" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Teléfono Acudiente *</label>
+                    <input type="text" value={formData.parentPhone || ''} onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Correo Acudiente</label>
+                    <input type="email" value={formData.parentEmail || ''} onChange={(e) => setFormData({ ...formData, parentEmail: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Correo</label>
-                  <input type="email" value={formData.email || ''} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+              </fieldset>
+
+              {/* ── Información Médica ── */}
+              <fieldset className="border border-slate-200 rounded-lg p-4">
+                <legend className="px-2 text-sm font-semibold text-slate-700 flex items-center gap-1.5"><Heart className="w-4 h-4 text-red-500" /> Información Médica</legend>
+                <div className="grid grid-cols-3 gap-3 mt-1">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">EPS</label>
+                    <input type="text" value={formData.eps || ''} onChange={(e) => setFormData({ ...formData, eps: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Tipo de Sangre</label>
+                    <select value={formData.bloodType || ''} onChange={(e) => setFormData({ ...formData, bloodType: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                      <option value="">Seleccionar</option>
+                      <option value="O+">O+</option><option value="O-">O-</option>
+                      <option value="A+">A+</option><option value="A-">A-</option>
+                      <option value="B+">B+</option><option value="B-">B-</option>
+                      <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                    </select>
+                  </div>
                 </div>
-                <div className="col-span-2 border-t pt-4 mt-2">
-                  <h4 className="font-medium text-slate-900 mb-3">Datos del Acudiente</h4>
+              </fieldset>
+
+              {/* ── Observaciones ── */}
+              <fieldset className="border border-slate-200 rounded-lg p-4">
+                <legend className="px-2 text-sm font-semibold text-slate-700 flex items-center gap-1.5"><FileText className="w-4 h-4 text-amber-500" /> Observaciones</legend>
+                <div className="mt-1">
+                  <textarea value={formData.observations || ''} onChange={(e) => setFormData({ ...formData, observations: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" rows={3} placeholder="Notas adicionales sobre el estudiante..." />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Nombre Acudiente *</label>
-                  <input type="text" value={formData.parentName || ''} onChange={(e) => setFormData({ ...formData, parentName: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Telefono Acudiente *</label>
-                  <input type="text" value={formData.parentPhone || ''} onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Correo Acudiente</label>
-                  <input type="email" value={formData.parentEmail || ''} onChange={(e) => setFormData({ ...formData, parentEmail: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">EPS</label>
-                  <input type="text" value={formData.eps || ''} onChange={(e) => setFormData({ ...formData, eps: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Sangre</label>
-                  <select value={formData.bloodType || ''} onChange={(e) => setFormData({ ...formData, bloodType: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
-                    <option value="">Seleccionar</option>
-                    <option value="O+">O+</option><option value="O-">O-</option>
-                    <option value="A+">A+</option><option value="A-">A-</option>
-                    <option value="B+">B+</option><option value="B-">B-</option>
-                    <option value="AB+">AB+</option><option value="AB-">AB-</option>
-                  </select>
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Observaciones</label>
-                  <textarea value={formData.observations || ''} onChange={(e) => setFormData({ ...formData, observations: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" rows={2} />
-                </div>
-              </div>
+              </fieldset>
             </div>
             <div className="px-6 py-4 border-t border-slate-200">
               {saveMessage && (
