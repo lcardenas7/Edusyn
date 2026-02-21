@@ -155,16 +155,20 @@ export class ObligationsService {
           }
         }
       }
-      // Fire-and-forget batch name sync (non-blocking)
+      // Batch name sync (awaited to avoid P2028 transaction-closed errors)
       if (namesToUpdate.length > 0) {
-        Promise.all(
-          namesToUpdate.map(u =>
-            this.prisma.financialThirdParty.update({
-              where: { id: u.id },
-              data: { name: u.name },
-            })
-          )
-        ).catch(err => console.error('Error syncing third party names:', err));
+        try {
+          await Promise.all(
+            namesToUpdate.map(u =>
+              this.prisma.financialThirdParty.update({
+                where: { id: u.id },
+                data: { name: u.name },
+              })
+            )
+          );
+        } catch (err) {
+          console.error('Error syncing third party names:', err);
+        }
       }
     }
 
