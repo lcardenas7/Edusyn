@@ -6,7 +6,6 @@ import {
   Search,
   Plus,
   RefreshCw,
-  Filter,
   CreditCard,
   Banknote,
   Smartphone,
@@ -16,14 +15,17 @@ import {
   Loader2,
   Eye,
   X,
-  CheckCircle2,
-  UserCircle,
   Receipt,
+  DollarSign,
+  Clock,
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { financePaymentsApi, financeThirdPartiesApi, financeObligationsApi, financeConceptsApi, academicGradesApi, groupsApi } from '../../lib/api'
 
 type PaymentMethod = 'CASH' | 'TRANSFER' | 'CARD' | 'PSE' | 'NEQUI' | 'DAVIPLATA' | 'OTHER'
-type ModalTab = 'obligation' | 'general'
+type MainTab = 'pending' | 'history'
 
 interface Payment {
   id: string
@@ -37,22 +39,18 @@ interface Payment {
   voidedAt?: string
 }
 
-interface ThirdPartyOption {
+interface Obligation {
   id: string
-  name: string
-  type: string
-  document?: string
-}
-
-interface ObligationOption {
-  id: string
+  reference?: string
+  thirdParty: { id: string; name: string; document?: string; type?: string }
   concept: { name: string; category?: { name: string } }
   totalAmount: number
   paidAmount: number
   balance: number
-  reference?: string
   dueDate?: string
   status: string
+  studentGroup?: string
+  studentGrade?: string
 }
 
 const methodConfig: Record<PaymentMethod, { label: string; icon: React.ReactNode; color: string }> = {
@@ -65,6 +63,12 @@ const methodConfig: Record<PaymentMethod, { label: string; icon: React.ReactNode
   OTHER: { label: 'Otro', icon: <Wallet className="w-4 h-4" />, color: 'bg-gray-100 text-gray-700' },
 }
 
+const statusConfig: Record<string, { label: string; color: string }> = {
+  PENDING: { label: 'Pendiente', color: 'text-yellow-600 bg-yellow-50' },
+  PARTIAL: { label: 'Parcial', color: 'text-blue-600 bg-blue-50' },
+  OVERDUE: { label: 'Vencida', color: 'text-red-600 bg-red-50' },
+}
+
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('es-CO', {
     style: 'currency',
@@ -74,54 +78,110 @@ const formatCurrency = (value: number) => {
 }
 
 export default function Payments() {
-  const [payments, setPayments] = useState<Payment[]>([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [methodFilter, setMethodFilter] = useState<PaymentMethod | ''>('')
-  const [showNewPaymentModal, setShowNewPaymentModal] = useState(false)
+  const [mainTab, setMainTab] = useState<MainTab>('pending')
 
-  // Modal state
-  const [modalTab, setModalTab] = useState<ModalTab>('obligation')
-  const [allThirdParties, setAllThirdParties] = useState<ThirdPartyOption[]>([])
-  const [obligations, setObligations] = useState<ObligationOption[]>([])
-  const [loadingModal, setLoadingModal] = useState(false)
+  // ═══ PENDING OBLIGATIONS STATE ═══
+  const [pendingObligations, setPendingObligations] = useState<Obligation[]>([])
+  const [loadingPending, setLoadingPending] = useState(true)
+  const [pendingSearch, setPendingSearch] = useState('')
+  const [debouncedPendingSearch, setDebouncedPendingSearch] = useState('')
+  const [gradeFilter, setGradeFilter] = useState('')
+  const [groupFilter, setGroupFilter] = useState('')
+  const [conceptFilter, setConceptFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [pendingPage, setPendingPage] = useState(1)
+  const [pendingTotal, setPendingTotal] = useState(0)
+
+  // ═══ HISTORY STATE ═══
+  const [payments, setPayments] = useState<Payment[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [historySearch, setHistorySearch] = useState('')
+  const [methodFilter, setMethodFilter] = useState<PaymentMethod | ''>('')
+
+  // ═══ FILTER OPTIONS ═══
+  const [filterGrades, setFilterGrades] = useState<any[]>([])
+  const [filterGroups, setFilterGroups] = useState<any[]>([])
+  const [filterConcepts, setFilterConcepts] = useState<any[]>([])
+  const filtersLoaded = useRef(false)
+
+  // ═══ PAYMENT MODAL STATE ═══
+  const [showPayModal, setShowPayModal] = useState(false)
+  const [payingObligation, setPayingObligation] = useState<Obligation | null>(null)
   const [savingPayment, setSavingPayment] = useState(false)
   const [paymentForm, setPaymentForm] = useState({
-    thirdPartyId: '',
-    obligationId: '',
     amount: '',
     paymentMethod: 'CASH' as PaymentMethod,
     transactionRef: '',
     notes: '',
   })
 
-  // Modal filter state
-  const [modalGrades, setModalGrades] = useState<any[]>([])
-  const [modalGroups, setModalGroups] = useState<any[]>([])
-  const [modalGradeFilter, setModalGradeFilter] = useState('')
-  const [modalGroupFilter, setModalGroupFilter] = useState('')
-  const [modalSearch, setModalSearch] = useState('')
-  const [debouncedModalSearch, setDebouncedModalSearch] = useState('')
-  const [loadingThirdParties, setLoadingThirdParties] = useState(false)
-  const [selectedThirdParty, setSelectedThirdParty] = useState<ThirdPartyOption | null>(null)
-  const [concepts, setConcepts] = useState<any[]>([])
-  const modalFiltersLoaded = useRef(false)
+  // ═══ GENERAL PAYMENT MODAL STATE ═══
+  const [showGeneralModal, setShowGeneralModal] = useState(false)
+  const [allThirdParties, setAllThirdParties] = useState<any[]>([])
+  const [loadingGeneralModal, setLoadingGeneralModal] = useState(false)
+  const [generalForm, setGeneralForm] = useState({
+    thirdPartyId: '',
+    amount: '',
+    paymentMethod: 'CASH' as PaymentMethod,
+    transactionRef: '',
+    notes: '',
+  })
 
-  // Debounce modal search
+  // ═══ PDF PREVIEW ═══
+  const [previewUrl, setPreviewUrl] = useState('')
+  const [previewTitle, setPreviewTitle] = useState('')
+
+  // ═══ DEBOUNCE ═══
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedModalSearch(modalSearch), 350)
+    const t = setTimeout(() => setDebouncedPendingSearch(pendingSearch), 400)
     return () => clearTimeout(t)
-  }, [modalSearch])
+  }, [pendingSearch])
 
-  // Auto-search when debounced search or filters change
+  // ═══ LOAD FILTER OPTIONS ═══
   useEffect(() => {
-    if (!showNewPaymentModal) return
-    if (modalTab !== 'obligation') return
-    searchThirdParties()
-  }, [debouncedModalSearch, modalGradeFilter, modalGroupFilter])
+    if (filtersLoaded.current) return
+    filtersLoaded.current = true
+    Promise.all([
+      academicGradesApi.getActive(),
+      groupsApi.getAll(),
+      financeConceptsApi.getAll({ isActive: 'true' }),
+    ]).then(([gRes, grRes, cRes]) => {
+      setFilterGrades(Array.isArray(gRes.data) ? gRes.data : gRes.data.data || [])
+      setFilterGroups(Array.isArray(grRes.data) ? grRes.data : grRes.data.data || [])
+      setFilterConcepts(Array.isArray(cRes.data) ? cRes.data : cRes.data.data || [])
+    }).catch(err => console.error('Error loading filters:', err))
+  }, [])
 
-  const fetchPayments = async () => {
-    setLoading(true)
+  // ═══ FETCH PENDING OBLIGATIONS ═══
+  const fetchPendingObligations = useCallback(async (page = pendingPage) => {
+    setLoadingPending(true)
+    try {
+      const params: any = { page, limit: 25 }
+      if (statusFilter) params.status = statusFilter
+      if (gradeFilter) params.gradeId = gradeFilter
+      if (groupFilter) params.groupId = groupFilter
+      if (conceptFilter) params.conceptId = conceptFilter
+      if (debouncedPendingSearch) params.search = debouncedPendingSearch
+      const res = await financeObligationsApi.getAll(params)
+      const result = res.data
+      const items = Array.isArray(result) ? result : result.data || []
+      // Only show obligations with balance > 0
+      setPendingObligations(items.filter((o: any) => ['PENDING', 'PARTIAL', 'OVERDUE'].includes(o.status)))
+      setPendingTotal(result.meta?.total || result.total || items.length)
+    } catch (err) {
+      console.error('Error fetching pending obligations:', err)
+    } finally {
+      setLoadingPending(false)
+    }
+  }, [gradeFilter, groupFilter, conceptFilter, statusFilter, debouncedPendingSearch, pendingPage])
+
+  useEffect(() => {
+    if (mainTab === 'pending') fetchPendingObligations()
+  }, [mainTab, gradeFilter, groupFilter, conceptFilter, statusFilter, debouncedPendingSearch, pendingPage])
+
+  // ═══ FETCH PAYMENT HISTORY ═══
+  const fetchPayments = useCallback(async () => {
+    setLoadingHistory(true)
     try {
       const params: any = {}
       if (methodFilter) params.paymentMethod = methodFilter
@@ -131,123 +191,42 @@ export default function Payments() {
     } catch (err) {
       console.error('Error fetching payments:', err)
     } finally {
-      setLoading(false)
+      setLoadingHistory(false)
     }
-  }
-
-  useEffect(() => {
-    fetchPayments()
   }, [methodFilter])
 
-  const openNewPaymentModal = async () => {
-    setShowNewPaymentModal(true)
-    setLoadingModal(true)
-    setModalTab('obligation')
-    resetForm()
-    try {
-      const promises: Promise<any>[] = [
-        financeThirdPartiesApi.getAll({ isActive: 'true' }),
-      ]
-      if (!modalFiltersLoaded.current) {
-        promises.push(academicGradesApi.getActive(), groupsApi.getAll(), financeConceptsApi.getAll({ isActive: 'true' }))
-      }
-      const [tpRes, ...rest] = await Promise.all(promises)
-      const tpArr = Array.isArray(tpRes.data) ? tpRes.data : tpRes.data.data || []
-      setAllThirdParties(tpArr)
-      if (!modalFiltersLoaded.current && rest.length >= 3) {
-        const gradesArr = Array.isArray(rest[0].data) ? rest[0].data : rest[0].data.data || []
-        const groupsArr = Array.isArray(rest[1].data) ? rest[1].data : rest[1].data.data || []
-        const conceptsArr = Array.isArray(rest[2].data) ? rest[2].data : rest[2].data.data || []
-        setModalGrades(gradesArr)
-        setModalGroups(groupsArr)
-        setConcepts(conceptsArr)
-        modalFiltersLoaded.current = true
-      }
-    } catch (err) {
-      console.error('Error loading modal data:', err)
-    } finally {
-      setLoadingModal(false)
-    }
+  useEffect(() => {
+    if (mainTab === 'history') fetchPayments()
+  }, [mainTab, methodFilter])
+
+  // ═══ OPEN PAY MODAL (from obligation row) ═══
+  const openPayModal = (obl: Obligation) => {
+    setPayingObligation(obl)
+    setPaymentForm({
+      amount: String(Number(obl.balance)),
+      paymentMethod: 'CASH',
+      transactionRef: '',
+      notes: '',
+    })
+    setShowPayModal(true)
   }
 
-  const resetForm = () => {
-    setPaymentForm({ thirdPartyId: '', obligationId: '', amount: '', paymentMethod: 'CASH', transactionRef: '', notes: '' })
-    setObligations([])
-    setSelectedThirdParty(null)
-    setModalGradeFilter('')
-    setModalGroupFilter('')
-    setModalSearch('')
-    setDebouncedModalSearch('')
-  }
-
-  // Search third parties via obligations endpoint (finds students by grade/group/name)
-  const searchThirdParties = useCallback(async () => {
-    if (!modalGradeFilter && !modalGroupFilter && !debouncedModalSearch) return
-    setLoadingThirdParties(true)
-    try {
-      const params: any = { limit: 50 }
-      if (modalGradeFilter) params.gradeId = modalGradeFilter
-      if (modalGroupFilter) params.groupId = modalGroupFilter
-      if (debouncedModalSearch) params.search = debouncedModalSearch
-      const res = await financeObligationsApi.getAll(params)
-      const oblArr = Array.isArray(res.data) ? res.data : res.data.data || []
-      const tpMap = new Map<string, ThirdPartyOption>()
-      for (const o of oblArr) {
-        if (o.thirdParty && !tpMap.has(o.thirdParty.id)) {
-          tpMap.set(o.thirdParty.id, { id: o.thirdParty.id, name: o.thirdParty.name, type: o.thirdParty.type || 'STUDENT', document: o.thirdParty.document })
-        }
-      }
-      setAllThirdParties([...tpMap.values()])
-    } catch (err) {
-      console.error('Error filtering:', err)
-    } finally {
-      setLoadingThirdParties(false)
-    }
-  }, [modalGradeFilter, modalGroupFilter, debouncedModalSearch])
-
-  const handleSelectThirdParty = async (tp: ThirdPartyOption) => {
-    setSelectedThirdParty(tp)
-    setPaymentForm(f => ({ ...f, thirdPartyId: tp.id, obligationId: '', amount: '' }))
-    setObligations([])
-    try {
-      const res = await financeObligationsApi.getAll({ thirdPartyId: tp.id, limit: 50 })
-      const oblArr = Array.isArray(res.data) ? res.data : res.data.data || []
-      setObligations(oblArr.filter((o: any) => ['PENDING', 'PARTIAL', 'OVERDUE'].includes(o.status)))
-    } catch (err) {
-      console.error('Error loading obligations:', err)
-    }
-  }
-
-  const handleSelectObligation = (oblId: string) => {
-    const obl = obligations.find(o => o.id === oblId)
-    if (paymentForm.obligationId === oblId) {
-      setPaymentForm(f => ({ ...f, obligationId: '', amount: '' }))
-    } else {
-      setPaymentForm(f => ({
-        ...f,
-        obligationId: oblId,
-        amount: obl ? String(Number(obl.balance)) : f.amount,
-      }))
-    }
-  }
-
+  // ═══ SUBMIT OBLIGATION PAYMENT ═══
   const handleSubmitPayment = async () => {
-    if (!paymentForm.thirdPartyId || !paymentForm.amount || Number(paymentForm.amount) <= 0) {
-      alert('Tercero y monto son requeridos')
-      return
-    }
+    if (!payingObligation || !paymentForm.amount || Number(paymentForm.amount) <= 0) return
     setSavingPayment(true)
     try {
       await financePaymentsApi.create({
-        thirdPartyId: paymentForm.thirdPartyId,
-        obligationId: paymentForm.obligationId || undefined,
+        thirdPartyId: payingObligation.thirdParty.id,
+        obligationId: payingObligation.id,
         amount: Number(paymentForm.amount),
         paymentMethod: paymentForm.paymentMethod,
         transactionRef: paymentForm.transactionRef || undefined,
         notes: paymentForm.notes || undefined,
       })
-      setShowNewPaymentModal(false)
-      fetchPayments()
+      setShowPayModal(false)
+      setPayingObligation(null)
+      fetchPendingObligations()
     } catch (err: any) {
       alert(err.response?.data?.message || 'Error al registrar pago')
     } finally {
@@ -255,6 +234,46 @@ export default function Payments() {
     }
   }
 
+  // ═══ OPEN GENERAL PAYMENT MODAL ═══
+  const openGeneralModal = async () => {
+    setShowGeneralModal(true)
+    setLoadingGeneralModal(true)
+    setGeneralForm({ thirdPartyId: '', amount: '', paymentMethod: 'CASH', transactionRef: '', notes: '' })
+    try {
+      const res = await financeThirdPartiesApi.getAll({ isActive: 'true' })
+      setAllThirdParties(Array.isArray(res.data) ? res.data : res.data.data || [])
+    } catch (err) {
+      console.error('Error loading third parties:', err)
+    } finally {
+      setLoadingGeneralModal(false)
+    }
+  }
+
+  // ═══ SUBMIT GENERAL PAYMENT ═══
+  const handleSubmitGeneralPayment = async () => {
+    if (!generalForm.thirdPartyId || !generalForm.amount || Number(generalForm.amount) <= 0) {
+      alert('Tercero y monto son requeridos')
+      return
+    }
+    setSavingPayment(true)
+    try {
+      await financePaymentsApi.create({
+        thirdPartyId: generalForm.thirdPartyId,
+        amount: Number(generalForm.amount),
+        paymentMethod: generalForm.paymentMethod,
+        transactionRef: generalForm.transactionRef || undefined,
+        notes: generalForm.notes || undefined,
+      })
+      setShowGeneralModal(false)
+      if (mainTab === 'history') fetchPayments()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al registrar pago')
+    } finally {
+      setSavingPayment(false)
+    }
+  }
+
+  // ═══ VOID PAYMENT ═══
   const handleVoidPayment = async (id: string) => {
     const reason = prompt('Motivo de anulación:')
     if (!reason) return
@@ -266,9 +285,7 @@ export default function Payments() {
     }
   }
 
-  const [previewUrl, setPreviewUrl] = useState<string>('')
-  const [previewTitle, setPreviewTitle] = useState('')
-
+  // ═══ RECEIPT HANDLERS ═══
   const handleDownloadReceipt = async (id: string, receiptNumber?: string) => {
     try {
       const response = await financePaymentsApi.downloadReceipt(id)
@@ -301,13 +318,14 @@ export default function Payments() {
     setPreviewTitle('')
   }
 
+  // ═══ DERIVED DATA ═══
   const filteredPayments = payments.filter(p => {
-    if (!search) return true
-    const searchLower = search.toLowerCase()
+    if (!historySearch) return true
+    const s = historySearch.toLowerCase()
     return (
-      p.thirdParty.name.toLowerCase().includes(searchLower) ||
-      p.receiptNumber?.toLowerCase().includes(searchLower) ||
-      p.obligation?.concept.name.toLowerCase().includes(searchLower)
+      p.thirdParty.name.toLowerCase().includes(s) ||
+      p.receiptNumber?.toLowerCase().includes(s) ||
+      p.obligation?.concept.name.toLowerCase().includes(s)
     )
   })
 
@@ -315,11 +333,17 @@ export default function Payments() {
     .filter(p => new Date(p.paymentDate).toDateString() === new Date().toDateString())
     .reduce((sum, p) => sum + Number(p.amount), 0)
 
+  const filteredGroups = gradeFilter
+    ? filterGroups.filter((g: any) => g.gradeId === gradeFilter || g.grade?.id === gradeFilter)
+    : filterGroups
+
+  const totalPages = Math.ceil(pendingTotal / 25)
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <Link to="/finance" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4">
             <ArrowLeft className="w-4 h-4 mr-1" />
             Volver a Finanzas
@@ -331,363 +355,419 @@ export default function Payments() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Caja / Recaudos</h1>
-                <p className="text-gray-500">Registro de pagos y recibos</p>
+                <p className="text-gray-500">Gestión de cobros y recibos</p>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <div className="px-4 py-2 bg-green-100 rounded-lg">
-                <p className="text-xs text-green-600">Recaudo Hoy</p>
-                <p className="text-lg font-bold text-green-700">{formatCurrency(todayTotal)}</p>
-              </div>
-              <button
-                onClick={openNewPaymentModal}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Registrar Pago
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar por tercero, recibo, concepto..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-400" />
-              <select
-                value={methodFilter}
-                onChange={(e) => setMethodFilter(e.target.value as PaymentMethod | '')}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Todos los métodos</option>
-                <option value="CASH">Efectivo</option>
-                <option value="TRANSFER">Transferencia</option>
-                <option value="CARD">Tarjeta</option>
-                <option value="PSE">PSE</option>
-                <option value="NEQUI">Nequi</option>
-                <option value="DAVIPLATA">Daviplata</option>
-              </select>
-            </div>
-            <button
-              onClick={fetchPayments}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
-            >
-              <RefreshCw className="w-5 h-5" />
+            <button onClick={openGeneralModal}
+              className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 flex items-center gap-2 text-sm">
+              <Plus className="w-4 h-4" />
+              Pago General
             </button>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          {loading ? (
-            <div className="p-8 text-center">
-              <RefreshCw className="w-8 h-8 animate-spin text-blue-500 mx-auto" />
-            </div>
-          ) : filteredPayments.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <Wallet className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>No hay pagos registrados</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recibo</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tercero</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Método</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recibido por</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filteredPayments.map((payment) => {
-                    const method = methodConfig[payment.paymentMethod]
-                    return (
-                      <tr key={payment.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <span className="font-mono text-sm text-blue-600">
-                            {payment.receiptNumber || payment.id.slice(0, 8)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          {new Date(payment.paymentDate).toLocaleString('es-CO', {
-                            dateStyle: 'short',
-                            timeStyle: 'short',
-                          })}
-                        </td>
-                        <td className="px-6 py-4">
-                          <Link
-                            to={`/finance/third-parties/${payment.thirdParty.id}`}
-                            className="font-medium text-gray-900 hover:text-blue-600"
-                          >
-                            {payment.thirdParty.name}
-                          </Link>
-                        </td>
-                        <td className="px-6 py-4 text-gray-500">
-                          {payment.obligation?.concept.name || 'Pago general'}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${method.color}`}>
-                            {method.icon}
-                            {method.label}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right font-bold text-green-600">
-                          {formatCurrency(Number(payment.amount))}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          {payment.receivedBy.firstName} {payment.receivedBy.lastName}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <button onClick={() => handlePreviewReceipt(payment.id, payment.receiptNumber)} title="Vista Previa"
-                              className="p-1.5 text-blue-500 hover:bg-blue-50 rounded">
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => handleDownloadReceipt(payment.id, payment.receiptNumber)} title="Descargar Recibo"
-                              className="p-1.5 text-gray-500 hover:bg-gray-100 rounded">
-                              <FileDown className="w-4 h-4" />
-                            </button>
-                            {!payment.voidedAt && (
-                              <button onClick={() => handleVoidPayment(payment.id)} title="Anular Pago"
-                                className="p-1.5 text-red-400 hover:bg-red-50 rounded">
-                                <XCircle className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+        {/* Main Tabs */}
+        <div className="flex border-b border-gray-200 mb-6">
+          <button onClick={() => setMainTab('pending')}
+            className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+              mainTab === 'pending' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}>
+            <Receipt className="w-4 h-4 inline mr-1.5 -mt-0.5" />
+            Pendientes de Cobro
+          </button>
+          <button onClick={() => setMainTab('history')}
+            className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+              mainTab === 'history' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}>
+            <Clock className="w-4 h-4 inline mr-1.5 -mt-0.5" />
+            Historial de Pagos
+          </button>
         </div>
+
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* TAB: PENDIENTES DE COBRO                                  */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {mainTab === 'pending' && (
+          <>
+            {/* Filters */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+              <div className="flex flex-wrap gap-3 items-center">
+                <div className="relative flex-1 min-w-[220px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input type="text" placeholder="Nombre, apellido o N° documento..."
+                    value={pendingSearch} onChange={e => { setPendingSearch(e.target.value); setPendingPage(1) }}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm" />
+                </div>
+                <select value={gradeFilter}
+                  onChange={e => { setGradeFilter(e.target.value); setGroupFilter(''); setPendingPage(1) }}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500">
+                  <option value="">Todos los grados</option>
+                  {filterGrades.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
+                <select value={groupFilter}
+                  onChange={e => { setGroupFilter(e.target.value); setPendingPage(1) }}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500">
+                  <option value="">Todos los grupos</option>
+                  {filteredGroups.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
+                <select value={conceptFilter}
+                  onChange={e => { setConceptFilter(e.target.value); setPendingPage(1) }}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500">
+                  <option value="">Todos los conceptos</option>
+                  {filterConcepts.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <select value={statusFilter}
+                  onChange={e => { setStatusFilter(e.target.value); setPendingPage(1) }}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500">
+                  <option value="">Todos los estados</option>
+                  <option value="PENDING">Pendiente</option>
+                  <option value="PARTIAL">Parcial</option>
+                  <option value="OVERDUE">Vencida</option>
+                </select>
+                <button onClick={() => fetchPendingObligations()}
+                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg" title="Recargar">
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Count */}
+            <p className="text-sm text-gray-500 mb-3">
+              Mostrando {Math.min(pendingObligations.length, 25)} de {pendingTotal} obligaciones pendientes
+            </p>
+
+            {/* Table */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              {loadingPending ? (
+                <div className="p-8 text-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mx-auto" />
+                </div>
+              ) : pendingObligations.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  <Receipt className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p>No hay obligaciones pendientes de cobro</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ref.</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estudiante</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Grupo</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Pagado</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Vence</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {pendingObligations.map(obl => {
+                        const st = statusConfig[obl.status] || { label: obl.status, color: 'text-gray-600 bg-gray-50' }
+                        const isOverdue = obl.status === 'OVERDUE'
+                        return (
+                          <tr key={obl.id} className={`hover:bg-gray-50 ${isOverdue ? 'bg-red-50/30' : ''}`}>
+                            <td className="px-4 py-3">
+                              <span className="font-mono text-xs text-blue-600">{obl.reference || obl.id.slice(0, 12)}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <p className="font-medium text-gray-900 text-sm">{obl.thirdParty.name}</p>
+                              {obl.thirdParty.document && <p className="text-xs text-gray-400">{obl.thirdParty.document}</p>}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {obl.studentGroup ? (
+                                <span className="text-xs px-2 py-1 bg-slate-100 rounded text-slate-600">
+                                  {obl.studentGrade ? `${obl.studentGrade} ` : ''}{obl.studentGroup}
+                                </span>
+                              ) : <span className="text-xs text-gray-300">-</span>}
+                            </td>
+                            <td className="px-4 py-3">
+                              <p className="text-sm text-gray-700">{obl.concept.name}</p>
+                              {obl.concept.category?.name && <p className="text-xs text-gray-400">{obl.concept.category.name}</p>}
+                            </td>
+                            <td className="px-4 py-3 text-right text-sm text-gray-700">{formatCurrency(Number(obl.totalAmount))}</td>
+                            <td className="px-4 py-3 text-right text-sm text-gray-500">{formatCurrency(Number(obl.paidAmount))}</td>
+                            <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">{formatCurrency(Number(obl.balance))}</td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${st.color}`}>
+                                {isOverdue && <AlertTriangle className="w-3 h-3" />}
+                                {st.label}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center text-xs text-gray-500">
+                              {obl.dueDate ? new Date(obl.dueDate).toLocaleDateString('es-CO') : '-'}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <button onClick={() => openPayModal(obl)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 text-xs font-medium transition-colors">
+                                <DollarSign className="w-3.5 h-3.5" />
+                                Pagar
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-sm text-gray-500">Página {pendingPage} de {totalPages}</p>
+                <div className="flex gap-2">
+                  <button onClick={() => setPendingPage(p => Math.max(1, p - 1))} disabled={pendingPage <= 1}
+                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setPendingPage(p => Math.min(totalPages, p + 1))} disabled={pendingPage >= totalPages}
+                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* TAB: HISTORIAL DE PAGOS                                   */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {mainTab === 'history' && (
+          <>
+            {/* Filters */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+              <div className="flex flex-wrap gap-3 items-center">
+                <div className="relative flex-1 min-w-[220px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input type="text" placeholder="Buscar por tercero, recibo, concepto..."
+                    value={historySearch} onChange={e => setHistorySearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm" />
+                </div>
+                <select value={methodFilter}
+                  onChange={e => setMethodFilter(e.target.value as PaymentMethod | '')}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500">
+                  <option value="">Todos los métodos</option>
+                  <option value="CASH">Efectivo</option>
+                  <option value="TRANSFER">Transferencia</option>
+                  <option value="CARD">Tarjeta</option>
+                  <option value="PSE">PSE</option>
+                  <option value="NEQUI">Nequi</option>
+                  <option value="DAVIPLATA">Daviplata</option>
+                </select>
+                <div className="px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-xs text-green-600">Recaudo Hoy</p>
+                  <p className="text-sm font-bold text-green-700">{formatCurrency(todayTotal)}</p>
+                </div>
+                <button onClick={() => fetchPayments()}
+                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg" title="Recargar">
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              {loadingHistory ? (
+                <div className="p-8 text-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mx-auto" />
+                </div>
+              ) : filteredPayments.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  <Wallet className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p>No hay pagos registrados</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recibo</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tercero</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Método</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recibido por</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {filteredPayments.map(payment => {
+                        const method = methodConfig[payment.paymentMethod]
+                        return (
+                          <tr key={payment.id} className={`hover:bg-gray-50 ${payment.voidedAt ? 'opacity-50 line-through' : ''}`}>
+                            <td className="px-4 py-3">
+                              <span className="font-mono text-xs text-blue-600">{payment.receiptNumber || payment.id.slice(0, 8)}</span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-500">
+                              {new Date(payment.paymentDate).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Link to={`/finance/third-parties/${payment.thirdParty.id}`}
+                                className="font-medium text-sm text-gray-900 hover:text-blue-600">
+                                {payment.thirdParty.name}
+                              </Link>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-500">
+                              {payment.obligation?.concept.name || <span className="italic text-gray-400">Pago general</span>}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${method.color}`}>
+                                {method.icon} {method.label}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right font-bold text-green-600 text-sm">
+                              {formatCurrency(Number(payment.amount))}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-500">
+                              {payment.receivedBy.firstName} {payment.receivedBy.lastName}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <button onClick={() => handlePreviewReceipt(payment.id, payment.receiptNumber)} title="Vista Previa"
+                                  className="p-1.5 text-blue-500 hover:bg-blue-50 rounded">
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => handleDownloadReceipt(payment.id, payment.receiptNumber)} title="Descargar"
+                                  className="p-1.5 text-gray-500 hover:bg-gray-100 rounded">
+                                  <FileDown className="w-4 h-4" />
+                                </button>
+                                {!payment.voidedAt && (
+                                  <button onClick={() => handleVoidPayment(payment.id)} title="Anular"
+                                    className="p-1.5 text-red-400 hover:bg-red-50 rounded">
+                                    <XCircle className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
-      {/* New Payment Modal */}
-      {showNewPaymentModal && (
+      {/* ═══ MODAL: PAGO A OBLIGACIÓN (small, focused) ═══ */}
+      {showPayModal && payingObligation && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col">
-            {/* Modal header with tabs */}
-            <div className="px-6 pt-5 pb-0">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="px-5 pt-5 pb-3">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">Registrar Pago</h2>
-                <button onClick={() => setShowNewPaymentModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+                <h2 className="text-lg font-bold text-gray-900">Registrar Pago</h2>
+                <button onClick={() => { setShowPayModal(false); setPayingObligation(null) }}
+                  className="p-1 hover:bg-gray-100 rounded-lg">
                   <X className="w-5 h-5 text-gray-400" />
                 </button>
               </div>
-              <div className="flex border-b border-gray-200">
-                <button onClick={() => { setModalTab('obligation'); resetForm() }}
-                  className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                    modalTab === 'obligation' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}>
-                  <Receipt className="w-4 h-4 inline mr-1.5 -mt-0.5" />
-                  Pago a Obligación
-                </button>
-                <button onClick={() => { setModalTab('general'); resetForm() }}
-                  className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                    modalTab === 'general' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}>
-                  <Wallet className="w-4 h-4 inline mr-1.5 -mt-0.5" />
-                  Pago General
-                </button>
+
+              {/* Obligation info */}
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-4">
+                <p className="font-medium text-gray-900 text-sm">{payingObligation.thirdParty.name}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{payingObligation.concept.name} · {payingObligation.reference || ''}</p>
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200">
+                  <span className="text-xs text-gray-500">Saldo pendiente</span>
+                  <span className="font-bold text-emerald-600">{formatCurrency(Number(payingObligation.balance))}</span>
+                </div>
+              </div>
+
+              {/* Payment form */}
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Monto a pagar *</label>
+                    <input type="number" value={paymentForm.amount}
+                      onChange={e => setPaymentForm(f => ({ ...f, amount: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
+                      placeholder="0" min="1" max={Number(payingObligation.balance)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Método</label>
+                    <select value={paymentForm.paymentMethod}
+                      onChange={e => setPaymentForm(f => ({ ...f, paymentMethod: e.target.value as PaymentMethod }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm">
+                      <option value="CASH">Efectivo</option>
+                      <option value="TRANSFER">Transferencia</option>
+                      <option value="CARD">Tarjeta</option>
+                      <option value="PSE">PSE</option>
+                      <option value="NEQUI">Nequi</option>
+                      <option value="DAVIPLATA">Daviplata</option>
+                      <option value="OTHER">Otro</option>
+                    </select>
+                  </div>
+                </div>
+                {paymentForm.paymentMethod !== 'CASH' && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Referencia</label>
+                    <input type="text" value={paymentForm.transactionRef}
+                      onChange={e => setPaymentForm(f => ({ ...f, transactionRef: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
+                      placeholder="N° transferencia, aprobación..." />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Notas</label>
+                  <input type="text" value={paymentForm.notes}
+                    onChange={e => setPaymentForm(f => ({ ...f, notes: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="Observaciones opcionales..." />
+                </div>
               </div>
             </div>
 
-            {/* Modal body */}
-            <div className="px-6 py-4 overflow-y-auto flex-1">
-              {loadingModal ? (
-                <div className="py-8 text-center"><Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto" /></div>
-              ) : modalTab === 'obligation' ? (
-                /* ═══ TAB: PAGO A OBLIGACIÓN ═══ */
-                <div className="space-y-4">
-                  {/* Selected student banner */}
-                  {selectedThirdParty ? (
-                    <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <UserCircle className="w-5 h-5 text-blue-500" />
-                        <div>
-                          <p className="text-sm font-semibold text-blue-900">{selectedThirdParty.name}</p>
-                          {selectedThirdParty.document && <p className="text-xs text-blue-600">{selectedThirdParty.document}</p>}
-                        </div>
-                      </div>
-                      <button onClick={() => { setSelectedThirdParty(null); setPaymentForm(f => ({ ...f, thirdPartyId: '', obligationId: '', amount: '' })); setObligations([]) }}
-                        className="text-xs text-blue-500 hover:text-blue-700 font-medium">Cambiar</button>
-                    </div>
-                  ) : (
-                    /* Search area */
-                    <div>
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        <select value={modalGradeFilter}
-                          onChange={e => { setModalGradeFilter(e.target.value); setModalGroupFilter('') }}
-                          className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm min-w-[130px]">
-                          <option value="">Todos los grados</option>
-                          {modalGrades.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                        </select>
-                        <select value={modalGroupFilter}
-                          onChange={e => setModalGroupFilter(e.target.value)}
-                          className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm min-w-[130px]">
-                          <option value="">Todos los grupos</option>
-                          {(modalGradeFilter
-                            ? modalGroups.filter((g: any) => g.gradeId === modalGradeFilter || g.grade?.id === modalGradeFilter)
-                            : modalGroups
-                          ).map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                        </select>
-                        <div className="relative flex-1 min-w-[180px]">
-                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input type="text" value={modalSearch}
-                            onChange={e => setModalSearch(e.target.value)}
-                            placeholder="Escriba nombre, apellido o documento..."
-                            className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
-                        </div>
-                      </div>
-                      {/* Results list */}
-                      {loadingThirdParties ? (
-                        <div className="py-4 text-center"><Loader2 className="w-5 h-5 animate-spin text-blue-500 mx-auto" /></div>
-                      ) : (modalGradeFilter || modalGroupFilter || debouncedModalSearch) ? (
-                        <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto divide-y divide-gray-100">
-                          {allThirdParties.length === 0 ? (
-                            <p className="text-sm text-gray-400 py-4 text-center">Sin resultados</p>
-                          ) : allThirdParties.map(tp => (
-                            <button key={tp.id} onClick={() => handleSelectThirdParty(tp)}
-                              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-blue-50 transition-colors text-left">
-                              <UserCircle className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">{tp.name}</p>
-                                {tp.document && <p className="text-xs text-gray-400">{tp.document}</p>}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-400 text-center py-3">Seleccione un grado/grupo o escriba para buscar</p>
-                      )}
-                    </div>
-                  )}
+            <div className="px-5 py-4 border-t border-gray-200 flex justify-end gap-2">
+              <button onClick={() => { setShowPayModal(false); setPayingObligation(null) }}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm">
+                Cancelar
+              </button>
+              <button onClick={handleSubmitPayment}
+                disabled={savingPayment || !paymentForm.amount || Number(paymentForm.amount) <= 0}
+                className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 flex items-center gap-2 disabled:opacity-50 text-sm">
+                {savingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
+                {savingPayment ? 'Registrando...' : 'Confirmar Pago'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-                  {/* Obligations table */}
-                  {selectedThirdParty && (
-                    <>
-                      {obligations.length === 0 ? (
-                        <div className="text-center py-3 text-sm text-gray-400 bg-gray-50 rounded-lg">
-                          Este estudiante no tiene obligaciones pendientes
-                        </div>
-                      ) : (
-                        <div>
-                          <p className="text-xs font-semibold text-gray-500 mb-2">Obligaciones pendientes ({obligations.length})</p>
-                          <div className="border border-gray-200 rounded-lg overflow-hidden">
-                            <table className="w-full text-sm">
-                              <thead className="bg-gray-50">
-                                <tr className="text-xs text-gray-500">
-                                  <th className="py-2 px-2 text-left w-6"></th>
-                                  <th className="py-2 px-2 text-left">Concepto</th>
-                                  <th className="py-2 px-2 text-right">Saldo</th>
-                                  <th className="py-2 px-2 text-center">Vence</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-gray-100">
-                                {obligations.map(obl => {
-                                  const selected = paymentForm.obligationId === obl.id
-                                  return (
-                                    <tr key={obl.id} onClick={() => handleSelectObligation(obl.id)}
-                                      className={`cursor-pointer transition-colors ${selected ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
-                                      <td className="py-2 px-2">
-                                        {selected
-                                          ? <CheckCircle2 className="w-4 h-4 text-blue-600" />
-                                          : <div className="w-4 h-4 border-2 border-gray-300 rounded-full" />}
-                                      </td>
-                                      <td className="py-2 px-2">
-                                        <p className="font-medium text-gray-900">{obl.concept.name}</p>
-                                        <p className="text-xs text-gray-400">{obl.reference || ''} {obl.concept.category?.name ? `· ${obl.concept.category.name}` : ''}</p>
-                                      </td>
-                                      <td className="py-2 px-2 text-right font-bold text-gray-900">{formatCurrency(Number(obl.balance))}</td>
-                                      <td className="py-2 px-2 text-center text-xs text-gray-500">
-                                        {obl.dueDate ? new Date(obl.dueDate).toLocaleDateString('es-CO') : '-'}
-                                      </td>
-                                    </tr>
-                                  )
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
+      {/* ═══ MODAL: PAGO GENERAL (sin obligación) ═══ */}
+      {showGeneralModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="px-5 pt-5 pb-3">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900">Pago General</h2>
+                <button onClick={() => setShowGeneralModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
 
-                      {/* Payment details */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Monto *</label>
-                          <input type="number" value={paymentForm.amount}
-                            onChange={e => setPaymentForm(f => ({ ...f, amount: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                            placeholder="0" min="1" />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Método</label>
-                          <select value={paymentForm.paymentMethod}
-                            onChange={e => setPaymentForm(f => ({ ...f, paymentMethod: e.target.value as PaymentMethod }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
-                            <option value="CASH">Efectivo</option>
-                            <option value="TRANSFER">Transferencia</option>
-                            <option value="CARD">Tarjeta</option>
-                            <option value="PSE">PSE</option>
-                            <option value="NEQUI">Nequi</option>
-                            <option value="DAVIPLATA">Daviplata</option>
-                            <option value="OTHER">Otro</option>
-                          </select>
-                        </div>
-                      </div>
-                      {paymentForm.paymentMethod !== 'CASH' && (
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Referencia</label>
-                          <input type="text" value={paymentForm.transactionRef}
-                            onChange={e => setPaymentForm(f => ({ ...f, transactionRef: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                            placeholder="N° transferencia, aprobación..." />
-                        </div>
-                      )}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Notas</label>
-                        <input type="text" value={paymentForm.notes}
-                          onChange={e => setPaymentForm(f => ({ ...f, notes: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                          placeholder="Observaciones opcionales..." />
-                      </div>
-                    </>
-                  )}
-                </div>
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 mb-4">
+                Registre ingresos sin obligación específica (uniformes, eventos, donaciones, etc.)
+              </div>
+
+              {loadingGeneralModal ? (
+                <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin text-amber-500 mx-auto" /></div>
               ) : (
-                /* ═══ TAB: PAGO GENERAL ═══ */
-                <div className="space-y-4">
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
-                    Use este modo para registrar ingresos que no están asociados a una obligación específica de un estudiante (ej: venta de uniformes, eventos, donaciones, etc.)
-                  </div>
+                <div className="space-y-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Tercero / Pagador *</label>
-                    <select value={paymentForm.thirdPartyId}
-                      onChange={e => setPaymentForm(f => ({ ...f, thirdPartyId: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                    <select value={generalForm.thirdPartyId}
+                      onChange={e => setGeneralForm(f => ({ ...f, thirdPartyId: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm">
                       <option value="">Seleccionar tercero...</option>
-                      {allThirdParties.map(tp => (
+                      {allThirdParties.map((tp: any) => (
                         <option key={tp.id} value={tp.id}>{tp.name} {tp.document ? `(${tp.document})` : ''}</option>
                       ))}
                     </select>
@@ -695,16 +775,16 @@ export default function Payments() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">Monto *</label>
-                      <input type="number" value={paymentForm.amount}
-                        onChange={e => setPaymentForm(f => ({ ...f, amount: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                      <input type="number" value={generalForm.amount}
+                        onChange={e => setGeneralForm(f => ({ ...f, amount: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm"
                         placeholder="0" min="1" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">Método</label>
-                      <select value={paymentForm.paymentMethod}
-                        onChange={e => setPaymentForm(f => ({ ...f, paymentMethod: e.target.value as PaymentMethod }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                      <select value={generalForm.paymentMethod}
+                        onChange={e => setGeneralForm(f => ({ ...f, paymentMethod: e.target.value as PaymentMethod }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm">
                         <option value="CASH">Efectivo</option>
                         <option value="TRANSFER">Transferencia</option>
                         <option value="CARD">Tarjeta</option>
@@ -715,35 +795,34 @@ export default function Payments() {
                       </select>
                     </div>
                   </div>
-                  {paymentForm.paymentMethod !== 'CASH' && (
+                  {generalForm.paymentMethod !== 'CASH' && (
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Referencia de transacción</label>
-                      <input type="text" value={paymentForm.transactionRef}
-                        onChange={e => setPaymentForm(f => ({ ...f, transactionRef: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Referencia</label>
+                      <input type="text" value={generalForm.transactionRef}
+                        onChange={e => setGeneralForm(f => ({ ...f, transactionRef: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm"
                         placeholder="N° transferencia, aprobación..." />
                     </div>
                   )}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Notas / Concepto del pago *</label>
-                    <textarea value={paymentForm.notes}
-                      onChange={e => setPaymentForm(f => ({ ...f, notes: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                      rows={2} placeholder="Describa el concepto del pago (ej: Venta de uniforme, Donación, etc.)" />
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Concepto / Notas *</label>
+                    <textarea value={generalForm.notes}
+                      onChange={e => setGeneralForm(f => ({ ...f, notes: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm"
+                      rows={2} placeholder="Describa el concepto (ej: Venta de uniforme, Donación...)" />
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Modal footer */}
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
-              <button onClick={() => setShowNewPaymentModal(false)}
+            <div className="px-5 py-4 border-t border-gray-200 flex justify-end gap-2">
+              <button onClick={() => setShowGeneralModal(false)}
                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm">
                 Cancelar
               </button>
-              <button onClick={handleSubmitPayment}
-                disabled={savingPayment || !paymentForm.thirdPartyId || !paymentForm.amount || Number(paymentForm.amount) <= 0}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-2 disabled:opacity-50 text-sm">
+              <button onClick={handleSubmitGeneralPayment}
+                disabled={savingPayment || !generalForm.thirdPartyId || !generalForm.amount || Number(generalForm.amount) <= 0}
+                className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 flex items-center gap-2 disabled:opacity-50 text-sm">
                 {savingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 {savingPayment ? 'Registrando...' : 'Registrar Pago'}
               </button>
@@ -751,7 +830,8 @@ export default function Payments() {
           </div>
         </div>
       )}
-      {/* PDF Preview Modal */}
+
+      {/* ═══ PDF Preview Modal ═══ */}
       {previewUrl && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl h-[85vh] flex flex-col">

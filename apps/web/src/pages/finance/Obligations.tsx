@@ -17,8 +17,9 @@ import {
   GraduationCap,
   Ban,
   Eye,
+  X,
 } from 'lucide-react'
-import { financeObligationsApi, financeConceptsApi, academicGradesApi, groupsApi } from '../../lib/api'
+import { financeObligationsApi, financeConceptsApi, financePaymentsApi, academicGradesApi, groupsApi } from '../../lib/api'
 
 type ObligationStatus = 'PENDING' | 'PARTIAL' | 'PAID' | 'CANCELLED' | 'OVERDUE'
 
@@ -82,6 +83,18 @@ export default function Obligations() {
   const [filterGroups, setFilterGroups] = useState<any[]>([])
   const [filterConcepts, setFilterConcepts] = useState<any[]>([])
   const filtersLoaded = useRef(false)
+
+  // Payment modal state
+  type PaymentMethod = 'CASH' | 'TRANSFER' | 'CARD' | 'PSE' | 'NEQUI' | 'DAVIPLATA' | 'OTHER'
+  const [showPayModal, setShowPayModal] = useState(false)
+  const [payingObligation, setPayingObligation] = useState<Obligation | null>(null)
+  const [savingPayment, setSavingPayment] = useState(false)
+  const [payForm, setPayForm] = useState({
+    amount: '',
+    paymentMethod: 'CASH' as PaymentMethod,
+    transactionRef: '',
+    notes: '',
+  })
 
   // Massive modal state
   const [concepts, setConcepts] = useState<any[]>([])
@@ -201,6 +214,34 @@ export default function Obligations() {
       alert(err.response?.data?.message || 'Error en asignación masiva')
     } finally {
       setSavingMassive(false)
+    }
+  }
+
+  const openPayModal = (obl: Obligation) => {
+    setPayingObligation(obl)
+    setPayForm({ amount: String(Number(obl.balance)), paymentMethod: 'CASH', transactionRef: '', notes: '' })
+    setShowPayModal(true)
+  }
+
+  const handleSubmitPayment = async () => {
+    if (!payingObligation || !payForm.amount || Number(payForm.amount) <= 0) return
+    setSavingPayment(true)
+    try {
+      await financePaymentsApi.create({
+        thirdPartyId: payingObligation.thirdParty.id,
+        obligationId: payingObligation.id,
+        amount: Number(payForm.amount),
+        paymentMethod: payForm.paymentMethod,
+        transactionRef: payForm.transactionRef || undefined,
+        notes: payForm.notes || undefined,
+      })
+      setShowPayModal(false)
+      setPayingObligation(null)
+      fetchObligations(currentPage)
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al registrar pago')
+    } finally {
+      setSavingPayment(false)
     }
   }
 
@@ -449,11 +490,19 @@ export default function Obligations() {
                               <Eye className="w-4 h-4" />
                             </Link>
                             {!['PAID', 'CANCELLED'].includes(obl.status) && (
-                              <button onClick={() => handleCancelObligation(obl.id, obl.reference)}
-                                title="Cancelar obligación"
-                                className="p-1.5 text-red-400 hover:bg-red-50 rounded">
-                                <Ban className="w-4 h-4" />
-                              </button>
+                              <>
+                                <button onClick={() => openPayModal(obl)}
+                                  title="Registrar pago"
+                                  className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-500 text-white rounded text-xs font-medium hover:bg-emerald-600 transition-colors">
+                                  <DollarSign className="w-3.5 h-3.5" />
+                                  Pagar
+                                </button>
+                                <button onClick={() => handleCancelObligation(obl.id, obl.reference)}
+                                  title="Cancelar obligación"
+                                  className="p-1.5 text-red-400 hover:bg-red-50 rounded">
+                                  <Ban className="w-4 h-4" />
+                                </button>
+                              </>
                             )}
                           </div>
                         </td>
@@ -488,6 +537,84 @@ export default function Obligations() {
           )}
         </div>
       </div>
+
+      {/* Payment Modal */}
+      {showPayModal && payingObligation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="px-5 pt-5 pb-3">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900">Registrar Pago</h2>
+                <button onClick={() => { setShowPayModal(false); setPayingObligation(null) }}
+                  className="p-1 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-4">
+                <p className="font-medium text-gray-900 text-sm">{payingObligation.thirdParty.name}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{payingObligation.concept.name} · {payingObligation.reference || ''}</p>
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200">
+                  <span className="text-xs text-gray-500">Saldo pendiente</span>
+                  <span className="font-bold text-emerald-600">{formatCurrency(Number(payingObligation.balance))}</span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Monto a pagar *</label>
+                    <input type="number" value={payForm.amount}
+                      onChange={e => setPayForm(f => ({ ...f, amount: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
+                      placeholder="0" min="1" max={Number(payingObligation.balance)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Método</label>
+                    <select value={payForm.paymentMethod}
+                      onChange={e => setPayForm(f => ({ ...f, paymentMethod: e.target.value as PaymentMethod }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm">
+                      <option value="CASH">Efectivo</option>
+                      <option value="TRANSFER">Transferencia</option>
+                      <option value="CARD">Tarjeta</option>
+                      <option value="PSE">PSE</option>
+                      <option value="NEQUI">Nequi</option>
+                      <option value="DAVIPLATA">Daviplata</option>
+                      <option value="OTHER">Otro</option>
+                    </select>
+                  </div>
+                </div>
+                {payForm.paymentMethod !== 'CASH' && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Referencia</label>
+                    <input type="text" value={payForm.transactionRef}
+                      onChange={e => setPayForm(f => ({ ...f, transactionRef: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
+                      placeholder="N° transferencia, aprobación..." />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Notas</label>
+                  <input type="text" value={payForm.notes}
+                    onChange={e => setPayForm(f => ({ ...f, notes: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="Observaciones opcionales..." />
+                </div>
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-gray-200 flex justify-end gap-2">
+              <button onClick={() => { setShowPayModal(false); setPayingObligation(null) }}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm">
+                Cancelar
+              </button>
+              <button onClick={handleSubmitPayment}
+                disabled={savingPayment || !payForm.amount || Number(payForm.amount) <= 0}
+                className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 flex items-center gap-2 disabled:opacity-50 text-sm">
+                {savingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
+                {savingPayment ? 'Registrando...' : 'Confirmar Pago'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Massive Assignment Modal */}
       {showMassiveModal && (
