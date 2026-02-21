@@ -330,7 +330,7 @@ export class ObligationsService {
             institutionId,
             thirdPartyId,
             conceptId: data.conceptId,
-            status: { in: ['PENDING', 'PARTIAL'] },
+            status: { in: ['PENDING', 'PARTIAL', 'OVERDUE'] },
           },
         });
 

@@ -538,6 +538,7 @@ export const gradesApi = {
 // Academic Grades (grados académicos - Transición, Primero, etc.)
 export const academicGradesApi = {
   getAll: (institutionId?: string) => api.get('/grades', { params: { institutionId } }),
+  getActive: (institutionId?: string) => api.get('/grades/active', { params: { institutionId } }),
   sync: (grades: any[]) => api.post('/grades/sync', { grades }),
 }
 

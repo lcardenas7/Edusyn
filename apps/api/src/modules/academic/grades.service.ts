@@ -37,8 +37,37 @@ export class GradesService {
     });
   }
 
+  // Administrativo: devuelve TODOS los grados con sus grupos de la institución
+  // Usado por: Structure.tsx, creación de grupos, administración
   async listByInstitution(institutionId: string) {
     return this.prisma.grade.findMany({
+      include: {
+        groups: {
+          where: {
+            campus: { institutionId }
+          },
+          include: {
+            campus: true,
+            shift: true,
+            director: { select: { id: true, firstName: true, lastName: true } },
+          }
+        }
+      },
+      orderBy: [{ stage: 'asc' }, { name: 'asc' }],
+    });
+  }
+
+  // Operativo: solo grados que tienen al menos un grupo en la institución
+  // Usado por: finanzas, filtros, reportes, módulos operativos
+  async listActiveByInstitution(institutionId: string) {
+    return this.prisma.grade.findMany({
+      where: {
+        groups: {
+          some: {
+            campus: { institutionId },
+          },
+        },
+      },
       include: {
         groups: {
           where: {

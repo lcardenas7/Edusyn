@@ -7,6 +7,10 @@ import { CreateThirdPartyDto, UpdateThirdPartyDto, SyncThirdPartiesDto } from '.
 export class ThirdPartiesService {
   constructor(private prisma: PrismaService) {}
 
+  private formatStudentName(s: { lastName: string; secondLastName?: string | null; firstName: string; secondName?: string | null }): string {
+    return [s.lastName, s.secondLastName, s.firstName, s.secondName].filter(Boolean).join(' ').toUpperCase();
+  }
+
   async findAll(institutionId: string, filters?: {
     type?: ThirdPartyType;
     search?: string;
@@ -25,7 +29,7 @@ export class ThirdPartiesService {
       }),
     };
 
-    return this.prisma.financialThirdParty.findMany({
+    const results = await this.prisma.financialThirdParty.findMany({
       where,
       orderBy: { name: 'asc' },
       include: {
@@ -37,6 +41,32 @@ export class ThirdPartiesService {
         },
       },
     });
+
+    // Auto-sync student names to full institutional format
+    const studentTps = results.filter(tp => tp.type === 'STUDENT' && tp.referenceId);
+    if (studentTps.length > 0) {
+      const students = await this.prisma.student.findMany({
+        where: { id: { in: studentTps.map(tp => tp.referenceId!) } },
+        select: { id: true, firstName: true, secondName: true, lastName: true, secondLastName: true },
+      });
+      const studentMap = new Map(students.map(s => [s.id, s]));
+      const updates: Promise<any>[] = [];
+      for (const tp of studentTps) {
+        const student = studentMap.get(tp.referenceId!);
+        if (student) {
+          const fullName = this.formatStudentName(student);
+          if (tp.name !== fullName) {
+            tp.name = fullName;
+            updates.push(this.prisma.financialThirdParty.update({ where: { id: tp.id }, data: { name: fullName } }));
+          }
+        }
+      }
+      if (updates.length > 0) {
+        Promise.all(updates).catch(err => console.error('Error syncing TP names:', err));
+      }
+    }
+
+    return results;
   }
 
   async findOne(id: string, institutionId: string) {
@@ -154,11 +184,13 @@ export class ThirdPartiesService {
           },
         });
 
+        const fullName = this.formatStudentName(student);
+
         if (existing) {
           await this.prisma.financialThirdParty.update({
             where: { id: existing.id },
             data: {
-              name: `${student.firstName} ${student.lastName}`,
+              name: fullName,
               document: student.documentNumber,
               documentType: student.documentType as DocumentType,
               email: student.email,
@@ -172,7 +204,7 @@ export class ThirdPartiesService {
               institutionId,
               type: 'STUDENT',
               referenceId: student.id,
-              name: `${student.firstName} ${student.lastName}`,
+              name: fullName,
               document: student.documentNumber,
               documentType: student.documentType as DocumentType,
               email: student.email,

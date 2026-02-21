@@ -114,7 +114,7 @@ export default function Obligations() {
     if (filtersLoaded.current) return
     filtersLoaded.current = true
     Promise.all([
-      academicGradesApi.getAll(),
+      academicGradesApi.getActive(),
       groupsApi.getAll(),
       financeConceptsApi.getAll({ isActive: 'true' }),
     ]).then(([gRes, grRes, cRes]) => {
@@ -156,7 +156,7 @@ export default function Obligations() {
     try {
       const [conceptsRes, gradesRes, groupsRes] = await Promise.all([
         financeConceptsApi.getAll({ isActive: 'true' }),
-        academicGradesApi.getAll(),
+        academicGradesApi.getActive(),
         groupsApi.getAll(),
       ])
       setConcepts(conceptsRes.data)

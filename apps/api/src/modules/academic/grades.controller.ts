@@ -22,11 +22,22 @@ export class GradesController {
     return this.gradesService.create(dto);
   }
 
+  // Administrativo: devuelve TODOS los grados (incluso sin grupos)
+  // Usado por: Structure.tsx, creación de grupos, administración
   @Get()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'SECRETARIA')
   async list(@Request() req: any, @Query('institutionId') institutionId?: string) {
     const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
     return this.gradesService.listByInstitution(instId);
+  }
+
+  // Operativo: solo grados que tienen al menos un grupo en la institución
+  // Usado por: finanzas, filtros, reportes, módulos operativos
+  @Get('active')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'SECRETARIA')
+  async listActive(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.gradesService.listActiveByInstitution(instId);
   }
 
   // Sincronizar grados y grupos desde el frontend (localStorage -> BD)
