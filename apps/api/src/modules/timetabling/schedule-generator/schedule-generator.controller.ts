@@ -31,6 +31,113 @@ export class ScheduleGeneratorController {
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // CONTEXTO PERSISTENTE DE GENERACIÓN (por institución+año+jornada)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('context')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async getContext(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('shiftId') shiftId: string,
+  ) {
+    if (!academicYearId || !shiftId) {
+      return null;
+    }
+    const ctx = await this.prisma.scheduleGenerationContext.findUnique({
+      where: {
+        institutionId_academicYearId_shiftId: {
+          institutionId: req.user.institutionId,
+          academicYearId,
+          shiftId,
+        },
+      },
+    });
+    return ctx;
+  }
+
+  @Post('context')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async upsertContext(
+    @Request() req,
+    @Body() body: {
+      academicYearId: string;
+      shiftId: string;
+      lastStep?: string;
+      startTime?: string;
+      classesPerDay?: number;
+      classDurationMinutes?: number;
+      breakDurationMinutes?: number;
+      breakAfterBlock?: number;
+      secondBreakAfterBlock?: number;
+      includeLunch?: boolean;
+      lunchDurationMinutes?: number;
+      lunchAfterBlock?: number;
+      includeTutoring?: boolean;
+      tutoringDurationMinutes?: number;
+      activeDays?: string[];
+      clearExisting?: boolean;
+      respectAvailability?: boolean;
+      groupTeacherBlocks?: boolean;
+      selectedGroupIds?: string[];
+      lastGenerationResult?: any;
+      configSaved?: boolean;
+    },
+  ) {
+    const institutionId = req.user.institutionId;
+    if (!body.academicYearId || !body.shiftId) {
+      return { success: false, error: 'academicYearId y shiftId son obligatorios' };
+    }
+
+    const { academicYearId, shiftId, ...data } = body;
+
+    const ctx = await this.prisma.scheduleGenerationContext.upsert({
+      where: {
+        institutionId_academicYearId_shiftId: {
+          institutionId,
+          academicYearId,
+          shiftId,
+        },
+      },
+      create: {
+        institutionId,
+        academicYearId,
+        shiftId,
+        ...data,
+      },
+      update: data,
+    });
+
+    return ctx;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // JORNADAS DISPONIBLES (para el selector del frontend)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('shifts')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async getShifts(@Request() req) {
+    const shifts = await this.prisma.shift.findMany({
+      where: { campus: { institutionId: req.user.institutionId } },
+      include: {
+        campus: { select: { name: true } },
+        _count: { select: { groups: true, timeBlocks: true } },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    return shifts.map(s => ({
+      id: s.id,
+      name: s.name,
+      type: s.type,
+      campusName: s.campus.name,
+      groupCount: s._count.groups,
+      timeBlockCount: s._count.timeBlocks,
+    }));
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // PLANTILLA EXCEL
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -90,10 +197,12 @@ export class ScheduleGeneratorController {
     @Request() req,
     @Body() body: {
       academicYearId: string;
+      shiftId?: string;
       groupIds?: string[];
       clearExisting?: boolean;
       respectAvailability?: boolean;
       groupTeacherBlocks?: boolean;
+      activeDays?: string[];
     },
   ) {
     if (!body.academicYearId) {
@@ -102,13 +211,43 @@ export class ScheduleGeneratorController {
 
     const options: GenerationOptions = {
       academicYearId: body.academicYearId,
+      shiftId: body.shiftId,
       groupIds: body.groupIds,
       clearExisting: body.clearExisting ?? true,
       respectAvailability: body.respectAvailability ?? true,
       groupTeacherBlocks: body.groupTeacherBlocks ?? true,
+      activeDays: body.activeDays as any,
     };
 
-    return this.generatorService.generateSchedule(req.user.institutionId, options);
+    const result = await this.generatorService.generateSchedule(req.user.institutionId, options);
+
+    // Persist result in context if shiftId provided
+    if (body.shiftId) {
+      try {
+        await this.prisma.scheduleGenerationContext.upsert({
+          where: {
+            institutionId_academicYearId_shiftId: {
+              institutionId: req.user.institutionId,
+              academicYearId: body.academicYearId,
+              shiftId: body.shiftId,
+            },
+          },
+          create: {
+            institutionId: req.user.institutionId,
+            academicYearId: body.academicYearId,
+            shiftId: body.shiftId,
+            lastStep: 'result',
+            lastGenerationResult: result as any,
+          },
+          update: {
+            lastStep: 'result',
+            lastGenerationResult: result as any,
+          },
+        });
+      } catch (_) { /* non-critical */ }
+    }
+
+    return result;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -177,7 +316,10 @@ export class ScheduleGeneratorController {
 
   @Get('schedule-config')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async getScheduleConfig(@Request() req) {
+  async getScheduleConfig(
+    @Request() req,
+    @Query('shiftId') shiftId?: string,
+  ) {
     const institutionId = req.user.institutionId;
 
     // Buscar shifts con sus bloques
@@ -189,8 +331,10 @@ export class ScheduleGeneratorController {
       },
     });
 
-    // Derivar configuración actual del primer shift que tenga bloques
-    const activeShift = shifts.find(s => s.timeBlocks.length > 0) || shifts[0];
+    // Si se especifica shiftId, usar ese; si no, el primero con bloques
+    const activeShift = shiftId
+      ? shifts.find(s => s.id === shiftId) || shifts[0]
+      : shifts.find(s => s.timeBlocks.length > 0) || shifts[0];
     const blocks = activeShift?.timeBlocks || [];
     const classBlocks = blocks.filter(b => b.type === 'CLASS');
     const breakBlocks = blocks.filter(b => b.type === 'BREAK' || b.type === 'LUNCH');
@@ -265,6 +409,7 @@ export class ScheduleGeneratorController {
   async configureSchedule(
     @Request() req,
     @Body() body: {
+      shiftId?: string;         // Explicit shift to configure (required for multi-shift)
       startTime: string;        // e.g., "06:30"
       classesPerDay: number;    // e.g., 7
       classDuration: number;    // minutes, e.g., 55
@@ -281,17 +426,22 @@ export class ScheduleGeneratorController {
   ) {
     const institutionId = req.user.institutionId;
 
-    // Find the active shift
-    const shift = await this.prisma.shift.findFirst({
-      where: { campus: { institutionId } },
-      include: { timeBlocks: true },
-    });
+    // Find the target shift — explicit shiftId or fallback to first
+    const shift = body.shiftId
+      ? await this.prisma.shift.findFirst({
+          where: { id: body.shiftId, campus: { institutionId } },
+          include: { timeBlocks: true },
+        })
+      : await this.prisma.shift.findFirst({
+          where: { campus: { institutionId } },
+          include: { timeBlocks: true },
+        });
 
     if (!shift) {
       return { success: false, error: 'No hay jornada configurada. Importe la carga académica primero.' };
     }
 
-    // Delete existing time blocks for this shift
+    // Delete existing time blocks ONLY for this specific shift
     await this.prisma.timeBlock.deleteMany({
       where: { institutionId, shiftId: shift.id },
     });
@@ -424,11 +574,15 @@ export class ScheduleGeneratorController {
   async getTeachingLoad(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
+    @Query('shiftId') shiftId?: string,
   ) {
     const assignments = await this.prisma.teacherAssignment.findMany({
       where: {
         academicYearId,
-        group: { shift: { campus: { institutionId: req.user.institutionId } } },
+        group: {
+          shift: { campus: { institutionId: req.user.institutionId } },
+          ...(shiftId ? { shiftId } : {}),
+        },
       },
       include: {
         teacher: { select: { id: true, firstName: true, lastName: true, email: true } },

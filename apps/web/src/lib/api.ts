@@ -1392,6 +1392,35 @@ export const timetablingEntriesApi = {
 // ═══════════════════════════════════════════════════════════════
 
 export const timetablingGeneratorApi = {
+  // Contexto persistente de generación (por jornada)
+  getContext: (academicYearId: string, shiftId: string) =>
+    api.get('/timetabling/generator/context', { params: { academicYearId, shiftId } }),
+  saveContext: (data: {
+    academicYearId: string;
+    shiftId: string;
+    lastStep?: string;
+    startTime?: string;
+    classesPerDay?: number;
+    classDurationMinutes?: number;
+    breakDurationMinutes?: number;
+    breakAfterBlock?: number;
+    secondBreakAfterBlock?: number;
+    includeLunch?: boolean;
+    lunchDurationMinutes?: number;
+    lunchAfterBlock?: number;
+    includeTutoring?: boolean;
+    tutoringDurationMinutes?: number;
+    activeDays?: string[];
+    clearExisting?: boolean;
+    respectAvailability?: boolean;
+    groupTeacherBlocks?: boolean;
+    selectedGroupIds?: string[];
+    lastGenerationResult?: any;
+    configSaved?: boolean;
+  }) => api.post('/timetabling/generator/context', data),
+  // Jornadas disponibles
+  getShifts: () =>
+    api.get('/timetabling/generator/shifts'),
   downloadTemplate: (academicYearId: string) =>
     api.get('/timetabling/generator/template', {
       params: { academicYearId },
@@ -1407,6 +1436,7 @@ export const timetablingGeneratorApi = {
   },
   generateSchedule: (data: {
     academicYearId: string;
+    shiftId?: string;
     groupIds?: string[];
     clearExisting?: boolean;
     respectAvailability?: boolean;
@@ -1418,15 +1448,16 @@ export const timetablingGeneratorApi = {
       params: { academicYearId, viewType },
       responseType: 'blob',
     }),
-  getTeachingLoad: (academicYearId: string) =>
-    api.get('/timetabling/generator/teaching-load', { params: { academicYearId } }),
+  getTeachingLoad: (academicYearId: string, shiftId?: string) =>
+    api.get('/timetabling/generator/teaching-load', { params: { academicYearId, ...(shiftId ? { shiftId } : {}) } }),
   getScheduleViews: (academicYearId: string, view: 'total' | 'by-grade' | 'by-teacher' | 'by-subject' | 'by-area' = 'total', filterId?: string) =>
     api.get('/timetabling/generator/schedule-views', { params: { academicYearId, view, filterId } }),
   deleteTeachingLoad: (academicYearId: string) =>
     api.post('/timetabling/generator/delete-teaching-load', { academicYearId }),
-  getScheduleConfig: () =>
-    api.get('/timetabling/generator/schedule-config'),
+  getScheduleConfig: (shiftId?: string) =>
+    api.get('/timetabling/generator/schedule-config', { params: { ...(shiftId ? { shiftId } : {}) } }),
   configureSchedule: (data: {
+    shiftId?: string;
     startTime: string;
     classesPerDay: number;
     classDuration: number;

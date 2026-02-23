@@ -456,6 +456,7 @@ model Institution {
   scheduleGradeConfigs        ScheduleGradeConfig[]
   teacherAvailabilities       TeacherAvailability[]
   scheduleEntries             ScheduleEntry[]
+  scheduleGenerationContexts  ScheduleGenerationContext[]
   reportCardConfig            ReportCardConfig?     @relation("ReportCardConfigInstitution")
   
   // Capabilities de visualización por rol
@@ -559,6 +560,7 @@ model Shift {
   campus Campus @relation(fields: [campusId], references: [id], onDelete: Cascade)
   groups Group[]
   timeBlocks TimeBlock[]
+  generationContexts ScheduleGenerationContext[]
 
   @@unique([campusId, type])
 }
@@ -900,9 +902,10 @@ model AcademicYear {
   groupSubjectExceptions GroupSubjectException[]
 
   // Timetabling (Horarios)
-  scheduleGradeConfigs   ScheduleGradeConfig[]
-  teacherAvailabilities  TeacherAvailability[]
-  scheduleEntries        ScheduleEntry[]
+  scheduleGradeConfigs        ScheduleGradeConfig[]
+  teacherAvailabilities       TeacherAvailability[]
+  scheduleEntries             ScheduleEntry[]
+  scheduleGenerationContexts  ScheduleGenerationContext[]
   
   // Componentes finales (pruebas semestrales, etc.)
   finalComponents        FinalComponent[] @relation("AcademicYearFinalComponents")
@@ -4121,6 +4124,55 @@ model ScheduleEntry {
   @@index([teacherAssignmentId])
   @@index([roomId])
   @@index([dayOfWeek])
+}
+
+// Contexto persistente de generación de horarios (uno por institución+año+jornada)
+model ScheduleGenerationContext {
+  id              String   @id @default(cuid())
+  institutionId   String
+  academicYearId  String
+  shiftId         String
+
+  // Último paso alcanzado en el flujo del generador
+  lastStep        String   @default("load")  // load | configure | generate | result
+
+  // Parámetros de configuración de jornada (independientes por shift)
+  startTime             String?   // "06:30"
+  classesPerDay         Int?      // 7
+  classDurationMinutes  Int?      // 55
+  breakDurationMinutes  Int?      // 15
+  breakAfterBlock       Int?      // 2
+  secondBreakAfterBlock Int?      // 0 = sin segundo receso
+  includeLunch          Boolean   @default(true)
+  lunchDurationMinutes  Int?      // 30
+  lunchAfterBlock       Int?      // 6
+  includeTutoring       Boolean   @default(false)
+  tutoringDurationMinutes Int?    // 55
+  activeDays            String[]  // ["MONDAY","TUESDAY",...]
+
+  // Opciones de generación
+  clearExisting         Boolean   @default(true)
+  respectAvailability   Boolean   @default(true)
+  groupTeacherBlocks    Boolean   @default(true)
+  selectedGroupIds      String[]  // IDs de grupos seleccionados (vacío = todos del shift)
+
+  // Resultado de última generación (snapshot para mostrar al reabrir)
+  lastGenerationResult  Json?     // GenerationResult serializado
+
+  // Indica si la configuración de bloques ya fue guardada para este shift
+  configSaved           Boolean   @default(false)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  institution     Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  academicYear    AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  shift           Shift        @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionId, academicYearId, shiftId])
+  @@index([institutionId])
+  @@index([academicYearId])
+  @@index([shiftId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

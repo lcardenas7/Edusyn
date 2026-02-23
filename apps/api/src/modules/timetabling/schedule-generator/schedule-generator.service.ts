@@ -1,11 +1,12 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { DayOfWeek, TimeBlockType } from '@prisma/client';
+import { DayOfWeek, ScheduleMode, TimeBlockType } from '@prisma/client';
 
 export interface GenerationOptions {
   academicYearId: string;
-  groupIds?: string[];           // Si vacío, genera para todos los grupos
-  clearExisting?: boolean;       // Limpiar horario existente antes de generar
+  shiftId?: string;              // Si se especifica, solo genera para grupos de esta jornada
+  groupIds?: string[];           // Si vacío, genera para todos los grupos (del shift si se indica)
+  clearExisting?: boolean;       // Limpiar horario existente antes de generar (solo del shift/grupos objetivo)
   respectAvailability?: boolean; // Respetar disponibilidad docente
   maxAttempts?: number;          // Intentos máximos del algoritmo
   activeDays?: DayOfWeek[];      // Días activos (default: L-V)
@@ -68,11 +69,11 @@ export class ScheduleGeneratorService {
     institutionId: string,
     options: GenerationOptions,
   ): Promise<GenerationResult> {
-    const { academicYearId, groupIds, clearExisting = true, respectAvailability = true, activeDays, groupTeacherBlocks = true } = options;
+    const { academicYearId, shiftId, groupIds, clearExisting = true, respectAvailability = true, activeDays, groupTeacherBlocks = true } = options;
     const daysToUse: DayOfWeek[] = activeDays && activeDays.length > 0 ? activeDays : DAYS;
 
-    // 1. Obtener grupos objetivo
-    const groups = await this.getTargetGroups(institutionId, academicYearId, groupIds);
+    // 1. Obtener grupos objetivo (filtrados por shiftId si se especifica)
+    const groups = await this.getTargetGroups(institutionId, academicYearId, groupIds, shiftId);
     if (groups.length === 0) {
       throw new BadRequestException('No se encontraron grupos para generar horarios');
     }
@@ -125,11 +126,12 @@ export class ScheduleGeneratorService {
     return result;
   }
 
-  private async getTargetGroups(institutionId: string, academicYearId: string, groupIds?: string[]) {
+  private async getTargetGroups(institutionId: string, academicYearId: string, groupIds?: string[], shiftId?: string) {
     return this.prisma.group.findMany({
       where: {
         shift: { campus: { institutionId } },
         teacherAssignments: { some: { academicYearId } },
+        ...(shiftId ? { shiftId } : {}),
         ...(groupIds?.length ? { id: { in: groupIds } } : {}),
       },
       include: {
@@ -281,8 +283,33 @@ export class ScheduleGeneratorService {
     // Track horas colocadas por asignación
     const placedPerAssignment = new Map<string, number>();
 
-    // Para cada asignación, intentar colocar las horas semanales
+    // ═══════════════════════════════════════════════════════
+    // FASE 4: FIXED_TEACHER — director de grupo cubre todos los bloques
+    // ═══════════════════════════════════════════════════════
+    const fixedTeacherGroupIds = new Set<string>();
+    for (const group of groups) {
+      const config = gradeConfigs.get(group.grade?.id || '');
+      if (config?.mode === ScheduleMode.FIXED_TEACHER) {
+        fixedTeacherGroupIds.add(group.id);
+      }
+    }
+
+    if (fixedTeacherGroupIds.size > 0) {
+      for (const group of groups) {
+        if (!fixedTeacherGroupIds.has(group.id)) continue;
+        const groupAssignments = sortedAssignments.filter(a => a.groupId === group.id);
+        const classBlocks = groupTimeBlocks.get(group.id) || [];
+        this.placeFixedTeacherGroup(
+          institutionId, academicYearId, group, groupAssignments, classBlocks,
+          teacherSlots, groupSlots, teacherAvailability, groupRoomMap,
+          activeDays, entriesToCreate, conflicts, placedPerAssignment,
+        );
+      }
+    }
+
+    // Para cada asignación ROTATING_TEACHER, intentar colocar las horas semanales
     for (const assignment of sortedAssignments) {
+      if (fixedTeacherGroupIds.has(assignment.groupId)) continue; // ya procesado
       if (assignment.weeklyHours <= 0) continue;
 
       const timeBlocks = groupTimeBlocks.get(assignment.groupId);
@@ -666,6 +693,89 @@ export class ScheduleGeneratorService {
 
   private isSlotTaken(entityId: string, slotKey: string, slotsMap: Map<string, Set<string>>): boolean {
     return slotsMap.get(entityId)?.has(slotKey) || false;
+  }
+
+  /**
+   * FASE 4: FIXED_TEACHER — el director de grupo ocupa todos los bloques de clase.
+   * Distribuye los sujetos de forma greedy (mayor remaining primero) para equilibrar la semana.
+   */
+  private placeFixedTeacherGroup(
+    institutionId: string,
+    academicYearId: string,
+    group: any,
+    groupAssignments: Assignment[],
+    classBlocks: any[],
+    teacherSlots: Map<string, Set<string>>,
+    groupSlots: Map<string, Set<string>>,
+    teacherAvailability: Map<string, any[]>,
+    groupRoomMap: Map<string, string>,
+    activeDays: DayOfWeek[],
+    entriesToCreate: any[],
+    conflicts: string[],
+    placedPerAssignment: Map<string, number>,
+  ): void {
+    const remaining = new Map<string, number>();
+    for (const a of groupAssignments) {
+      if (a.weeklyHours > 0) remaining.set(a.id, a.weeklyHours);
+      if (!placedPerAssignment.has(a.id)) placedPerAssignment.set(a.id, 0);
+    }
+
+    const totalNeeded = groupAssignments.reduce((s, a) => s + a.weeklyHours, 0);
+    if (totalNeeded === 0 || classBlocks.length === 0) return;
+
+    // Greedy: siempre asigna el sujeto con más horas restantes (distribución uniforme)
+    const getNext = (): Assignment | null => {
+      let best: Assignment | null = null;
+      let bestRem = 0;
+      for (const a of groupAssignments) {
+        const rem = remaining.get(a.id) || 0;
+        if (rem > bestRem) { bestRem = rem; best = a; }
+      }
+      return best;
+    };
+
+    const roomId = groupRoomMap.get(group.id) || null;
+
+    outer: for (const day of activeDays) {
+      for (const block of classBlocks) {
+        const next = getNext();
+        if (!next) break outer;
+
+        const slotKey = `${day}|${block.id}`;
+        if (this.isSlotTaken(group.id, slotKey, groupSlots)) continue;
+
+        const unavailable = (teacherAvailability.get(next.teacherId) || []).some(
+          ua => ua.dayOfWeek === day && ua.startTime <= block.startTime && ua.endTime >= block.endTime,
+        );
+        if (unavailable) continue;
+
+        if (!teacherSlots.has(next.teacherId)) teacherSlots.set(next.teacherId, new Set());
+        if (!groupSlots.has(group.id)) groupSlots.set(group.id, new Set());
+        teacherSlots.get(next.teacherId)!.add(slotKey);
+        groupSlots.get(group.id)!.add(slotKey);
+
+        entriesToCreate.push({
+          institutionId, academicYearId,
+          groupId: group.id,
+          timeBlockId: block.id,
+          dayOfWeek: day,
+          teacherAssignmentId: next.id,
+          roomId,
+        });
+
+        remaining.set(next.id, (remaining.get(next.id) || 1) - 1);
+        placedPerAssignment.set(next.id, (placedPerAssignment.get(next.id) || 0) + 1);
+      }
+    }
+
+    for (const a of groupAssignments) {
+      const placed = placedPerAssignment.get(a.id) || 0;
+      if (placed < a.weeklyHours) {
+        conflicts.push(
+          `${a.subjectName} (${group.name}, ${a.teacherName}): ${placed}/${a.weeklyHours} horas [FIXED_TEACHER]`,
+        );
+      }
+    }
   }
 
   /**

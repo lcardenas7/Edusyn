@@ -486,6 +486,20 @@ function ScheduleTab({ grades, selectedGroup, setSelectedGroup, gridData, loadin
     return allGroupsRaw.filter((g: any) => tutorIds.has(g.id))
   })()
 
+  // Fix race condition: after userCaps loads, redirect to first valid tutor group
+  useEffect(() => {
+    if (isManager || !userCaps || allGroupsRaw.length === 0) return
+    const tutorIds = new Set<string>(userCaps.tutorGroupIds || [])
+    if (tutorIds.size === 0) {
+      if (selectedGroup) setSelectedGroup('')
+      return
+    }
+    if (!selectedGroup || !tutorIds.has(selectedGroup)) {
+      const firstValid = allGroupsRaw.find((g: any) => tutorIds.has(g.id))
+      setSelectedGroup(firstValid?.id || '')
+    }
+  }, [userCaps]) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="space-y-4">
       {/* Group Selector */}
@@ -1041,7 +1055,7 @@ function ConflictsTab({ conflicts, loading }: any) {
 }
 
 // ═══════════════════════════════════════════════════════
-// GENERATOR TAB - Importar Excel, Generar y Exportar
+// GENERATOR TAB - Con selector de jornada y contexto persistente
 // ═══════════════════════════════════════════════════════
 
 function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated }: {
@@ -1050,7 +1064,13 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
   showMessage: (msg: string, type: 'success' | 'error') => void
   onScheduleGenerated: () => void
 }) {
-  const [step, setStep] = useState<'load' | 'preview' | 'configure' | 'generate' | 'result'>('load')
+  // ── Shift selector ──
+  const [shifts, setShifts] = useState<any[]>([])
+  const [selectedShiftId, setSelectedShiftId] = useState<string>('')
+  const [shiftsLoading, setShiftsLoading] = useState(false)
+
+  // ── Flow state ──
+  const [step, setStep] = useState<'load' | 'configure' | 'generate' | 'result'>('load')
   const [loading, setLoading] = useState(false)
   const [teachingLoad, setTeachingLoad] = useState<any>(null)
   const [importResult, setImportResult] = useState<any>(null)
@@ -1077,16 +1097,95 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
   })
   const [configSaved, setConfigSaved] = useState(false)
   const [configPreview, setConfigPreview] = useState<any[]>([])
-  const [configLoaded, setConfigLoaded] = useState(false)
+  const [contextLoaded, setContextLoaded] = useState(false)
 
   const allGroups = grades.flatMap(g => g.groups.map(gr => ({ ...gr, gradeName: g.name })))
 
-  // Cargar carga académica actual
+  const selectedShift = shifts.find(s => s.id === selectedShiftId)
+
+  // ── Load shifts on mount ──
+  useEffect(() => {
+    if (!academicYearId) return
+    setShiftsLoading(true)
+    timetablingGeneratorApi.getShifts()
+      .then(res => {
+        const data = res.data || []
+        setShifts(data)
+        if (data.length === 1 && !selectedShiftId) setSelectedShiftId(data[0].id)
+      })
+      .catch(() => {})
+      .finally(() => setShiftsLoading(false))
+  }, [academicYearId])
+
+  // ── Load persistent context when shift changes ──
+  useEffect(() => {
+    if (!academicYearId || !selectedShiftId) { setContextLoaded(false); return }
+    setContextLoaded(false)
+    timetablingGeneratorApi.getContext(academicYearId, selectedShiftId)
+      .then(res => {
+        const ctx = res.data
+        if (ctx) {
+          setScheduleConfig(prev => ({
+            ...prev,
+            startTime: ctx.startTime || prev.startTime,
+            classesPerDay: ctx.classesPerDay ?? prev.classesPerDay,
+            classDuration: ctx.classDurationMinutes ?? prev.classDuration,
+            breakDuration: ctx.breakDurationMinutes ?? prev.breakDuration,
+            breakAfterBlock: ctx.breakAfterBlock ?? prev.breakAfterBlock,
+            secondBreakAfterBlock: ctx.secondBreakAfterBlock ?? prev.secondBreakAfterBlock,
+            includeLunch: ctx.includeLunch ?? prev.includeLunch,
+            lunchDuration: ctx.lunchDurationMinutes ?? prev.lunchDuration,
+            lunchAfterBlock: ctx.lunchAfterBlock ?? prev.lunchAfterBlock,
+            includeTutoring: ctx.includeTutoring ?? prev.includeTutoring,
+            tutoringDuration: ctx.tutoringDurationMinutes ?? prev.tutoringDuration,
+            activeDays: ctx.activeDays?.length > 0 ? ctx.activeDays : prev.activeDays,
+          }))
+          setGenOptions({
+            clearExisting: ctx.clearExisting ?? true,
+            respectAvailability: ctx.respectAvailability ?? true,
+            groupTeacherBlocks: ctx.groupTeacherBlocks ?? true,
+          })
+          setSelectedGroupIds(ctx.selectedGroupIds || [])
+          setConfigSaved(ctx.configSaved ?? false)
+          if (ctx.lastGenerationResult) setGenerateResult(ctx.lastGenerationResult)
+          const validSteps = ['load', 'configure', 'generate', 'result']
+          if (ctx.lastStep && validSteps.includes(ctx.lastStep)) setStep(ctx.lastStep as any)
+        } else {
+          loadScheduleConfigFromBlocks()
+        }
+      })
+      .catch(() => {})
+      .finally(() => setContextLoaded(true))
+    loadTeachingLoad()
+  }, [academicYearId, selectedShiftId])
+
+  // ── Save context on step change ──
+  const saveContext = useCallback(async (overrides?: any) => {
+    if (!academicYearId || !selectedShiftId) return
+    try {
+      await timetablingGeneratorApi.saveContext({
+        academicYearId, shiftId: selectedShiftId, lastStep: step,
+        startTime: scheduleConfig.startTime, classesPerDay: scheduleConfig.classesPerDay,
+        classDurationMinutes: scheduleConfig.classDuration, breakDurationMinutes: scheduleConfig.breakDuration,
+        breakAfterBlock: scheduleConfig.breakAfterBlock, secondBreakAfterBlock: scheduleConfig.secondBreakAfterBlock,
+        includeLunch: scheduleConfig.includeLunch, lunchDurationMinutes: scheduleConfig.lunchDuration,
+        lunchAfterBlock: scheduleConfig.lunchAfterBlock, includeTutoring: scheduleConfig.includeTutoring,
+        tutoringDurationMinutes: scheduleConfig.tutoringDuration, activeDays: scheduleConfig.activeDays,
+        clearExisting: genOptions.clearExisting, respectAvailability: genOptions.respectAvailability,
+        groupTeacherBlocks: genOptions.groupTeacherBlocks, selectedGroupIds, configSaved,
+        ...overrides,
+      })
+    } catch (_) { /* non-critical */ }
+  }, [academicYearId, selectedShiftId, step, scheduleConfig, genOptions, selectedGroupIds, configSaved])
+
+  useEffect(() => { if (contextLoaded && selectedShiftId) saveContext() }, [step])
+
+  // ── Load teaching load for selected shift ──
   const loadTeachingLoad = async () => {
     if (!academicYearId) return
     setLoading(true)
     try {
-      const res = await timetablingGeneratorApi.getTeachingLoad(academicYearId)
+      const res = await timetablingGeneratorApi.getTeachingLoad(academicYearId, selectedShiftId || undefined)
       setTeachingLoad(res.data)
     } catch (err: any) {
       console.error('Error loading teaching load:', err)
@@ -1095,38 +1194,32 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
     }
   }
 
-  useEffect(() => { loadTeachingLoad() }, [academicYearId])
-
-  // Cargar configuración actual de bloques
-  const loadScheduleConfig = async () => {
-    if (configLoaded) return
+  // ── Load existing block config from TimeBlocks ──
+  const loadScheduleConfigFromBlocks = async () => {
     try {
-      const res = await timetablingGeneratorApi.getScheduleConfig()
+      const res = await timetablingGeneratorApi.getScheduleConfig(selectedShiftId || undefined)
       const d = res.data
       setScheduleConfig(prev => ({
         ...prev,
-        startTime: d.startTime || '06:30',
-        classesPerDay: d.classesPerDay || 7,
-        classDuration: d.classDurationMinutes || 55,
-        breakDuration: d.breakDurationMinutes || 15,
-        breakAfterBlock: d.breakAfterBlock > 0 ? d.breakAfterBlock : 2,
-        includeLunch: d.includeLunch ?? true,
-        lunchDuration: d.lunchDurationMinutes || 30,
-        lunchAfterBlock: d.lunchAfterBlock || 6,
-        includeTutoring: d.includeTutoring ?? true,
-        tutoringDuration: d.tutoringDurationMinutes || 55,
-        activeDays: d.activeDays || ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'],
+        startTime: d.startTime || prev.startTime,
+        classesPerDay: d.classesPerDay || prev.classesPerDay,
+        classDuration: d.classDurationMinutes || prev.classDuration,
+        breakDuration: d.breakDurationMinutes || prev.breakDuration,
+        breakAfterBlock: d.breakAfterBlock > 0 ? d.breakAfterBlock : prev.breakAfterBlock,
+        includeLunch: d.includeLunch ?? prev.includeLunch,
+        lunchDuration: d.lunchDurationMinutes || prev.lunchDuration,
+        lunchAfterBlock: d.lunchAfterBlock || prev.lunchAfterBlock,
+        includeTutoring: d.includeTutoring ?? prev.includeTutoring,
+        tutoringDuration: d.tutoringDurationMinutes || prev.tutoringDuration,
+        activeDays: d.activeDays || prev.activeDays,
       }))
-      setConfigLoaded(true)
-      if (d.existingBlocks?.length > 0) {
-        setConfigSaved(true)
-      }
+      if (d.existingBlocks?.length > 0) setConfigSaved(true)
     } catch (err) {
       console.error('Error loading config:', err)
     }
   }
 
-  // Calcular vista previa de bloques basado en config
+  // ── Compute block preview ──
   const computePreview = useCallback(() => {
     const blocks: { label: string; type: string; start: string; end: string }[] = []
     const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
@@ -1169,14 +1262,15 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
 
   useEffect(() => { computePreview() }, [computePreview])
 
-  // Guardar configuración
+  // Guardar configuración (scoped al shift seleccionado)
   const handleSaveConfig = async () => {
     setLoading(true)
     try {
-      const res = await timetablingGeneratorApi.configureSchedule(scheduleConfig)
+      const res = await timetablingGeneratorApi.configureSchedule({ ...scheduleConfig, shiftId: selectedShiftId || undefined })
       if (res.data.success) {
         showMessage(`Configuración guardada: ${res.data.classBlocks} bloques de clase, ${res.data.startTime} a ${res.data.endTime}`, 'success')
         setConfigSaved(true)
+        saveContext({ configSaved: true })
       } else {
         showMessage(res.data.error || 'Error al guardar configuración', 'error')
       }
@@ -1249,7 +1343,7 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
     }
   }
 
-  // Generar horario
+  // Generar horario (scoped al shift seleccionado)
   const handleGenerate = async () => {
     if (!academicYearId) return
     setLoading(true)
@@ -1257,6 +1351,7 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
     try {
       const res = await timetablingGeneratorApi.generateSchedule({
         academicYearId,
+        shiftId: selectedShiftId || undefined,
         groupIds: selectedGroupIds.length > 0 ? selectedGroupIds : undefined,
         clearExisting: genOptions.clearExisting,
         respectAvailability: genOptions.respectAvailability,
@@ -1326,23 +1421,59 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
 
   return (
     <div className="space-y-6">
-      {/* Step indicators */}
+      {/* ═══ SHIFT SELECTOR ═══ */}
+      <div className="bg-white border rounded-xl p-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <Building2 className="w-4 h-4 text-indigo-600" />
+            Jornada:
+          </div>
+          {shiftsLoading ? (
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500" />
+          ) : shifts.length === 0 ? (
+            <span className="text-sm text-gray-400">No hay jornadas. Importe la carga académica primero.</span>
+          ) : (
+            <div className="flex gap-2 flex-wrap">
+              {shifts.map(s => (
+                <button key={s.id} onClick={() => {
+                  if (s.id !== selectedShiftId) {
+                    setSelectedShiftId(s.id); setStep('load'); setTeachingLoad(null)
+                    setImportResult(null); setGenerateResult(null); setConfigSaved(false); setContextLoaded(false)
+                  }
+                }} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${selectedShiftId === s.id ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  {s.name} <span className="ml-1 text-xs opacity-75">({s.groupCount} grupos)</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {selectedShift && <p className="text-xs text-gray-400 mt-2">Sede: {selectedShift.campusName} · {selectedShift.timeBlockCount} bloques configurados</p>}
+      </div>
+
+      {!selectedShiftId && shifts.length > 0 && (
+        <div className="text-center py-12 text-gray-500">
+          <Building2 className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+          <p className="font-medium">Seleccione una jornada para continuar</p>
+          <p className="text-xs mt-1">Cada jornada tiene su propia configuración de horarios</p>
+        </div>
+      )}
+
+      {selectedShiftId && (<>
+      {/* Step indicators — 4 steps */}
       <div className="flex items-center gap-2 text-sm flex-wrap">
         {[
           { key: 'load', label: '1. Carga', icon: FileSpreadsheet },
-          { key: 'preview', label: '2. Revisar', icon: Eye },
-          { key: 'configure', label: '3. Configurar', icon: Settings },
-          { key: 'generate', label: '4. Generar', icon: Wand2 },
-          { key: 'result', label: '5. Resultado', icon: CheckCircle2 },
+          { key: 'configure', label: '2. Configurar', icon: Settings },
+          { key: 'generate', label: '3. Generar', icon: Wand2 },
+          { key: 'result', label: '4. Resultado', icon: CheckCircle2 },
         ].map((s, i) => {
           const Icon = s.icon
           const isActive = step === s.key
-          const stepOrder = ['load', 'preview', 'configure', 'generate', 'result']
+          const stepOrder = ['load', 'configure', 'generate', 'result']
           const currentIdx = stepOrder.indexOf(step)
           const isPast = currentIdx > i
           const canReach = (key: string) => {
             if (key === 'load') return true
-            if (key === 'preview') return teachingLoad?.assignments?.length > 0 || (importResult && importResult.created > 0)
             if (key === 'configure') return teachingLoad?.assignments?.length > 0
             if (key === 'generate') return teachingLoad?.assignments?.length > 0 && configSaved
             if (key === 'result') return !!generateResult
@@ -1352,11 +1483,7 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
           return (
             <button
               key={s.key}
-              onClick={() => {
-                if (!isReachable) return
-                if (s.key === 'configure') loadScheduleConfig()
-                setStep(s.key as any)
-              }}
+              onClick={() => { if (isReachable) setStep(s.key as any) }}
               disabled={!isReachable}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
                 isActive ? 'bg-indigo-100 text-indigo-700 font-medium'
@@ -1367,7 +1494,7 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
             >
               <Icon className="w-4 h-4" />
               {s.label}
-              {i < 4 && <ChevronDown className="w-3 h-3 -rotate-90 ml-1" />}
+              {i < 3 && <ChevronDown className="w-3 h-3 -rotate-90 ml-1" />}
             </button>
           )
         })}
@@ -1552,7 +1679,7 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
 
               {(teachingLoad.summary?.totalAssignments || 0) > 0 && (
                 <button
-                  onClick={() => { loadScheduleConfig(); setStep('configure') }}
+                  onClick={() => setStep('configure')}
                   className="mt-4 w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
                 >
                   <Settings className="w-5 h-5" />
@@ -1564,43 +1691,7 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
         </div>
       )}
 
-      {/* PASO 2: Revisar (preview) */}
-      {step === 'preview' && teachingLoad && (
-        <div className="bg-white border rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Vista Previa de Carga</h3>
-          <p className="text-sm text-gray-500 mb-4">Revise la carga académica antes de generar el horario.</p>
-          {/* Reuse the same table */}
-          <div className="max-h-96 overflow-y-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Docente</th>
-                  <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Email</th>
-                  <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Materia</th>
-                  <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Grupo</th>
-                  <th className="text-center px-3 py-2 text-xs font-medium text-gray-500">Horas</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {(teachingLoad.assignments || []).map((a: any) => (
-                  <tr key={a.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2">{a.teacherName}</td>
-                    <td className="px-3 py-2 text-gray-500 text-xs">{a.teacherEmail}</td>
-                    <td className="px-3 py-2">{a.subjectName}</td>
-                    <td className="px-3 py-2"><span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-medium">{a.groupName}</span></td>
-                    <td className="px-3 py-2 text-center font-medium">{a.weeklyHours}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <button onClick={() => { loadScheduleConfig(); setStep('configure') }} className="mt-4 w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2">
-            <Settings className="w-5 h-5" /> Continuar a Configurar
-          </button>
-        </div>
-      )}
-
-      {/* PASO 3: Configurar Parámetros */}
+      {/* PASO 2: Configurar Parámetros */}
       {step === 'configure' && (
         <div className="space-y-4">
           <div className="bg-white border rounded-xl p-6">
@@ -2046,6 +2137,8 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
           </button>
         </div>
       )}
+
+      </>)}
     </div>
   )
 }
@@ -2065,9 +2158,10 @@ const VIEW_MODES = [
 
 function ScheduleViewerTab({ academicYearId, isManager, user, userCaps }: { academicYearId: string; isManager?: boolean; user?: any; userCaps?: any }) {
   // Para docentes: solo mostrar su grupo de tutoría (no todos los que enseña)
-  const allowedGroupIds = !isManager && userCaps
-    ? new Set<string>(userCaps.tutorGroupIds || [])
-    : null // null = sin restricción
+  // null = sin restricción (managers); Set vacío = esperar carga; Set con ids = filtro activo
+  const allowedGroupIds = !isManager
+    ? (userCaps ? new Set<string>(userCaps.tutorGroupIds || []) : new Set<string>())
+    : null
 
   const defaultView = isManager ? 'by-grade' : 'by-teacher'
   const [viewMode, setViewMode] = useState<'total' | 'by-grade' | 'by-day' | 'by-teacher' | 'by-subject' | 'by-area'>(defaultView)
