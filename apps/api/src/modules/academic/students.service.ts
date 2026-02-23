@@ -818,7 +818,7 @@ export class StudentsService {
     groupId: string;
     academicYearId: string;
     institutionId: string;
-  }): Promise<Array<{ id: string; name: string; enrollmentId: string; documentNumber?: string }>> {
+  }): Promise<Array<{ id: string; name: string; enrollmentId: string; documentNumber?: string; hasDiagnosis: boolean; diagnosisType?: string }>> {
     const { groupId, academicYearId, institutionId } = params;
 
     const enrollments = await this.prisma.studentEnrollment.findMany({
@@ -840,6 +840,8 @@ export class StudentsService {
             lastName: true,
             secondLastName: true,
             documentNumber: true,
+            hasDiagnosis: true,
+            diagnosisType: true,
           },
         },
       },
@@ -861,6 +863,8 @@ export class StudentsService {
       ].filter(Boolean).join(' '),
       enrollmentId: enrollment.id,
       documentNumber: enrollment.student.documentNumber || undefined,
+      hasDiagnosis: enrollment.student.hasDiagnosis || false,
+      diagnosisType: enrollment.student.diagnosisType || undefined,
     }));
   }
 
@@ -871,7 +875,7 @@ export class StudentsService {
     groupIds: string[];
     academicYearId: string;
     institutionId: string;
-  }): Promise<Record<string, Array<{ id: string; name: string; enrollmentId: string; documentNumber?: string }>>> {
+  }): Promise<Record<string, Array<{ id: string; name: string; enrollmentId: string; documentNumber?: string; hasDiagnosis: boolean; diagnosisType?: string }>>> {
     const { groupIds, academicYearId, institutionId } = params;
 
     const enrollments = await this.prisma.studentEnrollment.findMany({
@@ -893,6 +897,8 @@ export class StudentsService {
             lastName: true,
             secondLastName: true,
             documentNumber: true,
+            hasDiagnosis: true,
+            diagnosisType: true,
           },
         },
       },
@@ -904,7 +910,7 @@ export class StudentsService {
     });
 
     // Agrupar por groupId
-    const result: Record<string, Array<{ id: string; name: string; enrollmentId: string; documentNumber?: string }>> = {};
+    const result: Record<string, Array<{ id: string; name: string; enrollmentId: string; documentNumber?: string; hasDiagnosis: boolean; diagnosisType?: string }>> = {};
     for (const enrollment of enrollments) {
       if (!result[enrollment.groupId]) {
         result[enrollment.groupId] = [];
@@ -919,6 +925,8 @@ export class StudentsService {
         ].filter(Boolean).join(' '),
         enrollmentId: enrollment.id,
         documentNumber: enrollment.student.documentNumber || undefined,
+        hasDiagnosis: enrollment.student.hasDiagnosis || false,
+        diagnosisType: enrollment.student.diagnosisType || undefined,
       });
     }
 

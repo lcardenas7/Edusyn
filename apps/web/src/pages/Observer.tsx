@@ -182,6 +182,8 @@ export default function Observer() {
           enrollmentId: e.id,
           studentId: e.student?.id || e.studentId,
           name: fullName(e.student),
+          hasDiagnosis: e.student?.hasDiagnosis || false,
+          diagnosisType: e.student?.diagnosisType || undefined,
         })).sort((a: any, b: any) => a.name.localeCompare(b.name)))
       } catch (err) {
         console.error('Error loading students:', err)

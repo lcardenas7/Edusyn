@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
-import { BookOpen, ChevronDown, Save, Plus, Trash2, X, Settings, AlertTriangle, Lock, Download, Upload, Library, Search, Copy, FileText } from 'lucide-react'
+import { BookOpen, ChevronDown, Save, Plus, Trash2, X, Settings, AlertTriangle, Lock, Download, Upload, Library, Search, Copy, FileText, Heart } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { useAuth } from '../contexts/AuthContext'
 import { useAcademic, type AcademicLevel, type QualitativeLevel } from '../contexts/AcademicContext'
@@ -60,6 +60,15 @@ const processColors = [
   { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', light: 'bg-purple-50/50', input: 'focus:ring-purple-500 focus:border-purple-500' },
   { bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200', light: 'bg-pink-50/50', input: 'focus:ring-pink-500 focus:border-pink-500' },
 ]
+
+function DiagnosisBadge({ student }: { student: { hasDiagnosis?: boolean; diagnosisType?: string } }) {
+  if (!student.hasDiagnosis) return null
+  return (
+    <span title={student.diagnosisType ? `Diagnóstico: ${student.diagnosisType}` : 'Estudiante con diagnóstico'} className="inline-flex items-center ml-1.5">
+      <Heart className="w-3.5 h-3.5 text-purple-500 fill-purple-200" />
+    </span>
+  )
+}
 
 interface Activity {
   id: string
@@ -424,7 +433,7 @@ export default function Grades() {
   }, [selectedAssignment?.academicYear?.id])
 
   // Estudiantes
-  const [students, setStudents] = useState<Array<{ id: string; name: string; enrollmentId: string }>>([])
+  const [students, setStudents] = useState<Array<{ id: string; name: string; enrollmentId: string; hasDiagnosis?: boolean; diagnosisType?: string }>>([])
   const [loadingStudents, setLoadingStudents] = useState(false)
 
   useEffect(() => {
@@ -1476,7 +1485,7 @@ export default function Grades() {
                   const selectedQl = qualitativeLevels.find(ql => ql.code === qg.levelCode)
                   return (
                     <tr key={student.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-3 font-medium text-slate-900">{student.name}</td>
+                      <td className="px-4 py-3 font-medium text-slate-900">{student.name}<DiagnosisBadge student={student} /></td>
                       <td className="px-4 py-3 text-center">
                         <select
                           value={qg.levelCode}
@@ -1562,7 +1571,7 @@ export default function Grades() {
                   const performance = getPerformanceLevel(grade)
                   return (
                     <tr key={student.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-3 font-medium text-slate-900">{student.name}</td>
+                      <td className="px-4 py-3 font-medium text-slate-900">{student.name}<DiagnosisBadge student={student} /></td>
                       <td className="px-4 py-3 text-center">
                         <input
                           type="number"
@@ -1720,7 +1729,7 @@ export default function Grades() {
                   return (
                     <tr key={student.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-3 py-2 font-medium text-slate-900 border-r border-slate-100 sticky left-0 bg-white z-10">
-                        {student.name}
+                        {student.name}<DiagnosisBadge student={student} />
                       </td>
                       
                       {processConfigs.map((process) => {
@@ -1814,7 +1823,7 @@ export default function Grades() {
                   
                   return (
                     <tr key={student.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 font-medium text-slate-900">{student.name}</td>
+                      <td className="px-6 py-4 font-medium text-slate-900">{student.name}<DiagnosisBadge student={student} /></td>
                       {processConfigs.map((process) => {
                         const colors = processColors[process.colorIndex]
                         const avg = calculateProcessAvg(student.id, process.code)
@@ -1986,7 +1995,7 @@ export default function Grades() {
                       
                       return (
                         <tr key={student.id} className="hover:bg-slate-50">
-                          <td className="px-4 py-3 font-medium text-slate-900">{student.name}</td>
+                          <td className="px-4 py-3 font-medium text-slate-900">{student.name}<DiagnosisBadge student={student} /></td>
                           <td className="px-4 py-3 text-center">
                             <span className="text-lg font-bold">{finalGrade > 0 ? finalGrade.toFixed(1) : '-'}</span>
                           </td>

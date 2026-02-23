@@ -35,13 +35,6 @@ export class PedagogicalSupportService {
       throw new BadRequestException('La matrícula no pertenece a esta institución');
     }
 
-    // Validar que el grado usa estructura DIMENSIONS
-    if (enrollment.group?.grade?.academicStructure !== 'DIMENSIONS') {
-      throw new BadRequestException(
-        'El acompañamiento pedagógico solo aplica para estructura DIMENSIONS (preescolar)',
-      );
-    }
-
     // Prevenir duplicados: no permitir más de un plan ACTIVO por estudiante+período
     const existingActive = await this.prisma.pedagogicalSupportPlan.findFirst({
       where: {

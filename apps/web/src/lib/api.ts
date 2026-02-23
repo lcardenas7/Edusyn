@@ -1547,3 +1547,87 @@ export const pedagogicalSupportApi = {
     api.get(`/pedagogical-support/by-group/${groupId}`, { params: { academicTermId, status } }),
   getById: (id: string) => api.get(`/pedagogical-support/${id}`),
 }
+
+// ============================================
+// APD — ACOMPAÑAMIENTO PEDAGÓGICO DIFERENCIAL
+// ============================================
+
+export const apdApi = {
+  // Configuración institucional
+  getConfig: () => api.get('/apd/config'),
+  updateConfig: (data: { enableDifferentialSupport?: boolean; allowTeacherAccess?: boolean }) =>
+    api.put('/apd/config', data),
+
+  // Perfiles de acompañamiento
+  createProfile: (data: {
+    studentId: string;
+    supportCategory: string;
+    pedagogicalNotes?: string;
+    parentConsentAccepted?: boolean;
+    consentDate?: string;
+    consentDocumentUrl?: string;
+  }) => api.post('/apd/profiles', data),
+  updateProfile: (id: string, data: {
+    supportCategory?: string;
+    pedagogicalNotes?: string;
+    parentConsentAccepted?: boolean;
+    consentDate?: string;
+    consentDocumentUrl?: string;
+    active?: boolean;
+  }) => api.put(`/apd/profiles/${id}`, data),
+  getProfile: (id: string) => api.get(`/apd/profiles/${id}`),
+  getProfileByStudent: (studentId: string) => api.get(`/apd/profiles/by-student/${studentId}`),
+  getProfiles: (params?: { active?: string; search?: string }) =>
+    api.get('/apd/profiles', { params }),
+
+  // Planes de acompañamiento (APD extendido)
+  createPlan: (data: {
+    studentEnrollmentId: string;
+    academicTermId: string;
+    supportProfileId?: string;
+    achievementId?: string;
+    supportStrategy: string;
+    familyCommitment?: string;
+    followUpDate?: string;
+    observations?: string;
+    objectives?: any;
+    adaptationStrategies?: any;
+    evaluationAdjustments?: any;
+  }) => api.post('/apd/plans', data),
+  updatePlan: (id: string, data: {
+    supportStrategy?: string;
+    familyCommitment?: string;
+    followUpDate?: string;
+    observations?: string;
+    objectives?: any;
+    adaptationStrategies?: any;
+    evaluationAdjustments?: any;
+    status?: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  }) => api.put(`/apd/plans/${id}`, data),
+  getPlan: (id: string) => api.get(`/apd/plans/${id}`),
+
+  // Actividades
+  createActivity: (data: {
+    supportPlanId: string;
+    topic: string;
+    originalActivityDescription?: string;
+    teacherFinalActivity?: string;
+    adaptationLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+  }) => api.post('/apd/activities', data),
+  updateActivity: (id: string, data: {
+    topic?: string;
+    originalActivityDescription?: string;
+    teacherFinalActivity?: string;
+    adaptationLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+    completionStatus?: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+    teacherFeedback?: string;
+    studentPerformanceScore?: number;
+  }) => api.put(`/apd/activities/${id}`, data),
+
+  // Logs de progreso
+  createProgressLog: (data: {
+    supportPlanId: string;
+    progressIndicator: number;
+    qualitativeObservation?: string;
+  }) => api.post('/apd/progress-logs', data),
+}

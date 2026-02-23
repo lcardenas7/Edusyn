@@ -1607,7 +1607,7 @@ function StudentAchievementCard({
   onUpdateObservation,
   saving,
 }: {
-  student: { id: string; name: string; enrollmentId: string }
+  student: { id: string; name: string; enrollmentId: string; hasDiagnosis?: boolean; diagnosisType?: string }
   grade: number
   level: PerformanceLevel
   studentAchievement?: StudentAchievement
@@ -1656,7 +1656,7 @@ function StudentAchievementCard({
 
         {/* Student info */}
         <div className="flex-1 min-w-0">
-          <span className="font-medium text-slate-800 text-sm truncate block">{student.name}</span>
+          <span className="font-medium text-slate-800 text-sm truncate block">{student.name}{student.hasDiagnosis && <span title={student.diagnosisType ? `Diagnóstico: ${student.diagnosisType}` : 'Estudiante con diagnóstico'} className="inline-flex items-center ml-1.5"><Heart className="w-3.5 h-3.5 text-purple-500 fill-purple-200" /></span>}</span>
         </div>
 
         {/* Grade + Level */}

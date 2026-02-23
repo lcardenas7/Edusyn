@@ -27,6 +27,8 @@ interface AcademicStudent {
   name: string;
   enrollmentId: string;
   documentNumber?: string;
+  hasDiagnosis: boolean;
+  diagnosisType?: string;
 }
 
 @Controller('academic/students')

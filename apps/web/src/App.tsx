@@ -38,6 +38,7 @@ import AcademicCatalog from './pages/AcademicCatalog'
 import AcademicTemplates from './pages/AcademicTemplates'
 import ForceChangePassword from './pages/ForceChangePassword'
 import PedagogicalSupport from './pages/PedagogicalSupport'
+import DifferentialSupport from './pages/DifferentialSupport'
 import Layout from './components/Layout'
 
 // Nuevas páginas por dominio (Refactor UX)
@@ -288,6 +289,7 @@ function App() {
                   <Route path="/students/recoveries" element={<Recoveries />} />
                   <Route path="/students/pedagogical-support" element={<PedagogicalSupport />} />
                   <Route path="/pedagogical-support" element={<PedagogicalSupport />} />
+                  <Route path="/differential-support" element={<DifferentialSupport />} />
                   
                   {/* ═══════════════════════════════════════════════════════════ */}
                   {/* MÓDULO FINANCIERO                                            */}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Calendar, Check, X, Clock, FileText, ChevronDown, AlertTriangle, Save, Users } from 'lucide-react'
+import { Calendar, Check, X, Clock, FileText, ChevronDown, AlertTriangle, Save, Users, Heart } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { teacherAssignmentsApi, academicStudentsApi, attendanceApi, tutoringAttendanceApi, academicYearsApi, storageApi } from '../lib/api'
 
@@ -33,7 +33,7 @@ export default function Attendance() {
   const [tutoringEnabled, setTutoringEnabled] = useState(false)
   const [directedGroups, setDirectedGroups] = useState<Array<{ id: string; name: string; gradeName?: string }>>([]) 
   const [selectedTutoringGroupId, setSelectedTutoringGroupId] = useState<string>('')
-  const [tutoringStudents, setTutoringStudents] = useState<Array<{ id: string; name: string; enrollmentId: string; status: string }>>([])
+  const [tutoringStudents, setTutoringStudents] = useState<Array<{ id: string; name: string; enrollmentId: string; status: string; hasDiagnosis?: boolean; diagnosisType?: string }>>([])
   const [loadingTutoringStudents, setLoadingTutoringStudents] = useState(false)
   const [savingTutoring, setSavingTutoring] = useState(false)
   const [tutoringMessage, setTutoringMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -57,7 +57,7 @@ export default function Attendance() {
   // Coordinador/Admin puede modificar cualquier día
   const canEdit = isAdmin || date === today
   
-  const [students, setStudents] = useState<Array<{ id: string; name: string; enrollmentId: string; status: string }>>([])
+  const [students, setStudents] = useState<Array<{ id: string; name: string; enrollmentId: string; status: string; hasDiagnosis?: boolean; diagnosisType?: string }>>([])
   const [loadingStudents, setLoadingStudents] = useState(false)
 
   // Obtener asignaturas únicas
@@ -603,7 +603,7 @@ export default function Attendance() {
                         {student.name.split(' ').map((n: string) => n[0]).join('')}
                       </span>
                     </div>
-                    <span className="font-medium text-slate-900">{student.name}</span>
+                    <span className="font-medium text-slate-900">{student.name}{student.hasDiagnosis && <span title={student.diagnosisType ? `Diagnóstico: ${student.diagnosisType}` : 'Estudiante con diagnóstico'} className="inline-flex items-center ml-1.5"><Heart className="w-3.5 h-3.5 text-purple-500 fill-purple-200" /></span>}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     {Object.entries(statusConfig).map(([status, cfg]) => (
@@ -775,7 +775,7 @@ export default function Attendance() {
                       {student.name.split(' ').map(n => n[0]).join('')}
                     </span>
                   </div>
-                  <span className="font-medium text-slate-900">{student.name}</span>
+                  <span className="font-medium text-slate-900">{student.name}{student.hasDiagnosis && <span title={student.diagnosisType ? `Diagnóstico: ${student.diagnosisType}` : 'Estudiante con diagnóstico'} className="inline-flex items-center ml-1.5"><Heart className="w-3.5 h-3.5 text-purple-500 fill-purple-200" /></span>}</span>
                 </div>
 
                 <div className="flex items-center gap-2">

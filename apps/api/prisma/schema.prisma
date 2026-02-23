@@ -337,6 +337,8 @@ model User {
   
   // Acompañamiento pedagógico
   pedagogicalSupportsCompleted PedagogicalSupportPlan[] @relation("PedagogicalSupportCompletedBy")
+  supportProgressLogs          SupportProgressLog[]     @relation("SupportProgressLogCreatedBy")
+  apdAuditLogs                 ApdAuditLog[]            @relation("ApdAuditLogUser")
   
   // Asistencia de tutoría
   tutoringAttendancesAsTeacher TutoringAttendance[] @relation("TutoringAttendanceTeacher")
@@ -397,6 +399,10 @@ model Institution {
   
   // Períodos Académicos (JSON)
   periodsConfig           Json?                // Períodos con fechas y ponderaciones
+  
+  // Acompañamiento Pedagógico Diferencial (APD)
+  enableDifferentialSupport Boolean            @default(false) // Activa/desactiva módulo APD
+  allowTeacherAccess        Boolean            @default(true)  // Permite a docentes acceder al módulo APD
 
   // Relaciones
   createdBy   User?             @relation("InstitutionCreatedBy", fields: [createdById], references: [id])
@@ -490,6 +496,10 @@ model Institution {
   rlsPreventiveAlerts         PreventiveAlert[]         @relation("RlsInstitutionPA")
   rlsPedagogicalSupportPlans  PedagogicalSupportPlan[]  @relation("RlsInstitutionPSP")
   rlsTutoringAttendances      TutoringAttendance[]      @relation("RlsInstitutionTutAtt")
+  
+  // APD (Acompañamiento Pedagógico Diferencial)
+  rlsEducationalSupportProfiles EducationalSupportProfile[] @relation("RlsInstitutionESP")
+  rlsApdAuditLogs               ApdAuditLog[]              @relation("RlsInstitutionApdAudit")
 }
 
 // Módulos habilitados por institución
@@ -1241,6 +1251,9 @@ model Student {
   
   // Pagos
   payments      StudentPayment[]
+  
+  // APD (Acompañamiento Pedagógico Diferencial)
+  educationalSupportProfiles EducationalSupportProfile[]
 
   @@unique([institutionId, documentNumber])
 }
@@ -4188,9 +4201,10 @@ model InstitutionRoleCapability {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ACOMPAÑAMIENTO PEDAGÓGICO (solo para estructura DIMENSIONS / preescolar)
-// Planes de apoyo pedagógico para estudiantes con desempeño BAJO.
+// ACOMPAÑAMIENTO PEDAGÓGICO DIFERENCIAL (APD)
+// Planes de apoyo pedagógico para estudiantes de TODOS los niveles.
 // NO modifica notas, NO recalcula promedios, NO impacta promoción.
+// Fase 1: Sin integración IA. Preparado para Fase 2 (IA desacoplada).
 // ═══════════════════════════════════════════════════════════════════════════
 
 model PedagogicalSupportPlan {
@@ -4199,11 +4213,18 @@ model PedagogicalSupportPlan {
   studentEnrollmentId String
   achievementId       String?       // dimensión específica (opcional)
   academicTermId      String
+  supportProfileId    String?       // Vínculo con perfil APD (opcional para planes legacy)
 
   supportStrategy     String        @db.Text
   familyCommitment    String?       @db.Text
   followUpDate        DateTime?
   observations        String?       @db.Text
+
+  // APD Fase 1: campos extendidos
+  objectives              Json?     // Array de objetivos pedagógicos
+  adaptationStrategies    Json?     // Estrategias de adaptación curricular
+  evaluationAdjustments   Json?     // Ajustes evaluativos razonables
+  progressPercentage      Decimal?  @db.Decimal(5, 2) // 0.00–100.00 calculado automáticamente
 
   status              SupportStatus @default(ACTIVE)
 
@@ -4219,9 +4240,150 @@ model PedagogicalSupportPlan {
   achievement         Achievement?      @relation(fields: [achievementId], references: [id])
   academicTerm        AcademicTerm      @relation(fields: [academicTermId], references: [id])
   completedBy         User?             @relation("PedagogicalSupportCompletedBy", fields: [completedById], references: [id])
+  supportProfile      EducationalSupportProfile? @relation(fields: [supportProfileId], references: [id])
+
+  // APD: relaciones con actividades y logs de progreso
+  activities          SupportActivity[]
+  progressLogs        SupportProgressLog[]
 
   @@index([institutionId])
   @@index([studentEnrollmentId])
   @@index([academicTermId])
   @@index([status])
+  @@index([supportProfileId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PERFIL DE ACOMPAÑAMIENTO EDUCATIVO
+// Separa información pedagógica del diagnóstico clínico.
+// Gestiona consentimiento parental (Decreto 1421 de 2017).
+// ═══════════════════════════════════════════════════════════════════════════
+
+model EducationalSupportProfile {
+  id                    String    @id @default(uuid())
+  institutionId         String
+  studentId             String
+
+  supportCategory       String    // Categoría configurable por institución (ej: "Ritmo de aprendizaje", "Barrera comunicativa")
+  pedagogicalNotes      String?   @db.Text
+
+  // Consentimiento parental obligatorio
+  parentConsentAccepted Boolean   @default(false)
+  consentDate           DateTime?
+  consentDocumentUrl    String?
+
+  active                Boolean   @default(false) // No se puede activar sin consentimiento
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  institution           Institution @relation("RlsInstitutionESP", fields: [institutionId], references: [id])
+  student               Student     @relation(fields: [studentId], references: [id])
+  supportPlans          PedagogicalSupportPlan[]
+
+  @@unique([institutionId, studentId]) // Un perfil por estudiante por institución
+  @@index([institutionId])
+  @@index([studentId])
+  @@index([active])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ACTIVIDADES DE ACOMPAÑAMIENTO
+// Seguimiento granular de actividades dentro de un plan pedagógico.
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum AdaptationLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ActivityCompletionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+model SupportActivity {
+  id                          String                   @id @default(uuid())
+  supportPlanId               String
+
+  topic                       String
+  originalActivityDescription String?                  @db.Text
+  teacherFinalActivity        String?                  @db.Text
+  adaptationLevel             AdaptationLevel          @default(MEDIUM)
+  completionStatus            ActivityCompletionStatus @default(PENDING)
+  teacherFeedback             String?                  @db.Text
+  studentPerformanceScore     Int?                     // 0–100
+
+  createdAt                   DateTime                 @default(now())
+  updatedAt                   DateTime                 @updatedAt
+
+  supportPlan                 PedagogicalSupportPlan   @relation(fields: [supportPlanId], references: [id], onDelete: Cascade)
+
+  @@index([supportPlanId])
+  @@index([completionStatus])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LOG DE PROGRESO DE ACOMPAÑAMIENTO
+// Historial cualitativo y cuantitativo de seguimiento.
+// ═══════════════════════════════════════════════════════════════════════════
+
+model SupportProgressLog {
+  id                      String                 @id @default(uuid())
+  supportPlanId           String
+
+  progressIndicator       Int                    // 1–5
+  qualitativeObservation  String?                @db.Text
+
+  createdById             String
+  createdAt               DateTime               @default(now())
+
+  supportPlan             PedagogicalSupportPlan @relation(fields: [supportPlanId], references: [id], onDelete: Cascade)
+  createdBy               User                   @relation("SupportProgressLogCreatedBy", fields: [createdById], references: [id])
+
+  @@index([supportPlanId])
+  @@index([createdById])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AUDITORÍA DEL MÓDULO APD
+// Registra toda acción sobre perfiles, planes y consultas.
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum ApdAuditAction {
+  PROFILE_CREATED
+  PROFILE_UPDATED
+  PROFILE_ACTIVATED
+  PROFILE_DEACTIVATED
+  PROFILE_VIEWED
+  PLAN_CREATED
+  PLAN_UPDATED
+  PLAN_STATUS_CHANGED
+  PLAN_PROGRESS_UPDATED
+  ACTIVITY_CREATED
+  ACTIVITY_UPDATED
+  PROGRESS_LOG_CREATED
+}
+
+model ApdAuditLog {
+  id              String          @id @default(uuid())
+  institutionId   String
+  userId          String
+  action          ApdAuditAction
+  entityType      String          // "EducationalSupportProfile" | "PedagogicalSupportPlan" | "SupportActivity" | "SupportProgressLog"
+  entityId        String
+  details         Json?           // Datos adicionales del cambio
+  ipAddress       String?
+
+  createdAt       DateTime        @default(now())
+
+  institution     Institution     @relation("RlsInstitutionApdAudit", fields: [institutionId], references: [id])
+  user            User            @relation("ApdAuditLogUser", fields: [userId], references: [id])
+
+  @@index([institutionId])
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }
