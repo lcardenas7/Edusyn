@@ -361,6 +361,18 @@ const AVAILABLE_MODULES: ModuleConfig[] = [
     ]
   },
   { 
+    id: 'DIAGNOSIS', 
+    name: 'Diagnóstico y Seguimiento', 
+    description: 'Diagnóstico educativo, acompañamiento e inclusión',
+    features: [
+      { id: 'DIAGNOSIS_VIEW', name: 'Ver Diagnósticos', description: 'Consultar diagnósticos de estudiantes' },
+      { id: 'DIAGNOSIS_MANAGE', name: 'Gestionar Diagnósticos', description: 'Registrar y actualizar diagnósticos' },
+      { id: 'DIAGNOSIS_SUPPORT', name: 'Acompañamiento Pedagógico', description: 'Planes de acompañamiento y PIAR' },
+      { id: 'DIAGNOSIS_INCLUSION', name: 'Inclusión Educativa', description: 'Gestión de apoyos diferenciales' },
+      { id: 'DIAGNOSIS_REPORTS', name: 'Reportes', description: 'Reportes de diagnóstico y seguimiento' },
+    ]
+  },
+  { 
     id: 'FINANCE', 
     name: 'Gestión Financiera', 
     description: 'Cobros, pagos, egresos y reportes financieros',

@@ -411,12 +411,12 @@ export default function Layout({ children }: { children: ReactNode }) {
       {/* Sidebar */}
       <aside className={`
         fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 shadow-sm
-        transform transition-transform duration-300 ease-in-out
+        transform transition-transform duration-300 ease-in-out flex flex-col
         lg:translate-x-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:top-0 top-14
       `}>
-        <div className="hidden lg:flex items-center justify-between px-6 py-5 border-b border-slate-200">
+        <div className="hidden lg:flex items-center justify-between px-6 py-5 border-b border-slate-200 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
               <GraduationCap className="w-6 h-6 text-white" />
@@ -440,7 +440,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           </button>
         </div>
 
-        <nav className="px-3 py-4 space-y-1 overflow-y-auto max-h-[calc(100vh-200px)] lg:max-h-[calc(100vh-200px)]">
+        <nav className="px-3 py-4 space-y-1 overflow-y-auto flex-1 min-h-0">
           {filteredNavigation.map((item) => {
             const hasChildren = item.children && item.children.length > 0
             const isExpanded = expandedMenus.includes(item.name)
@@ -515,7 +515,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-200 bg-white">
+        <div className="flex-shrink-0 p-4 border-t border-slate-200 bg-white">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-9 h-9 bg-slate-200 rounded-full flex items-center justify-center">
               <span className="text-sm font-medium text-slate-600">

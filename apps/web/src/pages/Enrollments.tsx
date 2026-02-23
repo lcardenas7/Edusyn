@@ -26,7 +26,9 @@ import { useAuth } from '../contexts/AuthContext'
 interface Student {
   id: string
   firstName: string
+  secondName?: string
   lastName: string
+  secondLastName?: string
   documentNumber: string
   documentType: string
   email?: string
@@ -91,10 +93,13 @@ const Enrollments: React.FC = () => {
   // Filtros y búsqueda
   const [filters, setFilters] = useState<EnrollmentFilters>({
     academicYearId: '',
+    gradeId: '',
+    groupId: '',
     status: '',
     search: ''
   })
   const [showFilters, setShowFilters] = useState(false)
+  const [allGroups, setAllGroups] = useState<Group[]>([])
   
   // Modales y acciones
   const [selectedEnrollment, setSelectedEnrollment] = useState<Enrollment | null>(null)
@@ -124,6 +129,7 @@ const Enrollments: React.FC = () => {
   useEffect(() => {
     if (institution?.id) {
       loadAcademicYears()
+      loadAllGroups()
     }
   }, [institution])
 
@@ -160,6 +166,28 @@ const Enrollments: React.FC = () => {
     }
   }
 
+  const loadAllGroups = async () => {
+    try {
+      const response = await groupsApi.getAll({ institutionId: institution!.id })
+      setAllGroups(response.data || [])
+    } catch (err) {
+      console.error('Error loading groups:', err)
+    }
+  }
+
+  // Extraer grados únicos de los grupos
+  const uniqueGrades = allGroups.reduce((acc: { id: string; name: string }[], g: Group) => {
+    if (g.grade && !acc.some(gr => gr.id === g.grade.id)) {
+      acc.push({ id: g.grade.id, name: g.grade.name })
+    }
+    return acc
+  }, []).sort((a, b) => a.name.localeCompare(b.name))
+
+  // Filtrar grupos por grado seleccionado
+  const filteredGroups = filters.gradeId
+    ? allGroups.filter(g => g.grade?.id === filters.gradeId)
+    : allGroups
+
   const loadEnrollments = async () => {
     if (!filters.academicYearId) return
     
@@ -169,8 +197,10 @@ const Enrollments: React.FC = () => {
     try {
       const response = await enrollmentsApi.getAll({
         academicYearId: filters.academicYearId,
-        status: filters.status,
-        search: filters.search
+        gradeId: filters.gradeId || undefined,
+        groupId: filters.groupId || undefined,
+        status: filters.status || undefined,
+        search: filters.search || undefined
       })
       setEnrollments(response.data)
     } catch (err: any) {
@@ -424,57 +454,87 @@ const Enrollments: React.FC = () => {
           </div>
 
           {showFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Año Académico</label>
-                <select
-                  value={filters.academicYearId}
-                  onChange={(e) => setFilters({ ...filters, academicYearId: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Todos</option>
-                  {academicYears.map(year => (
-                    <option key={year.id} value={year.id}>
-                      {year.name} ({year.year})
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Año Académico</label>
+                  <select
+                    value={filters.academicYearId}
+                    onChange={(e) => setFilters({ ...filters, academicYearId: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Todos</option>
+                    {academicYears.map(year => (
+                      <option key={year.id} value={year.id}>
+                        {year.name} ({year.year})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
-                <select
-                  value={filters.status}
-                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Todos</option>
-                  <option value="ACTIVE">Activo</option>
-                  <option value="PROMOTED">Promovido</option>
-                  <option value="REPEATED">Repite</option>
-                  <option value="WITHDRAWN">Retirado</option>
-                  <option value="TRANSFERRED">Transferido</option>
-                </select>
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Grado</label>
+                  <select
+                    value={filters.gradeId || ''}
+                    onChange={(e) => setFilters({ ...filters, gradeId: e.target.value, groupId: '' })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Todos los grados</option>
+                    {uniqueGrades.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Búsqueda</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    value={filters.search}
-                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                    placeholder="Buscar por nombre, documento..."
-                    className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Grupo</label>
+                  <select
+                    value={filters.groupId || ''}
+                    onChange={(e) => setFilters({ ...filters, groupId: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Todos los grupos</option>
+                    {filteredGroups.map(g => (
+                      <option key={g.id} value={g.id}>{g.grade?.name} {g.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+                  <select
+                    value={filters.status}
+                    onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Todos</option>
+                    <option value="ACTIVE">Activo</option>
+                    <option value="PROMOTED">Promovido</option>
+                    <option value="REPEATED">Repite</option>
+                    <option value="WITHDRAWN">Retirado</option>
+                    <option value="TRANSFERRED">Transferido</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Búsqueda</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      value={filters.search}
+                      onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                      placeholder="Buscar por nombre, documento..."
+                      className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-end">
+              <div className="flex items-center justify-end">
                 <button
                   onClick={loadEnrollments}
-                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Aplicar Filtros
                 </button>
@@ -552,7 +612,7 @@ const Enrollments: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-slate-900">
-                            {enrollment.student.lastName} {enrollment.student.firstName}
+                            {[enrollment.student.lastName, enrollment.student.secondLastName, enrollment.student.firstName, enrollment.student.secondName].filter(Boolean).join(' ')}
                           </div>
                           {enrollment.student.email && (
                             <div className="text-xs text-slate-500">{enrollment.student.email}</div>
@@ -673,7 +733,7 @@ const Enrollments: React.FC = () => {
             
             <div className="mb-4">
               <p className="text-sm text-slate-600 mb-2">
-                <strong>Estudiante:</strong> {selectedEnrollment.student.lastName} {selectedEnrollment.student.firstName}
+                <strong>Estudiante:</strong> {[selectedEnrollment.student.lastName, selectedEnrollment.student.secondLastName, selectedEnrollment.student.firstName, selectedEnrollment.student.secondName].filter(Boolean).join(' ')}
               </p>
               <p className="text-sm text-slate-600">
                 <strong>Grupo actual:</strong> {selectedEnrollment.group.name}
@@ -753,7 +813,7 @@ const Enrollments: React.FC = () => {
             
             <div className="mb-4">
               <p className="text-sm text-slate-600 mb-2">
-                <strong>Estudiante:</strong> {selectedEnrollment.student.lastName} {selectedEnrollment.student.firstName}
+                <strong>Estudiante:</strong> {[selectedEnrollment.student.lastName, selectedEnrollment.student.secondLastName, selectedEnrollment.student.firstName, selectedEnrollment.student.secondName].filter(Boolean).join(' ')}
               </p>
               <p className="text-sm text-slate-600">
                 <strong>Grupo actual:</strong> {selectedEnrollment.group.name}
@@ -846,7 +906,7 @@ const Enrollments: React.FC = () => {
             
             <div className="mb-4">
               <p className="text-sm text-slate-600 mb-2">
-                <strong>Estudiante:</strong> {selectedEnrollment.student.lastName} {selectedEnrollment.student.firstName}
+                <strong>Estudiante:</strong> {[selectedEnrollment.student.lastName, selectedEnrollment.student.secondLastName, selectedEnrollment.student.firstName, selectedEnrollment.student.secondName].filter(Boolean).join(' ')}
               </p>
               <p className="text-sm text-slate-600">
                 <strong>Grupo actual:</strong> {selectedEnrollment.group.name} ({selectedEnrollment.group.grade.name})
@@ -1031,7 +1091,7 @@ const Enrollments: React.FC = () => {
             
             <div className="mb-4">
               <p className="text-sm text-slate-600 mb-2">
-                <strong>Estudiante:</strong> {selectedEnrollment.student.lastName} {selectedEnrollment.student.firstName}
+                <strong>Estudiante:</strong> {[selectedEnrollment.student.lastName, selectedEnrollment.student.secondLastName, selectedEnrollment.student.firstName, selectedEnrollment.student.secondName].filter(Boolean).join(' ')}
               </p>
               <p className="text-sm text-slate-600">
                 <strong>Documento:</strong> {selectedEnrollment.student.documentType} {selectedEnrollment.student.documentNumber}

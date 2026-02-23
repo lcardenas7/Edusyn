@@ -3,7 +3,7 @@ import {
   ClipboardList, Search, Plus, Eye, X, Save, Bell,
   ThumbsUp, AlertTriangle, AlertOctagon, FileText, Phone,
   Handshake, Brain, Send, Users, BookOpen,
-  Activity, Shield,
+  Activity, Shield, Edit2,
   CheckCircle, XCircle, Trash2, BarChart3, Loader2,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
@@ -96,6 +96,8 @@ export default function Observer() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedObs, setSelectedObs] = useState<any>(null)
+  const [editingObs, setEditingObs] = useState(false)
+  const [editForm, setEditForm] = useState({ type: '', category: '', description: '', actionTaken: '', requiresFollowUp: false, followUpDate: '', followUpNotes: '' })
   const [activeTab, setActiveTab] = useState<'observations' | 'summary'>('observations')
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [saving, setSaving] = useState(false)
@@ -112,6 +114,8 @@ export default function Observer() {
     requiresFollowUp: false,
     followUpDate: '',
   })
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
+  const [studentSearchTerm, setStudentSearchTerm] = useState('')
 
   // Toast auto-dismiss
   useEffect(() => {
@@ -250,21 +254,36 @@ export default function Observer() {
 
   // ─── Handlers ─────────────────────────────────────────────────────────
   const handleCreate = async () => {
-    if (!formData.studentEnrollmentId || !formData.description) return
+    if (selectedStudentIds.length === 0 || !formData.description) return
     setSaving(true)
     try {
-      await observerApi.create({
-        studentEnrollmentId: formData.studentEnrollmentId,
-        date: formData.date,
-        type: formData.type,
-        category: formData.category,
-        description: formData.description,
-        actionTaken: formData.actionTaken || undefined,
-        requiresFollowUp: formData.requiresFollowUp,
-        followUpDate: formData.followUpDate || undefined,
-      })
-      setToast({ msg: 'Observación registrada correctamente', type: 'success' })
+      let created = 0
+      let errors = 0
+      for (const enrollmentId of selectedStudentIds) {
+        try {
+          await observerApi.create({
+            studentEnrollmentId: enrollmentId,
+            date: formData.date,
+            type: formData.type,
+            category: formData.category,
+            description: formData.description,
+            actionTaken: formData.actionTaken || undefined,
+            requiresFollowUp: formData.requiresFollowUp,
+            followUpDate: formData.followUpDate || undefined,
+          })
+          created++
+        } catch {
+          errors++
+        }
+      }
+      if (errors > 0) {
+        setToast({ msg: `${created} observación(es) registrada(s), ${errors} error(es)`, type: created > 0 ? 'success' : 'error' })
+      } else {
+        setToast({ msg: selectedStudentIds.length > 1 ? `Observación registrada para ${created} estudiantes` : 'Observación registrada correctamente', type: 'success' })
+      }
       setShowCreateModal(false)
+      setSelectedStudentIds([])
+      setStudentSearchTerm('')
       setFormData({
         studentEnrollmentId: '',
         date: new Date().toISOString().split('T')[0],
@@ -291,6 +310,43 @@ export default function Observer() {
       loadObservations()
     } catch (err: any) {
       setToast({ msg: err.response?.data?.message || 'Error al eliminar', type: 'error' })
+    }
+  }
+
+  const handleStartEdit = (obs: any) => {
+    setEditForm({
+      type: obs.type || 'POSITIVE',
+      category: obs.category || 'ACADEMIC',
+      description: obs.description || '',
+      actionTaken: obs.actionTaken || '',
+      requiresFollowUp: obs.requiresFollowUp || false,
+      followUpDate: obs.followUpDate ? new Date(obs.followUpDate).toISOString().split('T')[0] : '',
+      followUpNotes: obs.followUpNotes || '',
+    })
+    setEditingObs(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!selectedObs?.id || !editForm.description) return
+    setSaving(true)
+    try {
+      const updated = await observerApi.update(selectedObs.id, {
+        type: editForm.type,
+        category: editForm.category,
+        description: editForm.description,
+        actionTaken: editForm.actionTaken || undefined,
+        requiresFollowUp: editForm.requiresFollowUp,
+        followUpDate: editForm.followUpDate || undefined,
+        followUpNotes: editForm.followUpNotes || undefined,
+      })
+      setSelectedObs(updated.data)
+      setEditingObs(false)
+      setToast({ msg: 'Observación actualizada correctamente', type: 'success' })
+      loadObservations()
+    } catch (err: any) {
+      setToast({ msg: err.response?.data?.message || 'Error al actualizar', type: 'error' })
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -644,16 +700,23 @@ export default function Observer() {
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-center gap-1">
                               <button
-                                onClick={() => { setSelectedObs(obs); setShowDetailModal(true) }}
-                                className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-blue-600"
+                                onClick={() => { setSelectedObs(obs); setEditingObs(false); setShowDetailModal(true) }}
+                                className="p-1.5 hover:bg-blue-50 rounded text-blue-500 hover:text-blue-700"
                                 title="Ver detalle"
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
+                              <button
+                                onClick={() => { setSelectedObs(obs); handleStartEdit(obs); setShowDetailModal(true) }}
+                                className="p-1.5 hover:bg-amber-50 rounded text-amber-500 hover:text-amber-700"
+                                title="Editar observación"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
                               {canDeleteObs(userRoles) && (
                                 <button
                                   onClick={() => handleDelete(obs.id)}
-                                  className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-red-600"
+                                  className="p-1.5 hover:bg-red-50 rounded text-red-400 hover:text-red-600"
                                   title="Eliminar"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -690,29 +753,108 @@ export default function Observer() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Estudiante *</label>
-                  <select
-                    value={formData.studentEnrollmentId}
-                    onChange={(e) => setFormData({ ...formData, studentEnrollmentId: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                  >
-                    <option value="">Seleccionar estudiante ({students.length})</option>
-                    {students.map(s => (
-                      <option key={s.enrollmentId} value={s.enrollmentId}>{s.name}</option>
-                    ))}
-                  </select>
+              {/* Selección de estudiantes implicados */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Estudiante(s) implicado(s) *
+                  {selectedStudentIds.length > 0 && (
+                    <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                      {selectedStudentIds.length} seleccionado{selectedStudentIds.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </label>
+                <p className="text-xs text-slate-500 mb-2">Puede seleccionar varios estudiantes para registrar la misma observación a todos.</p>
+                <div className="border border-slate-300 rounded-lg overflow-hidden">
+                  {/* Buscador y seleccionar todos */}
+                  <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
+                    <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    <input
+                      type="text"
+                      placeholder="Buscar estudiante..."
+                      value={studentSearchTerm}
+                      onChange={(e) => setStudentSearchTerm(e.target.value)}
+                      className="flex-1 bg-transparent text-sm outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const filtered = students.filter(s => !studentSearchTerm || s.name.toLowerCase().includes(studentSearchTerm.toLowerCase()))
+                        const allIds = filtered.map(s => s.enrollmentId)
+                        const allSelected = allIds.every(id => selectedStudentIds.includes(id))
+                        if (allSelected) {
+                          setSelectedStudentIds(selectedStudentIds.filter(id => !allIds.includes(id)))
+                        } else {
+                          setSelectedStudentIds([...new Set([...selectedStudentIds, ...allIds])])
+                        }
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap"
+                    >
+                      {students.filter(s => !studentSearchTerm || s.name.toLowerCase().includes(studentSearchTerm.toLowerCase())).every(s => selectedStudentIds.includes(s.enrollmentId))
+                        ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                    </button>
+                  </div>
+                  {/* Lista de estudiantes con checkboxes */}
+                  <div className="max-h-40 overflow-y-auto divide-y divide-slate-100">
+                    {students
+                      .filter(s => !studentSearchTerm || s.name.toLowerCase().includes(studentSearchTerm.toLowerCase()))
+                      .map((s, idx) => (
+                        <label
+                          key={s.enrollmentId}
+                          className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-blue-50 transition-colors ${
+                            selectedStudentIds.includes(s.enrollmentId) ? 'bg-blue-50/50' : ''
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedStudentIds.includes(s.enrollmentId)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedStudentIds([...selectedStudentIds, s.enrollmentId])
+                              } else {
+                                setSelectedStudentIds(selectedStudentIds.filter(id => id !== s.enrollmentId))
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-xs text-slate-400 w-5 text-right">{idx + 1}.</span>
+                          <span className="text-sm text-slate-800">{s.name}</span>
+                        </label>
+                      ))}
+                    {students.filter(s => !studentSearchTerm || s.name.toLowerCase().includes(studentSearchTerm.toLowerCase())).length === 0 && (
+                      <p className="px-3 py-3 text-sm text-slate-400 text-center">No se encontraron estudiantes</p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label>
-                  <input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                  />
-                </div>
+                {/* Chips de seleccionados */}
+                {selectedStudentIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {selectedStudentIds.map(id => {
+                      const s = students.find(st => st.enrollmentId === id)
+                      return s ? (
+                        <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                          {s.name}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedStudentIds(selectedStudentIds.filter(sid => sid !== id))}
+                            className="hover:text-blue-900"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ) : null
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label>
+                <input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -723,9 +865,18 @@ export default function Observer() {
                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                   >
-                    {Object.entries(typeConfig).map(([k, v]) => (
-                      <option key={k} value={k}>{v.label}</option>
-                    ))}
+                    <optgroup label="Observaciones generales">
+                      {Object.entries(typeConfig).filter(([k]) => !k.startsWith('ACTA_TYPE')).map(([k, v]) => (
+                        <option key={k} value={k}>{v.label}</option>
+                      ))}
+                    </optgroup>
+                    {isAdmin && (
+                      <optgroup label="Clase de Situación (Ley 1620)">
+                        {Object.entries(typeConfig).filter(([k]) => k.startsWith('ACTA_TYPE')).map(([k, v]) => (
+                          <option key={k} value={k}>{v.label}</option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
                 </div>
                 <div>
@@ -741,6 +892,18 @@ export default function Observer() {
                   </select>
                 </div>
               </div>
+              {isAdmin && formData.type.startsWith('ACTA_TYPE') && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm font-medium text-red-700">
+                    ⚠️ Situación {formData.type === 'ACTA_TYPE_I' ? 'Tipo I (leve)' : formData.type === 'ACTA_TYPE_II' ? 'Tipo II (grave)' : 'Tipo III (gravísima)'} — Ley 1620
+                  </p>
+                  <p className="text-xs text-red-600 mt-1">
+                    {formData.type === 'ACTA_TYPE_I' ? 'Conflictos manejados inadecuadamente que no generan daño al cuerpo o a la salud.' :
+                     formData.type === 'ACTA_TYPE_II' ? 'Agresión escolar, acoso escolar o ciberacoso que no constituyen delito.' :
+                     'Situaciones que constituyen presunto delito contra la libertad, integridad y formación sexual.'}
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Descripción *</label>
@@ -798,7 +961,7 @@ export default function Observer() {
               </button>
               <button
                 onClick={handleCreate}
-                disabled={!formData.studentEnrollmentId || !formData.description || saving}
+                disabled={selectedStudentIds.length === 0 || !formData.description || saving}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -809,21 +972,25 @@ export default function Observer() {
         </div>
       )}
 
-      {/* ═══ Modal Detalle ═══ */}
+      {/* ═══ Modal Detalle / Editar ═══ */}
       {showDetailModal && selectedObs && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white">
-              <h3 className="text-lg font-semibold text-slate-900">Detalle de Observación</h3>
-              <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-slate-100 rounded-lg">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900">
+                {editingObs ? 'Editar Observación' : 'Detalle de Observación'}
+              </h3>
+              <button onClick={() => { setShowDetailModal(false); setEditingObs(false) }} className="p-2 hover:bg-slate-100 rounded-lg">
                 <X className="w-5 h-5 text-slate-500" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {(() => {
-                const tc = typeConfig[selectedObs.type] || typeConfig.POSITIVE
-                const cc = categoryConfig[selectedObs.category] || categoryConfig.OTHER
+                const obsType = editingObs ? editForm.type : selectedObs.type
+                const obsCat = editingObs ? editForm.category : selectedObs.category
+                const tc = typeConfig[obsType] || typeConfig.POSITIVE
+                const cc = categoryConfig[obsCat] || categoryConfig.OTHER
                 const sc = statusConfig[selectedObs.status] || statusConfig.OPEN
                 const TypeIcon = tc.icon
                 return (
@@ -838,67 +1005,184 @@ export default function Observer() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${tc.bg} ${tc.color}`}>
-                        {tc.label}
-                      </span>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${cc.color}`}>
-                        {cc.label}
-                      </span>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${sc.bg} ${sc.color}`}>
-                        {sc.label}
-                      </span>
-                    </div>
+                    {editingObs ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Tipo *</label>
+                            <select
+                              value={editForm.type}
+                              onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                            >
+                              {Object.entries(typeConfig).map(([k, v]) => (
+                                <option key={k} value={k}>{v.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Categoría *</label>
+                            <select
+                              value={editForm.category}
+                              onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                            >
+                              {Object.entries(categoryConfig).map(([k, v]) => (
+                                <option key={k} value={k}>{v.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
 
-                    <div>
-                      <p className="text-sm font-medium text-slate-700 mb-1">Descripción</p>
-                      <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg whitespace-pre-wrap">{selectedObs.description}</p>
-                    </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Descripción *</label>
+                          <textarea
+                            value={editForm.description}
+                            onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                            rows={3}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                          />
+                        </div>
 
-                    {selectedObs.actionTaken && (
-                      <div>
-                        <p className="text-sm font-medium text-slate-700 mb-1">Acción Tomada</p>
-                        <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg">{selectedObs.actionTaken}</p>
-                      </div>
-                    )}
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Acción Tomada</label>
+                          <textarea
+                            value={editForm.actionTaken}
+                            onChange={(e) => setEditForm({ ...editForm, actionTaken: e.target.value })}
+                            rows={2}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                          />
+                        </div>
 
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-slate-500">Acudiente Notificado</p>
-                        <p className="font-medium">{selectedObs.parentNotified ? 'Sí' : 'No'}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500">Requiere Seguimiento</p>
-                        <p className="font-medium">{selectedObs.requiresFollowUp ? 'Sí' : 'No'}</p>
-                      </div>
-                    </div>
+                        <div className="flex items-center gap-6">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={editForm.requiresFollowUp}
+                              onChange={(e) => setEditForm({ ...editForm, requiresFollowUp: e.target.checked })}
+                              className="w-4 h-4 rounded"
+                            />
+                            <span className="text-sm text-slate-700">Requiere seguimiento</span>
+                          </label>
+                        </div>
 
-                    {selectedObs.followUpDate && (
-                      <div className="p-3 bg-purple-50 rounded-lg">
-                        <p className="text-sm font-medium text-purple-700">Fecha de Seguimiento</p>
-                        <p className="text-sm text-purple-600">{new Date(selectedObs.followUpDate).toLocaleDateString('es-CO')}</p>
-                        {selectedObs.followUpNotes && (
-                          <p className="text-sm text-purple-600 mt-1">{selectedObs.followUpNotes}</p>
+                        {editForm.requiresFollowUp && (
+                          <div className="p-4 bg-purple-50 rounded-lg space-y-3">
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Fecha de Seguimiento</label>
+                              <input
+                                type="date"
+                                value={editForm.followUpDate}
+                                onChange={(e) => setEditForm({ ...editForm, followUpDate: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Notas de Seguimiento</label>
+                              <textarea
+                                value={editForm.followUpNotes}
+                                onChange={(e) => setEditForm({ ...editForm, followUpNotes: e.target.value })}
+                                rows={2}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                                placeholder="Notas adicionales del seguimiento..."
+                              />
+                            </div>
+                          </div>
                         )}
-                      </div>
-                    )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${tc.bg} ${tc.color}`}>
+                            {tc.label}
+                          </span>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${cc.color}`}>
+                            {cc.label}
+                          </span>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${sc.bg} ${sc.color}`}>
+                            {sc.label}
+                          </span>
+                        </div>
 
-                    <div className="pt-4 border-t border-slate-200 text-xs text-slate-500">
-                      <p>Registrado por: {authorName(selectedObs.author)}</p>
-                      <p>Fecha de registro: {new Date(selectedObs.createdAt).toLocaleString('es-CO')}</p>
-                    </div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-700 mb-1">Descripción</p>
+                          <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg whitespace-pre-wrap">{selectedObs.description}</p>
+                        </div>
+
+                        {selectedObs.actionTaken && (
+                          <div>
+                            <p className="text-sm font-medium text-slate-700 mb-1">Acción Tomada</p>
+                            <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg">{selectedObs.actionTaken}</p>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-slate-500">Acudiente Notificado</p>
+                            <p className="font-medium">{selectedObs.parentNotified ? 'Sí' : 'No'}</p>
+                          </div>
+                          <div>
+                            <p className="text-slate-500">Requiere Seguimiento</p>
+                            <p className="font-medium">{selectedObs.requiresFollowUp ? 'Sí' : 'No'}</p>
+                          </div>
+                        </div>
+
+                        {selectedObs.followUpDate && (
+                          <div className="p-3 bg-purple-50 rounded-lg">
+                            <p className="text-sm font-medium text-purple-700">Fecha de Seguimiento</p>
+                            <p className="text-sm text-purple-600">{new Date(selectedObs.followUpDate).toLocaleDateString('es-CO')}</p>
+                            {selectedObs.followUpNotes && (
+                              <p className="text-sm text-purple-600 mt-1">{selectedObs.followUpNotes}</p>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="pt-4 border-t border-slate-200 text-xs text-slate-500">
+                          <p>Registrado por: {authorName(selectedObs.author)}</p>
+                          <p>Fecha de registro: {new Date(selectedObs.createdAt).toLocaleString('es-CO')}</p>
+                        </div>
+                      </>
+                    )}
                   </>
                 )
               })()}
             </div>
 
-            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end">
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-              >
-                Cerrar
-              </button>
+            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3">
+              {editingObs ? (
+                <>
+                  <button
+                    onClick={() => setEditingObs(false)}
+                    className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleSaveEdit}
+                    disabled={!editForm.description || saving}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Guardar Cambios
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleStartEdit(selectedObs)}
+                    className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => { setShowDetailModal(false); setEditingObs(false) }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                  >
+                    Cerrar
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
