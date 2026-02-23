@@ -313,7 +313,7 @@ export default function Dashboard() {
                             {birthdays.filter(b => b.isToday && b.type === 'DOCENTE').map((birthday) => (
                               <div key={birthday.id} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-sm">
                                 <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center">
-                                  <span className="text-xs font-bold">{new Date(birthday.birthDate).getDate()}</span>
+                                  <span className="text-xs font-bold">{new Date(birthday.birthDate).getUTCDate()}</span>
                                 </div>
                                 <p className="font-medium text-slate-900 text-sm truncate">{birthday.name}</p>
                               </div>
@@ -329,7 +329,7 @@ export default function Dashboard() {
                             {birthdays.filter(b => b.isToday && b.type === 'ESTUDIANTE').map((birthday) => (
                               <div key={birthday.id} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-sm">
                                 <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center">
-                                  <span className="text-xs font-bold">{new Date(birthday.birthDate).getDate()}</span>
+                                  <span className="text-xs font-bold">{new Date(birthday.birthDate).getUTCDate()}</span>
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="font-medium text-slate-900 text-sm truncate">{birthday.name}</p>
@@ -344,7 +344,7 @@ export default function Dashboard() {
                   )}
 
                   {/* Próximos días (agrupados por día) */}
-                  {[1, 2, 3].map(daysAhead => {
+                  {[1, 2, 3, 4, 5, 6, 7].map(daysAhead => {
                     const dayBirthdays = birthdays.filter(b => b.daysFromToday === daysAhead);
                     if (dayBirthdays.length === 0) return null;
                     const futureDate = new Date();
@@ -362,7 +362,7 @@ export default function Dashboard() {
                               {dayBirthdays.filter(b => b.type === 'DOCENTE').map((birthday) => (
                                 <div key={birthday.id} className="flex items-center gap-2 py-1">
                                   <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
-                                    <span className="text-xs font-bold">{new Date(birthday.birthDate).getDate()}</span>
+                                    <span className="text-xs font-bold">{new Date(birthday.birthDate).getUTCDate()}</span>
                                   </div>
                                   <p className="text-sm text-slate-700 truncate">{birthday.name}</p>
                                 </div>
@@ -378,7 +378,7 @@ export default function Dashboard() {
                               {dayBirthdays.filter(b => b.type === 'ESTUDIANTE').map((birthday) => (
                                 <div key={birthday.id} className="flex items-center gap-2 py-1">
                                   <div className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-                                    <span className="text-xs font-bold">{new Date(birthday.birthDate).getDate()}</span>
+                                    <span className="text-xs font-bold">{new Date(birthday.birthDate).getUTCDate()}</span>
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm text-slate-700 truncate">{birthday.name}</p>

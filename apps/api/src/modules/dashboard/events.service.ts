@@ -83,18 +83,22 @@ export class EventsService {
   }
 
   async getBirthdays(institutionId?: string) {
-    const now = new Date();
-    const currentMonth = now.getMonth() + 1;
-    const currentDay = now.getDate();
+    // Usar hora de Colombia (UTC-5) para determinar "hoy"
+    // El servidor puede correr en UTC, pero los cumpleaños deben compararse con el día local
+    const nowUTC = new Date();
+    const colombiaOffset = -5 * 60; // UTC-5 en minutos
+    const colombiaNow = new Date(nowUTC.getTime() + colombiaOffset * 60 * 1000);
+    const currentMonth = colombiaNow.getUTCMonth() + 1;
+    const currentDay = colombiaNow.getUTCDate();
     
-    // Calcular los próximos 3 días (hoy + 3 días siguientes)
+    // Calcular los próximos 7 días (hoy + 7 días siguientes) en hora Colombia
     const daysToCheck: { month: number; day: number; daysFromToday: number }[] = [];
-    for (let i = 0; i <= 3; i++) {
-      const checkDate = new Date(now);
-      checkDate.setDate(now.getDate() + i);
+    for (let i = 0; i <= 7; i++) {
+      const checkDate = new Date(colombiaNow);
+      checkDate.setUTCDate(colombiaNow.getUTCDate() + i);
       daysToCheck.push({
-        month: checkDate.getMonth() + 1,
-        day: checkDate.getDate(),
+        month: checkDate.getUTCMonth() + 1,
+        day: checkDate.getUTCDate(),
         daysFromToday: i,
       });
     }
@@ -140,19 +144,19 @@ export class EventsService {
       },
     });
 
-    // Filtrar estudiantes por hoy + próximos 3 días
+    // Filtrar estudiantes por hoy + próximos 7 días
     const studentBirthdays = students
       .filter(s => {
         if (!s.birthDate) return false;
         const bd = new Date(s.birthDate);
-        const bdMonth = bd.getMonth() + 1;
-        const bdDay = bd.getDate();
+        const bdMonth = bd.getUTCMonth() + 1;
+        const bdDay = bd.getUTCDate();
         return daysToCheck.some(d => d.month === bdMonth && d.day === bdDay);
       })
       .map(s => {
         const bd = new Date(s.birthDate!);
-        const bdMonth = bd.getMonth() + 1;
-        const bdDay = bd.getDate();
+        const bdMonth = bd.getUTCMonth() + 1;
+        const bdDay = bd.getUTCDate();
         const dayInfo = daysToCheck.find(d => d.month === bdMonth && d.day === bdDay);
         return {
           id: s.id,
@@ -167,19 +171,19 @@ export class EventsService {
         };
       });
 
-    // Filtrar docentes por hoy + próximos 3 días
+    // Filtrar docentes por hoy + próximos 7 días
     const teacherBirthdays = teachers
       .filter(t => {
         if (!t.birthDate) return false;
         const bd = new Date(t.birthDate);
-        const bdMonth = bd.getMonth() + 1;
-        const bdDay = bd.getDate();
+        const bdMonth = bd.getUTCMonth() + 1;
+        const bdDay = bd.getUTCDate();
         return daysToCheck.some(d => d.month === bdMonth && d.day === bdDay);
       })
       .map(t => {
         const bd = new Date(t.birthDate!);
-        const bdMonth = bd.getMonth() + 1;
-        const bdDay = bd.getDate();
+        const bdMonth = bd.getUTCMonth() + 1;
+        const bdDay = bd.getUTCDate();
         const dayInfo = daysToCheck.find(d => d.month === bdMonth && d.day === bdDay);
         return {
           id: t.id,

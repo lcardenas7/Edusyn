@@ -23,7 +23,7 @@ export class DashboardService {
       announcements,
       upcomingEvents: events,
       gallery,
-      birthdays: birthdays.slice(0, 10),
+      birthdays: birthdays.slice(0, 20),
     };
   }
 }
