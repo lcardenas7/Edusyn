@@ -1459,6 +1459,7 @@ export default function Grades() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-amber-50">
+                  <th className="text-center px-2 py-3 text-xs font-medium text-slate-500 uppercase w-10">N°</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase min-w-[250px]">Estudiante</th>
                   <th className="text-center px-4 py-3 text-xs font-semibold text-amber-700 uppercase min-w-[160px]">Nivel</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-amber-700 uppercase min-w-[300px]">Observación</th>
@@ -1467,7 +1468,7 @@ export default function Grades() {
               <tbody className="divide-y divide-slate-100">
                 {loadingStudents ? (
                   <tr>
-                    <td colSpan={3} className="px-6 py-8 text-center text-slate-500">
+                    <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
                       <div className="flex items-center justify-center gap-2">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-600"></div>
                         Cargando estudiantes...
@@ -1476,15 +1477,16 @@ export default function Grades() {
                   </tr>
                 ) : students.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-6 py-8 text-center text-slate-500">
+                    <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
                       No hay estudiantes matriculados en este grupo
                     </td>
                   </tr>
-                ) : students.map((student) => {
+                ) : students.map((student, idx) => {
                   const qg = qualitativeGrades[student.id] || { levelCode: '', observation: '' }
                   const selectedQl = qualitativeLevels.find(ql => ql.code === qg.levelCode)
                   return (
                     <tr key={student.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-2 py-3 text-center text-sm font-medium text-slate-500">{idx + 1}</td>
                       <td className="px-4 py-3 font-medium text-slate-900">{student.name}<DiagnosisBadge student={student} /></td>
                       <td className="px-4 py-3 text-center">
                         <select
@@ -1543,6 +1545,7 @@ export default function Grades() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-purple-50">
+                  <th className="text-center px-2 py-3 text-xs font-medium text-slate-500 uppercase w-10">N°</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase min-w-[250px]">Estudiante</th>
                   <th className="text-center px-4 py-3 text-xs font-semibold text-purple-700 uppercase min-w-[120px]">
                     {finalComponents.find(fc => fc.id === selectedFinalComponentId)?.name || 'Nota'}
@@ -1553,7 +1556,7 @@ export default function Grades() {
               <tbody className="divide-y divide-slate-100">
                 {loadingStudents ? (
                   <tr>
-                    <td colSpan={3} className="px-6 py-8 text-center text-slate-500">
+                    <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
                       <div className="flex items-center justify-center gap-2">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
                         Cargando estudiantes...
@@ -1562,15 +1565,16 @@ export default function Grades() {
                   </tr>
                 ) : students.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-6 py-8 text-center text-slate-500">
+                    <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
                       No hay estudiantes matriculados en este grupo
                     </td>
                   </tr>
-                ) : students.map((student) => {
+                ) : students.map((student, idx) => {
                   const grade = fcGrades[student.id] || 0
                   const performance = getPerformanceLevel(grade)
                   return (
                     <tr key={student.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-2 py-3 text-center text-sm font-medium text-slate-500">{idx + 1}</td>
                       <td className="px-4 py-3 font-medium text-slate-900">{student.name}<DiagnosisBadge student={student} /></td>
                       <td className="px-4 py-3 text-center">
                         <input
@@ -1609,6 +1613,9 @@ export default function Grades() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-100">
+                  <th rowSpan={2} className="text-center px-2 py-2 text-xs font-medium text-slate-500 uppercase border-r border-slate-200 w-10 bg-slate-100 z-10">
+                    N°
+                  </th>
                   <th rowSpan={2} className="text-left px-3 py-2 text-xs font-medium text-slate-500 uppercase border-r border-slate-200 min-w-[140px] sticky left-0 bg-slate-100 z-10">
                     Estudiante
                   </th>
@@ -1722,12 +1729,13 @@ export default function Grades() {
                       No hay estudiantes matriculados en este grupo
                     </td>
                   </tr>
-                ) : students.map((student) => {
+                ) : students.map((student, idx) => {
                   const finalGrade = calculateFinalGrade(student.id)
                   const performance = getPerformanceLevel(finalGrade)
                   
                   return (
                     <tr key={student.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-2 py-2 text-center text-sm font-medium text-slate-500">{idx + 1}</td>
                       <td className="px-3 py-2 font-medium text-slate-900 border-r border-slate-100 sticky left-0 bg-white z-10">
                         {student.name}<DiagnosisBadge student={student} />
                       </td>
@@ -1788,6 +1796,7 @@ export default function Grades() {
             <table className="w-full">
               <thead className="bg-slate-50">
                 <tr>
+                  <th className="text-center px-2 py-3 text-xs font-medium text-slate-500 uppercase w-10">N°</th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase">Estudiante</th>
                   {processConfigs.map((process) => {
                     const colors = processColors[process.colorIndex]
@@ -1804,7 +1813,7 @@ export default function Grades() {
               <tbody className="divide-y divide-slate-100">
                 {loadingStudents ? (
                   <tr>
-                    <td colSpan={processConfigs.length + 3} className="px-6 py-8 text-center text-slate-500">
+                    <td colSpan={processConfigs.length + 4} className="px-6 py-8 text-center text-slate-500">
                       <div className="flex items-center justify-center gap-2">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
                         Cargando estudiantes...
@@ -1813,16 +1822,17 @@ export default function Grades() {
                   </tr>
                 ) : students.length === 0 ? (
                   <tr>
-                    <td colSpan={processConfigs.length + 3} className="px-6 py-8 text-center text-slate-500">
+                    <td colSpan={processConfigs.length + 4} className="px-6 py-8 text-center text-slate-500">
                       No hay estudiantes matriculados en este grupo
                     </td>
                   </tr>
-                ) : students.map((student) => {
+                ) : students.map((student, idx) => {
                   const finalGrade = calculateFinalGrade(student.id)
                   const performance = getPerformanceLevel(finalGrade)
                   
                   return (
                     <tr key={student.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-2 py-4 text-center text-sm font-medium text-slate-500">{idx + 1}</td>
                       <td className="px-6 py-4 font-medium text-slate-900">{student.name}<DiagnosisBadge student={student} /></td>
                       {processConfigs.map((process) => {
                         const colors = processColors[process.colorIndex]
@@ -1975,6 +1985,7 @@ export default function Grades() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-100">
+                      <th className="text-center px-2 py-3 text-xs font-medium text-slate-500 uppercase w-10">N°</th>
                       <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Estudiante</th>
                       <th className="text-center px-4 py-3 text-xs font-medium text-slate-500 uppercase">Nota Final</th>
                       <th className="text-center px-4 py-3 text-xs font-medium text-slate-500 uppercase">Desempeño</th>
@@ -1989,12 +2000,13 @@ export default function Grades() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {students.map((student) => {
+                    {students.map((student, idx) => {
                       const finalGrade = calculateFinalGrade(student.id)
                       const performance = getPerformanceLevel(finalGrade)
                       
                       return (
                         <tr key={student.id} className="hover:bg-slate-50">
+                          <td className="px-2 py-3 text-center text-sm font-medium text-slate-500">{idx + 1}</td>
                           <td className="px-4 py-3 font-medium text-slate-900">{student.name}<DiagnosisBadge student={student} /></td>
                           <td className="px-4 py-3 text-center">
                             <span className="text-lg font-bold">{finalGrade > 0 ? finalGrade.toFixed(1) : '-'}</span>

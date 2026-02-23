@@ -595,9 +595,10 @@ export default function Attendance() {
                 <div className="px-6 py-8 text-center text-slate-500">
                   No hay estudiantes matriculados en este grupo
                 </div>
-              ) : tutoringStudents.map((student) => (
+              ) : tutoringStudents.map((student, idx) => (
                 <div key={student.id} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                   <div className="flex items-center gap-3">
+                    <span className="w-6 text-center text-sm font-medium text-slate-500">{idx + 1}.</span>
                     <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
                       <span className="text-sm font-medium text-purple-600">
                         {student.name.split(' ').map((n: string) => n[0]).join('')}
@@ -763,13 +764,14 @@ export default function Attendance() {
             <div className="px-6 py-8 text-center text-slate-500">
               No hay estudiantes matriculados en este grupo
             </div>
-          ) : students.map((student) => {
+          ) : students.map((student, idx) => {
             const statusCfg = statusConfig[student.status as keyof typeof statusConfig]
             void statusCfg
             
             return (
               <div key={student.id} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                 <div className="flex items-center gap-3">
+                  <span className="w-6 text-center text-sm font-medium text-slate-500">{idx + 1}.</span>
                   <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
                     <span className="text-sm font-medium text-slate-600">
                       {student.name.split(' ').map(n => n[0]).join('')}

@@ -341,6 +341,9 @@ export default function PeriodFinalGrades() {
             <table className="w-full">
               <thead className="bg-slate-50">
                 <tr>
+                  <th className="px-2 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider w-10">
+                    N°
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Estudiante
                   </th>
@@ -356,8 +359,9 @@ export default function PeriodFinalGrades() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {grades.map((grade) => (
+                {grades.map((grade, idx) => (
                   <tr key={grade.studentEnrollmentId} className="hover:bg-slate-50">
+                    <td className="px-2 py-4 text-center text-sm font-medium text-slate-500">{idx + 1}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="font-medium text-slate-900">{grade.studentName}</span>
                     </td>

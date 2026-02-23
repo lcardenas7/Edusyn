@@ -717,6 +717,7 @@ export default function Recoveries() {
                 <table className="w-full">
                   <thead className="bg-slate-50">
                     <tr>
+                      <th className="text-center px-2 py-3 text-xs font-medium text-slate-500 uppercase w-10">N°</th>
                       <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase">Estudiante</th>
                       {selectedGroupId === 'all' && (
                         <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase">Grupo</th>
@@ -728,8 +729,9 @@ export default function Recoveries() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {failingStudents.map(student => (
+                    {failingStudents.map((student, idx) => (
                       <tr key={student.enrollmentId} className="hover:bg-slate-50">
+                        <td className="px-2 py-4 text-center text-sm font-medium text-slate-500">{idx + 1}</td>
                         <td className="px-6 py-4">
                           <p className="font-medium text-slate-900">{student.name}</p>
                         </td>

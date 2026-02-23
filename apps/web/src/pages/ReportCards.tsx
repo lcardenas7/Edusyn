@@ -930,6 +930,7 @@ export default function ReportCards() {
                   <th className="px-4 py-3 text-left">
                     <input type="checkbox" checked={selectedCards.length === filteredStudents.length && filteredStudents.length > 0} onChange={toggleSelectAll} className="w-4 h-4 rounded" />
                   </th>
+                  <th className="text-center px-2 py-3 text-sm font-medium text-slate-600 w-10">N°</th>
                   <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Estudiante</th>
                   <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Documento</th>
                   <th className="text-center px-4 py-3 text-sm font-medium text-slate-600">Promedio</th>
@@ -941,13 +942,14 @@ export default function ReportCards() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredStudents.map((s) => {
+                {filteredStudents.map((s, idx) => {
                   const perf = s.average !== null ? getPerformanceLevel(s.average) : null
                   return (
                     <tr key={s.enrollmentId} className="hover:bg-slate-50">
                       <td className="px-4 py-3">
                         <input type="checkbox" checked={selectedCards.includes(s.enrollmentId)} onChange={() => toggleSelectCard(s.enrollmentId)} className="w-4 h-4 rounded" />
                       </td>
+                      <td className="px-2 py-3 text-center text-sm font-medium text-slate-500">{idx + 1}</td>
                       <td className="px-4 py-3"><p className="text-sm font-medium text-slate-900">{s.studentName}</p></td>
                       <td className="px-4 py-3 text-sm text-slate-600">{s.documentNumber}</td>
                       <td className="px-4 py-3 text-center">

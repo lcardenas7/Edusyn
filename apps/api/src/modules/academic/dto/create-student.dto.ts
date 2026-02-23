@@ -235,6 +235,31 @@ export class UpdateStudentDto {
   @IsString()
   disabilityType?: string;
 
+  // Diagnóstico educativo
+  @IsOptional()
+  @IsBoolean()
+  hasDiagnosis?: boolean;
+
+  @IsOptional()
+  @IsString()
+  diagnosisType?: string;
+
+  @IsOptional()
+  @IsString()
+  diagnosisDetails?: string;
+
+  @IsOptional()
+  @IsString()
+  diagnosisSupports?: string;
+
+  @IsOptional()
+  @IsDateString()
+  diagnosisDate?: string;
+
+  @IsOptional()
+  @IsString()
+  diagnosisEntity?: string;
+
   // Información adicional
   @IsOptional()
   @IsString()

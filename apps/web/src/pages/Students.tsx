@@ -29,6 +29,8 @@ interface Student {
   eps: string
   observations: string
   photo?: string
+  hasDiagnosis?: boolean
+  diagnosisType?: string
 }
 
 interface AcademicHistory {
@@ -136,15 +138,20 @@ export default function Students() {
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [loadingObserver, setLoadingObserver] = useState(false)
 
-  const [formData, setFormData] = useState<Partial<Student>>({
+  // Estados para guardar estudiante
+  const [saving, setSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+
+  const [formData, setFormDataRaw] = useState<Partial<Student>>({
     firstName: '', lastName: '', documentType: 'TI', documentNumber: '', birthDate: '', gender: 'M',
     address: '', phone: '', email: '', group: '9°A', status: 'ACTIVE', enrollmentDate: new Date().toISOString().split('T')[0],
     parentName: '', parentPhone: '', parentEmail: '', bloodType: '', eps: '', observations: ''
   })
-
-  // Estados para guardar estudiante
-  const [saving, setSaving] = useState(false)
-  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  // Wrapper: limpiar mensaje de error al cambiar cualquier campo
+  const setFormData = useCallback((val: Partial<Student> | ((prev: Partial<Student>) => Partial<Student>)) => {
+    setSaveMessage(prev => prev?.type === 'error' ? null : prev)
+    setFormDataRaw(val as any)
+  }, [])
   
   // Estados para matrícula inmediata
   const [enrollNow, setEnrollNow] = useState(true) // Por defecto activado para nuevos
@@ -216,7 +223,7 @@ export default function Students() {
         setRawStudents(rawData)
         const apiStudents: Student[] = rawData.map((s: any) => ({
           id: s.id,
-          firstName: s.firstName || '',
+          firstName: `${s.firstName || ''} ${s.secondName || ''}`.trim(),
           lastName: `${s.lastName || ''} ${s.secondLastName || ''}`.trim(),
           documentType: s.documentType || 'TI',
           documentNumber: s.documentNumber || '',
@@ -233,7 +240,9 @@ export default function Students() {
           parentEmail: s.guardians?.[0]?.guardian?.email || '',
           bloodType: s.bloodType || '',
           eps: s.eps || '',
-          observations: s.observations || ''
+          observations: s.observations || '',
+          hasDiagnosis: s.hasDiagnosis || false,
+          diagnosisType: s.diagnosisType || ''
         }))
         setStudents(apiStudents)
       } catch (err: any) {
@@ -356,9 +365,19 @@ export default function Students() {
     try {
       if (editingStudent) {
         // Actualizar estudiante existente - enviar TODOS los campos
+        // Separar nombres compuestos en los 4 campos del backend
+        const firstNameParts = (formData.firstName || '').trim().split(/\s+/)
+        const apiFirstName = firstNameParts[0] || ''
+        const apiSecondName = firstNameParts.slice(1).join(' ') || ''
+        const lastNameParts = (formData.lastName || '').trim().split(/\s+/)
+        const apiLastName = lastNameParts[0] || ''
+        const apiSecondLastName = lastNameParts.slice(1).join(' ') || ''
+
         await studentsApi.update(editingStudent.id, {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
+          firstName: apiFirstName,
+          secondName: apiSecondName || null,
+          lastName: apiLastName,
+          secondLastName: apiSecondLastName || null,
           documentType: formData.documentType,
           documentNumber: formData.documentNumber,
           birthDate: formData.birthDate,
@@ -369,6 +388,8 @@ export default function Students() {
           bloodType: formData.bloodType || null,
           eps: formData.eps || null,
           observations: formData.observations || null,
+          hasDiagnosis: formData.hasDiagnosis || false,
+          diagnosisType: formData.diagnosisType || null,
         })
 
         // Actualizar o crear acudiente si hay datos
@@ -394,11 +415,14 @@ export default function Students() {
             try {
               await guardiansApi.createWithLink({
                 studentId: editingStudent.id,
+                institutionId: institution?.id,
+                documentType: 'CC',
+                documentNumber: formData.parentPhone || `ACU-${Date.now()}`,
                 firstName: guardianFirstName,
                 lastName: guardianLastName,
                 phone: formData.parentPhone || '',
                 email: formData.parentEmail || '',
-                relationship: 'PARENT',
+                relationship: 'OTHER',
                 isPrimary: true,
               })
             } catch (err) {
@@ -407,7 +431,39 @@ export default function Students() {
           }
         }
         
-        setStudents(students.map(s => s.id === editingStudent.id ? { ...s, ...formData } as Student : s))
+        // Recargar lista completa para que rawStudents tenga datos actualizados (incluyendo acudientes)
+        try {
+          const response = await studentsApi.getAll({ institutionId: institution?.id })
+          const rawData = response.data || []
+          setRawStudents(rawData)
+          const apiStudents: Student[] = rawData.map((s: any) => ({
+            id: s.id,
+            firstName: `${s.firstName || ''} ${s.secondName || ''}`.trim(),
+            lastName: `${s.lastName || ''} ${s.secondLastName || ''}`.trim(),
+            documentType: s.documentType || 'TI',
+            documentNumber: s.documentNumber || '',
+            birthDate: s.birthDate || '',
+            gender: s.gender || '',
+            address: s.address || '',
+            phone: s.phone || '',
+            email: s.email || '',
+            group: s.enrollments?.[0]?.group ? `${s.enrollments[0].group.grade?.name || ''} ${s.enrollments[0].group.name}`.trim() : '',
+            status: s.enrollments?.[0]?.status || 'ACTIVE',
+            enrollmentDate: s.enrollments?.[0]?.enrollmentDate || '',
+            parentName: s.guardians?.[0]?.guardian ? `${s.guardians[0].guardian.firstName} ${s.guardians[0].guardian.lastName}` : '',
+            parentPhone: s.guardians?.[0]?.guardian?.phone || '',
+            parentEmail: s.guardians?.[0]?.guardian?.email || '',
+            bloodType: s.bloodType || '',
+            eps: s.eps || '',
+            observations: s.observations || '',
+            hasDiagnosis: s.hasDiagnosis || false,
+            diagnosisType: s.diagnosisType || ''
+          }))
+          setStudents(apiStudents)
+        } catch {
+          // Fallback: actualización optimista local
+          setStudents(students.map(s => s.id === editingStudent.id ? { ...s, ...formData } as Student : s))
+        }
         setSaveMessage({ type: 'success', text: 'Estudiante actualizado correctamente' })
       } else if (enrollNow && currentAcademicYear && selectedGroupId) {
         // Crear estudiante Y matricular en un solo paso (flujo unificado)
@@ -437,7 +493,7 @@ export default function Students() {
           id: response.data.studentId,
           group: selectedGroup ? `${selectedGroup.grade?.name || ''} ${selectedGroup.name}`.trim() : ''
         } as Student
-        setStudents([...students, newStudent])
+        setStudents([...students, newStudent].sort((a, b) => a.lastName.localeCompare(b.lastName)))
         setSaveMessage({ type: 'success', text: 'Estudiante creado y matriculado correctamente' })
       } else {
         // Crear solo estudiante (sin matrícula)
@@ -458,7 +514,7 @@ export default function Students() {
           ...formData, 
           id: response.data.id 
         } as Student
-        setStudents([...students, newStudent])
+        setStudents([...students, newStudent].sort((a, b) => a.lastName.localeCompare(b.lastName)))
         setSaveMessage({ type: 'success', text: 'Estudiante creado correctamente (sin matrícula)' })
       }
 
@@ -524,7 +580,7 @@ export default function Students() {
       const response = await studentsApi.getAll({ institutionId: institution.id })
       const mapped = (response.data || []).map((s: any) => ({
         id: s.id,
-        firstName: s.firstName || '',
+        firstName: `${s.firstName || ''} ${s.secondName || ''}`.trim(),
         lastName: `${s.lastName || ''} ${s.secondLastName || ''}`.trim(),
         documentNumber: s.documentNumber || '',
         group: s.enrollments?.[0]?.group ? `${s.enrollments[0].group.grade?.name || ''} ${s.enrollments[0].group.name}`.trim() : '',
@@ -1144,7 +1200,7 @@ export default function Students() {
       const response = await studentsApi.getAll({ institutionId: institution.id })
       const apiStudents: Student[] = (response.data || []).map((s: any) => ({
         id: s.id,
-        firstName: s.firstName || '',
+        firstName: `${s.firstName || ''} ${s.secondName || ''}`.trim(),
         lastName: `${s.lastName || ''} ${s.secondLastName || ''}`.trim(),
         documentType: s.documentType || 'TI',
         documentNumber: s.documentNumber || '',
@@ -1161,7 +1217,9 @@ export default function Students() {
         parentEmail: s.guardians?.[0]?.guardian?.email || '',
         bloodType: s.bloodType || '',
         eps: s.eps || '',
-        observations: s.observations || ''
+        observations: s.observations || '',
+        hasDiagnosis: s.hasDiagnosis || false,
+        diagnosisType: s.diagnosisType || ''
       }))
       setStudents(apiStudents)
 
@@ -1585,6 +1643,7 @@ export default function Students() {
               <table className="w-full">
                 <thead className="bg-slate-50">
                   <tr>
+                    <th className="text-center px-3 py-3 text-xs font-medium text-slate-500 uppercase w-12">N°</th>
                     <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase">Estudiante</th>
                     <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase">Documento</th>
                     <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase">Grupo</th>
@@ -1594,16 +1653,26 @@ export default function Students() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredStudents.map((student) => (
+                  {filteredStudents.map((student, idx) => (
                     <tr key={student.id} className="hover:bg-slate-50">
+                      <td className="px-3 py-4 text-center">
+                        <span className="text-sm font-medium text-slate-500">{idx + 1}</span>
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
                             <span className="text-sm font-medium text-slate-600">{student.lastName[0]}{student.firstName[0]}</span>
                           </div>
                           <div>
-                            <p className="font-medium text-slate-900">{student.lastName} {student.firstName}</p>
-                            <p className="text-xs text-slate-500">{calculateAge(student.birthDate)} anos - {student.gender === 'M' ? 'Masculino' : 'Femenino'}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-slate-900">{student.lastName} {student.firstName}</p>
+                              {student.hasDiagnosis && (
+                                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs" title={student.diagnosisType || 'Diagnóstico'}>
+                                  <Heart className="w-3 h-3" />
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-500">{calculateAge(student.birthDate)} años - {student.gender === 'M' ? 'Masculino' : 'Femenino'}</p>
                           </div>
                         </div>
                       </td>
@@ -2059,6 +2128,35 @@ export default function Students() {
                       <option value="B+">B+</option><option value="B-">B-</option>
                       <option value="AB+">AB+</option><option value="AB-">AB-</option>
                     </select>
+                  </div>
+                </div>
+              </fieldset>
+
+              {/* ── Diagnóstico Educativo ── */}
+              <fieldset className="border border-purple-200 rounded-lg p-4 bg-purple-50/30">
+                <legend className="px-2 text-sm font-semibold text-purple-700 flex items-center gap-1.5"><Heart className="w-4 h-4 text-purple-500" /> Diagnóstico Educativo</legend>
+                <p className="text-xs text-purple-600 mb-3">Si el estudiante tiene un diagnóstico (TDAH, TEA, Dislexia, etc.), actívelo aquí para que los docentes lo identifiquen.</p>
+                <div className="grid grid-cols-2 gap-3 mt-1">
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox" 
+                      id="hasDiagnosis"
+                      checked={formData.hasDiagnosis || false} 
+                      onChange={(e) => setFormData({ ...formData, hasDiagnosis: e.target.checked })} 
+                      className="w-4 h-4 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                    />
+                    <label htmlFor="hasDiagnosis" className="text-sm font-medium text-purple-800">Estudiante con diagnóstico</label>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-purple-700 mb-1">Tipo de Diagnóstico</label>
+                    <input 
+                      type="text" 
+                      value={formData.diagnosisType || ''} 
+                      onChange={(e) => setFormData({ ...formData, diagnosisType: e.target.value })} 
+                      disabled={!formData.hasDiagnosis}
+                      placeholder="Ej: TDAH, TEA, Dislexia..."
+                      className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none disabled:bg-slate-100 disabled:text-slate-400" 
+                    />
                   </div>
                 </div>
               </fieldset>
