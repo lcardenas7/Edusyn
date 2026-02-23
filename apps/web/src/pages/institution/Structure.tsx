@@ -18,7 +18,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAcademic } from '../../contexts/AcademicContext'
 import { usePermissions, PERMISSIONS } from '../../hooks/usePermissions'
-import { academicGradesApi, groupsApi, teachersApi } from '../../lib/api'
+import { academicGradesApi, groupsApi, teachersApi, shiftsApi, campusesApi } from '../../lib/api'
 
 // Nivel educativo para visualización (derivado de AcademicLevel)
 interface EducationLevel {
@@ -143,6 +143,99 @@ export default function Structure() {
   const [groupForm, setGroupForm] = useState({ name: '', shift: 'MAÑANA' as Group['shift'], capacity: 35, directorId: '' })
   const [teachers, setTeachers] = useState<any[]>([])
   const [savingGroup, setSavingGroup] = useState(false)
+
+  // Jornadas (Shifts)
+  const [shifts, setShifts] = useState<any[]>([])
+  const [loadingShifts, setLoadingShifts] = useState(false)
+  const [showShiftModal, setShowShiftModal] = useState(false)
+  const [editingShift, setEditingShift] = useState<any>(null)
+  const [shiftForm, setShiftForm] = useState({ name: '', type: 'MORNING' })
+  const [savingShift, setSavingShift] = useState(false)
+  const [campusId, setCampusId] = useState<string>('')
+
+  // Cargar campus y jornadas
+  useEffect(() => {
+    const loadCampusAndShifts = async () => {
+      if (!authInstitution?.id) return
+      try {
+        // Cargar campus principal
+        const campusRes = await campusesApi.getAll(authInstitution.id)
+        const campuses = campusRes.data || []
+        if (campuses.length > 0) {
+          setCampusId(campuses[0].id)
+          // Cargar jornadas del campus
+          setLoadingShifts(true)
+          const shiftsRes = await shiftsApi.getAll(campuses[0].id)
+          setShifts(shiftsRes.data || [])
+        }
+      } catch (err) {
+        console.error('[Structure] Error loading shifts:', err)
+      } finally {
+        setLoadingShifts(false)
+      }
+    }
+    loadCampusAndShifts()
+  }, [authInstitution?.id])
+
+  const loadShifts = async () => {
+    if (!campusId) return
+    try {
+      setLoadingShifts(true)
+      const res = await shiftsApi.getAll(campusId)
+      setShifts(res.data || [])
+    } catch (err) {
+      console.error('[Structure] Error loading shifts:', err)
+    } finally {
+      setLoadingShifts(false)
+    }
+  }
+
+  const openShiftModal = (shift?: any) => {
+    if (shift) {
+      setEditingShift(shift)
+      setShiftForm({ name: shift.name, type: shift.type })
+    } else {
+      setEditingShift(null)
+      setShiftForm({ name: '', type: 'MORNING' })
+    }
+    setShowShiftModal(true)
+  }
+
+  const saveShift = async () => {
+    if (!shiftForm.name.trim() || !campusId) return
+    setSavingShift(true)
+    try {
+      if (editingShift) {
+        await shiftsApi.update(editingShift.id, { name: shiftForm.name, type: shiftForm.type })
+      } else {
+        await shiftsApi.create({ campusId, name: shiftForm.name, type: shiftForm.type })
+      }
+      await loadShifts()
+      setShowShiftModal(false)
+    } catch (err: any) {
+      console.error('[Structure] Error saving shift:', err)
+      alert(err.response?.data?.message || 'Error al guardar la jornada')
+    } finally {
+      setSavingShift(false)
+    }
+  }
+
+  const deleteShift = async (id: string) => {
+    if (!confirm('¿Eliminar esta jornada?')) return
+    try {
+      await shiftsApi.delete(id)
+      await loadShifts()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al eliminar la jornada')
+    }
+  }
+
+  const SHIFT_TYPES = [
+    { value: 'MORNING', label: 'Mañana' },
+    { value: 'AFTERNOON', label: 'Tarde' },
+    { value: 'NIGHT', label: 'Noche' },
+    { value: 'SINGLE', label: 'Jornada Única' },
+  ]
 
   // Cargar docentes
   useEffect(() => {
@@ -426,7 +519,11 @@ export default function Structure() {
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
         <div className="p-6">
           {/* Resumen */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-5 gap-4 mb-6">
+            <div className="bg-slate-50 rounded-lg p-4 text-center">
+              <p className="text-2xl font-bold text-slate-900">{shifts.length}</p>
+              <p className="text-xs text-slate-500">Jornadas</p>
+            </div>
             <div className="bg-slate-50 rounded-lg p-4 text-center">
               <p className="text-2xl font-bold text-slate-900">{levels.length}</p>
               <p className="text-xs text-slate-500">Niveles</p>
@@ -442,6 +539,60 @@ export default function Structure() {
             <div className="bg-slate-50 rounded-lg p-4 text-center">
               <p className="text-2xl font-bold text-slate-900">{grades.reduce((sum, g) => sum + g.groups.reduce((s, gr) => s + gr.capacity, 0), 0)}</p>
               <p className="text-xs text-slate-500">Capacidad Total</p>
+            </div>
+          </div>
+
+          {/* Sección de Jornadas */}
+          <div className="mb-6 border border-indigo-200 rounded-lg overflow-hidden">
+            <div className="px-4 py-3 bg-indigo-100 text-indigo-700 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4" />
+                <h3 className="font-semibold">Jornadas</h3>
+                <span className="text-xs opacity-70">({shifts.length})</span>
+              </div>
+              {canEditGrades && (
+                <button
+                  onClick={() => openShiftModal()}
+                  className="flex items-center gap-1 px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                >
+                  <Plus className="w-3 h-3" /> Agregar
+                </button>
+              )}
+            </div>
+            <div className="bg-white p-4">
+              {loadingShifts ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+                </div>
+              ) : shifts.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-4">
+                  No hay jornadas configuradas. {canEditGrades && 'Agrega una jornada para poder crear grupos.'}
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {shifts.map((shift: any) => (
+                    <div key={shift.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+                      <div>
+                        <p className="font-medium text-slate-900">{shift.name}</p>
+                        <p className="text-xs text-slate-500">
+                          {SHIFT_TYPES.find(t => t.value === shift.type)?.label || shift.type}
+                          {shift._count?.groups > 0 && ` · ${shift._count.groups} grupo(s)`}
+                        </p>
+                      </div>
+                      {canEditGrades && (
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => openShiftModal(shift)} className="p-1 hover:bg-slate-200 rounded" title="Editar">
+                            <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+                          </button>
+                          <button onClick={() => deleteShift(shift.id)} className="p-1 hover:bg-slate-200 rounded" title="Eliminar">
+                            <Trash2 className="w-3.5 h-3.5 text-slate-500" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -841,6 +992,63 @@ export default function Structure() {
                 className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
               >
                 {savingGroup ? 'Guardando...' : editingGroup?.group ? 'Guardar Cambios' : 'Crear Grupo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Jornada */}
+      {showShiftModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">
+                {editingShift ? 'Editar Jornada' : 'Nueva Jornada'}
+              </h3>
+              <button onClick={() => setShowShiftModal(false)} className="p-1 hover:bg-slate-100 rounded">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre de la jornada</label>
+                <input
+                  type="text"
+                  value={shiftForm.name}
+                  onChange={(e) => setShiftForm({ ...shiftForm, name: e.target.value })}
+                  placeholder="Ej: Mañana, Tarde, Jornada Única"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
+                <select
+                  value={shiftForm.type}
+                  onChange={(e) => setShiftForm({ ...shiftForm, type: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                >
+                  {SHIFT_TYPES.map(t => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowShiftModal(false)}
+                className="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveShift}
+                disabled={!shiftForm.name.trim() || savingShift}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              >
+                {savingShift ? 'Guardando...' : editingShift ? 'Guardar Cambios' : 'Crear Jornada'}
               </button>
             </div>
           </div>

@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards, BadRequestException } from '@nestjs/common';
+import { SchoolShift } from '@prisma/client';
 
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -21,5 +22,24 @@ export class ShiftsController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
   async list(@Query('campusId') campusId?: string) {
     return this.shiftsService.list({ campusId });
+  }
+
+  @Patch(':id')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async update(
+    @Param('id') id: string,
+    @Body() body: { name?: string; type?: SchoolShift },
+  ) {
+    return this.shiftsService.update(id, body);
+  }
+
+  @Delete(':id')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async delete(@Param('id') id: string) {
+    try {
+      return await this.shiftsService.delete(id);
+    } catch (err: any) {
+      throw new BadRequestException(err.message);
+    }
   }
 }

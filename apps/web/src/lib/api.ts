@@ -77,6 +77,8 @@ export const campusesApi = {
 export const shiftsApi = {
   getAll: (campusId?: string) => api.get('/shifts', { params: { campusId } }),
   create: (data: { campusId: string; type: string; name: string }) => api.post('/shifts', data),
+  update: (id: string, data: { name?: string; type?: string }) => api.patch(`/shifts/${id}`, data),
+  delete: (id: string) => api.delete(`/shifts/${id}`),
 }
 
 // Grades (Grados)
