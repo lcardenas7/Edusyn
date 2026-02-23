@@ -108,11 +108,35 @@ export class AcademicYearLifecycleService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async getCurrentYear(institutionId: string) {
-    return this.prisma.academicYear.findFirst({
+    // Buscar primero ACTIVE, luego DRAFT como fallback
+    const year = await this.prisma.academicYear.findFirst({
       where: {
         institutionId,
         status: 'ACTIVE',
       },
+      include: {
+        calendar: true,
+        terms: {
+          orderBy: { order: 'asc' },
+        },
+        _count: {
+          select: {
+            studentEnrollments: true,
+            teacherAssignments: true,
+          },
+        },
+      },
+    });
+
+    if (year) return year;
+
+    // Fallback: buscar el año más reciente (DRAFT o cualquier status no-CLOSED)
+    return this.prisma.academicYear.findFirst({
+      where: {
+        institutionId,
+        status: { not: 'CLOSED' },
+      },
+      orderBy: { year: 'desc' },
       include: {
         calendar: true,
         terms: {
