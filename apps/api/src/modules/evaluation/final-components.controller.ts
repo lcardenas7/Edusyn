@@ -4,11 +4,15 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { resolveInstitutionId } from '../../common/utils/institution-resolver';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Controller('final-components')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class FinalComponentsController {
-  constructor(private readonly service: FinalComponentsService) {}
+  constructor(
+    private readonly service: FinalComponentsService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
@@ -19,7 +23,7 @@ export class FinalComponentsController {
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async create(@Body() body: { academicYearId: string; name: string; weightPercentage: number; order: number }, @Req() req: any) {
-    const institutionId = await resolveInstitutionId(req.user, body as any);
+    const institutionId = await resolveInstitutionId(this.prisma as any, req);
     return this.service.create({
       institutionId: institutionId!,
       ...body,
@@ -32,7 +36,7 @@ export class FinalComponentsController {
     @Body() body: { academicYearId: string; components: Array<{ id?: string; name: string; weightPercentage: number; order: number }> },
     @Req() req: any,
   ) {
-    const institutionId = await resolveInstitutionId(req.user, body as any);
+    const institutionId = await resolveInstitutionId(this.prisma as any, req);
     return this.service.bulkSync(institutionId!, body.academicYearId, body.components);
   }
 

@@ -59,7 +59,7 @@ export default function Communications() {
   const [showViewModal, setShowViewModal] = useState(false)
   const [selectedCommunication, setSelectedCommunication] = useState<Communication | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<Communication | null>(null)
-  const [activeTab, setActiveTab] = useState<TabType>('sent')
+  const [activeTab, setActiveTab] = useState<TabType>('inbox')
   const [inboxMessages, setInboxMessages] = useState<any[]>([])
   const [loadingInbox, setLoadingInbox] = useState(false)
 
@@ -458,15 +458,6 @@ export default function Communications() {
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-slate-100 rounded-lg p-1 w-fit">
         <button
-          onClick={() => setActiveTab('sent')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'sent' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Send className="w-4 h-4" />
-          Enviados
-        </button>
-        <button
           onClick={() => setActiveTab('inbox')}
           className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
             activeTab === 'inbox' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
@@ -479,6 +470,15 @@ export default function Communications() {
               {inboxMessages.filter(m => !m.readAt).length}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => setActiveTab('sent')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'sent' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Send className="w-4 h-4" />
+          Enviados
         </button>
       </div>
 
