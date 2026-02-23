@@ -177,6 +177,7 @@ enum SystemModule {
   PAYMENTS           // Gestión de pagos y eventos financieros
   FINANCE            // Gestión financiera (cobros, pagos, egresos, facturas)
   TIMETABLE          // Gestión de horarios escolares
+  DIAGNOSIS          // Diagnóstico y seguimiento educativo
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

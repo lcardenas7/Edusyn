@@ -263,6 +263,7 @@ export class SuperadminService {
       'ELECTIONS': ['ELECTIONS_'],
       'FINANCE': ['FINANCE_'],
       'TIMETABLE': ['TIMETABLE_'],
+      'DIAGNOSIS': ['DIAGNOSIS_'],
     };
 
     // Eliminar módulos actuales y crear los nuevos con sus features

@@ -36,21 +36,10 @@ export class FinalComponentsService {
     academicYearId: string,
     components: Array<{ id?: string; name: string; weightPercentage: number; order: number }>,
   ) {
-    // Calcular peso total de los nuevos componentes
-    const totalNewWeight = components.reduce((sum, c) => sum + c.weightPercentage, 0);
-
-    // Obtener peso de períodos
-    const terms = await this.prisma.academicTerm.findMany({
-      where: { academicYearId },
-      select: { weightPercentage: true },
-    });
-    const totalTermWeight = terms.reduce((sum, t) => sum + t.weightPercentage, 0);
-
-    if (totalTermWeight + totalNewWeight > 100) {
-      throw new BadRequestException(
-        `El peso total excede 100%. Períodos: ${totalTermWeight}%, Componentes: ${totalNewWeight}%`,
-      );
-    }
+    // Nota: No validamos peso total aquí porque bulkSync se llama desde
+    // saveGradingConfigToAPI, donde los períodos pueden no haberse actualizado
+    // aún en la BD. La validación de peso total (períodos + componentes = 100%)
+    // se hace en el frontend (Periods.tsx).
 
     // Eliminar componentes existentes que no están en la nueva lista
     const existingIds = components.filter(c => c.id).map(c => c.id!);

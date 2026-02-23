@@ -19,6 +19,7 @@ export enum SystemModule {
   PAYMENTS = 'PAYMENTS',
   FINANCE = 'FINANCE',
   TIMETABLE = 'TIMETABLE',
+  DIAGNOSIS = 'DIAGNOSIS',
 }
 
 export class CreateInstitutionDto {
