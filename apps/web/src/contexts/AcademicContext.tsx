@@ -488,24 +488,34 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
             })
 
             // Sincronizar componentes finales (pruebas semestrales) junto con los períodos
-            if (gradingConfig.useFinalComponents && gradingConfig.finalComponents.length > 0) {
-              await api.post('/final-components/sync', {
-                academicYearId: activeYear.id,
-                components: gradingConfig.finalComponents.map((fc, i) => ({
-                  id: fc.id?.startsWith('fc-') ? undefined : fc.id,
-                  name: fc.name,
-                  weightPercentage: fc.weightPercentage,
-                  order: i + 1,
-                })),
-              })
-            } else {
-              // Si no hay componentes finales, limpiar los existentes
-              await api.post('/final-components/sync', {
-                academicYearId: activeYear.id,
-                components: [],
-              })
+            try {
+              if (gradingConfig.useFinalComponents && gradingConfig.finalComponents.length > 0) {
+                const syncPayload = {
+                  academicYearId: activeYear.id,
+                  components: gradingConfig.finalComponents.map((fc, i) => ({
+                    id: fc.id?.startsWith('fc-') ? undefined : fc.id,
+                    name: fc.name,
+                    weightPercentage: fc.weightPercentage,
+                    order: i + 1,
+                  })),
+                }
+                console.log('[FinalComponents] Syncing:', JSON.stringify(syncPayload))
+                const syncRes = await api.post('/final-components/sync', syncPayload)
+                console.log('[FinalComponents] Sync OK:', syncRes.data)
+              } else {
+                await api.post('/final-components/sync', {
+                  academicYearId: activeYear.id,
+                  components: [],
+                })
+              }
+            } catch (fcErr: any) {
+              console.error('[FinalComponents] Sync FAILED:', fcErr?.response?.data || fcErr?.message || fcErr)
             }
+          } else {
+            console.warn('[Periods] No active academic year found for institution:', instId)
           }
+        } else {
+          console.warn('[Periods] No institutionId in localStorage')
         }
       } catch (e) {
         console.error('Error syncing periods to AcademicTerm:', e)

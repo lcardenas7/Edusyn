@@ -36,8 +36,12 @@ export class FinalComponentsController {
     @Body() body: { academicYearId: string; components: Array<{ id?: string; name: string; weightPercentage: number; order: number }> },
     @Req() req: any,
   ) {
+    console.log('[FinalComponents] POST /sync received:', JSON.stringify(body));
     const institutionId = await resolveInstitutionId(this.prisma as any, req);
-    return this.service.bulkSync(institutionId!, body.academicYearId, body.components);
+    console.log('[FinalComponents] Resolved institutionId:', institutionId);
+    const result = await this.service.bulkSync(institutionId!, body.academicYearId, body.components);
+    console.log('[FinalComponents] bulkSync result:', JSON.stringify(result));
+    return result;
   }
 
   @Put(':id')

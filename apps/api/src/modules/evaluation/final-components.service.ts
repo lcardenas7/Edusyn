@@ -1,8 +1,9 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class FinalComponentsService {
+  private readonly logger = new Logger(FinalComponentsService.name);
   constructor(private prisma: PrismaService) {}
 
   async findByAcademicYear(academicYearId: string) {
@@ -36,10 +37,7 @@ export class FinalComponentsService {
     academicYearId: string,
     components: Array<{ id?: string; name: string; weightPercentage: number; order: number }>,
   ) {
-    // Nota: No validamos peso total aquí porque bulkSync se llama desde
-    // saveGradingConfigToAPI, donde los períodos pueden no haberse actualizado
-    // aún en la BD. La validación de peso total (períodos + componentes = 100%)
-    // se hace en el frontend (Periods.tsx).
+    this.logger.log(`bulkSync called: institutionId=${institutionId}, academicYearId=${academicYearId}, components=${JSON.stringify(components)}`);
 
     // Eliminar componentes existentes que no están en la nueva lista
     const existingIds = components.filter(c => c.id).map(c => c.id!);
