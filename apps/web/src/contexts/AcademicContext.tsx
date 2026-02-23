@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react'
 import api from '../lib/api'
+import { useAuth } from './AuthContext'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TIPOS PARA CONFIGURACIÓN ACADÉMICA (SIEE)
@@ -342,6 +343,7 @@ const saveToStorage = <T,>(key: string, value: T): void => {
 const AcademicContext = createContext<AcademicContextType | undefined>(undefined)
 
 export function AcademicProvider({ children }: { children: ReactNode }) {
+  const { institution: authInstitution } = useAuth()
   const [academicYear, setAcademicYearState] = useState<number>(() => 
     loadFromStorage('edusyn_academicYear', new Date().getFullYear())
   )
@@ -471,7 +473,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
 
       // Sincronizar como AcademicTerm en la BD para el año activo
       try {
-        const instId = localStorage.getItem('institutionId')
+        const instId = authInstitution?.id
         if (instId) {
           const yearRes = await api.get(`/academic-years/institution/${instId}/current`)
           const activeYear = yearRes.data
@@ -515,7 +517,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
             console.warn('[Periods] No active academic year found for institution:', instId)
           }
         } else {
-          console.warn('[Periods] No institutionId in localStorage')
+          console.warn('[Periods] No institutionId available from AuthContext')
         }
       } catch (e) {
         console.error('Error syncing periods to AcademicTerm:', e)
@@ -528,7 +530,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsSaving(false)
     }
-  }, [periods, gradingConfig])
+  }, [periods, gradingConfig, authInstitution?.id])
 
   // Guardar configuración de calificaciones en API
   const saveGradingConfigToAPI = useCallback(async (): Promise<boolean> => {
@@ -542,7 +544,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
       // Sincronizar componentes finales a la BD (FinalComponent table)
       if (gradingConfig.useFinalComponents && gradingConfig.finalComponents.length > 0) {
         try {
-          const instId = localStorage.getItem('institutionId')
+          const instId = authInstitution?.id
           if (instId) {
             const yearRes = await api.get(`/academic-years/institution/${instId}/current`)
             const activeYear = yearRes.data
@@ -564,7 +566,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
       } else {
         // Si se deshabilitaron, limpiar componentes de la BD
         try {
-          const instId = localStorage.getItem('institutionId')
+          const instId = authInstitution?.id
           if (instId) {
             const yearRes = await api.get(`/academic-years/institution/${instId}/current`)
             const activeYear = yearRes.data
@@ -587,7 +589,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsSaving(false)
     }
-  }, [gradingConfig])
+  }, [gradingConfig, authInstitution?.id])
 
   // Guardar configuración de áreas en API
   const saveAreaConfigToAPI = useCallback(async (): Promise<boolean> => {
