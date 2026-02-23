@@ -486,6 +486,25 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
                 endDate: p.endDate || undefined,
               })),
             })
+
+            // Sincronizar componentes finales (pruebas semestrales) junto con los períodos
+            if (gradingConfig.useFinalComponents && gradingConfig.finalComponents.length > 0) {
+              await api.post('/final-components/sync', {
+                academicYearId: activeYear.id,
+                components: gradingConfig.finalComponents.map((fc, i) => ({
+                  id: fc.id?.startsWith('fc-') ? undefined : fc.id,
+                  name: fc.name,
+                  weightPercentage: fc.weightPercentage,
+                  order: i + 1,
+                })),
+              })
+            } else {
+              // Si no hay componentes finales, limpiar los existentes
+              await api.post('/final-components/sync', {
+                academicYearId: activeYear.id,
+                components: [],
+              })
+            }
           }
         }
       } catch (e) {
@@ -499,7 +518,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsSaving(false)
     }
-  }, [periods])
+  }, [periods, gradingConfig])
 
   // Guardar configuración de calificaciones en API
   const saveGradingConfigToAPI = useCallback(async (): Promise<boolean> => {
