@@ -1685,6 +1685,7 @@ model FinalComponent {
   name             String   // "Prueba Semestral I", "Proyecto Final"
   weightPercentage Int      // Peso en la nota anual (ej: 10)
   order            Int
+  isOpen           Boolean  @default(false) // Controla si el ingreso de notas está habilitado
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

@@ -1523,6 +1523,8 @@ export const finalComponentsApi = {
     api.post('/final-components/sync', { academicYearId, components }),
   update: (id: string, data: { name?: string; weightPercentage?: number; order?: number }) =>
     api.put(`/final-components/${id}`, data),
+  toggleOpen: (id: string, isOpen: boolean) =>
+    api.put(`/final-components/${id}/toggle-open`, { isOpen }),
   delete: (id: string) => api.delete(`/final-components/${id}`),
 }
 

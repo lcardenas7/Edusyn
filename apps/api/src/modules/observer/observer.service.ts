@@ -413,12 +413,13 @@ export class ObserverService {
   // BÚSQUEDA POR GRUPO (para coordinadores/docentes)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async getByGroup(groupId: string, academicYearId: string, filters?: { type?: string; status?: string }) {
+  async getByGroup(groupId: string, academicYearId: string, filters?: { type?: string; status?: string; authorId?: string }) {
     return this.prisma.studentObservation.findMany({
       where: {
         studentEnrollment: { groupId, academicYearId },
         ...(filters?.type ? { type: filters.type as any } : {}),
         ...(filters?.status ? { status: filters.status as ObserverEntryStatus } : {}),
+        ...(filters?.authorId ? { authorId: filters.authorId } : {}),
       },
       include: observationFullInclude,
       orderBy: { date: 'desc' },

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { 
   Calendar,
   Clock,
@@ -9,13 +9,16 @@ import {
   Save,
   GraduationCap,
   Eye,
-  ArrowLeft
+  ArrowLeft,
+  Lock,
+  Unlock
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAcademic, AcademicPeriod } from '../../../contexts/AcademicContext'
 import { useAuth } from '../../../contexts/AuthContext'
 import { usePermissions, PERMISSIONS } from '../../../hooks/usePermissions'
 import AcademicYearBanner, { useAcademicYearStatus } from '../../../components/AcademicYearBanner'
+import { finalComponentsApi, academicYearLifecycleApi } from '../../../lib/api'
 
 export default function Periods() {
   const { 
@@ -36,6 +39,37 @@ export default function Periods() {
   const [editingPeriod, setEditingPeriod] = useState<AcademicPeriod | null>(null)
   const [periodForm, setPeriodForm] = useState({ name: '', weight: 25, startDate: '', endDate: '' })
   const [savingPeriods, setSavingPeriods] = useState(false)
+  const [dbFinalComponents, setDbFinalComponents] = useState<Array<{ id: string; name: string; isOpen: boolean }>>([])
+  const [togglingFc, setTogglingFc] = useState<string | null>(null)
+
+  // Cargar estado real de componentes finales desde la BD
+  const loadDbFinalComponents = useCallback(async () => {
+    if (!authInstitution?.id) return
+    try {
+      const yearRes = await academicYearLifecycleApi.getCurrent(authInstitution.id)
+      if (yearRes.data?.id) {
+        const res = await finalComponentsApi.getByAcademicYear(yearRes.data.id)
+        setDbFinalComponents((res.data || []).map((fc: any) => ({ id: fc.id, name: fc.name, isOpen: fc.isOpen })))
+      }
+    } catch (err) {
+      console.error('Error loading DB final components:', err)
+    }
+  }, [authInstitution?.id])
+
+  useEffect(() => { loadDbFinalComponents() }, [loadDbFinalComponents])
+
+  const handleToggleFcOpen = async (fcId: string, currentIsOpen: boolean) => {
+    setTogglingFc(fcId)
+    try {
+      await finalComponentsApi.toggleOpen(fcId, !currentIsOpen)
+      setDbFinalComponents(prev => prev.map(fc => fc.id === fcId ? { ...fc, isOpen: !currentIsOpen } : fc))
+    } catch (err) {
+      console.error('Error toggling final component:', err)
+      alert('Error al cambiar el estado del componente')
+    } finally {
+      setTogglingFc(null)
+    }
+  }
 
   // Cálculos
   const totalPeriodWeight = periods.reduce((sum, p) => sum + p.weight, 0)
@@ -275,7 +309,9 @@ export default function Periods() {
                 </div>
 
                 <div className="space-y-2">
-                  {gradingConfig.finalComponents.map((comp) => (
+                  {gradingConfig.finalComponents.map((comp) => {
+                    const dbComp = dbFinalComponents.find(db => db.name === comp.name || db.id === comp.id)
+                    return (
                     <div key={comp.id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-purple-200">
                       <input
                         type="text"
@@ -304,6 +340,21 @@ export default function Periods() {
                         />
                         <span className="text-xs text-slate-500">%</span>
                       </div>
+                      {dbComp && canEditPeriods && (
+                        <button
+                          onClick={() => handleToggleFcOpen(dbComp.id, dbComp.isOpen)}
+                          disabled={togglingFc === dbComp.id}
+                          title={dbComp.isOpen ? 'Cerrar ingreso de notas' : 'Abrir ingreso de notas'}
+                          className={`p-1.5 rounded transition-colors ${
+                            togglingFc === dbComp.id ? 'opacity-50 cursor-wait' :
+                            dbComp.isOpen 
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                              : 'bg-red-100 text-red-600 hover:bg-red-200'
+                          }`}
+                        >
+                          {dbComp.isOpen ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           if (gradingConfig.finalComponents.length > 1) {
@@ -318,7 +369,8 @@ export default function Periods() {
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 <div className="mt-3 text-xs text-purple-700">

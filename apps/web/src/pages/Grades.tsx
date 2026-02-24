@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
-import { BookOpen, ChevronDown, Save, Plus, Trash2, X, Settings, AlertTriangle, Lock, Download, Upload, Library, Search, Copy, FileText, Heart } from 'lucide-react'
+import { BookOpen, ChevronDown, Save, Plus, Trash2, X, AlertTriangle, Lock, Download, Upload, Library, Search, Copy, FileText, Heart } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { useAuth } from '../contexts/AuthContext'
 import { useAcademic, type AcademicLevel, type QualitativeLevel } from '../contexts/AcademicContext'
@@ -213,7 +213,6 @@ export default function Grades() {
   const [qualitativeGrades, setQualitativeGrades] = useState<Record<string, { levelCode: string; observation: string }>>({})
 
   const [showAddActivity, setShowAddActivity] = useState(false)
-  const [showConfig, setShowConfig] = useState(false)
   const [showDownloadMenu, setShowDownloadMenu] = useState(false)
   const [addToProcessCode, setAddToProcessCode] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'detailed' | 'summary' | 'achievements'>('detailed')
@@ -237,7 +236,7 @@ export default function Grades() {
 
   // Fuentes de nota unificadas (períodos + componentes finales)
   const [selectedSourceType, setSelectedSourceType] = useState<'period' | 'final_component'>('period')
-  const [finalComponents, setFinalComponents] = useState<Array<{ id: string; name: string; weightPercentage: number; order: number }>>([])
+  const [finalComponents, setFinalComponents] = useState<Array<{ id: string; name: string; weightPercentage: number; order: number; isOpen: boolean }>>([])
   const [selectedFinalComponentId, setSelectedFinalComponentId] = useState<string | null>(null)
   const [fcGrades, setFcGrades] = useState<Record<string, number>>({}) // studentId → grade
   const [savingFc, setSavingFc] = useState(false)
@@ -381,8 +380,18 @@ export default function Grades() {
     fetchPeriodsStatus()
   }, [selectedAssignment?.academicYear?.id])
 
-  // Verificar si el período está abierto
+  // Verificar si el período o componente final está abierto
   useEffect(() => {
+    // Si es componente final, verificar isOpen del componente
+    if (selectedSourceType === 'final_component' && selectedFinalComponentId) {
+      const fc = finalComponents.find(c => c.id === selectedFinalComponentId)
+      if (fc) {
+        setCurrentPeriodOpen(fc.isOpen)
+        setPeriodClosedMessage(fc.isOpen ? '' : `El ingreso de notas para "${fc.name}" está cerrado. Un administrador debe habilitarlo.`)
+      }
+      return
+    }
+
     if (periodsStatus.length === 0) {
       setCurrentPeriodOpen(true)
       setPeriodClosedMessage('')
@@ -412,7 +421,7 @@ export default function Grades() {
       setPeriodClosedMessage('')
       setAcademicTermId(null)
     }
-  }, [selectedPeriod, periodsStatus])
+  }, [selectedPeriod, periodsStatus, selectedSourceType, selectedFinalComponentId, finalComponents])
 
   // Cargar componentes finales del año
   useEffect(() => {
@@ -1197,15 +1206,6 @@ export default function Grades() {
           </p>
         </div>
         <div className="flex gap-2">
-          {isAdmin && (
-            <button 
-              onClick={() => setShowConfig(true)}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm sm:text-base"
-            >
-              <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Configurar</span>
-            </button>
-          )}
           {selectedAssignment && (
             <div className="relative">
               <button

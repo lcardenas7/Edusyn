@@ -78,6 +78,14 @@ export class FinalComponentsService {
     return results;
   }
 
+  async toggleOpen(id: string, isOpen: boolean) {
+    await this.findOne(id);
+    return this.prisma.finalComponent.update({
+      where: { id },
+      data: { isOpen },
+    });
+  }
+
   async update(id: string, data: { name?: string; weightPercentage?: number; order?: number }) {
     const existing = await this.findOne(id);
 

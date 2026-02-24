@@ -65,8 +65,12 @@ export class ObserverController {
     @Query('academicYearId') academicYearId: string,
     @Query('type') type?: string,
     @Query('status') status?: string,
+    @Request() req?,
   ) {
-    return this.observerService.getByGroup(groupId, academicYearId, { type, status });
+    const userRoles: string[] = (req?.user?.roles || []).map((r: any) => r.role?.name || r.name || r).filter(Boolean);
+    const isAdmin = userRoles.some((r: string) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'].includes(r));
+    const authorId = isAdmin ? undefined : req?.user?.id;
+    return this.observerService.getByGroup(groupId, academicYearId, { type, status, authorId });
   }
 
   @Get('by-student/:studentEnrollmentId')

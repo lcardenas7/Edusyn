@@ -44,6 +44,12 @@ export class FinalComponentsController {
     return result;
   }
 
+  @Put(':id/toggle-open')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async toggleOpen(@Param('id') id: string, @Body() body: { isOpen: boolean }) {
+    return this.service.toggleOpen(id, body.isOpen);
+  }
+
   @Put(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async update(@Param('id') id: string, @Body() body: { name?: string; weightPercentage?: number; order?: number }) {
