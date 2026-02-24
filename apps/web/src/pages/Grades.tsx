@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useAcademic, type AcademicLevel, type QualitativeLevel } from '../contexts/AcademicContext'
 import { teacherAssignmentsApi, academicStudentsApi, gradingPeriodConfigApi, partialGradesApi, achievementsApi, achievementConfigApi, achievementBankApi, finalComponentsApi, finalComponentGradesApi } from '../lib/api'
 import { buildQualitativeMaps, toPerformanceLevel, toQualitativeCode } from '../utils/qualitativePerformanceMapper'
+import { DiagnosisBadge } from '../components/StudentBadges'
 
 interface TeacherAssignment {
   id: string
@@ -60,15 +61,6 @@ const processColors = [
   { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', light: 'bg-purple-50/50', input: 'focus:ring-purple-500 focus:border-purple-500' },
   { bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200', light: 'bg-pink-50/50', input: 'focus:ring-pink-500 focus:border-pink-500' },
 ]
-
-function DiagnosisBadge({ student }: { student: { hasDiagnosis?: boolean; diagnosisType?: string } }) {
-  if (!student.hasDiagnosis) return null
-  return (
-    <span title={student.diagnosisType ? `Diagnóstico: ${student.diagnosisType}` : 'Estudiante con diagnóstico'} className="inline-flex items-center ml-1.5">
-      <Heart className="w-3.5 h-3.5 text-purple-500 fill-purple-200" />
-    </span>
-  )
-}
 
 interface Activity {
   id: string

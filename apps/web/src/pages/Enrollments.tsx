@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { enrollmentsApi, academicYearLifecycleApi, groupsApi, gradeChangeApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
+import { DiagnosisBadge } from '../components/StudentBadges'
 
 interface Student {
   id: string
@@ -613,6 +614,7 @@ const Enrollments: React.FC = () => {
                         <div>
                           <div className="text-sm font-medium text-slate-900">
                             {[enrollment.student.lastName, enrollment.student.secondLastName, enrollment.student.firstName, enrollment.student.secondName].filter(Boolean).join(' ')}
+                            <DiagnosisBadge student={enrollment.student} />
                           </div>
                           {enrollment.student.email && (
                             <div className="text-xs text-slate-500">{enrollment.student.email}</div>

@@ -7,6 +7,7 @@ import {
   CheckCircle, XCircle, Trash2, BarChart3, Loader2,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { DiagnosisBadge } from '../components/StudentBadges'
 import { observerApi, teacherAssignmentsApi, groupsApi, enrollmentsApi } from '../lib/api'
 import api from '../lib/api'
 
@@ -817,7 +818,7 @@ export default function Observer() {
                             className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                           />
                           <span className="text-xs text-slate-400 w-5 text-right">{idx + 1}.</span>
-                          <span className="text-sm text-slate-800">{s.name}</span>
+                          <span className="text-sm text-slate-800">{s.name}<DiagnosisBadge student={s} /></span>
                         </label>
                       ))}
                     {students.filter(s => !studentSearchTerm || s.name.toLowerCase().includes(studentSearchTerm.toLowerCase())).length === 0 && (

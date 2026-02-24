@@ -818,7 +818,7 @@ export class StudentsService {
     groupId: string;
     academicYearId: string;
     institutionId: string;
-  }): Promise<Array<{ id: string; name: string; enrollmentId: string; documentNumber?: string; hasDiagnosis: boolean; diagnosisType?: string }>> {
+  }): Promise<Array<{ id: string; name: string; enrollmentId: string; documentNumber?: string; hasDiagnosis: boolean; diagnosisType?: string; hasSupportProfile: boolean }>> {
     const { groupId, academicYearId, institutionId } = params;
 
     const enrollments = await this.prisma.studentEnrollment.findMany({
@@ -842,6 +842,11 @@ export class StudentsService {
             documentNumber: true,
             hasDiagnosis: true,
             diagnosisType: true,
+            educationalSupportProfiles: {
+              where: { active: true },
+              select: { id: true },
+              take: 1,
+            },
           },
         },
       },
@@ -865,6 +870,7 @@ export class StudentsService {
       documentNumber: enrollment.student.documentNumber || undefined,
       hasDiagnosis: enrollment.student.hasDiagnosis || false,
       diagnosisType: enrollment.student.diagnosisType || undefined,
+      hasSupportProfile: (enrollment.student as any).educationalSupportProfiles?.length > 0,
     }));
   }
 
@@ -875,7 +881,7 @@ export class StudentsService {
     groupIds: string[];
     academicYearId: string;
     institutionId: string;
-  }): Promise<Record<string, Array<{ id: string; name: string; enrollmentId: string; documentNumber?: string; hasDiagnosis: boolean; diagnosisType?: string }>>> {
+  }): Promise<Record<string, Array<{ id: string; name: string; enrollmentId: string; documentNumber?: string; hasDiagnosis: boolean; diagnosisType?: string; hasSupportProfile: boolean }>>> {
     const { groupIds, academicYearId, institutionId } = params;
 
     const enrollments = await this.prisma.studentEnrollment.findMany({
@@ -899,6 +905,11 @@ export class StudentsService {
             documentNumber: true,
             hasDiagnosis: true,
             diagnosisType: true,
+            educationalSupportProfiles: {
+              where: { active: true },
+              select: { id: true },
+              take: 1,
+            },
           },
         },
       },
@@ -910,7 +921,7 @@ export class StudentsService {
     });
 
     // Agrupar por groupId
-    const result: Record<string, Array<{ id: string; name: string; enrollmentId: string; documentNumber?: string; hasDiagnosis: boolean; diagnosisType?: string }>> = {};
+    const result: Record<string, Array<{ id: string; name: string; enrollmentId: string; documentNumber?: string; hasDiagnosis: boolean; diagnosisType?: string; hasSupportProfile: boolean }>> = {};
     for (const enrollment of enrollments) {
       if (!result[enrollment.groupId]) {
         result[enrollment.groupId] = [];
@@ -927,6 +938,7 @@ export class StudentsService {
         documentNumber: enrollment.student.documentNumber || undefined,
         hasDiagnosis: enrollment.student.hasDiagnosis || false,
         diagnosisType: enrollment.student.diagnosisType || undefined,
+        hasSupportProfile: (enrollment.student as any).educationalSupportProfiles?.length > 0,
       });
     }
 

@@ -29,6 +29,7 @@ interface AcademicStudent {
   documentNumber?: string;
   hasDiagnosis: boolean;
   diagnosisType?: string;
+  hasSupportProfile: boolean;
 }
 
 @Controller('academic/students')

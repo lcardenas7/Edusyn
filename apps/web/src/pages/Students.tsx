@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx'
 import { generateTemplate, parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
 import api, { studentsApi, guardiansApi, academicYearLifecycleApi, groupsApi, enrollmentsApi, observerApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
+import { DiagnosisBadge } from '../components/StudentBadges'
 
 type StudentStatus = 'ACTIVE' | 'INACTIVE' | 'TRANSFERRED' | 'GRADUATED' | 'WITHDRAWN'
 type ViewMode = 'list' | 'detail'
@@ -1665,12 +1666,7 @@ export default function Students() {
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <p className="font-medium text-slate-900">{student.lastName} {student.firstName}</p>
-                              {student.hasDiagnosis && (
-                                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs" title={student.diagnosisType || 'Diagnóstico'}>
-                                  <Heart className="w-3 h-3" />
-                                </span>
-                              )}
+                              <p className="font-medium text-slate-900">{student.lastName} {student.firstName}<DiagnosisBadge student={student} /></p>
                             </div>
                             <p className="text-xs text-slate-500">{calculateAge(student.birthDate)} años - {student.gender === 'M' ? 'Masculino' : 'Femenino'}</p>
                           </div>

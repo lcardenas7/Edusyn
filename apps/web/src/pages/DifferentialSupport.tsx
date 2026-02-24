@@ -25,7 +25,7 @@ import {
   Edit3,
   ClipboardList,
 } from 'lucide-react'
-import { apdApi, academicStudentsApi, academicYearsApi, academicTermsApi, teacherAssignmentsApi } from '../lib/api'
+import { apdApi, academicStudentsApi, academicYearsApi, academicTermsApi, teacherAssignmentsApi, academicGradesApi, groupsApi } from '../lib/api'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CONSTANTES
@@ -95,6 +95,14 @@ export default function DifferentialSupport() {
     parentConsentAccepted: false,
     consentDate: '',
   })
+
+  // Profile modal filters
+  const [modalGrades, setModalGrades] = useState<any[]>([])
+  const [modalGroups, setModalGroups] = useState<any[]>([])
+  const [modalStudents, setModalStudents] = useState<any[]>([])
+  const [modalSelectedGradeId, setModalSelectedGradeId] = useState('')
+  const [modalSelectedGroupId, setModalSelectedGroupId] = useState('')
+  const [modalStudentsLoading, setModalStudentsLoading] = useState(false)
 
   // Plans
   const [academicYears, setAcademicYears] = useState<any[]>([])
@@ -217,6 +225,49 @@ export default function DifferentialSupport() {
     }
   }
 
+  // Load grades when profile modal opens
+  useEffect(() => {
+    if (!showProfileModal || editingProfile) return
+    const loadGrades = async () => {
+      try {
+        const res = await academicGradesApi.getAll(institutionId)
+        setModalGrades(res.data || [])
+      } catch { setModalGrades([]) }
+    }
+    loadGrades()
+  }, [showProfileModal, editingProfile, institutionId])
+
+  // Load groups when grade selected in modal
+  useEffect(() => {
+    if (!modalSelectedGradeId) { setModalGroups([]); setModalSelectedGroupId(''); return }
+    const loadGroups = async () => {
+      try {
+        const res = await groupsApi.getAll({ gradeId: modalSelectedGradeId, institutionId })
+        setModalGroups(res.data || [])
+        setModalSelectedGroupId('')
+      } catch { setModalGroups([]) }
+    }
+    loadGroups()
+  }, [modalSelectedGradeId, institutionId])
+
+  // Load students when group selected in modal
+  useEffect(() => {
+    if (!modalSelectedGroupId || !selectedYearId) { setModalStudents([]); return }
+    const loadStudents = async () => {
+      setModalStudentsLoading(true)
+      try {
+        const res = await academicStudentsApi.getByGroup({
+          groupId: modalSelectedGroupId,
+          academicYearId: selectedYearId,
+          institutionId,
+        })
+        setModalStudents(res.data || [])
+      } catch { setModalStudents([]) }
+      finally { setModalStudentsLoading(false) }
+    }
+    loadStudents()
+  }, [modalSelectedGroupId, selectedYearId, institutionId])
+
   const openCreateProfile = () => {
     setEditingProfile(null)
     setProfileForm({
@@ -226,6 +277,9 @@ export default function DifferentialSupport() {
       parentConsentAccepted: false,
       consentDate: '',
     })
+    setModalSelectedGradeId('')
+    setModalSelectedGroupId('')
+    setModalStudents([])
     setShowProfileModal(true)
   }
 
@@ -1285,24 +1339,55 @@ export default function DifferentialSupport() {
             </div>
             <div className="p-5 space-y-4">
               {!editingProfile && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Estudiante <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={profileForm.studentId}
-                    onChange={(e) => setProfileForm({ ...profileForm, studentId: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
-                  >
-                    <option value="">Seleccionar estudiante...</option>
-                    {students.map((s: any) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name || `${s.firstName} ${s.lastName}`}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-slate-400 mt-1">Seleccione primero un grupo en la pestaña "Planes" para cargar estudiantes</p>
-                </div>
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Grado</label>
+                      <select
+                        value={modalSelectedGradeId}
+                        onChange={(e) => { setModalSelectedGradeId(e.target.value); setProfileForm({ ...profileForm, studentId: '' }) }}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                      >
+                        <option value="">Seleccionar grado...</option>
+                        {modalGrades.map((g: any) => (
+                          <option key={g.id} value={g.id}>{g.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Grupo</label>
+                      <select
+                        value={modalSelectedGroupId}
+                        onChange={(e) => { setModalSelectedGroupId(e.target.value); setProfileForm({ ...profileForm, studentId: '' }) }}
+                        disabled={!modalSelectedGradeId}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
+                      >
+                        <option value="">Seleccionar grupo...</option>
+                        {modalGroups.map((g: any) => (
+                          <option key={g.id} value={g.id}>{g.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Estudiante <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={profileForm.studentId}
+                      onChange={(e) => setProfileForm({ ...profileForm, studentId: e.target.value })}
+                      disabled={!modalSelectedGroupId || modalStudentsLoading}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
+                    >
+                      <option value="">{modalStudentsLoading ? 'Cargando...' : 'Seleccionar estudiante...'}</option>
+                      {modalStudents.map((s: any) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name || `${s.firstName} ${s.lastName}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
               )}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">

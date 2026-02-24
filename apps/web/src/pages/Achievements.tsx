@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useAcademic } from '../contexts/AcademicContext'
+import { DiagnosisBadge } from '../components/StudentBadges'
 import {
   FileText,
   Settings,
@@ -1656,7 +1657,7 @@ function StudentAchievementCard({
 
         {/* Student info */}
         <div className="flex-1 min-w-0">
-          <span className="font-medium text-slate-800 text-sm truncate block">{student.name}{student.hasDiagnosis && <span title={student.diagnosisType ? `Diagnóstico: ${student.diagnosisType}` : 'Estudiante con diagnóstico'} className="inline-flex items-center ml-1.5"><Heart className="w-3.5 h-3.5 text-purple-500 fill-purple-200" /></span>}</span>
+          <span className="font-medium text-slate-800 text-sm truncate block">{student.name}<DiagnosisBadge student={student} /></span>
         </div>
 
         {/* Grade + Level */}

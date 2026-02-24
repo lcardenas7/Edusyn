@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Calendar, Check, X, Clock, FileText, ChevronDown, AlertTriangle, Save, Users, Heart } from 'lucide-react'
+import { Calendar, Check, X, Clock, FileText, ChevronDown, AlertTriangle, Save, Users } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { DiagnosisBadge } from '../components/StudentBadges'
 import { teacherAssignmentsApi, academicStudentsApi, attendanceApi, tutoringAttendanceApi, academicYearsApi, storageApi } from '../lib/api'
 
 interface TeacherAssignment {
@@ -604,7 +605,7 @@ export default function Attendance() {
                         {student.name.split(' ').map((n: string) => n[0]).join('')}
                       </span>
                     </div>
-                    <span className="font-medium text-slate-900">{student.name}{student.hasDiagnosis && <span title={student.diagnosisType ? `Diagnóstico: ${student.diagnosisType}` : 'Estudiante con diagnóstico'} className="inline-flex items-center ml-1.5"><Heart className="w-3.5 h-3.5 text-purple-500 fill-purple-200" /></span>}</span>
+                    <span className="font-medium text-slate-900">{student.name}<DiagnosisBadge student={student} /></span>
                   </div>
                   <div className="flex items-center gap-2">
                     {Object.entries(statusConfig).map(([status, cfg]) => (
@@ -777,7 +778,7 @@ export default function Attendance() {
                       {student.name.split(' ').map(n => n[0]).join('')}
                     </span>
                   </div>
-                  <span className="font-medium text-slate-900">{student.name}{student.hasDiagnosis && <span title={student.diagnosisType ? `Diagnóstico: ${student.diagnosisType}` : 'Estudiante con diagnóstico'} className="inline-flex items-center ml-1.5"><Heart className="w-3.5 h-3.5 text-purple-500 fill-purple-200" /></span>}</span>
+                  <span className="font-medium text-slate-900">{student.name}<DiagnosisBadge student={student} /></span>
                 </div>
 
                 <div className="flex items-center gap-2">
