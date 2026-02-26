@@ -9,6 +9,7 @@ import {
   UseInterceptors,
   UploadedFile,
   Request,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -150,9 +151,11 @@ export class ScheduleGeneratorController {
 
   @Get('shifts')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
-  async getShifts(@Request() req) {
+  async getShifts(@Request() req, @Query('academicYearId') academicYearId?: string) {
+    const institutionId = await this.resolveInstitutionId(req, academicYearId);
+    if (!institutionId) return [];
     const shifts = await this.prisma.shift.findMany({
-      where: { campus: { institutionId: req.user.institutionId } },
+      where: { campus: { institutionId } },
       include: {
         campus: { select: { name: true } },
         _count: { select: { groups: true, timeBlocks: true } },
@@ -181,8 +184,10 @@ export class ScheduleGeneratorController {
     @Query('academicYearId') academicYearId: string,
     @Res() res: Response,
   ) {
+    const institutionId = await this.resolveInstitutionId(req, academicYearId);
+    if (!institutionId) throw new BadRequestException('No se pudo resolver la institución');
     const buffer = await this.excelService.generateTemplate(
-      req.user.institutionId,
+      institutionId,
       academicYearId,
     );
 
@@ -213,8 +218,14 @@ export class ScheduleGeneratorController {
       return { success: false, errors: ['academicYearId es obligatorio'] };
     }
 
+    const institutionId = await this.resolveInstitutionId(req, academicYearId);
+    if (!institutionId) {
+      return { success: false, errors: ['No se pudo resolver la institución. Contacte soporte.'] };
+    }
+    console.log(`[Import] institutionId=${institutionId}, academicYearId=${academicYearId}, user=${req.user.id}, role=${req.user.isSuperAdmin ? 'SUPERADMIN' : 'INSTITUTIONAL'}`);
+
     return this.excelService.importTeachingLoad(
-      req.user.institutionId,
+      institutionId,
       academicYearId,
       file.buffer,
     );
@@ -231,7 +242,8 @@ export class ScheduleGeneratorController {
     @Query('academicYearId') academicYearId: string,
     @Query('shiftId') shiftId?: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = await this.resolveInstitutionId(req, academicYearId);
+    if (!institutionId) return { feasible: false, error: 'No se pudo resolver la institución' };
     if (!academicYearId) return { feasible: false, error: 'academicYearId es obligatorio' };
 
     // 1. Get groups
@@ -372,6 +384,11 @@ export class ScheduleGeneratorController {
       return { success: false, errors: ['academicYearId es obligatorio'] };
     }
 
+    const institutionId = await this.resolveInstitutionId(req, body.academicYearId);
+    if (!institutionId) {
+      return { success: false, errors: ['No se pudo resolver la institución'] };
+    }
+
     const options: GenerationOptions = {
       academicYearId: body.academicYearId,
       shiftId: body.shiftId,
@@ -382,7 +399,7 @@ export class ScheduleGeneratorController {
       activeDays: body.activeDays as any,
     };
 
-    const result = await this.generatorService.generateSchedule(req.user.institutionId, options);
+    const result = await this.generatorService.generateSchedule(institutionId, options);
 
     // Persist result in context if shiftId provided
     if (body.shiftId) {
@@ -390,13 +407,13 @@ export class ScheduleGeneratorController {
         await this.prisma.scheduleGenerationContext.upsert({
           where: {
             institutionId_academicYearId_shiftId: {
-              institutionId: req.user.institutionId,
+              institutionId,
               academicYearId: body.academicYearId,
               shiftId: body.shiftId,
             },
           },
           create: {
-            institutionId: req.user.institutionId,
+            institutionId,
             academicYearId: body.academicYearId,
             shiftId: body.shiftId,
             lastStep: 'result',
@@ -425,8 +442,10 @@ export class ScheduleGeneratorController {
     @Query('viewType') viewType: 'by-group' | 'by-teacher' = 'by-group',
     @Res() res: Response,
   ) {
+    const institutionId = await this.resolveInstitutionId(req, academicYearId);
+    if (!institutionId) throw new BadRequestException('No se pudo resolver la institución');
     const buffer = await this.excelService.exportSchedule(
-      req.user.institutionId,
+      institutionId,
       academicYearId,
       viewType,
     );
@@ -455,8 +474,10 @@ export class ScheduleGeneratorController {
     @Query('viewType') viewType: 'by-group' | 'by-teacher' = 'by-group',
     @Res() res: Response,
   ) {
+    const institutionId = await this.resolveInstitutionId(req, academicYearId);
+    if (!institutionId) throw new BadRequestException('No se pudo resolver la institución');
     const buffer = await this.excelService.exportSchedulePdf(
-      req.user.institutionId,
+      institutionId,
       academicYearId,
       viewType,
     );
@@ -482,8 +503,10 @@ export class ScheduleGeneratorController {
   async getScheduleConfig(
     @Request() req,
     @Query('shiftId') shiftId?: string,
+    @Query('academicYearId') academicYearId?: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = await this.resolveInstitutionId(req, academicYearId);
+    if (!institutionId) return { error: 'No se pudo resolver la institución' };
 
     // Buscar shifts con sus bloques
     const shifts = await this.prisma.shift.findMany({
@@ -587,7 +610,8 @@ export class ScheduleGeneratorController {
       activeDays: string[];     // e.g., ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"]
     },
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = await this.resolveInstitutionId(req);
+    if (!institutionId) return { success: false, error: 'No se pudo resolver la institución' };
 
     // Find the target shift — explicit shiftId or fallback to first
     const shift = body.shiftId
@@ -743,7 +767,7 @@ export class ScheduleGeneratorController {
       where: {
         academicYearId,
         group: {
-          shift: { campus: { institutionId: req.user.institutionId } },
+          shift: { campus: { institutionId: (await this.resolveInstitutionId(req, academicYearId)) || '' } },
           ...(shiftId ? { shiftId } : {}),
         },
       },
@@ -789,7 +813,8 @@ export class ScheduleGeneratorController {
     @Request() req,
     @Body() body: { academicYearId: string },
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = await this.resolveInstitutionId(req, body.academicYearId);
+    if (!institutionId) return { success: false, error: 'No se pudo resolver la institución' };
 
     // First delete schedule entries that reference these assignments
     await this.prisma.scheduleEntry.deleteMany({
@@ -798,10 +823,7 @@ export class ScheduleGeneratorController {
 
     // Then delete all teacher assignments for this academic year in this institution
     const result = await this.prisma.teacherAssignment.deleteMany({
-      where: {
-        academicYearId: body.academicYearId,
-        group: { shift: { campus: { institutionId } } },
-      },
+      where: { academicYearId: body.academicYearId, institutionId },
     });
 
     return {
