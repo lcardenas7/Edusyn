@@ -40,6 +40,48 @@ const SCHEDULE_MODES = [
   { value: 'ROTATING_TEACHER', label: 'Rotación de docentes', desc: 'Los docentes rotan entre grupos (primaria alta, secundaria, media)' },
 ]
 
+// ═══════════════════════════════════════════════════════
+// COLORES POR MATERIA — paleta estilo aSc Timetables
+// ═══════════════════════════════════════════════════════
+const SUBJECT_COLORS = [
+  { bg: '#DBEAFE', border: '#93C5FD', text: '#1E40AF' },  // blue
+  { bg: '#FCE7F3', border: '#F9A8D4', text: '#9D174D' },  // pink
+  { bg: '#D1FAE5', border: '#6EE7B7', text: '#065F46' },  // emerald
+  { bg: '#FEF3C7', border: '#FCD34D', text: '#92400E' },  // amber
+  { bg: '#EDE9FE', border: '#C4B5FD', text: '#5B21B6' },  // violet
+  { bg: '#FFEDD5', border: '#FDBA74', text: '#9A3412' },  // orange
+  { bg: '#CFFAFE', border: '#67E8F9', text: '#155E75' },  // cyan
+  { bg: '#FEE2E2', border: '#FCA5A5', text: '#991B1B' },  // red
+  { bg: '#E0E7FF', border: '#A5B4FC', text: '#3730A3' },  // indigo
+  { bg: '#DCFCE7', border: '#86EFAC', text: '#166534' },  // green
+  { bg: '#F3E8FF', border: '#D8B4FE', text: '#6B21A8' },  // purple
+  { bg: '#FFF7ED', border: '#FED7AA', text: '#C2410C' },  // warm orange
+  { bg: '#ECFDF5', border: '#A7F3D0', text: '#047857' },  // teal
+  { bg: '#FDF2F8', border: '#FBCFE8', text: '#BE185D' },  // fuchsia
+  { bg: '#F0FDF4', border: '#BBF7D0', text: '#15803D' },  // lime-ish
+  { bg: '#FEF9C3', border: '#FDE047', text: '#854D0E' },  // yellow
+  { bg: '#F1F5F9', border: '#CBD5E1', text: '#334155' },  // slate
+  { bg: '#DBEAFE', border: '#60A5FA', text: '#1D4ED8' },  // sky blue
+  { bg: '#FFE4E6', border: '#FDA4AF', text: '#BE123C' },  // rose
+  { bg: '#E0F2FE', border: '#7DD3FC', text: '#0369A1' },  // light blue
+]
+
+const subjectColorCache = new Map<string, typeof SUBJECT_COLORS[0]>()
+
+function getSubjectColor(subjectName: string | undefined | null): typeof SUBJECT_COLORS[0] {
+  if (!subjectName) return { bg: '#F8FAFC', border: '#E2E8F0', text: '#475569' }
+  const key = subjectName.toLowerCase().trim()
+  if (subjectColorCache.has(key)) return subjectColorCache.get(key)!
+  // Stable hash → consistent color per subject name
+  let hash = 0
+  for (let i = 0; i < key.length; i++) {
+    hash = ((hash << 5) - hash + key.charCodeAt(i)) | 0
+  }
+  const color = SUBJECT_COLORS[Math.abs(hash) % SUBJECT_COLORS.length]
+  subjectColorCache.set(key, color)
+  return color
+}
+
 interface TimeBlock {
   id: string
   shiftId: string
@@ -411,9 +453,10 @@ function ScheduleTab({ grades, selectedGroup, setSelectedGroup, gridData, loadin
       )
     }
     if (entry.teacherAssignment) {
+      const sc = getSubjectColor(entry.teacherAssignment.subject?.name)
       return (
         <div className="text-xs">
-          <div className="font-semibold text-blue-700">{entry.teacherAssignment.subject?.name}</div>
+          <div className="font-semibold" style={{ color: sc.text }}>{entry.teacherAssignment.subject?.name}</div>
           <div className="text-gray-600">{getTeacherName(entry)}</div>
           {entry.room && <div className="text-gray-400">{entry.room.name}</div>}
         </div>
@@ -572,6 +615,7 @@ function ScheduleTab({ grades, selectedGroup, setSelectedGroup, gridData, loadin
                         )
                       }
 
+                      const cellSubjectColor = entry?.teacherAssignment?.subject?.name ? getSubjectColor(entry.teacherAssignment.subject.name) : null
                       return (
                         <td
                           key={day.key}
@@ -580,10 +624,10 @@ function ScheduleTab({ grades, selectedGroup, setSelectedGroup, gridData, loadin
                             entry
                               ? entry.projectName
                                 ? 'bg-purple-50 hover:bg-purple-100'
-                                : 'bg-blue-50 hover:bg-blue-100'
+                                : ''
                               : 'bg-white hover:bg-gray-50'
                           } ${isEditing ? 'ring-2 ring-indigo-500' : ''}`}
-                          style={entry?.color ? { backgroundColor: entry.color + '20' } : undefined}
+                          style={cellSubjectColor ? { backgroundColor: cellSubjectColor.bg, borderColor: cellSubjectColor.border } : undefined}
                         >
                           {isEditing ? (
                             <div className="space-y-1 min-w-[130px]" onClick={(e) => e.stopPropagation()}>
@@ -1050,6 +1094,99 @@ function ConflictsTab({ conflicts, loading }: any) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════
+// FEASIBILITY PANEL — Verificación previa estilo aSc "Test"
+// ═══════════════════════════════════════════════════════
+
+function FeasibilityPanel({ academicYearId, shiftId }: { academicYearId: string; shiftId?: string }) {
+  const [result, setResult] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  const runCheck = async () => {
+    if (!academicYearId) return
+    setLoading(true)
+    setExpanded(true)
+    try {
+      const res = await timetablingGeneratorApi.checkFeasibility(academicYearId, shiftId || undefined)
+      setResult(res.data)
+    } catch (err: any) {
+      setResult({ feasible: false, issues: [{ type: 'error', message: err.response?.data?.message || 'Error al verificar' }] })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const statusColor = !result ? 'bg-gray-50 border-gray-200' : result.feasible ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'
+  const statusIcon = !result ? '🔍' : result.feasible ? '✅' : '❌'
+  const statusText = !result ? 'Verificar factibilidad antes de generar' : result.feasible ? 'Horario factible — puede generarse' : 'Problemas detectados — revise antes de generar'
+
+  return (
+    <div className={`border-2 rounded-xl mb-6 overflow-hidden transition-colors ${statusColor}`}>
+      <button
+        onClick={runCheck}
+        disabled={loading}
+        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/30 transition-colors"
+      >
+        {loading ? <RefreshCw className="w-5 h-5 animate-spin text-indigo-500" /> : <span className="text-lg">{statusIcon}</span>}
+        <div className="flex-1">
+          <p className="font-medium text-sm text-gray-800">{loading ? 'Verificando...' : statusText}</p>
+          {!result && <p className="text-xs text-gray-500">Click para ejecutar verificación previa</p>}
+        </div>
+        {result && (
+          <button onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }} className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1">
+            {expanded ? '▲ Ocultar' : '▼ Ver detalles'}
+          </button>
+        )}
+      </button>
+
+      {expanded && result && (
+        <div className="px-4 pb-4 border-t border-gray-200/50">
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 mb-3">
+            <div className="bg-white rounded-lg p-2 text-center border">
+              <div className="text-lg font-bold text-indigo-700">{result.groupsWithLoad || 0}</div>
+              <div className="text-[10px] text-gray-500">Grupos con carga</div>
+            </div>
+            <div className="bg-white rounded-lg p-2 text-center border">
+              <div className="text-lg font-bold text-blue-700">{result.totalAssignments || 0}</div>
+              <div className="text-[10px] text-gray-500">Asignaciones</div>
+            </div>
+            <div className="bg-white rounded-lg p-2 text-center border">
+              <div className="text-lg font-bold text-purple-700">{result.totalHoursNeeded || 0}</div>
+              <div className="text-[10px] text-gray-500">Horas semanales</div>
+            </div>
+            <div className="bg-white rounded-lg p-2 text-center border">
+              <div className="text-lg font-bold text-teal-700">{result.classBlocksPerDay || 0} × {result.activeDays || 5}</div>
+              <div className="text-[10px] text-gray-500">Bloques × Días</div>
+            </div>
+          </div>
+
+          {/* Issues */}
+          {result.issues?.length > 0 && (
+            <div className="space-y-1.5">
+              {result.issues.map((issue: any, i: number) => (
+                <div key={i} className={`flex items-start gap-2 text-xs px-3 py-2 rounded-lg ${
+                  issue.type === 'error' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                }`}>
+                  <span className="mt-0.5 flex-shrink-0">{issue.type === 'error' ? '🔴' : '🟡'}</span>
+                  <span>{issue.message}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {result.issues?.length === 0 && (
+            <p className="text-xs text-green-700 bg-green-100 rounded-lg px-3 py-2">
+              ✨ No se detectaron problemas. {result.uniqueTeachers} docentes, {result.totalSlotsPerGroup} slots por grupo.
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -2127,6 +2264,9 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
               </div>
             </div>
 
+            {/* Feasibility Check */}
+            <FeasibilityPanel academicYearId={academicYearId} shiftId={selectedShiftId} />
+
             <button
               onClick={handleGenerate}
               disabled={loading}
@@ -2770,16 +2910,24 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
                       }
                       const isMoving = movingEntry?.id === entry.id
                       const isSwapTarget = movingEntry && !isMoving && !isSpecial
+                      const sc = getSubjectColor(entry.subjectName)
                       return (
                         <td key={day} className="px-2 py-1.5 border-r">
                           <div
                             className={`rounded px-1.5 py-1 text-center cursor-pointer transition-all ${
                               isMoving
-                                ? 'bg-amber-100 border-2 border-amber-400 ring-2 ring-amber-200'
+                                ? 'ring-2 ring-amber-200'
                                 : isSwapTarget
-                                  ? 'bg-orange-50 border-2 border-dashed border-orange-300 hover:border-orange-500 hover:shadow-sm'
-                                  : 'bg-blue-50 border border-blue-200 hover:border-blue-400 hover:shadow-sm'
+                                  ? 'border-2 border-dashed hover:shadow-sm'
+                                  : 'border hover:shadow-sm'
                             }`}
+                            style={
+                              isMoving
+                                ? { backgroundColor: '#FEF3C7', borderColor: '#F59E0B', borderWidth: 2 }
+                                : isSwapTarget
+                                  ? { backgroundColor: '#FFF7ED', borderColor: '#FB923C' }
+                                  : { backgroundColor: sc.bg, borderColor: sc.border }
+                            }
                             onClick={() => {
                               if (isMoving) {
                                 setMovingEntry(null)
@@ -2791,8 +2939,8 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
                             }}
                             title={isMoving ? 'Click para cancelar' : isSwapTarget ? 'Click para intercambiar con la ficha seleccionada' : 'Click para mover esta ficha'}
                           >
-                            <div className="font-semibold text-blue-800 truncate">{entry.subjectName}</div>
-                            {entry.teacherName && <div className="text-blue-600 truncate">{entry.teacherName}</div>}
+                            <div className="font-semibold truncate" style={{ color: sc.text }}>{entry.subjectName}</div>
+                            {entry.teacherName && <div className="truncate" style={{ color: sc.text, opacity: 0.7 }}>{entry.teacherName}</div>}
                             {entry.groupName && viewMode !== 'total' && viewMode !== 'by-grade' && viewMode !== 'by-day' && (
                               <div className="text-gray-500 truncate">{entry.groupName}</div>
                             )}

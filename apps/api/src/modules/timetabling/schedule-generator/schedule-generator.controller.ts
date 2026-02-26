@@ -188,6 +188,134 @@ export class ScheduleGeneratorController {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // VERIFICACIÓN PREVIA (TEST) — factibilidad antes de generar
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('feasibility-check')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async checkFeasibility(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('shiftId') shiftId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    if (!academicYearId) return { feasible: false, error: 'academicYearId es obligatorio' };
+
+    // 1. Get groups
+    const groups = await this.prisma.group.findMany({
+      where: {
+        shift: { campus: { institutionId } },
+        ...(shiftId ? { shiftId } : {}),
+      },
+      include: { grade: true, shift: true },
+    });
+
+    const groupsWithLoad = await this.prisma.group.findMany({
+      where: {
+        shift: { campus: { institutionId } },
+        teacherAssignments: { some: { academicYearId } },
+        ...(shiftId ? { shiftId } : {}),
+      },
+      select: { id: true },
+    });
+    const groupIdsWithLoad = new Set(groupsWithLoad.map(g => g.id));
+
+    // 2. Get assignments for groups with load
+    const assignments = groupIdsWithLoad.size > 0
+      ? await this.prisma.teacherAssignment.findMany({
+          where: { academicYearId, groupId: { in: [...groupIdsWithLoad] } },
+          include: {
+            teacher: { select: { id: true, firstName: true, lastName: true } },
+            subject: { select: { id: true, name: true } },
+            group: { select: { id: true, name: true, shiftId: true } },
+          },
+        })
+      : [];
+
+    // 3. Get time blocks per shift
+    const timeBlocks = await this.prisma.timeBlock.findMany({
+      where: { institutionId, ...(shiftId ? { shiftId } : {}), type: 'CLASS' },
+      orderBy: { order: 'asc' },
+    });
+
+    const activeDays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+    const totalSlotsPerGroup = timeBlocks.length * activeDays.length;
+    const totalHoursNeeded = assignments.reduce((s, a) => s + (a.weeklyHours || 0), 0);
+
+    // 4. Check teacher conflicts (same teacher, too many hours)
+    const teacherHours = new Map<string, { name: string; hours: number; groups: Set<string> }>();
+    for (const a of assignments) {
+      const tid = a.teacher.id;
+      if (!teacherHours.has(tid)) {
+        teacherHours.set(tid, {
+          name: `${a.teacher.firstName} ${a.teacher.lastName}`.trim(),
+          hours: 0,
+          groups: new Set(),
+        });
+      }
+      const t = teacherHours.get(tid)!;
+      t.hours += a.weeklyHours || 0;
+      t.groups.add(a.groupId);
+    }
+
+    const maxTeacherSlots = timeBlocks.length * activeDays.length;
+    const overloadedTeachers: { name: string; hours: number; maxSlots: number }[] = [];
+    for (const [, t] of teacherHours) {
+      if (t.hours > maxTeacherSlots) {
+        overloadedTeachers.push({ name: t.name, hours: t.hours, maxSlots: maxTeacherSlots });
+      }
+    }
+
+    // 5. Groups without load
+    const groupsWithoutLoad = groups.filter(g => !groupIdsWithLoad.has(g.id));
+
+    // 6. Feasibility verdict
+    const issues: { type: 'error' | 'warning'; message: string }[] = [];
+
+    if (groups.length === 0) {
+      issues.push({ type: 'error', message: 'No hay grupos configurados para esta jornada.' });
+    }
+    if (groupsWithLoad.length === 0 && groups.length > 0) {
+      issues.push({ type: 'error', message: `Hay ${groups.length} grupos pero ninguno tiene carga académica importada.` });
+    }
+    if (timeBlocks.length === 0) {
+      issues.push({ type: 'error', message: 'No hay bloques de tiempo tipo CLASS configurados. Configure el horario primero.' });
+    }
+    for (const t of overloadedTeachers) {
+      issues.push({ type: 'error', message: `${t.name}: ${t.hours}h semanales exceden los ${t.maxSlots} slots disponibles.` });
+    }
+    if (groupsWithoutLoad.length > 0 && groupsWithLoad.length > 0) {
+      issues.push({ type: 'warning', message: `${groupsWithoutLoad.length} grupo(s) sin carga académica: ${groupsWithoutLoad.slice(0, 5).map(g => g.name).join(', ')}${groupsWithoutLoad.length > 5 ? '...' : ''}` });
+    }
+
+    // Per-group slot check
+    for (const gId of groupIdsWithLoad) {
+      const groupAssignments = assignments.filter(a => a.groupId === gId);
+      const groupHours = groupAssignments.reduce((s, a) => s + (a.weeklyHours || 0), 0);
+      if (groupHours > totalSlotsPerGroup) {
+        const groupName = groupAssignments[0]?.group?.name || gId;
+        issues.push({ type: 'warning', message: `${groupName}: necesita ${groupHours}h pero solo hay ${totalSlotsPerGroup} slots.` });
+      }
+    }
+
+    const hasErrors = issues.some(i => i.type === 'error');
+
+    return {
+      feasible: !hasErrors,
+      totalGroups: groups.length,
+      groupsWithLoad: groupsWithLoad.length,
+      groupsWithoutLoad: groupsWithoutLoad.length,
+      totalAssignments: assignments.length,
+      totalHoursNeeded,
+      totalSlotsPerGroup,
+      classBlocksPerDay: timeBlocks.length,
+      activeDays: activeDays.length,
+      uniqueTeachers: teacherHours.size,
+      issues,
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // GENERAR HORARIO AUTOMÁTICAMENTE
   // ═══════════════════════════════════════════════════════════════════════════
 
