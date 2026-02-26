@@ -72,6 +72,7 @@ export default function AcademicLoad() {
   const [filterTeacher, setFilterTeacher] = useState<string>('')
   const [filterGroup, setFilterGroup] = useState<string>('')
   const [filterArea, setFilterArea] = useState<string>('')
+  const [filterShift, setFilterShift] = useState<string>('')
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -157,9 +158,19 @@ export default function AcademicLoad() {
 
   const [validationErrors, setValidationErrors] = useState<string[]>([])
 
+  // Unique shifts from groups
+  const uniqueShifts = [...new Map(groups.map(g => [g.shift, g.shift])).values()].filter(Boolean).sort()
+
+  // Filter groups by selected shift
+  const filteredGroups = filterShift ? groups.filter(g => g.shift === filterShift) : groups
+
   const filteredLoads = loads.filter(load => {
     if (filterTeacher && load.teacherId !== filterTeacher) return false
     if (filterGroup && load.groupId !== filterGroup) return false
+    if (filterShift) {
+      const loadGroup = groups.find(g => g.id === load.groupId)
+      if (loadGroup && loadGroup.shift !== filterShift) return false
+    }
     if (filterArea && load.areaId !== filterArea) return false
     return true
   })
@@ -397,6 +408,19 @@ export default function AcademicLoad() {
             </select>
           </div>
           <div className="flex-1">
+            <label className="block text-xs font-medium text-slate-600 mb-1">Jornada</label>
+            <select
+              value={filterShift}
+              onChange={(e) => { setFilterShift(e.target.value); setFilterGroup(''); }}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            >
+              <option value="">Todas las jornadas</option>
+              {uniqueShifts.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-1">
             <label className="block text-xs font-medium text-slate-600 mb-1">Grupo</label>
             <select
               value={filterGroup}
@@ -404,7 +428,7 @@ export default function AcademicLoad() {
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             >
               <option value="">Todos los grupos</option>
-              {groups.map(g => (
+              {filteredGroups.map(g => (
                 <option key={g.id} value={g.id}>{g.name} - {g.grade} ({g.shift})</option>
               ))}
             </select>
@@ -424,7 +448,7 @@ export default function AcademicLoad() {
           </div>
           <div className="pt-5">
             <button
-              onClick={() => { setFilterTeacher(''); setFilterGroup(''); setFilterArea(''); }}
+              onClick={() => { setFilterTeacher(''); setFilterGroup(''); setFilterArea(''); setFilterShift(''); }}
               className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
             >
               Limpiar
