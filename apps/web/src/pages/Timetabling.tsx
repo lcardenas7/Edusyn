@@ -14,7 +14,7 @@ import {
   Clock, MapPin, Settings, Calendar, AlertTriangle, Plus, Trash2, Save,
   ChevronDown, Edit2, X, Check, Grid3X3, Users, Building2, Layers,
   Upload, Download, Wand2, FileSpreadsheet, RefreshCw, Eye, CheckCircle2, XCircle,
-  Move, ArrowRight, CalendarDays
+  Move, ArrowRight, CalendarDays, Zap
 } from 'lucide-react'
 
 const DAYS = [
@@ -1105,14 +1105,39 @@ function ConflictsTab({ conflicts, loading }: any) {
 // UNPLACED HOURS PANEL — Detalle de horas sin ubicar con opciones
 // ═══════════════════════════════════════════════════════
 
-function UnplacedHoursPanel({ generateResult, academicYearId, shiftId, onRetryGenerate, loading }: {
+function UnplacedHoursPanel({ generateResult, academicYearId, shiftId, onRetryGenerate, loading, onAutoPlaceComplete }: {
   generateResult: any
   academicYearId: string
   shiftId: string
   onRetryGenerate: () => void
   loading: boolean
+  onAutoPlaceComplete?: () => void
 }) {
   const [expanded, setExpanded] = useState(true)
+  const [autoPlacing, setAutoPlacing] = useState(false)
+
+  const handleAutoPlace = async () => {
+    if (!confirm('¿Intentar colocar automáticamente las horas restantes? El sistema buscará slots vacíos sin conflictos.')) return
+    setAutoPlacing(true)
+    try {
+      const res = await timetablingGeneratorApi.autoPlace(academicYearId, shiftId || undefined)
+      const data = res.data
+      let msg = `✅ Colocadas: ${data.totalPlaced} hora(s)`
+      if (data.totalFailed > 0) {
+        msg += `\n❌ No se pudieron colocar: ${data.totalFailed} hora(s)`
+        for (const f of data.failed.slice(0, 5)) {
+          msg += `\n  • ${f.groupName} - ${f.subjectName} (${f.teacherName}): ${f.reason}`
+        }
+        if (data.failed.length > 5) msg += `\n  ... y ${data.failed.length - 5} más`
+      }
+      alert(msg)
+      onAutoPlaceComplete?.()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al auto-colocar')
+    } finally {
+      setAutoPlacing(false)
+    }
+  }
 
   // Collect all unplaced subjects across all groups
   const unplacedItems: { groupId: string; groupName: string; subjectName: string; teacherName: string; hoursNeeded: number; hoursPlaced: number; missing: number }[] = []
@@ -1297,6 +1322,14 @@ function UnplacedHoursPanel({ generateResult, academicYearId, shiftId, onRetryGe
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Re-generar horario
+            </button>
+            <button
+              onClick={handleAutoPlace}
+              disabled={autoPlacing || loading}
+              className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg font-medium text-sm hover:bg-green-700 transition-colors disabled:opacity-50"
+            >
+              <Zap className={`w-4 h-4 ${autoPlacing ? 'animate-pulse' : ''}`} />
+              {autoPlacing ? 'Colocando...' : 'Auto-colocar horas restantes'}
             </button>
             <button
               onClick={() => {
@@ -2452,8 +2485,8 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
                   className="w-4 h-4 text-indigo-600 rounded"
                 />
                 <div>
-                  <p className="font-medium text-sm text-gray-800">Agrupar bloques de docentes</p>
-                  <p className="text-xs text-gray-500">Prefiere colocar las clases de un docente en horas consecutivas del mismo día</p>
+                  <p className="font-medium text-sm text-gray-800">Agrupar horas consecutivas por docente</p>
+                  <p className="text-xs text-gray-500">Ej: Matemáticas 3h seguidas el mismo día. Desactivar para distribuir en días diferentes (1h lunes, 1h martes, etc.) — da más flexibilidad al algoritmo.</p>
                 </div>
               </label>
             </div>
@@ -2589,6 +2622,7 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
                 shiftId={selectedShiftId}
                 onRetryGenerate={handleGenerate}
                 loading={loading}
+                onAutoPlaceComplete={handleGenerate}
               />
             )}
           </div>
@@ -3065,6 +3099,30 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
     }
   }
 
+  // Auto-colocar horas sin ubicar
+  const [autoPlacing, setAutoPlacing] = useState(false)
+  const handleAutoPlace = async () => {
+    if (!confirm('¿Intentar colocar automáticamente las horas restantes? El sistema buscará slots vacíos sin conflictos.')) return
+    setAutoPlacing(true)
+    try {
+      const res = await timetablingGeneratorApi.autoPlace(academicYearId, selectedViewShiftId || undefined)
+      const data = res.data
+      let msg = `Colocadas: ${data.totalPlaced} hora(s)`
+      if (data.totalFailed > 0) {
+        msg += `\nNo se pudieron colocar: ${data.totalFailed} hora(s)`
+        for (const f of data.failed.slice(0, 5)) {
+          msg += `\n  - ${f.groupName} - ${f.subjectName} (${f.teacherName})`
+        }
+      }
+      alert(msg)
+      loadView()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al auto-colocar')
+    } finally {
+      setAutoPlacing(false)
+    }
+  }
+
   // Mover entrada a otro bloque/día
   const handleMoveEntry = async (entryId: string, newTimeBlockId: string, newDayOfWeek: string) => {
     try {
@@ -3075,6 +3133,20 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
       console.error('Error moving entry:', err)
       alert(err.response?.data?.message || 'Error al mover la entrada. Puede haber conflictos.')
       setMovingEntry(null)
+    }
+  }
+
+  // Quitar entrada del horario (devolver al pool de sin colocar)
+  const handleRemoveEntry = async (entryId: string, subjectName: string) => {
+    if (!confirm(`¿Quitar "${subjectName}" del horario? La hora quedará sin colocar y podrás reubicarla.`)) return
+    try {
+      await timetablingEntriesApi.delete(entryId)
+      setMovingEntry(null)
+      setPlacingUnplaced(null)
+      loadView()
+    } catch (err: any) {
+      console.error('Error removing entry:', err)
+      alert(err.response?.data?.message || 'Error al quitar la entrada')
     }
   }
 
@@ -3269,7 +3341,7 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
                       return (
                         <td key={day} className="px-2 py-1.5 border-r">
                           <div
-                            className={`rounded px-1.5 py-1 text-center cursor-pointer transition-all ${
+                            className={`relative group/entry rounded px-1.5 py-1 text-center cursor-pointer transition-all ${
                               isMoving
                                 ? 'ring-2 ring-amber-200'
                                 : isSwapTarget
@@ -3290,10 +3362,21 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
                                 handleSwapEntries(movingEntry, entry)
                               } else {
                                 setMovingEntry(entry)
+                                setPlacingUnplaced(null)
                               }
                             }}
                             title={isMoving ? 'Click para cancelar' : isSwapTarget ? 'Click para intercambiar con la ficha seleccionada' : 'Click para mover esta ficha'}
                           >
+                            {/* Botón quitar (×) — visible on hover */}
+                            {isManager && !movingEntry && !placingUnplaced && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleRemoveEntry(entry.id, entry.subjectName) }}
+                                className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full text-[9px] leading-none flex items-center justify-center opacity-0 group-hover/entry:opacity-100 transition-opacity hover:bg-red-600 z-10"
+                                title="Quitar del horario"
+                              >
+                                ×
+                              </button>
+                            )}
                             <div className="font-semibold truncate" style={{ color: sc.text }}>{entry.subjectName}</div>
                             {entry.teacherName && <div className="truncate" style={{ color: sc.text, opacity: 0.7 }}>{entry.teacherName}</div>}
                             {entry.groupName && viewMode !== 'total' && viewMode !== 'by-grade' && viewMode !== 'by-day' && (
@@ -3878,6 +3961,18 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
           )}
 
           <div className="ml-auto flex items-center gap-1">
+            {/* Auto-colocar - solo managers con horas sin ubicar */}
+            {isManager && viewData?.unplacedHours?.length > 0 && (
+              <button
+                onClick={handleAutoPlace}
+                disabled={autoPlacing || loading}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+                title="Colocar automáticamente las horas restantes"
+              >
+                <Zap className={`w-4 h-4 ${autoPlacing ? 'animate-pulse' : ''}`} />
+                {autoPlacing ? 'Colocando...' : `Auto-colocar (${viewData.unplacedHours.reduce((s: number, u: any) => s + u.remainingHours, 0)}h)`}
+              </button>
+            )}
             {/* Exportar - solo managers */}
             {isManager && (
             <div className="relative group">

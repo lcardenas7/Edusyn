@@ -877,6 +877,271 @@ export class ScheduleGeneratorController {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // AUTO-COLOCAR HORAS SIN UBICAR
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('auto-place')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
+  async autoPlaceUnplaced(
+    @Request() req,
+    @Body() body: { academicYearId: string; shiftId?: string },
+  ) {
+    const institutionId = await this.resolveInstitutionId(req, body.academicYearId);
+    if (!institutionId) throw new BadRequestException('No se pudo resolver la institución');
+
+    const { academicYearId, shiftId } = body;
+    const DAYS: ('MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY')[] =
+      ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+
+    // 1. Get CLASS-type time blocks
+    const timeBlocks = await this.prisma.timeBlock.findMany({
+      where: { institutionId, type: 'CLASS', ...(shiftId ? { shiftId } : {}) },
+      orderBy: { order: 'asc' },
+    });
+
+    // 2. Get all existing schedule entries
+    const existingEntries = await this.prisma.scheduleEntry.findMany({
+      where: { institutionId, academicYearId },
+      include: {
+        teacherAssignment: { select: { teacherId: true } },
+      },
+    });
+
+    // 3. Build occupancy maps
+    const groupOccupied = new Set<string>(); // "groupId|timeBlockId|day"
+    const teacherOccupied = new Set<string>(); // "teacherId|timeBlockId|day"
+    for (const e of existingEntries) {
+      groupOccupied.add(`${e.groupId}|${e.timeBlockId}|${e.dayOfWeek}`);
+      if (e.teacherAssignment?.teacherId) {
+        teacherOccupied.add(`${e.teacherAssignment.teacherId}|${e.timeBlockId}|${e.dayOfWeek}`);
+      }
+    }
+
+    // 4. Get all assignments and calculate unplaced
+    const allAssignments = await this.prisma.teacherAssignment.findMany({
+      where: {
+        academicYearId,
+        group: { campus: { institutionId }, ...(shiftId ? { shiftId } : {}) },
+      },
+      include: {
+        teacher: { select: { id: true, firstName: true, lastName: true } },
+        subject: { select: { id: true, name: true } },
+        group: { select: { id: true, name: true, shiftId: true, grade: { select: { name: true } } } },
+      },
+    });
+
+    const placedPerAssignment = new Map<string, number>();
+    for (const e of existingEntries) {
+      if (e.teacherAssignmentId) {
+        placedPerAssignment.set(e.teacherAssignmentId, (placedPerAssignment.get(e.teacherAssignmentId) || 0) + 1);
+      }
+    }
+
+    // Build list of individual hours to place, sorted by difficulty (fewer available slots first)
+    const hoursToPlace: { assignment: typeof allAssignments[0]; remaining: number }[] = [];
+    for (const a of allAssignments) {
+      const placed = placedPerAssignment.get(a.id) || 0;
+      const remaining = (a.weeklyHours || 0) - placed;
+      if (remaining > 0) {
+        hoursToPlace.push({ assignment: a, remaining });
+      }
+    }
+
+    // Sort: assignments with fewer possible slots first (hardest to place)
+    hoursToPlace.sort((a, b) => a.remaining - b.remaining);
+
+    // 5. Try to place each unplaced hour
+    const placed: { assignmentId: string; groupName: string; subjectName: string; teacherName: string; day: string; blockId: string }[] = [];
+    const failed: { groupName: string; subjectName: string; teacherName: string; reason: string }[] = [];
+
+    // Determine valid time blocks per group's shift
+    const shiftBlocksCache = new Map<string, typeof timeBlocks>();
+    const getBlocksForShift = (groupShiftId: string | null) => {
+      const key = groupShiftId || '__all__';
+      if (!shiftBlocksCache.has(key)) {
+        if (groupShiftId) {
+          shiftBlocksCache.set(key, timeBlocks.filter(tb => tb.shiftId === groupShiftId));
+        } else {
+          shiftBlocksCache.set(key, timeBlocks);
+        }
+      }
+      return shiftBlocksCache.get(key)!;
+    };
+
+    for (const item of hoursToPlace) {
+      const a = item.assignment;
+      const teacherId = a.teacher?.id;
+      const groupId = a.groupId;
+      const blocks = getBlocksForShift(a.group?.shiftId || null);
+      let placedCount = 0;
+
+      for (let h = 0; h < item.remaining; h++) {
+        let foundSlot = false;
+
+        // Try each day × block combination
+        for (const day of DAYS) {
+          for (const block of blocks) {
+            const groupKey = `${groupId}|${block.id}|${day}`;
+            const teacherKey = teacherId ? `${teacherId}|${block.id}|${day}` : null;
+
+            if (groupOccupied.has(groupKey)) continue;
+            if (teacherKey && teacherOccupied.has(teacherKey)) continue;
+
+            // Found a valid slot — create entry
+            try {
+              await this.prisma.scheduleEntry.create({
+                data: {
+                  institutionId,
+                  academicYearId,
+                  groupId,
+                  timeBlockId: block.id,
+                  dayOfWeek: day as any,
+                  teacherAssignmentId: a.id,
+                },
+              });
+
+              // Update occupancy maps
+              groupOccupied.add(groupKey);
+              if (teacherKey) teacherOccupied.add(teacherKey);
+
+              placed.push({
+                assignmentId: a.id,
+                groupName: `${a.group?.grade?.name || ''} ${a.group?.name || ''}`.trim(),
+                subjectName: a.subject?.name || '',
+                teacherName: `${a.teacher?.firstName || ''} ${a.teacher?.lastName || ''}`.trim(),
+                day,
+                blockId: block.id,
+              });
+              placedCount++;
+              foundSlot = true;
+              break; // move to next hour
+            } catch (err) {
+              console.error('[AutoPlace] Error creating entry:', err);
+              continue;
+            }
+          }
+          if (foundSlot) break;
+        }
+
+        if (!foundSlot) {
+          // === PHASE 2: Try swap-based resolution ===
+          // Find a slot where group is free but teacher is busy elsewhere,
+          // and that other entry can be relocated
+          for (const day of DAYS) {
+            if (foundSlot) break;
+            for (const block of blocks) {
+              if (foundSlot) break;
+              const groupKey = `${groupId}|${block.id}|${day}`;
+              const teacherKey = teacherId ? `${teacherId}|${block.id}|${day}` : null;
+
+              // Group must be free, teacher must be the conflict
+              if (groupOccupied.has(groupKey)) continue;
+              if (!teacherKey || !teacherOccupied.has(teacherKey)) continue;
+
+              // Teacher is busy here — find what entry is blocking
+              const blockingEntry = await this.prisma.scheduleEntry.findFirst({
+                where: {
+                  institutionId,
+                  academicYearId,
+                  timeBlockId: block.id,
+                  dayOfWeek: day as any,
+                  teacherAssignment: { teacherId },
+                },
+                include: {
+                  group: { select: { id: true, name: true, shiftId: true, grade: { select: { name: true } } } },
+                  teacherAssignment: { include: { subject: { select: { name: true } } } },
+                },
+              });
+              if (!blockingEntry) continue;
+
+              const bGroupId = blockingEntry.groupId;
+              const bBlocks = getBlocksForShift(blockingEntry.group?.shiftId || null);
+
+              // Try to find an alternative slot for the blocking entry
+              for (const altDay of DAYS) {
+                if (foundSlot) break;
+                for (const altBlock of bBlocks) {
+                  const altGroupKey = `${bGroupId}|${altBlock.id}|${altDay}`;
+                  const altTeacherKey = `${teacherId}|${altBlock.id}|${altDay}`;
+
+                  // Skip same slot
+                  if (altDay === day && altBlock.id === block.id) continue;
+                  // Both group and teacher must be free in the alt slot
+                  if (groupOccupied.has(altGroupKey)) continue;
+                  if (teacherOccupied.has(altTeacherKey)) continue;
+
+                  // Found! Move blocking entry to alt slot, then place our entry
+                  try {
+                    await this.prisma.scheduleEntry.update({
+                      where: { id: blockingEntry.id },
+                      data: { timeBlockId: altBlock.id, dayOfWeek: altDay as any },
+                    });
+
+                    // Update occupancy for the moved entry
+                    groupOccupied.delete(`${bGroupId}|${block.id}|${day}`);
+                    teacherOccupied.delete(`${teacherId}|${block.id}|${day}`);
+                    groupOccupied.add(altGroupKey);
+                    teacherOccupied.add(altTeacherKey);
+
+                    // Now place our entry in the freed slot
+                    await this.prisma.scheduleEntry.create({
+                      data: {
+                        institutionId,
+                        academicYearId,
+                        groupId,
+                        timeBlockId: block.id,
+                        dayOfWeek: day as any,
+                        teacherAssignmentId: a.id,
+                      },
+                    });
+
+                    groupOccupied.add(groupKey);
+                    teacherOccupied.add(teacherKey);
+
+                    const movedSubject = blockingEntry.teacherAssignment?.subject?.name || '?';
+                    const movedGroup = `${blockingEntry.group?.grade?.name || ''} ${blockingEntry.group?.name || ''}`.trim();
+                    placed.push({
+                      assignmentId: a.id,
+                      groupName: `${a.group?.grade?.name || ''} ${a.group?.name || ''}`.trim(),
+                      subjectName: a.subject?.name || '',
+                      teacherName: `${a.teacher?.firstName || ''} ${a.teacher?.lastName || ''}`.trim(),
+                      day,
+                      blockId: block.id,
+                      swap: `Movió ${movedSubject} de ${movedGroup} al ${altDay} para liberar espacio`,
+                    } as any);
+                    placedCount++;
+                    foundSlot = true;
+                  } catch (err) {
+                    console.error('[AutoPlace] Swap error:', err);
+                  }
+                  break;
+                }
+              }
+            }
+          }
+
+          if (!foundSlot) {
+            failed.push({
+              groupName: `${a.group?.grade?.name || ''} ${a.group?.name || ''}`.trim(),
+              subjectName: a.subject?.name || '',
+              teacherName: `${a.teacher?.firstName || ''} ${a.teacher?.lastName || ''}`.trim(),
+              reason: 'No hay slots disponibles ni movimientos posibles para resolver conflictos',
+            });
+          }
+        }
+      }
+    }
+
+    return {
+      success: true,
+      totalPlaced: placed.length,
+      totalFailed: failed.length,
+      placed,
+      failed,
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // VISTAS DE HORARIO (total, por grado, por docente, por materia, por área)
   // ═══════════════════════════════════════════════════════════════════════════
 
