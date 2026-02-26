@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { teacherWorkspaceApi, teacherAssignmentsApi } from '../lib/api'
+import { teacherWorkspaceApi, teacherAssignmentsApi, groupsApi } from '../lib/api'
 import {
   Plus, Trash2, X, GripVertical, MoreHorizontal,
   LayoutGrid, BookOpen, Archive, ChevronDown,
@@ -129,9 +129,10 @@ export default function TeacherWorkspace() {
     }
   }, [])
 
-  // ─── Load groups from assignments ───
+  // ─── Load groups (from assignments for teachers, from groupsApi for admins) ───
   const loadGroups = useCallback(async () => {
     try {
+      // Try teacher assignments first
       const res = await teacherAssignmentsApi.getAll({ teacherId: user?.id })
       const data = res.data || []
       const unique = new Map<string, { id: string; name: string; gradeName?: string }>()
@@ -140,7 +141,18 @@ export default function TeacherWorkspace() {
           unique.set(a.group.id, { id: a.group.id, name: a.group.name, gradeName: a.group.grade?.name })
         }
       })
-      setGroups(Array.from(unique.values()))
+      if (unique.size > 0) {
+        setGroups(Array.from(unique.values()))
+        return
+      }
+      // Fallback for admin/rector: load all institution groups
+      const groupsRes = await groupsApi.getAll({})
+      const allGroups = (groupsRes.data || []).map((g: any) => ({
+        id: g.id,
+        name: g.name,
+        gradeName: g.grade?.name || '',
+      }))
+      setGroups(allGroups)
     } catch (err) {
       console.error('Error loading groups:', err)
     }
