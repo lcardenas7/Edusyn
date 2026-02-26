@@ -1277,6 +1277,65 @@ export class TimetableExcelService {
   // EXPORTAR HORARIO A PDF
   // ═══════════════════════════════════════════════════════════════════════════
 
+  // Paleta de colores por materia — replica exacta del frontend
+  private readonly SUBJECT_COLORS = [
+    { bg: '#DBEAFE', border: '#93C5FD', text: '#1E40AF' },  // blue
+    { bg: '#FCE7F3', border: '#F9A8D4', text: '#9D174D' },  // pink
+    { bg: '#D1FAE5', border: '#6EE7B7', text: '#065F46' },  // emerald
+    { bg: '#FEF3C7', border: '#FCD34D', text: '#92400E' },  // amber
+    { bg: '#EDE9FE', border: '#C4B5FD', text: '#5B21B6' },  // violet
+    { bg: '#FFEDD5', border: '#FDBA74', text: '#9A3412' },  // orange
+    { bg: '#CFFAFE', border: '#67E8F9', text: '#155E75' },  // cyan
+    { bg: '#FEE2E2', border: '#FCA5A5', text: '#991B1B' },  // red
+    { bg: '#E0E7FF', border: '#A5B4FC', text: '#3730A3' },  // indigo
+    { bg: '#DCFCE7', border: '#86EFAC', text: '#166534' },  // green
+    { bg: '#F3E8FF', border: '#D8B4FE', text: '#6B21A8' },  // purple
+    { bg: '#FFF7ED', border: '#FED7AA', text: '#C2410C' },  // warm orange
+    { bg: '#ECFDF5', border: '#A7F3D0', text: '#047857' },  // teal
+    { bg: '#FDF2F8', border: '#FBCFE8', text: '#BE185D' },  // fuchsia
+    { bg: '#F0FDF4', border: '#BBF7D0', text: '#15803D' },  // lime-ish
+    { bg: '#FEF9C3', border: '#FDE047', text: '#854D0E' },  // yellow
+    { bg: '#F1F5F9', border: '#CBD5E1', text: '#334155' },  // slate
+    { bg: '#DBEAFE', border: '#60A5FA', text: '#1D4ED8' },  // sky blue
+    { bg: '#FFE4E6', border: '#FDA4AF', text: '#BE123C' },  // rose
+    { bg: '#E0F2FE', border: '#7DD3FC', text: '#0369A1' },  // light blue
+  ];
+
+  private subjectColorCache = new Map<string, { bg: string; border: string; text: string }>();
+
+  private getSubjectColor(subjectName: string | undefined | null): { bg: string; border: string; text: string } {
+    if (!subjectName) return { bg: '#F8FAFC', border: '#E2E8F0', text: '#475569' };
+    const key = subjectName.toLowerCase().trim();
+    if (this.subjectColorCache.has(key)) return this.subjectColorCache.get(key)!;
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) {
+      hash = ((hash << 5) - hash + key.charCodeAt(i)) | 0;
+    }
+    const color = this.SUBJECT_COLORS[Math.abs(hash) % this.SUBJECT_COLORS.length];
+    this.subjectColorCache.set(key, color);
+    return color;
+  }
+
+  // Helper to convert hex to RGB for PDFKit
+  private hexToRgb(hex: string): [number, number, number] {
+    const h = hex.replace('#', '');
+    return [parseInt(h.substring(0, 2), 16), parseInt(h.substring(2, 4), 16), parseInt(h.substring(4, 6), 16)];
+  }
+
+  // Draw a rounded rectangle
+  private drawRoundedRect(doc: any, x: number, y: number, w: number, h: number, r: number) {
+    doc.moveTo(x + r, y)
+      .lineTo(x + w - r, y)
+      .quadraticCurveTo(x + w, y, x + w, y + r)
+      .lineTo(x + w, y + h - r)
+      .quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+      .lineTo(x + r, y + h)
+      .quadraticCurveTo(x, y + h, x, y + h - r)
+      .lineTo(x, y + r)
+      .quadraticCurveTo(x, y, x + r, y)
+      .closePath();
+  }
+
   async exportSchedulePdf(
     institutionId: string,
     academicYearId: string,
@@ -1344,6 +1403,7 @@ export class TimetableExcelService {
         const key = e.groupId;
         if (!groupedData.has(key)) {
           const gradeName = e.group?.grade?.name || '';
+          const groupName = e.group?.name || 'Grupo';
           const shiftName = e.group?.shift?.name || '';
           const dir = e.group?.director;
           const comp = e.group?.companion;
@@ -1351,7 +1411,7 @@ export class TimetableExcelService {
           if (dir) subtitle += ` · Director: ${dir.firstName} ${dir.lastName}`;
           if (comp) subtitle += ` · Acompañante: ${comp.firstName} ${comp.lastName}`;
           groupedData.set(key, {
-            title: `Horario ${e.group?.name || 'Grupo'}`,
+            title: `${gradeName} ${groupName}`,
             subtitle,
             entries: [],
           });
@@ -1364,7 +1424,7 @@ export class TimetableExcelService {
         const t = e.teacherAssignment.teacher;
         const key = t.id;
         if (!groupedData.has(key)) {
-          const name = `${t.firstName || ''} ${t.lastName || ''}`.trim();
+          const name = `${t.firstName || ''} ${t.lastName || ''}`.trim().toUpperCase();
           const dirGroups = teacherDirectsMap.get(t.id);
           const compGroups = teacherCompanionMap.get(t.id);
           let subtitle = 'Docente';
@@ -1376,6 +1436,12 @@ export class TimetableExcelService {
       }
     }
 
+    // Count total hours per entity
+    const entityHourCounts = new Map<string, number>();
+    for (const [key, data] of groupedData) {
+      entityHourCounts.set(key, data.entries.length);
+    }
+
     // Crear PDF
     const doc = new PDFDocument({ size: 'LETTER', layout: 'landscape', margin: 30 });
     const chunks: Buffer[] = [];
@@ -1383,10 +1449,13 @@ export class TimetableExcelService {
     doc.on('data', (chunk: Buffer) => chunks.push(chunk));
 
     let isFirstPage = true;
+    let pageNum = 0;
+    const totalPages = groupedData.size;
 
-    for (const [, data] of groupedData) {
+    for (const [key, data] of groupedData) {
       if (!isFirstPage) doc.addPage();
       isFirstPage = false;
+      pageNum++;
 
       // Obtener bloques y días
       const blocksMap = new Map<string, any>();
@@ -1401,54 +1470,120 @@ export class TimetableExcelService {
       // Lookup
       const lookup = new Map<string, any>();
       for (const e of data.entries) {
-        const key = `${e.timeBlock?.id}|${e.dayOfWeek}`;
-        lookup.set(key, e);
+        const lookKey = `${e.timeBlock?.id}|${e.dayOfWeek}`;
+        lookup.set(lookKey, e);
       }
 
-      // Header
-      doc.fontSize(8).fillColor('#6B7280').text(instName, 30, 30, { align: 'left' });
-      doc.fontSize(16).fillColor('#1E3A5F').text(data.title, 30, 45, { align: 'center', width: 712 });
-      doc.fontSize(10).fillColor('#6B7280').text(data.subtitle, 30, 65, { align: 'center', width: 712 });
+      const pageW = 712;
+      const marginL = 30;
 
-      // Table dimensions
-      const tableTop = 85;
-      const colWidth0 = 75; // hora column
-      const colWidthDay = (712 - colWidth0) / activeDays.length;
-      const rowHeight = sortedBlocks.length > 8 ? 38 : 45;
+      // ─── Institution name (small, top-left) ───
+      doc.fontSize(7).fillColor('#9CA3AF').text(instName, marginL, 25, { align: 'left' });
 
-      // Header row
-      doc.rect(30, tableTop, colWidth0, 22).fill('#2563EB');
-      doc.fontSize(8).fillColor('#FFFFFF').text('HORA', 30, tableTop + 7, { width: colWidth0, align: 'center' });
+      // ─── Entity title (large, centered) ───
+      doc.fontSize(18).fillColor('#1F2937').text(data.title, marginL, 38, { align: 'center', width: pageW });
+
+      // ─── Subtitle ───
+      doc.fontSize(9).fillColor('#6B7280').text(data.subtitle, marginL, 60, { align: 'center', width: pageW });
+
+      // ─── Hours badge (top-right) ───
+      const hoursCount = entityHourCounts.get(key) || 0;
+      doc.fontSize(7).fillColor('#4F46E5').text(`${hoursCount} horas`, marginL + pageW - 60, 28, { width: 55, align: 'right' });
+
+      // ─── Table ───
+      const tableTop = 78;
+      const colWidth0 = 72; // hora column
+      const colWidthDay = (pageW - colWidth0) / activeDays.length;
+      const rowHeight = sortedBlocks.length > 8 ? 42 : sortedBlocks.length > 6 ? 48 : 55;
+      const headerH = 24;
+      const cellPad = 3;
+      const cellRadius = 4;
+
+      // ─── Header row (indigo gradient look) ───
+      doc.save();
+      doc.rect(marginL, tableTop, pageW, headerH).fill('#4F46E5');
+
+      doc.fontSize(7.5).fillColor('#FFFFFF')
+        .text('Hora', marginL, tableTop + 8, { width: colWidth0, align: 'center' });
 
       activeDays.forEach((day, i) => {
-        const x = 30 + colWidth0 + i * colWidthDay;
-        doc.rect(x, tableTop, colWidthDay, 22).fill('#2563EB');
-        doc.fontSize(8).fillColor('#FFFFFF').text(DAY_LABELS[day] || day, x, tableTop + 7, { width: colWidthDay, align: 'center' });
+        const x = marginL + colWidth0 + i * colWidthDay;
+        // Subtle separator line between day headers
+        if (i > 0) {
+          doc.strokeColor('#6366F1').lineWidth(0.5)
+            .moveTo(x, tableTop + 4).lineTo(x, tableTop + headerH - 4).stroke();
+        }
+        doc.fillColor('#FFFFFF').fontSize(8)
+          .text(DAY_LABELS[day] || day, x, tableTop + 8, { width: colWidthDay, align: 'center' });
       });
+      doc.restore();
 
-      // Data rows
-      let y = tableTop + 22;
-      for (const block of sortedBlocks) {
-        if (y + rowHeight > 580) break; // prevent overflow
+      // ─── Data rows ───
+      let y = tableTop + headerH;
+      for (let bi = 0; bi < sortedBlocks.length; bi++) {
+        const block = sortedBlocks[bi];
+        if (y + rowHeight > 585) break; // prevent overflow
 
         const isBreak = block.type === 'BREAK' || block.type === 'LUNCH';
-        const bgColor = isBreak ? '#F3F4F6' : '#FFFFFF';
+        const isTutoring = block.type === 'TUTORING';
+        const isAssembly = block.type === 'ASSEMBLY';
+        const isSpecial = isBreak || isTutoring || isAssembly;
 
-        // Hora cell
-        doc.rect(30, y, colWidth0, rowHeight).fill(bgColor).stroke('#D1D5DB');
+        // Row background (alternating)
+        const rowBg = isBreak ? '#F9FAFB' : bi % 2 === 0 ? '#FFFFFF' : '#FAFBFC';
+
+        // Full row background + border
+        doc.rect(marginL, y, pageW, rowHeight).fill(rowBg);
+        doc.rect(marginL, y, pageW, rowHeight).strokeColor('#E5E7EB').lineWidth(0.5).stroke();
+
+        // Hora cell — slightly darker background
+        doc.rect(marginL, y, colWidth0, rowHeight).fill(isBreak ? '#F3F4F6' : '#F8FAFC');
+        doc.rect(marginL, y, colWidth0, rowHeight).strokeColor('#E5E7EB').lineWidth(0.5).stroke();
+
         doc.fontSize(7).fillColor('#374151')
-          .text(block.label || `Bloque ${block.order}`, 32, y + 4, { width: colWidth0 - 4, align: 'center' });
-        doc.fontSize(6).fillColor('#9CA3AF')
-          .text(`${block.startTime}-${block.endTime}`, 32, y + 14, { width: colWidth0 - 4, align: 'center' });
+          .text(block.label || `Bloque ${block.order}`, marginL + 2, y + 6, { width: colWidth0 - 4, align: 'center' });
+        doc.fontSize(5.5).fillColor('#9CA3AF')
+          .text(`${block.startTime}-${block.endTime}`, marginL + 2, y + 17, { width: colWidth0 - 4, align: 'center' });
 
         // Day cells
         activeDays.forEach((day, i) => {
-          const x = 30 + colWidth0 + i * colWidthDay;
-          doc.rect(x, y, colWidthDay, rowHeight).fill(bgColor).stroke('#D1D5DB');
+          const x = marginL + colWidth0 + i * colWidthDay;
+          // Vertical grid line
+          doc.strokeColor('#E5E7EB').lineWidth(0.5)
+            .moveTo(x, y).lineTo(x, y + rowHeight).stroke();
 
           if (isBreak) {
-            doc.fontSize(7).fillColor('#9CA3AF')
-              .text(block.type === 'LUNCH' ? 'ALMUERZO' : 'RECESO', x + 2, y + rowHeight / 2 - 5, { width: colWidthDay - 4, align: 'center' });
+            doc.fontSize(6.5).fillColor('#9CA3AF')
+              .text(block.type === 'LUNCH' ? 'Almuerzo' : 'Receso', x + 2, y + rowHeight / 2 - 4, { width: colWidthDay - 4, align: 'center' });
+            return;
+          }
+
+          if (isTutoring) {
+            // Tutoría — indigo rounded cell
+            const cx = x + cellPad;
+            const cy = y + cellPad;
+            const cw = colWidthDay - cellPad * 2;
+            const ch = rowHeight - cellPad * 2;
+            this.drawRoundedRect(doc, cx, cy, cw, ch, cellRadius);
+            doc.fill('#EEF2FF');
+            this.drawRoundedRect(doc, cx, cy, cw, ch, cellRadius);
+            doc.strokeColor('#C7D2FE').lineWidth(0.8).stroke();
+            doc.fontSize(6.5).fillColor('#4338CA')
+              .text(block.label || 'Tutoría', cx, cy + ch / 2 - 4, { width: cw, align: 'center' });
+            return;
+          }
+
+          if (isAssembly) {
+            const cx = x + cellPad;
+            const cy = y + cellPad;
+            const cw = colWidthDay - cellPad * 2;
+            const ch = rowHeight - cellPad * 2;
+            this.drawRoundedRect(doc, cx, cy, cw, ch, cellRadius);
+            doc.fill('#F5F3FF');
+            this.drawRoundedRect(doc, cx, cy, cw, ch, cellRadius);
+            doc.strokeColor('#DDD6FE').lineWidth(0.8).stroke();
+            doc.fontSize(6.5).fillColor('#6D28D9')
+              .text(block.label || 'Formación', cx, cy + ch / 2 - 4, { width: cw, align: 'center' });
             return;
           }
 
@@ -1457,36 +1592,52 @@ export class TimetableExcelService {
 
           const subjectName = entry.teacherAssignment?.subject?.name || entry.projectName || '';
           const teacher = entry.teacherAssignment?.teacher;
-          const teacherShort = teacher ? `${teacher.firstName || ''} ${(teacher.lastName || '').charAt(0)}.`.trim() : '';
+          const teacherName = teacher ? `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim() : '';
           const roomName = entry.room?.name || '';
           const groupName = viewType === 'by-teacher' ? (entry.group?.name || '') : '';
 
-          // Subject
-          doc.fontSize(7).fillColor('#1E40AF')
-            .text(subjectName, x + 2, y + 3, { width: colWidthDay - 4, align: 'center' });
+          // Get subject color
+          const sc = this.getSubjectColor(subjectName);
 
-          // Teacher or group
-          if (viewType === 'by-group' && teacherShort) {
-            doc.fontSize(6).fillColor('#374151')
-              .text(teacherShort, x + 2, y + 14, { width: colWidthDay - 4, align: 'center' });
+          // Draw colored rounded cell
+          const cx = x + cellPad;
+          const cy = y + cellPad;
+          const cw = colWidthDay - cellPad * 2;
+          const ch = rowHeight - cellPad * 2;
+
+          this.drawRoundedRect(doc, cx, cy, cw, ch, cellRadius);
+          doc.fill(sc.bg);
+          this.drawRoundedRect(doc, cx, cy, cw, ch, cellRadius);
+          doc.strokeColor(sc.border).lineWidth(0.8).stroke();
+
+          // Subject name (bold)
+          doc.fontSize(7).fillColor(sc.text)
+            .text(subjectName.toUpperCase(), cx + 2, cy + 4, { width: cw - 4, align: 'center' });
+
+          // Teacher or group name
+          if (viewType === 'by-group' && teacherName) {
+            doc.fontSize(5.5).fillColor(sc.text)
+              .text(teacherName, cx + 2, cy + 15, { width: cw - 4, align: 'center' });
           } else if (groupName) {
-            doc.fontSize(6).fillColor('#374151')
-              .text(groupName, x + 2, y + 14, { width: colWidthDay - 4, align: 'center' });
+            doc.fontSize(6).fillColor(sc.text)
+              .text(groupName, cx + 2, cy + 15, { width: cw - 4, align: 'center' });
           }
 
           // Room
           if (roomName) {
             doc.fontSize(5).fillColor('#9CA3AF')
-              .text(roomName, x + 2, y + 24, { width: colWidthDay - 4, align: 'center' });
+              .text(`Salón: ${roomName}`, cx + 2, cy + ch - 10, { width: cw - 4, align: 'center' });
           }
         });
 
         y += rowHeight;
       }
 
-      // Footer
-      doc.fontSize(6).fillColor('#9CA3AF')
-        .text(`Generado por Edusyn — ${new Date().toLocaleDateString('es-CO')}`, 30, 575, { align: 'center', width: 712 });
+      // ─── Footer ───
+      doc.fontSize(6).fillColor('#D1D5DB')
+        .text(`Generado por Edusyn — ${new Date().toLocaleDateString('es-CO')}`, marginL, 590, { width: pageW / 2, align: 'left' });
+      doc.fontSize(6).fillColor('#D1D5DB')
+        .text(`Página ${pageNum} de ${totalPages}`, marginL + pageW / 2, 590, { width: pageW / 2, align: 'right' });
     }
 
     return new Promise<Buffer>((resolve, reject) => {
