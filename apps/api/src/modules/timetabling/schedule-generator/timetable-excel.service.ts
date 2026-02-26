@@ -382,26 +382,81 @@ export class TimetableExcelService {
       this.logger.log(`Eliminadas ${prevDeleted.count} asignaciones previas`);
     }
 
-    // Parsear filas con nuevas columnas
+    // ── Detección dinámica de columnas por nombre de encabezado ──
     const rows: TeachingLoadRow[] = [];
     const errors: string[] = [];
     const warnings: string[] = [];
 
+    // Leer encabezados de la fila 1 y mapear a índices
+    const headerRow = sheet.getRow(1);
+    const colMap: Record<string, number> = {};
+    const HEADER_ALIASES: Record<string, string> = {
+      'nombre docente': 'teacherName', 'nombre docente *': 'teacherName', 'docente': 'teacherName', 'nombre': 'teacherName',
+      'email docente': 'teacherEmail', 'email': 'teacherEmail', 'correo': 'teacherEmail', 'correo docente': 'teacherEmail',
+      'documento docente': 'teacherDocument', 'documento': 'teacherDocument', 'cedula': 'teacherDocument',
+      'area academica': 'areaName', 'area academica *': 'areaName', 'area': 'areaName',
+      'asignatura': 'subjectName', 'asignatura *': 'subjectName', 'materia': 'subjectName',
+      'grado': 'gradeName', 'grado *': 'gradeName',
+      'grupo': 'groupName', 'grupo *': 'groupName',
+      'jornada': 'shiftName', 'turno': 'shiftName',
+      'sede': 'campusName', 'campus': 'campusName',
+      'horas semanales': 'weeklyHours', 'horas semanales *': 'weeklyHours', 'horas': 'weeklyHours', 'horas/semana': 'weeklyHours',
+      'restricciones': 'restrictions',
+      'director de grupo': 'directorDeGrupo', 'director': 'directorDeGrupo', 'rol': 'directorDeGrupo',
+    };
+
+    headerRow.eachCell((cell, colNumber) => {
+      const raw = cell.value?.toString()?.trim() || '';
+      const normalized = raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
+      const fieldName = HEADER_ALIASES[normalized];
+      if (fieldName) {
+        colMap[fieldName] = colNumber;
+      }
+    });
+
+    this.logger.log(`[Import] Column mapping: ${JSON.stringify(colMap)}`);
+
+    // Validate required columns exist
+    const requiredCols = ['teacherName', 'subjectName', 'gradeName', 'groupName'];
+    const missingCols = requiredCols.filter(c => !colMap[c]);
+    if (missingCols.length > 0) {
+      const friendlyNames: Record<string, string> = { teacherName: 'Nombre Docente', subjectName: 'Asignatura', gradeName: 'Grado', groupName: 'Grupo' };
+      throw new BadRequestException(`Columnas obligatorias no encontradas: ${missingCols.map(c => friendlyNames[c]).join(', ')}. Verifique los encabezados de la fila 1.`);
+    }
+
+    // Helper to read a cell by field name
+    const getField = (row: any, field: string): string => {
+      const col = colMap[field];
+      if (!col) return '';
+      return row.getCell(col).value?.toString()?.trim() || '';
+    };
+
+    // If no areaName column, we'll derive area from subject later
+    const hasAreaColumn = !!colMap['areaName'];
+    if (!hasAreaColumn) {
+      warnings.push('⚠️ No se encontró columna "Área Académica". Se usará el nombre de la asignatura como área.');
+    }
+    const hasHoursColumn = !!colMap['weeklyHours'];
+    if (!hasHoursColumn) {
+      warnings.push('⚠️ No se encontró columna "Horas Semanales". Se usará 1 hora por defecto para cada asignación.');
+    }
+
     sheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return;
 
-      const teacherName = row.getCell(1).value?.toString()?.trim() || '';
-      const teacherEmail = row.getCell(2).value?.toString()?.trim() || '';
-      const teacherDocument = row.getCell(3).value?.toString()?.trim() || '';
-      const areaName = row.getCell(4).value?.toString()?.trim() || '';
-      const subjectName = row.getCell(5).value?.toString()?.trim() || '';
-      const gradeName = row.getCell(6).value?.toString()?.trim() || '';
-      const groupName = row.getCell(7).value?.toString()?.trim() || '';
-      const shiftName = row.getCell(8).value?.toString()?.trim() || '';
-      const campusName = row.getCell(9).value?.toString()?.trim() || '';
-      const weeklyHoursRaw = row.getCell(10).value;
-      const restrictions = row.getCell(11).value?.toString()?.trim() || '';
-      const directorDeGrupo = row.getCell(12).value?.toString()?.trim() || '';
+      const teacherName = getField(row, 'teacherName');
+      const teacherEmail = getField(row, 'teacherEmail');
+      const teacherDocument = getField(row, 'teacherDocument');
+      const areaName = hasAreaColumn ? getField(row, 'areaName') : getField(row, 'subjectName');
+      const subjectName = getField(row, 'subjectName');
+      const gradeName = getField(row, 'gradeName');
+      const groupName = getField(row, 'groupName');
+      const shiftName = getField(row, 'shiftName');
+      const campusName = getField(row, 'campusName');
+      const restrictions = getField(row, 'restrictions');
+      const directorDeGrupo = getField(row, 'directorDeGrupo');
+
+      const weeklyHoursRaw = colMap['weeklyHours'] ? row.getCell(colMap['weeklyHours']).value : null;
 
       // Ignorar filas vacías
       if (!teacherName && !teacherEmail && !subjectName && !groupName) return;
@@ -427,13 +482,17 @@ export class TimetableExcelService {
         return;
       }
 
-      const weeklyHours = typeof weeklyHoursRaw === 'number'
-        ? weeklyHoursRaw
-        : parseInt(weeklyHoursRaw?.toString() || '0', 10);
-
-      if (!weeklyHours || weeklyHours < 1 || weeklyHours > 20) {
-        errors.push(`Fila ${rowNumber}: Horas semanales inválidas (${weeklyHoursRaw}). Debe ser 1-20`);
-        return;
+      let weeklyHours: number;
+      if (weeklyHoursRaw !== null && weeklyHoursRaw !== undefined && weeklyHoursRaw !== '') {
+        weeklyHours = typeof weeklyHoursRaw === 'number'
+          ? weeklyHoursRaw
+          : parseInt(weeklyHoursRaw?.toString() || '0', 10);
+        if (!weeklyHours || weeklyHours < 1 || weeklyHours > 40) {
+          errors.push(`Fila ${rowNumber}: Horas semanales inválidas (${weeklyHoursRaw}). Debe ser 1-40`);
+          return;
+        }
+      } else {
+        weeklyHours = 1; // Default when column is missing
       }
 
       rows.push({

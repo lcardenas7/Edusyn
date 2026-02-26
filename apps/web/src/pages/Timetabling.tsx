@@ -2684,7 +2684,7 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
 
   useEffect(() => {
     if (!academicYearId) return
-    timetablingGeneratorApi.getShifts(academicYearId)
+    timetablingGeneratorApi.getShifts()
       .then(res => {
         const data = res.data || []
         setViewShifts(data)
