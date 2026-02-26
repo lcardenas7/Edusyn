@@ -763,13 +763,14 @@ export class ScheduleGeneratorController {
     @Query('academicYearId') academicYearId: string,
     @Query('shiftId') shiftId?: string,
   ) {
+    const institutionId = await this.resolveInstitutionId(req, academicYearId);
+    if (!institutionId) return { assignments: [], summary: { totalAssignments: 0, uniqueTeachers: 0, uniqueGroups: 0, totalWeeklyHours: 0 } };
+
     const assignments = await this.prisma.teacherAssignment.findMany({
       where: {
         academicYearId,
-        group: {
-          shift: { campus: { institutionId: (await this.resolveInstitutionId(req, academicYearId)) || '' } },
-          ...(shiftId ? { shiftId } : {}),
-        },
+        institutionId,
+        ...(shiftId ? { group: { shiftId } } : {}),
       },
       include: {
         teacher: { select: { id: true, firstName: true, lastName: true, email: true } },
