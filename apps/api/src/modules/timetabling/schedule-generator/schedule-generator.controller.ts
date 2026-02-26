@@ -30,6 +30,25 @@ export class ScheduleGeneratorController {
     private readonly capabilitiesService: CapabilitiesService,
   ) {}
 
+  /**
+   * Helper: resolve institutionId from JWT or derive from academicYearId (for SuperAdmin)
+   */
+  private async resolveInstitutionId(req: any, academicYearId?: string): Promise<string | null> {
+    if (req.user.institutionId) return req.user.institutionId;
+    // SuperAdmin: derive from academicYearId
+    if (academicYearId) {
+      const year = await this.prisma.academicYear.findUnique({
+        where: { id: academicYearId },
+        select: { institutionId: true },
+      });
+      if (year?.institutionId) {
+        console.log(`[Timetabling] Resolved institutionId ${year.institutionId} from academicYearId ${academicYearId}`);
+        return year.institutionId;
+      }
+    }
+    return null;
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // CONTEXTO PERSISTENTE DE GENERACIÓN (por institución+año+jornada)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -44,16 +63,23 @@ export class ScheduleGeneratorController {
     if (!academicYearId || !shiftId) {
       return null;
     }
-    const ctx = await this.prisma.scheduleGenerationContext.findUnique({
-      where: {
-        institutionId_academicYearId_shiftId: {
-          institutionId: req.user.institutionId,
-          academicYearId,
-          shiftId,
+    const institutionId = await this.resolveInstitutionId(req, academicYearId);
+    if (!institutionId) return null;
+    try {
+      const ctx = await this.prisma.scheduleGenerationContext.findUnique({
+        where: {
+          institutionId_academicYearId_shiftId: {
+            institutionId,
+            academicYearId,
+            shiftId,
+          },
         },
-      },
-    });
-    return ctx;
+      });
+      return ctx;
+    } catch (err) {
+      console.warn('[Context] Table may not exist yet:', err.code || err.message);
+      return null;
+    }
   }
 
   @Post('context')
@@ -84,31 +110,38 @@ export class ScheduleGeneratorController {
       configSaved?: boolean;
     },
   ) {
-    const institutionId = req.user.institutionId;
     if (!body.academicYearId || !body.shiftId) {
       return { success: false, error: 'academicYearId y shiftId son obligatorios' };
+    }
+    const institutionId = await this.resolveInstitutionId(req, body.academicYearId);
+    if (!institutionId) {
+      return { success: false, error: 'No se pudo resolver la institución' };
     }
 
     const { academicYearId, shiftId, ...data } = body;
 
-    const ctx = await this.prisma.scheduleGenerationContext.upsert({
-      where: {
-        institutionId_academicYearId_shiftId: {
+    try {
+      const ctx = await this.prisma.scheduleGenerationContext.upsert({
+        where: {
+          institutionId_academicYearId_shiftId: {
+            institutionId,
+            academicYearId,
+            shiftId,
+          },
+        },
+        create: {
           institutionId,
           academicYearId,
           shiftId,
+          ...data,
         },
-      },
-      create: {
-        institutionId,
-        academicYearId,
-        shiftId,
-        ...data,
-      },
-      update: data,
-    });
-
-    return ctx;
+        update: data,
+      });
+      return ctx;
+    } catch (err) {
+      console.warn('[Context] Table may not exist yet:', err.code || err.message);
+      return { success: false, error: 'Context table not available yet. Redeploy may be needed.' };
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -789,12 +822,12 @@ export class ScheduleGeneratorController {
     @Query('view') view: 'total' | 'by-grade' | 'by-teacher' | 'by-subject' | 'by-area' = 'total',
     @Query('filterId') filterId?: string,
   ) {
-    const institutionId = req.user.institutionId;
+    const institutionId = await this.resolveInstitutionId(req, academicYearId);
     const userId = req.user.sub || req.user.id;
-    console.log('[ScheduleViews] Request:', { institutionId, academicYearId, view, filterId, userId, userRoles: req.user.roles, isSuperAdmin: req.user.isSuperAdmin });
+    console.log('[ScheduleViews] Request:', { institutionId, academicYearId, view, filterId, userId, isSuperAdmin: req.user.isSuperAdmin });
 
     if (!institutionId) {
-      console.error('[ScheduleViews] No institutionId in request!');
+      console.error('[ScheduleViews] No institutionId — cannot resolve from JWT or academicYearId');
       return { view, entries: [], allTimeBlocks: [], totalEntries: 0, error: 'No institutionId' };
     }
     if (!academicYearId) {

@@ -599,16 +599,14 @@ export class ScheduleGeneratorService {
         }
       }
 
-      // ═══ PHASE C: Desperate — place ANY remaining hours in ANY available slot ═══
-      // At this point we don't care about double blocks, just fill every slot possible
+      // ═══ PHASE C: Desperate — place remaining hours, max 2h/day per subject ═══
       if (hoursPlaced < targetHours) {
         for (const day of activeDays) {
           if (hoursPlaced >= targetHours) break;
-          // Re-count entries for this day (including those added in phases A and B)
           const countThisDay = entriesToCreate.filter(
             e => e.teacherAssignmentId === assignment.id && e.dayOfWeek === day,
           ).length;
-          if (countThisDay >= 2) continue; // max 2h/day per subject
+          if (countThisDay >= 2) continue;
 
           const classBlocks = (groupTimeBlocks.get(assignment.groupId) || []);
           for (const block of classBlocks) {
@@ -617,6 +615,34 @@ export class ScheduleGeneratorService {
               e => e.teacherAssignmentId === assignment.id && e.dayOfWeek === day,
             ).length;
             if (placed >= 2) break;
+            const sk = `${day}|${block.id}`;
+            if (this.isSlotTaken(assignment.teacherId, sk, teacherSlots) ||
+                this.isSlotTaken(assignment.groupId, sk, groupSlots)) continue;
+            if (!teacherSlots.has(assignment.teacherId)) teacherSlots.set(assignment.teacherId, new Set());
+            if (!groupSlots.has(assignment.groupId)) groupSlots.set(assignment.groupId, new Set());
+            teacherSlots.get(assignment.teacherId)!.add(sk);
+            groupSlots.get(assignment.groupId)!.add(sk);
+            entriesToCreate.push({
+              institutionId, academicYearId,
+              groupId: assignment.groupId,
+              timeBlockId: block.id,
+              dayOfWeek: day,
+              teacherAssignmentId: assignment.id,
+              roomId: groupRoomMap.get(assignment.groupId) || null,
+            });
+            hoursPlaced++;
+          }
+        }
+      }
+
+      // ═══ PHASE D: Last resort — allow 3h/day per subject to fill remaining ═══
+      // Only triggers when schedule is very tight (e.g., 25h teacher in 25 slots)
+      if (hoursPlaced < targetHours) {
+        for (const day of activeDays) {
+          if (hoursPlaced >= targetHours) break;
+          const classBlocks = (groupTimeBlocks.get(assignment.groupId) || []);
+          for (const block of classBlocks) {
+            if (hoursPlaced >= targetHours) break;
             const sk = `${day}|${block.id}`;
             if (this.isSlotTaken(assignment.teacherId, sk, teacherSlots) ||
                 this.isSlotTaken(assignment.groupId, sk, groupSlots)) continue;
