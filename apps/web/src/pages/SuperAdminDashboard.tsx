@@ -389,6 +389,16 @@ const AVAILABLE_MODULES: ModuleConfig[] = [
       { id: 'FINANCE_SETTINGS', name: 'Configuración', description: 'Numeración, mora, cuentas bancarias' },
     ]
   },
+  {
+    id: 'TEACHER_WORKSPACE',
+    name: 'Mi Espacio (Docente)',
+    description: 'Espacio privado de trabajo para docentes con tableros Kanban, bitácoras y seguimiento',
+    features: [
+      { id: 'WORKSPACE_BOARDS', name: 'Tableros', description: 'Crear y gestionar tableros personales' },
+      { id: 'WORKSPACE_STUDENT_NOTES', name: 'Seguimiento Estudiantes', description: 'Notas privadas por estudiante' },
+      { id: 'WORKSPACE_CLASS_LOG', name: 'Bitácora de Clase', description: 'Registro diario de actividades' },
+    ]
+  },
 ]
 
 // Tipo para permisos de institución (usado en el backend)

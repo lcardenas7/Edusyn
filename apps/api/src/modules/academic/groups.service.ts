@@ -64,12 +64,13 @@ export class GroupsService {
     return groups;
   }
 
-  async update(id: string, data: { directorId?: string | null; maxCapacity?: number; name?: string }) {
+  async update(id: string, data: { directorId?: string | null; maxCapacity?: number; name?: string; shiftId?: string }) {
     return this.prisma.group.update({
       where: { id },
       data,
       include: {
         grade: true,
+        shift: true,
         director: { select: { id: true, firstName: true, lastName: true } },
       },
     });

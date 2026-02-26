@@ -1099,6 +1099,12 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
   const [configPreview, setConfigPreview] = useState<any[]>([])
   const [contextLoaded, setContextLoaded] = useState(false)
 
+  // ── Real time blocks for editing ──
+  const [realBlocks, setRealBlocks] = useState<any[]>([])
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
+  const [editingBlockData, setEditingBlockData] = useState<{ startTime: string; endTime: string }>({ startTime: '', endTime: '' })
+  const [savingBlock, setSavingBlock] = useState(false)
+
   const allGroups = grades.flatMap(g => g.groups.map(gr => ({ ...gr, gradeName: g.name })))
 
   const selectedShift = shifts.find(s => s.id === selectedShiftId)
@@ -1262,6 +1268,41 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
 
   useEffect(() => { computePreview() }, [computePreview])
 
+  // ── Load real time blocks from backend ──
+  const loadRealBlocks = useCallback(async () => {
+    if (!selectedShiftId) return
+    try {
+      const res = await timetablingTimeBlocksApi.getAll(selectedShiftId)
+      setRealBlocks((res.data || []).sort((a: any, b: any) => a.order - b.order))
+    } catch (err) {
+      console.error('Error loading blocks:', err)
+    }
+  }, [selectedShiftId])
+
+  // Load blocks when config is saved or shift changes
+  useEffect(() => {
+    if (configSaved && selectedShiftId) loadRealBlocks()
+  }, [configSaved, selectedShiftId, loadRealBlocks])
+
+  // ── Save individual block edit ──
+  const handleSaveBlockEdit = async () => {
+    if (!editingBlockId) return
+    setSavingBlock(true)
+    try {
+      await timetablingTimeBlocksApi.update(editingBlockId, {
+        startTime: editingBlockData.startTime,
+        endTime: editingBlockData.endTime,
+      })
+      await loadRealBlocks()
+      setEditingBlockId(null)
+      showMessage('Bloque actualizado', 'success')
+    } catch (err: any) {
+      showMessage(err.response?.data?.message || 'Error al actualizar bloque', 'error')
+    } finally {
+      setSavingBlock(false)
+    }
+  }
+
   // Guardar configuración (scoped al shift seleccionado)
   const handleSaveConfig = async () => {
     setLoading(true)
@@ -1271,6 +1312,7 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
         showMessage(`Configuración guardada: ${res.data.classBlocks} bloques de clase, ${res.data.startTime} a ${res.data.endTime}`, 'success')
         setConfigSaved(true)
         saveContext({ configSaved: true })
+        await loadRealBlocks()
       } else {
         showMessage(res.data.error || 'Error al guardar configuración', 'error')
       }
@@ -1920,6 +1962,93 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
               )}
             </div>
           </div>
+
+          {/* Edición de bloques individuales */}
+          {configSaved && realBlocks.length > 0 && (
+            <div className="bg-white border rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-indigo-600" />
+                Ajustar Bloques Individuales
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Haz clic en un bloque para ajustar su hora de inicio y fin. Útil para clases con duraciones diferentes (ej: 50 min después del receso).
+              </p>
+
+              <div className="border rounded-lg overflow-hidden">
+                <div className="bg-indigo-600 text-white text-xs font-medium px-3 py-2 grid grid-cols-5 gap-2">
+                  <span>Orden</span>
+                  <span>Tipo</span>
+                  <span>Inicio</span>
+                  <span>Fin</span>
+                  <span className="text-right">Duración</span>
+                </div>
+                <div className="divide-y max-h-[350px] overflow-y-auto">
+                  {realBlocks.map((block) => {
+                    const isEditing = editingBlockId === block.id
+                    const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+                    const duration = toMin(block.endTime) - toMin(block.startTime)
+                    const typeLabel = block.type === 'CLASS' ? 'Clase' : block.type === 'BREAK' ? 'Receso' : block.type === 'LUNCH' ? 'Almuerzo' : block.type === 'TUTORING' ? 'Tutoría' : block.type
+                    const typeColor = block.type === 'CLASS' ? 'bg-blue-100 text-blue-700' : block.type === 'BREAK' ? 'bg-amber-100 text-amber-700' : block.type === 'LUNCH' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'
+
+                    return (
+                      <div
+                        key={block.id}
+                        className={`grid grid-cols-5 gap-2 px-3 py-2.5 text-sm items-center ${isEditing ? 'bg-indigo-50' : 'hover:bg-gray-50 cursor-pointer'}`}
+                        onClick={() => {
+                          if (!isEditing) {
+                            setEditingBlockId(block.id)
+                            setEditingBlockData({ startTime: block.startTime, endTime: block.endTime })
+                          }
+                        }}
+                      >
+                        <span className="text-gray-500 font-medium">{block.order}</span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${typeColor} w-fit`}>{typeLabel}</span>
+                        {isEditing ? (
+                          <>
+                            <input
+                              type="time"
+                              value={editingBlockData.startTime}
+                              onChange={e => setEditingBlockData(prev => ({ ...prev, startTime: e.target.value }))}
+                              className="border rounded px-2 py-1 text-sm w-24"
+                              onClick={e => e.stopPropagation()}
+                            />
+                            <input
+                              type="time"
+                              value={editingBlockData.endTime}
+                              onChange={e => setEditingBlockData(prev => ({ ...prev, endTime: e.target.value }))}
+                              className="border rounded px-2 py-1 text-sm w-24"
+                              onClick={e => e.stopPropagation()}
+                            />
+                            <div className="flex gap-1 justify-end" onClick={e => e.stopPropagation()}>
+                              <button
+                                onClick={handleSaveBlockEdit}
+                                disabled={savingBlock}
+                                className="p-1.5 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                              >
+                                {savingBlock ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                              </button>
+                              <button
+                                onClick={() => setEditingBlockId(null)}
+                                className="p-1.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-gray-700">{block.startTime}</span>
+                            <span className="text-gray-700">{block.endTime}</span>
+                            <span className="text-right text-gray-500">{duration} min</span>
+                          </>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

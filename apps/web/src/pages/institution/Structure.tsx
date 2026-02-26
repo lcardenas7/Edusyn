@@ -33,6 +33,8 @@ interface Group {
   id: string
   name: string
   shift: 'MAÑANA' | 'TARDE' | 'NOCHE' | 'ÚNICA'
+  shiftId?: string
+  shiftName?: string
   capacity: number
   director?: string
   directorId?: string
@@ -140,7 +142,7 @@ export default function Structure() {
   // Modal states para grupos
   const [showGroupModal, setShowGroupModal] = useState(false)
   const [editingGroup, setEditingGroup] = useState<{ gradeId: string; group: Group | null } | null>(null)
-  const [groupForm, setGroupForm] = useState({ name: '', shift: 'MAÑANA' as Group['shift'], capacity: 35, directorId: '' })
+  const [groupForm, setGroupForm] = useState({ name: '', shiftId: '', capacity: 35, directorId: '' })
   const [teachers, setTeachers] = useState<any[]>([])
   const [savingGroup, setSavingGroup] = useState(false)
 
@@ -270,6 +272,8 @@ export default function Structure() {
           groups: (g.groups || []).map((gr: any) => ({
             id: gr.id,
             name: gr.name,
+            shiftId: gr.shiftId || gr.shift?.id,
+            shiftName: gr.shift?.name,
             shift: gr.shift?.type === 'MORNING' ? 'MAÑANA' 
                  : gr.shift?.type === 'AFTERNOON' ? 'TARDE'
                  : gr.shift?.type === 'NIGHT' ? 'NOCHE'
@@ -410,10 +414,11 @@ export default function Structure() {
   const openGroupModal = (gradeId: string, group?: Group) => {
     if (group) {
       setEditingGroup({ gradeId, group })
-      setGroupForm({ name: group.name, shift: group.shift, capacity: group.capacity, directorId: group.directorId || '' })
+      setGroupForm({ name: group.name, shiftId: group.shiftId || '', capacity: group.capacity, directorId: group.directorId || '' })
     } else {
       setEditingGroup({ gradeId, group: null })
-      setGroupForm({ name: '', shift: 'MAÑANA', capacity: 35, directorId: '' })
+      // Default to first shift if available
+      setGroupForm({ name: '', shiftId: shifts[0]?.id || '', capacity: 35, directorId: '' })
     }
     setShowGroupModal(true)
   }
@@ -431,15 +436,20 @@ export default function Structure() {
           name: groupForm.name,
           maxCapacity: groupForm.capacity,
           directorId: groupForm.directorId || null,
+          shiftId: groupForm.shiftId || undefined,
         })
-        // Encontrar nombre del director seleccionado
+        // Encontrar nombre del director y jornada seleccionados
         const selTeacher = teachers.find(t => t.id === groupForm.directorId)
         const directorName = selTeacher ? `${selTeacher.firstName} ${selTeacher.lastName}` : undefined
+        const selShift = shifts.find(s => s.id === groupForm.shiftId)
+        const shiftLabel = selShift?.type === 'MORNING' ? 'MAÑANA' : selShift?.type === 'AFTERNOON' ? 'TARDE' : selShift?.type === 'NIGHT' ? 'NOCHE' : 'ÚNICA'
         setGrades(grades.map(g => 
           g.id === gradeId 
-            ? { ...g, groups: g.groups.map(gr => gr.id === group.id ? { ...gr, name: groupForm.name, capacity: groupForm.capacity, shift: groupForm.shift, directorId: groupForm.directorId || undefined, directorName } : gr) }
+            ? { ...g, groups: g.groups.map(gr => gr.id === group.id ? { ...gr, name: groupForm.name, capacity: groupForm.capacity, shiftId: groupForm.shiftId, shift: shiftLabel as any, shiftName: selShift?.name, directorId: groupForm.directorId || undefined, directorName } : gr) }
             : g
         ))
+        // Reload to get fresh data
+        await loadGradesFromAPI()
       } catch (err) {
         console.error('[Structure] Error updating group:', err)
         alert('Error al actualizar el grupo')
@@ -447,16 +457,26 @@ export default function Structure() {
         setSavingGroup(false)
       }
     } else {
-      const newGroup: Group = {
-        id: `group-${Date.now()}`,
-        name: groupForm.name,
-        shift: groupForm.shift,
-        capacity: groupForm.capacity,
-        directorId: groupForm.directorId || undefined
+      // Crear grupo nuevo - llamar a la API
+      if (!groupForm.shiftId || !campusId) {
+        alert('Selecciona una jornada')
+        return
       }
-      setGrades(grades.map(g => 
-        g.id === gradeId ? { ...g, groups: [...g.groups, newGroup] } : g
-      ))
+      setSavingGroup(true)
+      try {
+        await groupsApi.create({
+          campusId,
+          shiftId: groupForm.shiftId,
+          gradeId,
+          name: groupForm.name,
+        })
+        await loadGradesFromAPI()
+      } catch (err: any) {
+        console.error('[Structure] Error creating group:', err)
+        alert(err.response?.data?.message || 'Error al crear el grupo')
+      } finally {
+        setSavingGroup(false)
+      }
     }
     setShowGroupModal(false)
   }
@@ -708,7 +728,12 @@ export default function Structure() {
                                     <div key={group.id} className="flex items-center gap-3 bg-white px-3 py-2 rounded-lg border border-slate-200">
                                       <UsersRound className="w-4 h-4 text-slate-400" />
                                       <span className="font-medium text-slate-700">{grade.name} {group.name}</span>
-                                      <span className="text-xs px-2 py-0.5 bg-slate-100 rounded text-slate-500">{group.shift}</span>
+                                      <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                                        group.shift === 'MAÑANA' ? 'bg-amber-100 text-amber-700 border border-amber-200' :
+                                        group.shift === 'TARDE' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                                        group.shift === 'NOCHE' ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' :
+                                        'bg-slate-100 text-slate-600'
+                                      }`}>{group.shiftName || group.shift}</span>
                                       <span className="text-xs text-slate-500">Cap: {group.capacity}</span>
                                       {group.directorName && <span className="text-xs px-2 py-0.5 bg-purple-50 text-purple-600 rounded border border-purple-200">Tutor: {group.directorName}</span>}
                                       {canEditGrades && (
@@ -942,14 +967,14 @@ export default function Structure() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Jornada</label>
                 <select
-                  value={groupForm.shift}
-                  onChange={(e) => setGroupForm({ ...groupForm, shift: e.target.value as Group['shift'] })}
+                  value={groupForm.shiftId}
+                  onChange={(e) => setGroupForm({ ...groupForm, shiftId: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
                 >
-                  <option value="MAÑANA">Mañana</option>
-                  <option value="TARDE">Tarde</option>
-                  <option value="NOCHE">Noche</option>
-                  <option value="ÚNICA">Jornada Única</option>
+                  <option value="">— Seleccionar jornada —</option>
+                  {shifts.map((s: any) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
                 </select>
               </div>
               <div>
