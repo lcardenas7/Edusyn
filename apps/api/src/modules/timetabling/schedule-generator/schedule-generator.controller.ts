@@ -276,7 +276,7 @@ export class ScheduleGeneratorController {
     const totalHoursNeeded = assignments.reduce((s, a) => s + (a.weeklyHours || 0), 0);
 
     // 4. Check teacher conflicts (same teacher, too many hours)
-    const teacherHours = new Map<string, { name: string; hours: number; groups: Set<string> }>();
+    const teacherHours = new Map<string, { name: string; hours: number; groups: Set<string>; details: string[] }>();
     for (const a of assignments) {
       const tid = a.teacher.id;
       if (!teacherHours.has(tid)) {
@@ -284,18 +284,20 @@ export class ScheduleGeneratorController {
           name: `${a.teacher.firstName} ${a.teacher.lastName}`.trim(),
           hours: 0,
           groups: new Set(),
+          details: [],
         });
       }
       const t = teacherHours.get(tid)!;
       t.hours += a.weeklyHours || 0;
       t.groups.add(a.groupId);
+      t.details.push(`${a.subject?.name || '?'} (${a.group?.name || '?'}): ${a.weeklyHours}h`);
     }
 
     const maxTeacherSlots = timeBlocks.length * activeDays.length;
-    const overloadedTeachers: { name: string; hours: number; maxSlots: number }[] = [];
+    const overloadedTeachers: { name: string; hours: number; maxSlots: number; details: string[] }[] = [];
     for (const [, t] of teacherHours) {
       if (t.hours > maxTeacherSlots) {
-        overloadedTeachers.push({ name: t.name, hours: t.hours, maxSlots: maxTeacherSlots });
+        overloadedTeachers.push({ name: t.name, hours: t.hours, maxSlots: maxTeacherSlots, details: t.details });
       }
     }
 
@@ -315,7 +317,7 @@ export class ScheduleGeneratorController {
       issues.push({ type: 'error', message: 'No hay bloques de tiempo tipo CLASS configurados. Configure el horario primero.' });
     }
     for (const t of overloadedTeachers) {
-      issues.push({ type: 'error', message: `${t.name}: ${t.hours}h semanales exceden los ${t.maxSlots} slots disponibles.` });
+      issues.push({ type: 'error', message: `${t.name}: ${t.hours}h semanales exceden los ${t.maxSlots} slots disponibles. Detalle: ${t.details.join(', ')}` });
     }
     if (groupsWithoutLoad.length > 0 && groupsWithLoad.length > 0) {
       issues.push({ type: 'warning', message: `${groupsWithoutLoad.length} grupo(s) sin carga académica: ${groupsWithoutLoad.slice(0, 5).map(g => g.name).join(', ')}${groupsWithoutLoad.length > 5 ? '...' : ''}` });
@@ -890,6 +892,7 @@ export class ScheduleGeneratorController {
       gradeName: e.group?.grade?.name,
       gradeId: e.group?.grade?.id,
       gradeStage: e.group?.grade?.stage,
+      shiftId: e.group?.shift?.id,
       shiftName: e.group?.shift?.name,
       campusName: e.group?.campus?.name,
       subjectName: e.teacherAssignment?.subject?.name || e.projectName || '',
@@ -968,6 +971,51 @@ export class ScheduleGeneratorController {
       });
     }
 
+    // ═══════════════════════════════════════════════════════════════════
+    // CALCULAR HORAS SIN COLOCAR (assignments vs placed entries)
+    // ═══════════════════════════════════════════════════════════════════
+    const groupIds = [...new Set(formattedEntries.map(e => e.groupId))];
+    const allAssignments = groupIds.length > 0 ? await this.prisma.teacherAssignment.findMany({
+      where: { academicYearId, groupId: { in: groupIds } },
+      include: {
+        teacher: { select: { id: true, firstName: true, lastName: true } },
+        subject: { select: { id: true, name: true, area: { select: { id: true, name: true } } } },
+        group: { select: { id: true, name: true, shiftId: true, grade: { select: { id: true, name: true } } } },
+      },
+    }) : [];
+
+    // Count placed entries per assignmentId
+    const placedPerAssignment = new Map<string, number>();
+    for (const e of entries) {
+      if (e.teacherAssignmentId) {
+        placedPerAssignment.set(e.teacherAssignmentId, (placedPerAssignment.get(e.teacherAssignmentId) || 0) + 1);
+      }
+    }
+
+    const unplacedHours: any[] = [];
+    for (const a of allAssignments) {
+      const placed = placedPerAssignment.get(a.id) || 0;
+      const remaining = (a.weeklyHours || 0) - placed;
+      if (remaining > 0) {
+        unplacedHours.push({
+          assignmentId: a.id,
+          groupId: a.groupId,
+          groupName: a.group?.name || '',
+          gradeId: a.group?.grade?.id || '',
+          gradeName: a.group?.grade?.name || '',
+          shiftId: a.group?.shiftId || '',
+          subjectName: a.subject?.name || '',
+          subjectId: a.subject?.id || '',
+          areaName: a.subject?.area?.name || '',
+          teacherName: `${a.teacher?.firstName || ''} ${a.teacher?.lastName || ''}`.trim(),
+          teacherId: a.teacher?.id || '',
+          weeklyHours: a.weeklyHours || 0,
+          placedHours: placed,
+          remainingHours: remaining,
+        });
+      }
+    }
+
     switch (view) {
       case 'by-grade': {
         const gradeMap = new Map<string, { gradeId: string; gradeName: string; stage: string; groups: any[] }>();
@@ -1001,11 +1049,12 @@ export class ScheduleGeneratorController {
               .map(([groupId, entries]) => ({
                 groupId,
                 groupName: entries[0]?.groupName || '',
+                shiftId: entries[0]?.shiftId || '',
                 entries,
               }))
               .sort((a, b) => a.groupName.localeCompare(b.groupName, 'es', { numeric: true })),
           }));
-        return { view, grades, allTimeBlocks, totalEntries: formattedEntries.length };
+        return { view, grades, allTimeBlocks, totalEntries: formattedEntries.length, unplacedHours };
       }
 
       case 'by-teacher': {
@@ -1024,9 +1073,9 @@ export class ScheduleGeneratorController {
         }
         // Si filterId, devolver solo ese docente
         if (filterId && teacherMap.has(filterId)) {
-          return { view, teachers: [teacherMap.get(filterId)], allTimeBlocks, totalEntries: formattedEntries.length };
+          return { view, teachers: [teacherMap.get(filterId)], allTimeBlocks, totalEntries: formattedEntries.length, unplacedHours };
         }
-        return { view, teachers: Array.from(teacherMap.values()), allTimeBlocks, totalEntries: formattedEntries.length };
+        return { view, teachers: Array.from(teacherMap.values()), allTimeBlocks, totalEntries: formattedEntries.length, unplacedHours };
       }
 
       case 'by-subject': {
@@ -1043,7 +1092,7 @@ export class ScheduleGeneratorController {
           }
           subjectMap.get(e.subjectId)!.entries.push(e);
         }
-        return { view, subjects: Array.from(subjectMap.values()), allTimeBlocks, totalEntries: formattedEntries.length };
+        return { view, subjects: Array.from(subjectMap.values()), allTimeBlocks, totalEntries: formattedEntries.length, unplacedHours };
       }
 
       case 'by-area': {
@@ -1066,11 +1115,11 @@ export class ScheduleGeneratorController {
           subjects: Array.from(a.subjects.values()),
           totalEntries: Array.from(a.subjects.values()).reduce((sum, s) => sum + s.entries.length, 0),
         }));
-        return { view, areas, allTimeBlocks, totalEntries: formattedEntries.length };
+        return { view, areas, allTimeBlocks, totalEntries: formattedEntries.length, unplacedHours };
       }
 
       default: // total
-        return { view: 'total', entries: formattedEntries, allTimeBlocks, totalEntries: formattedEntries.length };
+        return { view: 'total', entries: formattedEntries, allTimeBlocks, totalEntries: formattedEntries.length, unplacedHours };
     }
   }
 }

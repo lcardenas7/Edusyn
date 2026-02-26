@@ -2832,13 +2832,18 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
       }
     }
     const blocksMap = new Map<string, any>()
+    const printShiftIds = new Set<string>()
     for (const g of allGroups) {
       for (const e of g.entries) {
         if (e.timeBlock && !blocksMap.has(e.timeBlock.id)) blocksMap.set(e.timeBlock.id, e.timeBlock)
+        if (e.shiftId) printShiftIds.add(e.shiftId)
       }
     }
     for (const tb of (viewData.allTimeBlocks || [])) {
-      if (!blocksMap.has(tb.id) && tb.type !== 'CLASS' && tb.type !== 'FREE') blocksMap.set(tb.id, tb)
+      if (!blocksMap.has(tb.id) && tb.type !== 'CLASS' && tb.type !== 'FREE') {
+        if (printShiftIds.size > 0 && tb.shiftId && !printShiftIds.has(tb.shiftId)) continue
+        blocksMap.set(tb.id, tb)
+      }
     }
     const sortedBlocks = Array.from(blocksMap.values()).sort((a: any, b: any) => a.order - b.order)
     const dayLabel = DAYS.find(d => d.key === selectedDay)?.label || selectedDay
@@ -2894,8 +2899,17 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
       }
     }
     const blocksMap = new Map<string, any>()
-    for (const g of allGroups) for (const e of g.entries) if (e.timeBlock && !blocksMap.has(e.timeBlock.id)) blocksMap.set(e.timeBlock.id, e.timeBlock)
-    for (const tb of (viewData.allTimeBlocks || [])) if (!blocksMap.has(tb.id) && tb.type !== 'CLASS' && tb.type !== 'FREE') blocksMap.set(tb.id, tb)
+    const printShiftIds2 = new Set<string>()
+    for (const g of allGroups) for (const e of g.entries) {
+      if (e.timeBlock && !blocksMap.has(e.timeBlock.id)) blocksMap.set(e.timeBlock.id, e.timeBlock)
+      if (e.shiftId) printShiftIds2.add(e.shiftId)
+    }
+    for (const tb of (viewData.allTimeBlocks || [])) {
+      if (!blocksMap.has(tb.id) && tb.type !== 'CLASS' && tb.type !== 'FREE') {
+        if (printShiftIds2.size > 0 && tb.shiftId && !printShiftIds2.has(tb.shiftId)) continue
+        blocksMap.set(tb.id, tb)
+      }
+    }
     const sortedBlocks = Array.from(blocksMap.values()).sort((a: any, b: any) => a.order - b.order)
     const dayLabel = DAYS.find(d => d.key === selectedDay)?.label || selectedDay
     const dateStr = provisionalMode ? new Date(provisionalDate + 'T12:00:00').toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : dayLabel
@@ -3038,6 +3052,37 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
       setMovingEntry(null)
       loadView()
     }
+  }
+
+  // Renderizar fichas de horas sin colocar para un grupo
+  const renderUnplacedChips = (groupId: string) => {
+    const unplaced = (viewData?.unplacedHours || []).filter((u: any) => u.groupId === groupId)
+    if (unplaced.length === 0) return null
+    const totalRemaining = unplaced.reduce((s: number, u: any) => s + u.remainingHours, 0)
+    return (
+      <div className="mt-2 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+        <div className="flex items-center gap-2 mb-2">
+          <AlertTriangle className="w-4 h-4 text-amber-500" />
+          <span className="text-xs font-medium text-amber-700">{totalRemaining} hora{totalRemaining !== 1 ? 's' : ''} sin colocar</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {unplaced.map((u: any) => {
+            const sc = getSubjectColor(u.subjectName)
+            return Array.from({ length: u.remainingHours }, (_, i) => (
+              <div
+                key={`${u.assignmentId}-${i}`}
+                className="px-2 py-1 rounded text-[10px] border cursor-default"
+                style={{ backgroundColor: sc.bg, borderColor: sc.border, color: sc.text }}
+                title={`${u.subjectName} — ${u.teacherName} (${u.placedHours}/${u.weeklyHours}h colocadas)`}
+              >
+                <span className="font-semibold">{u.subjectName}</span>
+                <span className="opacity-60 ml-1">{u.teacherName?.split(' ')[0]}</span>
+              </div>
+            ))
+          })}
+        </div>
+      </div>
+    )
   }
 
   // Renderizar grilla horaria para un conjunto de entradas
@@ -3248,7 +3293,7 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
           <div>
             <p className="text-sm text-gray-500 mb-4">{viewData.totalEntries} entradas en total • {groupMap.size} grupos</p>
             {Array.from(groupMap.entries()).map(([gId, entries]) => (
-              renderScheduleGrid(entries, entries[0]?.groupName || 'Grupo', `${entries[0]?.gradeName || ''} — ${entries[0]?.shiftName || ''}`)
+              renderScheduleGrid(entries, entries[0]?.groupName || 'Grupo', `${entries[0]?.gradeName || ''} — ${entries[0]?.shiftName || ''}`, entries[0]?.shiftId)
             ))}
           </div>
         )
@@ -3279,7 +3324,10 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
                   <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">{grade.stage}</span>
                 </div>
                 {(grade.groups || []).map((group: any) => (
-                  renderScheduleGrid(group.entries, group.groupName)
+                  <div key={group.groupId}>
+                    {renderScheduleGrid(group.entries, group.groupName, undefined, group.shiftId)}
+                    {renderUnplacedChips(group.groupId)}
+                  </div>
                 ))}
               </div>
             ))}
@@ -3310,9 +3358,20 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
             if (e.timeBlock && !blocksMap.has(e.timeBlock.id)) blocksMap.set(e.timeBlock.id, e.timeBlock)
           }
         }
-        // Agregar bloques especiales
+        // Agregar bloques especiales — solo del turno de los grupos mostrados
+        const dayShiftIds = new Set<string>()
+        for (const g of allGroups) {
+          for (const e of g.entries) { if (e.shiftId) dayShiftIds.add(e.shiftId) }
+        }
+        // Also get shiftId from group-level data
+        for (const grade of (viewData.grades || [])) {
+          for (const group of (grade.groups || [])) {
+            if (group.shiftId) dayShiftIds.add(group.shiftId)
+          }
+        }
         for (const tb of (viewData.allTimeBlocks || [])) {
           if (!blocksMap.has(tb.id) && tb.type !== 'CLASS' && tb.type !== 'FREE') {
+            if (dayShiftIds.size > 0 && tb.shiftId && !dayShiftIds.has(tb.shiftId)) continue
             blocksMap.set(tb.id, tb)
           }
         }
@@ -3574,10 +3633,39 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
                   <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                     <Users className="w-5 h-5 text-green-600" />
                     <h3 className="text-lg font-bold text-gray-800">{teacher.teacherName}</h3>
-                    <span className="text-xs text-gray-400">{teacher.email}</span>
+                    <span className="text-xs text-gray-400">{typeof teacher.email === 'string' ? teacher.email : ''}</span>
                     <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded ml-auto">{teacher.entries.length} horas</span>
                   </div>
-                  {renderScheduleGrid(teacher.entries, '')}
+                  {renderScheduleGrid(teacher.entries, '', undefined, teacher.entries[0]?.shiftId)}
+                  {(() => {
+                    const teacherUnplaced = (viewData?.unplacedHours || []).filter((u: any) => u.teacherId === teacher.teacherId)
+                    if (teacherUnplaced.length === 0) return null
+                    const totalRemaining = teacherUnplaced.reduce((s: number, u: any) => s + u.remainingHours, 0)
+                    return (
+                      <div className="mt-2 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AlertTriangle className="w-4 h-4 text-amber-500" />
+                          <span className="text-xs font-medium text-amber-700">{totalRemaining} hora{totalRemaining !== 1 ? 's' : ''} sin colocar</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {teacherUnplaced.map((u: any) => {
+                            const sc = getSubjectColor(u.subjectName)
+                            return Array.from({ length: u.remainingHours }, (_, i) => (
+                              <div
+                                key={`${u.assignmentId}-${i}`}
+                                className="px-2 py-1 rounded text-[10px] border cursor-default"
+                                style={{ backgroundColor: sc.bg, borderColor: sc.border, color: sc.text }}
+                                title={`${u.subjectName} — ${u.groupName} (${u.placedHours}/${u.weeklyHours}h colocadas)`}
+                              >
+                                <span className="font-semibold">{u.subjectName}</span>
+                                <span className="opacity-60 ml-1">{u.groupName}</span>
+                              </div>
+                            ))
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
               ))}
             {teachers.length === 0 && (
@@ -3613,7 +3701,7 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
                     groupMap.get(key)!.push(e)
                   }
                   return Array.from(groupMap.entries()).map(([gId, entries]) => (
-                    renderScheduleGrid(entries, entries[0]?.groupName || '', `${entries[0]?.teacherName || ''}`)
+                    renderScheduleGrid(entries, entries[0]?.groupName || '', `${entries[0]?.teacherName || ''}`, entries[0]?.shiftId)
                   ))
                 })()}
               </div>
