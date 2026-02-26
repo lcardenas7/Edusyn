@@ -260,10 +260,9 @@ export default function Structure() {
       const dbGrades: any[] = res.data || []
       
       // Mapear datos de BD al formato local
-      // Solo mostrar grados que tienen grupos en esta institución
+      // Mostrar todos los grados (incluso sin grupos) para poder crear grupos nuevos
       // (Grade es global, Group es por institución via Campus)
       const mappedGrades: Grade[] = dbGrades
-        .filter((g: any) => g.groups && g.groups.length > 0)
         .map((g: any) => ({
           id: g.id,
           name: g.name,

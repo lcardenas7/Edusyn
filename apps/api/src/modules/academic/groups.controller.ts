@@ -26,7 +26,7 @@ export class GroupsController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async update(
     @Param('id') id: string,
-    @Body() body: { directorId?: string | null; maxCapacity?: number; name?: string },
+    @Body() body: { directorId?: string | null; maxCapacity?: number; name?: string; shiftId?: string },
   ) {
     return this.groupsService.update(id, body);
   }

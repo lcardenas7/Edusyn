@@ -8,15 +8,27 @@ export class GroupsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateGroupDto) {
-    return this.prisma.group.create({
-      data: {
-        campusId: dto.campusId,
-        shiftId: dto.shiftId,
-        gradeId: dto.gradeId,
-        code: dto.code,
-        name: dto.name,
-      },
-    });
+    console.log('[GroupsService] Creating group with dto:', dto);
+    try {
+      const group = await this.prisma.group.create({
+        data: {
+          campusId: dto.campusId,
+          shiftId: dto.shiftId,
+          gradeId: dto.gradeId,
+          code: dto.code,
+          name: dto.name,
+        },
+        include: {
+          grade: true,
+          shift: true,
+        },
+      });
+      console.log('[GroupsService] Group created:', group.id, group.name);
+      return group;
+    } catch (error: any) {
+      console.error('[GroupsService] Error creating group:', error.message);
+      throw error;
+    }
   }
 
   async list(params: { campusId?: string; shiftId?: string; gradeId?: string; institutionId?: string }) {

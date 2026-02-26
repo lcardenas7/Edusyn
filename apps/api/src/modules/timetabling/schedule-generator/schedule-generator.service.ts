@@ -72,20 +72,27 @@ export class ScheduleGeneratorService {
     const { academicYearId, shiftId, groupIds, clearExisting = true, respectAvailability = true, activeDays, groupTeacherBlocks = true } = options;
     const daysToUse: DayOfWeek[] = activeDays && activeDays.length > 0 ? activeDays : DAYS;
 
+    console.log('[ScheduleGenerator] Starting generation with options:', {
+      institutionId, academicYearId, shiftId, groupIds, clearExisting, activeDays: daysToUse,
+    });
+
     // 1. Obtener grupos objetivo (filtrados por shiftId si se especifica)
     const groups = await this.getTargetGroups(institutionId, academicYearId, groupIds, shiftId);
+    console.log('[ScheduleGenerator] Found groups:', groups.length, groups.map(g => ({ id: g.id, name: g.name, shiftId: g.shiftId })));
     if (groups.length === 0) {
       throw new BadRequestException('No se encontraron grupos para generar horarios');
     }
 
     // 2. Obtener TeacherAssignments para esos grupos
     const assignments = await this.getAssignments(academicYearId, groups.map(g => g.id));
+    console.log('[ScheduleGenerator] Found assignments:', assignments.length, assignments.slice(0, 3).map(a => ({ subject: a.subjectName, group: a.groupName, hours: a.weeklyHours })));
     if (assignments.length === 0) {
       throw new BadRequestException('No hay asignaciones docente-materia-grupo. Importe la carga académica primero.');
     }
 
     // 3. Obtener bloques de tiempo por grupo (según su jornada/shift)
     const groupTimeBlocks = await this.getGroupTimeBlocks(institutionId, groups);
+    console.log('[ScheduleGenerator] TimeBlocks per group:', Array.from(groupTimeBlocks.entries()).map(([gid, blocks]) => ({ groupId: gid, blocksCount: blocks.length, types: blocks.map(b => b.type) })));
 
     // 4. Obtener disponibilidad docente
     const teacherAvailability = respectAvailability
@@ -109,6 +116,25 @@ export class ScheduleGeneratorService {
       });
     }
 
+    // Verificar que hay bloques de tiempo disponibles
+    let totalClassBlocks = 0;
+    for (const [groupId, blocks] of groupTimeBlocks.entries()) {
+      totalClassBlocks += blocks.length;
+    }
+    console.log('[ScheduleGenerator] Total CLASS blocks across all groups:', totalClassBlocks);
+
+    if (totalClassBlocks === 0) {
+      console.error('[ScheduleGenerator] No CLASS blocks found for any group!');
+      return {
+        success: false,
+        totalAssignments: assignments.length,
+        placedHours: 0,
+        unplacedHours: assignments.reduce((sum, a) => sum + a.weeklyHours, 0),
+        conflicts: ['No hay bloques de tiempo de tipo CLASS configurados para la jornada. Configure el horario primero.'],
+        details: [],
+      };
+    }
+
     // 7. Ejecutar algoritmo de generación
     const result = await this.runGenerator(
       institutionId,
@@ -122,6 +148,13 @@ export class ScheduleGeneratorService {
       daysToUse,
       groupTeacherBlocks,
     );
+
+    console.log('[ScheduleGenerator] Generation result:', {
+      success: result.success,
+      placedHours: result.placedHours,
+      unplacedHours: result.unplacedHours,
+      conflictsCount: result.conflicts.length,
+    });
 
     return result;
   }
@@ -167,7 +200,10 @@ export class ScheduleGeneratorService {
     const result = new Map<string, any[]>();
 
     for (const group of groups) {
-      if (!group.shiftId && !group.shift?.id) continue;
+      if (!group.shiftId && !group.shift?.id) {
+        console.log(`[ScheduleGenerator] Group ${group.name} has no shiftId, skipping`);
+        continue;
+      }
       const shiftId = group.shiftId || group.shift?.id;
 
       const blocks = await this.prisma.timeBlock.findMany({
@@ -175,8 +211,11 @@ export class ScheduleGeneratorService {
         orderBy: { order: 'asc' },
       });
 
+      console.log(`[ScheduleGenerator] Group ${group.name} (shift ${shiftId}): found ${blocks.length} total blocks, types:`, blocks.map(b => b.type));
+
       // Solo bloques de tipo CLASS son asignables
       const classBlocks = blocks.filter(b => b.type === 'CLASS');
+      console.log(`[ScheduleGenerator] Group ${group.name}: ${classBlocks.length} CLASS blocks available`);
       result.set(group.id, classBlocks);
     }
 
