@@ -57,6 +57,13 @@ export class PartialGradesController {
     return this.partialGradesService.delete(id);
   }
 
+  @Post('recover-lost-grades')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async recoverLostGrades(@Request() req: any) {
+    const instId = await requireInstitutionId(this.prisma as any, req);
+    return this.partialGradesService.recoverLostGrades(instId);
+  }
+
   @Delete('activity')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async deleteByActivity(

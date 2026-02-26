@@ -423,6 +423,108 @@ export class PartialGradesService {
     return this.prisma.partialGrade.delete({ where: { id } });
   }
 
+  /**
+   * Recuperar notas perdidas: para cada PeriodFinalGrade que no tenga PartialGrades,
+   * crear una PartialGrade sintética con la nota final como "Nota recuperada".
+   * Esto restaura la visibilidad en la planilla.
+   */
+  async recoverLostGrades(institutionId: string) {
+    // 1. Get all PeriodFinalGrades for this institution
+    const finalGrades = await this.prisma.periodFinalGrade.findMany({
+      where: { institutionId },
+      include: {
+        subject: { select: { id: true, name: true } },
+        academicTerm: { select: { id: true, name: true } },
+        studentEnrollment: {
+          select: {
+            id: true,
+            academicYearId: true,
+            student: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
+    });
+
+    let recovered = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+
+    for (const pfg of finalGrades) {
+      try {
+        // 2. Find the active TeacherAssignment for this subject+group+year
+        // First, find the student's group via their enrollment
+        const enrollment = await this.prisma.studentEnrollment.findUnique({
+          where: { id: pfg.studentEnrollmentId },
+          select: { groupId: true, academicYearId: true },
+        });
+        if (!enrollment?.groupId) { skipped++; continue; }
+
+        // 3. Find any active assignment for this group+subject (prefer active, fall back to any)
+        let assignment = await this.prisma.teacherAssignment.findFirst({
+          where: {
+            academicYearId: enrollment.academicYearId,
+            groupId: enrollment.groupId,
+            subjectId: pfg.subjectId,
+            endDate: null,
+          },
+          select: { id: true },
+        });
+
+        if (!assignment) {
+          // Fall back to any assignment for this group+subject (even ended)
+          assignment = await this.prisma.teacherAssignment.findFirst({
+            where: {
+              academicYearId: enrollment.academicYearId,
+              groupId: enrollment.groupId,
+              subjectId: pfg.subjectId,
+            },
+            select: { id: true },
+            orderBy: { createdAt: 'desc' },
+          });
+        }
+
+        if (!assignment) { skipped++; continue; }
+
+        // 4. Check if PartialGrades already exist for this combo
+        const existingPartials = await this.prisma.partialGrade.count({
+          where: {
+            studentEnrollmentId: pfg.studentEnrollmentId,
+            teacherAssignmentId: assignment.id,
+            academicTermId: pfg.academicTermId,
+          },
+        });
+
+        if (existingPartials > 0) { skipped++; continue; }
+
+        // 5. Create a synthetic PartialGrade with the final score
+        await this.prisma.partialGrade.create({
+          data: {
+            institutionId,
+            studentEnrollmentId: pfg.studentEnrollmentId,
+            teacherAssignmentId: assignment.id,
+            academicTermId: pfg.academicTermId,
+            componentType: 'COGNITIVO',
+            activityIndex: 1,
+            activityName: 'Nota recuperada (periodo)',
+            activityType: 'Recuperación',
+            score: pfg.finalScore,
+          },
+        });
+        recovered++;
+      } catch (e: any) {
+        errors.push(`PFG ${pfg.id}: ${e.message}`);
+      }
+    }
+
+    return {
+      totalFinalGrades: finalGrades.length,
+      recovered,
+      skipped,
+      errors: errors.slice(0, 20),
+      message: `Recuperadas ${recovered} notas de ${finalGrades.length} registros de notas finales. ${skipped} ya tenían notas parciales.`,
+    };
+  }
+
   async deleteByActivity(
     teacherAssignmentId: string,
     academicTermId: string,

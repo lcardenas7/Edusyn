@@ -278,6 +278,7 @@ export const partialGradesApi = {
   getByStudent: (studentEnrollmentId: string, academicTermId?: string) =>
     api.get('/partial-grades/by-student', { params: { studentEnrollmentId, academicTermId } }),
   delete: (id: string) => api.delete(`/partial-grades/${id}`),
+  recoverLostGrades: () => api.post('/partial-grades/recover-lost-grades'),
 }
 
 // Performance Scale
