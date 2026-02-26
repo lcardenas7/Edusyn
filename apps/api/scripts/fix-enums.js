@@ -2,11 +2,12 @@
  * Script para agregar valores faltantes a enums de PostgreSQL.
  * Se ejecuta antes de prisma db push para evitar errores de sincronización.
  * 
- * IMPORTANTE: prisma db execute wraps SQL in a transaction, and PostgreSQL
- * forbids ALTER TYPE ADD VALUE inside transactions. So we use PrismaClient
- * $executeRawUnsafe which does NOT wrap in a transaction by default.
+ * IMPORTANTE: Prisma (tanto $executeRawUnsafe como db execute) envuelve 
+ * queries en transacciones implícitas. PostgreSQL prohíbe ALTER TYPE ADD VALUE
+ * dentro de transacciones. Por eso usamos el driver 'pg' directamente,
+ * que ejecuta cada query en autocommit (sin transacción).
  */
-const { PrismaClient } = require('@prisma/client');
+const { Client } = require('pg');
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -22,16 +23,16 @@ const statements = [
 ];
 
 async function main() {
-  const prisma = new PrismaClient();
-  console.log(`[fix-enums] Executing ${statements.length} enum fixes via PrismaClient...`);
+  const client = new Client({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } });
+  await client.connect();
+  console.log(`[fix-enums] Connected to PostgreSQL. Executing ${statements.length} enum fixes...`);
 
   for (let i = 0; i < statements.length; i++) {
     const stmt = statements[i];
     try {
-      await prisma.$executeRawUnsafe(stmt);
+      await client.query(stmt);
       console.log(`[fix-enums] [${i + 1}/${statements.length}] OK: ${stmt}`);
     } catch (err) {
-      // "already exists" is expected and safe to ignore
       const msg = err.message || String(err);
       if (msg.includes('already exists') || msg.includes('duplicate')) {
         console.log(`[fix-enums] [${i + 1}/${statements.length}] Already exists (OK): ${stmt}`);
@@ -41,7 +42,7 @@ async function main() {
     }
   }
 
-  await prisma.$disconnect();
+  await client.end();
   console.log('[fix-enums] Done');
   process.exit(0);
 }
