@@ -887,6 +887,7 @@ export class ScheduleGeneratorController {
     @Query('academicYearId') academicYearId: string,
     @Query('view') view: 'total' | 'by-grade' | 'by-teacher' | 'by-subject' | 'by-area' = 'total',
     @Query('filterId') filterId?: string,
+    @Query('shiftId') shiftId?: string,
   ) {
     const institutionId = await this.resolveInstitutionId(req, academicYearId);
     const userId = req.user.sub || req.user.id;
@@ -901,16 +902,16 @@ export class ScheduleGeneratorController {
       return { view, entries: [], allTimeBlocks: [], totalEntries: 0, error: 'No academicYearId' };
     }
 
-    // Obtener todos los bloques de tiempo de la institución para incluir TUTORING/BREAK/LUNCH
+    // Obtener bloques de tiempo (filtrados por shift si se proporciona)
     const allTimeBlocks = await this.prisma.timeBlock.findMany({
-      where: { institutionId },
+      where: { institutionId, ...(shiftId ? { shiftId } : {}) },
       select: { id: true, startTime: true, endTime: true, order: true, label: true, type: true, shiftId: true },
       orderBy: { order: 'asc' },
     });
 
-    // Base query para todas las entradas del horario
+    // Base query para las entradas del horario (filtradas por shift si se proporciona)
     const entries = await this.prisma.scheduleEntry.findMany({
-      where: { institutionId, academicYearId },
+      where: { institutionId, academicYearId, ...(shiftId ? { group: { shiftId } } : {}) },
       include: {
         group: {
           select: {

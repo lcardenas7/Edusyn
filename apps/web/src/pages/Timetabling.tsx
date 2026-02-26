@@ -2682,6 +2682,21 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
   const [movingEntry, setMovingEntry] = useState<any>(null)
   const [exporting, setExporting] = useState(false)
 
+  // Shift filter for views
+  const [viewShifts, setViewShifts] = useState<any[]>([])
+  const [selectedViewShiftId, setSelectedViewShiftId] = useState<string>('')
+
+  useEffect(() => {
+    if (!academicYearId) return
+    timetablingGeneratorApi.getShifts(academicYearId)
+      .then(res => {
+        const data = res.data || []
+        setViewShifts(data)
+        if (data.length === 1) setSelectedViewShiftId(data[0].id)
+      })
+      .catch(() => {})
+  }, [academicYearId])
+
   // Provisional daily schedule
   const [provisionalMode, setProvisionalMode] = useState(false)
   const [provisionalDate, setProvisionalDate] = useState<string>(() => {
@@ -2709,6 +2724,7 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
           academicYearId,
           backendView as any,
           selectedFilter || undefined,
+          selectedViewShiftId || undefined,
         )
         if (!cancelled) {
           console.log('[ScheduleViewer] Response:', {
@@ -2732,18 +2748,18 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
 
     fetchData()
     return () => { cancelled = true }
-  }, [isActive, academicYearId, viewMode, selectedFilter])
+  }, [isActive, academicYearId, viewMode, selectedFilter, selectedViewShiftId])
 
   // Manual refresh function for UI button
   const loadView = useCallback(() => {
     if (!academicYearId || !isActive) return
     const backendView = viewMode === 'by-day' ? 'by-grade' : viewMode
     setLoading(true)
-    timetablingGeneratorApi.getScheduleViews(academicYearId, backendView as any, selectedFilter || undefined)
+    timetablingGeneratorApi.getScheduleViews(academicYearId, backendView as any, selectedFilter || undefined, selectedViewShiftId || undefined)
       .then(res => { setViewData(res.data) })
       .catch(err => { console.error('[ScheduleViewer] Refresh error:', err) })
       .finally(() => { setLoading(false) })
-  }, [academicYearId, isActive, viewMode, selectedFilter])
+  }, [academicYearId, isActive, viewMode, selectedFilter, selectedViewShiftId])
 
   const handleViewChange = (mode: string) => {
     setViewMode(mode as any)
@@ -3787,6 +3803,27 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
               </button>
             )
           })}
+          {/* Shift filter */}
+          {viewShifts.length > 1 && (
+            <div className="flex items-center gap-1 ml-2 pl-2 border-l border-gray-200">
+              <button
+                onClick={() => setSelectedViewShiftId('')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${!selectedViewShiftId ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                Todas
+              </button>
+              {viewShifts.map((s: any) => (
+                <button
+                  key={s.id}
+                  onClick={() => setSelectedViewShiftId(s.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedViewShiftId === s.id ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                  {s.name}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="ml-auto flex items-center gap-1">
             {/* Exportar - solo managers */}
             {isManager && (

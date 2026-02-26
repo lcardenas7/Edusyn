@@ -865,10 +865,13 @@ export class TimetableExcelService {
     let updated = 0;
     let skipped = 0;
 
+    // Log cache contents for debugging
+    this.logger.log(`[Import P6] teacherCache entries: ${[...teacherCache.entries()].map(([k, v]) => `${k}→${v.substring(0,8)}`).join(', ')}`);
+
     for (const row of rows) {
       const teacherCacheKey = row.teacherEmail || normalizeNameKey(row.teacherName);
       const teacherId = teacherCache.get(teacherCacheKey);
-      if (!teacherId) { skipped++; continue; }
+      if (!teacherId) { this.logger.warn(`[Import P6] Row ${row.rowNumber}: teacher not found for key="${teacherCacheKey}"`); skipped++; continue; }
 
       const areaId = areaCache.get(row.areaName.toLowerCase());
       if (!areaId) { skipped++; continue; }
@@ -890,6 +893,8 @@ export class TimetableExcelService {
       const groupKey = `${row.groupName.toLowerCase()}|${gradeId}|${shiftId}|${campusId}`;
       const groupId = groupCache.get(groupKey);
       if (!groupId) { skipped++; continue; }
+
+      this.logger.log(`[Import P6] Row ${row.rowNumber}: teacher="${row.teacherName}" key="${teacherCacheKey}" teacherId=${teacherId.substring(0,8)} subject="${row.subjectName}" group="${row.groupName}" hours=${row.weeklyHours}`);
 
       try {
         const existing = await this.prisma.teacherAssignment.findFirst({

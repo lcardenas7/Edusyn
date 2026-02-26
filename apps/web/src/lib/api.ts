@@ -1452,8 +1452,8 @@ export const timetablingGeneratorApi = {
     }),
   getTeachingLoad: (academicYearId: string, shiftId?: string) =>
     api.get('/timetabling/generator/teaching-load', { params: { academicYearId, ...(shiftId ? { shiftId } : {}) } }),
-  getScheduleViews: (academicYearId: string, view: 'total' | 'by-grade' | 'by-teacher' | 'by-subject' | 'by-area' = 'total', filterId?: string) =>
-    api.get('/timetabling/generator/schedule-views', { params: { academicYearId, view, filterId } }),
+  getScheduleViews: (academicYearId: string, view: 'total' | 'by-grade' | 'by-teacher' | 'by-subject' | 'by-area' = 'total', filterId?: string, shiftId?: string) =>
+    api.get('/timetabling/generator/schedule-views', { params: { academicYearId, view, ...(filterId ? { filterId } : {}), ...(shiftId ? { shiftId } : {}) } }),
   deleteTeachingLoad: (academicYearId: string) =>
     api.post('/timetabling/generator/delete-teaching-load', { academicYearId }),
   checkFeasibility: (academicYearId: string, shiftId?: string) =>
