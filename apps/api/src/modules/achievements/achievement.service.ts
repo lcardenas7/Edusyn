@@ -9,10 +9,31 @@ export class AchievementService {
   // LOGROS ACADÉMICOS
   // ============================================
 
+  /**
+   * Helper: Obtener IDs de todas las asignaciones (actual + históricas) para el mismo grupo+materia+año.
+   */
+  private async getAllAssignmentIds(teacherAssignmentId: string): Promise<string[]> {
+    const current = await this.prisma.teacherAssignment.findUnique({
+      where: { id: teacherAssignmentId },
+      select: { academicYearId: true, groupId: true, subjectId: true },
+    });
+    if (!current) return [teacherAssignmentId];
+    const all = await this.prisma.teacherAssignment.findMany({
+      where: {
+        academicYearId: current.academicYearId,
+        groupId: current.groupId,
+        subjectId: current.subjectId,
+      },
+      select: { id: true },
+    });
+    return all.map(a => a.id);
+  }
+
   async getAchievementsByAssignment(teacherAssignmentId: string, academicTermId: string) {
+    const assignmentIds = await this.getAllAssignmentIds(teacherAssignmentId);
     return this.prisma.achievement.findMany({
       where: {
-        teacherAssignmentId,
+        teacherAssignmentId: { in: assignmentIds },
         academicTermId,
         isPromotional: false,
       },
@@ -33,9 +54,10 @@ export class AchievementService {
   }
 
   async getPromotionalAchievements(teacherAssignmentId: string) {
+    const assignmentIds = await this.getAllAssignmentIds(teacherAssignmentId);
     return this.prisma.achievement.findMany({
       where: {
-        teacherAssignmentId,
+        teacherAssignmentId: { in: assignmentIds },
         isPromotional: true,
       },
       include: {
@@ -112,9 +134,10 @@ export class AchievementService {
   // ============================================
 
   async getAttitudinalAchievements(teacherAssignmentId: string, academicTermId: string) {
+    const assignmentIds = await this.getAllAssignmentIds(teacherAssignmentId);
     return this.prisma.attitudinalAchievement.findMany({
       where: {
-        teacherAssignmentId,
+        teacherAssignmentId: { in: assignmentIds },
         academicTermId,
       },
       include: {
@@ -528,9 +551,10 @@ export class AchievementService {
     academicTermId: string,
     requiredCount: number,
   ) {
+    const assignmentIds = await this.getAllAssignmentIds(teacherAssignmentId);
     const achievements = await this.prisma.achievement.findMany({
       where: {
-        teacherAssignmentId,
+        teacherAssignmentId: { in: assignmentIds },
         academicTermId,
         isPromotional: false,
       },
@@ -547,10 +571,11 @@ export class AchievementService {
   }
 
   async getUnapprovedStudentAchievements(teacherAssignmentId: string, academicTermId: string) {
+    const assignmentIds = await this.getAllAssignmentIds(teacherAssignmentId);
     return this.prisma.studentAchievement.findMany({
       where: {
         achievement: {
-          teacherAssignmentId,
+          teacherAssignmentId: { in: assignmentIds },
           academicTermId,
         },
         OR: [

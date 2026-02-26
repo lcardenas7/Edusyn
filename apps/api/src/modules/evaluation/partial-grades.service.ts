@@ -72,6 +72,80 @@ export class PartialGradesService {
       await this.guardTermNotFinalized(termId);
     }
 
+    // ── MIGRACIÓN: Transferir notas de asignaciones anteriores al docente actual ──
+    // Cuando un docente nuevo guarda notas, las notas del docente anterior
+    // deben migrar al assignment actual para que el composite key funcione.
+    const assignmentIds = [...new Set(grades.map(g => g.teacherAssignmentId))];
+    for (const currentAssignmentId of assignmentIds) {
+      const currentAssignment = await this.prisma.teacherAssignment.findUnique({
+        where: { id: currentAssignmentId },
+        select: { academicYearId: true, groupId: true, subjectId: true },
+      });
+      if (!currentAssignment) continue;
+
+      // Find historical (ended) assignments for the same group+subject+year
+      const historicalAssignments = await this.prisma.teacherAssignment.findMany({
+        where: {
+          academicYearId: currentAssignment.academicYearId,
+          groupId: currentAssignment.groupId,
+          subjectId: currentAssignment.subjectId,
+          id: { not: currentAssignmentId },
+        },
+        select: { id: true },
+      });
+
+      if (historicalAssignments.length > 0) {
+        const oldIds = historicalAssignments.map(a => a.id);
+
+        // Get grades from old assignments
+        const oldGrades = await this.prisma.partialGrade.findMany({
+          where: { teacherAssignmentId: { in: oldIds } },
+          select: { id: true, studentEnrollmentId: true, academicTermId: true, componentType: true, activityIndex: true },
+        });
+
+        if (oldGrades.length > 0) {
+          // Get grades already existing under the current assignment (to detect conflicts)
+          const currentGrades = await this.prisma.partialGrade.findMany({
+            where: { teacherAssignmentId: currentAssignmentId },
+            select: { studentEnrollmentId: true, academicTermId: true, componentType: true, activityIndex: true },
+          });
+
+          // Build a set of composite keys for current grades
+          const currentKeys = new Set(
+            currentGrades.map(g => `${g.studentEnrollmentId}|${g.academicTermId}|${g.componentType}|${g.activityIndex}`)
+          );
+
+          // Split old grades into conflicting (current teacher already has a value) and migratable
+          const conflictIds: string[] = [];
+          const migrateIds: string[] = [];
+          for (const og of oldGrades) {
+            const key = `${og.studentEnrollmentId}|${og.academicTermId}|${og.componentType}|${og.activityIndex}`;
+            if (currentKeys.has(key)) {
+              conflictIds.push(og.id);
+            } else {
+              migrateIds.push(og.id);
+            }
+          }
+
+          // Delete conflicting old grades (current teacher's value takes precedence)
+          if (conflictIds.length > 0) {
+            await this.prisma.partialGrade.deleteMany({
+              where: { id: { in: conflictIds } },
+            });
+          }
+
+          // Migrate non-conflicting old grades to the current assignment
+          if (migrateIds.length > 0) {
+            await this.prisma.partialGrade.updateMany({
+              where: { id: { in: migrateIds } },
+              data: { teacherAssignmentId: currentAssignmentId },
+            });
+            console.log(`[PartialGrades] Migrated ${migrateIds.length} grades from historical assignments to current assignment ${currentAssignmentId.substring(0, 8)}`);
+          }
+        }
+      }
+    }
+
     const results: any[] = [];
     for (const grade of grades) {
       if (grade.score > 0) {
@@ -157,7 +231,8 @@ export class PartialGradesService {
     }
 
     // 4. Obtener pesos de los componentes evaluativos
-    const plan = await this.prisma.evaluationPlan.findUnique({
+    // Buscar en la asignación actual primero, luego en históricas (mismo grupo+materia)
+    let plan = await this.prisma.evaluationPlan.findUnique({
       where: {
         teacherAssignmentId_academicTermId: { teacherAssignmentId, academicTermId },
       },
@@ -167,6 +242,36 @@ export class PartialGradesService {
         },
       },
     });
+
+    // Si no hay plan en la asignación actual, buscar en asignaciones históricas
+    if (!plan) {
+      const assignmentContext = await this.prisma.teacherAssignment.findUnique({
+        where: { id: teacherAssignmentId },
+        select: { academicYearId: true, groupId: true, subjectId: true },
+      });
+      if (assignmentContext) {
+        const historicalAssignments = await this.prisma.teacherAssignment.findMany({
+          where: {
+            academicYearId: assignmentContext.academicYearId,
+            groupId: assignmentContext.groupId,
+            subjectId: assignmentContext.subjectId,
+            id: { not: teacherAssignmentId },
+          },
+          select: { id: true },
+        });
+        for (const ha of historicalAssignments) {
+          plan = await this.prisma.evaluationPlan.findUnique({
+            where: {
+              teacherAssignmentId_academicTermId: { teacherAssignmentId: ha.id, academicTermId },
+            },
+            include: {
+              components: { include: { component: true } },
+            },
+          });
+          if (plan) break;
+        }
+      }
+    }
 
     // 5. Calcular nota final ponderada
     let finalScore: number;
@@ -252,9 +357,32 @@ export class PartialGradesService {
   }
 
   async getByAssignment(teacherAssignmentId: string, academicTermId: string) {
+    // Find the current assignment to get group+subject+year context
+    const currentAssignment = await this.prisma.teacherAssignment.findUnique({
+      where: { id: teacherAssignmentId },
+      select: { academicYearId: true, groupId: true, subjectId: true },
+    });
+
+    if (!currentAssignment) {
+      return [];
+    }
+
+    // Find ALL assignments (current + historical) for the same group+subject+year
+    const allAssignments = await this.prisma.teacherAssignment.findMany({
+      where: {
+        academicYearId: currentAssignment.academicYearId,
+        groupId: currentAssignment.groupId,
+        subjectId: currentAssignment.subjectId,
+      },
+      select: { id: true },
+    });
+
+    const assignmentIds = allAssignments.map(a => a.id);
+
+    // Return grades from ALL assignments for this group+subject+year
     return this.prisma.partialGrade.findMany({
       where: {
-        teacherAssignmentId,
+        teacherAssignmentId: { in: assignmentIds },
         academicTermId,
       },
       include: {
