@@ -503,6 +503,10 @@ export default function Grades() {
   // Cargar notas guardadas
   useEffect(() => {
     const loadSavedGrades = async () => {
+      // Limpiar estado del grupo anterior antes de cargar el nuevo
+      setCustomActivityNames({})
+      setAdditionalActivities({})
+
       if (!selectedAssignment?.id || !academicTermId || students.length === 0) {
         const initGrades: Record<string, Record<string, number>> = {}
         students.forEach(student => {
@@ -540,9 +544,8 @@ export default function Grades() {
           }
         })
         
-        if (Object.keys(savedNames).length > 0) {
-          setCustomActivityNames(prev => ({ ...prev, ...savedNames }))
-        }
+        // Reemplazar nombres personalizados (no mezclar con los del grupo anterior)
+        setCustomActivityNames(savedNames)
         setGrades(initGrades)
       } catch (err) {
         console.error('Error loading saved grades:', err)
