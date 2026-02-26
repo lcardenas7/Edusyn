@@ -339,6 +339,7 @@ export default function Timetabling() {
             return (
               <button
                 key={tab.key}
+                data-tab={tab.key}
                 onClick={() => setActiveTab(tab.key as any)}
                 className={`flex items-center gap-2 py-3 px-4 border-b-2 text-sm font-medium whitespace-nowrap transition-colors ${
                   activeTab === tab.key
@@ -1094,6 +1095,220 @@ function ConflictsTab({ conflicts, loading }: any) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════
+// UNPLACED HOURS PANEL — Detalle de horas sin ubicar con opciones
+// ═══════════════════════════════════════════════════════
+
+function UnplacedHoursPanel({ generateResult, academicYearId, shiftId, onRetryGenerate, loading }: {
+  generateResult: any
+  academicYearId: string
+  shiftId: string
+  onRetryGenerate: () => void
+  loading: boolean
+}) {
+  const [expanded, setExpanded] = useState(true)
+
+  // Collect all unplaced subjects across all groups
+  const unplacedItems: { groupId: string; groupName: string; subjectName: string; teacherName: string; hoursNeeded: number; hoursPlaced: number; missing: number }[] = []
+  for (const detail of (generateResult.details || [])) {
+    for (const s of (detail.unplacedSubjects || [])) {
+      unplacedItems.push({
+        groupId: detail.groupId,
+        groupName: detail.groupName,
+        subjectName: s.subjectName,
+        teacherName: s.teacherName,
+        hoursNeeded: s.hoursNeeded,
+        hoursPlaced: s.hoursPlaced,
+        missing: s.hoursNeeded - s.hoursPlaced,
+      })
+    }
+  }
+
+  // Group by teacher to identify overloaded teachers
+  const teacherLoad = new Map<string, { name: string; totalMissing: number; items: typeof unplacedItems }>()
+  for (const item of unplacedItems) {
+    const key = item.teacherName
+    if (!teacherLoad.has(key)) {
+      teacherLoad.set(key, { name: key, totalMissing: 0, items: [] })
+    }
+    const t = teacherLoad.get(key)!
+    t.totalMissing += item.missing
+    t.items.push(item)
+  }
+
+  const totalMissing = unplacedItems.reduce((s, i) => s + i.missing, 0)
+
+  // Analyze patterns and generate suggestions
+  const suggestions: { icon: string; title: string; description: string; type: 'auto' | 'manual' | 'info' }[] = []
+
+  // Check if all unplaced belong to same teacher
+  if (teacherLoad.size === 1) {
+    const [, teacher] = [...teacherLoad.entries()][0]
+    suggestions.push({
+      icon: '👤',
+      title: `Docente sobrecargado: ${teacher.name}`,
+      description: `Todas las ${totalMissing} horas sin ubicar pertenecen a este docente. No hay suficientes slots libres en los días activos. Considere redistribuir la carga o agregar más bloques CLASS.`,
+      type: 'info',
+    })
+  } else if (teacherLoad.size > 1) {
+    const sorted = [...teacherLoad.values()].sort((a, b) => b.totalMissing - a.totalMissing)
+    suggestions.push({
+      icon: '👥',
+      title: `${teacherLoad.size} docentes con horas sin ubicar`,
+      description: `Principal: ${sorted[0].name} (${sorted[0].totalMissing}h). Los docentes compartidos entre múltiples grupos se saturan primero.`,
+      type: 'info',
+    })
+  }
+
+  // Check for subjects with odd hours (might need 1h loose blocks)
+  const oddHourSubjects = unplacedItems.filter(i => i.hoursNeeded % 2 !== 0 && i.missing > 0)
+  if (oddHourSubjects.length > 0) {
+    suggestions.push({
+      icon: '🔢',
+      title: `${oddHourSubjects.length} materias con horas impares`,
+      description: `Materias como ${oddHourSubjects.slice(0, 2).map(s => `${s.subjectName} (${s.hoursNeeded}h)`).join(', ')} necesitan 1 bloque suelto. El algoritmo prioriza bloques dobles consecutivos.`,
+      type: 'info',
+    })
+  }
+
+  // Subjects where only 1h is missing
+  const almostPlaced = unplacedItems.filter(i => i.missing <= 2)
+  if (almostPlaced.length > 0) {
+    suggestions.push({
+      icon: '🎯',
+      title: `${almostPlaced.length} materias casi completas (faltan 1-2h)`,
+      description: `${almostPlaced.map(s => `${s.subjectName} ${s.groupName}: ${s.hoursPlaced}/${s.hoursNeeded}`).join(' | ')}. Estas se pueden completar manualmente en la vista de Horario.`,
+      type: 'manual',
+    })
+  }
+
+  // Suggestion: retry without groupTeacherBlocks
+  suggestions.push({
+    icon: '🔄',
+    title: 'Re-generar sin agrupar bloques de docentes',
+    description: 'Desactivar "Agrupar bloques de docentes" permite más flexibilidad para ubicar todas las horas, sacrificando la consecutividad.',
+    type: 'auto',
+  })
+
+  // Suggestion: add more CLASS blocks
+  suggestions.push({
+    icon: '➕',
+    title: 'Agregar más bloques CLASS',
+    description: 'Vuelva al paso Configurar y aumente el número de clases por día, o vaya a la pestaña Bloques para agregar bloques adicionales.',
+    type: 'manual',
+  })
+
+  if (unplacedItems.length === 0) return null
+
+  return (
+    <div className="bg-red-50 border-2 border-red-200 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-red-100/50 transition-colors"
+      >
+        <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+          <AlertTriangle className="w-5 h-5 text-red-600" />
+        </div>
+        <div className="flex-1">
+          <p className="font-semibold text-red-800">{totalMissing} horas sin ubicar en {unplacedItems.length} asignaciones</p>
+          <p className="text-xs text-red-600">{teacherLoad.size} docente(s) afectado(s) — click para ver detalles y opciones</p>
+        </div>
+        <span className="text-red-400 text-sm">{expanded ? '▲' : '▼'}</span>
+      </button>
+
+      {expanded && (
+        <div className="px-5 pb-5 space-y-4 border-t border-red-200">
+          {/* Table of unplaced items */}
+          <div className="mt-4">
+            <p className="text-xs font-semibold text-red-800 uppercase tracking-wider mb-2">Materias sin completar</p>
+            <div className="bg-white rounded-lg border border-red-200 overflow-hidden">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-red-100 text-red-800">
+                    <th className="px-3 py-2 text-left font-medium">Grupo</th>
+                    <th className="px-3 py-2 text-left font-medium">Materia</th>
+                    <th className="px-3 py-2 text-left font-medium">Docente</th>
+                    <th className="px-3 py-2 text-center font-medium">Ubicadas</th>
+                    <th className="px-3 py-2 text-center font-medium">Necesarias</th>
+                    <th className="px-3 py-2 text-center font-medium">Faltan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unplacedItems.map((item, i) => {
+                    const sc = getSubjectColor(item.subjectName)
+                    return (
+                      <tr key={i} className="border-t border-red-100 hover:bg-red-50/50">
+                        <td className="px-3 py-2 font-medium text-gray-700">{item.groupName}</td>
+                        <td className="px-3 py-2">
+                          <span className="px-2 py-0.5 rounded text-[11px] font-semibold" style={{ backgroundColor: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
+                            {item.subjectName}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-gray-600">{item.teacherName}</td>
+                        <td className="px-3 py-2 text-center text-green-700 font-bold">{item.hoursPlaced}</td>
+                        <td className="px-3 py-2 text-center text-gray-600">{item.hoursNeeded}</td>
+                        <td className="px-3 py-2 text-center">
+                          <span className="bg-red-600 text-white px-2 py-0.5 rounded-full text-[11px] font-bold">{item.missing}</span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-red-100 border-t-2 border-red-300">
+                    <td colSpan={5} className="px-3 py-2 text-right font-semibold text-red-800">Total sin ubicar:</td>
+                    <td className="px-3 py-2 text-center font-bold text-red-800 text-sm">{totalMissing}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          {/* Suggestions */}
+          <div>
+            <p className="text-xs font-semibold text-red-800 uppercase tracking-wider mb-2">Diagnóstico y sugerencias</p>
+            <div className="space-y-2">
+              {suggestions.map((s, i) => (
+                <div key={i} className={`flex items-start gap-3 px-4 py-3 rounded-lg border ${
+                  s.type === 'info' ? 'bg-blue-50 border-blue-200' : s.type === 'auto' ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <span className="text-lg flex-shrink-0 mt-0.5">{s.icon}</span>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{s.title}</p>
+                    <p className="text-xs text-gray-600 mt-0.5">{s.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-3 pt-2">
+            <button
+              onClick={onRetryGenerate}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2.5 bg-amber-600 text-white rounded-lg font-medium text-sm hover:bg-amber-700 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              Re-generar horario
+            </button>
+            <button
+              onClick={() => {
+                const el = document.querySelector('[data-tab="viewer"]') as HTMLButtonElement
+                if (el) el.click()
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg font-medium text-sm hover:bg-indigo-700 transition-colors"
+            >
+              <Grid3X3 className="w-4 h-4" />
+              Ir a Vistas — ubicar manualmente
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -2363,6 +2578,17 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* ═══ PANEL DE HORAS SIN UBICAR ═══ */}
+            {generateResult.unplacedHours > 0 && (
+              <UnplacedHoursPanel
+                generateResult={generateResult}
+                academicYearId={academicYearId}
+                shiftId={selectedShiftId}
+                onRetryGenerate={handleGenerate}
+                loading={loading}
+              />
             )}
           </div>
 
