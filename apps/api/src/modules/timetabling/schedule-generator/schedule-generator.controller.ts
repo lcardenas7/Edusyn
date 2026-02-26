@@ -54,7 +54,7 @@ export class ScheduleGeneratorController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('context')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async getContext(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -83,7 +83,7 @@ export class ScheduleGeneratorController {
   }
 
   @Post('context')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async upsertContext(
     @Request() req,
     @Body() body: {
@@ -149,7 +149,7 @@ export class ScheduleGeneratorController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('shifts')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async getShifts(@Request() req) {
     const shifts = await this.prisma.shift.findMany({
       where: { campus: { institutionId: req.user.institutionId } },
@@ -175,7 +175,7 @@ export class ScheduleGeneratorController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('template')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async downloadTemplate(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -199,7 +199,7 @@ export class ScheduleGeneratorController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Post('import')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   @UseInterceptors(FileInterceptor('file'))
   async importTeachingLoad(
     @Request() req,
@@ -225,7 +225,7 @@ export class ScheduleGeneratorController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('feasibility-check')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async checkFeasibility(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -353,7 +353,7 @@ export class ScheduleGeneratorController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Post('generate')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async generateSchedule(
     @Request() req,
     @Body() body: {
@@ -416,7 +416,7 @@ export class ScheduleGeneratorController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('export')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async exportSchedule(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -446,7 +446,7 @@ export class ScheduleGeneratorController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('export-pdf')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async exportSchedulePdf(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -476,7 +476,7 @@ export class ScheduleGeneratorController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('schedule-config')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async getScheduleConfig(
     @Request() req,
     @Query('shiftId') shiftId?: string,
@@ -566,7 +566,7 @@ export class ScheduleGeneratorController {
   }
 
   @Post('configure-schedule')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async configureSchedule(
     @Request() req,
     @Body() body: {
@@ -731,7 +731,7 @@ export class ScheduleGeneratorController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('teaching-load')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async getTeachingLoad(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -782,7 +782,7 @@ export class ScheduleGeneratorController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Post('delete-teaching-load')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
   async deleteTeachingLoad(
     @Request() req,
     @Body() body: { academicYearId: string },
@@ -815,7 +815,7 @@ export class ScheduleGeneratorController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('schedule-views')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   async getScheduleViews(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -917,7 +917,7 @@ export class ScheduleGeneratorController {
       ? req.user.roles.map((r: any) => typeof r === 'string' ? r : r.role?.name || r.name || '')
       : [];
     const isAdminFromJwt = req.user.isSuperAdmin ||
-      jwtRoles.some(r => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'].includes(r));
+      jwtRoles.some(r => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(r));
 
     let isFullAccess = isAdminFromJwt;
     if (!isFullAccess) {
