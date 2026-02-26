@@ -374,11 +374,9 @@ export class TimetableExcelService {
     await this.prisma.scheduleEntry.deleteMany({
       where: { institutionId, academicYearId },
     });
+    // Use institutionId directly (not nested relation) to guarantee ALL assignments are deleted
     const prevDeleted = await this.prisma.teacherAssignment.deleteMany({
-      where: {
-        academicYearId,
-        group: { shift: { campus: { institutionId } } },
-      },
+      where: { academicYearId, institutionId },
     });
     if (prevDeleted.count > 0) {
       this.logger.log(`Eliminadas ${prevDeleted.count} asignaciones previas`);
