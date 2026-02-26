@@ -1729,7 +1729,12 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
       setImportResult(res.data)
       if (res.data.created > 0 || res.data.updated > 0) {
         showMessage(`Importación exitosa: ${res.data.created} creadas, ${res.data.updated} actualizadas`, 'success')
-        loadTeachingLoad()
+        // Use teaching-load data from import response if available (avoids second API call)
+        if (res.data.teachingLoad) {
+          setTeachingLoad(res.data.teachingLoad)
+        } else {
+          loadTeachingLoad()
+        }
       }
     } catch (err: any) {
       showMessage(err.response?.data?.message || 'Error al importar archivo', 'error')

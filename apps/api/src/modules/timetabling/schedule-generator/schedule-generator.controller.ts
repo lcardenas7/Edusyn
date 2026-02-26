@@ -224,11 +224,47 @@ export class ScheduleGeneratorController {
     }
     console.log(`[Import] institutionId=${institutionId}, academicYearId=${academicYearId}, user=${req.user.id}, role=${req.user.isSuperAdmin ? 'SUPERADMIN' : 'INSTITUTIONAL'}`);
 
-    return this.excelService.importTeachingLoad(
+    const importResult = await this.excelService.importTeachingLoad(
       institutionId,
       academicYearId,
       file.buffer,
     );
+
+    // Fetch fresh teaching-load data so frontend can display it immediately
+    const assignments = await this.prisma.teacherAssignment.findMany({
+      where: { academicYearId, institutionId },
+      include: {
+        teacher: { select: { id: true, firstName: true, lastName: true, email: true } },
+        subject: { select: { id: true, name: true } },
+        group: { select: { id: true, name: true } },
+      },
+      orderBy: [{ teacher: { firstName: 'asc' } }, { group: { name: 'asc' } }],
+    });
+    const uniqueTeachers = new Set(assignments.map(a => a.teacherId));
+    const uniqueGroups = new Set(assignments.map(a => a.groupId));
+    const totalHours = assignments.reduce((sum, a) => sum + (a.weeklyHours || 0), 0);
+    console.log(`[Import] Post-import check: ${assignments.length} assignments found for institutionId=${institutionId}`);
+
+    return {
+      ...importResult,
+      teachingLoad: {
+        assignments: assignments.map(a => ({
+          id: a.id,
+          teacherId: a.teacherId,
+          teacherName: `${a.teacher.firstName || ''} ${a.teacher.lastName || ''}`.trim() || 'Docente',
+          teacherEmail: a.teacher.email,
+          subjectName: a.subject.name,
+          groupName: a.group.name,
+          weeklyHours: a.weeklyHours,
+        })),
+        summary: {
+          totalAssignments: assignments.length,
+          uniqueTeachers: uniqueTeachers.size,
+          uniqueGroups: uniqueGroups.size,
+          totalWeeklyHours: totalHours,
+        },
+      },
+    };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -764,7 +800,12 @@ export class ScheduleGeneratorController {
     @Query('shiftId') shiftId?: string,
   ) {
     const institutionId = await this.resolveInstitutionId(req, academicYearId);
+    console.log(`[TeachingLoad] institutionId=${institutionId}, academicYearId=${academicYearId}, shiftId=${shiftId || 'ALL'}, user=${req.user?.id}`);
     if (!institutionId) return { assignments: [], summary: { totalAssignments: 0, uniqueTeachers: 0, uniqueGroups: 0, totalWeeklyHours: 0 } };
+
+    // Also check raw count without shiftId for diagnostics
+    const totalCount = await this.prisma.teacherAssignment.count({ where: { academicYearId, institutionId } });
+    console.log(`[TeachingLoad] Total assignments (no shift filter): ${totalCount}`);
 
     const assignments = await this.prisma.teacherAssignment.findMany({
       where: {
