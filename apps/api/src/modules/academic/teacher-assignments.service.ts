@@ -159,14 +159,8 @@ export class TeacherAssignmentsService {
         teacherId: params.teacherId,
         // Por defecto solo asignaciones activas
         ...(params.activeOnly !== false && { endDate: null }),
-        // Filtrar por institución a través del grupo → campus
-        ...(params.institutionId && {
-          group: {
-            campus: {
-              institutionId: params.institutionId,
-            },
-          },
-        }),
+        // Filtrar por institución directamente (campo propio de TeacherAssignment)
+        ...(params.institutionId && { institutionId: params.institutionId }),
       },
       include: this.assignmentIncludes,
       orderBy: { createdAt: 'desc' },

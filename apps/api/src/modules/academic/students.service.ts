@@ -192,6 +192,13 @@ export class StudentsService {
         ...(dto.displacement !== undefined && { displacement: dto.displacement }),
         ...(dto.disability !== undefined && { disability: dto.disability }),
         ...(dto.disabilityType !== undefined && { disabilityType: dto.disabilityType }),
+        // Diagnóstico educativo
+        ...(dto.hasDiagnosis !== undefined && { hasDiagnosis: dto.hasDiagnosis }),
+        ...(dto.diagnosisType !== undefined && { diagnosisType: dto.diagnosisType }),
+        ...(dto.diagnosisDetails !== undefined && { diagnosisDetails: dto.diagnosisDetails }),
+        ...(dto.diagnosisSupports !== undefined && { diagnosisSupports: dto.diagnosisSupports }),
+        ...(dto.diagnosisDate !== undefined && { diagnosisDate: dto.diagnosisDate ? new Date(dto.diagnosisDate) : null }),
+        ...(dto.diagnosisEntity !== undefined && { diagnosisEntity: dto.diagnosisEntity }),
         // Información adicional
         ...(dto.previousSchool !== undefined && { previousSchool: dto.previousSchool }),
         ...(dto.photo !== undefined && { photo: dto.photo }),
