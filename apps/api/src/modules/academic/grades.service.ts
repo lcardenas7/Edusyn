@@ -84,6 +84,15 @@ export class GradesService {
     });
   }
 
+  async delete(id: string) {
+    // Check for related groups
+    const groupCount = await this.prisma.group.count({ where: { gradeId: id } });
+    if (groupCount > 0) {
+      throw new Error(`No se puede eliminar el grado porque tiene ${groupCount} grupo(s) asociados. Elimine los grupos primero.`);
+    }
+    return this.prisma.grade.delete({ where: { id } });
+  }
+
   // Sincronizar grados y grupos desde el frontend
   async syncGradesAndGroups(institutionId: string, grades: SyncGradeDto[]) {
     console.log(`[GradesService] Sincronizando ${grades.length} grados para institución ${institutionId}`);

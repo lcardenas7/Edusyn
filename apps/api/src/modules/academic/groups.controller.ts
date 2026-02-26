@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Patch, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Body, Controller, Get, Post, Patch, Delete, Param, Query, UseGuards, Request, BadRequestException } from '@nestjs/common';
 
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -50,5 +50,15 @@ export class GroupsController {
     const groups = await this.groupsService.list({ campusId, shiftId, gradeId, institutionId: instId });
     console.log('[GroupsController] returning', groups.length, 'groups');
     return groups;
+  }
+
+  @Delete(':id')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async delete(@Param('id') id: string) {
+    try {
+      return await this.groupsService.delete(id);
+    } catch (err: any) {
+      throw new BadRequestException(err.message);
+    }
   }
 }

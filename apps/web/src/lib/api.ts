@@ -92,6 +92,7 @@ export const groupsApi = {
   getAll: (params?: { campusId?: string; shiftId?: string; gradeId?: string; institutionId?: string }) => api.get('/groups', { params }),
   create: (data: { campusId: string; shiftId: string; gradeId: string; name: string; code?: string }) => api.post('/groups', data),
   update: (id: string, data: { directorId?: string | null; maxCapacity?: number; name?: string; shiftId?: string }) => api.patch(`/groups/${id}`, data),
+  delete: (id: string) => api.delete(`/groups/${id}`),
 }
 
 // Areas (Catálogo Académico)
@@ -542,6 +543,7 @@ export const academicGradesApi = {
   getAll: (institutionId?: string) => api.get('/grades', { params: { institutionId } }),
   getActive: (institutionId?: string) => api.get('/grades/active', { params: { institutionId } }),
   sync: (grades: any[]) => api.post('/grades/sync', { grades }),
+  delete: (id: string) => api.delete(`/grades/${id}`),
 }
 
 // Dashboard APIs

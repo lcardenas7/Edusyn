@@ -76,6 +76,19 @@ export class GroupsService {
     return groups;
   }
 
+  async delete(id: string) {
+    // Check for related students, assignments, schedule entries
+    const studentCount = await this.prisma.studentEnrollment.count({ where: { groupId: id } });
+    if (studentCount > 0) {
+      throw new Error(`No se puede eliminar el grupo porque tiene ${studentCount} estudiante(s) matriculados.`);
+    }
+    const assignmentCount = await this.prisma.teacherAssignment.count({ where: { groupId: id } });
+    if (assignmentCount > 0) {
+      throw new Error(`No se puede eliminar el grupo porque tiene ${assignmentCount} asignación(es) docente. Elimine la carga académica primero.`);
+    }
+    return this.prisma.group.delete({ where: { id } });
+  }
+
   async update(id: string, data: { directorId?: string | null; maxCapacity?: number; name?: string; shiftId?: string }) {
     return this.prisma.group.update({
       where: { id },

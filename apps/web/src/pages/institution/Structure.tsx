@@ -406,8 +406,19 @@ export default function Structure() {
     setShowGradeModal(false)
   }
 
-  const deleteGrade = (id: string) => {
-    setGrades(grades.filter(g => g.id !== id))
+  const deleteGrade = async (id: string) => {
+    const grade = grades.find(g => g.id === id)
+    if (grade && grade.groups.length > 0) {
+      alert(`No se puede eliminar "${grade.name}" porque tiene ${grade.groups.length} grupo(s). Elimine los grupos primero.`)
+      return
+    }
+    if (!confirm(`¿Eliminar el grado "${grade?.name || id}"? Esta acción no se puede deshacer.`)) return
+    try {
+      await academicGradesApi.delete(id)
+      setGrades(grades.filter(g => g.id !== id))
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al eliminar el grado')
+    }
   }
 
   const openGroupModal = (gradeId: string, group?: Group) => {
@@ -480,10 +491,18 @@ export default function Structure() {
     setShowGroupModal(false)
   }
 
-  const deleteGroup = (gradeId: string, groupId: string) => {
-    setGrades(grades.map(g => 
-      g.id === gradeId ? { ...g, groups: g.groups.filter(gr => gr.id !== groupId) } : g
-    ))
+  const deleteGroup = async (gradeId: string, groupId: string) => {
+    const grade = grades.find(g => g.id === gradeId)
+    const group = grade?.groups.find(gr => gr.id === groupId)
+    if (!confirm(`¿Eliminar el grupo "${grade?.name} ${group?.name || groupId}"? Esta acción no se puede deshacer.`)) return
+    try {
+      await groupsApi.delete(groupId)
+      setGrades(grades.map(g => 
+        g.id === gradeId ? { ...g, groups: g.groups.filter(gr => gr.id !== groupId) } : g
+      ))
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al eliminar el grupo')
+    }
   }
 
   return (

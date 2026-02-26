@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards, Request, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Delete, Param, UseGuards, Request, Query, BadRequestException } from '@nestjs/common';
 
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -49,5 +49,15 @@ export class GradesController {
   ) {
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.gradesService.syncGradesAndGroups(institutionId, body.grades);
+  }
+
+  @Delete(':id')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async delete(@Param('id') id: string) {
+    try {
+      return await this.gradesService.delete(id);
+    } catch (err: any) {
+      throw new BadRequestException(err.message);
+    }
   }
 }

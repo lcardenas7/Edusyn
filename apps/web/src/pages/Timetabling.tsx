@@ -2676,6 +2676,7 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
   const [selectedFilter, setSelectedFilter] = useState<string>('')
   const [selectedDay, setSelectedDay] = useState<string>('MONDAY')
   const [movingEntry, setMovingEntry] = useState<any>(null)
+  const [placingUnplaced, setPlacingUnplaced] = useState<any>(null)
   const [exporting, setExporting] = useState(false)
 
   // Shift filter for views
@@ -3044,6 +3045,26 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
     }
   }
 
+  // Colocar hora sin ubicar en un slot vacío
+  const handlePlaceUnplaced = async (timeBlockId: string, dayOfWeek: string) => {
+    if (!placingUnplaced) return
+    try {
+      await timetablingEntriesApi.create({
+        academicYearId,
+        groupId: placingUnplaced.groupId,
+        timeBlockId,
+        dayOfWeek,
+        teacherAssignmentId: placingUnplaced.assignmentId,
+      })
+      setPlacingUnplaced(null)
+      setMovingEntry(null)
+      loadView()
+    } catch (err: any) {
+      console.error('Error placing entry:', err)
+      alert(err.response?.data?.message || 'Error al colocar la entrada. Puede haber conflictos de horario.')
+    }
+  }
+
   // Mover entrada a otro bloque/día
   const handleMoveEntry = async (entryId: string, newTimeBlockId: string, newDayOfWeek: string) => {
     try {
@@ -3071,31 +3092,48 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
     }
   }
 
-  // Renderizar fichas de horas sin colocar para un grupo
+  // Renderizar fichas de horas sin colocar para un grupo (clickables para colocar manualmente)
   const renderUnplacedChips = (groupId: string) => {
     const unplaced = (viewData?.unplacedHours || []).filter((u: any) => u.groupId === groupId)
     if (unplaced.length === 0) return null
     const totalRemaining = unplaced.reduce((s: number, u: any) => s + u.remainingHours, 0)
+    const isPlacing = placingUnplaced?.groupId === groupId
     return (
-      <div className="mt-2 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+      <div className={`mt-2 mb-4 p-3 rounded-lg border ${isPlacing ? 'bg-green-50 border-green-300' : 'bg-amber-50 border-amber-200'}`}>
         <div className="flex items-center gap-2 mb-2">
-          <AlertTriangle className="w-4 h-4 text-amber-500" />
-          <span className="text-xs font-medium text-amber-700">{totalRemaining} hora{totalRemaining !== 1 ? 's' : ''} sin colocar</span>
+          <AlertTriangle className={`w-4 h-4 ${isPlacing ? 'text-green-500' : 'text-amber-500'}`} />
+          <span className={`text-xs font-medium ${isPlacing ? 'text-green-700' : 'text-amber-700'}`}>
+            {isPlacing ? 'Selecciona una celda vacía en la grilla para colocar la hora' : `${totalRemaining} hora${totalRemaining !== 1 ? 's' : ''} sin colocar — click en una ficha para ubicarla`}
+          </span>
+          {placingUnplaced && (
+            <button onClick={() => setPlacingUnplaced(null)} className="ml-auto text-xs text-gray-500 hover:text-gray-700 underline">Cancelar</button>
+          )}
         </div>
         <div className="flex flex-wrap gap-1.5">
           {unplaced.map((u: any) => {
             const sc = getSubjectColor(u.subjectName)
-            return Array.from({ length: u.remainingHours }, (_, i) => (
-              <div
-                key={`${u.assignmentId}-${i}`}
-                className="px-2 py-1 rounded text-[10px] border cursor-default"
-                style={{ backgroundColor: sc.bg, borderColor: sc.border, color: sc.text }}
-                title={`${u.subjectName} — ${u.teacherName} (${u.placedHours}/${u.weeklyHours}h colocadas)`}
-              >
-                <span className="font-semibold">{u.subjectName}</span>
-                <span className="opacity-60 ml-1">{u.teacherName?.split(' ')[0]}</span>
-              </div>
-            ))
+            return Array.from({ length: u.remainingHours }, (_, i) => {
+              const isSelected = placingUnplaced?.assignmentId === u.assignmentId
+              return (
+                <div
+                  key={`${u.assignmentId}-${i}`}
+                  className={`px-2 py-1 rounded text-[10px] border cursor-pointer transition-all hover:shadow-md ${isSelected ? 'ring-2 ring-green-400 scale-105' : 'hover:scale-105'}`}
+                  style={{ backgroundColor: isSelected ? '#dcfce7' : sc.bg, borderColor: isSelected ? '#22c55e' : sc.border, color: isSelected ? '#166534' : sc.text }}
+                  title={`${u.subjectName} — ${u.teacherName} (${u.placedHours}/${u.weeklyHours}h) — Click para ubicar`}
+                  onClick={() => {
+                    if (isSelected) {
+                      setPlacingUnplaced(null)
+                    } else {
+                      setPlacingUnplaced(u)
+                      setMovingEntry(null)
+                    }
+                  }}
+                >
+                  <span className="font-semibold">{u.subjectName}</span>
+                  <span className="opacity-60 ml-1">{u.teacherName?.split(' ')[0]}</span>
+                </div>
+              )
+            })
           })}
         </div>
       </div>
@@ -3206,18 +3244,20 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
                         )
                       }
                       if (!entry) {
-                        // Celda vacía: si hay entrada en movimiento, permitir soltar aquí
-                        const isTarget = movingEntry && !isSpecial
+                        // Celda vacía: si hay entrada en movimiento o chip sin colocar, permitir soltar aquí
+                        const isMoveTarget = movingEntry && !isSpecial
+                        const isPlaceTarget = placingUnplaced && !isSpecial
+                        const isTarget = isMoveTarget || isPlaceTarget
                         return (
                           <td
                             key={day}
                             className={`px-2 py-1.5 border-r ${isTarget ? 'bg-green-50 cursor-pointer hover:bg-green-100' : ''}`}
-                            onClick={isTarget ? () => handleMoveEntry(movingEntry.id, block.id, day) : undefined}
+                            onClick={isMoveTarget ? () => handleMoveEntry(movingEntry.id, block.id, day) : isPlaceTarget ? () => handlePlaceUnplaced(block.id, day) : undefined}
                           >
                             {isTarget && (
                               <div className="border-2 border-dashed border-green-300 rounded px-1.5 py-1 text-center text-green-500 text-[10px]">
                                 <ArrowRight className="w-3 h-3 mx-auto" />
-                                Mover aquí
+                                {isPlaceTarget ? 'Colocar aquí' : 'Mover aquí'}
                               </div>
                             )}
                           </td>
@@ -3658,26 +3698,43 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
                     const teacherUnplaced = (viewData?.unplacedHours || []).filter((u: any) => u.teacherId === teacher.teacherId)
                     if (teacherUnplaced.length === 0) return null
                     const totalRemaining = teacherUnplaced.reduce((s: number, u: any) => s + u.remainingHours, 0)
+                    const isPlacingThis = teacherUnplaced.some((u: any) => placingUnplaced?.assignmentId === u.assignmentId)
                     return (
-                      <div className="mt-2 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className={`mt-2 mb-4 p-3 rounded-lg border ${isPlacingThis ? 'bg-green-50 border-green-300' : 'bg-amber-50 border-amber-200'}`}>
                         <div className="flex items-center gap-2 mb-2">
-                          <AlertTriangle className="w-4 h-4 text-amber-500" />
-                          <span className="text-xs font-medium text-amber-700">{totalRemaining} hora{totalRemaining !== 1 ? 's' : ''} sin colocar</span>
+                          <AlertTriangle className={`w-4 h-4 ${isPlacingThis ? 'text-green-500' : 'text-amber-500'}`} />
+                          <span className={`text-xs font-medium ${isPlacingThis ? 'text-green-700' : 'text-amber-700'}`}>
+                            {isPlacingThis ? 'Selecciona una celda vacía para colocar la hora' : `${totalRemaining} hora${totalRemaining !== 1 ? 's' : ''} sin colocar — click en una ficha para ubicarla`}
+                          </span>
+                          {isPlacingThis && (
+                            <button onClick={() => setPlacingUnplaced(null)} className="ml-auto text-xs text-gray-500 hover:text-gray-700 underline">Cancelar</button>
+                          )}
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {teacherUnplaced.map((u: any) => {
                             const sc = getSubjectColor(u.subjectName)
-                            return Array.from({ length: u.remainingHours }, (_, i) => (
-                              <div
-                                key={`${u.assignmentId}-${i}`}
-                                className="px-2 py-1 rounded text-[10px] border cursor-default"
-                                style={{ backgroundColor: sc.bg, borderColor: sc.border, color: sc.text }}
-                                title={`${u.subjectName} — ${u.groupName} (${u.placedHours}/${u.weeklyHours}h colocadas)`}
-                              >
-                                <span className="font-semibold">{u.subjectName}</span>
-                                <span className="opacity-60 ml-1">{u.groupName}</span>
-                              </div>
-                            ))
+                            return Array.from({ length: u.remainingHours }, (_, i) => {
+                              const isSelected = placingUnplaced?.assignmentId === u.assignmentId
+                              return (
+                                <div
+                                  key={`${u.assignmentId}-${i}`}
+                                  className={`px-2 py-1 rounded text-[10px] border cursor-pointer transition-all hover:shadow-md ${isSelected ? 'ring-2 ring-green-400 scale-105' : 'hover:scale-105'}`}
+                                  style={{ backgroundColor: isSelected ? '#dcfce7' : sc.bg, borderColor: isSelected ? '#22c55e' : sc.border, color: isSelected ? '#166534' : sc.text }}
+                                  title={`${u.subjectName} — ${u.groupName} (${u.placedHours}/${u.weeklyHours}h) — Click para ubicar`}
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      setPlacingUnplaced(null)
+                                    } else {
+                                      setPlacingUnplaced(u)
+                                      setMovingEntry(null)
+                                    }
+                                  }}
+                                >
+                                  <span className="font-semibold">{u.subjectName}</span>
+                                  <span className="opacity-60 ml-1">{u.groupName}</span>
+                                </div>
+                              )
+                            })
                           })}
                         </div>
                       </div>
