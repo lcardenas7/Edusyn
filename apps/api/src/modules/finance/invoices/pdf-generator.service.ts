@@ -48,9 +48,9 @@ export class PdfGeneratorService {
 
   private getPageConfig(_settings: any): PageConfig {
     return {
-      size: [396, 612] as any,
-      margin: 28,
-      contentWidth: 340,
+      size: [396, 612] as any, // 5.5 x 8.5 inches (fixed half-letter)
+      margin: 22,
+      contentWidth: 352,
       isHalfLetter: true,
     };
   }
@@ -113,28 +113,15 @@ export class PdfGeneratorService {
       qrBuffer = await this.generateQRBuffer(qrData);
     }
 
-    // ── Calculate dynamic page height based on content ──
     const m = pc.margin;
     const w = pc.contentWidth;
     const hl = true;
     const fs = 0.85;
-    const itemCount = invoice.items.length;
-    const hasResolution = !!settings?.invoiceResolution;
-    const hasBankAccounts = settings?.invoiceShowBankAccounts !== false && settings?.bankAccounts;
-    const hasDiscount = Number(invoice.discountTotal || 0) > 0;
-    const hasTax = Number(invoice.taxTotal || 0) > 0;
-    // header(55) + separator(8) + titleBar(22) + resolution?(14) + gap(4) + infoBoxes(61) + gap(6)
-    // + itemsTableHeader(20) + items(16 each) + tableBorder(6)
-    // + subtotal(14) + discount?(14) + tax?(14) + totalBox(28)
-    // + bankAccounts?(40) + footer(17) + bottomBar(4)
-    let contentH = 55 + 8 + 22 + (hasResolution ? 14 : 4) + 61 + 6
-      + 20 + (itemCount * 16) + 6
-      + 14 + (hasDiscount ? 14 : 0) + (hasTax ? 14 : 0) + 28
-      + (hasBankAccounts ? 40 : 0) + 17 + 4;
-    const pageH = m + contentH + 10;
+    const PAGE_W = 396;
+    const PAGE_H = 612; // fixed 5.5 x 8.5 half-letter
 
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: [396, pageH] as any, margins: { top: m, bottom: 0, left: m, right: m }, bufferPages: true });
+      const doc = new PDFDocument({ size: [PAGE_W, PAGE_H] as any, margins: { top: m, bottom: 0, left: m, right: m }, bufferPages: true });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -283,24 +270,25 @@ export class PdfGeneratorService {
         this.drawBankAccounts(doc, settings.bankAccounts, colors, m, w);
       }
 
-      // ── Footer (content-relative) ──
+      // ── Footer (fixed at page bottom) ──
       const _addPage = doc.addPage.bind(doc);
       doc.addPage = () => doc as any;
 
-      let footerY = doc.y + 4;
-      doc.moveTo(m, footerY).lineTo(m + w, footerY).lineWidth(0.3).stroke(colors.border);
-      footerY += 3;
+      const lastPage = doc.bufferedPageRange().count - 1;
+      doc.switchToPage(lastPage);
+
       let invoiceFooterText = `Documento generado el ${new Date().toLocaleString('es-CO')} | Documento interno`;
       if (settings?.billingMode === 'INTERNAL_ONLY') {
         invoiceFooterText += ' | No constituye factura electrónica';
       }
+      const fY = PAGE_H - 20;
+      doc.moveTo(m, fY).lineTo(m + w, fY).lineWidth(0.3).stroke(colors.border);
       doc.fontSize(4).font('Helvetica').fillColor(colors.lightText);
-      doc.text(invoiceFooterText, m, footerY, { width: w, align: 'center', lineBreak: false });
+      doc.text(invoiceFooterText, m, fY + 3, { width: w, align: 'center', lineBreak: false });
       doc.fillColor(colors.text);
-      footerY += 10;
 
-      // ── Bottom colored bar ──
-      doc.rect(0, footerY, doc.page.width, 4).fill(colors.primary);
+      // ── Bottom colored bar (fixed at very bottom) ──
+      doc.rect(0, PAGE_H - 4, PAGE_W, 4).fill(colors.primary);
 
       doc.addPage = _addPage;
 
@@ -363,20 +351,16 @@ export class PdfGeneratorService {
     const discountAmount = payment.obligation ? Number(payment.obligation.discountAmount || 0) : 0;
     const paidAmount = Number(payment.amount);
 
-    // ── Calculate dynamic page height based on content ──
     const hl = true;
     const fs = 0.85;
     const m = pc.margin;
     const w = pc.contentWidth;
-    // header(55) + separator(8) + titleBar(22) + gap(6) + infoBoxes(63) + gap(8)
-    // + tableHeader(16) + dataRow(18) + tableBorder(8)
-    // + subtotal(12) + discount?(12) + totalBox(30) + signature(18) + footer(17) + bottomBar(4)
-    let contentH = 55 + 8 + 22 + 6 + 63 + 8 + 16 + 18 + 8 + 12 + 30 + 18 + 17 + 4;
-    if (discountAmount > 0) contentH += 12;
-    const pageH = m + contentH + 10; // top margin + content + small buffer
+    const PAGE_W = 396;
+    const PAGE_H = 612; // fixed 5.5 x 8.5 half-letter
+    const MIN_TABLE_ROWS = 4; // always show at least 4 rows in items table
 
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: [396, pageH] as any, margins: { top: m, bottom: 0, left: m, right: m }, autoFirstPage: true, bufferPages: true });
+      const doc = new PDFDocument({ size: [PAGE_W, PAGE_H] as any, margins: { top: m, bottom: 0, left: m, right: m }, autoFirstPage: true, bufferPages: true });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -518,7 +502,7 @@ export class PdfGeneratorService {
       cx += unitW;
       doc.text('TOTAL', cx, tableTop + (tblHeaderH - tblFontSize) / 2, { width: totalW - 6, align: 'right' });
 
-      // Data row
+      // Data row (the real item)
       doc.fillColor(colors.text).font('Helvetica').fontSize(tblFontSize);
       let cy = tableTop + tblHeaderH + 2;
       doc.rect(m, cy - 1, w, tblRowH).fill(colors.secondary);
@@ -532,6 +516,15 @@ export class PdfGeneratorService {
       cx += unitW;
       doc.text(this.formatCurrency(obligationAmount), cx, cy + (tblRowH - tblFontSize) / 2 - 1, { width: totalW - 6, align: 'right' });
       cy += tblRowH;
+
+      // Empty rows to fill up to MIN_TABLE_ROWS
+      for (let row = 1; row < MIN_TABLE_ROWS; row++) {
+        const bgColor = row % 2 === 0 ? colors.secondary : '#FFFFFF';
+        doc.rect(m, cy - 1, w, tblRowH).fill(bgColor);
+        // Draw a subtle horizontal separator
+        doc.moveTo(m, cy - 1).lineTo(m + w, cy - 1).lineWidth(0.2).stroke(colors.border);
+        cy += tblRowH;
+      }
 
       // Bottom border of table
       doc.moveTo(m, cy).lineTo(m + w, cy).lineWidth(0.5).stroke(colors.border);
@@ -575,23 +568,22 @@ export class PdfGeneratorService {
       doc.fillColor(colors.text);
       y += 18;
 
-      // ── Footer ──
+      // ── Footer (fixed at page bottom) ──
       const _addPage = doc.addPage.bind(doc);
       doc.addPage = () => doc as any;
 
-      doc.moveTo(m, y).lineTo(m + w, y).lineWidth(0.3).stroke(colors.border);
-      y += 3;
       let footerText = `Documento generado el ${new Date().toLocaleString('es-CO')} | Documento interno`;
       if (settings?.billingMode === 'INTERNAL_ONLY') {
         footerText += ' | No constituye factura electrónica';
       }
+      const fY = PAGE_H - 20;
+      doc.moveTo(m, fY).lineTo(m + w, fY).lineWidth(0.3).stroke(colors.border);
       doc.fontSize(4).font('Helvetica').fillColor(colors.lightText);
-      doc.text(footerText, m, y, { width: w, align: 'center', lineBreak: false });
+      doc.text(footerText, m, fY + 3, { width: w, align: 'center', lineBreak: false });
       doc.fillColor(colors.text);
-      y += 10;
 
-      // ── Bottom colored bar ──
-      doc.rect(0, y, doc.page.width, 4).fill(colors.primary);
+      // ── Bottom colored bar (fixed at very bottom) ──
+      doc.rect(0, PAGE_H - 4, PAGE_W, 4).fill(colors.primary);
 
       doc.addPage = _addPage;
 
@@ -701,6 +693,7 @@ export class PdfGeneratorService {
     doc.fillColor(colors.text).font('Helvetica').fontSize(7.5);
     let cy = tableTop + 20;
 
+    const MIN_ROWS = 4;
     items.forEach((item, idx) => {
       if (idx % 2 === 0) {
         doc.rect(m, cy - 2, w, 16).fill(colors.secondary);
@@ -716,6 +709,14 @@ export class PdfGeneratorService {
       doc.text(this.formatCurrency(Number(item.total)), cx, cy, { width: colWidths[3] - 8, align: 'right' });
       cy += 16;
     });
+
+    // Empty rows to fill up to MIN_ROWS
+    for (let row = items.length; row < MIN_ROWS; row++) {
+      const bgColor = row % 2 === 0 ? colors.secondary : '#FFFFFF';
+      doc.rect(m, cy - 2, w, 16).fill(bgColor);
+      doc.moveTo(m, cy - 2).lineTo(m + w, cy - 2).lineWidth(0.2).stroke(colors.border);
+      cy += 16;
+    }
 
     // Bottom border
     doc.moveTo(m, cy).lineTo(m + w, cy).lineWidth(0.5).stroke(colors.border);

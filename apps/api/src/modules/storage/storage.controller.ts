@@ -1,6 +1,8 @@
 import {
   Controller,
   Post,
+  Get,
+  Query,
   UseInterceptors,
   UploadedFile,
   Body,
@@ -131,6 +133,13 @@ export class StorageController {
       success: true,
       data: result,
     };
+  }
+
+  @Get('resolve-url')
+  async resolveUrl(@Query('path') path: string) {
+    if (!path) throw new BadRequestException('Se requiere el parámetro "path"');
+    const signedUrl = await this.storageService.resolveFileUrl(path, 3600);
+    return { success: true, url: signedUrl };
   }
 
   @Post('upload/my-signature')

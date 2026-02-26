@@ -568,6 +568,7 @@ export const galleryApi = {
 
 // Storage API - Subida de archivos a Supabase
 export const storageApi = {
+  resolveUrl: (path: string) => api.get('/storage/resolve-url', { params: { path } }),
   uploadGalleryImage: (file: File, institutionId: string, category?: string) => {
     const formData = new FormData();
     formData.append('file', file);

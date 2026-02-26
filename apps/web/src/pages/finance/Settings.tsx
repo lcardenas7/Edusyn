@@ -156,6 +156,23 @@ export default function FinanceSettings() {
 
   useEffect(() => { fetchSettings() }, [])
 
+  // Resolve logo URL to signed URL for preview when settings load
+  useEffect(() => {
+    if (settings?.invoiceLogoUrl && !logoPreviewUrl) {
+      const url = settings.invoiceLogoUrl
+      if (url.startsWith('http')) {
+        // Already a full URL - try using it directly
+        setLogoPreviewUrl(url)
+      } else {
+        // It's an R2 key - resolve to signed URL
+        storageApi.resolveUrl(url).then(res => {
+          const signed = res.data?.url
+          if (signed) setLogoPreviewUrl(signed)
+        }).catch(() => { /* ignore */ })
+      }
+    }
+  }, [settings?.invoiceLogoUrl])
+
   const toggleSection = useCallback((key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] })), [])
 
   const logoInputRef = useRef<HTMLInputElement>(null)
