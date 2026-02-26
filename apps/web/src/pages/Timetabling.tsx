@@ -2687,48 +2687,58 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
   const [provisionalSelected, setProvisionalSelected] = useState<{ groupId: string; blockId: string } | null>(null)
   const [provisionalNotes, setProvisionalNotes] = useState('')
 
-  const loadView = async (mode?: string) => {
-    if (!academicYearId) {
-      console.warn('[ScheduleViewer] No academicYearId, skipping loadView')
+  // Single effect that handles ALL data loading — no stale closures
+  useEffect(() => {
+    if (!isActive || !academicYearId) {
+      console.log('[ScheduleViewer] Skip load:', { isActive, academicYearId })
       return
     }
-    console.log('[ScheduleViewer] loadView called:', { academicYearId, mode: mode || viewMode, isActive })
-    setLoading(true)
-    try {
-      // Para 'by-day' usamos los datos de 'by-grade' y filtramos en el frontend
-      const backendView = (mode || viewMode) === 'by-day' ? 'by-grade' : (mode || viewMode)
-      const res = await timetablingGeneratorApi.getScheduleViews(
-        academicYearId,
-        backendView as any,
-        selectedFilter || undefined,
-      )
-      console.log('[ScheduleViewer] API response:', { totalEntries: res.data?.totalEntries, view: res.data?.view, hasGrades: !!res.data?.grades?.length })
-      setViewData(res.data)
-    } catch (err: any) {
-      console.error('[ScheduleViewer] Error loading view:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
 
-  // Track activation count to force reload when tab becomes visible
-  const activationRef = useRef(0)
-  useEffect(() => {
-    if (isActive) {
-      activationRef.current++
-      console.log('[ScheduleViewer] Tab became active, activation #', activationRef.current, { academicYearId, viewMode })
-      if (academicYearId) {
-        loadView()
+    let cancelled = false
+    const fetchData = async () => {
+      console.log('[ScheduleViewer] Fetching:', { academicYearId, viewMode, selectedFilter, isActive })
+      setLoading(true)
+      try {
+        const backendView = viewMode === 'by-day' ? 'by-grade' : viewMode
+        const res = await timetablingGeneratorApi.getScheduleViews(
+          academicYearId,
+          backendView as any,
+          selectedFilter || undefined,
+        )
+        if (!cancelled) {
+          console.log('[ScheduleViewer] Response:', {
+            totalEntries: res.data?.totalEntries,
+            view: res.data?.view,
+            error: res.data?.error,
+            hasEntries: !!(res.data?.entries?.length),
+            hasGrades: !!(res.data?.grades?.length),
+          })
+          setViewData(res.data)
+        }
+      } catch (err: any) {
+        console.error('[ScheduleViewer] API Error:', err?.response?.status, err?.response?.data || err.message)
+        if (!cancelled) {
+          setViewData(null)
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
       }
     }
-  }, [isActive])
 
-  // Reload when viewMode changes (only if active)
-  useEffect(() => {
-    if (isActive && academicYearId) {
-      loadView()
-    }
-  }, [viewMode, academicYearId])
+    fetchData()
+    return () => { cancelled = true }
+  }, [isActive, academicYearId, viewMode, selectedFilter])
+
+  // Manual refresh function for UI button
+  const loadView = useCallback(() => {
+    if (!academicYearId || !isActive) return
+    const backendView = viewMode === 'by-day' ? 'by-grade' : viewMode
+    setLoading(true)
+    timetablingGeneratorApi.getScheduleViews(academicYearId, backendView as any, selectedFilter || undefined)
+      .then(res => { setViewData(res.data) })
+      .catch(err => { console.error('[ScheduleViewer] Refresh error:', err) })
+      .finally(() => { setLoading(false) })
+  }, [academicYearId, isActive, viewMode, selectedFilter])
 
   const handleViewChange = (mode: string) => {
     setViewMode(mode as any)

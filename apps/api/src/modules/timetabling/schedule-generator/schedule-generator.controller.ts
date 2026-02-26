@@ -790,7 +790,17 @@ export class ScheduleGeneratorController {
     @Query('filterId') filterId?: string,
   ) {
     const institutionId = req.user.institutionId;
-    console.log('[ScheduleViews] Loading views:', { institutionId, academicYearId, view, filterId });
+    const userId = req.user.sub || req.user.id;
+    console.log('[ScheduleViews] Request:', { institutionId, academicYearId, view, filterId, userId, userRoles: req.user.roles, isSuperAdmin: req.user.isSuperAdmin });
+
+    if (!institutionId) {
+      console.error('[ScheduleViews] No institutionId in request!');
+      return { view, entries: [], allTimeBlocks: [], totalEntries: 0, error: 'No institutionId' };
+    }
+    if (!academicYearId) {
+      console.error('[ScheduleViews] No academicYearId in request!');
+      return { view, entries: [], allTimeBlocks: [], totalEntries: 0, error: 'No academicYearId' };
+    }
 
     // Obtener todos los bloques de tiempo de la institución para incluir TUTORING/BREAK/LUNCH
     const allTimeBlocks = await this.prisma.timeBlock.findMany({
@@ -830,6 +840,12 @@ export class ScheduleGeneratorController {
       orderBy: [{ timeBlock: { order: 'asc' } }, { dayOfWeek: 'asc' }],
     });
     console.log(`[ScheduleViews] Found ${entries.length} schedule entries for institution ${institutionId}, year ${academicYearId}`);
+    if (entries.length === 0) {
+      // Debug: check if there are ANY entries for this institution
+      const totalInstitutionEntries = await this.prisma.scheduleEntry.count({ where: { institutionId } });
+      const totalYearEntries = await this.prisma.scheduleEntry.count({ where: { academicYearId } });
+      console.log(`[ScheduleViews] DEBUG: Total entries for institution: ${totalInstitutionEntries}, for year: ${totalYearEntries}`);
+    }
 
     // Formatear cada entrada
     const formatEntry = (e: any) => ({
@@ -863,13 +879,27 @@ export class ScheduleGeneratorController {
     // ═══════════════════════════════════════════════════════════════════
     // FILTRADO POR CAPABILITIES (solo para roles no-admin)
     // ═══════════════════════════════════════════════════════════════════
-    const userId = req.user.sub || req.user.id;
-    const userCaps = await this.capabilitiesService.getUserCapabilities(userId, institutionId);
-    const isFullAccess = userCaps.effectiveRoles.some(r =>
-      ['SUPERADMIN', 'ADMIN_INSTITUTIONAL'].includes(r),
-    );
+    // Direct role check from JWT - bypass capabilities service for admins
+    const jwtRoles: string[] = Array.isArray(req.user.roles)
+      ? req.user.roles.map((r: any) => typeof r === 'string' ? r : r.role?.name || r.name || '')
+      : [];
+    const isAdminFromJwt = req.user.isSuperAdmin ||
+      jwtRoles.some(r => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'].includes(r));
+
+    let isFullAccess = isAdminFromJwt;
+    if (!isFullAccess) {
+      // Fallback to capabilities service
+      const userCaps = await this.capabilitiesService.getUserCapabilities(userId, institutionId);
+      isFullAccess = userCaps.effectiveRoles.some(r =>
+        ['SUPERADMIN', 'ADMIN_INSTITUTIONAL'].includes(r),
+      );
+      console.log('[ScheduleViews] Capabilities check:', { effectiveRoles: userCaps.effectiveRoles, isFullAccess });
+    } else {
+      console.log('[ScheduleViews] Admin bypass from JWT, skipping capabilities check');
+    }
 
     if (!isFullAccess) {
+      const userCaps = await this.capabilitiesService.getUserCapabilities(userId, institutionId);
       const canViewOwn = userCaps.capabilities.includes('VIEW_OWN_SCHEDULE');
       const canViewTutorGroup = userCaps.capabilities.includes('VIEW_TUTOR_GROUP_SCHEDULE');
 
