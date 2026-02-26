@@ -1474,7 +1474,7 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
           const isPast = currentIdx > i
           const canReach = (key: string) => {
             if (key === 'load') return true
-            if (key === 'configure') return teachingLoad?.assignments?.length > 0
+            if (key === 'configure') return !!teachingLoad
             if (key === 'generate') return teachingLoad?.assignments?.length > 0 && configSaved
             if (key === 'result') return !!generateResult
             return false
@@ -1677,15 +1677,13 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
                 </div>
               )}
 
-              {(teachingLoad.summary?.totalAssignments || 0) > 0 && (
-                <button
-                  onClick={() => setStep('configure')}
-                  className="mt-4 w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
-                >
-                  <Settings className="w-5 h-5" />
-                  Continuar a Configurar Horario
-                </button>
-              )}
+              <button
+                onClick={() => setStep('configure')}
+                className="mt-4 w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <Settings className="w-5 h-5" />
+                Continuar a Configurar Horario
+              </button>
             </div>
           )}
         </div>

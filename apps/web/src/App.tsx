@@ -39,6 +39,7 @@ import AcademicTemplates from './pages/AcademicTemplates'
 import ForceChangePassword from './pages/ForceChangePassword'
 import PedagogicalSupport from './pages/PedagogicalSupport'
 import DifferentialSupport from './pages/DifferentialSupport'
+import TeacherWorkspace from './pages/TeacherWorkspace'
 import Layout from './components/Layout'
 
 // Nuevas páginas por dominio (Refactor UX)
@@ -316,6 +317,7 @@ function App() {
                   {/* MÓDULO DE TIMETABLING (HORARIOS)                            */}
                   {/* ═══════════════════════════════════════════════════════════ */}
                   <Route path="/timetabling" element={<Timetabling />} />
+                  <Route path="/my-workspace" element={<TeacherWorkspace />} />
                   <Route path="/capabilities-config" element={<CapabilitiesConfig />} />
                 </Routes>
               </Layout>

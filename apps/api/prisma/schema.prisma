@@ -178,6 +178,7 @@ enum SystemModule {
   FINANCE            // Gestión financiera (cobros, pagos, egresos, facturas)
   TIMETABLE          // Gestión de horarios escolares
   DIAGNOSIS          // Diagnóstico y seguimiento educativo
+  TEACHER_WORKSPACE  // Espacio de trabajo privado del docente
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -343,6 +344,10 @@ model User {
   
   // Asistencia de tutoría
   tutoringAttendancesAsTeacher TutoringAttendance[] @relation("TutoringAttendanceTeacher")
+  
+  // Teacher Workspace (espacio privado del docente)
+  workspaceBoards             WorkspaceBoard[]       @relation("WorkspaceBoards")
+  workspaceItemsAsStudent     WorkspaceItem[]        @relation("WorkspaceItemStudent")
 }
 
 model Role {
@@ -502,6 +507,9 @@ model Institution {
   // APD (Acompañamiento Pedagógico Diferencial)
   rlsEducationalSupportProfiles EducationalSupportProfile[] @relation("RlsInstitutionESP")
   rlsApdAuditLogs               ApdAuditLog[]              @relation("RlsInstitutionApdAudit")
+  
+  // Teacher Workspace
+  rlsWorkspaceBoards            WorkspaceBoard[]            @relation("RlsInstitutionWB")
 }
 
 // Módulos habilitados por institución
@@ -612,6 +620,9 @@ model Group {
   subjectExceptions     GroupSubjectException[] // Excepciones de asignaturas para este grupo
   scheduleEntries       ScheduleEntry[]
   tutoringAttendances   TutoringAttendance[]
+  
+  // Teacher Workspace
+  workspaceBoards       WorkspaceBoard[]
 
   @@unique([campusId, shiftId, gradeId, name])
 }
@@ -910,6 +921,9 @@ model AcademicYear {
   
   // Componentes finales (pruebas semestrales, etc.)
   finalComponents        FinalComponent[] @relation("AcademicYearFinalComponents")
+  
+  // Teacher Workspace
+  workspaceBoards        WorkspaceBoard[]
 
   @@unique([institutionId, year])
 }
@@ -4440,4 +4454,99 @@ model ApdAuditLog {
   @@index([userId])
   @@index([entityType, entityId])
   @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEACHER WORKSPACE (Espacio privado del docente)
+// Módulo completamente aislado del core académico.
+// Todo es privado por defecto (visible solo por teacherId).
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum WorkspaceBoardType {
+  KANBAN
+  CLASS_LOG
+  STUDENT_NOTES
+  CHECKLIST
+  MICRO_COLLECT
+  CLASSROOM_ROLES
+  PROJECT
+}
+
+enum WorkspaceVisibility {
+  PRIVATE
+  SHARED_COORDINATOR
+  SHARED_ADMIN
+}
+
+enum WorkspaceItemStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  ARCHIVED
+}
+
+model WorkspaceBoard {
+  id              String              @id @default(cuid())
+  teacherId       String
+  institutionId   String
+  academicYearId  String?
+  groupId         String?
+  type            WorkspaceBoardType
+  title           String
+  description     String?
+  color           String?
+  visibility      WorkspaceVisibility @default(PRIVATE)
+  sharedAt        DateTime?
+  sortOrder       Int                 @default(0)
+  isArchived      Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  teacher         User                @relation("WorkspaceBoards", fields: [teacherId], references: [id], onDelete: Cascade)
+  institution     Institution         @relation("RlsInstitutionWB", fields: [institutionId], references: [id], onDelete: Cascade)
+  academicYear    AcademicYear?       @relation(fields: [academicYearId], references: [id])
+  group           Group?              @relation(fields: [groupId], references: [id])
+  columns         WorkspaceColumn[]
+  items           WorkspaceItem[]
+
+  @@index([teacherId, institutionId])
+  @@index([teacherId, type])
+  @@index([institutionId, visibility])
+}
+
+model WorkspaceColumn {
+  id        String   @id @default(cuid())
+  boardId   String
+  title     String
+  sortOrder Int      @default(0)
+  color     String?
+
+  board     WorkspaceBoard  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  items     WorkspaceItem[]
+
+  @@index([boardId])
+}
+
+model WorkspaceItem {
+  id         String              @id @default(cuid())
+  boardId    String
+  columnId   String?
+  studentId  String?
+  title      String
+  content    String?             @db.Text
+  metadata   Json?
+  status     WorkspaceItemStatus @default(TODO)
+  dueDate    DateTime?
+  sortOrder  Int                 @default(0)
+  isArchived Boolean             @default(false)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  board      WorkspaceBoard      @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  column     WorkspaceColumn?    @relation(fields: [columnId], references: [id], onDelete: SetNull)
+  student    User?               @relation("WorkspaceItemStudent", fields: [studentId], references: [id])
+
+  @@index([boardId, columnId])
+  @@index([boardId, status])
+  @@index([boardId, studentId])
 }

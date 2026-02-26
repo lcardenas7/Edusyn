@@ -1666,3 +1666,32 @@ export const apdApi = {
     qualitativeObservation?: string;
   }) => api.post('/apd/progress-logs', data),
 }
+
+// Teacher Workspace
+export const teacherWorkspaceApi = {
+  // Boards
+  listBoards: (params?: { type?: string; groupId?: string; isArchived?: string }) =>
+    api.get('/teacher-workspace/boards', { params }),
+  getBoard: (id: string) => api.get(`/teacher-workspace/boards/${id}`),
+  createBoard: (data: { type: string; title: string; description?: string; color?: string; academicYearId?: string; groupId?: string }) =>
+    api.post('/teacher-workspace/boards', data),
+  updateBoard: (id: string, data: { title?: string; description?: string; color?: string; isArchived?: boolean; sortOrder?: number }) =>
+    api.put(`/teacher-workspace/boards/${id}`, data),
+  deleteBoard: (id: string) => api.delete(`/teacher-workspace/boards/${id}`),
+
+  // Columns
+  createColumn: (data: { boardId: string; title: string; color?: string }) =>
+    api.post('/teacher-workspace/columns', data),
+  updateColumn: (id: string, data: { title?: string; color?: string; sortOrder?: number }) =>
+    api.put(`/teacher-workspace/columns/${id}`, data),
+  deleteColumn: (id: string) => api.delete(`/teacher-workspace/columns/${id}`),
+
+  // Items
+  createItem: (data: { boardId: string; columnId?: string; studentId?: string; title: string; content?: string; metadata?: any; dueDate?: string }) =>
+    api.post('/teacher-workspace/items', data),
+  updateItem: (id: string, data: { columnId?: string; title?: string; content?: string; metadata?: any; status?: string; dueDate?: string; sortOrder?: number; isArchived?: boolean }) =>
+    api.put(`/teacher-workspace/items/${id}`, data),
+  moveItem: (id: string, data: { columnId: string; sortOrder: number }) =>
+    api.patch(`/teacher-workspace/items/${id}/move`, data),
+  deleteItem: (id: string) => api.delete(`/teacher-workspace/items/${id}`),
+}
