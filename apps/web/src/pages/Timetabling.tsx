@@ -363,23 +363,25 @@ export default function Timetabling() {
         <ConflictsTab conflicts={conflicts} loading={loading} />
       )}
 
-      {activeTab === 'generator' && (
+      {/* GeneratorTab and ScheduleViewerTab stay mounted to preserve state */}
+      <div style={{ display: activeTab === 'generator' ? 'block' : 'none' }}>
         <GeneratorTab
           academicYearId={academicYearId}
           grades={grades}
           showMessage={showMessage}
           onScheduleGenerated={() => { loadGrid(); loadConflicts() }}
         />
-      )}
+      </div>
 
-      {activeTab === 'viewer' && (
+      <div style={{ display: activeTab === 'viewer' ? 'block' : 'none' }}>
         <ScheduleViewerTab
           academicYearId={academicYearId}
           isManager={isManager}
           user={user}
           userCaps={userCaps}
+          isActive={activeTab === 'viewer'}
         />
-      )}
+      </div>
     </div>
   )
 }
@@ -2159,11 +2161,21 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
               </div>
             </div>
 
+            {/* DB insert warning */}
+            {generateResult.failedInDb > 0 && (
+              <div className="bg-red-100 border border-red-300 rounded-lg p-3 mb-4">
+                <p className="text-sm font-medium text-red-800">
+                  Error de persistencia: {generateResult.failedInDb} entradas no se guardaron en la base de datos.
+                  Solo {generateResult.createdInDb} de {generateResult.placedHours} horas fueron realmente guardadas.
+                </p>
+              </div>
+            )}
+
             {/* Stats */}
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="bg-green-50 rounded-lg p-3 text-center">
-                <div className="text-2xl font-bold text-green-700">{generateResult.placedHours}</div>
-                <div className="text-xs text-green-600">Horas ubicadas</div>
+                <div className="text-2xl font-bold text-green-700">{generateResult.createdInDb ?? generateResult.placedHours}</div>
+                <div className="text-xs text-green-600">Horas guardadas</div>
               </div>
               <div className="bg-red-50 rounded-lg p-3 text-center">
                 <div className="text-2xl font-bold text-red-700">{generateResult.unplacedHours}</div>
@@ -2283,7 +2295,7 @@ const VIEW_MODES = [
   { key: 'by-area', label: 'Por Área/Depto', icon: Building2 },
 ] as const
 
-function ScheduleViewerTab({ academicYearId, isManager, user, userCaps }: { academicYearId: string; isManager?: boolean; user?: any; userCaps?: any }) {
+function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive }: { academicYearId: string; isManager?: boolean; user?: any; userCaps?: any; isActive?: boolean }) {
   // Para docentes: solo mostrar su grupo de tutoría (no todos los que enseña)
   // null = sin restricción (managers); Set vacío = esperar carga; Set con ids = filtro activo
   const allowedGroupIds = !isManager
@@ -2328,9 +2340,12 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps }: { acad
     }
   }
 
+  // Reload data when tab becomes active (e.g. after generating schedule)
   useEffect(() => {
-    loadView()
-  }, [academicYearId, viewMode])
+    if (isActive && academicYearId) {
+      loadView()
+    }
+  }, [isActive, academicYearId, viewMode])
 
   const handleViewChange = (mode: string) => {
     setViewMode(mode as any)

@@ -18,6 +18,8 @@ export interface GenerationResult {
   totalAssignments: number;
   placedHours: number;
   unplacedHours: number;
+  createdInDb?: number;
+  failedInDb?: number;
   conflicts: string[];
   details: GroupGenerationDetail[];
 }
@@ -77,11 +79,9 @@ export class ScheduleGeneratorService {
     });
 
     // 1. Obtener grupos objetivo (filtrados por shiftId si se especifica)
+    // getTargetGroups throws if no groups found with diagnostic info
     const groups = await this.getTargetGroups(institutionId, academicYearId, groupIds, shiftId);
     console.log('[ScheduleGenerator] Found groups:', groups.length, groups.map(g => ({ id: g.id, name: g.name, shiftId: g.shiftId })));
-    if (groups.length === 0) {
-      throw new BadRequestException('No se encontraron grupos para generar horarios');
-    }
 
     // 2. Obtener TeacherAssignments para esos grupos
     const assignments = await this.getAssignments(academicYearId, groups.map(g => g.id));
@@ -153,6 +153,8 @@ export class ScheduleGeneratorService {
       success: result.success,
       placedHours: result.placedHours,
       unplacedHours: result.unplacedHours,
+      createdInDb: result.createdInDb,
+      failedInDb: result.failedInDb,
       conflictsCount: result.conflicts.length,
     });
 
@@ -160,7 +162,7 @@ export class ScheduleGeneratorService {
   }
 
   private async getTargetGroups(institutionId: string, academicYearId: string, groupIds?: string[], shiftId?: string) {
-    return this.prisma.group.findMany({
+    const groups = await this.prisma.group.findMany({
       where: {
         shift: { campus: { institutionId } },
         teacherAssignments: { some: { academicYearId } },
@@ -168,10 +170,52 @@ export class ScheduleGeneratorService {
         ...(groupIds?.length ? { id: { in: groupIds } } : {}),
       },
       include: {
-        grade: { select: { id: true, name: true } },
-        shift: { select: { id: true, name: true, type: true } },
+        grade: true,
+        shift: true,
       },
     });
+
+    // If no groups found, log diagnostics and give specific error
+    if (groups.length === 0) {
+      const allGroupsForShift = shiftId
+        ? await this.prisma.group.count({ where: { shiftId, shift: { campus: { institutionId } } } })
+        : 0;
+      const assignmentsForShift = shiftId
+        ? await this.prisma.teacherAssignment.count({
+            where: { academicYearId, group: { shiftId, shift: { campus: { institutionId } } } },
+          })
+        : 0;
+      const allGroupsWithAssignments = await this.prisma.group.count({
+        where: {
+          shift: { campus: { institutionId } },
+          teacherAssignments: { some: { academicYearId } },
+        },
+      });
+      console.error('[ScheduleGenerator] No groups found! Diagnostics:', {
+        shiftId,
+        groupIds,
+        totalGroupsForShift: allGroupsForShift,
+        assignmentsForShift,
+        totalGroupsWithAssignments: allGroupsWithAssignments,
+      });
+
+      // Give specific error message based on diagnostics
+      if (shiftId && allGroupsForShift > 0 && assignmentsForShift === 0) {
+        throw new BadRequestException(
+          `La jornada tiene ${allGroupsForShift} grupos pero ninguno tiene carga académica importada para este año. Importe la carga académica primero.`,
+        );
+      } else if (shiftId && allGroupsForShift === 0) {
+        throw new BadRequestException(
+          'No hay grupos asignados a esta jornada. Configure los grupos en Estructura Organizacional.',
+        );
+      } else {
+        throw new BadRequestException(
+          `No se encontraron grupos con carga académica. Hay ${allGroupsWithAssignments} grupos con asignaciones en otras jornadas.`,
+        );
+      }
+    }
+
+    return groups;
   }
 
   private async getAssignments(academicYearId: string, groupIds: string[]): Promise<Assignment[]> {
@@ -626,19 +670,24 @@ export class ScheduleGeneratorService {
 
     // Crear entries en batch
     let createdCount = 0;
+    let failedCount = 0;
+    console.log(`[ScheduleGenerator] Creating ${entriesToCreate.length} schedule entries in DB...`);
     for (const entry of entriesToCreate) {
       try {
         await this.prisma.scheduleEntry.create({ data: entry });
         createdCount++;
       } catch (e: any) {
+        failedCount++;
         // Conflicto de unique constraint - slot ya ocupado
         if (e.code === 'P2002') {
-          conflicts.push(`Conflicto de duplicado al crear entrada de horario`);
+          conflicts.push(`Conflicto de duplicado: grupo ${entry.groupId}, bloque ${entry.timeBlockId}, día ${entry.dayOfWeek}`);
         } else {
+          console.error(`[ScheduleGenerator] DB create error:`, e.message, entry);
           conflicts.push(`Error al crear entrada: ${e.message}`);
         }
       }
     }
+    console.log(`[ScheduleGenerator] DB results: ${createdCount} created, ${failedCount} failed of ${entriesToCreate.length} total`);
 
     // Compilar detalles por grupo
     const groupMap = new Map<string, GroupGenerationDetail>();
@@ -677,11 +726,18 @@ export class ScheduleGeneratorService {
     const totalPlaced = detailsList.reduce((s, d) => s + d.hoursPlaced, 0);
     const totalNeeded = detailsList.reduce((s, d) => s + d.totalHoursNeeded, 0);
 
+    // If DB inserts failed, adjust the result to reflect actual DB state
+    if (failedCount > 0) {
+      conflicts.push(`⚠️ ${failedCount} entradas no se pudieron guardar en la base de datos. Horas realmente guardadas: ${createdCount}`);
+    }
+
     return {
-      success: totalPlaced === totalNeeded,
+      success: totalPlaced === totalNeeded && failedCount === 0,
       totalAssignments: assignments.filter(a => a.weeklyHours > 0).length,
       placedHours: totalPlaced,
       unplacedHours: totalNeeded - totalPlaced,
+      createdInDb: createdCount,
+      failedInDb: failedCount,
       conflicts,
       details: detailsList,
     };

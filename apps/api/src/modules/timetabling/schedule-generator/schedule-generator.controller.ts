@@ -662,6 +662,7 @@ export class ScheduleGeneratorController {
     @Query('filterId') filterId?: string,
   ) {
     const institutionId = req.user.institutionId;
+    console.log('[ScheduleViews] Loading views:', { institutionId, academicYearId, view, filterId });
 
     // Obtener todos los bloques de tiempo de la institución para incluir TUTORING/BREAK/LUNCH
     const allTimeBlocks = await this.prisma.timeBlock.findMany({
@@ -700,6 +701,7 @@ export class ScheduleGeneratorController {
       },
       orderBy: [{ timeBlock: { order: 'asc' } }, { dayOfWeek: 'asc' }],
     });
+    console.log(`[ScheduleViews] Found ${entries.length} schedule entries for institution ${institutionId}, year ${academicYearId}`);
 
     // Formatear cada entrada
     const formatEntry = (e: any) => ({

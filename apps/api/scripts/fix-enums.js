@@ -15,6 +15,8 @@ if (!DATABASE_URL) {
 
 const statements = [
   `ALTER TYPE "SystemModule" ADD VALUE IF NOT EXISTS 'DIAGNOSIS';`,
+  `ALTER TYPE "SystemModule" ADD VALUE IF NOT EXISTS 'TEACHER_WORKSPACE';`,
+  `ALTER TYPE "Module" ADD VALUE IF NOT EXISTS 'TEACHER_WORKSPACE';`,
 ];
 
 const tmpFile = path.join(__dirname, '_fix-enums.sql');

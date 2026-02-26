@@ -264,6 +264,8 @@ export class SuperadminService {
       'FINANCE': ['FINANCE_'],
       'TIMETABLE': ['TIMETABLE_'],
       'DIAGNOSIS': ['DIAGNOSIS_'],
+      'PAYMENTS': ['PAYMENTS_'],
+      'TEACHER_WORKSPACE': ['TEACHER_WORKSPACE_'],
     };
 
     // Eliminar módulos actuales y crear los nuevos con sus features
