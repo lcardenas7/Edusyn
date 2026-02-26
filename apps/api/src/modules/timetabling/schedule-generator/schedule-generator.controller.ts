@@ -230,9 +230,9 @@ export class ScheduleGeneratorController {
       file.buffer,
     );
 
-    // Fetch fresh teaching-load data so frontend can display it immediately
+    // Fetch fresh teaching-load data so frontend can display it immediately (only active)
     const assignments = await this.prisma.teacherAssignment.findMany({
-      where: { academicYearId, institutionId },
+      where: { academicYearId, institutionId, endDate: null },
       include: {
         teacher: { select: { id: true, firstName: true, lastName: true, email: true } },
         subject: { select: { id: true, name: true } },
@@ -811,6 +811,7 @@ export class ScheduleGeneratorController {
       where: {
         academicYearId,
         institutionId,
+        endDate: null,
         ...(shiftId ? { group: { shiftId } } : {}),
       },
       include: {
@@ -857,6 +858,26 @@ export class ScheduleGeneratorController {
   ) {
     const institutionId = await this.resolveInstitutionId(req, body.academicYearId);
     if (!institutionId) return { success: false, error: 'No se pudo resolver la institución' };
+
+    // Check if there are grades or other dependent data
+    const activeAssignments = await this.prisma.teacherAssignment.findMany({
+      where: { academicYearId: body.academicYearId, institutionId, endDate: null },
+      select: { id: true },
+    });
+    const assignmentIds = activeAssignments.map(a => a.id);
+
+    const dependentDataCount = await this.prisma.partialGrade.count({
+      where: { teacherAssignmentId: { in: assignmentIds } },
+    });
+
+    if (dependentDataCount > 0 && !body['confirmDelete']) {
+      return {
+        success: false,
+        requiresConfirmation: true,
+        dependentData: { partialGrades: dependentDataCount, assignments: assignmentIds.length },
+        message: `⚠️ Hay ${dependentDataCount} calificaciones parciales asociadas a ${assignmentIds.length} asignaciones activas. ¿Está seguro de eliminar? Esto borrará PERMANENTEMENTE las calificaciones, logros, asistencia y horarios.`,
+      };
+    }
 
     // First delete schedule entries that reference these assignments
     await this.prisma.scheduleEntry.deleteMany({
@@ -917,10 +938,11 @@ export class ScheduleGeneratorController {
       }
     }
 
-    // 4. Get all assignments and calculate unplaced
+    // 4. Get all assignments and calculate unplaced (only active)
     const allAssignments = await this.prisma.teacherAssignment.findMany({
       where: {
         academicYearId,
+        endDate: null,
         group: { campus: { institutionId }, ...(shiftId ? { shiftId } : {}) },
       },
       include: {
@@ -1306,7 +1328,7 @@ export class ScheduleGeneratorController {
     // ═══════════════════════════════════════════════════════════════════
     const groupIds = [...new Set(formattedEntries.map(e => e.groupId))];
     const allAssignments = groupIds.length > 0 ? await this.prisma.teacherAssignment.findMany({
-      where: { academicYearId, groupId: { in: groupIds } },
+      where: { academicYearId, groupId: { in: groupIds }, endDate: null },
       include: {
         teacher: { select: { id: true, firstName: true, lastName: true } },
         subject: { select: { id: true, name: true, area: { select: { id: true, name: true } } } },

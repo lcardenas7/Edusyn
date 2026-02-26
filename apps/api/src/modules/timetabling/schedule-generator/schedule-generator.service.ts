@@ -220,7 +220,7 @@ export class ScheduleGeneratorService {
 
   private async getAssignments(academicYearId: string, groupIds: string[]): Promise<Assignment[]> {
     const raw = await this.prisma.teacherAssignment.findMany({
-      where: { academicYearId, groupId: { in: groupIds } },
+      where: { academicYearId, groupId: { in: groupIds }, endDate: null },
       include: {
         teacher: { select: { id: true, firstName: true, lastName: true } },
         subject: { select: { id: true, name: true } },

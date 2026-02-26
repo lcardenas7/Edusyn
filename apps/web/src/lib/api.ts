@@ -1458,8 +1458,8 @@ export const timetablingGeneratorApi = {
     api.get('/timetabling/generator/schedule-views', { params: { academicYearId, view, ...(filterId ? { filterId } : {}), ...(shiftId ? { shiftId } : {}) } }),
   autoPlace: (academicYearId: string, shiftId?: string) =>
     api.post('/timetabling/generator/auto-place', { academicYearId, ...(shiftId ? { shiftId } : {}) }),
-  deleteTeachingLoad: (academicYearId: string) =>
-    api.post('/timetabling/generator/delete-teaching-load', { academicYearId }),
+  deleteTeachingLoad: (academicYearId: string, confirmDelete?: boolean) =>
+    api.post('/timetabling/generator/delete-teaching-load', { academicYearId, ...(confirmDelete ? { confirmDelete } : {}) }),
   checkFeasibility: (academicYearId: string, shiftId?: string) =>
     api.get('/timetabling/generator/feasibility-check', { params: { academicYearId, ...(shiftId ? { shiftId } : {}) } }),
   getScheduleConfig: (shiftId?: string) =>

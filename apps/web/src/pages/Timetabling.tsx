@@ -1712,17 +1712,28 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
 
   // Eliminar carga académica
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const handleDeleteTeachingLoad = async () => {
+  const [deleteWarning, setDeleteWarning] = useState<{ message: string; partialGrades: number; assignments: number } | null>(null)
+  const handleDeleteTeachingLoad = async (confirmDelete = false) => {
     if (!academicYearId) return
     setLoading(true)
     try {
-      const res = await timetablingGeneratorApi.deleteTeachingLoad(academicYearId)
+      const res = await timetablingGeneratorApi.deleteTeachingLoad(academicYearId, confirmDelete || undefined)
+      if (res.data.requiresConfirmation) {
+        setDeleteWarning({
+          message: res.data.message,
+          partialGrades: res.data.dependentData?.partialGrades || 0,
+          assignments: res.data.dependentData?.assignments || 0,
+        })
+        setLoading(false)
+        return
+      }
       showMessage(res.data.message || 'Carga eliminada', 'success')
       setTeachingLoad(null)
       setImportResult(null)
       setGenerateResult(null)
       setConfigSaved(false)
       setShowDeleteConfirm(false)
+      setDeleteWarning(null)
       setStep('load')
     } catch (err: any) {
       showMessage(err.response?.data?.message || 'Error al eliminar', 'error')
@@ -2041,23 +2052,52 @@ function GeneratorTab({ academicYearId, grades, showMessage, onScheduleGenerated
               </div>
               {showDeleteConfirm && (
                 <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-800 font-medium mb-2">¿Eliminar toda la carga académica?</p>
-                  <p className="text-xs text-red-600 mb-3">Se eliminarán todas las asignaciones docente-materia-grupo y las entradas de horario asociadas. Esta acción no se puede deshacer.</p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleDeleteTeachingLoad}
-                      disabled={loading}
-                      className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50"
-                    >
-                      {loading ? 'Eliminando...' : 'Sí, eliminar todo'}
-                    </button>
-                    <button
-                      onClick={() => setShowDeleteConfirm(false)}
-                      className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
+                  {deleteWarning ? (
+                    <>
+                      <p className="text-sm text-red-800 font-bold mb-2">⚠️ ADVERTENCIA: Datos en riesgo</p>
+                      <p className="text-xs text-red-700 mb-2">{deleteWarning.message}</p>
+                      <div className="bg-red-100 rounded p-2 mb-3 text-xs text-red-800">
+                        <p>• <strong>{deleteWarning.partialGrades}</strong> calificaciones parciales se perderán permanentemente</p>
+                        <p>• <strong>{deleteWarning.assignments}</strong> asignaciones activas serán eliminadas</p>
+                        <p>• Logros, asistencia, desempeños y horarios asociados también se borrarán</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDeleteTeachingLoad(true)}
+                          disabled={loading}
+                          className="px-4 py-2 bg-red-700 text-white text-sm rounded-lg hover:bg-red-800 disabled:opacity-50 font-bold"
+                        >
+                          {loading ? 'Eliminando...' : 'CONFIRMAR eliminación permanente'}
+                        </button>
+                        <button
+                          onClick={() => { setShowDeleteConfirm(false); setDeleteWarning(null) }}
+                          className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-red-800 font-medium mb-2">¿Eliminar toda la carga académica?</p>
+                      <p className="text-xs text-red-600 mb-3">Se verificará si hay calificaciones u otros datos asociados antes de proceder.</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDeleteTeachingLoad(false)}
+                          disabled={loading}
+                          className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50"
+                        >
+                          {loading ? 'Verificando...' : 'Continuar'}
+                        </button>
+                        <button
+                          onClick={() => setShowDeleteConfirm(false)}
+                          className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 

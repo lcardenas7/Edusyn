@@ -369,18 +369,11 @@ export class TimetableExcelService {
       throw new BadRequestException('No se encontró la hoja "Carga Académica" en el archivo');
     }
 
-    // ── LIMPIEZA: Borrar carga previa para reemplazarla con la nueva ──
-    this.logger.log('Eliminando carga académica previa antes de importar...');
-    await this.prisma.scheduleEntry.deleteMany({
-      where: { institutionId, academicYearId },
-    });
-    // Use institutionId directly (not nested relation) to guarantee ALL assignments are deleted
-    const prevDeleted = await this.prisma.teacherAssignment.deleteMany({
-      where: { academicYearId, institutionId },
-    });
-    if (prevDeleted.count > 0) {
-      this.logger.log(`Eliminadas ${prevDeleted.count} asignaciones previas`);
-    }
+    // ── MODO SEGURO: NO borrar asignaciones previas ──
+    // Las asignaciones existentes se preservan para proteger datos dependientes:
+    // calificaciones, logros, asistencia, desempeños, horarios, etc.
+    // Solo se actualizan/crean las asignaciones que vienen en el archivo.
+    this.logger.log('[Import] Modo merge: se preservan asignaciones existentes y sus datos dependientes.');
 
     // ── Detección dinámica de columnas por nombre de encabezado ──
     const rows: TeachingLoadRow[] = [];
@@ -919,12 +912,13 @@ export class TimetableExcelService {
       }
     }
 
-    // ── FASE 6: Crear/Actualizar TeacherAssignments ──
+    // ── FASE 6: Crear/Actualizar TeacherAssignments (modo merge seguro) ──
     let created = 0;
     let updated = 0;
     let skipped = 0;
+    let reassigned = 0;
+    const touchedAssignmentIds = new Set<string>();
 
-    // Log cache contents for debugging
     this.logger.log(`[Import P6] teacherCache entries: ${[...teacherCache.entries()].map(([k, v]) => `${k}→${v.substring(0,8)}`).join(', ')}`);
 
     for (const row of rows) {
@@ -953,38 +947,89 @@ export class TimetableExcelService {
       const groupId = groupCache.get(groupKey);
       if (!groupId) { skipped++; continue; }
 
-      this.logger.log(`[Import P6] Row ${row.rowNumber}: teacher="${row.teacherName}" key="${teacherCacheKey}" teacherId=${teacherId.substring(0,8)} subject="${row.subjectName}" group="${row.groupName}" hours=${row.weeklyHours}`);
+      this.logger.log(`[Import P6] Row ${row.rowNumber}: teacher="${row.teacherName}" teacherId=${teacherId.substring(0,8)} subject="${row.subjectName}" group="${row.groupName}" hours=${row.weeklyHours}`);
 
       try {
-        const existing = await this.prisma.teacherAssignment.findFirst({
-          where: { academicYearId, groupId, subjectId, teacherId },
+        // 1) Buscar asignación EXACTA (mismo docente + grupo + materia)
+        const exactMatch = await this.prisma.teacherAssignment.findFirst({
+          where: { academicYearId, groupId, subjectId, teacherId, endDate: null },
         });
 
-        if (existing) {
-          if (existing.weeklyHours !== row.weeklyHours) {
+        if (exactMatch) {
+          // Mismo docente, misma materia, mismo grupo → solo actualizar horas si cambiaron
+          touchedAssignmentIds.add(exactMatch.id);
+          if (exactMatch.weeklyHours !== row.weeklyHours) {
             await this.prisma.teacherAssignment.update({
-              where: { id: existing.id },
+              where: { id: exactMatch.id },
               data: { weeklyHours: row.weeklyHours },
             });
             updated++;
           } else {
             skipped++;
           }
-        } else {
-          await this.prisma.teacherAssignment.create({
-            data: { institutionId, academicYearId, groupId, subjectId, teacherId, weeklyHours: row.weeklyHours },
-          });
-          created++;
+          continue;
         }
+
+        // 2) Buscar si hay una asignación ACTIVA para el mismo grupo+materia pero CON OTRO docente
+        const otherTeacherMatch = await this.prisma.teacherAssignment.findFirst({
+          where: { academicYearId, groupId, subjectId, endDate: null, teacherId: { not: teacherId } },
+          include: { teacher: { select: { firstName: true, lastName: true } } },
+        });
+
+        if (otherTeacherMatch) {
+          // Docente cambió → soft-end la asignación anterior (preserva todos los datos)
+          const oldTeacherName = `${otherTeacherMatch.teacher.firstName || ''} ${otherTeacherMatch.teacher.lastName || ''}`.trim();
+          await this.prisma.teacherAssignment.update({
+            where: { id: otherTeacherMatch.id },
+            data: { endDate: new Date(), endReason: `Reasignado a ${row.teacherName} via importación` },
+          });
+          warnings.push(`🔄 ${row.subjectName} en ${row.groupName}: cambió de "${oldTeacherName}" → "${row.teacherName}". Las calificaciones anteriores de "${oldTeacherName}" se conservan.`);
+          reassigned++;
+        }
+
+        // 3) Buscar si el mismo docente tuvo una asignación TERMINADA para este grupo+materia (volvió)
+        const returnedMatch = await this.prisma.teacherAssignment.findFirst({
+          where: { academicYearId, groupId, subjectId, teacherId, endDate: { not: null } },
+          orderBy: { endDate: 'desc' },
+        });
+
+        if (returnedMatch) {
+          // El docente regresa → reactivar su asignación anterior (recupera sus calificaciones)
+          await this.prisma.teacherAssignment.update({
+            where: { id: returnedMatch.id },
+            data: { endDate: null, endReason: null, weeklyHours: row.weeklyHours },
+          });
+          touchedAssignmentIds.add(returnedMatch.id);
+          warnings.push(`🔙 ${row.teacherName} regresa a ${row.subjectName} en ${row.groupName}. Asignación reactivada con sus calificaciones previas.`);
+          updated++;
+          continue;
+        }
+
+        // 4) No existe → crear nueva asignación
+        const newAssignment = await this.prisma.teacherAssignment.create({
+          data: { institutionId, academicYearId, groupId, subjectId, teacherId, weeklyHours: row.weeklyHours },
+        });
+        touchedAssignmentIds.add(newAssignment.id);
+        created++;
       } catch (e: any) {
         errors.push(`Fila ${row.rowNumber}: Error al guardar asignación — ${e.message}`);
         skipped++;
       }
     }
 
-    // Agregar nota de protección de datos al final de warnings
-    warnings.push(`ℹ️ Resumen de entidades: ${entitiesCreated.teachers} docentes nuevos, ${entitiesCreated.areas} áreas nuevas, ${entitiesCreated.subjects} asignaturas nuevas, ${entitiesCreated.grades} grados nuevos, ${entitiesCreated.groups} grupos nuevos.`);
-    warnings.push(`🔒 Los docentes, áreas, asignaturas y grupos existentes NO fueron modificados ni eliminados. Solo se reemplazó la carga académica (asignaciones docente↔materia↔grupo).`);
+    // ── FASE 7: Resumen de protección de datos ──
+    const totalActive = await this.prisma.teacherAssignment.count({
+      where: { academicYearId, institutionId, endDate: null },
+    });
+    const totalEnded = await this.prisma.teacherAssignment.count({
+      where: { academicYearId, institutionId, endDate: { not: null } },
+    });
+
+    warnings.push(`ℹ️ Entidades creadas: ${entitiesCreated.teachers} docentes, ${entitiesCreated.areas} áreas, ${entitiesCreated.subjects} asignaturas, ${entitiesCreated.grades} grados, ${entitiesCreated.groups} grupos.`);
+    if (reassigned > 0) {
+      warnings.push(`� ${reassigned} asignaciones reasignadas a otro docente. Las calificaciones del docente anterior se conservan intactas.`);
+    }
+    warnings.push(`🔒 Importación segura: ${totalActive} asignaciones activas, ${totalEnded} finalizadas. Calificaciones, horarios, logros y asistencia NO fueron afectados.`);
 
     return {
       success: errors.length === 0,
