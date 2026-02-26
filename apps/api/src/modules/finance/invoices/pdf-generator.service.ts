@@ -113,18 +113,32 @@ export class PdfGeneratorService {
       qrBuffer = await this.generateQRBuffer(qrData);
     }
 
+    // ── Calculate dynamic page height based on content ──
+    const m = pc.margin;
+    const w = pc.contentWidth;
+    const hl = true;
+    const fs = 0.85;
+    const itemCount = invoice.items.length;
+    const hasResolution = !!settings?.invoiceResolution;
+    const hasBankAccounts = settings?.invoiceShowBankAccounts !== false && settings?.bankAccounts;
+    const hasDiscount = Number(invoice.discountTotal || 0) > 0;
+    const hasTax = Number(invoice.taxTotal || 0) > 0;
+    // header(55) + separator(8) + titleBar(22) + resolution?(14) + gap(4) + infoBoxes(61) + gap(6)
+    // + itemsTableHeader(20) + items(16 each) + tableBorder(6)
+    // + subtotal(14) + discount?(14) + tax?(14) + totalBox(28)
+    // + bankAccounts?(40) + footer(17) + bottomBar(4)
+    let contentH = 55 + 8 + 22 + (hasResolution ? 14 : 4) + 61 + 6
+      + 20 + (itemCount * 16) + 6
+      + 14 + (hasDiscount ? 14 : 0) + (hasTax ? 14 : 0) + 28
+      + (hasBankAccounts ? 40 : 0) + 17 + 4;
+    const pageH = m + contentH + 10;
+
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: pc.size, margins: { top: pc.margin, bottom: 0, left: pc.margin, right: pc.margin }, bufferPages: true });
+      const doc = new PDFDocument({ size: [396, pageH] as any, margins: { top: m, bottom: 0, left: m, right: m }, bufferPages: true });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
-
-      const m = pc.margin;
-      const w = pc.contentWidth;
-      const pageH = doc.page.height;
-      const hl = pc.isHalfLetter;
-      const fs = hl ? 0.85 : 1;
 
       // ── Top colored bar ──
       doc.rect(0, 0, doc.page.width, 4).fill(colors.primary);
@@ -265,29 +279,29 @@ export class PdfGeneratorService {
       }, colors, m, w);
 
       // ── Bank accounts (compact) ──
-      if (settings?.invoiceShowBankAccounts !== false && settings?.bankAccounts && doc.y < pageH - 80) {
+      if (settings?.invoiceShowBankAccounts !== false && settings?.bankAccounts) {
         this.drawBankAccounts(doc, settings.bankAccounts, colors, m, w);
       }
 
-      // ── Footer (fixed at bottom) ──
-      // Temporarily block PDFKit from adding pages when drawing near the bottom
+      // ── Footer (content-relative) ──
       const _addPage = doc.addPage.bind(doc);
       doc.addPage = () => doc as any;
 
-      const footerY = pageH - (pc.isHalfLetter ? 16 : 20);
-      doc.moveTo(m, footerY - 3).lineTo(m + w, footerY - 3).lineWidth(0.3).stroke(colors.border);
-      let invoiceFooterText = `Documento generado el ${new Date().toLocaleString('es-CO')} | Documento interno - No constituye factura electrónica`;
+      let footerY = doc.y + 4;
+      doc.moveTo(m, footerY).lineTo(m + w, footerY).lineWidth(0.3).stroke(colors.border);
+      footerY += 3;
+      let invoiceFooterText = `Documento generado el ${new Date().toLocaleString('es-CO')} | Documento interno`;
       if (settings?.billingMode === 'INTERNAL_ONLY') {
-        invoiceFooterText += ' | Para factura electrónica válida ante la DIAN, solicítela a su contador.';
+        invoiceFooterText += ' | No constituye factura electrónica';
       }
-      doc.fontSize(pc.isHalfLetter ? 4 : 5).font('Helvetica').fillColor(colors.lightText);
+      doc.fontSize(4).font('Helvetica').fillColor(colors.lightText);
       doc.text(invoiceFooterText, m, footerY, { width: w, align: 'center', lineBreak: false });
       doc.fillColor(colors.text);
+      footerY += 10;
 
       // ── Bottom colored bar ──
-      doc.rect(0, pageH - 4, doc.page.width, 4).fill(colors.primary);
+      doc.rect(0, footerY, doc.page.width, 4).fill(colors.primary);
 
-      // Restore addPage
       doc.addPage = _addPage;
 
       doc.end();
@@ -349,19 +363,24 @@ export class PdfGeneratorService {
     const discountAmount = payment.obligation ? Number(payment.obligation.discountAmount || 0) : 0;
     const paidAmount = Number(payment.amount);
 
+    // ── Calculate dynamic page height based on content ──
+    const hl = true;
+    const fs = 0.85;
+    const m = pc.margin;
+    const w = pc.contentWidth;
+    // header(55) + separator(8) + titleBar(22) + gap(6) + infoBoxes(63) + gap(8)
+    // + tableHeader(16) + dataRow(18) + tableBorder(8)
+    // + subtotal(12) + discount?(12) + totalBox(30) + signature(18) + footer(17) + bottomBar(4)
+    let contentH = 55 + 8 + 22 + 6 + 63 + 8 + 16 + 18 + 8 + 12 + 30 + 18 + 17 + 4;
+    if (discountAmount > 0) contentH += 12;
+    const pageH = m + contentH + 10; // top margin + content + small buffer
+
     return new Promise((resolve, reject) => {
-      // Use small bottom margin to prevent footer from triggering auto page breaks
-      const doc = new PDFDocument({ size: pc.size, margins: { top: pc.margin, bottom: 0, left: pc.margin, right: pc.margin }, autoFirstPage: true, bufferPages: true });
+      const doc = new PDFDocument({ size: [396, pageH] as any, margins: { top: m, bottom: 0, left: m, right: m }, autoFirstPage: true, bufferPages: true });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
-
-      const m = pc.margin;
-      const w = pc.contentWidth;
-      const pageH = doc.page.height;
-      const hl = pc.isHalfLetter;
-      const fs = hl ? 0.85 : 1;
 
       // ── Top colored bar ──
       doc.rect(0, 0, doc.page.width, 4).fill(colors.primary);
@@ -514,14 +533,6 @@ export class PdfGeneratorService {
       doc.text(this.formatCurrency(obligationAmount), cx, cy + (tblRowH - tblFontSize) / 2 - 1, { width: totalW - 6, align: 'right' });
       cy += tblRowH;
 
-      // Add empty rows to fill product area (more for letter, fewer for half-letter)
-      const emptyRows = hl ? 2 : 5;
-      for (let i = 0; i < emptyRows; i++) {
-        const bgColor = i % 2 === 0 ? '#FFFFFF' : colors.secondary;
-        doc.rect(m, cy - 1, w, tblRowH).fill(bgColor);
-        cy += tblRowH;
-      }
-
       // Bottom border of table
       doc.moveTo(m, cy).lineTo(m + w, cy).lineWidth(0.5).stroke(colors.border);
       y = cy + 8;
@@ -553,7 +564,7 @@ export class PdfGeneratorService {
       doc.text('TOTAL RECIBIDO:', totalsX, y + (totalBoxH - 10 * fs) / 2, { width: totalsLabelW, align: 'right' });
       doc.text(this.formatCurrency(paidAmount), totalsX + totalsLabelW, y + (totalBoxH - 10 * fs) / 2, { width: totalsValW, align: 'right' });
       doc.fillColor(colors.text);
-      y += totalBoxH + (hl ? 15 : 25);
+      y += totalBoxH + 10;
 
       // ── Signature line ──
       const sigLineW = hl ? 140 : 180;
@@ -562,26 +573,26 @@ export class PdfGeneratorService {
       doc.moveTo(sigX, y).lineTo(sigX + sigLineW, y).lineWidth(0.5).stroke(colors.border);
       doc.text(`Recibido por: ${payment.receivedBy.firstName} ${payment.receivedBy.lastName}`, sigX, y + 3, { width: sigLineW, align: 'center' });
       doc.fillColor(colors.text);
+      y += 18;
 
-      // ── Footer (fixed at bottom) ──
-      // Temporarily block PDFKit from adding pages when drawing near the bottom
+      // ── Footer ──
       const _addPage = doc.addPage.bind(doc);
       doc.addPage = () => doc as any;
 
-      const footerY = pageH - (hl ? 16 : 20);
-      doc.moveTo(m, footerY - 3).lineTo(m + w, footerY - 3).lineWidth(0.3).stroke(colors.border);
-      let footerText = `Documento generado el ${new Date().toLocaleString('es-CO')} | Documento interno - No constituye factura electrónica`;
+      doc.moveTo(m, y).lineTo(m + w, y).lineWidth(0.3).stroke(colors.border);
+      y += 3;
+      let footerText = `Documento generado el ${new Date().toLocaleString('es-CO')} | Documento interno`;
       if (settings?.billingMode === 'INTERNAL_ONLY') {
-        footerText += ' | Para factura electrónica válida ante la DIAN, solicítela a su contador.';
+        footerText += ' | No constituye factura electrónica';
       }
-      doc.fontSize(hl ? 4 : 5).font('Helvetica').fillColor(colors.lightText);
-      doc.text(footerText, m, footerY, { width: w, align: 'center', lineBreak: false });
+      doc.fontSize(4).font('Helvetica').fillColor(colors.lightText);
+      doc.text(footerText, m, y, { width: w, align: 'center', lineBreak: false });
       doc.fillColor(colors.text);
+      y += 10;
 
       // ── Bottom colored bar ──
-      doc.rect(0, pageH - 4, doc.page.width, 4).fill(colors.primary);
+      doc.rect(0, y, doc.page.width, 4).fill(colors.primary);
 
-      // Restore addPage
       doc.addPage = _addPage;
 
       doc.end();

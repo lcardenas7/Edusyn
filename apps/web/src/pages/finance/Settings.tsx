@@ -156,6 +156,8 @@ export default function FinanceSettings() {
 
   useEffect(() => { fetchSettings() }, [])
 
+  const toggleSection = useCallback((key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] })), [])
+
   const logoInputRef = useRef<HTMLInputElement>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string>('')
@@ -300,8 +302,6 @@ export default function FinanceSettings() {
       </div>
     )
   }
-
-  const toggleSection = useCallback((key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] })), [])
 
   if (!settings) return null
 
