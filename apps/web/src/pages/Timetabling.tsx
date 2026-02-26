@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import {
   timetablingTimeBlocksApi,
@@ -2688,7 +2688,11 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
   const [provisionalNotes, setProvisionalNotes] = useState('')
 
   const loadView = async (mode?: string) => {
-    if (!academicYearId) return
+    if (!academicYearId) {
+      console.warn('[ScheduleViewer] No academicYearId, skipping loadView')
+      return
+    }
+    console.log('[ScheduleViewer] loadView called:', { academicYearId, mode: mode || viewMode, isActive })
     setLoading(true)
     try {
       // Para 'by-day' usamos los datos de 'by-grade' y filtramos en el frontend
@@ -2698,20 +2702,33 @@ function ScheduleViewerTab({ academicYearId, isManager, user, userCaps, isActive
         backendView as any,
         selectedFilter || undefined,
       )
+      console.log('[ScheduleViewer] API response:', { totalEntries: res.data?.totalEntries, view: res.data?.view, hasGrades: !!res.data?.grades?.length })
       setViewData(res.data)
     } catch (err: any) {
-      console.error('Error loading view:', err)
+      console.error('[ScheduleViewer] Error loading view:', err)
     } finally {
       setLoading(false)
     }
   }
 
-  // Reload data when tab becomes active (e.g. after generating schedule)
+  // Track activation count to force reload when tab becomes visible
+  const activationRef = useRef(0)
+  useEffect(() => {
+    if (isActive) {
+      activationRef.current++
+      console.log('[ScheduleViewer] Tab became active, activation #', activationRef.current, { academicYearId, viewMode })
+      if (academicYearId) {
+        loadView()
+      }
+    }
+  }, [isActive])
+
+  // Reload when viewMode changes (only if active)
   useEffect(() => {
     if (isActive && academicYearId) {
       loadView()
     }
-  }, [isActive, academicYearId, viewMode])
+  }, [viewMode, academicYearId])
 
   const handleViewChange = (mode: string) => {
     setViewMode(mode as any)

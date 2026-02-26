@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Body, UseGuards, Request } from '@nestjs/common'
+import { Controller, Get, Put, Body, UseGuards, Request, BadRequestException } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import type { ProfileDto, AreaConfigDto, GradingConfigDto, AcademicLevelConfig, PeriodConfig } from './institution-config.service'
 import { InstitutionConfigService } from './institution-config.service'
@@ -40,7 +40,8 @@ export class InstitutionConfigController {
       return teacherAssignment.academicYear.institutionId
     }
 
-    throw new Error('Usuario no asociado a ninguna institución')
+    // SuperAdmin u otros usuarios sin institución → retornar null-safe
+    throw new BadRequestException('Este usuario no está asociado a ninguna institución. Si es SuperAdmin, seleccione una institución primero.')
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
