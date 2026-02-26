@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Settings as SettingsIcon, Save, RefreshCw, Plus, Trash2, Upload, Image, ChevronDown, ChevronRight, FileText, Building2, Palette, CreditCard, Bell, Shield } from 'lucide-react'
 import { financeSettingsApi, storageApi } from '../../lib/api'
@@ -59,6 +59,39 @@ interface FinancialSettingsData {
   electronicProviderUrl: string | null
 }
 
+// ── Extracted outside FinanceSettings to prevent re-creation on every render ──
+const SectionCard = ({ id, icon: Icon, title, subtitle, children, openSections, toggleSection }: {
+  id: string; icon: any; title: string; subtitle: string; children: React.ReactNode;
+  openSections: Record<string, boolean>; toggleSection: (key: string) => void;
+}) => (
+  <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <button onClick={() => toggleSection(id)} className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-blue-50 rounded-lg"><Icon className="w-5 h-5 text-blue-600" /></div>
+        <div className="text-left">
+          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+          <p className="text-xs text-gray-500">{subtitle}</p>
+        </div>
+      </div>
+      {openSections[id] ? <ChevronDown className="w-5 h-5 text-gray-400" /> : <ChevronRight className="w-5 h-5 text-gray-400" />}
+    </button>
+    {openSections[id] && <div className="px-6 pb-6 border-t border-gray-100 pt-4">{children}</div>}
+  </div>
+)
+
+const Toggle = ({ value, onChange, label, description }: { value: boolean; onChange: (v: boolean) => void; label: string; description?: string }) => (
+  <div className="flex items-center justify-between">
+    <div>
+      <p className="text-sm font-medium text-gray-700">{label}</p>
+      {description && <p className="text-xs text-gray-500">{description}</p>}
+    </div>
+    <button onClick={() => onChange(!value)}
+      className={`relative w-11 h-6 rounded-full transition-colors ${value ? 'bg-blue-500' : 'bg-gray-300'}`}>
+      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${value ? 'translate-x-5' : ''}`} />
+    </button>
+  </div>
+)
+
 export default function FinanceSettings() {
   const { institution } = useAuth()
   const [settings, setSettings] = useState<FinancialSettingsData | null>(null)
@@ -95,7 +128,7 @@ export default function FinanceSettings() {
         invoiceRangeFrom: data.invoiceRangeFrom ?? null,
         invoiceRangeTo: data.invoiceRangeTo ?? null,
         invoiceLogoUrl: data.invoiceLogoUrl || null,
-        invoicePageSize: data.invoicePageSize || 'LETTER',
+        invoicePageSize: 'HALF_LETTER',
         invoicePrimaryColor: data.invoicePrimaryColor || '#1E40AF',
         invoiceSecondaryColor: data.invoiceSecondaryColor || '#F0F9FF',
         invoiceFooterText: data.invoiceFooterText || null,
@@ -268,41 +301,13 @@ export default function FinanceSettings() {
     )
   }
 
-  const toggleSection = (key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
+  const toggleSection = useCallback((key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] })), [])
 
   if (!settings) return null
 
   const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm'
   const labelCls = 'block text-sm font-medium text-gray-700 mb-1'
 
-  const SectionCard = ({ id, icon: Icon, title, subtitle, children }: { id: string; icon: any; title: string; subtitle: string; children: React.ReactNode }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <button onClick={() => toggleSection(id)} className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-50 rounded-lg"><Icon className="w-5 h-5 text-blue-600" /></div>
-          <div className="text-left">
-            <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-            <p className="text-xs text-gray-500">{subtitle}</p>
-          </div>
-        </div>
-        {openSections[id] ? <ChevronDown className="w-5 h-5 text-gray-400" /> : <ChevronRight className="w-5 h-5 text-gray-400" />}
-      </button>
-      {openSections[id] && <div className="px-6 pb-6 border-t border-gray-100 pt-4">{children}</div>}
-    </div>
-  )
-
-  const Toggle = ({ value, onChange, label, description }: { value: boolean; onChange: (v: boolean) => void; label: string; description?: string }) => (
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium text-gray-700">{label}</p>
-        {description && <p className="text-xs text-gray-500">{description}</p>}
-      </div>
-      <button onClick={() => onChange(!value)}
-        className={`relative w-11 h-6 rounded-full transition-colors ${value ? 'bg-blue-500' : 'bg-gray-300'}`}>
-        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${value ? 'translate-x-5' : ''}`} />
-      </button>
-    </div>
-  )
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -339,7 +344,7 @@ export default function FinanceSettings() {
         <div className="space-y-4">
 
           {/* ═══ MODO DE FACTURACIÓN ═══ */}
-          <SectionCard id="billing" icon={FileText} title="Modo de Facturaci&oacute;n" subtitle="Tipo de documento y numeraci&oacute;n">
+          <SectionCard id="billing" icon={FileText} title="Modo de Facturaci&oacute;n" subtitle="Tipo de documento y numeraci&oacute;n" openSections={openSections} toggleSection={toggleSection}>
             {/* Billing Mode */}
             <div className="mb-5">
               <label className={labelCls}>Modo de facturaci&oacute;n</label>
@@ -403,7 +408,7 @@ export default function FinanceSettings() {
           </SectionCard>
 
           {/* ═══ DATOS FISCALES / DIAN ═══ */}
-          <SectionCard id="fiscal" icon={Building2} title="Datos Fiscales e Institucionales" subtitle="NIT, raz&oacute;n social, r&eacute;gimen tributario y contacto">
+          <SectionCard id="fiscal" icon={Building2} title="Datos Fiscales e Institucionales" subtitle="NIT, raz&oacute;n social, r&eacute;gimen tributario y contacto" openSections={openSections} toggleSection={toggleSection}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label className={labelCls}>Raz&oacute;n Social</label>
@@ -457,7 +462,7 @@ export default function FinanceSettings() {
           </SectionCard>
 
           {/* ═══ APARIENCIA DEL DOCUMENTO ═══ */}
-          <SectionCard id="visual" icon={Palette} title="Apariencia del Documento" subtitle="Logo, colores, tama&ntilde;o de p&aacute;gina y opciones visuales">
+          <SectionCard id="visual" icon={Palette} title="Apariencia del Documento" subtitle="Logo, colores y opciones visuales" openSections={openSections} toggleSection={toggleSection}>
             {/* Logo */}
             <div className="mb-5">
               <label className="block text-sm font-medium text-gray-700 mb-2">Logo / Escudo Institucional</label>
@@ -495,24 +500,6 @@ export default function FinanceSettings() {
               </div>
             </div>
 
-            {/* Tamaño de página */}
-            <div className="mb-5">
-              <label className={labelCls}>Tama&ntilde;o de P&aacute;gina</label>
-              <div className="flex gap-3 mt-1">
-                <label className={`flex-1 p-3 border-2 rounded-lg cursor-pointer text-center transition-all ${settings.invoicePageSize === 'LETTER' ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200' : 'border-gray-200 hover:border-gray-300'}`}>
-                  <input type="radio" name="pageSize" value="LETTER" checked={settings.invoicePageSize === 'LETTER'}
-                    onChange={() => setSettings({ ...settings, invoicePageSize: 'LETTER' })} className="sr-only" />
-                  <p className="font-semibold text-gray-900 text-sm">Carta</p>
-                  <p className="text-xs text-gray-500">8.5&quot; &times; 11&quot;</p>
-                </label>
-                <label className={`flex-1 p-3 border-2 rounded-lg cursor-pointer text-center transition-all ${settings.invoicePageSize === 'HALF_LETTER' ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200' : 'border-gray-200 hover:border-gray-300'}`}>
-                  <input type="radio" name="pageSize" value="HALF_LETTER" checked={settings.invoicePageSize === 'HALF_LETTER'}
-                    onChange={() => setSettings({ ...settings, invoicePageSize: 'HALF_LETTER' })} className="sr-only" />
-                  <p className="font-semibold text-gray-900 text-sm">Media Carta</p>
-                  <p className="text-xs text-gray-500">5.5&quot; &times; 8.5&quot;</p>
-                </label>
-              </div>
-            </div>
 
             {/* Colores */}
             <div className="mb-5">
@@ -561,7 +548,7 @@ export default function FinanceSettings() {
           </SectionCard>
 
           {/* ═══ RESOLUCIÓN DIAN ═══ */}
-          <SectionCard id="resolution" icon={Shield} title="Resoluci&oacute;n de Facturaci&oacute;n (DIAN)" subtitle="Datos de autorizaci&oacute;n para facturaci&oacute;n. Solo si aplica.">
+          <SectionCard id="resolution" icon={Shield} title="Resoluci&oacute;n de Facturaci&oacute;n (DIAN)" subtitle="Datos de autorizaci&oacute;n para facturaci&oacute;n. Solo si aplica." openSections={openSections} toggleSection={toggleSection}>
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-xs mb-4">
               Estos datos son opcionales. Solo dil&iacute;gencielos si su instituci&oacute;n cuenta con resoluci&oacute;n de facturaci&oacute;n de la DIAN.
             </div>
@@ -591,7 +578,7 @@ export default function FinanceSettings() {
           </SectionCard>
 
           {/* ═══ CUENTAS BANCARIAS ═══ */}
-          <SectionCard id="bank" icon={CreditCard} title="Cuentas Bancarias" subtitle="Cuentas para recibir pagos. Se muestran en documentos.">
+          <SectionCard id="bank" icon={CreditCard} title="Cuentas Bancarias" subtitle="Cuentas para recibir pagos. Se muestran en documentos." openSections={openSections} toggleSection={toggleSection}>
             <div className="flex justify-end mb-3">
               <button onClick={addBankAccount} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1 text-sm font-medium">
                 <Plus className="w-4 h-4" /> Agregar Cuenta
@@ -623,7 +610,7 @@ export default function FinanceSettings() {
           </SectionCard>
 
           {/* ═══ DELEGACIÓN DE RECAUDO ═══ */}
-          <SectionCard id="collection" icon={Shield} title="Delegación de Recaudo" subtitle="Permitir que docentes registren pagos">
+          <SectionCard id="collection" icon={Shield} title="Delegaci&oacute;n de Recaudo" subtitle="Permitir que docentes registren pagos" openSections={openSections} toggleSection={toggleSection}>
             <Toggle value={settings.allowTeacherCollection} onChange={v => setSettings({ ...settings, allowTeacherCollection: v })}
               label="Habilitar recaudo por docentes" description="Permite a los docentes registrar pagos en nombre de la institución. El coordinador podrá ver un reporte de recaudo por usuario." />
             {settings.allowTeacherCollection && (
@@ -634,7 +621,7 @@ export default function FinanceSettings() {
           </SectionCard>
 
           {/* ═══ NOTIFICACIONES ═══ */}
-          <SectionCard id="notifications" icon={Bell} title="Notificaciones" subtitle="Recordatorios autom&aacute;ticos de pago">
+          <SectionCard id="notifications" icon={Bell} title="Notificaciones" subtitle="Recordatorios autom&aacute;ticos de pago" openSections={openSections} toggleSection={toggleSection}>
             <Toggle value={settings.sendPaymentReminders} onChange={v => setSettings({ ...settings, sendPaymentReminders: v })}
               label="Recordatorios de pago" description="Enviar recordatorio antes del vencimiento" />
             {settings.sendPaymentReminders && (
@@ -648,7 +635,7 @@ export default function FinanceSettings() {
 
           {/* ═══ PROVEEDOR ELECTRÓNICO (FUTURO) ═══ */}
           {settings.billingMode === 'EXTERNAL_ELECTRONIC_PROVIDER' && (
-            <SectionCard id="electronic" icon={Shield} title="Proveedor Electr&oacute;nico" subtitle="Configuraci&oacute;n de integraci&oacute;n con proveedor de facturaci&oacute;n electr&oacute;nica">
+            <SectionCard id="electronic" icon={Shield} title="Proveedor Electr&oacute;nico" subtitle="Configuraci&oacute;n de integraci&oacute;n con proveedor de facturaci&oacute;n electr&oacute;nica" openSections={openSections} toggleSection={toggleSection}>
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-xs mb-4">
                 Esta funcionalidad estar&aacute; disponible pr&oacute;ximamente. Por ahora puede registrar los datos de su proveedor.
               </div>

@@ -3874,7 +3874,7 @@ model FinancialSettings {
   
   // Configuración visual del documento
   invoiceLogoUrl        String?   // URL del logo/escudo institucional
-  invoicePageSize       String    @default("LETTER") // LETTER | HALF_LETTER
+  invoicePageSize       String    @default("HALF_LETTER") // Media carta (5.5" x 8.5")
   invoicePrimaryColor   String?   @default("#1E40AF") // Color primario bordes/encabezados
   invoiceSecondaryColor String?   @default("#F0F9FF") // Color secundario fondo
   invoiceFooterText     String?   @db.Text // Texto legal pie de página

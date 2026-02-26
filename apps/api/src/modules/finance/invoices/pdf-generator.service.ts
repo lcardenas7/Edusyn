@@ -46,13 +46,12 @@ export class PdfGeneratorService {
     }
   }
 
-  private getPageConfig(settings: any): PageConfig {
-    const isHalfLetter = settings?.invoicePageSize === 'HALF_LETTER';
+  private getPageConfig(_settings: any): PageConfig {
     return {
-      size: isHalfLetter ? [396, 612] as any : 'LETTER',
-      margin: isHalfLetter ? 28 : 40,
-      contentWidth: isHalfLetter ? 340 : 532,
-      isHalfLetter,
+      size: [396, 612] as any,
+      margin: 28,
+      contentWidth: 340,
+      isHalfLetter: true,
     };
   }
 
