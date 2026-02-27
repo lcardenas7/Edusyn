@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { teacherWorkspaceApi, teacherAssignmentsApi, groupsApi } from '../lib/api'
+import { teacherWorkspaceApi } from '../lib/api'
 import {
   Plus, Trash2, X, GripVertical, MoreHorizontal,
   LayoutGrid, BookOpen, Archive, ChevronDown,
-  Pencil, Check, Clock, AlertCircle, Loader2
+  Pencil, Check, Clock, AlertCircle, Loader2,
+  DollarSign, Users, Target, Percent
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -42,6 +43,7 @@ interface WorkspaceBoard {
   description: string | null
   color: string | null
   groupId: string | null
+  metadata: any
   isArchived: boolean
   group?: { id: string; name: string; grade?: { name: string } } | null
   columns?: WorkspaceColumn[]
@@ -82,11 +84,18 @@ export default function TeacherWorkspace() {
 
   // Create board modal
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [createForm, setCreateForm] = useState({ type: 'KANBAN', title: '', description: '', groupId: '' })
+  const [createForm, setCreateForm] = useState<{
+    type: string; title: string; description: string;
+    scopeType: string; groupId: string; gradeId: string; groupIds: string[];
+    goalAmount: string; concept: string; allowPartial: boolean; roles: string[];
+  }>({ type: 'KANBAN', title: '', description: '', scopeType: 'GROUP', groupId: '', gradeId: '', groupIds: [], goalAmount: '', concept: '', allowPartial: false, roles: ['Monitor', 'Líder', 'Secretario', 'Tesorero', 'Vigía ambiental'] })
   const [creating, setCreating] = useState(false)
 
-  // Groups for board assignment
-  const [groups, setGroups] = useState<Array<{ id: string; name: string; gradeName?: string }>>([])
+  // Scope options from teacher assignments
+  const [scopeOptions, setScopeOptions] = useState<{ groups: any[]; grades: any[] }>({ groups: [], grades: [] })
+
+  // Board summary (for structured boards)
+  const [boardSummary, setBoardSummary] = useState<any>(null)
 
   // Inline editing
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
@@ -129,54 +138,84 @@ export default function TeacherWorkspace() {
     }
   }, [])
 
-  // ─── Load groups (from assignments for teachers, from groupsApi for admins) ───
-  const loadGroups = useCallback(async () => {
+  // ─── Load scope options (grades & groups from teacher's assignments) ───
+  const loadScopeOptions = useCallback(async () => {
     try {
-      // Try teacher assignments first
-      const res = await teacherAssignmentsApi.getAll({ teacherId: user?.id })
-      const data = res.data || []
-      const unique = new Map<string, { id: string; name: string; gradeName?: string }>()
-      data.forEach((a: any) => {
-        if (a.group && !unique.has(a.group.id)) {
-          unique.set(a.group.id, { id: a.group.id, name: a.group.name, gradeName: a.group.grade?.name })
-        }
-      })
-      if (unique.size > 0) {
-        setGroups(Array.from(unique.values()))
-        return
-      }
-      // Fallback for admin/rector: load all institution groups
-      const groupsRes = await groupsApi.getAll({})
-      const allGroups = (groupsRes.data || []).map((g: any) => ({
-        id: g.id,
-        name: g.name,
-        gradeName: g.grade?.name || '',
-      }))
-      setGroups(allGroups)
+      const res = await teacherWorkspaceApi.getScopeOptions()
+      setScopeOptions(res.data || { groups: [], grades: [] })
     } catch (err) {
-      console.error('Error loading groups:', err)
+      console.error('Error loading scope options:', err)
     }
-  }, [user?.id])
+  }, [])
+
+  // ─── Load board summary ───
+  const loadBoardSummary = useCallback(async (boardId: string) => {
+    try {
+      const res = await teacherWorkspaceApi.getBoardSummary(boardId)
+      setBoardSummary(res.data)
+    } catch { setBoardSummary(null) }
+  }, [])
 
   useEffect(() => {
     loadBoards()
-    loadGroups()
-  }, [loadBoards, loadGroups])
+    loadScopeOptions()
+  }, [loadBoards, loadScopeOptions])
+
+  // Load summary when active board changes
+  useEffect(() => {
+    if (activeBoard && ['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(activeBoard.type)) {
+      loadBoardSummary(activeBoard.id)
+    } else {
+      setBoardSummary(null)
+    }
+  }, [activeBoard?.id])
+
+  const defaultCreateForm = { type: 'KANBAN', title: '', description: '', scopeType: 'GROUP', groupId: '', gradeId: '', groupIds: [] as string[], goalAmount: '', concept: '', allowPartial: false, roles: ['Monitor', 'Líder', 'Secretario', 'Tesorero', 'Vigía ambiental'] }
 
   // ─── Create board ───
   const handleCreateBoard = async () => {
     if (!createForm.title.trim()) return
     setCreating(true)
     try {
-      await teacherWorkspaceApi.createBoard({
+      const isStructured = ['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(createForm.type)
+
+      // Build metadata based on board type
+      let metadata: any = undefined
+      if (createForm.type === 'MICRO_COLLECT') {
+        metadata = {
+          goalAmount: Number(createForm.goalAmount) || 0,
+          concept: createForm.concept || createForm.title,
+          allowPartial: createForm.allowPartial,
+        }
+      } else if (createForm.type === 'CLASSROOM_ROLES') {
+        metadata = { roles: createForm.roles.filter(r => r.trim()) }
+      }
+
+      const res = await teacherWorkspaceApi.createBoard({
         type: createForm.type,
         title: createForm.title.trim(),
         description: createForm.description.trim() || undefined,
+        scopeType: isStructured ? createForm.scopeType : undefined,
         groupId: createForm.groupId || undefined,
+        gradeId: createForm.scopeType === 'GRADE' ? createForm.gradeId || undefined : undefined,
+        groupIds: createForm.scopeType === 'MULTI_GROUP' ? createForm.groupIds : undefined,
+        metadata,
       })
+
+      // Auto-populate structured boards
+      if (isStructured && res.data?.id) {
+        try {
+          await teacherWorkspaceApi.populateBoard(res.data.id)
+        } catch (e) {
+          console.warn('Auto-populate failed:', e)
+        }
+      }
+
       setShowCreateModal(false)
-      setCreateForm({ type: 'KANBAN', title: '', description: '', groupId: '' })
+      setCreateForm(defaultCreateForm)
       await loadBoards()
+      // Auto-select the new board
+      if (res.data?.id) loadBoard(res.data.id)
     } catch (err: any) {
       setError('Error al crear tablero')
     } finally {
@@ -510,7 +549,174 @@ export default function TeacherWorkspace() {
                 </button>
               </div>
 
-              {/* Columns */}
+              {/* ═══════ MICRO_COLLECT View ═══════ */}
+              {activeBoard.type === 'MICRO_COLLECT' ? (
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {/* Summary bar */}
+                  {boardSummary && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="bg-white rounded-xl border border-slate-200 p-3">
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mb-1"><Target className="w-3.5 h-3.5" /> Meta</div>
+                        <p className="text-lg font-bold text-slate-900">${(boardSummary.goalAmount || 0).toLocaleString()}</p>
+                      </div>
+                      <div className="bg-white rounded-xl border border-slate-200 p-3">
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mb-1"><DollarSign className="w-3.5 h-3.5" /> Recaudado</div>
+                        <p className="text-lg font-bold text-green-600">${(boardSummary.totalCollected || 0).toLocaleString()}</p>
+                      </div>
+                      <div className="bg-white rounded-xl border border-slate-200 p-3">
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mb-1"><Percent className="w-3.5 h-3.5" /> Progreso</div>
+                        <p className="text-lg font-bold text-blue-600">{boardSummary.percentage || 0}%</p>
+                        <div className="mt-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${Math.min(boardSummary.percentage || 0, 100)}%` }} />
+                        </div>
+                      </div>
+                      <div className="bg-white rounded-xl border border-slate-200 p-3">
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mb-1"><Users className="w-3.5 h-3.5" /> Estado</div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-green-600 font-medium">{boardSummary.paidCount || 0}✓</span>
+                          <span className="text-amber-500 font-medium">{boardSummary.partialCount || 0}~</span>
+                          <span className="text-red-500 font-medium">{boardSummary.pendingCount || 0}✗</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Student payment table */}
+                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                          <th className="text-left px-4 py-2.5 font-medium text-slate-600">#</th>
+                          <th className="text-left px-4 py-2.5 font-medium text-slate-600">Estudiante</th>
+                          <th className="text-left px-4 py-2.5 font-medium text-slate-600">Monto</th>
+                          <th className="text-left px-4 py-2.5 font-medium text-slate-600">Estado</th>
+                          <th className="text-right px-4 py-2.5 font-medium text-slate-600">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(activeBoard.columns?.[0]?.items || activeBoard.items || []).map((item: WorkspaceItem, idx: number) => {
+                          const meta = (item.metadata || {}) as any
+                          const payStatus = meta.status || 'PENDING'
+                          const amountPaid = Number(meta.amountPaid) || 0
+                          return (
+                            <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="px-4 py-2 text-slate-400">{idx + 1}</td>
+                              <td className="px-4 py-2 font-medium text-slate-800">{item.title}</td>
+                              <td className="px-4 py-2">
+                                <input type="number" value={amountPaid} min={0}
+                                  onChange={async (e) => {
+                                    const val = Number(e.target.value) || 0
+                                    const goalPer = (activeBoard.metadata as any)?.goalAmount ? Number((activeBoard.metadata as any).goalAmount) / (activeBoard.columns?.[0]?.items?.length || 1) : 0
+                                    const newStatus = val <= 0 ? 'PENDING' : (goalPer > 0 && val >= goalPer ? 'PAID' : 'PARTIAL')
+                                    await teacherWorkspaceApi.updateItem(item.id, { metadata: { ...meta, amountPaid: val, status: newStatus } })
+                                    loadBoard(activeBoard.id)
+                                    loadBoardSummary(activeBoard.id)
+                                  }}
+                                  className="w-24 px-2 py-1 border border-slate-300 rounded text-sm focus:ring-1 focus:ring-blue-400 outline-none" />
+                              </td>
+                              <td className="px-4 py-2">
+                                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  payStatus === 'PAID' ? 'bg-green-100 text-green-700' :
+                                  payStatus === 'PARTIAL' ? 'bg-amber-100 text-amber-700' :
+                                  'bg-red-100 text-red-700'
+                                }`}>
+                                  {payStatus === 'PAID' ? 'Pagado' : payStatus === 'PARTIAL' ? 'Parcial' : 'Pendiente'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                <button onClick={async () => {
+                                  const goalPer = (activeBoard.metadata as any)?.goalAmount ? Number((activeBoard.metadata as any).goalAmount) / (activeBoard.columns?.[0]?.items?.length || 1) : 0
+                                  await teacherWorkspaceApi.updateItem(item.id, { metadata: { ...meta, amountPaid: goalPer || amountPaid, status: 'PAID' } })
+                                  loadBoard(activeBoard.id)
+                                  loadBoardSummary(activeBoard.id)
+                                }}
+                                  className="px-2 py-1 text-xs bg-green-50 text-green-700 rounded hover:bg-green-100 mr-1"
+                                  disabled={payStatus === 'PAID'}>
+                                  <Check className="w-3 h-3 inline mr-0.5" /> Pagado
+                                </button>
+                                <button onClick={async () => {
+                                  await teacherWorkspaceApi.updateItem(item.id, { metadata: { ...meta, amountPaid: 0, status: 'PENDING' } })
+                                  loadBoard(activeBoard.id)
+                                  loadBoardSummary(activeBoard.id)
+                                }}
+                                  className="px-2 py-1 text-xs bg-slate-50 text-slate-600 rounded hover:bg-slate-100">
+                                  ↩ Deshacer
+                                </button>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              /* ═══════ CLASSROOM_ROLES View ═══════ */
+              ) : activeBoard.type === 'CLASSROOM_ROLES' ? (
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {/* Summary bar */}
+                  {boardSummary && (
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-white rounded-xl border border-slate-200 p-3">
+                        <div className="text-xs text-slate-500 mb-1">Total estudiantes</div>
+                        <p className="text-lg font-bold text-slate-900">{boardSummary.totalStudents || 0}</p>
+                      </div>
+                      <div className="bg-white rounded-xl border border-slate-200 p-3">
+                        <div className="text-xs text-slate-500 mb-1">Con rol asignado</div>
+                        <p className="text-lg font-bold text-green-600">{boardSummary.assignedCount || 0}</p>
+                      </div>
+                      <div className="bg-white rounded-xl border border-slate-200 p-3">
+                        <div className="text-xs text-slate-500 mb-1">Sin asignar</div>
+                        <p className="text-lg font-bold text-amber-500">{boardSummary.unassignedCount || 0}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Student roles table */}
+                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                          <th className="text-left px-4 py-2.5 font-medium text-slate-600">#</th>
+                          <th className="text-left px-4 py-2.5 font-medium text-slate-600">Estudiante</th>
+                          <th className="text-left px-4 py-2.5 font-medium text-slate-600">Rol asignado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(activeBoard.columns?.[0]?.items || activeBoard.items || []).map((item: WorkspaceItem, idx: number) => {
+                          const meta = (item.metadata || {}) as any
+                          const boardMeta = (activeBoard.metadata as any) || {}
+                          const availableRoles: string[] = boardMeta.roles || []
+                          return (
+                            <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="px-4 py-2 text-slate-400">{idx + 1}</td>
+                              <td className="px-4 py-2 font-medium text-slate-800">{item.title}</td>
+                              <td className="px-4 py-2">
+                                <select value={meta.role || ''}
+                                  onChange={async (e) => {
+                                    await teacherWorkspaceApi.updateItem(item.id, { metadata: { ...meta, role: e.target.value } })
+                                    loadBoard(activeBoard.id)
+                                    loadBoardSummary(activeBoard.id)
+                                  }}
+                                  className={`px-2 py-1 border rounded text-sm focus:ring-1 focus:ring-blue-400 outline-none ${
+                                    meta.role ? 'border-green-300 bg-green-50' : 'border-slate-300'
+                                  }`}>
+                                  <option value="">Sin rol</option>
+                                  {availableRoles.map((r: string) => (
+                                    <option key={r} value={r}>{r}</option>
+                                  ))}
+                                </select>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              /* ═══════ Generic Kanban View ═══════ */
+              ) : (
               <div className="flex-1 flex gap-4 p-4 overflow-x-auto">
                 {activeBoard.columns?.map(column => (
                   <div
@@ -681,6 +887,7 @@ export default function TeacherWorkspace() {
                   </button>
                 </div>
               </div>
+              )}
             </div>
           )}
         </div>
@@ -742,20 +949,128 @@ export default function TeacherWorkspace() {
                 />
               </div>
 
-              {/* Group */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Grupo (opcional)</label>
-                <select
-                  value={createForm.groupId}
-                  onChange={(e) => setCreateForm(f => ({ ...f, groupId: e.target.value }))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                >
-                  <option value="">Sin grupo específico</option>
-                  {groups.map(g => (
-                    <option key={g.id} value={g.id}>{g.gradeName} {g.name}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Scope selector for structured boards */}
+              {['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(createForm.type) ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Alcance</label>
+                    <div className="flex gap-2">
+                      {[{ v: 'GROUP', l: 'Grupo' }, { v: 'GRADE', l: 'Grado' }, { v: 'MULTI_GROUP', l: 'Varios grupos' }].map(o => (
+                        <button key={o.v} onClick={() => setCreateForm(f => ({ ...f, scopeType: o.v, groupId: '', gradeId: '', groupIds: [] }))}
+                          className={`flex-1 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${createForm.scopeType === o.v ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}>
+                          {o.l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {createForm.scopeType === 'GROUP' && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Grupo</label>
+                      <select value={createForm.groupId} onChange={(e) => setCreateForm(f => ({ ...f, groupId: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+                        <option value="">Seleccionar grupo...</option>
+                        {scopeOptions.groups.map((g: any) => (
+                          <option key={g.id} value={g.id}>{g.gradeName} {g.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {createForm.scopeType === 'GRADE' && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Grado</label>
+                      <select value={createForm.gradeId} onChange={(e) => setCreateForm(f => ({ ...f, gradeId: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+                        <option value="">Seleccionar grado...</option>
+                        {scopeOptions.grades.map((g: any) => (
+                          <option key={g.id} value={g.id}>{g.name} ({g.groups?.length || 0} grupos)</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {createForm.scopeType === 'MULTI_GROUP' && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Grupos ({createForm.groupIds.length} seleccionados)</label>
+                      <div className="max-h-32 overflow-y-auto border border-slate-300 rounded-lg p-2 space-y-1">
+                        {scopeOptions.groups.map((g: any) => (
+                          <label key={g.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 px-1 rounded">
+                            <input type="checkbox" checked={createForm.groupIds.includes(g.id)}
+                              onChange={(e) => setCreateForm(f => ({
+                                ...f,
+                                groupIds: e.target.checked ? [...f.groupIds, g.id] : f.groupIds.filter(id => id !== g.id)
+                              }))}
+                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                            <span>{g.gradeName} {g.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* MICRO_COLLECT specific fields */}
+                  {createForm.type === 'MICRO_COLLECT' && (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Meta ($)</label>
+                          <input type="number" value={createForm.goalAmount}
+                            onChange={(e) => setCreateForm(f => ({ ...f, goalAmount: e.target.value }))}
+                            placeholder="0" min="0"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Concepto</label>
+                          <input value={createForm.concept}
+                            onChange={(e) => setCreateForm(f => ({ ...f, concept: e.target.value }))}
+                            placeholder="Ej: Libros, Salida..."
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" />
+                        </div>
+                      </div>
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" checked={createForm.allowPartial}
+                          onChange={(e) => setCreateForm(f => ({ ...f, allowPartial: e.target.checked }))}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                        <span className="text-slate-700">Permitir pagos parciales</span>
+                      </label>
+                    </>
+                  )}
+
+                  {/* CLASSROOM_ROLES specific fields */}
+                  {createForm.type === 'CLASSROOM_ROLES' && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Roles disponibles</label>
+                      <div className="space-y-1.5">
+                        {createForm.roles.map((role, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <input value={role}
+                              onChange={(e) => setCreateForm(f => {
+                                const roles = [...f.roles]
+                                roles[idx] = e.target.value
+                                return { ...f, roles }
+                              })}
+                              className="flex-1 px-2 py-1 border border-slate-300 rounded text-sm focus:ring-1 focus:ring-blue-400 outline-none" />
+                            <button onClick={() => setCreateForm(f => ({ ...f, roles: f.roles.filter((_, i) => i !== idx) }))}
+                              className="p-1 text-red-400 hover:text-red-600"><X className="w-3.5 h-3.5" /></button>
+                          </div>
+                        ))}
+                        <button onClick={() => setCreateForm(f => ({ ...f, roles: [...f.roles, ''] }))}
+                          className="text-xs text-blue-600 hover:underline">+ Agregar rol</button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Grupo (opcional)</label>
+                  <select value={createForm.groupId}
+                    onChange={(e) => setCreateForm(f => ({ ...f, groupId: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+                    <option value="">Sin grupo específico</option>
+                    {scopeOptions.groups.map((g: any) => (
+                      <option key={g.id} value={g.id}>{g.gradeName} {g.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
