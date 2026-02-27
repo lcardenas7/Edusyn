@@ -566,7 +566,7 @@ export class TeacherWorkspaceService {
 
     if (board.type === 'MICRO_COLLECT') {
       const perStudent = Number(boardMeta.goalAmount) || 0; // per-student value
-      const totalGoal = perStudent * items.length; // auto-calculated total
+      const totalGoal = perStudent > 0 ? perStudent * items.length : 0;
       let totalCollected = 0;
       let paidCount = 0;
       let pendingCount = 0;
@@ -576,17 +576,22 @@ export class TeacherWorkspaceService {
         const meta = (item.metadata || {}) as any;
         const amt = Number(meta.amountPaid) || 0;
         totalCollected += amt;
+        // Use actual status from metadata
         if (meta.status === 'PAID') paidCount++;
         else if (meta.status === 'PARTIAL') partialCount++;
         else pendingCount++;
       }
 
+      const percentage = totalGoal > 0
+        ? Math.round((totalCollected / totalGoal) * 100)
+        : (totalCollected > 0 ? 100 : 0); // if no goal set but money collected, show 100%
+
       return {
         type: 'MICRO_COLLECT',
         perStudent,
-        goalAmount: totalGoal,
+        goalAmount: totalGoal > 0 ? totalGoal : totalCollected, // fallback to actual collected if no goal
         totalCollected,
-        percentage: totalGoal > 0 ? Math.round((totalCollected / totalGoal) * 100) : 0,
+        percentage,
         totalStudents: items.length,
         paidCount,
         partialCount,

@@ -233,11 +233,12 @@ export default function TeacherWorkspace() {
   }
 
   // ─── Pay student (MICRO_COLLECT) ───
-  const handlePayStudent = async () => {
+  const handlePayStudent = async (overrideAmount?: number) => {
     if (!payModal || !activeBoard) return
-    const val = Number(payAmount) || 0
+    const val = overrideAmount !== undefined ? overrideAmount : (Number(payAmount) || 0)
+    if (val <= 0) return // don't save $0 payments
     const perStudent = Number((activeBoard.metadata as any)?.goalAmount) || 0
-    const newStatus = val <= 0 ? 'PENDING' : (perStudent > 0 && val >= perStudent ? 'PAID' : 'PARTIAL')
+    const newStatus = perStudent > 0 && val >= perStudent ? 'PAID' : (val > 0 ? 'PARTIAL' : 'PENDING')
     await teacherWorkspaceApi.updateItem(payModal.itemId, { metadata: { ...payModal.meta, amountPaid: val, status: newStatus } })
     setPayModal(null)
     setPayAmount('')
@@ -246,29 +247,38 @@ export default function TeacherWorkspace() {
   }
 
   // ─── Role student search (CLASSROOM_ROLES) ───
-  const roleSearchTimerRef = useRef<any>(null)
+  // Searches within EXISTING board items (students already populated on the board)
   const handleRoleStudentSearchChange = (q: string) => {
     setRoleStudentSearch(q)
-    if (roleSearchTimerRef.current) clearTimeout(roleSearchTimerRef.current)
-    if (!activeBoard) return
-    roleSearchTimerRef.current = setTimeout(async () => {
-      try {
-        const res = await teacherWorkspaceApi.searchStudents(activeBoard.id, q)
-        setRoleStudentResults(res.data || [])
-      } catch { setRoleStudentResults([]) }
-    }, 300)
+    if (!activeBoard || !q.trim()) { setRoleStudentResults([]); return }
+    const allItems = activeBoard.columns?.flatMap(c => c.items) || []
+    const query = q.trim().toLowerCase()
+    const filtered = allItems
+      .filter((item: WorkspaceItem) => {
+        const meta = (item.metadata || {}) as any
+        // Exclude students already assigned to a role
+        if (meta.role) return false
+        return item.title.toLowerCase().includes(query)
+      })
+      .map((item: WorkspaceItem) => ({
+        itemId: item.id,
+        studentRecordId: ((item.metadata || {}) as any).studentRecordId || '',
+        fullName: item.title,
+      }))
+      .slice(0, 20)
+    setRoleStudentResults(filtered)
   }
 
-  const handleAssignRole = async (studentRecordId: string, role: string) => {
+  const handleAssignRole = async (itemId: string, role: string) => {
     if (!activeBoard) return
-    setAddingStudent(studentRecordId)
+    setAddingStudent(itemId)
     try {
-      // Add student then immediately assign role
-      const res = await teacherWorkspaceApi.addStudent(activeBoard.id, studentRecordId)
-      if (res.data?.id) {
-        await teacherWorkspaceApi.updateItem(res.data.id, { metadata: { studentRecordId, role } })
-      }
-      setRoleStudentResults(prev => prev.filter(s => s.studentRecordId !== studentRecordId))
+      // Update existing item's metadata to assign the role
+      const item = activeBoard.columns?.flatMap(c => c.items).find((i: WorkspaceItem) => i.id === itemId)
+      const existingMeta = (item?.metadata || {}) as any
+      await teacherWorkspaceApi.updateItem(itemId, { metadata: { ...existingMeta, role } })
+      setRoleStudentResults(prev => prev.filter(s => s.itemId !== itemId))
+      setAssignRoleModal(null)
       loadBoard(activeBoard.id)
       loadBoardSummary(activeBoard.id)
     } catch (err: any) {
@@ -1412,18 +1422,22 @@ export default function TeacherWorkspace() {
             <div className="flex justify-end gap-2 px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
               <button onClick={() => setPayModal(null)}
                 className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
-              <button onClick={async () => {
-                if (!payModal || !activeBoard) return
-                const perStudent = Number((activeBoard.metadata as any)?.goalAmount) || 0
-                await teacherWorkspaceApi.updateItem(payModal.itemId, { metadata: { ...payModal.meta, amountPaid: perStudent, status: 'PAID' } })
-                setPayModal(null); setPayAmount('')
-                loadBoard(activeBoard.id); loadBoardSummary(activeBoard.id)
+              <button onClick={() => {
+                const perStudent = Number((activeBoard?.metadata as any)?.goalAmount) || 0
+                if (perStudent > 0) {
+                  handlePayStudent(perStudent)
+                } else {
+                  // No per-student value set, use what's in the input
+                  handlePayStudent()
+                }
               }}
-                className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700">
+                disabled={!Number((activeBoard?.metadata as any)?.goalAmount)}
+                className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-30 disabled:cursor-not-allowed">
                 <Check className="w-3.5 h-3.5 inline mr-1" />Pago completo
               </button>
-              <button onClick={handlePayStudent}
-                className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              <button onClick={() => handlePayStudent()}
+                disabled={!payAmount || Number(payAmount) <= 0}
+                className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
                 Confirmar monto
               </button>
             </div>
@@ -1450,20 +1464,17 @@ export default function TeacherWorkspace() {
               </div>
               <div className="max-h-48 overflow-y-auto divide-y divide-slate-100">
                 {roleStudentResults.map((s: any) => (
-                  <div key={s.studentRecordId} className="flex items-center justify-between py-2 px-1">
+                  <div key={s.itemId} className="flex items-center justify-between py-2 px-1">
                     <span className="text-sm text-slate-700">{s.fullName}</span>
-                    <button onClick={() => {
-                      handleAssignRole(s.studentRecordId, assignRoleModal)
-                      setAssignRoleModal(null)
-                    }}
-                      disabled={addingStudent === s.studentRecordId}
+                    <button onClick={() => handleAssignRole(s.itemId, assignRoleModal)}
+                      disabled={addingStudent === s.itemId}
                       className="px-2.5 py-1 text-xs bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 disabled:opacity-50 font-medium">
-                      {addingStudent === s.studentRecordId ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Seleccionar'}
+                      {addingStudent === s.itemId ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Seleccionar'}
                     </button>
                   </div>
                 ))}
                 {roleStudentSearch && roleStudentResults.length === 0 && (
-                  <p className="text-xs text-slate-400 text-center py-4">No se encontraron estudiantes disponibles</p>
+                  <p className="text-xs text-slate-400 text-center py-4">No se encontraron estudiantes sin rol asignado</p>
                 )}
                 {!roleStudentSearch && roleStudentResults.length === 0 && (
                   <p className="text-xs text-slate-400 text-center py-4">Escribe para buscar...</p>
