@@ -365,12 +365,12 @@ export class PdfGeneratorService {
     const m = pc.margin;
     const w = pc.contentWidth;
     const PAGE_W = 396;
-    const MIN_TABLE_ROWS = 4;
-    // Dynamic height: header(55) + sep(8) + title(22) + gap(6) + boxes(63) + gap(8)
-    //   + tableHeader(16) + rows(18 * MIN_TABLE_ROWS) + border(8)
-    //   + subtotal(12) + discount?(12) + totalBox(30) + signature(28) + footer(20) + bar(4)
-    let contentH = 55 + 8 + 22 + 6 + 63 + 8 + 16 + (18 * MIN_TABLE_ROWS) + 8 + 12 + 30 + 28 + 20 + 4;
-    if (discountAmount > 0) contentH += 12;
+    const MIN_TABLE_ROWS = 2;
+    // Dynamic height: header(55) + sep(6) + title(13) + gap(4) + boxes(55) + gap(6)
+    //   + tableHeader(13) + rows(15 * MIN_TABLE_ROWS) + border(6)
+    //   + subtotal(10) + discount?(10) + totalBox(16) + signature(22) + footer(16) + bar(4)
+    let contentH = 55 + 6 + 13 + 4 + 55 + 6 + 13 + (15 * MIN_TABLE_ROWS) + 6 + 10 + 16 + 22 + 16 + 4;
+    if (discountAmount > 0) contentH += 10;
     const PAGE_H = m + contentH + m;
 
     return new Promise((resolve, reject) => {
@@ -415,18 +415,18 @@ export class PdfGeneratorService {
         doc.text(line, textX, doc.y, { width: textW, align: hasLogo ? undefined : 'center' });
       });
 
-      y = Math.max(doc.y, m + logoSize) + 4;
+      y = Math.max(doc.y, m + logoSize) + 3;
       doc.moveTo(m, y).lineTo(m + w, y).lineWidth(0.5).stroke(colors.primary);
-      y += 4;
+      y += 3;
 
-      // ── Title bar with receipt number ──
-      const titleH = hl ? 16 : 20;
+      // ── Title bar with receipt number (compact) ──
+      const titleH = 13;
       doc.rect(m, y, w, titleH).fill(colors.primary);
-      doc.fillColor('#FFFFFF').fontSize((hl ? 8 : 10) * fs).font('Helvetica-Bold');
-      doc.text('RECIBO DE PAGO', m + 8, y + (titleH - 10 * fs) / 2, { width: w / 2 - 8 });
-      doc.text(`N° ${payment.receiptNumber || 'S/N'}`, m + w / 2, y + (titleH - 10 * fs) / 2, { width: w / 2 - 8, align: 'right' });
+      doc.fillColor('#FFFFFF').fontSize(6.5).font('Helvetica-Bold');
+      doc.text('RECIBO DE PAGO', m + 6, y + 3, { width: w / 2 - 6 });
+      doc.text(`N° ${payment.receiptNumber || 'S/N'}`, m + w / 2, y + 3, { width: w / 2 - 6, align: 'right' });
       doc.fillColor(colors.text);
-      y += titleH + 6;
+      y += titleH + 4;
 
       // ── Two-column: Client info (left) + Receipt meta + QR (right) ──
       const qrDrawSize = hl ? 42 : 50; // actual QR image size
@@ -434,7 +434,7 @@ export class PdfGeneratorService {
       const leftW = w * 0.55;
       const rightW = w - leftW - colGap;
       const rowH = hl ? 10 : 11;
-      const boxH = hl ? 55 : 62;
+      const boxH = hl ? 48 : 55;
 
       // Left: Client info
       doc.rect(m, y, leftW, boxH).lineWidth(0.5).stroke(colors.border);
@@ -491,30 +491,29 @@ export class PdfGeneratorService {
         } catch { /* QR failed */ }
       }
 
-      y += boxH + 8;
+      y += boxH + 5;
 
       // ── Items Table: DESCRIPCIÓN | CANT. | V. UNITARIO | TOTAL ──
       const tableTop = y;
-      // Column widths differ by page size
       const descW = hl ? (w - 150) : (w - 210);
       const cantW = hl ? 35 : 45;
       const unitW = hl ? 55 : 80;
       const totalW = hl ? 60 : 85;
-      const tblRowH = hl ? 18 : 22;
-      const tblFontSize = (hl ? 7 : 8) * fs;
-      const tblHeaderH = hl ? 16 : 20;
+      const tblRowH = 15;
+      const tblFontSize = 5.8;
+      const tblHeaderH = 13;
 
-      // Header row
+      // Header row (compact)
       doc.rect(m, tableTop, w, tblHeaderH).fill(colors.primary);
       doc.fillColor('#FFFFFF').fontSize(tblFontSize).font('Helvetica-Bold');
       let cx = m + 6;
-      doc.text('DESCRIPCIÓN', cx, tableTop + (tblHeaderH - tblFontSize) / 2, { width: descW - 12 });
+      doc.text('DESCRIPCIÓN', cx, tableTop + 3.5, { width: descW - 12 });
       cx += descW;
-      doc.text('CANT.', cx, tableTop + (tblHeaderH - tblFontSize) / 2, { width: cantW, align: 'center' });
+      doc.text('CANT.', cx, tableTop + 3.5, { width: cantW, align: 'center' });
       cx += cantW;
-      doc.text('V. UNITARIO', cx, tableTop + (tblHeaderH - tblFontSize) / 2, { width: unitW, align: 'right' });
+      doc.text('V. UNITARIO', cx, tableTop + 3.5, { width: unitW, align: 'right' });
       cx += unitW;
-      doc.text('TOTAL', cx, tableTop + (tblHeaderH - tblFontSize) / 2, { width: totalW - 6, align: 'right' });
+      doc.text('TOTAL', cx, tableTop + 3.5, { width: totalW - 6, align: 'right' });
 
       // Data row (the real item)
       doc.fillColor(colors.text).font('Helvetica').fontSize(tblFontSize);
@@ -522,13 +521,13 @@ export class PdfGeneratorService {
       doc.rect(m, cy - 1, w, tblRowH).fill(colors.secondary);
       doc.fillColor(colors.text);
       cx = m + 6;
-      doc.text(payment.obligation?.concept?.name || 'Pago general', cx, cy + (tblRowH - tblFontSize) / 2 - 1, { width: descW - 12 });
+      doc.text(payment.obligation?.concept?.name || 'Pago general', cx, cy + 4, { width: descW - 12 });
       cx += descW;
-      doc.text('1', cx, cy + (tblRowH - tblFontSize) / 2 - 1, { width: cantW, align: 'center' });
+      doc.text('1', cx, cy + 4, { width: cantW, align: 'center' });
       cx += cantW;
-      doc.text(this.formatCurrency(obligationAmount), cx, cy + (tblRowH - tblFontSize) / 2 - 1, { width: unitW, align: 'right' });
+      doc.text(this.formatCurrency(obligationAmount), cx, cy + 4, { width: unitW, align: 'right' });
       cx += unitW;
-      doc.text(this.formatCurrency(obligationAmount), cx, cy + (tblRowH - tblFontSize) / 2 - 1, { width: totalW - 6, align: 'right' });
+      doc.text(this.formatCurrency(obligationAmount), cx, cy + 4, { width: totalW - 6, align: 'right' });
       cy += tblRowH;
 
       // Empty rows to fill up to MIN_TABLE_ROWS
@@ -542,45 +541,45 @@ export class PdfGeneratorService {
 
       // Bottom border of table
       doc.moveTo(m, cy).lineTo(m + w, cy).lineWidth(0.5).stroke(colors.border);
-      y = cy + 8;
+      y = cy + 5;
 
       // ── Totals section (right-aligned) ──
       const totalsW = hl ? 170 : 220;
       const totalsX = m + w - totalsW;
       const totalsValW = hl ? 80 : 100;
       const totalsLabelW = totalsW - totalsValW;
-      doc.fontSize((hl ? 7 : 8) * fs);
+      doc.fontSize(5.8);
 
       // Subtotal
       doc.font('Helvetica').text('Subtotal:', totalsX, y, { width: totalsLabelW, align: 'right' });
       doc.text(this.formatCurrency(obligationAmount), totalsX + totalsLabelW, y, { width: totalsValW, align: 'right' });
-      y += hl ? 12 : 16;
+      y += 10;
 
       // Descuento (if any)
       if (discountAmount > 0) {
         doc.text('Descuento:', totalsX, y, { width: totalsLabelW, align: 'right' });
         doc.fillColor('#059669').text(`-${this.formatCurrency(discountAmount)}`, totalsX + totalsLabelW, y, { width: totalsValW, align: 'right' });
         doc.fillColor(colors.text);
-        y += hl ? 12 : 16;
+        y += 10;
       }
 
-      // Total box
-      const totalBoxH = hl ? 20 : 24;
+      // Total box (compact)
+      const totalBoxH = 16;
       doc.rect(totalsX - 4, y, totalsW + 4, totalBoxH).fill(colors.primary);
-      doc.fillColor('#FFFFFF').fontSize((hl ? 8 : 10) * fs).font('Helvetica-Bold');
-      doc.text('TOTAL RECIBIDO:', totalsX, y + (totalBoxH - 10 * fs) / 2, { width: totalsLabelW, align: 'right' });
-      doc.text(this.formatCurrency(paidAmount), totalsX + totalsLabelW, y + (totalBoxH - 10 * fs) / 2, { width: totalsValW, align: 'right' });
+      doc.fillColor('#FFFFFF').fontSize(6.5).font('Helvetica-Bold');
+      doc.text('TOTAL RECIBIDO:', totalsX, y + 4, { width: totalsLabelW, align: 'right' });
+      doc.text(this.formatCurrency(paidAmount), totalsX + totalsLabelW, y + 4, { width: totalsValW, align: 'right' });
       doc.fillColor(colors.text);
-      y += totalBoxH + 10;
+      y += totalBoxH + 6;
 
       // ── Signature line ──
       const sigLineW = hl ? 140 : 180;
       const sigX = m + w - sigLineW;
       doc.fontSize((hl ? 6 : 7) * fs).font('Helvetica').fillColor(colors.lightText);
       doc.moveTo(sigX, y).lineTo(sigX + sigLineW, y).lineWidth(0.5).stroke(colors.border);
-      doc.text(`Recibido por: ${payment.receivedBy.firstName} ${payment.receivedBy.lastName}`, sigX, y + 3, { width: sigLineW, align: 'center' });
+      doc.text(`Recibido por: ${payment.receivedBy.firstName} ${payment.receivedBy.lastName}`, sigX, y + 2, { width: sigLineW, align: 'center' });
       doc.fillColor(colors.text);
-      y += 18;
+      y += 14;
 
       // ── Footer (after content) ──
       const _addPage = doc.addPage.bind(doc);
