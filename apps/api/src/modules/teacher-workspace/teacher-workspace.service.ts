@@ -112,12 +112,32 @@ export class TeacherWorkspaceService {
   }
 
   async createBoard(teacherId: string, institutionId: string, dto: CreateBoardDto) {
-    const cols = this.defaultColumns[dto.type] || ['General'];
-
     // For MULTI_GROUP scope, store groupIds in metadata
     let metadata = dto.metadata || undefined;
     if (dto.scopeType === 'MULTI_GROUP' && dto.groupIds?.length) {
       metadata = { ...(metadata || {}), groupIds: dto.groupIds };
+    }
+
+    // STUDENT_NOTES: auto-create columns per assigned group
+    let colDefs: { title: string; color?: string; metadata?: any }[];
+    if (dto.type === 'STUDENT_NOTES') {
+      const assignments = await this.prisma.teacherAssignment.findMany({
+        where: { teacherId, group: { campus: { institutionId } }, endDate: null },
+        select: { group: { select: { id: true, name: true, grade: { select: { name: true } } } } },
+      });
+      const groupMap = new Map<string, { id: string; name: string; gradeName: string }>();
+      for (const a of assignments) {
+        if (a.group && !groupMap.has(a.group.id)) {
+          groupMap.set(a.group.id, { id: a.group.id, name: a.group.name, gradeName: a.group.grade.name });
+        }
+      }
+      const groups = Array.from(groupMap.values());
+      colDefs = groups.length > 0
+        ? groups.map(g => ({ title: `${g.gradeName} ${g.name}`, metadata: { groupId: g.id } }))
+        : [{ title: 'Seguimiento' }];
+    } else {
+      const defaultCols = this.defaultColumns[dto.type] || ['General'];
+      colDefs = defaultCols.map(title => ({ title }));
     }
 
     return this.prisma.workspaceBoard.create({
@@ -136,8 +156,9 @@ export class TeacherWorkspaceService {
         startDate: dto.startDate ? new Date(dto.startDate) : undefined,
         endDate: dto.endDate ? new Date(dto.endDate) : undefined,
         columns: {
-          create: cols.map((title, idx) => ({
-            title,
+          create: colDefs.map((col, idx) => ({
+            title: col.title,
+            color: col.color,
             sortOrder: (idx + 1) * 100,
           })),
         },
