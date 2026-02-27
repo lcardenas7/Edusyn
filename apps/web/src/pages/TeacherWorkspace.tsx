@@ -128,6 +128,11 @@ export default function TeacherWorkspace() {
   const [obsDate, setObsDate] = useState(new Date().toISOString().slice(0, 10))
   const [savingObs, setSavingObs] = useState(false)
 
+  // Project task modal
+  const [taskModal, setTaskModal] = useState<{ columnId: string; item?: WorkspaceItem } | null>(null)
+  const [taskForm, setTaskForm] = useState({ title: '', description: '', priority: 'MEDIUM', dueDate: '', checklist: [] as { text: string; done: boolean }[] })
+  const [savingTask, setSavingTask] = useState(false)
+
   // Inline editing
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [editingItemTitle, setEditingItemTitle] = useState('')
@@ -328,6 +333,41 @@ export default function TeacherWorkspace() {
       console.error('Error saving observation:', err)
     } finally {
       setSavingObs(false)
+    }
+  }
+
+  // ─── Save/Update project task ───
+  const handleSaveTask = async () => {
+    if (!taskModal || !taskForm.title.trim() || !activeBoard) return
+    setSavingTask(true)
+    try {
+      const meta = { priority: taskForm.priority, checklist: taskForm.checklist }
+      if (taskModal.item) {
+        // Update existing task
+        await teacherWorkspaceApi.updateItem(taskModal.item.id, {
+          title: taskForm.title.trim(),
+          content: taskForm.description.trim() || undefined,
+          dueDate: taskForm.dueDate || undefined,
+          metadata: { ...((taskModal.item.metadata || {}) as any), ...meta },
+        })
+      } else {
+        // Create new task
+        await teacherWorkspaceApi.createItem({
+          boardId: activeBoard.id,
+          columnId: taskModal.columnId,
+          title: taskForm.title.trim(),
+          content: taskForm.description.trim() || undefined,
+          dueDate: taskForm.dueDate || undefined,
+          metadata: meta,
+        })
+      }
+      setTaskModal(null)
+      setTaskForm({ title: '', description: '', priority: 'MEDIUM', dueDate: '', checklist: [] })
+      loadBoard(activeBoard.id)
+    } catch (err: any) {
+      console.error('Error saving task:', err)
+    } finally {
+      setSavingTask(false)
     }
   }
 
@@ -1003,6 +1043,156 @@ export default function TeacherWorkspace() {
                 ))}
               </div>
 
+              /* ═══════ PROJECT View ═══════ */
+              ) : activeBoard.type === 'PROJECT' ? (
+              <div className="flex-1 flex flex-col">
+                {/* Project progress bar */}
+                {(() => {
+                  const allItems = activeBoard.columns?.flatMap(c => c.items) || []
+                  const total = allItems.length
+                  const doneCol = activeBoard.columns?.find(c => c.title.toLowerCase().includes('finaliz') || c.title.toLowerCase().includes('hecho') || c.title.toLowerCase().includes('done'))
+                  const doneCount = doneCol?.items.length || 0
+                  const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0
+                  const overdue = allItems.filter(i => i.dueDate && new Date(i.dueDate) < new Date() && i.status !== 'DONE').length
+                  const highPri = allItems.filter(i => ((i.metadata as any)?.priority === 'HIGH')).length
+                  return total > 0 ? (
+                    <div className="px-4 pt-3 pb-1">
+                      <div className="bg-white rounded-xl border border-slate-200 p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-4 text-xs">
+                            <span className="text-slate-500"><span className="font-bold text-slate-700">{total}</span> tareas</span>
+                            <span className="text-green-600"><span className="font-bold">{doneCount}</span> completadas</span>
+                            {overdue > 0 && <span className="text-red-500"><span className="font-bold">{overdue}</span> vencidas</span>}
+                            {highPri > 0 && <span className="text-orange-500"><span className="font-bold">{highPri}</span> alta prioridad</span>}
+                          </div>
+                          <span className="text-sm font-bold text-blue-600">{pct}%</span>
+                        </div>
+                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-blue-500 to-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                  ) : null
+                })()}
+
+                {/* Kanban columns */}
+                <div className="flex-1 flex gap-4 p-4 overflow-x-auto">
+                  {activeBoard.columns?.map(column => {
+                    const colColors: Record<string, string> = {
+                      'Ideas': 'from-purple-50 to-purple-100/50', 'En progreso': 'from-amber-50 to-amber-100/50',
+                      'Finalizado': 'from-green-50 to-green-100/50', 'Por hacer': 'from-blue-50 to-blue-100/50',
+                      'En proceso': 'from-amber-50 to-amber-100/50', 'Hecho': 'from-green-50 to-green-100/50',
+                    }
+                    const bg = colColors[column.title] || 'from-slate-50 to-slate-100/50'
+                    return (
+                      <div key={column.id}
+                        className={`flex-shrink-0 w-80 flex flex-col bg-gradient-to-b ${bg} rounded-xl shadow-sm border border-slate-200`}
+                        onDragOver={(e) => handleDragOver(e, column.id)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, column.id)}
+                      >
+                        <div className="flex items-center justify-between px-3 py-2.5 border-b border-slate-100">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-semibold text-slate-700">{column.title}</h3>
+                            <span className="text-xs text-slate-400 bg-white px-1.5 py-0.5 rounded-full">{column.items.length}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => {
+                              setTaskModal({ columnId: column.id })
+                              setTaskForm({ title: '', description: '', priority: 'MEDIUM', dueDate: '', checklist: [] })
+                            }} className="p-1 rounded hover:bg-white/80" title="Nueva tarea">
+                              <Plus className="w-4 h-4 text-slate-400" />
+                            </button>
+                            <button onClick={() => handleDeleteColumn(column.id)}
+                              className="p-1 rounded hover:bg-red-50" title="Eliminar fase">
+                              <Trash2 className="w-3.5 h-3.5 text-slate-300 hover:text-red-400" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-2 space-y-2 max-h-[calc(100vh-260px)]">
+                          {column.items.map((item: WorkspaceItem) => {
+                            const meta = (item.metadata || {}) as any
+                            const pri = meta.priority || 'MEDIUM'
+                            const priColors: Record<string, string> = { HIGH: 'border-l-red-500', MEDIUM: 'border-l-amber-400', LOW: 'border-l-green-400' }
+                            const priLabels: Record<string, string> = { HIGH: 'Alta', MEDIUM: 'Media', LOW: 'Baja' }
+                            const priBadge: Record<string, string> = { HIGH: 'bg-red-100 text-red-700', MEDIUM: 'bg-amber-100 text-amber-700', LOW: 'bg-green-100 text-green-700' }
+                            const isOverdue = item.dueDate && new Date(item.dueDate) < new Date()
+                            const checklist: { text: string; done: boolean }[] = meta.checklist || []
+                            const checkDone = checklist.filter(c => c.done).length
+                            return (
+                              <div key={item.id} draggable onDragStart={(e) => handleDragStart(e, item)}
+                                className={`bg-white rounded-lg border-l-4 ${priColors[pri]} border border-slate-100 p-2.5 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group ${
+                                  dragItem?.id === item.id ? 'opacity-40' : ''
+                                }`}>
+                                <div className="flex items-start justify-between">
+                                  <p className="text-sm font-medium text-slate-800 leading-tight flex-1"
+                                    onDoubleClick={() => {
+                                      const m = (item.metadata || {}) as any
+                                      setTaskModal({ columnId: item.columnId || '', item })
+                                      setTaskForm({
+                                        title: item.title, description: item.content || '',
+                                        priority: m.priority || 'MEDIUM', dueDate: item.dueDate?.slice(0, 10) || '',
+                                        checklist: m.checklist || [],
+                                      })
+                                    }}>{item.title}</p>
+                                  <div className="opacity-0 group-hover:opacity-100 flex gap-0.5 flex-shrink-0 ml-1">
+                                    <button onClick={() => {
+                                      const m = (item.metadata || {}) as any
+                                      setTaskModal({ columnId: item.columnId || '', item })
+                                      setTaskForm({
+                                        title: item.title, description: item.content || '',
+                                        priority: m.priority || 'MEDIUM', dueDate: item.dueDate?.slice(0, 10) || '',
+                                        checklist: m.checklist || [],
+                                      })
+                                    }} className="p-0.5 rounded hover:bg-slate-100">
+                                      <Pencil className="w-3 h-3 text-slate-400" />
+                                    </button>
+                                    <button onClick={() => handleDeleteItem(item.id)} className="p-0.5 rounded hover:bg-red-50">
+                                      <Trash2 className="w-3 h-3 text-red-400" />
+                                    </button>
+                                  </div>
+                                </div>
+                                {item.content && <p className="text-xs text-slate-500 mt-1 line-clamp-2">{item.content}</p>}
+                                <div className="flex items-center flex-wrap gap-1.5 mt-2">
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${priBadge[pri]}`}>{priLabels[pri]}</span>
+                                  {item.dueDate && (
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5 ${
+                                      isOverdue ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'
+                                    }`}>
+                                      <Clock className="w-2.5 h-2.5" />{new Date(item.dueDate).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
+                                    </span>
+                                  )}
+                                  {checklist.length > 0 && (
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                      checkDone === checklist.length ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
+                                    }`}>
+                                      ✓ {checkDone}/{checklist.length}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                          {column.items.length === 0 && (
+                            <div className="text-center py-8 text-slate-300">
+                              <p className="text-xs">Sin tareas</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  {/* Add phase */}
+                  <div className="flex-shrink-0 w-80">
+                    <button onClick={handleAddColumn}
+                      className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-xl text-slate-400 hover:text-slate-600 hover:border-slate-400 transition-colors">
+                      <Plus className="w-5 h-5" /><span className="text-sm">Nueva fase</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               /* ═══════ Generic Kanban View ═══════ */
               ) : (
               <div className="flex-1 flex gap-4 p-4 overflow-x-auto">
@@ -1581,6 +1771,95 @@ export default function TeacherWorkspace() {
                 className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5">
                 {savingObs && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════ Task Modal (PROJECT) ═══════ */}
+      {taskModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setTaskModal(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex-shrink-0 px-5 py-4 border-b border-slate-100">
+              <h3 className="text-base font-semibold text-slate-900">{taskModal.item ? 'Editar tarea' : 'Nueva tarea'}</h3>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Título</label>
+                <input value={taskForm.title} onChange={(e) => setTaskForm(f => ({ ...f, title: e.target.value }))}
+                  placeholder="Nombre de la tarea..." autoFocus
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
+                <textarea value={taskForm.description} onChange={(e) => setTaskForm(f => ({ ...f, description: e.target.value }))}
+                  placeholder="Detalles opcionales..." rows={2}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Prioridad</label>
+                  <div className="flex gap-1.5">
+                    {[
+                      { key: 'LOW', label: 'Baja', color: 'bg-green-100 text-green-700 border-green-200' },
+                      { key: 'MEDIUM', label: 'Media', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+                      { key: 'HIGH', label: 'Alta', color: 'bg-red-100 text-red-700 border-red-200' },
+                    ].map(p => (
+                      <button key={p.key} onClick={() => setTaskForm(f => ({ ...f, priority: p.key }))}
+                        className={`px-2 py-1 text-xs rounded-full border font-medium transition-all ${
+                          taskForm.priority === p.key ? p.color + ' ring-1 ring-offset-1' : 'bg-white text-slate-400 border-slate-200'
+                        }`}>{p.label}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Fecha límite</label>
+                  <input type="date" value={taskForm.dueDate} onChange={(e) => setTaskForm(f => ({ ...f, dueDate: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                </div>
+              </div>
+              {/* Checklist */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Sub-tareas</label>
+                <div className="space-y-1.5">
+                  {taskForm.checklist.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input type="checkbox" checked={item.done}
+                        onChange={() => {
+                          const cl = [...taskForm.checklist]
+                          cl[idx] = { ...cl[idx], done: !cl[idx].done }
+                          setTaskForm(f => ({ ...f, checklist: cl }))
+                        }}
+                        className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                      <input value={item.text}
+                        onChange={(e) => {
+                          const cl = [...taskForm.checklist]
+                          cl[idx] = { ...cl[idx], text: e.target.value }
+                          setTaskForm(f => ({ ...f, checklist: cl }))
+                        }}
+                        placeholder="Sub-tarea..."
+                        className={`flex-1 text-sm border-b border-slate-200 py-0.5 outline-none focus:border-blue-400 ${item.done ? 'line-through text-slate-400' : ''}`} />
+                      <button onClick={() => {
+                        setTaskForm(f => ({ ...f, checklist: f.checklist.filter((_, i) => i !== idx) }))
+                      }} className="text-slate-300 hover:text-red-400">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  <button onClick={() => setTaskForm(f => ({ ...f, checklist: [...f.checklist, { text: '', done: false }] }))}
+                    className="text-xs text-blue-600 hover:underline">+ Agregar sub-tarea</button>
+                </div>
+              </div>
+            </div>
+            <div className="flex-shrink-0 flex justify-end gap-2 px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+              <button onClick={() => setTaskModal(null)}
+                className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+              <button onClick={handleSaveTask}
+                disabled={savingTask || !taskForm.title.trim()}
+                className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5">
+                {savingTask && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {taskModal.item ? 'Guardar cambios' : 'Crear tarea'}
               </button>
             </div>
           </div>
