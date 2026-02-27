@@ -3,8 +3,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { teacherWorkspaceApi } from '../lib/api'
 import {
   Plus, Trash2, X, GripVertical, MoreHorizontal,
-  LayoutGrid, BookOpen, Archive, ChevronDown,
-  Pencil, Check, Clock, AlertCircle, Loader2,
+  LayoutGrid, BookOpen, Archive, ChevronDown, ChevronLeft, ChevronRight,
+  Pencil, Check, Clock, AlertCircle, Loader2, Calendar,
   DollarSign, Users, Target, Percent, Search, UserPlus
 } from 'lucide-react'
 
@@ -99,6 +99,13 @@ export default function TeacherWorkspace() {
 
   // Board summary (for structured boards)
   const [boardSummary, setBoardSummary] = useState<any>(null)
+
+  // Calendar view
+  const [showCalendar, setShowCalendar] = useState(false)
+  const [calMonth, setCalMonth] = useState(new Date())
+  const [calEvents, setCalEvents] = useState<any[]>([])
+  const [loadingCal, setLoadingCal] = useState(false)
+  const [calSelectedDay, setCalSelectedDay] = useState<string | null>(null)
 
   // Add student search
   const [showAddStudent, setShowAddStudent] = useState(false)
@@ -205,6 +212,26 @@ export default function TeacherWorkspace() {
       setBoardSummary(null)
     }
   }, [activeBoard?.id])
+
+  // Load calendar events when calendar view is active
+  const loadCalendarEvents = useCallback(async (month: Date) => {
+    setLoadingCal(true)
+    try {
+      const from = new Date(month.getFullYear(), month.getMonth(), 1)
+      const to = new Date(month.getFullYear(), month.getMonth() + 1, 0, 23, 59, 59)
+      const res = await teacherWorkspaceApi.getCalendarEvents(from.toISOString(), to.toISOString())
+      setCalEvents(res.data || [])
+    } catch (err) {
+      console.error('Error loading calendar events:', err)
+      setCalEvents([])
+    } finally {
+      setLoadingCal(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (showCalendar) loadCalendarEvents(calMonth)
+  }, [showCalendar, calMonth, loadCalendarEvents])
 
   // ─── Search & add student to structured board ───
   const searchTimerRef = useRef<any>(null)
@@ -632,13 +659,24 @@ export default function TeacherWorkspace() {
             <h1 className="text-2xl font-bold text-slate-900">Mi Espacio</h1>
             <p className="text-sm text-slate-500 mt-0.5">Espacio privado de trabajo del docente</p>
           </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-          >
-            <Plus className="w-4 h-4" />
-            Nuevo Tablero
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowCalendar(!showCalendar)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
+                showCalendar ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              {showCalendar ? 'Tableros' : 'Calendario'}
+            </button>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              Nuevo Tablero
+            </button>
+          </div>
         </div>
       </div>
 
@@ -651,6 +689,187 @@ export default function TeacherWorkspace() {
       )}
 
       <div className="flex-1 flex overflow-hidden">
+
+        {/* ═══════ CALENDAR VIEW ═══════ */}
+        {showCalendar ? (
+          <div className="flex-1 overflow-y-auto p-6">
+            {(() => {
+              const year = calMonth.getFullYear()
+              const month = calMonth.getMonth()
+              const monthName = calMonth.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })
+              const firstDay = new Date(year, month, 1)
+              const lastDay = new Date(year, month + 1, 0)
+              const startOffset = firstDay.getDay() // 0=Sun
+              const daysInMonth = lastDay.getDate()
+              const today = new Date().toISOString().slice(0, 10)
+
+              // Group events by date
+              const eventsByDate: Record<string, any[]> = {}
+              for (const ev of calEvents) {
+                const d = ev.date ? new Date(ev.date).toISOString().slice(0, 10) : null
+                if (d) {
+                  if (!eventsByDate[d]) eventsByDate[d] = []
+                  eventsByDate[d].push(ev)
+                }
+              }
+
+              // Board type colors
+              const typeColors: Record<string, string> = {
+                KANBAN: 'bg-slate-500', CLASS_LOG: 'bg-blue-500', STUDENT_NOTES: 'bg-purple-500',
+                CHECKLIST: 'bg-emerald-500', MICRO_COLLECT: 'bg-amber-500', CLASSROOM_ROLES: 'bg-rose-500',
+                PROJECT: 'bg-indigo-500',
+              }
+              const typeLabels: Record<string, string> = {
+                KANBAN: 'Kanban', CLASS_LOG: 'Bitácora', STUDENT_NOTES: 'Seguimiento',
+                CHECKLIST: 'Verificación', MICRO_COLLECT: 'Recaudo', CLASSROOM_ROLES: 'Roles',
+                PROJECT: 'Proyecto',
+              }
+
+              // Build calendar grid cells
+              const cells: { day: number; dateStr: string }[] = []
+              for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+                cells.push({ day: d, dateStr })
+              }
+
+              // Events for selected day
+              const selectedDayEvents = calSelectedDay ? (eventsByDate[calSelectedDay] || []) : []
+
+              return (
+                <div className="max-w-5xl mx-auto">
+                  {/* Month navigation */}
+                  <div className="flex items-center justify-between mb-4">
+                    <button onClick={() => setCalMonth(new Date(year, month - 1, 1))}
+                      className="p-2 rounded-lg hover:bg-slate-100 transition-colors">
+                      <ChevronLeft className="w-5 h-5 text-slate-600" />
+                    </button>
+                    <div className="text-center">
+                      <h2 className="text-xl font-bold text-slate-900 capitalize">{monthName}</h2>
+                      <p className="text-xs text-slate-400 mt-0.5">{calEvents.length} eventos este mes</p>
+                    </div>
+                    <button onClick={() => setCalMonth(new Date(year, month + 1, 1))}
+                      className="p-2 rounded-lg hover:bg-slate-100 transition-colors">
+                      <ChevronRight className="w-5 h-5 text-slate-600" />
+                    </button>
+                  </div>
+
+                  {loadingCal && (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                    </div>
+                  )}
+
+                  {/* Legend */}
+                  <div className="flex flex-wrap gap-3 mb-3">
+                    {Object.entries(typeLabels).map(([key, label]) => (
+                      <div key={key} className="flex items-center gap-1.5 text-xs text-slate-500">
+                        <div className={`w-2.5 h-2.5 rounded-full ${typeColors[key]}`} />
+                        {label}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-4">
+                    {/* Calendar grid */}
+                    <div className="flex-1">
+                      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                        {/* Day headers */}
+                        <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-200">
+                          {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => (
+                            <div key={d} className="px-2 py-2 text-center text-xs font-semibold text-slate-500">{d}</div>
+                          ))}
+                        </div>
+                        {/* Calendar cells */}
+                        <div className="grid grid-cols-7">
+                          {/* Empty cells for offset */}
+                          {Array.from({ length: startOffset }).map((_, i) => (
+                            <div key={`empty-${i}`} className="min-h-[80px] border-b border-r border-slate-100 bg-slate-50/50" />
+                          ))}
+                          {cells.map(({ day, dateStr }) => {
+                            const dayEvents = eventsByDate[dateStr] || []
+                            const isToday = dateStr === today
+                            const isSelected = dateStr === calSelectedDay
+                            return (
+                              <div key={day}
+                                onClick={() => setCalSelectedDay(isSelected ? null : dateStr)}
+                                className={`min-h-[80px] border-b border-r border-slate-100 p-1 cursor-pointer transition-colors ${
+                                  isSelected ? 'bg-blue-50 ring-1 ring-inset ring-blue-300' :
+                                  isToday ? 'bg-amber-50/50' : 'hover:bg-slate-50'
+                                }`}>
+                                <div className="flex items-center justify-between mb-0.5">
+                                  <span className={`text-xs font-medium px-1 py-0.5 rounded ${
+                                    isToday ? 'bg-blue-600 text-white' : 'text-slate-600'
+                                  }`}>{day}</span>
+                                  {dayEvents.length > 0 && (
+                                    <span className="text-[10px] text-slate-400 font-medium">{dayEvents.length}</span>
+                                  )}
+                                </div>
+                                <div className="space-y-0.5">
+                                  {dayEvents.slice(0, 3).map((ev: any, idx: number) => (
+                                    <div key={idx} className="flex items-center gap-1 group/ev">
+                                      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${typeColors[ev.boardType] || 'bg-slate-400'}`} />
+                                      <span className="text-[10px] text-slate-600 truncate leading-tight">{ev.title}</span>
+                                    </div>
+                                  ))}
+                                  {dayEvents.length > 3 && (
+                                    <span className="text-[10px] text-slate-400 pl-2.5">+{dayEvents.length - 3} más</span>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Day detail panel */}
+                    <div className="w-72 flex-shrink-0">
+                      <div className="bg-white rounded-xl border border-slate-200 sticky top-4">
+                        <div className="px-4 py-3 border-b border-slate-100">
+                          <h3 className="text-sm font-semibold text-slate-800">
+                            {calSelectedDay
+                              ? new Date(calSelectedDay + 'T12:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
+                              : 'Selecciona un día'}
+                          </h3>
+                        </div>
+                        <div className="p-3 max-h-[calc(100vh-300px)] overflow-y-auto">
+                          {!calSelectedDay && (
+                            <p className="text-xs text-slate-400 text-center py-8">Haz clic en un día para ver sus eventos</p>
+                          )}
+                          {calSelectedDay && selectedDayEvents.length === 0 && (
+                            <p className="text-xs text-slate-400 text-center py-8">Sin eventos este día</p>
+                          )}
+                          {selectedDayEvents.map((ev: any) => (
+                            <div key={ev.id} className="mb-2 p-2.5 rounded-lg border border-slate-100 hover:border-slate-200 transition-colors">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className={`w-2 h-2 rounded-full ${typeColors[ev.boardType] || 'bg-slate-400'}`} />
+                                <span className="text-[10px] font-medium text-slate-400 uppercase">{typeLabels[ev.boardType] || ev.boardType}</span>
+                              </div>
+                              <p className="text-sm font-medium text-slate-800">{ev.title}</p>
+                              <p className="text-xs text-slate-500 mt-0.5">{ev.boardTitle}</p>
+                              {ev.status && (
+                                <span className={`inline-block mt-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                  ev.status === 'DONE' ? 'bg-green-100 text-green-700' :
+                                  ev.status === 'IN_PROGRESS' ? 'bg-amber-100 text-amber-700' :
+                                  'bg-slate-100 text-slate-600'
+                                }`}>{ev.status === 'DONE' ? 'Completado' : ev.status === 'IN_PROGRESS' ? 'En progreso' : ev.status}</span>
+                              )}
+                              <button onClick={() => {
+                                setShowCalendar(false)
+                                loadBoard(ev.boardId)
+                              }} className="mt-1.5 text-[10px] text-blue-600 hover:underline">Ir al tablero →</button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
+        ) : (
+        <>
         {/* ═══════ Sidebar: Board List ═══════ */}
         <div className="w-72 flex-shrink-0 border-r border-slate-200 bg-slate-50 overflow-y-auto">
           <div className="p-4 space-y-2">
@@ -1369,6 +1588,8 @@ export default function TeacherWorkspace() {
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
 
       {/* ═══════ Create Board Modal ═══════ */}
