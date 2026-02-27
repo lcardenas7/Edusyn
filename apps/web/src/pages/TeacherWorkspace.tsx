@@ -540,13 +540,15 @@ export default function TeacherWorkspace() {
                     <p className="text-xs text-slate-500">{activeBoard.description}</p>
                   )}
                 </div>
-                <button
-                  onClick={handleAddColumn}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Columna
-                </button>
+                {!['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(activeBoard.type) && (
+                  <button
+                    onClick={handleAddColumn}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Columna
+                  </button>
+                )}
               </div>
 
               {/* ═══════ MICRO_COLLECT View ═══════ */}
@@ -896,14 +898,14 @@ export default function TeacherWorkspace() {
       {/* ═══════ Create Board Modal ═══════ */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowCreateModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <h3 className="text-lg font-semibold text-slate-900">Nuevo Tablero</h3>
               <button onClick={() => setShowCreateModal(false)} className="p-1 rounded-lg hover:bg-slate-100">
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {/* Board type selector */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Tipo de tablero</label>

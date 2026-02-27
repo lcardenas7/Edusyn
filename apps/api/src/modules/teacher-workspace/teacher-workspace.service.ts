@@ -339,28 +339,30 @@ export class TeacherWorkspaceService {
       throw new BadRequestException('Solo tableros de tipo Micro-recaudo o Roles del Aula se pueden poblar');
     }
 
-    // Resolve student IDs based on scope
+    // Resolve Student IDs based on scope (these are Student.id, NOT User.id)
     const studentIds = await this.resolveStudentsByScope(board, institutionId);
     if (!studentIds.length) {
       throw new BadRequestException('No se encontraron estudiantes para el alcance seleccionado');
     }
 
-    // Get existing student items to avoid duplicates (idempotent)
-    const existing = await this.prisma.workspaceItem.findMany({
-      where: { boardId, studentId: { in: studentIds } },
-      select: { studentId: true },
+    // Get existing items to avoid duplicates — check by metadata.studentRecordId
+    const existingItems = await this.prisma.workspaceItem.findMany({
+      where: { boardId, isArchived: false },
+      select: { metadata: true },
     });
-    const existingSet = new Set(existing.map(e => e.studentId));
-    const newStudentIds = studentIds.filter(id => !existingSet.has(id));
+    const existingStudentIds = new Set(
+      existingItems.map(e => ((e.metadata as any)?.studentRecordId || '')).filter(Boolean),
+    );
+    const newStudentIds = studentIds.filter(id => !existingStudentIds.has(id));
 
     if (!newStudentIds.length) {
       return { created: 0, total: studentIds.length, message: 'Todos los estudiantes ya están en el tablero' };
     }
 
-    // Get student names for titles
-    const students = await this.prisma.user.findMany({
-      where: { id: { in: newStudentIds } },
-      select: { id: true, firstName: true, lastName: true },
+    // Get student names from Student model (NOT User)
+    const students = await this.prisma.student.findMany({
+      where: { id: { in: newStudentIds }, isActive: true },
+      select: { id: true, userId: true, firstName: true, secondName: true, lastName: true, secondLastName: true },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     });
 
@@ -370,10 +372,10 @@ export class TeacherWorkspaceService {
       orderBy: { sortOrder: 'asc' },
     });
 
-    // Build default metadata per board type
-    const boardMeta = (board.metadata || {}) as any;
+    // Build items — store Student.id in metadata, Student.userId in studentId FK (if exists)
     const itemsData = students.map((s, idx) => {
-      let itemMeta: any = { studentId: s.id };
+      const fullName = [s.lastName, s.secondLastName, s.firstName, s.secondName].filter(Boolean).join(' ');
+      let itemMeta: any = { studentRecordId: s.id };
       if (board.type === 'MICRO_COLLECT') {
         itemMeta = { ...itemMeta, amountPaid: 0, status: 'PENDING' };
       } else if (board.type === 'CLASSROOM_ROLES') {
@@ -382,10 +384,10 @@ export class TeacherWorkspaceService {
       return {
         boardId,
         columnId: firstCol?.id || null,
-        studentId: s.id,
-        title: `${s.lastName} ${s.firstName}`,
+        studentId: s.userId || null, // FK to User (optional)
+        title: fullName,
         metadata: itemMeta,
-        sortOrder: (existing.length + idx + 1) * 100,
+        sortOrder: (existingItems.length + idx + 1) * 100,
       };
     });
 
@@ -410,14 +412,18 @@ export class TeacherWorkspaceService {
       const meta = (board.metadata || {}) as any;
       groupIds = meta.groupIds || [];
     } else if (board.groupId) {
-      // Legacy: no scopeType but has groupId
       groupIds = [board.groupId];
     }
 
     if (!groupIds.length) return [];
 
+    // Query active enrollments only (Student IDs, not User IDs)
     const enrollments = await this.prisma.studentEnrollment.findMany({
-      where: { groupId: { in: groupIds } },
+      where: {
+        groupId: { in: groupIds },
+        status: 'ACTIVE',
+        institutionId,
+      },
       select: { studentId: true },
     });
 
