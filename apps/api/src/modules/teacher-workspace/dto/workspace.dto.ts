@@ -1,5 +1,5 @@
-import { IsString, IsOptional, IsEnum, IsBoolean, IsInt, IsDateString, Min } from 'class-validator';
-import { WorkspaceBoardType, WorkspaceItemStatus } from '@prisma/client';
+import { IsString, IsOptional, IsEnum, IsBoolean, IsInt, IsDateString, IsArray, Min } from 'class-validator';
+import { WorkspaceBoardType, WorkspaceItemStatus, WorkspaceScopeType } from '@prisma/client';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BOARD DTOs
@@ -8,6 +8,9 @@ import { WorkspaceBoardType, WorkspaceItemStatus } from '@prisma/client';
 export class CreateBoardDto {
   @IsEnum(WorkspaceBoardType)
   type: WorkspaceBoardType;
+
+  @IsOptional() @IsEnum(WorkspaceScopeType)
+  scopeType?: WorkspaceScopeType;
 
   @IsString()
   title: string;
@@ -18,11 +21,26 @@ export class CreateBoardDto {
   @IsOptional() @IsString()
   color?: string;
 
+  @IsOptional()
+  metadata?: any;
+
   @IsOptional() @IsString()
   academicYearId?: string;
 
   @IsOptional() @IsString()
   groupId?: string;
+
+  @IsOptional() @IsString()
+  gradeId?: string;
+
+  @IsOptional() @IsArray() @IsString({ each: true })
+  groupIds?: string[];
+
+  @IsOptional() @IsDateString()
+  startDate?: string;
+
+  @IsOptional() @IsDateString()
+  endDate?: string;
 }
 
 export class UpdateBoardDto {
@@ -34,6 +52,9 @@ export class UpdateBoardDto {
 
   @IsOptional() @IsString()
   color?: string;
+
+  @IsOptional()
+  metadata?: any;
 
   @IsOptional() @IsBoolean()
   isArchived?: boolean;
@@ -93,6 +114,9 @@ export class CreateItemDto {
 
   @IsOptional() @IsDateString()
   dueDate?: string;
+
+  @IsOptional() @IsDateString()
+  eventDate?: string;
 }
 
 export class UpdateItemDto {
@@ -113,6 +137,9 @@ export class UpdateItemDto {
 
   @IsOptional() @IsDateString()
   dueDate?: string;
+
+  @IsOptional() @IsDateString()
+  eventDate?: string;
 
   @IsOptional() @IsInt() @Min(0)
   sortOrder?: number;

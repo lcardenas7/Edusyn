@@ -1681,11 +1681,24 @@ export const teacherWorkspaceApi = {
   listBoards: (params?: { type?: string; groupId?: string; isArchived?: string }) =>
     api.get('/teacher-workspace/boards', { params }),
   getBoard: (id: string) => api.get(`/teacher-workspace/boards/${id}`),
-  createBoard: (data: { type: string; title: string; description?: string; color?: string; academicYearId?: string; groupId?: string }) =>
-    api.post('/teacher-workspace/boards', data),
-  updateBoard: (id: string, data: { title?: string; description?: string; color?: string; isArchived?: boolean; sortOrder?: number }) =>
+  createBoard: (data: {
+    type: string; title: string; description?: string; color?: string;
+    scopeType?: string; metadata?: any; academicYearId?: string;
+    groupId?: string; gradeId?: string; groupIds?: string[];
+    startDate?: string; endDate?: string;
+  }) => api.post('/teacher-workspace/boards', data),
+  updateBoard: (id: string, data: { title?: string; description?: string; color?: string; metadata?: any; isArchived?: boolean; sortOrder?: number }) =>
     api.put(`/teacher-workspace/boards/${id}`, data),
   deleteBoard: (id: string) => api.delete(`/teacher-workspace/boards/${id}`),
+
+  // Scope, Populate, Summary
+  getScopeOptions: () => api.get('/teacher-workspace/scope-options'),
+  populateBoard: (id: string) => api.post(`/teacher-workspace/boards/${id}/populate`),
+  getBoardSummary: (id: string) => api.get(`/teacher-workspace/boards/${id}/summary`),
+
+  // Calendar
+  getCalendarEvents: (from: string, to: string) =>
+    api.get('/teacher-workspace/calendar', { params: { from, to } }),
 
   // Columns
   createColumn: (data: { boardId: string; title: string; color?: string }) =>
@@ -1695,9 +1708,9 @@ export const teacherWorkspaceApi = {
   deleteColumn: (id: string) => api.delete(`/teacher-workspace/columns/${id}`),
 
   // Items
-  createItem: (data: { boardId: string; columnId?: string; studentId?: string; title: string; content?: string; metadata?: any; dueDate?: string }) =>
+  createItem: (data: { boardId: string; columnId?: string; studentId?: string; title: string; content?: string; metadata?: any; dueDate?: string; eventDate?: string }) =>
     api.post('/teacher-workspace/items', data),
-  updateItem: (id: string, data: { columnId?: string; title?: string; content?: string; metadata?: any; status?: string; dueDate?: string; sortOrder?: number; isArchived?: boolean }) =>
+  updateItem: (id: string, data: { columnId?: string; title?: string; content?: string; metadata?: any; status?: string; dueDate?: string; eventDate?: string; sortOrder?: number; isArchived?: boolean }) =>
     api.put(`/teacher-workspace/items/${id}`, data),
   moveItem: (id: string, data: { columnId: string; sortOrder: number }) =>
     api.patch(`/teacher-workspace/items/${id}/move`, data),

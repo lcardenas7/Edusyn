@@ -591,6 +591,7 @@ model Grade {
   gradeTemplates GradeTemplate[]  // Plantillas académicas por año (una por año académico)
   scheduleGradeConfigs ScheduleGradeConfig[]
   achievementBank      AchievementBank[]
+  workspaceBoards      WorkspaceBoard[]   @relation("WorkspaceBoardGrade")
 
   @@unique([stage, name])
 }
@@ -4485,33 +4486,47 @@ enum WorkspaceItemStatus {
   ARCHIVED
 }
 
+enum WorkspaceScopeType {
+  GROUP
+  GRADE
+  MULTI_GROUP
+}
+
 model WorkspaceBoard {
-  id              String              @id @default(cuid())
+  id              String               @id @default(cuid())
   teacherId       String
   institutionId   String
   academicYearId  String?
   groupId         String?
+  gradeId         String?
   type            WorkspaceBoardType
+  scopeType       WorkspaceScopeType?
   title           String
   description     String?
   color           String?
-  visibility      WorkspaceVisibility @default(PRIVATE)
+  metadata        Json?
+  visibility      WorkspaceVisibility  @default(PRIVATE)
   sharedAt        DateTime?
-  sortOrder       Int                 @default(0)
-  isArchived      Boolean             @default(false)
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  startDate       DateTime?
+  endDate         DateTime?
+  sortOrder       Int                  @default(0)
+  isArchived      Boolean              @default(false)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 
-  teacher         User                @relation("WorkspaceBoards", fields: [teacherId], references: [id], onDelete: Cascade)
-  institution     Institution         @relation("RlsInstitutionWB", fields: [institutionId], references: [id], onDelete: Cascade)
-  academicYear    AcademicYear?       @relation(fields: [academicYearId], references: [id])
-  group           Group?              @relation(fields: [groupId], references: [id])
+  teacher         User                 @relation("WorkspaceBoards", fields: [teacherId], references: [id], onDelete: Cascade)
+  institution     Institution          @relation("RlsInstitutionWB", fields: [institutionId], references: [id], onDelete: Cascade)
+  academicYear    AcademicYear?        @relation(fields: [academicYearId], references: [id])
+  group           Group?               @relation(fields: [groupId], references: [id])
+  grade           Grade?               @relation("WorkspaceBoardGrade", fields: [gradeId], references: [id])
   columns         WorkspaceColumn[]
   items           WorkspaceItem[]
 
   @@index([teacherId, institutionId])
   @@index([teacherId, type])
   @@index([institutionId, visibility])
+  @@index([gradeId])
+  @@index([startDate, endDate])
 }
 
 model WorkspaceColumn {
@@ -4537,6 +4552,7 @@ model WorkspaceItem {
   metadata   Json?
   status     WorkspaceItemStatus @default(TODO)
   dueDate    DateTime?
+  eventDate  DateTime?
   sortOrder  Int                 @default(0)
   isArchived Boolean             @default(false)
   createdAt  DateTime            @default(now())
@@ -4549,4 +4565,6 @@ model WorkspaceItem {
   @@index([boardId, columnId])
   @@index([boardId, status])
   @@index([boardId, studentId])
+  @@index([dueDate])
+  @@index([eventDate])
 }

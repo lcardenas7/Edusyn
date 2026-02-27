@@ -67,6 +67,37 @@ export class TeacherWorkspaceController {
     return this.service.deleteBoard(id, teacherId, institutionId);
   }
 
+  @Get('scope-options')
+  async getScopeOptions(@Request() req: any) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.getScopeOptions(teacherId, institutionId);
+  }
+
+  @Post('boards/:id/populate')
+  async populateBoard(@Request() req: any, @Param('id') id: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.populateBoard(id, teacherId, institutionId);
+  }
+
+  @Get('boards/:id/summary')
+  async getBoardSummary(@Request() req: any, @Param('id') id: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.getBoardSummary(id, teacherId, institutionId);
+  }
+
+  @Get('calendar')
+  async getCalendar(
+    @Request() req: any,
+    @Query('from') from: string,
+    @Query('to') to: string,
+  ) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.getCalendarEvents(
+      teacherId, institutionId,
+      new Date(from), new Date(to),
+    );
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // COLUMNS
   // ═══════════════════════════════════════════════════════════════════════════
