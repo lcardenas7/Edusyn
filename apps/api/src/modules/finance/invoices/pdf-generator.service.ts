@@ -366,12 +366,10 @@ export class PdfGeneratorService {
     const w = pc.contentWidth;
     const PAGE_W = 396;
     const MIN_TABLE_ROWS = 2;
-    // Dynamic height: header(55) + sep(6) + title(13) + gap(4) + boxes(55) + gap(6)
-    //   + tableHeader(13) + rows(15 * MIN_TABLE_ROWS) + border(6)
-    //   + subtotal(10) + discount?(10) + totalBox(16) + signature(22) + footer(16) + bar(4)
-    let contentH = 55 + 6 + 13 + 4 + 55 + 6 + 13 + (15 * MIN_TABLE_ROWS) + 6 + 10 + 16 + 22 + 16 + 4;
+    // Dynamic height — tightly measured per section
+    let contentH = 50 + 5 + 13 + 3 + 48 + 5 + 13 + (15 * MIN_TABLE_ROWS) + 5 + 10 + 16 + 18 + 14 + 4;
     if (discountAmount > 0) contentH += 10;
-    const PAGE_H = m + contentH; // no bottom margin — blue bar is the last element
+    const PAGE_H = m + contentH;
 
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ size: [PAGE_W, PAGE_H] as any, margins: { top: m, bottom: 0, left: m, right: m }, autoFirstPage: true, bufferPages: true });
