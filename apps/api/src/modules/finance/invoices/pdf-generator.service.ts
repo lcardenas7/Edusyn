@@ -118,18 +118,14 @@ export class PdfGeneratorService {
     const hl = true;
     const fs = 0.85;
     const PAGE_W = 396;
-    const itemCount = invoice.items.length;
     const MIN_TABLE_ROWS = 4;
-    const tableRows = Math.max(itemCount, MIN_TABLE_ROWS);
     const hasResolution = !!settings?.invoiceResolution;
     const hasBankAccounts = settings?.invoiceShowBankAccounts !== false && settings?.bankAccounts;
     const hasDiscount = Number(invoice.discountTotal || 0) > 0;
     const hasTax = Number(invoice.taxTotal || 0) > 0;
-    // Dynamic height: header(55) + sep(8) + title(22) + resolution?(14:4) + boxes(61) + gap(6)
-    //   + tableHeader(20) + rows(16*N) + border(6) + subtotal(14) + discount?(14) + tax?(14) + totalBox(28)
-    //   + bankAccounts?(40) + footer(20) + bar(4)
+    // Fixed height based on exactly 4 table rows — extra items overflow to next page
     let contentH = 55 + 8 + 22 + (hasResolution ? 14 : 4) + 61 + 6
-      + 20 + (tableRows * 16) + 6
+      + 20 + (MIN_TABLE_ROWS * 16) + 6
       + 14 + (hasDiscount ? 14 : 0) + (hasTax ? 14 : 0) + 28
       + (hasBankAccounts ? 40 : 0) + 20 + 4;
     const PAGE_H = m + contentH + m;
@@ -693,32 +689,32 @@ export class PdfGeneratorService {
   private drawProfessionalItemsTable(
     doc: PDFKit.PDFDocument, items: any[], colors: DocColors, m: number, w: number,
   ) {
-    const tableTop = doc.y;
     const descW = w - 170;
     const colWidths = [descW, 40, 65, 65];
     const headers = ['Descripción', 'Cant.', 'V. Unitario', 'Total'];
-
-    // Header row
-    doc.rect(m, tableTop, w, 16).fill(colors.primary);
-    doc.fillColor('#FFFFFF').fontSize(7.5).font('Helvetica-Bold');
-    let cx = m + 4;
-    headers.forEach((h, i) => {
-      const align = i >= 2 ? 'right' : (i === 1 ? 'center' : undefined);
-      doc.text(h, cx, tableTop + 4, { width: colWidths[i] - 8, align: align as any });
-      cx += colWidths[i];
-    });
-
-    // Data rows
-    doc.fillColor(colors.text).font('Helvetica').fontSize(7.5);
-    let cy = tableTop + 20;
-
+    const ROW_H = 16;
+    const HEADER_H = 16;
     const MIN_ROWS = 4;
-    items.forEach((item, idx) => {
+    const pageH = doc.page.height;
+
+    const drawTableHeader = (startY: number) => {
+      doc.rect(m, startY, w, HEADER_H).fill(colors.primary);
+      doc.fillColor('#FFFFFF').fontSize(7.5).font('Helvetica-Bold');
+      let cx = m + 4;
+      headers.forEach((h, i) => {
+        const align = i >= 2 ? 'right' : (i === 1 ? 'center' : undefined);
+        doc.text(h, cx, startY + 4, { width: colWidths[i] - 8, align: align as any });
+        cx += colWidths[i];
+      });
+    };
+
+    const drawDataRow = (item: any, idx: number, cy: number) => {
       if (idx % 2 === 0) {
-        doc.rect(m, cy - 2, w, 16).fill(colors.secondary);
+        doc.rect(m, cy - 2, w, ROW_H).fill(colors.secondary);
         doc.fillColor(colors.text);
       }
-      cx = m + 4;
+      doc.fillColor(colors.text).font('Helvetica').fontSize(7.5);
+      let cx = m + 4;
       doc.text(item.description, cx, cy, { width: colWidths[0] - 8 });
       cx += colWidths[0];
       doc.text(String(item.quantity), cx, cy, { width: colWidths[1] - 8, align: 'center' });
@@ -726,15 +722,37 @@ export class PdfGeneratorService {
       doc.text(this.formatCurrency(Number(item.unitPrice)), cx, cy, { width: colWidths[2] - 8, align: 'right' });
       cx += colWidths[2];
       doc.text(this.formatCurrency(Number(item.total)), cx, cy, { width: colWidths[3] - 8, align: 'right' });
-      cy += 16;
+    };
+
+    // Draw first header
+    drawTableHeader(doc.y);
+    let cy = doc.y + HEADER_H + 4;
+    let rowCount = 0;
+
+    // Draw data rows with page overflow handling
+    items.forEach((item, idx) => {
+      if (cy + ROW_H > pageH - 10) {
+        // Close current table
+        doc.moveTo(m, cy).lineTo(m + w, cy).lineWidth(0.5).stroke(colors.border);
+        // New page
+        doc.addPage({ size: [doc.page.width, pageH] as any, margins: { top: m, bottom: 0, left: m, right: m } });
+        doc.rect(0, 0, doc.page.width, 4).fill(colors.primary);
+        drawTableHeader(m + 6);
+        cy = m + 6 + HEADER_H + 4;
+        rowCount = 0;
+      }
+      drawDataRow(item, idx, cy);
+      cy += ROW_H;
+      rowCount++;
     });
 
-    // Empty rows to fill up to MIN_ROWS
-    for (let row = items.length; row < MIN_ROWS; row++) {
+    // Fill empty rows up to MIN_ROWS on the last page
+    const totalRows = Math.max(items.length, MIN_ROWS);
+    for (let row = items.length; row < totalRows; row++) {
       const bgColor = row % 2 === 0 ? colors.secondary : '#FFFFFF';
-      doc.rect(m, cy - 2, w, 16).fill(bgColor);
+      doc.rect(m, cy - 2, w, ROW_H).fill(bgColor);
       doc.moveTo(m, cy - 2).lineTo(m + w, cy - 2).lineWidth(0.2).stroke(colors.border);
-      cy += 16;
+      cy += ROW_H;
     }
 
     // Bottom border
