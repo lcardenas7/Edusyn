@@ -371,7 +371,7 @@ export class PdfGeneratorService {
     //   + subtotal(10) + discount?(10) + totalBox(16) + signature(22) + footer(16) + bar(4)
     let contentH = 55 + 6 + 13 + 4 + 55 + 6 + 13 + (15 * MIN_TABLE_ROWS) + 6 + 10 + 16 + 22 + 16 + 4;
     if (discountAmount > 0) contentH += 10;
-    const PAGE_H = m + contentH + m;
+    const PAGE_H = m + contentH; // no bottom margin — blue bar is the last element
 
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ size: [PAGE_W, PAGE_H] as any, margins: { top: m, bottom: 0, left: m, right: m }, autoFirstPage: true, bufferPages: true });
