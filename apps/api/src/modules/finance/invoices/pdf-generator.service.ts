@@ -427,7 +427,7 @@ export class PdfGeneratorService {
       y += titleH + 4;
 
       // ── Two-column: Client info (left) + Receipt meta + QR (right) ──
-      const qrDrawSize = hl ? 42 : 50; // actual QR image size
+      const qrDrawSize = hl ? 32 : 42; // QR must fit inside boxH minus header
       const colGap = 8;
       const leftW = w * 0.55;
       const rightW = w - leftW - colGap;
