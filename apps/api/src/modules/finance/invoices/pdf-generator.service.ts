@@ -118,7 +118,21 @@ export class PdfGeneratorService {
     const hl = true;
     const fs = 0.85;
     const PAGE_W = 396;
-    const PAGE_H = 612; // fixed 5.5 x 8.5 half-letter
+    const itemCount = invoice.items.length;
+    const MIN_TABLE_ROWS = 4;
+    const tableRows = Math.max(itemCount, MIN_TABLE_ROWS);
+    const hasResolution = !!settings?.invoiceResolution;
+    const hasBankAccounts = settings?.invoiceShowBankAccounts !== false && settings?.bankAccounts;
+    const hasDiscount = Number(invoice.discountTotal || 0) > 0;
+    const hasTax = Number(invoice.taxTotal || 0) > 0;
+    // Dynamic height: header(55) + sep(8) + title(22) + resolution?(14:4) + boxes(61) + gap(6)
+    //   + tableHeader(20) + rows(16*N) + border(6) + subtotal(14) + discount?(14) + tax?(14) + totalBox(28)
+    //   + bankAccounts?(40) + footer(20) + bar(4)
+    let contentH = 55 + 8 + 22 + (hasResolution ? 14 : 4) + 61 + 6
+      + 20 + (tableRows * 16) + 6
+      + 14 + (hasDiscount ? 14 : 0) + (hasTax ? 14 : 0) + 28
+      + (hasBankAccounts ? 40 : 0) + 20 + 4;
+    const PAGE_H = m + contentH + m;
 
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ size: [PAGE_W, PAGE_H] as any, margins: { top: m, bottom: 0, left: m, right: m }, bufferPages: true });
@@ -270,25 +284,24 @@ export class PdfGeneratorService {
         this.drawBankAccounts(doc, settings.bankAccounts, colors, m, w);
       }
 
-      // ── Footer (fixed at page bottom) ──
+      // ── Footer (after content) ──
       const _addPage = doc.addPage.bind(doc);
       doc.addPage = () => doc as any;
 
-      const lastPage = doc.bufferedPageRange().count - 1;
-      doc.switchToPage(lastPage);
-
+      let footerY = doc.y + 4;
       let invoiceFooterText = `Documento generado el ${new Date().toLocaleString('es-CO')} | Documento interno`;
       if (settings?.billingMode === 'INTERNAL_ONLY') {
         invoiceFooterText += ' | No constituye factura electrónica';
       }
-      const fY = PAGE_H - 20;
-      doc.moveTo(m, fY).lineTo(m + w, fY).lineWidth(0.3).stroke(colors.border);
+      doc.moveTo(m, footerY).lineTo(m + w, footerY).lineWidth(0.3).stroke(colors.border);
+      footerY += 3;
       doc.fontSize(4).font('Helvetica').fillColor(colors.lightText);
-      doc.text(invoiceFooterText, m, fY + 3, { width: w, align: 'center', lineBreak: false });
+      doc.text(invoiceFooterText, m, footerY, { width: w, align: 'center', lineBreak: false });
       doc.fillColor(colors.text);
+      footerY += 10;
 
-      // ── Bottom colored bar (fixed at very bottom) ──
-      doc.rect(0, PAGE_H - 4, PAGE_W, 4).fill(colors.primary);
+      // ── Bottom colored bar ──
+      doc.rect(0, footerY, PAGE_W, 4).fill(colors.primary);
 
       doc.addPage = _addPage;
 
@@ -356,8 +369,13 @@ export class PdfGeneratorService {
     const m = pc.margin;
     const w = pc.contentWidth;
     const PAGE_W = 396;
-    const PAGE_H = 612; // fixed 5.5 x 8.5 half-letter
-    const MIN_TABLE_ROWS = 4; // always show at least 4 rows in items table
+    const MIN_TABLE_ROWS = 4;
+    // Dynamic height: header(55) + sep(8) + title(22) + gap(6) + boxes(63) + gap(8)
+    //   + tableHeader(16) + rows(18 * MIN_TABLE_ROWS) + border(8)
+    //   + subtotal(12) + discount?(12) + totalBox(30) + signature(28) + footer(20) + bar(4)
+    let contentH = 55 + 8 + 22 + 6 + 63 + 8 + 16 + (18 * MIN_TABLE_ROWS) + 8 + 12 + 30 + 28 + 20 + 4;
+    if (discountAmount > 0) contentH += 12;
+    const PAGE_H = m + contentH + m;
 
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ size: [PAGE_W, PAGE_H] as any, margins: { top: m, bottom: 0, left: m, right: m }, autoFirstPage: true, bufferPages: true });
@@ -568,7 +586,7 @@ export class PdfGeneratorService {
       doc.fillColor(colors.text);
       y += 18;
 
-      // ── Footer (fixed at page bottom) ──
+      // ── Footer (after content) ──
       const _addPage = doc.addPage.bind(doc);
       doc.addPage = () => doc as any;
 
@@ -576,14 +594,15 @@ export class PdfGeneratorService {
       if (settings?.billingMode === 'INTERNAL_ONLY') {
         footerText += ' | No constituye factura electrónica';
       }
-      const fY = PAGE_H - 20;
-      doc.moveTo(m, fY).lineTo(m + w, fY).lineWidth(0.3).stroke(colors.border);
+      doc.moveTo(m, y).lineTo(m + w, y).lineWidth(0.3).stroke(colors.border);
+      y += 3;
       doc.fontSize(4).font('Helvetica').fillColor(colors.lightText);
-      doc.text(footerText, m, fY + 3, { width: w, align: 'center', lineBreak: false });
+      doc.text(footerText, m, y, { width: w, align: 'center', lineBreak: false });
       doc.fillColor(colors.text);
+      y += 10;
 
-      // ── Bottom colored bar (fixed at very bottom) ──
-      doc.rect(0, PAGE_H - 4, PAGE_W, 4).fill(colors.primary);
+      // ── Bottom colored bar ──
+      doc.rect(0, y, PAGE_W, 4).fill(colors.primary);
 
       doc.addPage = _addPage;
 
