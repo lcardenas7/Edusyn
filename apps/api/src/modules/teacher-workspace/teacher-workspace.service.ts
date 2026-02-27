@@ -431,6 +431,106 @@ export class TeacherWorkspaceService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // SEARCH STUDENTS — for manual add in structured boards
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async searchStudentsForBoard(boardId: string, teacherId: string, institutionId: string, query: string) {
+    const board = await this.validateBoardOwnership(boardId, teacherId, institutionId);
+
+    // Get all student IDs in scope
+    const scopeStudentIds = await this.resolveStudentsByScope(board, institutionId);
+    if (!scopeStudentIds.length) return [];
+
+    // Get already added student record IDs
+    const existingItems = await this.prisma.workspaceItem.findMany({
+      where: { boardId, isArchived: false },
+      select: { metadata: true },
+    });
+    const existingSet = new Set(
+      existingItems.map(e => ((e.metadata as any)?.studentRecordId || '')).filter(Boolean),
+    );
+
+    // Filter to only students not already in board
+    const availableIds = scopeStudentIds.filter(id => !existingSet.has(id));
+    if (!availableIds.length) return [];
+
+    // Search by name
+    const searchFilter = query.trim()
+      ? {
+          OR: [
+            { firstName: { contains: query.trim(), mode: 'insensitive' as const } },
+            { lastName: { contains: query.trim(), mode: 'insensitive' as const } },
+            { secondLastName: { contains: query.trim(), mode: 'insensitive' as const } },
+          ],
+        }
+      : {};
+
+    const students = await this.prisma.student.findMany({
+      where: { id: { in: availableIds }, isActive: true, ...searchFilter },
+      select: { id: true, userId: true, firstName: true, secondName: true, lastName: true, secondLastName: true },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+      take: 20,
+    });
+
+    return students.map(s => ({
+      studentRecordId: s.id,
+      userId: s.userId,
+      fullName: [s.lastName, s.secondLastName, s.firstName, s.secondName].filter(Boolean).join(' '),
+    }));
+  }
+
+  async addStudentToBoard(boardId: string, teacherId: string, institutionId: string, studentRecordId: string) {
+    const board = await this.validateBoardOwnership(boardId, teacherId, institutionId);
+
+    if (!['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(board.type)) {
+      throw new BadRequestException('Solo tableros estructurados soportan agregar estudiantes');
+    }
+
+    // Check not already added
+    const existingItems = await this.prisma.workspaceItem.findMany({
+      where: { boardId, isArchived: false },
+      select: { metadata: true, sortOrder: true },
+    });
+    const alreadyAdded = existingItems.some(e => (e.metadata as any)?.studentRecordId === studentRecordId);
+    if (alreadyAdded) throw new BadRequestException('El estudiante ya está en el tablero');
+
+    // Get student info
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentRecordId },
+      select: { id: true, userId: true, firstName: true, secondName: true, lastName: true, secondLastName: true },
+    });
+    if (!student) throw new NotFoundException('Estudiante no encontrado');
+
+    const fullName = [student.lastName, student.secondLastName, student.firstName, student.secondName].filter(Boolean).join(' ');
+
+    // Get first column
+    const firstCol = await this.prisma.workspaceColumn.findFirst({
+      where: { boardId },
+      orderBy: { sortOrder: 'asc' },
+    });
+
+    let itemMeta: any = { studentRecordId: student.id };
+    if (board.type === 'MICRO_COLLECT') {
+      itemMeta = { ...itemMeta, amountPaid: 0, status: 'PENDING' };
+    } else if (board.type === 'CLASSROOM_ROLES') {
+      itemMeta = { ...itemMeta, role: '' };
+    }
+
+    const maxSort = existingItems.reduce((max, e) => Math.max(max, e.sortOrder), 0);
+
+    return this.prisma.workspaceItem.create({
+      data: {
+        boardId,
+        columnId: firstCol?.id || null,
+        studentId: student.userId || null,
+        title: fullName,
+        metadata: itemMeta,
+        sortOrder: maxSort + 100,
+      },
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // SUMMARY — aggregated stats for structured boards
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -444,7 +544,8 @@ export class TeacherWorkspaceService {
     });
 
     if (board.type === 'MICRO_COLLECT') {
-      const goalAmount = boardMeta.goalAmount || 0;
+      const perStudent = Number(boardMeta.goalAmount) || 0; // per-student value
+      const totalGoal = perStudent * items.length; // auto-calculated total
       let totalCollected = 0;
       let paidCount = 0;
       let pendingCount = 0;
@@ -461,9 +562,10 @@ export class TeacherWorkspaceService {
 
       return {
         type: 'MICRO_COLLECT',
-        goalAmount,
+        perStudent,
+        goalAmount: totalGoal,
         totalCollected,
-        percentage: goalAmount > 0 ? Math.round((totalCollected / goalAmount) * 100) : 0,
+        percentage: totalGoal > 0 ? Math.round((totalCollected / totalGoal) * 100) : 0,
         totalStudents: items.length,
         paidCount,
         partialCount,

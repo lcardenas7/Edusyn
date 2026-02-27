@@ -1691,10 +1691,12 @@ export const teacherWorkspaceApi = {
     api.put(`/teacher-workspace/boards/${id}`, data),
   deleteBoard: (id: string) => api.delete(`/teacher-workspace/boards/${id}`),
 
-  // Scope, Populate, Summary
+  // Scope, Populate, Summary, Students
   getScopeOptions: () => api.get('/teacher-workspace/scope-options'),
   populateBoard: (id: string) => api.post(`/teacher-workspace/boards/${id}/populate`),
   getBoardSummary: (id: string) => api.get(`/teacher-workspace/boards/${id}/summary`),
+  searchStudents: (boardId: string, q: string) => api.get(`/teacher-workspace/boards/${boardId}/search-students`, { params: { q } }),
+  addStudent: (boardId: string, studentRecordId: string) => api.post(`/teacher-workspace/boards/${boardId}/add-student`, { studentRecordId }),
 
   // Calendar
   getCalendarEvents: (from: string, to: string) =>

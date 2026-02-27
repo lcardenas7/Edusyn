@@ -85,6 +85,18 @@ export class TeacherWorkspaceController {
     return this.service.getBoardSummary(id, teacherId, institutionId);
   }
 
+  @Get('boards/:id/search-students')
+  async searchStudents(@Request() req: any, @Param('id') id: string, @Query('q') q: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.searchStudentsForBoard(id, teacherId, institutionId, q || '');
+  }
+
+  @Post('boards/:id/add-student')
+  async addStudent(@Request() req: any, @Param('id') id: string, @Body() body: { studentRecordId: string }) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.addStudentToBoard(id, teacherId, institutionId, body.studentRecordId);
+  }
+
   @Get('calendar')
   async getCalendar(
     @Request() req: any,
