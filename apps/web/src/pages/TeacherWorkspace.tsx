@@ -238,7 +238,8 @@ export default function TeacherWorkspace() {
     const val = overrideAmount !== undefined ? overrideAmount : (Number(payAmount) || 0)
     if (val <= 0) return // don't save $0 payments
     const perStudent = Number((activeBoard.metadata as any)?.goalAmount) || 0
-    const newStatus = perStudent > 0 && val >= perStudent ? 'PAID' : (val > 0 ? 'PARTIAL' : 'PENDING')
+    // If no per-student goal set, any payment = PAID. Otherwise compare against goal.
+    const newStatus = val <= 0 ? 'PENDING' : (perStudent > 0 ? (val >= perStudent ? 'PAID' : 'PARTIAL') : 'PAID')
     await teacherWorkspaceApi.updateItem(payModal.itemId, { metadata: { ...payModal.meta, amountPaid: val, status: newStatus } })
     setPayModal(null)
     setPayAmount('')
