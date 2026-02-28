@@ -387,7 +387,7 @@ export default function Classroom() {
             {activeTab === 'announcements' && <AnnouncementsTab classroom={activeClassroom} isTeacher={!!isTeacher} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'content' && <ContentTab classroom={activeClassroom} isTeacher={!!isTeacher} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'activities' && <ActivitiesTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} onReload={reloadClassroom} setError={setError} />}
-            {activeTab === 'forum' && <ForumTab isTeacher={!!isTeacher} />}
+            {activeTab === 'forum' && <ForumTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} user={user} setError={setError} />}
             {activeTab === 'students' && <StudentsTab classroomId={activeClassroom.id} />}
             {activeTab === 'grades' && <GradesTab />}
           </>
@@ -1765,48 +1765,260 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TAB: FORO (placeholder para Fase 2+)
+// TAB: FORO (funcional)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function ForumTab({ isTeacher }: { isTeacher: boolean }) {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-800">Foro de Discusión</h2>
-        {isTeacher && (
-          <button disabled className="flex items-center gap-2 px-5 py-2.5 bg-blue-600/50 text-white rounded-xl text-sm font-semibold cursor-not-allowed" style={{ minHeight: '44px' }}>
-            <Plus className="w-5 h-5" /> Nuevo Tema
-          </button>
+interface ForumPostData {
+  id: string; title?: string; content: string; authorId: string; parentId?: string;
+  isPinned: boolean; isAnonymous: boolean; createdAt: string;
+  author: { id: string; firstName: string; lastName: string };
+  _count?: { replies: number };
+  replies?: ForumPostData[];
+}
+
+function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
+  classroom: any; isTeacher: boolean; isStudent: boolean; user: any; setError: (e: string) => void
+}) {
+  const [posts, setPosts] = useState<ForumPostData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showCreate, setShowCreate] = useState(false)
+  const [form, setForm] = useState({ title: '', content: '' })
+  const [creating, setCreating] = useState(false)
+
+  // Thread view
+  const [selectedPost, setSelectedPost] = useState<ForumPostData | null>(null)
+  const [threadLoading, setThreadLoading] = useState(false)
+  const [replyContent, setReplyContent] = useState('')
+  const [replying, setReplying] = useState(false)
+  const [replyToId, setReplyToId] = useState<string | null>(null)
+
+  const loadPosts = useCallback(async () => {
+    try {
+      setLoading(true)
+      const { data } = await classroomApi.listForumPosts(classroom.id)
+      setPosts(data)
+    } catch {} finally { setLoading(false) }
+  }, [classroom.id])
+
+  useEffect(() => { loadPosts() }, [loadPosts])
+
+  const handleCreate = async () => {
+    if (!form.title.trim() || !form.content.trim()) return
+    try {
+      setCreating(true)
+      await classroomApi.createForumPost(classroom.id, { title: form.title, content: form.content })
+      setForm({ title: '', content: '' })
+      setShowCreate(false)
+      loadPosts()
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al crear tema')
+    } finally { setCreating(false) }
+  }
+
+  const openThread = async (post: ForumPostData) => {
+    setThreadLoading(true)
+    try {
+      const { data } = await classroomApi.getForumPost(post.id)
+      setSelectedPost(data)
+    } catch {} finally { setThreadLoading(false) }
+  }
+
+  const handleReply = async () => {
+    if (!replyContent.trim() || !selectedPost) return
+    try {
+      setReplying(true)
+      await classroomApi.createForumPost(classroom.id, {
+        title: '', content: replyContent,
+        parentId: replyToId || selectedPost.id,
+      })
+      setReplyContent('')
+      setReplyToId(null)
+      openThread(selectedPost)
+      loadPosts()
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al responder')
+    } finally { setReplying(false) }
+  }
+
+  const handlePin = async (postId: string) => {
+    try { await classroomApi.togglePinForumPost(postId); loadPosts(); if (selectedPost) openThread(selectedPost) } catch {}
+  }
+
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm('¿Eliminar esta publicación?')) return
+    try {
+      await classroomApi.deleteForumPost(postId)
+      if (selectedPost?.id === postId) setSelectedPost(null)
+      loadPosts()
+    } catch {}
+  }
+
+  const formatDate = (d: string) => new Date(d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+  const currentUserId = user?.id
+
+  if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+
+  // ── THREAD DETAIL VIEW ──
+  if (selectedPost) {
+    const post = selectedPost
+    return (
+      <div className="space-y-5">
+        <button onClick={() => { setSelectedPost(null); setReplyToId(null); setReplyContent('') }} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-blue-600">
+          <ChevronLeft className="w-4 h-4" /> Volver al foro
+        </button>
+
+        {threadLoading ? (
+          <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+        ) : (
+          <>
+            {/* Main post */}
+            <div className={`bg-white rounded-2xl border-2 p-6 ${post.isPinned ? 'border-yellow-300' : 'border-slate-200'}`}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2.5 mb-2">
+                    {post.isPinned && <Pin className="w-4 h-4 text-yellow-500" />}
+                    <h2 className="text-xl font-bold text-slate-800">{post.title || 'Sin título'}</h2>
+                  </div>
+                  <p className="text-base text-slate-600 whitespace-pre-wrap leading-relaxed">{post.content}</p>
+                  <p className="text-sm text-slate-400 mt-4">
+                    {post.author.firstName} {post.author.lastName} · {formatDate(post.createdAt)}
+                  </p>
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  {isTeacher && (
+                    <button onClick={() => handlePin(post.id)} className="p-2 rounded-xl hover:bg-slate-100" title={post.isPinned ? 'Desfijar' : 'Fijar'}>
+                      {post.isPinned ? <PinOff className="w-5 h-5 text-slate-400" /> : <Pin className="w-5 h-5 text-slate-400" />}
+                    </button>
+                  )}
+                  {(isTeacher || post.authorId === currentUserId) && (
+                    <button onClick={() => handleDeletePost(post.id)} className="p-2 rounded-xl hover:bg-red-50">
+                      <Trash2 className="w-5 h-5 text-red-400" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Replies */}
+            <div className="space-y-3">
+              <h3 className="text-base font-bold text-slate-700">{post.replies?.length || 0} Respuesta(s)</h3>
+              {post.replies?.map(reply => (
+                <div key={reply.id} className="bg-white rounded-2xl border border-slate-200 p-5 ml-4">
+                  <p className="text-base text-slate-700 whitespace-pre-wrap">{reply.content}</p>
+                  <div className="flex items-center justify-between mt-3">
+                    <p className="text-sm text-slate-400">
+                      {reply.author.firstName} {reply.author.lastName} · {formatDate(reply.createdAt)}
+                    </p>
+                    <div className="flex gap-1">
+                      <button onClick={() => setReplyToId(reply.id)} className="text-xs text-blue-500 hover:text-blue-700 px-2 py-1 rounded hover:bg-blue-50">Responder</button>
+                      {(isTeacher || reply.authorId === currentUserId) && (
+                        <button onClick={() => handleDeletePost(reply.id)} className="p-1 rounded hover:bg-red-50"><Trash2 className="w-4 h-4 text-red-400" /></button>
+                      )}
+                    </div>
+                  </div>
+                  {/* Nested replies (level 2) */}
+                  {reply.replies && reply.replies.length > 0 && (
+                    <div className="mt-3 ml-4 space-y-2 border-l-2 border-slate-100 pl-4">
+                      {reply.replies.map((nested: any) => (
+                        <div key={nested.id} className="py-2">
+                          <p className="text-sm text-slate-700 whitespace-pre-wrap">{nested.content}</p>
+                          <div className="flex items-center justify-between mt-1">
+                            <p className="text-xs text-slate-400">{nested.author.firstName} {nested.author.lastName} · {formatDate(nested.createdAt)}</p>
+                            {(isTeacher || nested.authorId === currentUserId) && (
+                              <button onClick={() => handleDeletePost(nested.id)} className="p-0.5 rounded hover:bg-red-50"><Trash2 className="w-3.5 h-3.5 text-red-400" /></button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Reply form */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
+              {replyToId && (
+                <div className="flex items-center gap-2 text-sm text-blue-600">
+                  <span>Respondiendo a un comentario</span>
+                  <button onClick={() => setReplyToId(null)} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+                </div>
+              )}
+              <textarea value={replyContent} onChange={e => setReplyContent(e.target.value)} rows={3} placeholder="Escribe tu respuesta..." className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-blue-500 outline-none" />
+              <div className="flex justify-end">
+                <button onClick={handleReply} disabled={!replyContent.trim() || replying} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                  {replying && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {replying ? 'Enviando...' : 'Responder'}
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
+    )
+  }
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
-        <MessageSquare className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-        <h3 className="text-xl font-bold text-slate-700">Próximamente</h3>
-        <p className="text-base text-slate-500 mt-2 max-w-lg mx-auto">
-          {isTeacher
-            ? 'Podrás crear temas de discusión para que tus estudiantes participen, con respuestas anidadas y la opción de fijar temas importantes.'
-            : 'Aquí podrás participar en discusiones con tu profesor y compañeros sobre los temas del curso.'}
-        </p>
+  // ── FORUM LIST VIEW ──
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-slate-800">Foro de Discusión</h2>
+        <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
+          <Plus className="w-5 h-5" /> Nuevo Tema
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 text-center opacity-70">
-          <MessageSquare className="w-8 h-8 mx-auto text-blue-400 mb-2" />
-          <h4 className="text-sm font-bold text-slate-700">Temas de discusión</h4>
-          <p className="text-xs text-slate-500 mt-1">Crea y participa en conversaciones organizadas por tema</p>
+      {/* Create form */}
+      {showCreate && (
+        <div className="bg-white border-2 border-blue-200 rounded-2xl p-6 space-y-4">
+          <h3 className="text-lg font-bold text-slate-800">Nuevo Tema de Discusión</h3>
+          <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Título del tema" className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
+          <textarea value={form.content} onChange={e => setForm({ ...form, content: e.target.value })} placeholder="Describe el tema de discusión..." rows={4} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-blue-500 outline-none" />
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setShowCreate(false)} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
+            <button onClick={handleCreate} disabled={!form.title.trim() || !form.content.trim() || creating} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+              {creating && <Loader2 className="w-4 h-4 animate-spin" />}
+              {creating ? 'Publicando...' : 'Publicar Tema'}
+            </button>
+          </div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 text-center opacity-70">
-          <ChevronRight className="w-8 h-8 mx-auto text-green-400 mb-2" />
-          <h4 className="text-sm font-bold text-slate-700">Respuestas anidadas</h4>
-          <p className="text-xs text-slate-500 mt-1">Responde directamente a mensajes específicos</p>
+      )}
+
+      {/* Posts list */}
+      {posts.length === 0 && !showCreate ? (
+        <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
+          <MessageSquare className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+          <p className="text-lg font-medium text-slate-500">No hay temas de discusión</p>
+          <p className="text-base mt-1 text-slate-400">Crea el primer tema para iniciar la conversación</p>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 text-center opacity-70">
-          <Pin className="w-8 h-8 mx-auto text-amber-400 mb-2" />
-          <h4 className="text-sm font-bold text-slate-700">Fijar temas</h4>
-          <p className="text-xs text-slate-500 mt-1">Destaca los temas más importantes</p>
+      ) : (
+        <div className="space-y-3">
+          {posts.map(post => (
+            <button key={post.id} onClick={() => openThread(post)} className="w-full text-left bg-white rounded-2xl border-2 border-slate-200 hover:border-blue-300 p-5 transition-all hover:shadow-sm group">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-sm font-bold text-blue-700 shrink-0">
+                  {post.author.firstName?.[0] || ''}{post.author.lastName?.[0] || ''}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    {post.isPinned && <Pin className="w-4 h-4 text-yellow-500" />}
+                    <h3 className="text-base font-bold text-slate-800 group-hover:text-blue-700">{post.title || 'Sin título'}</h3>
+                  </div>
+                  <p className="text-sm text-slate-500 mt-1 line-clamp-2">{post.content}</p>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-slate-400">
+                    <span>{post.author.firstName} {post.author.lastName}</span>
+                    <span>{formatDate(post.createdAt)}</span>
+                    <span className="flex items-center gap-1">
+                      <MessageSquare className="w-4 h-4" /> {post._count?.replies || 0} respuesta(s)
+                    </span>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 shrink-0 mt-1" />
+              </div>
+            </button>
+          ))}
         </div>
-      </div>
+      )}
     </div>
   )
 }

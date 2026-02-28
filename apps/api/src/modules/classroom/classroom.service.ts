@@ -716,6 +716,117 @@ export class ClassroomService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // FORUM
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async createForumPost(classroomId: string, authorId: string, dto: {
+    title: string;
+    content: string;
+    parentId?: string;
+  }) {
+    // Verify user has access (teacher or enrolled student)
+    await this.verifyClassroomAccess(classroomId, authorId);
+
+    return this.prisma.forumPost.create({
+      data: {
+        classroomId,
+        authorId,
+        title: dto.parentId ? undefined : dto.title,
+        content: dto.content,
+        parentId: dto.parentId || undefined,
+      },
+      include: {
+        author: { select: { id: true, firstName: true, lastName: true } },
+        _count: { select: { replies: true } },
+      },
+    });
+  }
+
+  async listForumPosts(classroomId: string, userId: string) {
+    await this.verifyClassroomAccess(classroomId, userId);
+
+    return this.prisma.forumPost.findMany({
+      where: { classroomId, parentId: null },
+      include: {
+        author: { select: { id: true, firstName: true, lastName: true } },
+        _count: { select: { replies: true } },
+      },
+      orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  async getForumPost(postId: string, userId: string) {
+    const post = await this.prisma.forumPost.findUnique({
+      where: { id: postId },
+      include: {
+        author: { select: { id: true, firstName: true, lastName: true } },
+        replies: {
+          include: {
+            author: { select: { id: true, firstName: true, lastName: true } },
+            replies: {
+              include: {
+                author: { select: { id: true, firstName: true, lastName: true } },
+              },
+              orderBy: { createdAt: 'asc' },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+    if (!post) throw new NotFoundException('Tema no encontrado');
+    if (post.classroomId) await this.verifyClassroomAccess(post.classroomId, userId);
+    return post;
+  }
+
+  async togglePinForumPost(postId: string, teacherId: string) {
+    const post = await this.prisma.forumPost.findUnique({ where: { id: postId } });
+    if (!post || !post.classroomId) throw new NotFoundException('Tema no encontrado');
+    await this.validateClassroomOwnership(post.classroomId, teacherId);
+
+    return this.prisma.forumPost.update({
+      where: { id: postId },
+      data: { isPinned: !post.isPinned },
+    });
+  }
+
+  async deleteForumPost(postId: string, userId: string, isTeacher: boolean) {
+    const post = await this.prisma.forumPost.findUnique({ where: { id: postId } });
+    if (!post) throw new NotFoundException('Publicación no encontrada');
+
+    // Author can delete own post, teacher can delete any
+    if (post.authorId !== userId) {
+      if (!isTeacher || !post.classroomId) throw new ForbiddenException('No tiene permisos');
+      await this.validateClassroomOwnership(post.classroomId, userId);
+    }
+
+    await this.prisma.forumPost.delete({ where: { id: postId } });
+    return { success: true };
+  }
+
+  private async verifyClassroomAccess(classroomId: string, userId: string) {
+    // Check if teacher
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: classroomId },
+      include: { teacherAssignment: { select: { teacherId: true, groupId: true, academicYearId: true } } },
+    });
+    if (!classroom) throw new NotFoundException('Aula no encontrada');
+    if (classroom.teacherAssignment.teacherId === userId) return classroom;
+
+    // Check if enrolled student
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: {
+        student: { userId },
+        groupId: classroom.teacherAssignment.groupId,
+        academicYearId: classroom.teacherAssignment.academicYearId,
+        status: 'ACTIVE',
+      },
+    });
+    if (!enrollment) throw new ForbiddenException('No tiene acceso a esta aula');
+    return classroom;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // VALIDATION HELPERS
   // ═══════════════════════════════════════════════════════════════════════════
 

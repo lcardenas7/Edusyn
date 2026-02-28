@@ -303,4 +303,48 @@ export class ClassroomController {
     const { userId } = await this.resolveCtx(req);
     return this.service.returnSubmission(submissionId, userId, body);
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FORUM
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post(':id/forum')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async createForumPost(@Param('id') classroomId: string, @Request() req: any, @Body() body: {
+    title: string;
+    content: string;
+    parentId?: string;
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.createForumPost(classroomId, userId, body);
+  }
+
+  @Get(':id/forum')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE', 'ACUDIENTE')
+  async listForumPosts(@Param('id') classroomId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.listForumPosts(classroomId, userId);
+  }
+
+  @Get('forum/:postId')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE', 'ACUDIENTE')
+  async getForumPost(@Param('postId') postId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.getForumPost(postId, userId);
+  }
+
+  @Put('forum/:postId/pin')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async togglePinForumPost(@Param('postId') postId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.togglePinForumPost(postId, userId);
+  }
+
+  @Delete('forum/:postId')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async deleteForumPost(@Param('postId') postId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    const isTeacher = req.user.roles?.some((r: any) => ['DOCENTE', 'COORDINADOR'].includes(r.role || r));
+    return this.service.deleteForumPost(postId, userId, !!isTeacher);
+  }
 }

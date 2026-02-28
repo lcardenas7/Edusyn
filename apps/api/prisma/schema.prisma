@@ -4642,6 +4642,7 @@ model Classroom {
   sections          ClassroomSection[]
   announcements     ClassroomAnnouncement[]
   activities        ClassroomActivity[]
+  forumPosts        ForumPost[]            @relation("ClassroomForumPosts")
 
   @@index([institutionId])
   @@index([teacherAssignmentId])
@@ -4809,20 +4810,24 @@ model QuestionAnswer {
 
 model ForumPost {
   id          String   @id @default(cuid())
-  activityId  String
+  classroomId String?
+  activityId  String?
   authorId    String
   parentId    String?
+  title       String?
   content     String   @db.Text
   isAnonymous Boolean  @default(false)
   isPinned    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  activity   ClassroomActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  classroom  Classroom?        @relation("ClassroomForumPosts", fields: [classroomId], references: [id], onDelete: Cascade)
+  activity   ClassroomActivity? @relation(fields: [activityId], references: [id], onDelete: Cascade)
   author     User              @relation("ForumPostAuthor", fields: [authorId], references: [id])
   parent     ForumPost?        @relation("ForumReplies", fields: [parentId], references: [id])
   replies    ForumPost[]       @relation("ForumReplies")
 
+  @@index([classroomId])
   @@index([activityId])
   @@index([authorId])
 }

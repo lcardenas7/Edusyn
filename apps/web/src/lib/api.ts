@@ -1785,6 +1785,14 @@ export const classroomApi = {
   returnSubmission: (submissionId: string, data: { feedback?: string }) =>
     api.put(`/classrooms/submissions/${submissionId}/return`, data),
 
+  // Forum
+  createForumPost: (classroomId: string, data: { title: string; content: string; parentId?: string }) =>
+    api.post(`/classrooms/${classroomId}/forum`, data),
+  listForumPosts: (classroomId: string) => api.get(`/classrooms/${classroomId}/forum`),
+  getForumPost: (postId: string) => api.get(`/classrooms/forum/${postId}`),
+  togglePinForumPost: (postId: string) => api.put(`/classrooms/forum/${postId}/pin`),
+  deleteForumPost: (postId: string) => api.delete(`/classrooms/forum/${postId}`),
+
   // File upload for classroom materials (documents, images)
   uploadMaterial: (file: File) => {
     const formData = new FormData()
