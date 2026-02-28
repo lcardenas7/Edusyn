@@ -1754,6 +1754,37 @@ export const classroomApi = {
     api.put(`/classrooms/announcements/${announcementId}`, data),
   deleteAnnouncement: (announcementId: string) => api.delete(`/classrooms/announcements/${announcementId}`),
 
+  // Activities
+  createActivity: (classroomId: string, data: {
+    sectionId: string; type: string; title: string; description?: string;
+    maxScore?: number; dueDate?: string; openDate?: string; allowLateSubmit?: boolean;
+    attachmentUrl?: string; attachmentName?: string;
+  }) => api.post(`/classrooms/${classroomId}/activities`, data),
+  listActivities: (classroomId: string, role?: string) =>
+    api.get(`/classrooms/${classroomId}/activities`, { params: { role } }),
+  getActivity: (activityId: string, role?: string) =>
+    api.get(`/classrooms/activities/${activityId}`, { params: { role } }),
+  updateActivity: (activityId: string, data: {
+    title?: string; description?: string; maxScore?: number; dueDate?: string;
+    openDate?: string; allowLateSubmit?: boolean; isVisible?: boolean;
+    attachmentUrl?: string; attachmentName?: string;
+  }) => api.put(`/classrooms/activities/${activityId}`, data),
+  publishActivity: (activityId: string) => api.put(`/classrooms/activities/${activityId}/publish`),
+  unpublishActivity: (activityId: string) => api.put(`/classrooms/activities/${activityId}/unpublish`),
+  deleteActivity: (activityId: string) => api.delete(`/classrooms/activities/${activityId}`),
+
+  // Submissions
+  submitTask: (activityId: string, data: { content?: string; fileUrl?: string }) =>
+    api.post(`/classrooms/activities/${activityId}/submit`, data),
+  listSubmissions: (activityId: string) =>
+    api.get(`/classrooms/activities/${activityId}/submissions`),
+  getMySubmission: (activityId: string) =>
+    api.get(`/classrooms/activities/${activityId}/my-submission`),
+  gradeSubmission: (submissionId: string, data: { score: number; feedback?: string }) =>
+    api.put(`/classrooms/submissions/${submissionId}/grade`, data),
+  returnSubmission: (submissionId: string, data: { feedback?: string }) =>
+    api.put(`/classrooms/submissions/${submissionId}/return`, data),
+
   // File upload for classroom materials (documents, images)
   uploadMaterial: (file: File) => {
     const formData = new FormData()

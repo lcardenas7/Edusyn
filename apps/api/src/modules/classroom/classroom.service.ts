@@ -393,6 +393,329 @@ export class ClassroomService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // ACTIVITIES
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async createActivity(classroomId: string, teacherId: string, dto: {
+    sectionId: string;
+    type: string;
+    title: string;
+    description?: string;
+    maxScore?: number;
+    dueDate?: string;
+    openDate?: string;
+    allowLateSubmit?: boolean;
+    attachmentUrl?: string;
+    attachmentName?: string;
+  }) {
+    const classroom = await this.validateClassroomOwnership(classroomId, teacherId);
+    // Validate section belongs to this classroom
+    const section = await this.prisma.classroomSection.findFirst({
+      where: { id: dto.sectionId, classroom: { id: classroomId } },
+    });
+    if (!section) throw new ForbiddenException('Sección no encontrada en esta aula');
+
+    return this.prisma.classroomActivity.create({
+      data: {
+        classroomId,
+        sectionId: dto.sectionId,
+        type: dto.type as any,
+        title: dto.title,
+        description: dto.description,
+        maxScore: dto.maxScore,
+        dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
+        openDate: dto.openDate ? new Date(dto.openDate) : undefined,
+        allowLateSubmit: dto.allowLateSubmit ?? false,
+        metadata: dto.attachmentUrl ? { attachmentUrl: dto.attachmentUrl, attachmentName: dto.attachmentName } : undefined,
+        isPublished: false,
+      },
+      include: {
+        section: { select: { id: true, title: true } },
+        _count: { select: { submissions: true } },
+      },
+    });
+  }
+
+  async listActivities(classroomId: string, userId: string, role: 'teacher' | 'student') {
+    if (role === 'teacher') {
+      // Teachers see all activities
+      return this.prisma.classroomActivity.findMany({
+        where: { classroomId },
+        include: {
+          section: { select: { id: true, title: true } },
+          _count: { select: { submissions: true } },
+        },
+        orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
+      });
+    }
+
+    // Students see only published activities
+    return this.prisma.classroomActivity.findMany({
+      where: { classroomId, isPublished: true, isVisible: true },
+      include: {
+        section: { select: { id: true, title: true } },
+        submissions: {
+          where: {
+            studentEnrollment: { student: { userId } },
+          },
+          select: {
+            id: true, status: true, score: true, submittedAt: true, feedback: true, attemptNumber: true,
+          },
+          orderBy: { attemptNumber: 'desc' },
+          take: 1,
+        },
+      },
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  async getActivity(activityId: string, userId: string, role: 'teacher' | 'student') {
+    const activity = await this.prisma.classroomActivity.findUnique({
+      where: { id: activityId },
+      include: {
+        section: { select: { id: true, title: true } },
+        classroom: {
+          select: {
+            id: true, title: true,
+            teacherAssignment: { select: { teacherId: true, groupId: true, academicYearId: true } },
+          },
+        },
+        _count: { select: { submissions: true } },
+      },
+    });
+    if (!activity) throw new NotFoundException('Actividad no encontrada');
+
+    if (role === 'teacher') {
+      if (activity.classroom.teacherAssignment.teacherId !== userId) {
+        throw new ForbiddenException('No tiene permisos sobre esta actividad');
+      }
+      return activity;
+    }
+
+    // Student: must be published
+    if (!activity.isPublished || !activity.isVisible) {
+      throw new NotFoundException('Actividad no encontrada');
+    }
+    return activity;
+  }
+
+  async updateActivity(activityId: string, teacherId: string, dto: {
+    title?: string;
+    description?: string;
+    maxScore?: number;
+    dueDate?: string;
+    openDate?: string;
+    allowLateSubmit?: boolean;
+    isVisible?: boolean;
+    attachmentUrl?: string;
+    attachmentName?: string;
+  }) {
+    await this.validateActivityOwnership(activityId, teacherId);
+
+    const data: any = {};
+    if (dto.title !== undefined) data.title = dto.title;
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.maxScore !== undefined) data.maxScore = dto.maxScore;
+    if (dto.dueDate !== undefined) data.dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
+    if (dto.openDate !== undefined) data.openDate = dto.openDate ? new Date(dto.openDate) : null;
+    if (dto.allowLateSubmit !== undefined) data.allowLateSubmit = dto.allowLateSubmit;
+    if (dto.isVisible !== undefined) data.isVisible = dto.isVisible;
+    if (dto.attachmentUrl !== undefined) {
+      data.metadata = { attachmentUrl: dto.attachmentUrl, attachmentName: dto.attachmentName };
+    }
+
+    return this.prisma.classroomActivity.update({
+      where: { id: activityId },
+      data,
+      include: {
+        section: { select: { id: true, title: true } },
+        _count: { select: { submissions: true } },
+      },
+    });
+  }
+
+  async publishActivity(activityId: string, teacherId: string) {
+    await this.validateActivityOwnership(activityId, teacherId);
+    return this.prisma.classroomActivity.update({
+      where: { id: activityId },
+      data: { isPublished: true },
+    });
+  }
+
+  async unpublishActivity(activityId: string, teacherId: string) {
+    await this.validateActivityOwnership(activityId, teacherId);
+    return this.prisma.classroomActivity.update({
+      where: { id: activityId },
+      data: { isPublished: false },
+    });
+  }
+
+  async deleteActivity(activityId: string, teacherId: string) {
+    await this.validateActivityOwnership(activityId, teacherId);
+    await this.prisma.classroomActivity.delete({ where: { id: activityId } });
+    return { success: true };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SUBMISSIONS (Student submits, Teacher grades)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async submitTask(activityId: string, studentUserId: string, dto: {
+    content?: string;
+    fileUrl?: string;
+  }) {
+    const activity = await this.prisma.classroomActivity.findUnique({
+      where: { id: activityId },
+      include: {
+        classroom: {
+          select: { teacherAssignment: { select: { groupId: true, academicYearId: true } } },
+        },
+      },
+    });
+    if (!activity || !activity.isPublished) throw new NotFoundException('Actividad no encontrada');
+
+    // Find student enrollment
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: {
+        student: { userId: studentUserId },
+        groupId: activity.classroom.teacherAssignment.groupId,
+        academicYearId: activity.classroom.teacherAssignment.academicYearId,
+        status: 'ACTIVE',
+      },
+    });
+    if (!enrollment) throw new ForbiddenException('No estás matriculado en este grupo');
+
+    // Check due date
+    const now = new Date();
+    const isLate = activity.dueDate && now > activity.dueDate;
+    if (isLate && !activity.allowLateSubmit) {
+      throw new ForbiddenException('La fecha límite ha pasado y no se permiten entregas tardías');
+    }
+
+    // Count existing attempts
+    const existingAttempts = await this.prisma.activitySubmission.count({
+      where: { activityId, studentEnrollmentId: enrollment.id },
+    });
+    if (existingAttempts >= activity.maxAttempts) {
+      throw new ForbiddenException(`Has alcanzado el máximo de ${activity.maxAttempts} intento(s)`);
+    }
+
+    return this.prisma.activitySubmission.create({
+      data: {
+        activityId,
+        studentEnrollmentId: enrollment.id,
+        attemptNumber: existingAttempts + 1,
+        status: isLate ? 'LATE' : 'SUBMITTED',
+        content: dto.content,
+        fileUrl: dto.fileUrl,
+        submittedAt: now,
+      },
+      include: {
+        activity: { select: { id: true, title: true, maxScore: true } },
+      },
+    });
+  }
+
+  async listSubmissions(activityId: string, teacherId: string) {
+    const activity = await this.validateActivityOwnership(activityId, teacherId);
+
+    return this.prisma.activitySubmission.findMany({
+      where: { activityId },
+      include: {
+        studentEnrollment: {
+          include: {
+            student: {
+              select: { id: true, firstName: true, lastName: true, secondLastName: true, photo: true },
+            },
+          },
+        },
+      },
+      orderBy: [{ submittedAt: 'desc' }],
+    });
+  }
+
+  async gradeSubmission(submissionId: string, teacherId: string, dto: {
+    score: number;
+    feedback?: string;
+  }) {
+    const submission = await this.prisma.activitySubmission.findUnique({
+      where: { id: submissionId },
+      include: {
+        activity: {
+          include: {
+            classroom: { select: { teacherAssignment: { select: { teacherId: true } } } },
+          },
+        },
+      },
+    });
+    if (!submission || submission.activity.classroom.teacherAssignment.teacherId !== teacherId) {
+      throw new ForbiddenException('Entrega no encontrada o no tiene permisos');
+    }
+
+    return this.prisma.activitySubmission.update({
+      where: { id: submissionId },
+      data: {
+        score: dto.score,
+        feedback: dto.feedback,
+        status: 'GRADED',
+        gradedAt: new Date(),
+        gradedById: teacherId,
+      },
+      include: {
+        studentEnrollment: {
+          include: {
+            student: { select: { id: true, firstName: true, lastName: true } },
+          },
+        },
+        activity: { select: { id: true, title: true, maxScore: true } },
+      },
+    });
+  }
+
+  async returnSubmission(submissionId: string, teacherId: string, dto: { feedback?: string }) {
+    const submission = await this.prisma.activitySubmission.findUnique({
+      where: { id: submissionId },
+      include: {
+        activity: {
+          include: {
+            classroom: { select: { teacherAssignment: { select: { teacherId: true } } } },
+          },
+        },
+      },
+    });
+    if (!submission || submission.activity.classroom.teacherAssignment.teacherId !== teacherId) {
+      throw new ForbiddenException('Entrega no encontrada o no tiene permisos');
+    }
+
+    return this.prisma.activitySubmission.update({
+      where: { id: submissionId },
+      data: {
+        status: 'RETURNED',
+        feedback: dto.feedback,
+      },
+    });
+  }
+
+  async getMySubmission(activityId: string, studentUserId: string) {
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: {
+        student: { userId: studentUserId },
+        status: 'ACTIVE',
+      },
+      select: { id: true },
+    });
+    if (!enrollment) return null;
+
+    return this.prisma.activitySubmission.findFirst({
+      where: { activityId, studentEnrollmentId: enrollment.id },
+      orderBy: { attemptNumber: 'desc' },
+      include: {
+        activity: { select: { id: true, title: true, maxScore: true, dueDate: true } },
+      },
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // VALIDATION HELPERS
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -435,5 +758,18 @@ export class ClassroomService {
       throw new ForbiddenException('Material no encontrado o no tiene permisos');
     }
     return material;
+  }
+
+  private async validateActivityOwnership(activityId: string, teacherId: string) {
+    const activity = await this.prisma.classroomActivity.findUnique({
+      where: { id: activityId },
+      include: {
+        classroom: { include: { teacherAssignment: { select: { teacherId: true } } } },
+      },
+    });
+    if (!activity || activity.classroom.teacherAssignment.teacherId !== teacherId) {
+      throw new ForbiddenException('Actividad no encontrada o no tiene permisos');
+    }
+    return activity;
   }
 }

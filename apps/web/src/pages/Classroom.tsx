@@ -386,7 +386,7 @@ export default function Classroom() {
             {activeTab === 'home' && <HomeTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} user={user} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'announcements' && <AnnouncementsTab classroom={activeClassroom} isTeacher={!!isTeacher} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'content' && <ContentTab classroom={activeClassroom} isTeacher={!!isTeacher} onReload={reloadClassroom} setError={setError} />}
-            {activeTab === 'activities' && <ActivitiesTab isTeacher={!!isTeacher} />}
+            {activeTab === 'activities' && <ActivitiesTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'forum' && <ForumTab isTeacher={!!isTeacher} />}
             {activeTab === 'students' && <StudentsTab classroomId={activeClassroom.id} />}
             {activeTab === 'grades' && <GradesTab />}
@@ -1263,52 +1263,503 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDownload, 
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TAB: ACTIVIDADES (placeholder para Fase 2+)
+// TAB: ACTIVIDADES (Tareas funcionales)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function ActivitiesTab({ isTeacher }: { isTeacher: boolean }) {
-  const activityTypes = [
-    { icon: ClipboardList, label: 'Tareas', desc: 'Asigna trabajos con fecha de entrega y calificación automática o manual', color: 'text-blue-600 bg-blue-50 border-blue-200' },
-    { icon: BookOpen, label: 'Quizzes', desc: 'Evaluaciones rápidas con preguntas de opción múltiple y calificación automática', color: 'text-green-600 bg-green-50 border-green-200' },
-    { icon: FileText, label: 'Exámenes', desc: 'Evaluaciones formales con tiempo límite y restricciones configurables', color: 'text-purple-600 bg-purple-50 border-purple-200' },
-    { icon: GraduationCap, label: 'Simulacro ICFES', desc: 'Simulacros Saber 11 con análisis detallado por competencia y área', color: 'text-amber-600 bg-amber-50 border-amber-200' },
-  ]
+interface Activity {
+  id: string; sectionId: string; classroomId: string; type: string;
+  title: string; description?: string; maxScore?: number;
+  dueDate?: string; openDate?: string; allowLateSubmit: boolean;
+  isVisible: boolean; isPublished: boolean; metadata?: any;
+  createdAt: string; updatedAt: string;
+  section?: { id: string; title: string };
+  _count?: { submissions: number };
+  submissions?: { id: string; status: string; score?: number; submittedAt?: string; feedback?: string; attemptNumber: number }[];
+}
 
+interface Submission {
+  id: string; activityId: string; status: string; content?: string; fileUrl?: string;
+  score?: number; feedback?: string; submittedAt?: string; attemptNumber: number;
+  studentEnrollment?: { student: { id: string; firstName: string; lastName: string; secondLastName?: string; photo?: string } };
+}
+
+const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
+  DRAFT: { bg: 'bg-slate-100', text: 'text-slate-600', label: 'Borrador' },
+  SUBMITTED: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Entregado' },
+  GRADED: { bg: 'bg-green-100', text: 'text-green-700', label: 'Calificado' },
+  RETURNED: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Devuelto' },
+  LATE: { bg: 'bg-red-100', text: 'text-red-700', label: 'Tardío' },
+  AUTO_GRADED: { bg: 'bg-green-100', text: 'text-green-700', label: 'Auto-calificado' },
+}
+
+function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: {
+  classroom: any; isTeacher: boolean; isStudent: boolean; onReload: () => void; setError: (e: string) => void
+}) {
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showCreate, setShowCreate] = useState(false)
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
+  const [submissions, setSubmissions] = useState<Submission[]>([])
+  const [submissionsLoading, setSubmissionsLoading] = useState(false)
+
+  // Create form
+  const [form, setForm] = useState({ title: '', description: '', sectionId: '', maxScore: '5.0', dueDate: '', allowLateSubmit: false })
+  const [attachFile, setAttachFile] = useState<File | null>(null)
+  const [creating, setCreating] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  // Student submit
+  const [submitContent, setSubmitContent] = useState('')
+  const [submitFile, setSubmitFile] = useState<File | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [mySubmission, setMySubmission] = useState<any>(null)
+  const submitFileRef = useRef<HTMLInputElement>(null)
+
+  // Grading
+  const [gradingSubmission, setGradingSubmission] = useState<Submission | null>(null)
+  const [gradeScore, setGradeScore] = useState('')
+  const [gradeFeedback, setGradeFeedback] = useState('')
+  const [grading, setGrading] = useState(false)
+
+  const sections: Section[] = classroom.sections || []
+
+  const loadActivities = useCallback(async () => {
+    try {
+      setLoading(true)
+      const { data } = await classroomApi.listActivities(classroom.id, isStudent ? 'student' : undefined)
+      setActivities(data)
+    } catch {} finally { setLoading(false) }
+  }, [classroom.id, isStudent])
+
+  useEffect(() => { loadActivities() }, [loadActivities])
+
+  const handleCreate = async () => {
+    if (!form.title.trim() || !form.sectionId) return
+    try {
+      setCreating(true)
+      let attachmentUrl: string | undefined
+      let attachmentName: string | undefined
+      if (attachFile) {
+        const { data } = await classroomApi.uploadMaterial(attachFile)
+        attachmentUrl = data.data.path || data.data.url
+        attachmentName = attachFile.name
+      }
+      await classroomApi.createActivity(classroom.id, {
+        sectionId: form.sectionId, type: 'TASK', title: form.title,
+        description: form.description || undefined,
+        maxScore: parseFloat(form.maxScore) || 5.0,
+        dueDate: form.dueDate || undefined,
+        allowLateSubmit: form.allowLateSubmit,
+        attachmentUrl, attachmentName,
+      })
+      setForm({ title: '', description: '', sectionId: '', maxScore: '5.0', dueDate: '', allowLateSubmit: false })
+      setAttachFile(null)
+      setShowCreate(false)
+      loadActivities()
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al crear actividad')
+    } finally { setCreating(false) }
+  }
+
+  const handlePublish = async (id: string, published: boolean) => {
+    try {
+      if (published) await classroomApi.unpublishActivity(id)
+      else await classroomApi.publishActivity(id)
+      loadActivities()
+    } catch {}
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('¿Eliminar esta actividad y todas sus entregas?')) return
+    try { await classroomApi.deleteActivity(id); loadActivities(); setSelectedActivity(null) } catch {}
+  }
+
+  const openActivity = async (activity: Activity) => {
+    setSelectedActivity(activity)
+    if (isTeacher) {
+      setSubmissionsLoading(true)
+      try {
+        const { data } = await classroomApi.listSubmissions(activity.id)
+        setSubmissions(data)
+      } catch {} finally { setSubmissionsLoading(false) }
+    }
+    if (isStudent) {
+      try {
+        const { data } = await classroomApi.getMySubmission(activity.id)
+        setMySubmission(data)
+      } catch { setMySubmission(null) }
+    }
+  }
+
+  const handleStudentSubmit = async () => {
+    if (!selectedActivity) return
+    try {
+      setSubmitting(true)
+      let fileUrl: string | undefined
+      if (submitFile) {
+        const { data } = await classroomApi.uploadMaterial(submitFile)
+        fileUrl = data.data.path || data.data.url
+      }
+      await classroomApi.submitTask(selectedActivity.id, { content: submitContent || undefined, fileUrl })
+      setSubmitContent('')
+      setSubmitFile(null)
+      const { data } = await classroomApi.getMySubmission(selectedActivity.id)
+      setMySubmission(data)
+      loadActivities()
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al entregar')
+    } finally { setSubmitting(false) }
+  }
+
+  const handleGrade = async () => {
+    if (!gradingSubmission || !gradeScore) return
+    try {
+      setGrading(true)
+      await classroomApi.gradeSubmission(gradingSubmission.id, { score: parseFloat(gradeScore), feedback: gradeFeedback || undefined })
+      setGradingSubmission(null)
+      setGradeScore(''); setGradeFeedback('')
+      if (selectedActivity) openActivity(selectedActivity)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al calificar')
+    } finally { setGrading(false) }
+  }
+
+  const handleReturn = async (sub: Submission) => {
+    const fb = prompt('Retroalimentación para el estudiante (opcional):')
+    try {
+      await classroomApi.returnSubmission(sub.id, { feedback: fb || undefined })
+      if (selectedActivity) openActivity(selectedActivity)
+    } catch {}
+  }
+
+  const openFile = async (url: string) => {
+    try { const { data } = await storageApi.resolveUrl(url); window.open(data.url, '_blank') } catch { window.open(url, '_blank') }
+  }
+
+  const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
+  const isDuePast = (d?: string) => d ? new Date(d) < new Date() : false
+
+  if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+
+  // ── ACTIVITY DETAIL VIEW ──
+  if (selectedActivity) {
+    const act = selectedActivity
+    const meta = act.metadata as any
+    return (
+      <div className="space-y-5">
+        <button onClick={() => { setSelectedActivity(null); setMySubmission(null) }} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-blue-600">
+          <ChevronLeft className="w-4 h-4" /> Volver a actividades
+        </button>
+
+        {/* Activity header card */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <ClipboardList className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800">{act.title}</h2>
+                  <p className="text-sm text-slate-400">{act.section?.title || 'Sin sección'}</p>
+                </div>
+              </div>
+              {act.description && <p className="text-base text-slate-600 mt-3 whitespace-pre-wrap leading-relaxed">{act.description}</p>}
+              {meta?.attachmentUrl && (
+                <button onClick={() => openFile(meta.attachmentUrl)} className="flex items-center gap-3 mt-4 px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors group">
+                  <File className="w-5 h-5 text-blue-500" />
+                  <span className="text-base text-slate-700 group-hover:text-blue-600">{meta.attachmentName || 'Archivo adjunto'}</span>
+                  <Download className="w-4 h-4 text-slate-400 ml-auto" />
+                </button>
+              )}
+            </div>
+            {isTeacher && (
+              <div className="flex gap-1 shrink-0">
+                <button onClick={() => handlePublish(act.id, act.isPublished)} className={`px-4 py-2 rounded-xl text-sm font-medium ${act.isPublished ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`} style={{ minHeight: '44px' }}>
+                  {act.isPublished ? 'Despublicar' : 'Publicar'}
+                </button>
+                <button onClick={() => handleDelete(act.id)} className="p-2.5 rounded-xl hover:bg-red-50">
+                  <Trash2 className="w-5 h-5 text-red-400" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Meta info */}
+          <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-slate-100">
+            <div className="flex items-center gap-2 text-sm">
+              <BarChart3 className="w-4 h-4 text-slate-400" />
+              <span className="text-slate-600">Nota máx: <strong>{act.maxScore ? Number(act.maxScore) : '—'}</strong></span>
+            </div>
+            <div className={`flex items-center gap-2 text-sm ${isDuePast(act.dueDate) ? 'text-red-600' : 'text-slate-600'}`}>
+              <Clock className="w-4 h-4" />
+              <span>Fecha límite: <strong>{formatDate(act.dueDate)}</strong></span>
+            </div>
+            {act.allowLateSubmit && <span className="text-xs px-2.5 py-1 bg-amber-50 text-amber-600 rounded-full">Permite entrega tardía</span>}
+            <span className={`text-xs px-2.5 py-1 rounded-full ${act.isPublished ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
+              {act.isPublished ? 'Publicada' : 'Borrador'}
+            </span>
+          </div>
+        </div>
+
+        {/* TEACHER: Submissions list */}
+        {isTeacher && (
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-800">Entregas ({submissions.length})</h3>
+            </div>
+            {submissionsLoading ? (
+              <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+            ) : submissions.length === 0 ? (
+              <div className="text-center py-12 text-slate-400">
+                <Upload className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                <p className="text-base">Aún no hay entregas</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {submissions.map(sub => {
+                  const st = sub.studentEnrollment?.student
+                  const name = st ? `${st.lastName}${st.secondLastName ? ' ' + st.secondLastName : ''}, ${st.firstName}` : 'Estudiante'
+                  const initials = st ? `${st.firstName?.[0] || ''}${st.lastName?.[0] || ''}` : '?'
+                  const statusInfo = STATUS_COLORS[sub.status] || STATUS_COLORS.DRAFT
+                  return (
+                    <div key={sub.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50">
+                      {st?.photo ? (
+                        <img src={st.photo} alt={name} className="w-10 h-10 rounded-full object-cover border border-slate-200" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-sm font-bold text-blue-700">{initials}</div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-base font-medium text-slate-800">{name}</p>
+                        <p className="text-sm text-slate-400">{formatDate(sub.submittedAt)}</p>
+                      </div>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>
+                      {sub.score !== undefined && sub.score !== null && (
+                        <span className="text-base font-bold text-slate-800">{Number(sub.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
+                      )}
+                      {sub.fileUrl && (
+                        <button onClick={() => openFile(sub.fileUrl!)} className="p-2 rounded-xl hover:bg-blue-50" title="Ver archivo">
+                          <Download className="w-5 h-5 text-blue-500" />
+                        </button>
+                      )}
+                      {(sub.status === 'SUBMITTED' || sub.status === 'LATE') && (
+                        <div className="flex gap-1">
+                          <button onClick={() => { setGradingSubmission(sub); setGradeScore(''); setGradeFeedback('') }} className="px-3 py-2 bg-green-50 text-green-700 rounded-xl text-sm font-medium hover:bg-green-100" style={{ minHeight: '40px' }}>
+                            Calificar
+                          </button>
+                          <button onClick={() => handleReturn(sub)} className="px-3 py-2 bg-orange-50 text-orange-600 rounded-xl text-sm font-medium hover:bg-orange-100" style={{ minHeight: '40px' }}>
+                            Devolver
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TEACHER: Grading modal */}
+        {gradingSubmission && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4">
+              <h3 className="text-lg font-bold text-slate-800">Calificar entrega</h3>
+              <p className="text-sm text-slate-500">
+                {gradingSubmission.studentEnrollment?.student?.firstName} {gradingSubmission.studentEnrollment?.student?.lastName}
+              </p>
+              {gradingSubmission.content && (
+                <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 max-h-40 overflow-y-auto whitespace-pre-wrap">{gradingSubmission.content}</div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nota (máx {act.maxScore ? Number(act.maxScore) : '5.0'})</label>
+                <input type="number" step="0.1" min="0" max={act.maxScore ? Number(act.maxScore) : 5} value={gradeScore} onChange={e => setGradeScore(e.target.value)} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Retroalimentación (opcional)</label>
+                <textarea value={gradeFeedback} onChange={e => setGradeFeedback(e.target.value)} rows={3} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Comentarios para el estudiante..." />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button onClick={() => setGradingSubmission(null)} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
+                <button onClick={handleGrade} disabled={!gradeScore || grading} className="px-5 py-2.5 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                  {grading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {grading ? 'Guardando...' : 'Guardar nota'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* STUDENT: My submission / submit form */}
+        {isStudent && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+            <h3 className="text-lg font-bold text-slate-800">Tu entrega</h3>
+            {mySubmission ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className={`text-sm px-3 py-1 rounded-full font-medium ${(STATUS_COLORS[mySubmission.status] || STATUS_COLORS.DRAFT).bg} ${(STATUS_COLORS[mySubmission.status] || STATUS_COLORS.DRAFT).text}`}>
+                    {(STATUS_COLORS[mySubmission.status] || STATUS_COLORS.DRAFT).label}
+                  </span>
+                  {mySubmission.score !== undefined && mySubmission.score !== null && (
+                    <span className="text-lg font-bold text-green-700">{Number(mySubmission.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
+                  )}
+                  <span className="text-sm text-slate-400">Entregado: {formatDate(mySubmission.submittedAt)}</span>
+                </div>
+                {mySubmission.content && <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 whitespace-pre-wrap">{mySubmission.content}</div>}
+                {mySubmission.fileUrl && (
+                  <button onClick={() => openFile(mySubmission.fileUrl)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 text-sm text-blue-700">
+                    <Download className="w-4 h-4" /> Ver archivo entregado
+                  </button>
+                )}
+                {mySubmission.feedback && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <p className="text-sm font-medium text-amber-700 mb-1">Retroalimentación del docente:</p>
+                    <p className="text-sm text-amber-800 whitespace-pre-wrap">{mySubmission.feedback}</p>
+                  </div>
+                )}
+                {mySubmission.status === 'RETURNED' && (
+                  <p className="text-sm text-orange-600 font-medium">El docente devolvió tu entrega. Puedes volver a entregar.</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <textarea value={submitContent} onChange={e => setSubmitContent(e.target.value)} rows={4} placeholder="Escribe tu respuesta aquí (opcional)..." className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-blue-500 outline-none" />
+                <input ref={submitFileRef} type="file" className="hidden" onChange={e => setSubmitFile(e.target.files?.[0] || null)} />
+                {submitFile ? (
+                  <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <Paperclip className="w-5 h-5 text-slate-400" />
+                    <span className="text-base text-slate-700 flex-1 truncate">{submitFile.name}</span>
+                    <button onClick={() => setSubmitFile(null)} className="p-1 rounded-lg hover:bg-slate-200"><X className="w-4 h-4" /></button>
+                  </div>
+                ) : null}
+                <div className="flex items-center justify-between">
+                  <button onClick={() => submitFileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
+                    <Upload className="w-5 h-5" /> Subir archivo
+                  </button>
+                  <button onClick={handleStudentSubmit} disabled={(!submitContent.trim() && !submitFile) || submitting} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                    {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {submitting ? 'Entregando...' : 'Entregar actividad'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── ACTIVITIES LIST VIEW ──
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-slate-800">Actividades</h2>
         {isTeacher && (
-          <button disabled className="flex items-center gap-2 px-5 py-2.5 bg-blue-600/50 text-white rounded-xl text-sm font-semibold cursor-not-allowed" style={{ minHeight: '44px' }}>
-            <Plus className="w-5 h-5" /> Crear Actividad
+          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
+            <Plus className="w-5 h-5" /> Crear Tarea
           </button>
         )}
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
-        <ClipboardList className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-        <h3 className="text-xl font-bold text-slate-700">Próximamente</h3>
-        <p className="text-base text-slate-500 mt-2 max-w-lg mx-auto">
-          {isTeacher ? 'Podrás crear y gestionar tareas, quizzes, exámenes y simulacros ICFES con calificación automática y sincronización con la planilla.' : 'Aquí encontrarás tus tareas pendientes, quizzes y exámenes con sus fechas de entrega y calificaciones.'}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        {activityTypes.map(at => (
-          <div key={at.label} className={`bg-white rounded-2xl border-2 p-6 opacity-70 ${at.color.split(' ').pop()}`}>
-            <div className="flex items-center gap-4 mb-3">
-              <div className={`w-12 h-12 rounded-xl ${at.color.split(' ').slice(0, 2).join(' ')} flex items-center justify-center`}>
-                <at.icon className="w-6 h-6" />
-              </div>
-              <div>
-                <h4 className="text-base font-bold text-slate-800">{at.label}</h4>
-                <span className="text-xs px-2.5 py-0.5 bg-slate-100 text-slate-500 rounded-full font-medium">Próximamente</span>
-              </div>
+      {/* Create form */}
+      {showCreate && (
+        <div className="bg-white border-2 border-blue-200 rounded-2xl p-6 space-y-4">
+          <h3 className="text-lg font-bold text-slate-800">Nueva Tarea</h3>
+          <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Título de la tarea" className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
+          <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Instrucciones y descripción..." rows={4} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-blue-500 outline-none" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Sección</label>
+              <select value={form.sectionId} onChange={e => setForm({ ...form, sectionId: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base">
+                <option value="">Seleccionar sección...</option>
+                {sections.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
+              </select>
             </div>
-            <p className="text-sm text-slate-600 leading-relaxed">{at.desc}</p>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Nota máxima</label>
+              <input type="number" step="0.1" min="0" value={form.maxScore} onChange={e => setForm({ ...form, maxScore: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Fecha límite</label>
+              <input type="datetime-local" value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base" />
+            </div>
           </div>
-        ))}
-      </div>
+          <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+            <input type="checkbox" checked={form.allowLateSubmit} onChange={e => setForm({ ...form, allowLateSubmit: e.target.checked })} className="rounded" />
+            Permitir entregas tardías
+          </label>
+          <input ref={fileRef} type="file" className="hidden" onChange={e => setAttachFile(e.target.files?.[0] || null)} />
+          {attachFile && (
+            <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
+              <Paperclip className="w-5 h-5 text-slate-400" />
+              <span className="text-base text-slate-700 flex-1 truncate">{attachFile.name}</span>
+              <button onClick={() => setAttachFile(null)} className="p-1 rounded-lg hover:bg-slate-200"><X className="w-4 h-4" /></button>
+            </div>
+          )}
+          <div className="flex items-center justify-between pt-2">
+            <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
+              <Paperclip className="w-5 h-5" /> Adjuntar archivo
+            </button>
+            <div className="flex gap-3">
+              <button onClick={() => { setShowCreate(false); setAttachFile(null) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
+              <button onClick={handleCreate} disabled={!form.title.trim() || !form.sectionId || creating} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                {creating && <Loader2 className="w-4 h-4 animate-spin" />}
+                {creating ? 'Creando...' : 'Crear Tarea'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Activities list */}
+      {activities.length === 0 && !showCreate ? (
+        <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
+          <ClipboardList className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+          <p className="text-lg font-medium text-slate-500">{isTeacher ? 'No has creado actividades aún' : 'No hay actividades publicadas'}</p>
+          {isTeacher && <p className="text-base mt-1 text-slate-400">Crea tu primera tarea para que los estudiantes puedan entregar</p>}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {activities.map(act => {
+            const statusInfo = act.isPublished ? { bg: 'bg-green-50', text: 'text-green-600', label: 'Publicada' } : { bg: 'bg-slate-100', text: 'text-slate-500', label: 'Borrador' }
+            const duePast = isDuePast(act.dueDate)
+            const studentSub = act.submissions?.[0]
+            const studentStatus = studentSub ? STATUS_COLORS[studentSub.status] : null
+            return (
+              <button key={act.id} onClick={() => openActivity(act)} className="w-full text-left bg-white rounded-2xl border-2 border-slate-200 hover:border-blue-300 p-5 transition-all hover:shadow-sm group">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                    <ClipboardList className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h3 className="text-base font-bold text-slate-800 group-hover:text-blue-700">{act.title}</h3>
+                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>
+                      {studentStatus && (
+                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${studentStatus.bg} ${studentStatus.text}`}>{studentStatus.label}</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-slate-500 mt-1">{act.section?.title || 'Sin sección'}</p>
+                    <div className="flex items-center gap-4 mt-2 text-sm">
+                      {act.dueDate && (
+                        <span className={`flex items-center gap-1 ${duePast ? 'text-red-500' : 'text-slate-400'}`}>
+                          <Clock className="w-4 h-4" /> {formatDate(act.dueDate)}
+                        </span>
+                      )}
+                      {act.maxScore && <span className="text-slate-400">Nota máx: {Number(act.maxScore)}</span>}
+                      {isTeacher && act._count && <span className="text-slate-400">{act._count.submissions} entrega(s)</span>}
+                      {studentSub?.score !== undefined && studentSub.score !== null && (
+                        <span className="text-green-700 font-bold">{Number(studentSub.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 shrink-0 mt-1" />
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

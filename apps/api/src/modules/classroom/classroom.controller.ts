@@ -182,4 +182,125 @@ export class ClassroomController {
     const { userId } = await this.resolveCtx(req);
     return this.service.deleteAnnouncement(announcementId, userId);
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ACTIVITIES
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post(':id/activities')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async createActivity(@Param('id') classroomId: string, @Request() req: any, @Body() body: {
+    sectionId: string;
+    type: string;
+    title: string;
+    description?: string;
+    maxScore?: number;
+    dueDate?: string;
+    openDate?: string;
+    allowLateSubmit?: boolean;
+    attachmentUrl?: string;
+    attachmentName?: string;
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.createActivity(classroomId, userId, body);
+  }
+
+  @Get(':id/activities')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE', 'ACUDIENTE')
+  async listActivities(@Param('id') classroomId: string, @Request() req: any, @Query('role') role?: string) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.listActivities(classroomId, userId, role === 'student' ? 'student' : 'teacher');
+  }
+
+  @Get('activities/:activityId')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE', 'ACUDIENTE')
+  async getActivity(@Param('activityId') activityId: string, @Request() req: any, @Query('role') role?: string) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.getActivity(activityId, userId, role === 'student' ? 'student' : 'teacher');
+  }
+
+  @Put('activities/:activityId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async updateActivity(@Param('activityId') activityId: string, @Request() req: any, @Body() body: {
+    title?: string;
+    description?: string;
+    maxScore?: number;
+    dueDate?: string;
+    openDate?: string;
+    allowLateSubmit?: boolean;
+    isVisible?: boolean;
+    attachmentUrl?: string;
+    attachmentName?: string;
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.updateActivity(activityId, userId, body);
+  }
+
+  @Put('activities/:activityId/publish')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async publishActivity(@Param('activityId') activityId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.publishActivity(activityId, userId);
+  }
+
+  @Put('activities/:activityId/unpublish')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async unpublishActivity(@Param('activityId') activityId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.unpublishActivity(activityId, userId);
+  }
+
+  @Delete('activities/:activityId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async deleteActivity(@Param('activityId') activityId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.deleteActivity(activityId, userId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SUBMISSIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('activities/:activityId/submit')
+  @Roles('ESTUDIANTE')
+  async submitTask(@Param('activityId') activityId: string, @Request() req: any, @Body() body: {
+    content?: string;
+    fileUrl?: string;
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.submitTask(activityId, userId, body);
+  }
+
+  @Get('activities/:activityId/submissions')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async listSubmissions(@Param('activityId') activityId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.listSubmissions(activityId, userId);
+  }
+
+  @Get('activities/:activityId/my-submission')
+  @Roles('ESTUDIANTE')
+  async getMySubmission(@Param('activityId') activityId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.getMySubmission(activityId, userId);
+  }
+
+  @Put('submissions/:submissionId/grade')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async gradeSubmission(@Param('submissionId') submissionId: string, @Request() req: any, @Body() body: {
+    score: number;
+    feedback?: string;
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.gradeSubmission(submissionId, userId, body);
+  }
+
+  @Put('submissions/:submissionId/return')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async returnSubmission(@Param('submissionId') submissionId: string, @Request() req: any, @Body() body: {
+    feedback?: string;
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.returnSubmission(submissionId, userId, body);
+  }
 }
