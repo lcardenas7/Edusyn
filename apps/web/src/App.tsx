@@ -40,6 +40,7 @@ import ForceChangePassword from './pages/ForceChangePassword'
 import PedagogicalSupport from './pages/PedagogicalSupport'
 import DifferentialSupport from './pages/DifferentialSupport'
 import TeacherWorkspace from './pages/TeacherWorkspace'
+import Classroom from './pages/Classroom'
 import Layout from './components/Layout'
 
 // Nuevas páginas por dominio (Refactor UX)
@@ -318,6 +319,8 @@ function App() {
                   {/* ═══════════════════════════════════════════════════════════ */}
                   <Route path="/timetabling" element={<Timetabling />} />
                   <Route path="/my-workspace" element={<TeacherWorkspace />} />
+                  <Route path="/classroom" element={<Classroom />} />
+                  <Route path="/my-classes" element={<Classroom />} />
                   <Route path="/capabilities-config" element={<CapabilitiesConfig />} />
                 </Routes>
               </Layout>

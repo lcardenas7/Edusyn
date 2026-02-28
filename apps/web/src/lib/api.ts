@@ -1718,3 +1718,39 @@ export const teacherWorkspaceApi = {
     api.patch(`/teacher-workspace/items/${id}/move`, data),
   deleteItem: (id: string) => api.delete(`/teacher-workspace/items/${id}`),
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AULA VIRTUAL
+// ═══════════════════════════════════════════════════════════════════════════
+export const classroomApi = {
+  // Classrooms
+  list: (role?: string) => api.get('/classrooms', { params: { role } }),
+  getAvailableAssignments: () => api.get('/classrooms/available-assignments'),
+  create: (data: { teacherAssignmentId: string; title?: string; description?: string; color?: string }) =>
+    api.post('/classrooms', data),
+  getById: (id: string) => api.get(`/classrooms/${id}`),
+  update: (id: string, data: { title?: string; description?: string; color?: string; coverImage?: string; isActive?: boolean }) =>
+    api.put(`/classrooms/${id}`, data),
+  getStudents: (id: string) => api.get(`/classrooms/${id}/students`),
+
+  // Sections
+  createSection: (classroomId: string, data: { title: string; description?: string }) =>
+    api.post(`/classrooms/${classroomId}/sections`, data),
+  updateSection: (sectionId: string, data: { title?: string; description?: string; isVisible?: boolean; sortOrder?: number }) =>
+    api.put(`/classrooms/sections/${sectionId}`, data),
+  deleteSection: (sectionId: string) => api.delete(`/classrooms/sections/${sectionId}`),
+
+  // Materials
+  createMaterial: (sectionId: string, data: { type: string; title: string; content?: string; fileUrl?: string }) =>
+    api.post(`/classrooms/sections/${sectionId}/materials`, data),
+  updateMaterial: (materialId: string, data: { title?: string; content?: string; fileUrl?: string; isVisible?: boolean; sortOrder?: number }) =>
+    api.put(`/classrooms/materials/${materialId}`, data),
+  deleteMaterial: (materialId: string) => api.delete(`/classrooms/materials/${materialId}`),
+
+  // Announcements
+  createAnnouncement: (classroomId: string, data: { title: string; content: string; isPinned?: boolean }) =>
+    api.post(`/classrooms/${classroomId}/announcements`, data),
+  updateAnnouncement: (announcementId: string, data: { title?: string; content?: string; isPinned?: boolean }) =>
+    api.put(`/classrooms/announcements/${announcementId}`, data),
+  deleteAnnouncement: (announcementId: string) => api.delete(`/classrooms/announcements/${announcementId}`),
+}

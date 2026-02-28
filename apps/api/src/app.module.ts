@@ -33,6 +33,7 @@ import { InstitutionContextModule } from './modules/institution-context/institut
 import { PedagogicalSupportModule } from './modules/pedagogical-support/pedagogical-support.module';
 import { ApdModule } from './modules/apd/apd.module';
 import { TeacherWorkspaceModule } from './modules/teacher-workspace/teacher-workspace.module';
+import { ClassroomModule } from './modules/classroom/classroom.module';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 
 @Module({
@@ -73,6 +74,7 @@ import { TenantContextInterceptor } from './common/interceptors/tenant-context.i
     PedagogicalSupportModule,
     ApdModule,
     TeacherWorkspaceModule,
+    ClassroomModule,
   ],
   controllers: [AppController],
   providers: [

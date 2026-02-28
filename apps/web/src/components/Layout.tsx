@@ -48,6 +48,7 @@ import {
   Heart,
   FileDown,
   LayoutGrid,
+  MonitorPlay,
 } from 'lucide-react'
 
 type Role = 'SUPER_ADMIN' | 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE' | 'SECRETARIA' | 'RECTOR' | 'PSICOLOGA'
@@ -232,6 +233,10 @@ const institutionalNavigation: NavItem[] = [
 
   // Mi Espacio (Teacher Workspace)
   { name: 'Mi Espacio', href: '/my-workspace', icon: LayoutGrid, roles: ['DOCENTE', 'COORDINADOR'], module: 'TEACHER_WORKSPACE' },
+
+  // Aula Virtual
+  { name: 'Aula Virtual', href: '/classroom', icon: MonitorPlay, roles: ['DOCENTE', 'COORDINADOR'] },
+  { name: 'Mis Clases', href: '/my-classes', icon: MonitorPlay, roles: ['ESTUDIANTE', 'ACUDIENTE'] },
 
   // Documentos y Gestión
   { name: 'Documentos', href: '/institutional-documents', icon: FolderOpen, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'SECRETARIA'] },

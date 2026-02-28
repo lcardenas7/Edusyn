@@ -348,6 +348,11 @@ model User {
   // Teacher Workspace (espacio privado del docente)
   workspaceBoards             WorkspaceBoard[]       @relation("WorkspaceBoards")
   workspaceItemsAsStudent     WorkspaceItem[]        @relation("WorkspaceItemStudent")
+  
+  // Aula Virtual
+  classroomAnnouncements      ClassroomAnnouncement[] @relation("ClassroomAnnouncementAuthor")
+  classroomGradedSubmissions  ActivitySubmission[]    @relation("ClassroomGradedSubmissions")
+  forumPosts                  ForumPost[]             @relation("ForumPostAuthor")
 }
 
 model Role {
@@ -510,6 +515,9 @@ model Institution {
   
   // Teacher Workspace
   rlsWorkspaceBoards            WorkspaceBoard[]            @relation("RlsInstitutionWB")
+  
+  // Aula Virtual
+  rlsClassrooms                 Classroom[]                 @relation("RlsInstitutionCR")
 }
 
 // Módulos habilitados por institución
@@ -1105,6 +1113,9 @@ model TeacherAssignment {
   attitudinalAchievements AttitudinalAchievement[]
   scheduleEntries         ScheduleEntry[]
   finalComponentGrades    FinalComponentGrade[]
+  
+  // Aula Virtual
+  classroom               Classroom?              @relation("ClassroomAssignment")
 
   @@unique([academicYearId, groupId, subjectId, teacherId, startDate])
 }
@@ -1488,6 +1499,9 @@ model StudentEnrollment {
   
   // Asistencia de tutoría
   tutoringAttendances     TutoringAttendance[]
+  
+  // Aula Virtual
+  classroomSubmissions    ActivitySubmission[]    @relation("ClassroomSubmissions")
 
   @@unique([studentId, academicYearId])
 }
@@ -4567,4 +4581,245 @@ model WorkspaceItem {
   @@index([boardId, studentId])
   @@index([dueDate])
   @@index([eventDate])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AULA VIRTUAL — Módulo de clases virtuales por asignatura
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum MaterialType {
+  DOCUMENT
+  VIDEO_YOUTUBE
+  VIDEO_UPLOAD
+  LINK
+  TEXT
+  IMAGE
+}
+
+enum ClassroomActivityType {
+  TASK
+  QUIZ
+  FORUM
+  GAME
+  EXAM
+  ICFES_SIMULATOR
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  MULTIPLE_SELECT
+  TRUE_FALSE
+  SHORT_ANSWER
+  FILL_BLANK
+  ORDERING
+  MATCHING
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  GRADED
+  RETURNED
+  LATE
+  AUTO_GRADED
+}
+
+model Classroom {
+  id                  String   @id @default(cuid())
+  institutionId       String
+  teacherAssignmentId String   @unique
+  title               String
+  description         String?  @db.Text
+  coverImage          String?
+  color               String?
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  institution       Institution       @relation("RlsInstitutionCR", fields: [institutionId], references: [id])
+  teacherAssignment TeacherAssignment  @relation("ClassroomAssignment", fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
+  sections          ClassroomSection[]
+  announcements     ClassroomAnnouncement[]
+  activities        ClassroomActivity[]
+
+  @@index([institutionId])
+  @@index([teacherAssignmentId])
+}
+
+model ClassroomSection {
+  id          String   @id @default(cuid())
+  classroomId String
+  title       String
+  description String?  @db.Text
+  sortOrder   Int      @default(0)
+  isVisible   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  classroom   Classroom          @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  materials   ClassroomMaterial[]
+  activities  ClassroomActivity[]
+
+  @@index([classroomId])
+}
+
+model ClassroomMaterial {
+  id        String       @id @default(cuid())
+  sectionId String
+  type      MaterialType
+  title     String
+  content   String?      @db.Text
+  fileUrl   String?
+  sortOrder Int          @default(0)
+  isVisible Boolean      @default(true)
+  createdAt DateTime     @default(now())
+
+  section   ClassroomSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@index([sectionId])
+}
+
+model ClassroomAnnouncement {
+  id          String   @id @default(cuid())
+  classroomId String
+  authorId    String
+  title       String
+  content     String   @db.Text
+  isPinned    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  author      User      @relation("ClassroomAnnouncementAuthor", fields: [authorId], references: [id])
+
+  @@index([classroomId])
+}
+
+model ClassroomActivity {
+  id          String                @id @default(cuid())
+  sectionId   String
+  classroomId String
+  type        ClassroomActivityType
+  title       String
+  description String?               @db.Text
+
+  maxScore         Decimal?  @db.Decimal(3,1)
+  dueDate          DateTime?
+  openDate         DateTime?
+  timeLimitMinutes Int?
+  allowLateSubmit  Boolean   @default(false)
+  maxAttempts      Int       @default(1)
+  shuffleQuestions Boolean   @default(false)
+  showResults      Boolean   @default(true)
+
+  syncToGradebook    Boolean  @default(false)
+  gradebookComponent String?
+  gradebookIndex     Int?
+
+  isVisible   Boolean  @default(true)
+  isPublished Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  section     ClassroomSection      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  classroom   Classroom             @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  questions   ActivityQuestion[]
+  submissions ActivitySubmission[]
+  forumPosts  ForumPost[]
+
+  @@index([classroomId])
+  @@index([sectionId])
+  @@index([dueDate])
+}
+
+model ActivityQuestion {
+  id                String       @id @default(cuid())
+  activityId        String
+  type              QuestionType
+  text              String       @db.Text
+  imageUrl          String?
+  options           Json?
+  correctAnswer     String?      @db.Text
+  points            Decimal      @db.Decimal(3,1) @default(1.0)
+  explanation       String?      @db.Text
+  wrongExplanations Json?
+  subjectArea       String?
+  competency        String?
+  sortOrder         Int          @default(0)
+
+  activity    ClassroomActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  answers     QuestionAnswer[]
+
+  @@index([activityId])
+}
+
+model ActivitySubmission {
+  id                  String           @id @default(cuid())
+  activityId          String
+  studentEnrollmentId String
+  attemptNumber       Int              @default(1)
+  status              SubmissionStatus @default(DRAFT)
+
+  content          String?  @db.Text
+  fileUrl          String?
+
+  score            Decimal? @db.Decimal(3,1)
+  feedback         String?  @db.Text
+  gradedAt         DateTime?
+  gradedById       String?
+
+  startedAt        DateTime?
+  submittedAt      DateTime?
+  timeSpentSeconds Int?
+
+  syncedToGradebook Boolean @default(false)
+  partialGradeId    String?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  activity          ClassroomActivity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  studentEnrollment StudentEnrollment  @relation("ClassroomSubmissions", fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+  gradedBy          User?              @relation("ClassroomGradedSubmissions", fields: [gradedById], references: [id])
+  answers           QuestionAnswer[]
+
+  @@unique([activityId, studentEnrollmentId, attemptNumber])
+  @@index([activityId])
+  @@index([studentEnrollmentId])
+}
+
+model QuestionAnswer {
+  id              String   @id @default(cuid())
+  submissionId    String
+  questionId      String
+  answer          String?  @db.Text
+  selectedOptions Json?
+  isCorrect       Boolean?
+  pointsEarned    Decimal? @db.Decimal(3,1)
+
+  submission   ActivitySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  question     ActivityQuestion   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, questionId])
+  @@index([submissionId])
+}
+
+model ForumPost {
+  id          String   @id @default(cuid())
+  activityId  String
+  authorId    String
+  parentId    String?
+  content     String   @db.Text
+  isAnonymous Boolean  @default(false)
+  isPinned    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  activity   ClassroomActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  author     User              @relation("ForumPostAuthor", fields: [authorId], references: [id])
+  parent     ForumPost?        @relation("ForumReplies", fields: [parentId], references: [id])
+  replies    ForumPost[]       @relation("ForumReplies")
+
+  @@index([activityId])
+  @@index([authorId])
 }
