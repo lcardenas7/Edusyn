@@ -7,7 +7,8 @@ import {
   Trash2, Pencil, Pin, PinOff, X, Upload, ExternalLink,
   GraduationCap, Layers, ClipboardList, BookOpen, Download,
   Bold, Italic, Underline, List, ListOrdered, Youtube,
-  FileUp, Image, Search, Paperclip, File,
+  FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
+  BarChart3, ChevronDown, ChevronRight, Clock, CheckCircle2, AlertTriangle,
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -64,19 +65,24 @@ interface Announcement {
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316']
 
-type TabKey = 'home' | 'content' | 'activities' | 'students'
+type TabKey = 'home' | 'announcements' | 'content' | 'activities' | 'forum' | 'students' | 'grades'
 
 const TEACHER_TABS: { key: TabKey; label: string; icon: any }[] = [
-  { key: 'home', label: 'Inicio', icon: Megaphone },
-  { key: 'content', label: 'Contenido', icon: FolderOpen },
+  { key: 'home', label: 'Inicio', icon: Home },
+  { key: 'announcements', label: 'Anuncios', icon: Megaphone },
+  { key: 'content', label: 'Contenidos', icon: FolderOpen },
   { key: 'activities', label: 'Actividades', icon: ClipboardList },
+  { key: 'forum', label: 'Foro', icon: MessageSquare },
   { key: 'students', label: 'Estudiantes', icon: Users },
 ]
 
 const STUDENT_TABS: { key: TabKey; label: string; icon: any }[] = [
-  { key: 'home', label: 'Inicio', icon: Megaphone },
-  { key: 'content', label: 'Contenido', icon: FolderOpen },
+  { key: 'home', label: 'Inicio', icon: Home },
+  { key: 'announcements', label: 'Anuncios', icon: Megaphone },
+  { key: 'content', label: 'Contenidos', icon: FolderOpen },
   { key: 'activities', label: 'Actividades', icon: ClipboardList },
+  { key: 'forum', label: 'Foro', icon: MessageSquare },
+  { key: 'grades', label: 'Mis Notas', icon: BarChart3 },
 ]
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -309,84 +315,81 @@ export default function Classroom() {
   }
 
   // ═══════════════════════════════════════════════════════════════════════
-  // RENDER: CLASSROOM DETAIL (sidebar + content area)
+  // RENDER: CLASSROOM DETAIL (horizontal nav + full-width content)
   // ═══════════════════════════════════════════════════════════════════════
 
   const ta = activeClassroom.teacherAssignment
   const tabs = isTeacher ? TEACHER_TABS : STUDENT_TABS
 
   return (
-    <div className="flex h-[calc(100vh-64px)]">
-      {/* ── SIDEBAR ── */}
-      <div className="w-60 shrink-0 bg-white border-r border-slate-200 flex flex-col">
-        {/* Classroom header */}
-        <div className="p-4 border-b border-slate-100">
-          <button onClick={() => setActiveClassroom(null)} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-600 mb-2">
-            <ChevronLeft className="w-3.5 h-3.5" /> Todas las aulas
+    <div className="min-h-[calc(100vh-64px)] bg-slate-50">
+      {/* ── COLOR HEADER BAR ── */}
+      <div className="relative" style={{ backgroundColor: activeClassroom.color || '#3B82F6' }}>
+        <div className="max-w-6xl mx-auto px-6 py-5">
+          <button onClick={() => setActiveClassroom(null)} className="flex items-center gap-1.5 text-white/70 hover:text-white text-sm mb-2 transition-colors">
+            <ChevronLeft className="w-4 h-4" /> Todas las aulas
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: activeClassroom.color || '#3B82F6' }} />
-            <h2 className="font-bold text-slate-800 text-sm leading-tight line-clamp-2">{activeClassroom.title}</h2>
-          </div>
-          <p className="text-xs text-slate-500 mt-1 ml-5">
-            {ta.group.grade.name} {ta.group.name}
-          </p>
-          <p className="text-xs text-slate-400 ml-5">
-            {ta.subject.name}
-          </p>
-        </div>
-
-        {/* Nav items */}
-        <nav className="flex-1 p-2 space-y-0.5">
-          {tabs.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === tab.key
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
-              }`}
-            >
-              <tab.icon className={`w-4 h-4 ${activeTab === tab.key ? 'text-blue-600' : 'text-slate-400'}`} />
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-
-        {/* Teacher info at bottom */}
-        {ta.teacher && (
-          <div className="p-4 border-t border-slate-100">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">
-                {ta.teacher.firstName?.[0]}{ta.teacher.lastName?.[0]}
-              </div>
-              <div>
-                <p className="text-xs font-medium text-slate-700">Prof. {ta.teacher.firstName} {ta.teacher.lastName}</p>
-                <p className="text-[10px] text-slate-400">Docente</p>
-              </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-white">{activeClassroom.title}</h1>
+              <p className="text-base text-white/80 mt-1">
+                {ta.group.grade.name} {ta.group.name} · {ta.subject.name}
+                {ta.teacher && ` · Prof. ${ta.teacher.firstName} ${ta.teacher.lastName}`}
+              </p>
             </div>
+            {activeClassroom.studentCount !== undefined && (
+              <div className="hidden sm:flex items-center gap-2 bg-white/20 rounded-xl px-4 py-2">
+                <Users className="w-5 h-5 text-white" />
+                <span className="text-white font-semibold text-lg">{activeClassroom.studentCount || (activeClassroom as any)._count?.sections || '—'}</span>
+                <span className="text-white/70 text-sm">estudiantes</span>
+              </div>
+            )}
           </div>
-        )}
+        </div>
+      </div>
+
+      {/* ── HORIZONTAL TAB NAVIGATION ── */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-6xl mx-auto px-6">
+          <nav className="flex gap-1 overflow-x-auto scrollbar-hide -mb-px">
+            {tabs.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
+                  activeTab === tab.key
+                    ? 'border-blue-600 text-blue-700'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                <tab.icon className={`w-5 h-5 ${activeTab === tab.key ? 'text-blue-600' : 'text-slate-400'}`} />
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
       </div>
 
       {/* ── MAIN CONTENT AREA ── */}
-      <div className="flex-1 overflow-y-auto bg-slate-50">
+      <div className="max-w-6xl mx-auto px-6 py-6">
         {error && (
-          <div className="flex items-center gap-2 p-3 mx-6 mt-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            <AlertCircle className="w-4 h-4" />{error}
-            <button onClick={() => setError('')} className="ml-auto"><X className="w-4 h-4" /></button>
+          <div className="flex items-center gap-2 p-4 mb-5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-base">
+            <AlertCircle className="w-5 h-5 shrink-0" />{error}
+            <button onClick={() => setError('')} className="ml-auto p-1"><X className="w-4 h-4" /></button>
           </div>
         )}
 
         {loading ? (
-          <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+          <div className="flex items-center justify-center py-24"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
         ) : (
           <>
-            {activeTab === 'home' && <HomeTab classroom={activeClassroom} isTeacher={!!isTeacher} onReload={reloadClassroom} setError={setError} />}
+            {activeTab === 'home' && <HomeTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} user={user} onReload={reloadClassroom} setError={setError} />}
+            {activeTab === 'announcements' && <AnnouncementsTab classroom={activeClassroom} isTeacher={!!isTeacher} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'content' && <ContentTab classroom={activeClassroom} isTeacher={!!isTeacher} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'activities' && <ActivitiesTab isTeacher={!!isTeacher} />}
+            {activeTab === 'forum' && <ForumTab isTeacher={!!isTeacher} />}
             {activeTab === 'students' && <StudentsTab classroomId={activeClassroom.id} />}
+            {activeTab === 'grades' && <GradesTab />}
           </>
         )}
       </div>
@@ -395,10 +398,207 @@ export default function Classroom() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TAB: INICIO (Anuncios)
+// TAB: INICIO (Dashboard diferenciado docente/estudiante)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function HomeTab({ classroom, isTeacher, onReload, setError }: {
+function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError }: {
+  classroom: any; isTeacher: boolean; isStudent: boolean; user: any; onReload: () => void; setError: (e: string) => void
+}) {
+  const announcements: Announcement[] = classroom.announcements || []
+  const sections: Section[] = classroom.sections || []
+  const totalMaterials = sections.reduce((acc: number, s: Section) => acc + s.materials.length, 0)
+  const pinnedAnnouncements = announcements.filter(a => a.isPinned).slice(0, 3)
+  const recentAnnouncements = announcements.filter(a => !a.isPinned).slice(0, 2)
+
+  // Student dashboard
+  if (isStudent) {
+    const firstName = user?.firstName || 'Estudiante'
+    return (
+      <div className="space-y-6">
+        {/* Welcome */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <h2 className="text-2xl font-bold text-slate-800">Bienvenido, {firstName}</h2>
+          <p className="text-base text-slate-500 mt-1">Curso: {classroom.title}</p>
+        </div>
+
+        {/* Dashboard cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {/* Actividades pendientes */}
+          <div className="bg-white rounded-2xl border-2 border-orange-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-orange-500 to-orange-400 px-5 py-3 flex items-center gap-2.5">
+              <ClipboardList className="w-6 h-6 text-white" />
+              <h3 className="text-lg font-bold text-white">Actividades Pendientes</h3>
+            </div>
+            <div className="p-5">
+              <p className="text-base text-slate-600">Las actividades aparecerán aquí próximamente</p>
+              <button className="mt-4 px-5 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 transition-colors">
+                Ver pendientes
+              </button>
+            </div>
+          </div>
+
+          {/* Anuncios recientes */}
+          <div className="bg-white rounded-2xl border-2 border-blue-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-400 px-5 py-3 flex items-center gap-2.5">
+              <Megaphone className="w-6 h-6 text-white" />
+              <h3 className="text-lg font-bold text-white">Anuncios Recientes</h3>
+            </div>
+            <div className="p-5">
+              {[...pinnedAnnouncements, ...recentAnnouncements].slice(0, 3).length === 0 ? (
+                <p className="text-base text-slate-500">Sin anuncios recientes</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {[...pinnedAnnouncements, ...recentAnnouncements].slice(0, 3).map(a => (
+                    <div key={a.id} className="flex items-start gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
+                      <p className="text-base text-slate-700">{a.title}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mis Calificaciones */}
+          <div className="bg-white rounded-2xl border-2 border-green-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-green-500 to-green-400 px-5 py-3 flex items-center gap-2.5">
+              <BarChart3 className="w-6 h-6 text-white" />
+              <h3 className="text-lg font-bold text-white">Mis Calificaciones</h3>
+            </div>
+            <div className="p-5">
+              <p className="text-base text-slate-600">Tus calificaciones aparecerán aquí</p>
+              <button className="mt-4 px-5 py-2.5 bg-green-500 text-white rounded-xl text-sm font-semibold hover:bg-green-600 transition-colors">
+                Ver calificaciones
+              </button>
+            </div>
+          </div>
+
+          {/* Contenidos del Curso */}
+          <div className="bg-white rounded-2xl border-2 border-purple-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-purple-500 to-purple-400 px-5 py-3 flex items-center gap-2.5">
+              <BookOpen className="w-6 h-6 text-white" />
+              <h3 className="text-lg font-bold text-white">Contenidos del Curso</h3>
+            </div>
+            <div className="p-5">
+              {sections.length === 0 ? (
+                <p className="text-base text-slate-500">Aún no hay contenidos publicados</p>
+              ) : (
+                <div className="space-y-2">
+                  {sections.filter(s => s.isVisible).slice(0, 3).map(s => (
+                    <div key={s.id} className="flex items-center gap-2">
+                      <FolderOpen className="w-5 h-5 text-purple-500 shrink-0" />
+                      <p className="text-base text-slate-700">{s.title}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button className="mt-4 px-5 py-2.5 bg-purple-500 text-white rounded-xl text-sm font-semibold hover:bg-purple-600 transition-colors">
+                Ver materiales
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Teacher dashboard
+  return (
+    <div className="space-y-6">
+      {/* Stats row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+              <Layers className="w-5 h-5 text-blue-600" />
+            </div>
+            <span className="text-2xl font-bold text-slate-800">{sections.length}</span>
+          </div>
+          <p className="text-sm text-slate-500">Secciones</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
+              <BookOpen className="w-5 h-5 text-green-600" />
+            </div>
+            <span className="text-2xl font-bold text-slate-800">{totalMaterials}</span>
+          </div>
+          <p className="text-sm text-slate-500">Recursos</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+              <Megaphone className="w-5 h-5 text-amber-600" />
+            </div>
+            <span className="text-2xl font-bold text-slate-800">{announcements.length}</span>
+          </div>
+          <p className="text-sm text-slate-500">Anuncios</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
+              <ClipboardList className="w-5 h-5 text-purple-600" />
+            </div>
+            <span className="text-2xl font-bold text-slate-800">{classroom._count?.activities || 0}</span>
+          </div>
+          <p className="text-sm text-slate-500">Actividades</p>
+        </div>
+      </div>
+
+      {/* Two column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Recent announcements */}
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <Megaphone className="w-5 h-5 text-amber-500" /> Anuncios recientes
+            </h3>
+          </div>
+          <div className="p-5">
+            {announcements.length === 0 ? (
+              <p className="text-base text-slate-400 text-center py-6">No hay anuncios aún</p>
+            ) : (
+              <div className="space-y-3">
+                {announcements.slice(0, 4).map(a => (
+                  <div key={a.id} className="flex items-start gap-3 pb-3 border-b border-slate-50 last:border-0 last:pb-0">
+                    {a.isPinned && <Pin className="w-4 h-4 text-yellow-500 mt-1 shrink-0" />}
+                    {!a.isPinned && <Megaphone className="w-4 h-4 text-slate-300 mt-1 shrink-0" />}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-700">{a.title}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{new Date(a.createdAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Activity feed placeholder */}
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-blue-500" /> Actividad reciente
+            </h3>
+          </div>
+          <div className="p-5">
+            <div className="text-center py-6 text-slate-400">
+              <Clock className="w-10 h-10 mx-auto mb-2 opacity-40" />
+              <p className="text-base">Las entregas y actividad de los estudiantes aparecerán aquí</p>
+              <p className="text-sm mt-1">Próximamente en Fase 2</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: ANUNCIOS (separada del Inicio)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
   classroom: any; isTeacher: boolean; onReload: () => void; setError: (e: string) => void
 }) {
   const [showForm, setShowForm] = useState(false)
@@ -408,8 +608,6 @@ function HomeTab({ classroom, isTeacher, onReload, setError }: {
   const fileRef = useRef<HTMLInputElement>(null)
 
   const announcements: Announcement[] = classroom.announcements || []
-  const sections: Section[] = classroom.sections || []
-  const totalMaterials = sections.reduce((acc: number, s: Section) => acc + s.materials.length, 0)
 
   const handleSubmit = async () => {
     if (!form.title.trim() || !form.content.trim()) return
@@ -417,13 +615,11 @@ function HomeTab({ classroom, isTeacher, onReload, setError }: {
       setUploading(true)
       let attachmentUrl: string | undefined
       let attachmentName: string | undefined
-
       if (attachmentFile) {
         const { data } = await classroomApi.uploadMaterial(attachmentFile)
         attachmentUrl = data.data.path || data.data.url
         attachmentName = attachmentFile.name
       }
-
       await classroomApi.createAnnouncement(classroom.id, { ...form, attachmentUrl, attachmentName })
       setForm({ title: '', content: '' })
       setAttachmentFile(null)
@@ -431,9 +627,7 @@ function HomeTab({ classroom, isTeacher, onReload, setError }: {
       onReload()
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al crear anuncio')
-    } finally {
-      setUploading(false)
-    }
+    } finally { setUploading(false) }
   }
 
   const handleTogglePin = async (id: string, pinned: boolean) => {
@@ -446,51 +640,27 @@ function HomeTab({ classroom, isTeacher, onReload, setError }: {
   }
 
   const openAttachment = async (url: string) => {
-    try {
-      const { data } = await storageApi.resolveUrl(url)
-      window.open(data.url, '_blank')
-    } catch { window.open(url, '_blank') }
+    try { const { data } = await storageApi.resolveUrl(url); window.open(data.url, '_blank') } catch { window.open(url, '_blank') }
   }
 
   return (
-    <div className="p-6 space-y-5">
-      {/* Overview cards */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-5 text-center">
-          <Layers className="w-6 h-6 mx-auto text-blue-500 mb-1.5" />
-          <p className="text-2xl font-bold text-slate-800">{sections.length}</p>
-          <p className="text-xs text-slate-500">Secciones</p>
-        </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-5 text-center">
-          <BookOpen className="w-6 h-6 mx-auto text-green-500 mb-1.5" />
-          <p className="text-2xl font-bold text-slate-800">{totalMaterials}</p>
-          <p className="text-xs text-slate-500">Recursos</p>
-        </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-5 text-center">
-          <Megaphone className="w-6 h-6 mx-auto text-amber-500 mb-1.5" />
-          <p className="text-2xl font-bold text-slate-800">{announcements.length}</p>
-          <p className="text-xs text-slate-500">Anuncios</p>
-        </div>
-      </div>
-
-      {/* Announcements header */}
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-slate-800">Anuncios</h3>
+        <h2 className="text-xl font-bold text-slate-800">Anuncios</h2>
         {isTeacher && (
-          <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
-            <Plus className="w-4 h-4" /> Nuevo Anuncio
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
+            <Plus className="w-5 h-5" /> Nuevo Anuncio
           </button>
         )}
       </div>
 
-      {/* New announcement form */}
       {showForm && (
-        <div className="bg-white border border-blue-200 rounded-xl p-5 space-y-3">
+        <div className="bg-white border-2 border-blue-200 rounded-2xl p-6 space-y-4">
           <input
             value={form.title}
             onChange={e => setForm({ ...form, title: e.target.value })}
             placeholder="Título del anuncio"
-            className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             autoFocus
           />
           <textarea
@@ -498,25 +668,24 @@ function HomeTab({ classroom, isTeacher, onReload, setError }: {
             onChange={e => setForm({ ...form, content: e.target.value })}
             placeholder="Escribe tu anuncio aquí..."
             rows={4}
-            className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           />
-          {/* Attachment */}
           <input ref={fileRef} type="file" className="hidden" onChange={e => setAttachmentFile(e.target.files?.[0] || null)} />
-          {attachmentFile ? (
-            <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200">
-              <Paperclip className="w-4 h-4 text-slate-400" />
-              <span className="text-sm text-slate-700 flex-1 truncate">{attachmentFile.name}</span>
-              <button onClick={() => setAttachmentFile(null)} className="p-0.5 rounded hover:bg-slate-200"><X className="w-3.5 h-3.5 text-slate-400" /></button>
+          {attachmentFile && (
+            <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
+              <Paperclip className="w-5 h-5 text-slate-400" />
+              <span className="text-base text-slate-700 flex-1 truncate">{attachmentFile.name}</span>
+              <button onClick={() => setAttachmentFile(null)} className="p-1 rounded-lg hover:bg-slate-200"><X className="w-4 h-4 text-slate-400" /></button>
             </div>
-          ) : null}
-          <div className="flex items-center justify-between">
-            <button onClick={() => fileRef.current?.click()} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-slate-200 hover:border-blue-300 transition-colors">
-              <Paperclip className="w-3.5 h-3.5" /> Adjuntar archivo
+          )}
+          <div className="flex items-center justify-between pt-1">
+            <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
+              <Paperclip className="w-5 h-5" /> Adjuntar archivo
             </button>
-            <div className="flex gap-2">
-              <button onClick={() => { setShowForm(false); setAttachmentFile(null) }} className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
-              <button onClick={handleSubmit} disabled={!form.title.trim() || !form.content.trim() || uploading} className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
-                {uploading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            <div className="flex gap-3">
+              <button onClick={() => { setShowForm(false); setAttachmentFile(null) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
+              <button onClick={handleSubmit} disabled={!form.title.trim() || !form.content.trim() || uploading} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                {uploading && <Loader2 className="w-4 h-4 animate-spin" />}
                 {uploading ? 'Publicando...' : 'Publicar'}
               </button>
             </div>
@@ -524,42 +693,41 @@ function HomeTab({ classroom, isTeacher, onReload, setError }: {
         </div>
       )}
 
-      {/* Announcements list */}
       {announcements.length === 0 && !showForm ? (
-        <div className="text-center py-16 text-slate-400 bg-white rounded-xl border border-slate-200">
-          <Megaphone className="w-14 h-14 mx-auto mb-3 opacity-40" />
-          <p className="text-sm font-medium">No hay anuncios aún</p>
-          {isTeacher && <p className="text-xs mt-1 text-slate-400">Publica un anuncio para comunicarte con tus estudiantes</p>}
+        <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
+          <Megaphone className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+          <p className="text-lg font-medium text-slate-500">No hay anuncios aún</p>
+          {isTeacher && <p className="text-base mt-1 text-slate-400">Publica un anuncio para comunicarte con tus estudiantes</p>}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {announcements.map(a => (
-            <div key={a.id} className={`bg-white rounded-xl border p-5 ${a.isPinned ? 'border-yellow-300 ring-1 ring-yellow-100' : 'border-slate-200'}`}>
-              <div className="flex items-start justify-between gap-3">
+            <div key={a.id} className={`bg-white rounded-2xl border-2 p-6 ${a.isPinned ? 'border-yellow-300' : 'border-slate-200'}`}>
+              <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    {a.isPinned && <Pin className="w-3.5 h-3.5 text-yellow-500 shrink-0" />}
-                    <h4 className="font-semibold text-slate-800 text-base">{a.title}</h4>
+                  <div className="flex items-center gap-2.5">
+                    {a.isPinned && <Pin className="w-5 h-5 text-yellow-500 shrink-0" />}
+                    <h3 className="text-lg font-bold text-slate-800">{a.title}</h3>
                   </div>
-                  <p className="text-sm text-slate-600 mt-2 whitespace-pre-wrap leading-relaxed">{a.content}</p>
+                  <p className="text-base text-slate-600 mt-3 whitespace-pre-wrap leading-relaxed">{a.content}</p>
                   {a.attachmentUrl && (
-                    <button onClick={() => openAttachment(a.attachmentUrl!)} className="flex items-center gap-2 mt-3 px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors group">
-                      <File className="w-4 h-4 text-blue-500" />
-                      <span className="text-sm text-slate-700 group-hover:text-blue-600 truncate">{a.attachmentName || 'Archivo adjunto'}</span>
-                      <Download className="w-3.5 h-3.5 text-slate-400 ml-auto shrink-0" />
+                    <button onClick={() => openAttachment(a.attachmentUrl!)} className="flex items-center gap-3 mt-4 px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors group w-full sm:w-auto">
+                      <File className="w-5 h-5 text-blue-500" />
+                      <span className="text-base text-slate-700 group-hover:text-blue-600 truncate">{a.attachmentName || 'Archivo adjunto'}</span>
+                      <Download className="w-4 h-4 text-slate-400 ml-auto shrink-0" />
                     </button>
                   )}
-                  <p className="text-xs text-slate-400 mt-3">
+                  <p className="text-sm text-slate-400 mt-4">
                     {a.author.firstName} {a.author.lastName} · {new Date(a.createdAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
                 {isTeacher && (
                   <div className="flex gap-1 shrink-0">
-                    <button onClick={() => handleTogglePin(a.id, a.isPinned)} className="p-1.5 rounded-lg hover:bg-slate-100" title={a.isPinned ? 'Desfijar' : 'Fijar'}>
-                      {a.isPinned ? <PinOff className="w-4 h-4 text-slate-400" /> : <Pin className="w-4 h-4 text-slate-400" />}
+                    <button onClick={() => handleTogglePin(a.id, a.isPinned)} className="p-2 rounded-xl hover:bg-slate-100" title={a.isPinned ? 'Desfijar' : 'Fijar'}>
+                      {a.isPinned ? <PinOff className="w-5 h-5 text-slate-400" /> : <Pin className="w-5 h-5 text-slate-400" />}
                     </button>
-                    <button onClick={() => handleDelete(a.id)} className="p-1.5 rounded-lg hover:bg-red-50">
-                      <Trash2 className="w-4 h-4 text-red-400" />
+                    <button onClick={() => handleDelete(a.id)} className="p-2 rounded-xl hover:bg-red-50">
+                      <Trash2 className="w-5 h-5 text-red-400" />
                     </button>
                   </div>
                 )}
@@ -1100,33 +1268,138 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDownload, 
 
 function ActivitiesTab({ isTeacher }: { isTeacher: boolean }) {
   const activityTypes = [
-    { icon: ClipboardList, label: 'Tareas', desc: 'Asigna trabajos con fecha de entrega y calificación', color: 'text-blue-500 bg-blue-50' },
-    { icon: BookOpen, label: 'Quizzes', desc: 'Evaluaciones rápidas con calificación automática', color: 'text-green-500 bg-green-50' },
-    { icon: FileText, label: 'Exámenes', desc: 'Evaluaciones formales con tiempo límite', color: 'text-purple-500 bg-purple-50' },
-    { icon: GraduationCap, label: 'Simulacro ICFES', desc: 'Simulacros Saber 11 con análisis detallado', color: 'text-amber-500 bg-amber-50' },
+    { icon: ClipboardList, label: 'Tareas', desc: 'Asigna trabajos con fecha de entrega y calificación automática o manual', color: 'text-blue-600 bg-blue-50 border-blue-200' },
+    { icon: BookOpen, label: 'Quizzes', desc: 'Evaluaciones rápidas con preguntas de opción múltiple y calificación automática', color: 'text-green-600 bg-green-50 border-green-200' },
+    { icon: FileText, label: 'Exámenes', desc: 'Evaluaciones formales con tiempo límite y restricciones configurables', color: 'text-purple-600 bg-purple-50 border-purple-200' },
+    { icon: GraduationCap, label: 'Simulacro ICFES', desc: 'Simulacros Saber 11 con análisis detallado por competencia y área', color: 'text-amber-600 bg-amber-50 border-amber-200' },
   ]
 
   return (
-    <div className="p-6">
-      <div className="text-center py-12">
-        <ClipboardList className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-        <h3 className="text-lg font-semibold text-slate-700">Actividades</h3>
-        <p className="text-sm text-slate-500 mt-1 mb-8">
-          {isTeacher ? 'Próximamente podrás crear y gestionar actividades evaluativas' : 'Próximamente encontrarás aquí tus tareas, quizzes y exámenes'}
-        </p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-slate-800">Actividades</h2>
+        {isTeacher && (
+          <button disabled className="flex items-center gap-2 px-5 py-2.5 bg-blue-600/50 text-white rounded-xl text-sm font-semibold cursor-not-allowed" style={{ minHeight: '44px' }}>
+            <Plus className="w-5 h-5" /> Crear Actividad
+          </button>
+        )}
+      </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-3xl mx-auto">
-          {activityTypes.map(at => (
-            <div key={at.label} className="bg-white rounded-xl border border-slate-200 p-5 text-left opacity-70">
-              <div className={`w-11 h-11 rounded-lg ${at.color} flex items-center justify-center mb-3`}>
-                <at.icon className="w-5 h-5" />
+      <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
+        <ClipboardList className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+        <h3 className="text-xl font-bold text-slate-700">Próximamente</h3>
+        <p className="text-base text-slate-500 mt-2 max-w-lg mx-auto">
+          {isTeacher ? 'Podrás crear y gestionar tareas, quizzes, exámenes y simulacros ICFES con calificación automática y sincronización con la planilla.' : 'Aquí encontrarás tus tareas pendientes, quizzes y exámenes con sus fechas de entrega y calificaciones.'}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {activityTypes.map(at => (
+          <div key={at.label} className={`bg-white rounded-2xl border-2 p-6 opacity-70 ${at.color.split(' ').pop()}`}>
+            <div className="flex items-center gap-4 mb-3">
+              <div className={`w-12 h-12 rounded-xl ${at.color.split(' ').slice(0, 2).join(' ')} flex items-center justify-center`}>
+                <at.icon className="w-6 h-6" />
               </div>
-              <h4 className="text-sm font-semibold text-slate-700">{at.label}</h4>
-              <p className="text-xs text-slate-500 mt-1">{at.desc}</p>
-              <span className="inline-block mt-3 text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">Próximamente</span>
+              <div>
+                <h4 className="text-base font-bold text-slate-800">{at.label}</h4>
+                <span className="text-xs px-2.5 py-0.5 bg-slate-100 text-slate-500 rounded-full font-medium">Próximamente</span>
+              </div>
             </div>
-          ))}
+            <p className="text-sm text-slate-600 leading-relaxed">{at.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: FORO (placeholder para Fase 2+)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function ForumTab({ isTeacher }: { isTeacher: boolean }) {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-slate-800">Foro de Discusión</h2>
+        {isTeacher && (
+          <button disabled className="flex items-center gap-2 px-5 py-2.5 bg-blue-600/50 text-white rounded-xl text-sm font-semibold cursor-not-allowed" style={{ minHeight: '44px' }}>
+            <Plus className="w-5 h-5" /> Nuevo Tema
+          </button>
+        )}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
+        <MessageSquare className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+        <h3 className="text-xl font-bold text-slate-700">Próximamente</h3>
+        <p className="text-base text-slate-500 mt-2 max-w-lg mx-auto">
+          {isTeacher
+            ? 'Podrás crear temas de discusión para que tus estudiantes participen, con respuestas anidadas y la opción de fijar temas importantes.'
+            : 'Aquí podrás participar en discusiones con tu profesor y compañeros sobre los temas del curso.'}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 text-center opacity-70">
+          <MessageSquare className="w-8 h-8 mx-auto text-blue-400 mb-2" />
+          <h4 className="text-sm font-bold text-slate-700">Temas de discusión</h4>
+          <p className="text-xs text-slate-500 mt-1">Crea y participa en conversaciones organizadas por tema</p>
         </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 text-center opacity-70">
+          <ChevronRight className="w-8 h-8 mx-auto text-green-400 mb-2" />
+          <h4 className="text-sm font-bold text-slate-700">Respuestas anidadas</h4>
+          <p className="text-xs text-slate-500 mt-1">Responde directamente a mensajes específicos</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 text-center opacity-70">
+          <Pin className="w-8 h-8 mx-auto text-amber-400 mb-2" />
+          <h4 className="text-sm font-bold text-slate-700">Fijar temas</h4>
+          <p className="text-xs text-slate-500 mt-1">Destaca los temas más importantes</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: MIS NOTAS (placeholder para estudiantes)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function GradesTab() {
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold text-slate-800">Mis Calificaciones</h2>
+
+      <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
+        <BarChart3 className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+        <h3 className="text-xl font-bold text-slate-700">Próximamente</h3>
+        <p className="text-base text-slate-500 mt-2 max-w-lg mx-auto">
+          Aquí podrás ver todas tus calificaciones del curso, organizadas por actividad con tu nota, fecha de entrega y retroalimentación del docente.
+        </p>
+      </div>
+
+      {/* Preview table structure */}
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden opacity-70">
+        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
+          <h3 className="text-base font-bold text-slate-700">Vista previa de calificaciones</h3>
+        </div>
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-slate-100">
+              <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Actividad</th>
+              <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Fecha límite</th>
+              <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Estado</th>
+              <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Nota</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-slate-50">
+              <td className="px-6 py-3 text-sm text-slate-500">—</td>
+              <td className="px-6 py-3 text-sm text-slate-500">—</td>
+              <td className="px-6 py-3"><span className="text-xs px-2.5 py-1 bg-slate-100 text-slate-500 rounded-full">Sin datos</span></td>
+              <td className="px-6 py-3 text-sm text-slate-500">—</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   )
@@ -1152,75 +1425,74 @@ function StudentsTab({ classroomId }: { classroomId: string }) {
     load()
   }, [classroomId])
 
-  if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+  if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
 
-  // Student model has firstName/lastName directly on it, with optional user relation
   const getStudentName = (s: any) => {
     const student = s.student || {}
     const firstName = student.firstName || student.user?.firstName || ''
     const lastName = student.lastName || student.user?.lastName || ''
-    const secondName = student.secondName || ''
     const secondLastName = student.secondLastName || ''
     const email = student.email || student.user?.email || ''
-    return { firstName, lastName, secondName, secondLastName, email }
+    const photo = student.photo || null
+    return { firstName, lastName, secondLastName, email, photo }
   }
 
   const filtered = students.filter((s: any) => {
     if (!search.trim()) return true
     const { firstName, lastName } = getStudentName(s)
-    const name = `${firstName} ${lastName}`.toLowerCase()
-    return name.includes(search.toLowerCase())
+    return `${firstName} ${lastName}`.toLowerCase().includes(search.toLowerCase())
   })
 
   return (
-    <div className="p-6">
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        {/* Header */}
-        <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <div className="flex items-center gap-2.5">
-            <Users className="w-5 h-5 text-blue-500" />
-            <h3 className="text-sm font-bold text-slate-800">Estudiantes del grupo</h3>
-            <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full font-semibold">{students.length}</span>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2.5">
+          Estudiantes del grupo
+          <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-semibold">{students.length}</span>
+        </h2>
+        {students.length > 5 && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar estudiante..."
+              className="pl-10 pr-4 py-2.5 text-base border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none w-64"
+            />
           </div>
-          {students.length > 5 && (
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar estudiante..."
-                className="pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none w-52"
-              />
-            </div>
-          )}
-        </div>
+        )}
+      </div>
 
-        {/* Student list */}
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="divide-y divide-slate-100">
           {filtered.length === 0 && students.length > 0 && (
-            <div className="text-center py-8 text-slate-400 text-sm">No se encontraron estudiantes</div>
+            <div className="text-center py-12 text-slate-400 text-base">No se encontraron estudiantes</div>
           )}
           {filtered.length === 0 && students.length === 0 && (
-            <div className="text-center py-12 text-slate-400 text-sm">No hay estudiantes matriculados en este grupo</div>
+            <div className="text-center py-16 text-slate-400 text-base">No hay estudiantes matriculados en este grupo</div>
           )}
           {filtered.map((s: any, i: number) => {
-            const { firstName, lastName, secondLastName, email } = getStudentName(s)
+            const { firstName, lastName, secondLastName, email, photo } = getStudentName(s)
             const displayName = lastName && firstName
               ? `${lastName}${secondLastName ? ' ' + secondLastName : ''}, ${firstName}`
               : lastName || firstName || 'Sin nombre'
             const initials = `${firstName[0] || ''}${lastName[0] || ''}`
 
             return (
-              <div key={s.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors">
-                <span className="text-xs text-slate-400 w-7 text-right font-mono">{i + 1}</span>
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-xs font-bold text-blue-700 shrink-0">
-                  {initials || '?'}
-                </div>
+              <div key={s.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors">
+                <span className="text-sm text-slate-400 w-8 text-right font-mono">{i + 1}</span>
+                {photo ? (
+                  <img src={photo} alt={displayName} className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-sm font-bold text-blue-700 shrink-0">
+                    {initials || '?'}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-800">{displayName}</p>
-                  {email && <p className="text-xs text-slate-400 truncate">{email}</p>}
+                  <p className="text-base font-medium text-slate-800">{displayName}</p>
+                  {email && <p className="text-sm text-slate-400 truncate">{email}</p>}
                 </div>
-                <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full shrink-0">Activo</span>
+                <span className="text-sm bg-green-50 text-green-600 px-3 py-1 rounded-full shrink-0 font-medium">Activo</span>
               </div>
             )
           })}
