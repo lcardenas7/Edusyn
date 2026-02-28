@@ -1748,9 +1748,9 @@ export const classroomApi = {
   deleteMaterial: (materialId: string) => api.delete(`/classrooms/materials/${materialId}`),
 
   // Announcements
-  createAnnouncement: (classroomId: string, data: { title: string; content: string; isPinned?: boolean }) =>
+  createAnnouncement: (classroomId: string, data: { title: string; content: string; isPinned?: boolean; attachmentUrl?: string; attachmentName?: string }) =>
     api.post(`/classrooms/${classroomId}/announcements`, data),
-  updateAnnouncement: (announcementId: string, data: { title?: string; content?: string; isPinned?: boolean }) =>
+  updateAnnouncement: (announcementId: string, data: { title?: string; content?: string; isPinned?: boolean; attachmentUrl?: string; attachmentName?: string }) =>
     api.put(`/classrooms/announcements/${announcementId}`, data),
   deleteAnnouncement: (announcementId: string) => api.delete(`/classrooms/announcements/${announcementId}`),
 

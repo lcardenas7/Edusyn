@@ -331,6 +331,8 @@ export class ClassroomService {
     title: string;
     content: string;
     isPinned?: boolean;
+    attachmentUrl?: string;
+    attachmentName?: string;
   }) {
     await this.validateClassroomOwnership(classroomId, teacherId);
     return this.prisma.classroomAnnouncement.create({
@@ -340,6 +342,8 @@ export class ClassroomService {
         title: dto.title,
         content: dto.content,
         isPinned: dto.isPinned ?? false,
+        attachmentUrl: dto.attachmentUrl,
+        attachmentName: dto.attachmentName,
       },
       include: {
         author: { select: { id: true, firstName: true, lastName: true } },
@@ -351,6 +355,8 @@ export class ClassroomService {
     title?: string;
     content?: string;
     isPinned?: boolean;
+    attachmentUrl?: string;
+    attachmentName?: string;
   }) {
     const ann = await this.prisma.classroomAnnouncement.findUnique({
       where: { id: announcementId },
@@ -365,6 +371,8 @@ export class ClassroomService {
         ...(dto.title !== undefined && { title: dto.title }),
         ...(dto.content !== undefined && { content: dto.content }),
         ...(dto.isPinned !== undefined && { isPinned: dto.isPinned }),
+        ...(dto.attachmentUrl !== undefined && { attachmentUrl: dto.attachmentUrl }),
+        ...(dto.attachmentName !== undefined && { attachmentName: dto.attachmentName }),
       },
       include: {
         author: { select: { id: true, firstName: true, lastName: true } },

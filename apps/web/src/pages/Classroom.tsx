@@ -7,7 +7,7 @@ import {
   Trash2, Pencil, Pin, PinOff, X, Upload, ExternalLink,
   GraduationCap, Layers, ClipboardList, BookOpen, Download,
   Bold, Italic, Underline, List, ListOrdered, Youtube,
-  FileUp, Image, Search,
+  FileUp, Image, Search, Paperclip, File,
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -56,6 +56,8 @@ interface Announcement {
   title: string
   content: string
   isPinned: boolean
+  attachmentUrl?: string
+  attachmentName?: string
   createdAt: string
   author: { id: string; firstName: string; lastName: string }
 }
@@ -142,12 +144,12 @@ export default function Classroom() {
 
   useEffect(() => { loadClassrooms() }, [loadClassrooms])
 
-  const loadClassroom = async (id: string) => {
+  const loadClassroom = async (id: string, preserveTab = false) => {
     try {
       setLoading(true)
       const { data } = await classroomApi.getById(id)
       setActiveClassroom(data)
-      setActiveTab('home')
+      if (!preserveTab) setActiveTab('home')
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al cargar aula')
     } finally {
@@ -155,7 +157,7 @@ export default function Classroom() {
     }
   }
 
-  const reloadClassroom = () => { if (activeClassroom?.id) loadClassroom(activeClassroom.id) }
+  const reloadClassroom = () => { if (activeClassroom?.id) loadClassroom(activeClassroom.id, true) }
 
   const loadAvailableAssignments = async () => {
     try {
@@ -401,6 +403,9 @@ function HomeTab({ classroom, isTeacher, onReload, setError }: {
 }) {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ title: '', content: '' })
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const announcements: Announcement[] = classroom.announcements || []
   const sections: Section[] = classroom.sections || []
@@ -409,12 +414,25 @@ function HomeTab({ classroom, isTeacher, onReload, setError }: {
   const handleSubmit = async () => {
     if (!form.title.trim() || !form.content.trim()) return
     try {
-      await classroomApi.createAnnouncement(classroom.id, form)
+      setUploading(true)
+      let attachmentUrl: string | undefined
+      let attachmentName: string | undefined
+
+      if (attachmentFile) {
+        const { data } = await classroomApi.uploadMaterial(attachmentFile)
+        attachmentUrl = data.data.path || data.data.url
+        attachmentName = attachmentFile.name
+      }
+
+      await classroomApi.createAnnouncement(classroom.id, { ...form, attachmentUrl, attachmentName })
       setForm({ title: '', content: '' })
+      setAttachmentFile(null)
       setShowForm(false)
       onReload()
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al crear anuncio')
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -427,32 +445,39 @@ function HomeTab({ classroom, isTeacher, onReload, setError }: {
     try { await classroomApi.deleteAnnouncement(id); onReload() } catch {}
   }
 
+  const openAttachment = async (url: string) => {
+    try {
+      const { data } = await storageApi.resolveUrl(url)
+      window.open(data.url, '_blank')
+    } catch { window.open(url, '_blank') }
+  }
+
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-5">
+    <div className="p-6 space-y-5">
       {/* Overview cards */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
-          <Layers className="w-5 h-5 mx-auto text-blue-500 mb-1" />
-          <p className="text-lg font-bold text-slate-800">{sections.length}</p>
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-5 text-center">
+          <Layers className="w-6 h-6 mx-auto text-blue-500 mb-1.5" />
+          <p className="text-2xl font-bold text-slate-800">{sections.length}</p>
           <p className="text-xs text-slate-500">Secciones</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
-          <BookOpen className="w-5 h-5 mx-auto text-green-500 mb-1" />
-          <p className="text-lg font-bold text-slate-800">{totalMaterials}</p>
+        <div className="bg-white rounded-xl border border-slate-200 p-5 text-center">
+          <BookOpen className="w-6 h-6 mx-auto text-green-500 mb-1.5" />
+          <p className="text-2xl font-bold text-slate-800">{totalMaterials}</p>
           <p className="text-xs text-slate-500">Recursos</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
-          <Megaphone className="w-5 h-5 mx-auto text-amber-500 mb-1" />
-          <p className="text-lg font-bold text-slate-800">{announcements.length}</p>
+        <div className="bg-white rounded-xl border border-slate-200 p-5 text-center">
+          <Megaphone className="w-6 h-6 mx-auto text-amber-500 mb-1.5" />
+          <p className="text-2xl font-bold text-slate-800">{announcements.length}</p>
           <p className="text-xs text-slate-500">Anuncios</p>
         </div>
       </div>
 
       {/* Announcements header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-bold text-slate-800">Anuncios</h3>
+        <h3 className="text-lg font-bold text-slate-800">Anuncios</h3>
         {isTeacher && (
-          <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
             <Plus className="w-4 h-4" /> Nuevo Anuncio
           </button>
         )}
@@ -460,12 +485,12 @@ function HomeTab({ classroom, isTeacher, onReload, setError }: {
 
       {/* New announcement form */}
       {showForm && (
-        <div className="bg-white border border-blue-200 rounded-xl p-4 space-y-2">
+        <div className="bg-white border border-blue-200 rounded-xl p-5 space-y-3">
           <input
             value={form.title}
             onChange={e => setForm({ ...form, title: e.target.value })}
             placeholder="Título del anuncio"
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             autoFocus
           />
           <textarea
@@ -473,33 +498,57 @@ function HomeTab({ classroom, isTeacher, onReload, setError }: {
             onChange={e => setForm({ ...form, content: e.target.value })}
             placeholder="Escribe tu anuncio aquí..."
             rows={4}
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           />
-          <div className="flex justify-end gap-2">
-            <button onClick={() => setShowForm(false)} className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
-            <button onClick={handleSubmit} disabled={!form.title.trim() || !form.content.trim()} className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">Publicar</button>
+          {/* Attachment */}
+          <input ref={fileRef} type="file" className="hidden" onChange={e => setAttachmentFile(e.target.files?.[0] || null)} />
+          {attachmentFile ? (
+            <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200">
+              <Paperclip className="w-4 h-4 text-slate-400" />
+              <span className="text-sm text-slate-700 flex-1 truncate">{attachmentFile.name}</span>
+              <button onClick={() => setAttachmentFile(null)} className="p-0.5 rounded hover:bg-slate-200"><X className="w-3.5 h-3.5 text-slate-400" /></button>
+            </div>
+          ) : null}
+          <div className="flex items-center justify-between">
+            <button onClick={() => fileRef.current?.click()} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-slate-200 hover:border-blue-300 transition-colors">
+              <Paperclip className="w-3.5 h-3.5" /> Adjuntar archivo
+            </button>
+            <div className="flex gap-2">
+              <button onClick={() => { setShowForm(false); setAttachmentFile(null) }} className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+              <button onClick={handleSubmit} disabled={!form.title.trim() || !form.content.trim() || uploading} className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+                {uploading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {uploading ? 'Publicando...' : 'Publicar'}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Announcements list */}
       {announcements.length === 0 && !showForm ? (
-        <div className="text-center py-12 text-slate-400 bg-white rounded-xl border border-slate-200">
-          <Megaphone className="w-12 h-12 mx-auto mb-2 opacity-40" />
-          <p className="text-sm">No hay anuncios aún</p>
+        <div className="text-center py-16 text-slate-400 bg-white rounded-xl border border-slate-200">
+          <Megaphone className="w-14 h-14 mx-auto mb-3 opacity-40" />
+          <p className="text-sm font-medium">No hay anuncios aún</p>
           {isTeacher && <p className="text-xs mt-1 text-slate-400">Publica un anuncio para comunicarte con tus estudiantes</p>}
         </div>
       ) : (
         <div className="space-y-3">
           {announcements.map(a => (
-            <div key={a.id} className={`bg-white rounded-xl border p-4 ${a.isPinned ? 'border-yellow-300 ring-1 ring-yellow-100' : 'border-slate-200'}`}>
+            <div key={a.id} className={`bg-white rounded-xl border p-5 ${a.isPinned ? 'border-yellow-300 ring-1 ring-yellow-100' : 'border-slate-200'}`}>
               <div className="flex items-start justify-between gap-3">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    {a.isPinned && <Pin className="w-3.5 h-3.5 text-yellow-500" />}
-                    <h4 className="font-semibold text-slate-800">{a.title}</h4>
+                    {a.isPinned && <Pin className="w-3.5 h-3.5 text-yellow-500 shrink-0" />}
+                    <h4 className="font-semibold text-slate-800 text-base">{a.title}</h4>
                   </div>
                   <p className="text-sm text-slate-600 mt-2 whitespace-pre-wrap leading-relaxed">{a.content}</p>
+                  {a.attachmentUrl && (
+                    <button onClick={() => openAttachment(a.attachmentUrl!)} className="flex items-center gap-2 mt-3 px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors group">
+                      <File className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm text-slate-700 group-hover:text-blue-600 truncate">{a.attachmentName || 'Archivo adjunto'}</span>
+                      <Download className="w-3.5 h-3.5 text-slate-400 ml-auto shrink-0" />
+                    </button>
+                  )}
                   <p className="text-xs text-slate-400 mt-3">
                     {a.author.firstName} {a.author.lastName} · {new Date(a.createdAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
@@ -652,12 +701,12 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-4">
+    <div className="p-6 space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-bold text-slate-800">Contenido del aula</h3>
+        <h3 className="text-lg font-bold text-slate-800">Contenido del aula</h3>
         {isTeacher && (
-          <button onClick={() => setShowAddSection(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button onClick={() => setShowAddSection(true)} className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
             <Plus className="w-4 h-4" /> Nueva Sección
           </button>
         )}
@@ -670,7 +719,7 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
             value={newSectionTitle}
             onChange={e => setNewSectionTitle(e.target.value)}
             placeholder="Nombre de la sección (ej: Semana 1, Unidad: Fracciones)"
-            className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            className="flex-1 border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             autoFocus
             onKeyDown={e => e.key === 'Enter' && handleAddSection()}
           />
@@ -681,18 +730,18 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
 
       {/* Sections */}
       {sections.length === 0 && !showAddSection ? (
-        <div className="text-center py-12 text-slate-400 bg-white rounded-xl border border-slate-200">
-          <FolderOpen className="w-12 h-12 mx-auto mb-2 opacity-40" />
-          <p className="text-sm">No hay secciones de contenido aún</p>
+        <div className="text-center py-16 text-slate-400 bg-white rounded-xl border border-slate-200">
+          <FolderOpen className="w-14 h-14 mx-auto mb-3 opacity-40" />
+          <p className="text-sm font-medium">No hay secciones de contenido aún</p>
           {isTeacher && <p className="text-xs mt-1">Crea secciones para organizar tu material por temas o semanas</p>}
         </div>
       ) : (
         sections.filter(s => isTeacher || s.isVisible).map(section => (
           <div key={section.id} className={`bg-white rounded-xl border ${section.isVisible ? 'border-slate-200' : 'border-dashed border-slate-300 opacity-70'}`}>
             {/* Section header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50 rounded-t-xl">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <FolderOpen className="w-4 h-4 text-blue-500 shrink-0" />
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 rounded-t-xl">
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <FolderOpen className="w-5 h-5 text-blue-500 shrink-0" />
                 {editingSection === section.id ? (
                   <input
                     value={editingSectionTitle}
@@ -703,75 +752,40 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
                     autoFocus
                   />
                 ) : (
-                  <h4 className="font-semibold text-slate-700 text-sm truncate">{section.title}</h4>
+                  <h4 className="font-semibold text-slate-800 text-sm">{section.title}</h4>
                 )}
-                {!section.isVisible && <span className="text-xs bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded shrink-0">Oculta</span>}
+                {!section.isVisible && <span className="text-xs bg-slate-200 text-slate-500 px-2 py-0.5 rounded shrink-0">Oculta</span>}
               </div>
               {isTeacher && (
                 <div className="flex items-center gap-0.5 ml-2 shrink-0">
                   <button onClick={() => { setEditingSection(section.id); setEditingSectionTitle(section.title) }} className="p-1.5 rounded-lg hover:bg-slate-100" title="Renombrar">
-                    <Pencil className="w-3.5 h-3.5 text-slate-400" />
+                    <Pencil className="w-4 h-4 text-slate-400" />
                   </button>
                   <button onClick={() => handleToggleVis(section.id, section.isVisible)} className="p-1.5 rounded-lg hover:bg-slate-100" title={section.isVisible ? 'Ocultar' : 'Mostrar'}>
-                    {section.isVisible ? <EyeOff className="w-3.5 h-3.5 text-slate-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+                    {section.isVisible ? <EyeOff className="w-4 h-4 text-slate-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
                   </button>
                   <button onClick={() => handleDeleteSection(section.id)} className="p-1.5 rounded-lg hover:bg-red-50" title="Eliminar">
-                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                    <Trash2 className="w-4 h-4 text-red-400" />
                   </button>
                 </div>
               )}
             </div>
 
-            {/* Materials list */}
-            <div className="p-3 space-y-1.5">
+            {/* Materials list - bigger cards */}
+            <div className="p-4 space-y-3">
               {section.materials.filter(m => isTeacher || m.isVisible).map(material => (
-                <div key={material.id} className={`flex items-start gap-3 px-3 py-2.5 rounded-lg ${material.isVisible ? 'bg-slate-50 hover:bg-slate-100' : 'bg-slate-50/50 opacity-60'} group transition-colors`}>
-                  <div className="mt-0.5">{getMaterialIcon(material.type)}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-slate-700 truncate">{material.title}</p>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-500 shrink-0">{getMaterialLabel(material.type)}</span>
-                    </div>
-                    {material.type === 'TEXT' && material.content && (
-                      <p className="text-xs text-slate-500 mt-1 line-clamp-3 whitespace-pre-wrap">{material.content}</p>
-                    )}
-                    {material.type === 'VIDEO_YOUTUBE' && material.content && (() => {
-                      const vid = extractYoutubeId(material.content)
-                      return vid ? (
-                        <div className="mt-2 aspect-video max-w-lg rounded-lg overflow-hidden border border-slate-200">
-                          <iframe src={`https://www.youtube-nocookie.com/embed/${vid}`} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                        </div>
-                      ) : null
-                    })()}
-                    {material.type === 'LINK' && material.content && (
-                      <a href={material.content} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline flex items-center gap-1 mt-1">
-                        <ExternalLink className="w-3 h-3" />{material.content}
-                      </a>
-                    )}
-                    {(material.type === 'DOCUMENT' || material.type === 'IMAGE') && material.fileUrl && (
-                      <button onClick={() => handleDownload(material)} className="flex items-center gap-1 text-xs text-blue-500 hover:underline mt-1">
-                        <Download className="w-3 h-3" /> Descargar archivo
-                      </button>
-                    )}
-                  </div>
-                  {isTeacher && (
-                    <div className="opacity-0 group-hover:opacity-100 flex gap-0.5 shrink-0">
-                      <button onClick={() => handleToggleMaterialVis(material.id, material.isVisible)} className="p-1 rounded hover:bg-slate-200">
-                        {material.isVisible ? <EyeOff className="w-3.5 h-3.5 text-slate-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
-                      </button>
-                      <button onClick={() => handleDeleteMaterial(material.id)} className="p-1 rounded hover:bg-red-50">
-                        <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <MaterialCard key={material.id} material={material} isTeacher={isTeacher} onToggleVis={handleToggleMaterialVis} onDelete={handleDeleteMaterial} onDownload={handleDownload} resolveFileUrl={resolveFileUrl} />
               ))}
+
+              {section.materials.filter(m => isTeacher || m.isVisible).length === 0 && (
+                <p className="text-sm text-slate-400 text-center py-4">Esta sección aún no tiene recursos</p>
+              )}
 
               {/* Add resource buttons (teacher only) */}
               {isTeacher && (
-                <div className="pt-2 border-t border-slate-100 mt-2">
-                  <p className="text-xs text-slate-400 mb-2 font-medium px-1">Agregar recurso:</p>
-                  <div className="flex flex-wrap gap-1.5">
+                <div className="pt-3 border-t border-slate-100 mt-3">
+                  <p className="text-xs text-slate-400 mb-2.5 font-medium">Agregar recurso:</p>
+                  <div className="flex flex-wrap gap-2">
                     {[
                       { type: 'TEXT', label: 'Texto', icon: Type, color: 'bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100' },
                       { type: 'VIDEO_YOUTUBE', label: 'Video YouTube', icon: Youtube, color: 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' },
@@ -782,9 +796,9 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
                       <button
                         key={btn.type}
                         onClick={() => openMaterialModal(section.id, btn.type)}
-                        className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium border rounded-lg transition-colors ${btn.color}`}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border rounded-lg transition-colors ${btn.color}`}
                       >
-                        <btn.icon className="w-3.5 h-3.5" />
+                        <btn.icon className="w-4 h-4" />
                         {btn.label}
                       </button>
                     ))}
@@ -973,6 +987,114 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// MATERIAL CARD (bigger, with inline previews)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDownload, resolveFileUrl }: {
+  material: Material; isTeacher: boolean;
+  onToggleVis: (id: string, vis: boolean) => void;
+  onDelete: (id: string) => void;
+  onDownload: (m: Material) => void;
+  resolveFileUrl: (path: string) => Promise<string>;
+}) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (material.type === 'IMAGE' && material.fileUrl) {
+      resolveFileUrl(material.fileUrl).then(url => setImageUrl(url)).catch(() => {})
+    }
+  }, [material.fileUrl, material.type])
+
+  const typeColors: Record<string, string> = {
+    TEXT: 'border-l-purple-400',
+    VIDEO_YOUTUBE: 'border-l-red-400',
+    DOCUMENT: 'border-l-blue-400',
+    IMAGE: 'border-l-pink-400',
+    LINK: 'border-l-green-400',
+  }
+
+  return (
+    <div className={`rounded-xl border border-slate-200 border-l-4 ${typeColors[material.type] || 'border-l-slate-300'} ${material.isVisible ? 'bg-white' : 'bg-slate-50/50 opacity-60'} group transition-all hover:shadow-sm`}>
+      <div className="p-4">
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+              {getMaterialIcon(material.type, 'w-5 h-5')}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h5 className="text-sm font-semibold text-slate-800">{material.title}</h5>
+              <span className="text-[11px] text-slate-400">{getMaterialLabel(material.type)}</span>
+            </div>
+          </div>
+          {isTeacher && (
+            <div className="opacity-0 group-hover:opacity-100 flex gap-0.5 shrink-0 transition-opacity">
+              <button onClick={() => onToggleVis(material.id, material.isVisible)} className="p-1.5 rounded-lg hover:bg-slate-100">
+                {material.isVisible ? <EyeOff className="w-4 h-4 text-slate-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+              </button>
+              <button onClick={() => onDelete(material.id)} className="p-1.5 rounded-lg hover:bg-red-50">
+                <Trash2 className="w-4 h-4 text-red-400" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Content area */}
+        {material.type === 'TEXT' && material.content && (
+          <div className="mt-3 px-1">
+            <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{material.content}</p>
+          </div>
+        )}
+
+        {material.type === 'VIDEO_YOUTUBE' && material.content && (() => {
+          const vid = extractYoutubeId(material.content)
+          return vid ? (
+            <div className="mt-3 aspect-video rounded-lg overflow-hidden border border-slate-200">
+              <iframe src={`https://www.youtube-nocookie.com/embed/${vid}`} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+            </div>
+          ) : null
+        })()}
+
+        {material.type === 'LINK' && material.content && (
+          <a href={material.content} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 mt-3 px-3 py-2.5 bg-green-50 hover:bg-green-100 rounded-lg border border-green-200 transition-colors group/link">
+            <ExternalLink className="w-4 h-4 text-green-500" />
+            <span className="text-sm text-green-700 group-hover/link:underline truncate">{material.content}</span>
+          </a>
+        )}
+
+        {material.type === 'IMAGE' && material.fileUrl && (
+          <div className="mt-3">
+            {imageUrl ? (
+              <img src={imageUrl} alt={material.title} className="max-h-72 rounded-lg border border-slate-200 object-contain" />
+            ) : (
+              <div className="h-32 bg-slate-100 rounded-lg flex items-center justify-center">
+                <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+              </div>
+            )}
+            <button onClick={() => onDownload(material)} className="flex items-center gap-2 mt-2 px-3 py-2 text-xs text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+              <Download className="w-3.5 h-3.5" /> Descargar imagen
+            </button>
+          </div>
+        )}
+
+        {material.type === 'DOCUMENT' && material.fileUrl && (
+          <button onClick={() => onDownload(material)} className="flex items-center gap-3 mt-3 w-full px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors text-left group/doc">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
+              <FileText className="w-5 h-5 text-blue-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-blue-800 group-hover/doc:underline">{material.title}</p>
+              <p className="text-xs text-blue-500">Haz clic para abrir el documento</p>
+            </div>
+            <Download className="w-4 h-4 text-blue-400 shrink-0" />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // TAB: ACTIVIDADES (placeholder para Fase 2+)
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -985,23 +1107,23 @@ function ActivitiesTab({ isTeacher }: { isTeacher: boolean }) {
   ]
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <div className="text-center py-8">
+    <div className="p-6">
+      <div className="text-center py-12">
         <ClipboardList className="w-16 h-16 mx-auto text-slate-300 mb-4" />
         <h3 className="text-lg font-semibold text-slate-700">Actividades</h3>
         <p className="text-sm text-slate-500 mt-1 mb-8">
           {isTeacher ? 'Próximamente podrás crear y gestionar actividades evaluativas' : 'Próximamente encontrarás aquí tus tareas, quizzes y exámenes'}
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-3xl mx-auto">
           {activityTypes.map(at => (
-            <div key={at.label} className="bg-white rounded-xl border border-slate-200 p-4 text-left opacity-70">
-              <div className={`w-10 h-10 rounded-lg ${at.color} flex items-center justify-center mb-3`}>
+            <div key={at.label} className="bg-white rounded-xl border border-slate-200 p-5 text-left opacity-70">
+              <div className={`w-11 h-11 rounded-lg ${at.color} flex items-center justify-center mb-3`}>
                 <at.icon className="w-5 h-5" />
               </div>
               <h4 className="text-sm font-semibold text-slate-700">{at.label}</h4>
               <p className="text-xs text-slate-500 mt-1">{at.desc}</p>
-              <span className="inline-block mt-2 text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">Próximamente</span>
+              <span className="inline-block mt-3 text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">Próximamente</span>
             </div>
           ))}
         </div>
@@ -1032,21 +1154,33 @@ function StudentsTab({ classroomId }: { classroomId: string }) {
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
 
+  // Student model has firstName/lastName directly on it, with optional user relation
+  const getStudentName = (s: any) => {
+    const student = s.student || {}
+    const firstName = student.firstName || student.user?.firstName || ''
+    const lastName = student.lastName || student.user?.lastName || ''
+    const secondName = student.secondName || ''
+    const secondLastName = student.secondLastName || ''
+    const email = student.email || student.user?.email || ''
+    return { firstName, lastName, secondName, secondLastName, email }
+  }
+
   const filtered = students.filter((s: any) => {
     if (!search.trim()) return true
-    const name = `${s.student?.user?.firstName || ''} ${s.student?.user?.lastName || ''}`.toLowerCase()
+    const { firstName, lastName } = getStudentName(s)
+    const name = `${firstName} ${lastName}`.toLowerCase()
     return name.includes(search.toLowerCase())
   })
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-6">
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-blue-500" />
-            <h3 className="text-sm font-bold text-slate-700">Estudiantes del grupo</h3>
-            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">{students.length}</span>
+        <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center gap-2.5">
+            <Users className="w-5 h-5 text-blue-500" />
+            <h3 className="text-sm font-bold text-slate-800">Estudiantes del grupo</h3>
+            <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full font-semibold">{students.length}</span>
           </div>
           {students.length > 5 && (
             <div className="relative">
@@ -1054,37 +1188,36 @@ function StudentsTab({ classroomId }: { classroomId: string }) {
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar..."
-                className="pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none w-44"
+                placeholder="Buscar estudiante..."
+                className="pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none w-52"
               />
             </div>
           )}
         </div>
 
-        {/* Table */}
+        {/* Student list */}
         <div className="divide-y divide-slate-100">
           {filtered.length === 0 && students.length > 0 && (
-            <div className="text-center py-6 text-slate-400 text-sm">No se encontraron estudiantes</div>
+            <div className="text-center py-8 text-slate-400 text-sm">No se encontraron estudiantes</div>
           )}
           {filtered.length === 0 && students.length === 0 && (
-            <div className="text-center py-8 text-slate-400 text-sm">No hay estudiantes matriculados en este grupo</div>
+            <div className="text-center py-12 text-slate-400 text-sm">No hay estudiantes matriculados en este grupo</div>
           )}
           {filtered.map((s: any, i: number) => {
-            const firstName = s.student?.user?.firstName || ''
-            const lastName = s.student?.user?.lastName || ''
-            const email = s.student?.user?.email || ''
+            const { firstName, lastName, secondLastName, email } = getStudentName(s)
+            const displayName = lastName && firstName
+              ? `${lastName}${secondLastName ? ' ' + secondLastName : ''}, ${firstName}`
+              : lastName || firstName || 'Sin nombre'
             const initials = `${firstName[0] || ''}${lastName[0] || ''}`
 
             return (
-              <div key={s.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
-                <span className="text-xs text-slate-400 w-6 text-right font-mono">{i + 1}</span>
+              <div key={s.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors">
+                <span className="text-xs text-slate-400 w-7 text-right font-mono">{i + 1}</span>
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-xs font-bold text-blue-700 shrink-0">
                   {initials || '?'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-800">
-                    {lastName && firstName ? `${lastName} ${firstName}` : lastName || firstName || 'Sin nombre'}
-                  </p>
+                  <p className="text-sm font-medium text-slate-800">{displayName}</p>
                   {email && <p className="text-xs text-slate-400 truncate">{email}</p>}
                 </div>
                 <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full shrink-0">Activo</span>
