@@ -1712,7 +1712,7 @@ export const teacherWorkspaceApi = {
   // Items
   createItem: (data: { boardId: string; columnId?: string; studentId?: string; title: string; content?: string; metadata?: any; dueDate?: string; eventDate?: string }) =>
     api.post('/teacher-workspace/items', data),
-  updateItem: (id: string, data: { columnId?: string; title?: string; content?: string; metadata?: any; status?: string; dueDate?: string; eventDate?: string; sortOrder?: number; isArchived?: boolean }) =>
+  updateItem: (id: string, data: { columnId?: string; title?: string; content?: string; metadata?: any; status?: string; dueDate?: string | null; eventDate?: string | null; sortOrder?: number; isArchived?: boolean }) =>
     api.put(`/teacher-workspace/items/${id}`, data),
   moveItem: (id: string, data: { columnId: string; sortOrder: number }) =>
     api.patch(`/teacher-workspace/items/${id}/move`, data),

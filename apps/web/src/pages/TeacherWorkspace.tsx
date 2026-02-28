@@ -147,6 +147,7 @@ export default function TeacherWorkspace() {
   // Add item
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null)
   const [newItemTitle, setNewItemTitle] = useState('')
+  const [newItemDate, setNewItemDate] = useState('')
   const newItemRef = useRef<HTMLInputElement>(null)
 
   // Drag state
@@ -478,10 +479,19 @@ export default function TeacherWorkspace() {
   const handleAddItem = async (columnId: string) => {
     if (!newItemTitle.trim() || !activeBoard) return
     try {
+      const datePayload: any = {}
+      if (newItemDate) {
+        if (activeBoard.type === 'CLASS_LOG') {
+          datePayload.eventDate = newItemDate
+        } else {
+          datePayload.dueDate = newItemDate
+        }
+      }
       const res = await teacherWorkspaceApi.createItem({
         boardId: activeBoard.id,
         columnId,
         title: newItemTitle.trim(),
+        ...datePayload,
       })
       // Update local state
       setActiveBoard(prev => {
@@ -493,6 +503,7 @@ export default function TeacherWorkspace() {
         return { ...prev, columns: cols }
       })
       setNewItemTitle('')
+      setNewItemDate('')
       setAddingToColumn(null)
     } catch (err: any) {
       setError('Error al crear item')
@@ -517,6 +528,23 @@ export default function TeacherWorkspace() {
     } finally {
       setEditingItemId(null)
     }
+  }
+
+  // ─── Update item date inline ───
+  const handleUpdateItemDate = async (itemId: string, dateValue: string) => {
+    if (!activeBoard) return
+    try {
+      const field = activeBoard.type === 'CLASS_LOG' ? 'eventDate' : 'dueDate'
+      await teacherWorkspaceApi.updateItem(itemId, { [field]: dateValue || null })
+      setActiveBoard(prev => {
+        if (!prev) return prev
+        const cols = prev.columns?.map(c => ({
+          ...c,
+          items: c.items.map(i => i.id === itemId ? { ...i, [field]: dateValue || null } : i),
+        }))
+        return { ...prev, columns: cols }
+      })
+    } catch (err) { console.error(err) }
   }
 
   // ─── Delete item ───
@@ -759,15 +787,23 @@ export default function TeacherWorkspace() {
                     </div>
                   )}
 
-                  {/* Legend */}
-                  <div className="flex flex-wrap gap-3 mb-3">
-                    {Object.entries(typeLabels).map(([key, label]) => (
-                      <div key={key} className="flex items-center gap-1.5 text-xs text-slate-500">
-                        <div className={`w-2.5 h-2.5 rounded-full ${typeColors[key]}`} />
-                        {label}
+                  {/* Legend — only types with events this month */}
+                  {(() => {
+                    const activeTypes = new Set(calEvents.map(e => e.boardType))
+                    const legendItems = Object.entries(typeLabels).filter(([key]) => activeTypes.has(key))
+                    return legendItems.length > 0 ? (
+                      <div className="flex flex-wrap gap-3 mb-3">
+                        {legendItems.map(([key, label]) => (
+                          <div key={key} className="flex items-center gap-1.5 text-xs text-slate-500">
+                            <div className={`w-2.5 h-2.5 rounded-full ${typeColors[key]}`} />
+                            {label}
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    ) : !loadingCal ? (
+                      <p className="text-xs text-slate-400 mb-3">Sin eventos este mes — agrega fechas a tus items con el ícono 📅</p>
+                    ) : null
+                  })()}
 
                   <div className="flex gap-4">
                     {/* Calendar grid */}
@@ -1435,7 +1471,7 @@ export default function TeacherWorkspace() {
                       </div>
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => { setAddingToColumn(column.id); setNewItemTitle('') }}
+                          onClick={() => { setAddingToColumn(column.id); setNewItemTitle(''); setNewItemDate('') }}
                           className="p-1 rounded hover:bg-slate-100" title="Agregar item"
                         >
                           <Plus className="w-4 h-4 text-slate-400" />
@@ -1497,15 +1533,43 @@ export default function TeacherWorkspace() {
                                   {item.student.firstName} {item.student.lastName}
                                 </p>
                               )}
-                              {item.dueDate && (
-                                <p className="text-xs text-slate-400 mt-0.5">
-                                  <Clock className="w-3 h-3 inline mr-0.5" />
-                                  {new Date(item.dueDate).toLocaleDateString()}
+                              {(item.dueDate || item.eventDate) && (
+                                <p className={`text-xs mt-0.5 flex items-center gap-0.5 ${
+                                  item.dueDate && new Date(item.dueDate) < new Date() && item.status !== 'DONE'
+                                    ? 'text-red-500' : 'text-slate-400'
+                                }`}>
+                                  <Clock className="w-3 h-3" />
+                                  {new Date(item.dueDate || item.eventDate!).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
                                 </p>
+                              )}
+                              {editingItemId === `date-${item.id}` && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <input type="date"
+                                    defaultValue={
+                                      (activeBoard?.type === 'CLASS_LOG' ? item.eventDate : item.dueDate)?.toString().slice(0, 10) || ''
+                                    }
+                                    onChange={(e) => handleUpdateItemDate(item.id, e.target.value)}
+                                    className="text-xs border border-blue-300 rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-blue-400"
+                                    autoFocus
+                                    onBlur={() => setEditingItemId(null)} />
+                                  {(item.dueDate || item.eventDate) && (
+                                    <button onClick={() => { handleUpdateItemDate(item.id, ''); setEditingItemId(null) }}
+                                      className="text-red-300 hover:text-red-500" title="Quitar fecha">
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </div>
                             {/* Item actions */}
                             <div className="opacity-0 group-hover:opacity-100 flex gap-0.5 flex-shrink-0">
+                              <button
+                                onClick={() => setEditingItemId(`date-${item.id}`)}
+                                className="p-0.5 rounded hover:bg-blue-50"
+                                title={activeBoard?.type === 'CLASS_LOG' ? 'Fecha evento' : 'Fecha límite'}
+                              >
+                                <Calendar className={`w-3 h-3 ${item.dueDate || item.eventDate ? 'text-blue-500' : 'text-slate-400'}`} />
+                              </button>
                               <button
                                 onClick={() => {
                                   setEditingItemId(item.id)
@@ -1540,19 +1604,32 @@ export default function TeacherWorkspace() {
                             placeholder="Título del item..."
                             className="w-full text-sm border border-slate-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-400 outline-none"
                           />
-                          <div className="flex justify-end gap-1.5 mt-2">
-                            <button
-                              onClick={() => setAddingToColumn(null)}
-                              className="px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 rounded"
-                            >
-                              Cancelar
-                            </button>
-                            <button
-                              onClick={() => handleAddItem(column.id)}
-                              className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                            >
-                              Agregar
-                            </button>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <div className="flex items-center gap-1 flex-1">
+                              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                              <input type="date" value={newItemDate} onChange={(e) => setNewItemDate(e.target.value)}
+                                className="text-xs border border-slate-200 rounded px-1.5 py-1 text-slate-500 focus:ring-1 focus:ring-blue-400 outline-none"
+                                title={activeBoard?.type === 'CLASS_LOG' ? 'Fecha del evento (opcional)' : 'Fecha límite (opcional)'} />
+                              {newItemDate && (
+                                <button onClick={() => setNewItemDate('')} className="text-slate-300 hover:text-red-400">
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => setAddingToColumn(null)}
+                                className="px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 rounded"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                onClick={() => handleAddItem(column.id)}
+                                className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                              >
+                                Agregar
+                              </button>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -1562,7 +1639,7 @@ export default function TeacherWorkspace() {
                     {addingToColumn !== column.id && (
                       <div className="px-2 pb-2">
                         <button
-                          onClick={() => { setAddingToColumn(column.id); setNewItemTitle('') }}
+                          onClick={() => { setAddingToColumn(column.id); setNewItemTitle(''); setNewItemDate('') }}
                           className="w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
                         >
                           <Plus className="w-3.5 h-3.5" />
