@@ -1,0 +1,6 @@
+export { default as WButton } from './WButton'
+export { default as WBadge } from './WBadge'
+export { default as WCard } from './WCard'
+export { default as WSummaryCard } from './WSummaryCard'
+export { default as WInput } from './WInput'
+export { default as WModal } from './WModal'

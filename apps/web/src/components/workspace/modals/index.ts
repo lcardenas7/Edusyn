@@ -1,0 +1,5 @@
+export { default as CreateBoardModal } from './CreateBoardModal'
+export { default as PaymentModal } from './PaymentModal'
+export { default as AssignRoleModal } from './AssignRoleModal'
+export { default as ObservationModal } from './ObservationModal'
+export { default as TaskModal } from './TaskModal'
