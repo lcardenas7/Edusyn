@@ -407,6 +407,10 @@ export class ClassroomService {
     allowLateSubmit?: boolean;
     attachmentUrl?: string;
     attachmentName?: string;
+    shuffleQuestions?: boolean;
+    showResults?: boolean;
+    maxAttempts?: number;
+    timeLimitMinutes?: number;
   }) {
     const classroom = await this.validateClassroomOwnership(classroomId, teacherId);
     // Validate section belongs to this classroom
@@ -426,6 +430,10 @@ export class ClassroomService {
         dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
         openDate: dto.openDate ? new Date(dto.openDate) : undefined,
         allowLateSubmit: dto.allowLateSubmit ?? false,
+        shuffleQuestions: dto.shuffleQuestions ?? false,
+        showResults: dto.showResults ?? true,
+        maxAttempts: dto.maxAttempts ?? 1,
+        timeLimitMinutes: dto.timeLimitMinutes,
         metadata: dto.attachmentUrl ? { attachmentUrl: dto.attachmentUrl, attachmentName: dto.attachmentName } : undefined,
         isPublished: false,
       },
@@ -713,6 +721,295 @@ export class ClassroomService {
         activity: { select: { id: true, title: true, maxScore: true, dueDate: true } },
       },
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // QUIZ / EXAM – Questions CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async addQuestion(activityId: string, teacherId: string, dto: {
+    type: string; text: string; options?: any; correctAnswer?: string;
+    points?: number; explanation?: string; imageUrl?: string;
+  }) {
+    const activity = await this.validateActivityOwnership(activityId, teacherId);
+    const maxSort = await this.prisma.activityQuestion.aggregate({
+      where: { activityId },
+      _max: { sortOrder: true },
+    });
+    return this.prisma.activityQuestion.create({
+      data: {
+        activityId,
+        type: dto.type as any,
+        text: dto.text,
+        options: dto.options,
+        correctAnswer: dto.correctAnswer,
+        points: dto.points ?? 1,
+        explanation: dto.explanation,
+        imageUrl: dto.imageUrl,
+        sortOrder: (maxSort._max.sortOrder ?? -1) + 1,
+      },
+    });
+  }
+
+  async updateQuestion(questionId: string, teacherId: string, dto: {
+    text?: string; options?: any; correctAnswer?: string;
+    points?: number; explanation?: string; imageUrl?: string;
+  }) {
+    const q = await this.prisma.activityQuestion.findUnique({
+      where: { id: questionId },
+      include: { activity: { select: { classroomId: true } } },
+    });
+    if (!q) throw new NotFoundException('Pregunta no encontrada');
+    await this.validateClassroomOwnership(q.activity.classroomId, teacherId);
+
+    return this.prisma.activityQuestion.update({
+      where: { id: questionId },
+      data: {
+        text: dto.text,
+        options: dto.options,
+        correctAnswer: dto.correctAnswer,
+        points: dto.points,
+        explanation: dto.explanation,
+        imageUrl: dto.imageUrl,
+      },
+    });
+  }
+
+  async deleteQuestion(questionId: string, teacherId: string) {
+    const q = await this.prisma.activityQuestion.findUnique({
+      where: { id: questionId },
+      include: { activity: { select: { classroomId: true } } },
+    });
+    if (!q) throw new NotFoundException('Pregunta no encontrada');
+    await this.validateClassroomOwnership(q.activity.classroomId, teacherId);
+    await this.prisma.activityQuestion.delete({ where: { id: questionId } });
+    return { success: true };
+  }
+
+  async listQuestions(activityId: string, userId: string, includeAnswers: boolean) {
+    const questions = await this.prisma.activityQuestion.findMany({
+      where: { activityId },
+      orderBy: { sortOrder: 'asc' },
+    });
+    if (!includeAnswers) {
+      return questions.map(q => ({ ...q, correctAnswer: undefined, explanation: undefined }));
+    }
+    return questions;
+  }
+
+  async reorderQuestions(activityId: string, teacherId: string, questionIds: string[]) {
+    await this.validateActivityOwnership(activityId, teacherId);
+    const ops = questionIds.map((id, i) =>
+      this.prisma.activityQuestion.update({ where: { id }, data: { sortOrder: i } })
+    );
+    await this.prisma.$transaction(ops);
+    return { success: true };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // QUIZ / EXAM – Taking & Auto-grading
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async startQuiz(activityId: string, userId: string) {
+    const activity = await this.prisma.classroomActivity.findUnique({
+      where: { id: activityId },
+      include: { classroom: { include: { teacherAssignment: true } } },
+    });
+    if (!activity || !activity.isPublished) throw new NotFoundException('Actividad no encontrada');
+
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: {
+        student: { userId },
+        groupId: activity.classroom.teacherAssignment.groupId,
+        academicYearId: activity.classroom.teacherAssignment.academicYearId,
+        status: 'ACTIVE',
+      },
+    });
+    if (!enrollment) throw new ForbiddenException('No está matriculado');
+
+    // Check max attempts
+    const existingCount = await this.prisma.activitySubmission.count({
+      where: { activityId, studentEnrollmentId: enrollment.id },
+    });
+    if (existingCount >= activity.maxAttempts) {
+      throw new ForbiddenException(`Ha alcanzado el máximo de ${activity.maxAttempts} intento(s)`);
+    }
+
+    // Check for existing DRAFT (resume it)
+    const draft = await this.prisma.activitySubmission.findFirst({
+      where: { activityId, studentEnrollmentId: enrollment.id, status: 'DRAFT' },
+    });
+    if (draft) {
+      const questions = await this.prisma.activityQuestion.findMany({
+        where: { activityId },
+        orderBy: { sortOrder: 'asc' },
+        select: { id: true, type: true, text: true, imageUrl: true, options: true, points: true, sortOrder: true },
+      });
+      const existingAnswers = await this.prisma.questionAnswer.findMany({
+        where: { submissionId: draft.id },
+      });
+      return { submission: draft, questions, answers: existingAnswers };
+    }
+
+    // Create new submission
+    const submission = await this.prisma.activitySubmission.create({
+      data: {
+        activityId,
+        studentEnrollmentId: enrollment.id,
+        attemptNumber: existingCount + 1,
+        status: 'DRAFT',
+        startedAt: new Date(),
+      },
+    });
+
+    const questions = await this.prisma.activityQuestion.findMany({
+      where: { activityId },
+      orderBy: activity.shuffleQuestions ? undefined : { sortOrder: 'asc' },
+      select: { id: true, type: true, text: true, imageUrl: true, options: true, points: true, sortOrder: true },
+    });
+
+    // Shuffle if needed
+    const finalQuestions = activity.shuffleQuestions
+      ? questions.sort(() => Math.random() - 0.5)
+      : questions;
+
+    return { submission, questions: finalQuestions, answers: [] };
+  }
+
+  async saveQuizAnswer(submissionId: string, userId: string, dto: {
+    questionId: string; answer?: string; selectedOptions?: any;
+  }) {
+    const sub = await this.prisma.activitySubmission.findUnique({
+      where: { id: submissionId },
+      include: { studentEnrollment: { include: { student: true } } },
+    });
+    if (!sub || sub.studentEnrollment.student.userId !== userId) throw new ForbiddenException('No autorizado');
+    if (sub.status !== 'DRAFT') throw new ForbiddenException('El quiz ya fue enviado');
+
+    // Upsert answer
+    return this.prisma.questionAnswer.upsert({
+      where: { submissionId_questionId: { submissionId, questionId: dto.questionId } },
+      create: { submissionId, questionId: dto.questionId, answer: dto.answer, selectedOptions: dto.selectedOptions },
+      update: { answer: dto.answer, selectedOptions: dto.selectedOptions },
+    });
+  }
+
+  async submitQuiz(submissionId: string, userId: string) {
+    const sub = await this.prisma.activitySubmission.findUnique({
+      where: { id: submissionId },
+      include: {
+        studentEnrollment: { include: { student: true } },
+        activity: true,
+      },
+    });
+    if (!sub || sub.studentEnrollment.student.userId !== userId) throw new ForbiddenException('No autorizado');
+    if (sub.status !== 'DRAFT') throw new ForbiddenException('Ya fue enviado');
+
+    // Auto-grade
+    const questions = await this.prisma.activityQuestion.findMany({
+      where: { activityId: sub.activityId },
+    });
+    const answers = await this.prisma.questionAnswer.findMany({
+      where: { submissionId },
+    });
+
+    let totalScore = 0;
+    const answerUpdates: any[] = [];
+
+    for (const q of questions) {
+      const ans = answers.find(a => a.questionId === q.id);
+      if (!ans) continue;
+
+      let isCorrect = false;
+      let pointsEarned = 0;
+
+      if (q.type === 'MULTIPLE_CHOICE' || q.type === 'TRUE_FALSE') {
+        isCorrect = ans.answer?.trim().toLowerCase() === q.correctAnswer?.trim().toLowerCase();
+        pointsEarned = isCorrect ? Number(q.points) : 0;
+      } else if (q.type === 'MULTIPLE_SELECT') {
+        const selected = (ans.selectedOptions as string[] || []).sort();
+        const correct = (JSON.parse(q.correctAnswer || '[]') as string[]).sort();
+        isCorrect = JSON.stringify(selected) === JSON.stringify(correct);
+        pointsEarned = isCorrect ? Number(q.points) : 0;
+      } else if (q.type === 'SHORT_ANSWER') {
+        isCorrect = ans.answer?.trim().toLowerCase() === q.correctAnswer?.trim().toLowerCase();
+        pointsEarned = isCorrect ? Number(q.points) : 0;
+      }
+
+      totalScore += pointsEarned;
+      answerUpdates.push(
+        this.prisma.questionAnswer.update({
+          where: { id: ans.id },
+          data: { isCorrect, pointsEarned },
+        })
+      );
+    }
+
+    // Normalize score to maxScore scale
+    const totalPoints = questions.reduce((sum, q) => sum + Number(q.points), 0);
+    const maxScore = sub.activity.maxScore ? Number(sub.activity.maxScore) : totalPoints;
+    const normalizedScore = totalPoints > 0 ? (totalScore / totalPoints) * maxScore : 0;
+
+    const now = new Date();
+    const timeSpent = sub.startedAt ? Math.floor((now.getTime() - sub.startedAt.getTime()) / 1000) : null;
+
+    await this.prisma.$transaction([
+      ...answerUpdates,
+      this.prisma.activitySubmission.update({
+        where: { id: submissionId },
+        data: {
+          status: 'AUTO_GRADED',
+          score: Math.round(normalizedScore * 10) / 10,
+          submittedAt: now,
+          timeSpentSeconds: timeSpent,
+          gradedAt: now,
+        },
+      }),
+    ]);
+
+    // Return result
+    return this.prisma.activitySubmission.findUnique({
+      where: { id: submissionId },
+      include: {
+        answers: { include: { question: true } },
+        activity: { select: { title: true, maxScore: true, showResults: true } },
+      },
+    });
+  }
+
+  async getQuizResult(submissionId: string, userId: string) {
+    const sub = await this.prisma.activitySubmission.findUnique({
+      where: { id: submissionId },
+      include: {
+        studentEnrollment: { include: { student: true } },
+        answers: { include: { question: true } },
+        activity: { select: { id: true, title: true, maxScore: true, showResults: true } },
+      },
+    });
+    if (!sub) throw new NotFoundException('Entrega no encontrada');
+
+    // Student can only see own results
+    const isOwner = sub.studentEnrollment.student.userId === userId;
+    // Teacher can see any
+    if (!isOwner) {
+      await this.validateClassroomOwnership(
+        (await this.prisma.classroomActivity.findUnique({ where: { id: sub.activityId } }))?.classroomId || '',
+        userId
+      );
+    }
+
+    // If showResults is false and student viewing, hide correct answers
+    if (!sub.activity.showResults && isOwner) {
+      return {
+        ...sub,
+        answers: sub.answers.map(a => ({
+          ...a,
+          question: { ...a.question, correctAnswer: undefined, explanation: undefined },
+        })),
+      };
+    }
+
+    return sub;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

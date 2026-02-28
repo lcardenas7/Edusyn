@@ -305,6 +305,88 @@ export class ClassroomController {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // QUIZ / EXAM – Questions
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('activities/:activityId/questions')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async addQuestion(@Param('activityId') activityId: string, @Request() req: any, @Body() body: {
+    type: string; text: string; options?: any; correctAnswer?: string;
+    points?: number; explanation?: string; imageUrl?: string;
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.addQuestion(activityId, userId, body);
+  }
+
+  @Get('activities/:activityId/questions')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async listQuestions(@Param('activityId') activityId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    const isTeacher = req.user.roles?.some((r: any) => ['DOCENTE', 'COORDINADOR'].includes(r.role || r));
+    return this.service.listQuestions(activityId, userId, !!isTeacher);
+  }
+
+  @Put('questions/:questionId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async updateQuestion(@Param('questionId') questionId: string, @Request() req: any, @Body() body: {
+    text?: string; options?: any; correctAnswer?: string;
+    points?: number; explanation?: string; imageUrl?: string;
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.updateQuestion(questionId, userId, body);
+  }
+
+  @Delete('questions/:questionId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async deleteQuestion(@Param('questionId') questionId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.deleteQuestion(questionId, userId);
+  }
+
+  @Put('activities/:activityId/questions/reorder')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async reorderQuestions(@Param('activityId') activityId: string, @Request() req: any, @Body() body: {
+    questionIds: string[];
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.reorderQuestions(activityId, userId, body.questionIds);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // QUIZ / EXAM – Taking
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('activities/:activityId/start-quiz')
+  @Roles('ESTUDIANTE')
+  async startQuiz(@Param('activityId') activityId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.startQuiz(activityId, userId);
+  }
+
+  @Put('submissions/:submissionId/answer')
+  @Roles('ESTUDIANTE')
+  async saveQuizAnswer(@Param('submissionId') submissionId: string, @Request() req: any, @Body() body: {
+    questionId: string; answer?: string; selectedOptions?: any;
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.saveQuizAnswer(submissionId, userId, body);
+  }
+
+  @Post('submissions/:submissionId/submit-quiz')
+  @Roles('ESTUDIANTE')
+  async submitQuiz(@Param('submissionId') submissionId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.submitQuiz(submissionId, userId);
+  }
+
+  @Get('submissions/:submissionId/result')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async getQuizResult(@Param('submissionId') submissionId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.getQuizResult(submissionId, userId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // FORUM
   // ═══════════════════════════════════════════════════════════════════════════
 

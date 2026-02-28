@@ -9,6 +9,7 @@ import {
   Bold, Italic, Underline, List, ListOrdered, Youtube,
   FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
   BarChart3, ChevronDown, ChevronRight, Clock, CheckCircle2, AlertTriangle,
+  CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX,
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1303,12 +1304,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [submissionsLoading, setSubmissionsLoading] = useState(false)
 
   // Create form
-  const [form, setForm] = useState({ title: '', description: '', sectionId: '', maxScore: '5.0', dueDate: '', allowLateSubmit: false })
+  const [form, setForm] = useState({ title: '', description: '', sectionId: '', maxScore: '5.0', dueDate: '', allowLateSubmit: false, type: 'TASK' as string, shuffleQuestions: false, showResults: true, maxAttempts: '1', timeLimitMinutes: '' })
   const [attachFile, setAttachFile] = useState<File | null>(null)
   const [creating, setCreating] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // Student submit
+  // Student submit (TASK)
   const [submitContent, setSubmitContent] = useState('')
   const [submitFile, setSubmitFile] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -1320,6 +1321,23 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [gradeScore, setGradeScore] = useState('')
   const [gradeFeedback, setGradeFeedback] = useState('')
   const [grading, setGrading] = useState(false)
+
+  // Quiz questions (teacher)
+  const [questions, setQuestions] = useState<any[]>([])
+  const [questionsLoading, setQuestionsLoading] = useState(false)
+  const [showAddQuestion, setShowAddQuestion] = useState(false)
+  const [qForm, setQForm] = useState({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', points: '1', explanation: '' })
+  const [editingQuestion, setEditingQuestion] = useState<string | null>(null)
+  const [savingQuestion, setSavingQuestion] = useState(false)
+
+  // Quiz taking (student)
+  const [quizMode, setQuizMode] = useState<'idle' | 'taking' | 'result'>('idle')
+  const [quizSubmission, setQuizSubmission] = useState<any>(null)
+  const [quizQuestions, setQuizQuestions] = useState<any[]>([])
+  const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({})
+  const [quizCurrentIdx, setQuizCurrentIdx] = useState(0)
+  const [quizSubmitting, setQuizSubmitting] = useState(false)
+  const [quizResult, setQuizResult] = useState<any>(null)
 
   const sections: Section[] = classroom.sections || []
 
@@ -1345,14 +1363,18 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         attachmentName = attachFile.name
       }
       await classroomApi.createActivity(classroom.id, {
-        sectionId: form.sectionId, type: 'TASK', title: form.title,
+        sectionId: form.sectionId, type: form.type, title: form.title,
         description: form.description || undefined,
         maxScore: parseFloat(form.maxScore) || 5.0,
         dueDate: form.dueDate || undefined,
         allowLateSubmit: form.allowLateSubmit,
         attachmentUrl, attachmentName,
-      })
-      setForm({ title: '', description: '', sectionId: '', maxScore: '5.0', dueDate: '', allowLateSubmit: false })
+        shuffleQuestions: form.shuffleQuestions,
+        showResults: form.showResults,
+        maxAttempts: parseInt(form.maxAttempts) || 1,
+        timeLimitMinutes: form.timeLimitMinutes ? parseInt(form.timeLimitMinutes) : undefined,
+      } as any)
+      setForm({ title: '', description: '', sectionId: '', maxScore: '5.0', dueDate: '', allowLateSubmit: false, type: 'TASK', shuffleQuestions: false, showResults: true, maxAttempts: '1', timeLimitMinutes: '' })
       setAttachFile(null)
       setShowCreate(false)
       loadActivities()
@@ -1374,20 +1396,40 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     try { await classroomApi.deleteActivity(id); loadActivities(); setSelectedActivity(null) } catch {}
   }
 
+  const isQuizType = (type: string) => ['QUIZ', 'EXAM'].includes(type)
+
+  const loadQuestions = async (activityId: string) => {
+    setQuestionsLoading(true)
+    try {
+      const { data } = await classroomApi.listQuestions(activityId)
+      setQuestions(data)
+    } catch {} finally { setQuestionsLoading(false) }
+  }
+
   const openActivity = async (activity: Activity) => {
     setSelectedActivity(activity)
+    setQuizMode('idle')
+    setQuizResult(null)
     if (isTeacher) {
       setSubmissionsLoading(true)
       try {
         const { data } = await classroomApi.listSubmissions(activity.id)
         setSubmissions(data)
       } catch {} finally { setSubmissionsLoading(false) }
+      if (isQuizType(activity.type)) loadQuestions(activity.id)
     }
     if (isStudent) {
-      try {
-        const { data } = await classroomApi.getMySubmission(activity.id)
-        setMySubmission(data)
-      } catch { setMySubmission(null) }
+      if (isQuizType(activity.type)) {
+        try {
+          const { data } = await classroomApi.getMySubmission(activity.id)
+          setMySubmission(data)
+        } catch { setMySubmission(null) }
+      } else {
+        try {
+          const { data } = await classroomApi.getMySubmission(activity.id)
+          setMySubmission(data)
+        } catch { setMySubmission(null) }
+      }
     }
   }
 
@@ -1436,6 +1478,100 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     try { const { data } = await storageApi.resolveUrl(url); window.open(data.url, '_blank') } catch { window.open(url, '_blank') }
   }
 
+  // Quiz question handlers (teacher)
+  const resetQForm = () => setQForm({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', points: '1', explanation: '' })
+
+  const handleAddQuestion = async () => {
+    if (!selectedActivity || !qForm.text.trim()) return
+    try {
+      setSavingQuestion(true)
+      const payload: any = { type: qForm.type, text: qForm.text, points: parseFloat(qForm.points) || 1, explanation: qForm.explanation || undefined }
+      if (qForm.type === 'MULTIPLE_CHOICE' || qForm.type === 'TRUE_FALSE') {
+        payload.options = qForm.type === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : qForm.options.filter(o => o.trim())
+        payload.correctAnswer = qForm.correctAnswer
+      } else if (qForm.type === 'SHORT_ANSWER') {
+        payload.correctAnswer = qForm.correctAnswer
+      }
+      if (editingQuestion) {
+        await classroomApi.updateQuestion(editingQuestion, payload)
+        setEditingQuestion(null)
+      } else {
+        await classroomApi.addQuestion(selectedActivity.id, payload)
+      }
+      resetQForm()
+      setShowAddQuestion(false)
+      loadQuestions(selectedActivity.id)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al guardar pregunta')
+    } finally { setSavingQuestion(false) }
+  }
+
+  const handleDeleteQuestion = async (qId: string) => {
+    if (!confirm('¿Eliminar esta pregunta?')) return
+    try {
+      await classroomApi.deleteQuestion(qId)
+      if (selectedActivity) loadQuestions(selectedActivity.id)
+    } catch {}
+  }
+
+  const startEditQuestion = (q: any) => {
+    setQForm({
+      type: q.type,
+      text: q.text,
+      options: q.type === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : (q.options || ['', '', '', '']),
+      correctAnswer: q.correctAnswer || '',
+      points: String(q.points ? Number(q.points) : 1),
+      explanation: q.explanation || '',
+    })
+    setEditingQuestion(q.id)
+    setShowAddQuestion(true)
+  }
+
+  // Quiz taking handlers (student)
+  const handleStartQuiz = async () => {
+    if (!selectedActivity) return
+    try {
+      setQuizSubmitting(true)
+      const { data } = await classroomApi.startQuiz(selectedActivity.id)
+      setQuizSubmission(data.submission)
+      setQuizQuestions(data.questions)
+      const existing: Record<string, string> = {}
+      ;(data.answers || []).forEach((a: any) => { if (a.answer) existing[a.questionId] = a.answer })
+      setQuizAnswers(existing)
+      setQuizCurrentIdx(0)
+      setQuizMode('taking')
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al iniciar quiz')
+    } finally { setQuizSubmitting(false) }
+  }
+
+  const handleQuizAnswer = async (questionId: string, answer: string) => {
+    setQuizAnswers(prev => ({ ...prev, [questionId]: answer }))
+    if (quizSubmission) {
+      try { await classroomApi.saveQuizAnswer(quizSubmission.id, { questionId, answer }) } catch {}
+    }
+  }
+
+  const handleSubmitQuiz = async () => {
+    if (!quizSubmission || !confirm('¿Enviar el quiz? No podrás cambiar tus respuestas.')) return
+    try {
+      setQuizSubmitting(true)
+      const { data } = await classroomApi.submitQuiz(quizSubmission.id)
+      setQuizResult(data)
+      setQuizMode('result')
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al enviar quiz')
+    } finally { setQuizSubmitting(false) }
+  }
+
+  const handleViewResult = async (submissionId: string) => {
+    try {
+      const { data } = await classroomApi.getQuizResult(submissionId)
+      setQuizResult(data)
+      setQuizMode('result')
+    } catch {}
+  }
+
   const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
   const isDuePast = (d?: string) => d ? new Date(d) < new Date() : false
 
@@ -1456,11 +1592,14 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                  <ClipboardList className="w-5 h-5 text-blue-600" />
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                  {isQuizType(act.type) ? <HelpCircle className="w-5 h-5 text-purple-600" /> : <ClipboardList className="w-5 h-5 text-blue-600" />}
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-slate-800">{act.title}</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-slate-800">{act.title}</h2>
+                    {isQuizType(act.type) && <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">{act.type === 'QUIZ' ? 'Quiz' : 'Examen'}</span>}
+                  </div>
                   <p className="text-sm text-slate-400">{act.section?.title || 'Sin sección'}</p>
                 </div>
               </div>
@@ -1590,8 +1729,280 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           </div>
         )}
 
-        {/* STUDENT: My submission / submit form */}
-        {isStudent && (
+        {/* TEACHER: Question Editor for QUIZ/EXAM */}
+        {isTeacher && isQuizType(act.type) && (
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-800">Preguntas ({questions.length})</h3>
+              <button onClick={() => { resetQForm(); setEditingQuestion(null); setShowAddQuestion(true) }} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700" style={{ minHeight: '40px' }}>
+                <Plus className="w-4 h-4" /> Agregar pregunta
+              </button>
+            </div>
+
+            {/* Add/Edit question form */}
+            {showAddQuestion && (
+              <div className="p-6 border-b border-slate-100 bg-purple-50/30 space-y-4">
+                <h4 className="text-base font-bold text-slate-800">{editingQuestion ? 'Editar pregunta' : 'Nueva pregunta'}</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
+                    <select value={qForm.type} onChange={e => setQForm({ ...qForm, type: e.target.value, options: e.target.value === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : ['', '', '', ''], correctAnswer: '' })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base">
+                      <option value="MULTIPLE_CHOICE">Opción múltiple</option>
+                      <option value="TRUE_FALSE">Verdadero/Falso</option>
+                      <option value="SHORT_ANSWER">Respuesta corta</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Puntos</label>
+                    <input type="number" step="0.1" min="0.1" value={qForm.points} onChange={e => setQForm({ ...qForm, points: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Pregunta</label>
+                  <textarea value={qForm.text} onChange={e => setQForm({ ...qForm, text: e.target.value })} rows={2} placeholder="Escribe la pregunta..." className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-purple-500 outline-none" />
+                </div>
+
+                {/* Options for MULTIPLE_CHOICE */}
+                {qForm.type === 'MULTIPLE_CHOICE' && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-slate-700">Opciones</label>
+                    {qForm.options.map((opt, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <input type="radio" name="correctOpt" checked={qForm.correctAnswer === opt && opt !== ''} onChange={() => setQForm({ ...qForm, correctAnswer: opt })} className="accent-purple-600" />
+                        <input value={opt} onChange={e => { const opts = [...qForm.options]; opts[i] = e.target.value; setQForm({ ...qForm, options: opts }) }} placeholder={`Opción ${String.fromCharCode(65 + i)}`} className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
+                        {qForm.options.length > 2 && (
+                          <button onClick={() => { const opts = qForm.options.filter((_, j) => j !== i); setQForm({ ...qForm, options: opts, correctAnswer: qForm.correctAnswer === opt ? '' : qForm.correctAnswer }) }} className="p-1.5 rounded-lg hover:bg-red-50">
+                            <X className="w-4 h-4 text-red-400" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {qForm.options.length < 6 && (
+                      <button onClick={() => setQForm({ ...qForm, options: [...qForm.options, ''] })} className="text-sm text-purple-600 hover:text-purple-700 font-medium">+ Agregar opción</button>
+                    )}
+                    <p className="text-xs text-slate-400">Selecciona el radio de la respuesta correcta</p>
+                  </div>
+                )}
+
+                {/* TRUE_FALSE correct answer */}
+                {qForm.type === 'TRUE_FALSE' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Respuesta correcta</label>
+                    <div className="flex gap-4">
+                      {['Verdadero', 'Falso'].map(v => (
+                        <label key={v} className="flex items-center gap-2 cursor-pointer">
+                          <input type="radio" name="tfAnswer" checked={qForm.correctAnswer === v} onChange={() => setQForm({ ...qForm, correctAnswer: v })} className="accent-purple-600" />
+                          <span className="text-base">{v}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* SHORT_ANSWER correct answer */}
+                {qForm.type === 'SHORT_ANSWER' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Respuesta correcta</label>
+                    <input value={qForm.correctAnswer} onChange={e => setQForm({ ...qForm, correctAnswer: e.target.value })} placeholder="Respuesta esperada..." className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Explicación (opcional)</label>
+                  <input value={qForm.explanation} onChange={e => setQForm({ ...qForm, explanation: e.target.value })} placeholder="Se muestra al estudiante después de enviar..." className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
+                </div>
+
+                <div className="flex justify-end gap-3">
+                  <button onClick={() => { setShowAddQuestion(false); setEditingQuestion(null); resetQForm() }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
+                  <button onClick={handleAddQuestion} disabled={!qForm.text.trim() || !qForm.correctAnswer || savingQuestion} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                    {savingQuestion && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {editingQuestion ? 'Guardar cambios' : 'Agregar'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Questions list */}
+            {questionsLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-purple-500" /></div>
+            ) : questions.length === 0 ? (
+              <div className="text-center py-12 text-slate-400">
+                <HelpCircle className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                <p className="text-base">Agrega preguntas para este {act.type === 'QUIZ' ? 'quiz' : 'examen'}</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {questions.map((q, i) => (
+                  <div key={q.id} className="px-6 py-4 hover:bg-slate-50">
+                    <div className="flex items-start gap-3">
+                      <span className="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-bold shrink-0">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-base font-medium text-slate-800">{q.text}</p>
+                        <div className="flex items-center gap-3 mt-1 text-sm text-slate-400">
+                          <span className="px-2 py-0.5 bg-slate-100 rounded text-xs">{q.type === 'MULTIPLE_CHOICE' ? 'Opción múltiple' : q.type === 'TRUE_FALSE' ? 'V/F' : 'Respuesta corta'}</span>
+                          <span>{Number(q.points)} pts</span>
+                          {q.correctAnswer && <span className="text-green-600">✓ {q.correctAnswer}</span>}
+                        </div>
+                        {q.options && Array.isArray(q.options) && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {(q.options as string[]).map((opt: string, j: number) => (
+                              <span key={j} className={`text-xs px-2.5 py-1 rounded-full border ${opt === q.correctAnswer ? 'bg-green-50 border-green-300 text-green-700' : 'bg-white border-slate-200 text-slate-600'}`}>
+                                {String.fromCharCode(65 + j)}. {opt}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        <button onClick={() => startEditQuestion(q)} className="p-2 rounded-xl hover:bg-slate-100"><Pencil className="w-4 h-4 text-slate-400" /></button>
+                        <button onClick={() => handleDeleteQuestion(q.id)} className="p-2 rounded-xl hover:bg-red-50"><Trash2 className="w-4 h-4 text-red-400" /></button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* STUDENT: Quiz-taking UI for QUIZ/EXAM */}
+        {isStudent && isQuizType(act.type) && quizMode === 'taking' && (
+          <div className="bg-white rounded-2xl border-2 border-purple-200 p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-800">Pregunta {quizCurrentIdx + 1} de {quizQuestions.length}</h3>
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1">
+                  {quizQuestions.map((_, i) => (
+                    <button key={i} onClick={() => setQuizCurrentIdx(i)} className={`w-8 h-8 rounded-lg text-xs font-bold ${i === quizCurrentIdx ? 'bg-purple-600 text-white' : quizAnswers[quizQuestions[i]?.id] ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{i + 1}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {quizQuestions[quizCurrentIdx] && (() => {
+              const q = quizQuestions[quizCurrentIdx]
+              return (
+                <div className="space-y-4">
+                  <p className="text-lg text-slate-800 font-medium">{q.text}</p>
+                  {q.type === 'MULTIPLE_CHOICE' && q.options && (
+                    <div className="space-y-2">
+                      {(q.options as string[]).map((opt: string, i: number) => (
+                        <button key={i} onClick={() => handleQuizAnswer(q.id, opt)} className={`w-full text-left px-5 py-3.5 rounded-xl border-2 text-base transition-all ${quizAnswers[q.id] === opt ? 'border-purple-500 bg-purple-50 text-purple-800 font-medium' : 'border-slate-200 hover:border-purple-300 text-slate-700'}`}>
+                          <span className="font-bold mr-3">{String.fromCharCode(65 + i)}.</span>{opt}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {q.type === 'TRUE_FALSE' && (
+                    <div className="flex gap-4">
+                      {['Verdadero', 'Falso'].map(v => (
+                        <button key={v} onClick={() => handleQuizAnswer(q.id, v)} className={`flex-1 px-5 py-3.5 rounded-xl border-2 text-base font-medium transition-all ${quizAnswers[q.id] === v ? 'border-purple-500 bg-purple-50 text-purple-800' : 'border-slate-200 hover:border-purple-300 text-slate-700'}`}>
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {q.type === 'SHORT_ANSWER' && (
+                    <input value={quizAnswers[q.id] || ''} onChange={e => handleQuizAnswer(q.id, e.target.value)} placeholder="Escribe tu respuesta..." className="w-full border-2 border-slate-200 rounded-xl px-5 py-3.5 text-base focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none" />
+                  )}
+                </div>
+              )
+            })()}
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+              <button onClick={() => setQuizCurrentIdx(Math.max(0, quizCurrentIdx - 1))} disabled={quizCurrentIdx === 0} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl disabled:opacity-30" style={{ minHeight: '44px' }}>
+                ← Anterior
+              </button>
+              <span className="text-sm text-slate-400">{Object.keys(quizAnswers).length} de {quizQuestions.length} respondidas</span>
+              {quizCurrentIdx < quizQuestions.length - 1 ? (
+                <button onClick={() => setQuizCurrentIdx(quizCurrentIdx + 1)} className="px-4 py-2.5 text-sm text-purple-600 hover:bg-purple-50 rounded-xl font-medium" style={{ minHeight: '44px' }}>
+                  Siguiente →
+                </button>
+              ) : (
+                <button onClick={handleSubmitQuiz} disabled={quizSubmitting} className="px-5 py-2.5 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                  {quizSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Enviar Quiz
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* STUDENT: Quiz result view */}
+        {isStudent && isQuizType(act.type) && quizMode === 'result' && quizResult && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl border-2 border-green-200 p-6 text-center space-y-3">
+              <Award className="w-14 h-14 mx-auto text-green-500" />
+              <h3 className="text-2xl font-bold text-slate-800">Resultado</h3>
+              <p className="text-4xl font-bold text-green-700">{quizResult.score !== null ? Number(quizResult.score) : '—'}<span className="text-xl text-slate-400">/{act.maxScore ? Number(act.maxScore) : '?'}</span></p>
+              {quizResult.timeSpentSeconds && (
+                <p className="text-sm text-slate-400">Tiempo: {Math.floor(quizResult.timeSpentSeconds / 60)}m {quizResult.timeSpentSeconds % 60}s</p>
+              )}
+              <p className="text-sm text-slate-500">
+                {quizResult.answers?.filter((a: any) => a.isCorrect).length || 0} de {quizResult.answers?.length || 0} correctas
+              </p>
+            </div>
+
+            {quizResult.activity?.showResults && quizResult.answers?.map((a: any, i: number) => (
+              <div key={a.id} className={`bg-white rounded-2xl border-2 p-5 ${a.isCorrect ? 'border-green-200' : 'border-red-200'}`}>
+                <div className="flex items-start gap-3">
+                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${a.isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    {a.isCorrect ? <CircleCheck className="w-4 h-4" /> : <CircleX className="w-4 h-4" />}
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-base font-medium text-slate-800">{a.question?.text}</p>
+                    <p className="text-sm mt-1"><span className="text-slate-400">Tu respuesta:</span> <span className={a.isCorrect ? 'text-green-700 font-medium' : 'text-red-600'}>{a.answer || '—'}</span></p>
+                    {!a.isCorrect && a.question?.correctAnswer && (
+                      <p className="text-sm mt-0.5"><span className="text-slate-400">Correcta:</span> <span className="text-green-700 font-medium">{a.question.correctAnswer}</span></p>
+                    )}
+                    {a.question?.explanation && (
+                      <p className="text-sm mt-2 text-blue-600 italic">{a.question.explanation}</p>
+                    )}
+                  </div>
+                  <span className="text-sm font-bold text-slate-500">{a.pointsEarned ? Number(a.pointsEarned) : 0}/{a.question?.points ? Number(a.question.points) : '?'}</span>
+                </div>
+              </div>
+            ))}
+
+            <button onClick={() => { setQuizMode('idle'); setQuizResult(null) }} className="text-sm text-slate-500 hover:text-blue-600">← Volver</button>
+          </div>
+        )}
+
+        {/* STUDENT: Quiz idle state (start or view result) */}
+        {isStudent && isQuizType(act.type) && quizMode === 'idle' && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+            <h3 className="text-lg font-bold text-slate-800">{act.type === 'QUIZ' ? 'Quiz' : 'Examen'}</h3>
+            {mySubmission && (mySubmission.status === 'AUTO_GRADED' || mySubmission.status === 'GRADED') ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className={`text-sm px-3 py-1 rounded-full font-medium ${(STATUS_COLORS[mySubmission.status] || STATUS_COLORS.DRAFT).bg} ${(STATUS_COLORS[mySubmission.status] || STATUS_COLORS.DRAFT).text}`}>
+                    {(STATUS_COLORS[mySubmission.status] || STATUS_COLORS.DRAFT).label}
+                  </span>
+                  {mySubmission.score !== undefined && mySubmission.score !== null && (
+                    <span className="text-lg font-bold text-green-700">{Number(mySubmission.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
+                  )}
+                </div>
+                <button onClick={() => handleViewResult(mySubmission.id)} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                  <Eye className="w-5 h-5" /> Ver resultados
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-base text-slate-600">
+                  {act.type === 'QUIZ' ? 'Presentarás un quiz' : 'Presentarás un examen'} con preguntas de selección y/o respuesta corta.
+                  {act.maxScore && <span> La nota máxima es <strong>{Number(act.maxScore)}</strong>.</span>}
+                </p>
+                <button onClick={handleStartQuiz} disabled={quizSubmitting} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                  {quizSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CircleDot className="w-5 h-5" />}
+                  {quizSubmitting ? 'Iniciando...' : 'Comenzar'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* STUDENT: My submission / submit form (TASK only) */}
+        {isStudent && !isQuizType(act.type) && (
           <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
             <h3 className="text-lg font-bold text-slate-800">Tu entrega</h3>
             {mySubmission ? (
@@ -1656,17 +2067,27 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         <h2 className="text-xl font-bold text-slate-800">Actividades</h2>
         {isTeacher && (
           <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
-            <Plus className="w-5 h-5" /> Crear Tarea
+            <Plus className="w-5 h-5" /> Nueva Actividad
           </button>
         )}
       </div>
 
       {/* Create form */}
       {showCreate && (
-        <div className="bg-white border-2 border-blue-200 rounded-2xl p-6 space-y-4">
-          <h3 className="text-lg font-bold text-slate-800">Nueva Tarea</h3>
-          <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Título de la tarea" className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
-          <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Instrucciones y descripción..." rows={4} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-blue-500 outline-none" />
+        <div className={`bg-white border-2 rounded-2xl p-6 space-y-4 ${isQuizType(form.type) ? 'border-purple-200' : 'border-blue-200'}`}>
+          <h3 className="text-lg font-bold text-slate-800">Nueva Actividad</h3>
+
+          {/* Activity type selector */}
+          <div className="flex gap-2">
+            {[{ value: 'TASK', label: 'Tarea', icon: ClipboardList, color: 'blue' }, { value: 'QUIZ', label: 'Quiz', icon: HelpCircle, color: 'purple' }, { value: 'EXAM', label: 'Examen', icon: Award, color: 'red' }].map(t => (
+              <button key={t.value} onClick={() => setForm({ ...form, type: t.value })} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${form.type === t.value ? (t.color === 'blue' ? 'border-blue-500 bg-blue-50 text-blue-700' : t.color === 'purple' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-red-500 bg-red-50 text-red-700') : 'border-slate-200 text-slate-500 hover:border-slate-300'}`} style={{ minHeight: '44px' }}>
+                <t.icon className="w-5 h-5" /> {t.label}
+              </button>
+            ))}
+          </div>
+
+          <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder={isQuizType(form.type) ? 'Título del quiz/examen' : 'Título de la tarea'} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
+          <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder={isQuizType(form.type) ? 'Instrucciones para el estudiante...' : 'Instrucciones y descripción...'} rows={3} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-blue-500 outline-none" />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Sección</label>
@@ -1684,27 +2105,62 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               <input type="datetime-local" value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base" />
             </div>
           </div>
-          <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
-            <input type="checkbox" checked={form.allowLateSubmit} onChange={e => setForm({ ...form, allowLateSubmit: e.target.checked })} className="rounded" />
-            Permitir entregas tardías
-          </label>
-          <input ref={fileRef} type="file" className="hidden" onChange={e => setAttachFile(e.target.files?.[0] || null)} />
-          {attachFile && (
-            <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
-              <Paperclip className="w-5 h-5 text-slate-400" />
-              <span className="text-base text-slate-700 flex-1 truncate">{attachFile.name}</span>
-              <button onClick={() => setAttachFile(null)} className="p-1 rounded-lg hover:bg-slate-200"><X className="w-4 h-4" /></button>
+
+          {/* Quiz/Exam specific fields */}
+          {isQuizType(form.type) && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-purple-50/50 rounded-xl border border-purple-100">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Intentos máximos</label>
+                <input type="number" min="1" max="10" value={form.maxAttempts} onChange={e => setForm({ ...form, maxAttempts: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Tiempo límite (min)</label>
+                <input type="number" min="1" value={form.timeLimitMinutes} onChange={e => setForm({ ...form, timeLimitMinutes: e.target.value })} placeholder="Sin límite" className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base" />
+              </div>
+              <div className="flex flex-col gap-2 justify-center">
+                <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                  <input type="checkbox" checked={form.shuffleQuestions} onChange={e => setForm({ ...form, shuffleQuestions: e.target.checked })} className="rounded accent-purple-600" />
+                  Mezclar preguntas
+                </label>
+                <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                  <input type="checkbox" checked={form.showResults} onChange={e => setForm({ ...form, showResults: e.target.checked })} className="rounded accent-purple-600" />
+                  Mostrar resultados
+                </label>
+              </div>
             </div>
           )}
+
+          {!isQuizType(form.type) && (
+            <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={form.allowLateSubmit} onChange={e => setForm({ ...form, allowLateSubmit: e.target.checked })} className="rounded" />
+              Permitir entregas tardías
+            </label>
+          )}
+          {!isQuizType(form.type) && (
+            <>
+              <input ref={fileRef} type="file" className="hidden" onChange={e => setAttachFile(e.target.files?.[0] || null)} />
+              {attachFile && (
+                <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <Paperclip className="w-5 h-5 text-slate-400" />
+                  <span className="text-base text-slate-700 flex-1 truncate">{attachFile.name}</span>
+                  <button onClick={() => setAttachFile(null)} className="p-1 rounded-lg hover:bg-slate-200"><X className="w-4 h-4" /></button>
+                </div>
+              )}
+            </>
+          )}
           <div className="flex items-center justify-between pt-2">
-            <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
-              <Paperclip className="w-5 h-5" /> Adjuntar archivo
-            </button>
+            {!isQuizType(form.type) ? (
+              <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
+                <Paperclip className="w-5 h-5" /> Adjuntar archivo
+              </button>
+            ) : (
+              <p className="text-sm text-purple-500">Las preguntas se agregan después de crear</p>
+            )}
             <div className="flex gap-3">
               <button onClick={() => { setShowCreate(false); setAttachFile(null) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
-              <button onClick={handleCreate} disabled={!form.title.trim() || !form.sectionId || creating} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+              <button onClick={handleCreate} disabled={!form.title.trim() || !form.sectionId || creating} className={`px-5 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2 ${isQuizType(form.type) ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`} style={{ minHeight: '44px' }}>
                 {creating && <Loader2 className="w-4 h-4 animate-spin" />}
-                {creating ? 'Creando...' : 'Crear Tarea'}
+                {creating ? 'Creando...' : `Crear ${form.type === 'TASK' ? 'Tarea' : form.type === 'QUIZ' ? 'Quiz' : 'Examen'}`}
               </button>
             </div>
           </div>
@@ -1728,8 +2184,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             return (
               <button key={act.id} onClick={() => openActivity(act)} className="w-full text-left bg-white rounded-2xl border-2 border-slate-200 hover:border-blue-300 p-5 transition-all hover:shadow-sm group">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-                    <ClipboardList className="w-6 h-6 text-blue-600" />
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                    {isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2.5 flex-wrap">

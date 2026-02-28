@@ -1785,6 +1785,28 @@ export const classroomApi = {
   returnSubmission: (submissionId: string, data: { feedback?: string }) =>
     api.put(`/classrooms/submissions/${submissionId}/return`, data),
 
+  // Quiz / Exam – Questions
+  addQuestion: (activityId: string, data: any) =>
+    api.post(`/classrooms/activities/${activityId}/questions`, data),
+  listQuestions: (activityId: string) =>
+    api.get(`/classrooms/activities/${activityId}/questions`),
+  updateQuestion: (questionId: string, data: any) =>
+    api.put(`/classrooms/questions/${questionId}`, data),
+  deleteQuestion: (questionId: string) =>
+    api.delete(`/classrooms/questions/${questionId}`),
+  reorderQuestions: (activityId: string, questionIds: string[]) =>
+    api.put(`/classrooms/activities/${activityId}/questions/reorder`, { questionIds }),
+
+  // Quiz / Exam – Taking
+  startQuiz: (activityId: string) =>
+    api.post(`/classrooms/activities/${activityId}/start-quiz`),
+  saveQuizAnswer: (submissionId: string, data: { questionId: string; answer?: string; selectedOptions?: any }) =>
+    api.put(`/classrooms/submissions/${submissionId}/answer`, data),
+  submitQuiz: (submissionId: string) =>
+    api.post(`/classrooms/submissions/${submissionId}/submit-quiz`),
+  getQuizResult: (submissionId: string) =>
+    api.get(`/classrooms/submissions/${submissionId}/result`),
+
   // Forum
   createForumPost: (classroomId: string, data: { title: string; content: string; parentId?: string }) =>
     api.post(`/classrooms/${classroomId}/forum`, data),
