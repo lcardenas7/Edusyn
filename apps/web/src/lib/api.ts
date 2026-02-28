@@ -1807,6 +1807,12 @@ export const classroomApi = {
   getQuizResult: (submissionId: string) =>
     api.get(`/classrooms/submissions/${submissionId}/result`),
 
+  // ICFES Simulator
+  getIcfesResult: (submissionId: string) =>
+    api.get(`/classrooms/submissions/${submissionId}/icfes-result`),
+  getIcfesClassroomResults: (activityId: string) =>
+    api.get(`/classrooms/activities/${activityId}/icfes-results`),
+
   // Forum
   createForumPost: (classroomId: string, data: { title: string; content: string; parentId?: string }) =>
     api.post(`/classrooms/${classroomId}/forum`, data),

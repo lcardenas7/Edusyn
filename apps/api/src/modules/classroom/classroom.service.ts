@@ -730,6 +730,7 @@ export class ClassroomService {
   async addQuestion(activityId: string, teacherId: string, dto: {
     type: string; text: string; options?: any; correctAnswer?: string;
     points?: number; explanation?: string; imageUrl?: string;
+    subjectArea?: string; competency?: string;
   }) {
     const activity = await this.validateActivityOwnership(activityId, teacherId);
     const maxSort = await this.prisma.activityQuestion.aggregate({
@@ -746,6 +747,8 @@ export class ClassroomService {
         points: dto.points ?? 1,
         explanation: dto.explanation,
         imageUrl: dto.imageUrl,
+        subjectArea: dto.subjectArea,
+        competency: dto.competency,
         sortOrder: (maxSort._max.sortOrder ?? -1) + 1,
       },
     });
@@ -754,6 +757,7 @@ export class ClassroomService {
   async updateQuestion(questionId: string, teacherId: string, dto: {
     text?: string; options?: any; correctAnswer?: string;
     points?: number; explanation?: string; imageUrl?: string;
+    subjectArea?: string; competency?: string;
   }) {
     const q = await this.prisma.activityQuestion.findUnique({
       where: { id: questionId },
@@ -771,6 +775,8 @@ export class ClassroomService {
         points: dto.points,
         explanation: dto.explanation,
         imageUrl: dto.imageUrl,
+        subjectArea: dto.subjectArea,
+        competency: dto.competency,
       },
     });
   }
@@ -1010,6 +1016,118 @@ export class ClassroomService {
     }
 
     return sub;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ICFES SIMULATOR – Results by area
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async getIcfesResults(submissionId: string, userId: string) {
+    const sub = await this.prisma.activitySubmission.findUnique({
+      where: { id: submissionId },
+      include: {
+        studentEnrollment: { include: { student: true } },
+        answers: { include: { question: true } },
+        activity: { select: { id: true, title: true, maxScore: true, showResults: true, type: true } },
+      },
+    });
+    if (!sub) throw new NotFoundException('Entrega no encontrada');
+
+    const isOwner = sub.studentEnrollment.student.userId === userId;
+    if (!isOwner) {
+      await this.validateClassroomOwnership(
+        (await this.prisma.classroomActivity.findUnique({ where: { id: sub.activityId } }))?.classroomId || '',
+        userId
+      );
+    }
+
+    // Group answers by subjectArea
+    const areaMap: Record<string, { correct: number; total: number; points: number; maxPoints: number; answers: any[] }> = {};
+    for (const a of sub.answers) {
+      const area = a.question.subjectArea || 'General';
+      if (!areaMap[area]) areaMap[area] = { correct: 0, total: 0, points: 0, maxPoints: 0, answers: [] };
+      areaMap[area].total++;
+      areaMap[area].maxPoints += Number(a.question.points);
+      if (a.isCorrect) {
+        areaMap[area].correct++;
+        areaMap[area].points += Number(a.pointsEarned || 0);
+      }
+      areaMap[area].answers.push(a);
+    }
+
+    const areas = Object.entries(areaMap).map(([name, data]) => ({
+      name,
+      correct: data.correct,
+      total: data.total,
+      percentage: data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0,
+      points: data.points,
+      maxPoints: data.maxPoints,
+      answers: sub.activity.showResults || !isOwner ? data.answers : data.answers.map(a => ({
+        ...a, question: { ...a.question, correctAnswer: undefined, explanation: undefined },
+      })),
+    }));
+
+    // Calculate global ICFES-style score (0-500)
+    const totalCorrect = sub.answers.filter(a => a.isCorrect).length;
+    const totalQuestions = sub.answers.length;
+    const globalPercentage = totalQuestions > 0 ? (totalCorrect / totalQuestions) * 100 : 0;
+    const icfesGlobalScore = Math.round(globalPercentage * 5); // Scale to 0-500
+
+    return {
+      id: sub.id,
+      status: sub.status,
+      score: sub.score,
+      maxScore: sub.activity.maxScore,
+      startedAt: sub.startedAt,
+      submittedAt: sub.submittedAt,
+      timeSpentSeconds: sub.timeSpentSeconds,
+      activity: sub.activity,
+      student: { firstName: sub.studentEnrollment.student.firstName, lastName: sub.studentEnrollment.student.lastName },
+      totalCorrect,
+      totalQuestions,
+      globalPercentage: Math.round(globalPercentage),
+      icfesGlobalScore,
+      areas,
+    };
+  }
+
+  async getIcfesClassroomResults(activityId: string, teacherId: string) {
+    await this.validateActivityOwnership(activityId, teacherId);
+    const submissions = await this.prisma.activitySubmission.findMany({
+      where: { activityId, status: { in: ['AUTO_GRADED', 'GRADED'] } },
+      include: {
+        studentEnrollment: { include: { student: { select: { firstName: true, lastName: true, secondLastName: true } } } },
+        answers: { include: { question: { select: { subjectArea: true, points: true } } } },
+      },
+      orderBy: { score: 'desc' },
+    });
+
+    return submissions.map(sub => {
+      const areaMap: Record<string, { correct: number; total: number }> = {};
+      for (const a of sub.answers) {
+        const area = a.question.subjectArea || 'General';
+        if (!areaMap[area]) areaMap[area] = { correct: 0, total: 0 };
+        areaMap[area].total++;
+        if (a.isCorrect) areaMap[area].correct++;
+      }
+      const areas = Object.entries(areaMap).map(([name, d]) => ({
+        name, correct: d.correct, total: d.total, percentage: d.total > 0 ? Math.round((d.correct / d.total) * 100) : 0,
+      }));
+      const totalCorrect = sub.answers.filter(a => a.isCorrect).length;
+      const totalQuestions = sub.answers.length;
+      return {
+        id: sub.id,
+        student: sub.studentEnrollment.student,
+        score: sub.score,
+        totalCorrect,
+        totalQuestions,
+        globalPercentage: totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0,
+        icfesGlobalScore: totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 500) : 0,
+        areas,
+        submittedAt: sub.submittedAt,
+        timeSpentSeconds: sub.timeSpentSeconds,
+      };
+    });
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

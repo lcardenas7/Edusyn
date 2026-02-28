@@ -353,6 +353,24 @@ export class ClassroomController {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // ICFES SIMULATOR – Results
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('submissions/:submissionId/icfes-result')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async getIcfesResult(@Param('submissionId') submissionId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.getIcfesResults(submissionId, userId);
+  }
+
+  @Get('activities/:activityId/icfes-results')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async getIcfesClassroomResults(@Param('activityId') activityId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.getIcfesClassroomResults(activityId, userId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // QUIZ / EXAM – Taking
   // ═══════════════════════════════════════════════════════════════════════════
 

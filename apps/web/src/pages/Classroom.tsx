@@ -1326,7 +1326,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [questions, setQuestions] = useState<any[]>([])
   const [questionsLoading, setQuestionsLoading] = useState(false)
   const [showAddQuestion, setShowAddQuestion] = useState(false)
-  const [qForm, setQForm] = useState({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', points: '1', explanation: '' })
+  const [qForm, setQForm] = useState({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', points: '1', explanation: '', subjectArea: '' })
   const [editingQuestion, setEditingQuestion] = useState<string | null>(null)
   const [savingQuestion, setSavingQuestion] = useState(false)
 
@@ -1396,7 +1396,19 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     try { await classroomApi.deleteActivity(id); loadActivities(); setSelectedActivity(null) } catch {}
   }
 
-  const isQuizType = (type: string) => ['QUIZ', 'EXAM'].includes(type)
+  const isQuizType = (type: string) => ['QUIZ', 'EXAM', 'ICFES_SIMULATOR'].includes(type)
+  const isIcfes = (type: string) => type === 'ICFES_SIMULATOR'
+
+  const ICFES_AREAS = ['Lectura Crítica', 'Matemáticas', 'Ciencias Naturales', 'Sociales y Ciudadanas', 'Inglés']
+  const AREA_COLORS: Record<string, string> = {
+    'Lectura Crítica': 'bg-blue-500', 'Matemáticas': 'bg-red-500', 'Ciencias Naturales': 'bg-green-500',
+    'Sociales y Ciudadanas': 'bg-amber-500', 'Inglés': 'bg-purple-500', 'General': 'bg-slate-500',
+  }
+
+  // ICFES results state
+  const [icfesResult, setIcfesResult] = useState<any>(null)
+  const [icfesClassResults, setIcfesClassResults] = useState<any[]>([])
+  const [icfesLoading, setIcfesLoading] = useState(false)
 
   const loadQuestions = async (activityId: string) => {
     setQuestionsLoading(true)
@@ -1416,20 +1428,16 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         const { data } = await classroomApi.listSubmissions(activity.id)
         setSubmissions(data)
       } catch {} finally { setSubmissionsLoading(false) }
-      if (isQuizType(activity.type)) loadQuestions(activity.id)
+      if (isQuizType(activity.type)) {
+        loadQuestions(activity.id)
+        if (isIcfes(activity.type)) loadIcfesClassResults(activity.id)
+      }
     }
     if (isStudent) {
-      if (isQuizType(activity.type)) {
-        try {
-          const { data } = await classroomApi.getMySubmission(activity.id)
-          setMySubmission(data)
-        } catch { setMySubmission(null) }
-      } else {
-        try {
-          const { data } = await classroomApi.getMySubmission(activity.id)
-          setMySubmission(data)
-        } catch { setMySubmission(null) }
-      }
+      try {
+        const { data } = await classroomApi.getMySubmission(activity.id)
+        setMySubmission(data)
+      } catch { setMySubmission(null) }
     }
   }
 
@@ -1479,13 +1487,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   // Quiz question handlers (teacher)
-  const resetQForm = () => setQForm({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', points: '1', explanation: '' })
+  const resetQForm = () => setQForm({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', points: '1', explanation: '', subjectArea: '' })
 
   const handleAddQuestion = async () => {
     if (!selectedActivity || !qForm.text.trim()) return
     try {
       setSavingQuestion(true)
-      const payload: any = { type: qForm.type, text: qForm.text, points: parseFloat(qForm.points) || 1, explanation: qForm.explanation || undefined }
+      const payload: any = { type: qForm.type, text: qForm.text, points: parseFloat(qForm.points) || 1, explanation: qForm.explanation || undefined, subjectArea: qForm.subjectArea || undefined }
       if (qForm.type === 'MULTIPLE_CHOICE' || qForm.type === 'TRUE_FALSE') {
         payload.options = qForm.type === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : qForm.options.filter(o => o.trim())
         payload.correctAnswer = qForm.correctAnswer
@@ -1522,6 +1530,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       correctAnswer: q.correctAnswer || '',
       points: String(q.points ? Number(q.points) : 1),
       explanation: q.explanation || '',
+      subjectArea: q.subjectArea || '',
     })
     setEditingQuestion(q.id)
     setShowAddQuestion(true)
@@ -1572,6 +1581,23 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     } catch {}
   }
 
+  const handleViewIcfesResult = async (submissionId: string) => {
+    try {
+      setIcfesLoading(true)
+      const { data } = await classroomApi.getIcfesResult(submissionId)
+      setIcfesResult(data)
+      setQuizMode('result')
+    } catch {} finally { setIcfesLoading(false) }
+  }
+
+  const loadIcfesClassResults = async (activityId: string) => {
+    try {
+      setIcfesLoading(true)
+      const { data } = await classroomApi.getIcfesClassroomResults(activityId)
+      setIcfesClassResults(data)
+    } catch {} finally { setIcfesLoading(false) }
+  }
+
   const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
   const isDuePast = (d?: string) => d ? new Date(d) < new Date() : false
 
@@ -1592,13 +1618,14 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                  {isQuizType(act.type) ? <HelpCircle className="w-5 h-5 text-purple-600" /> : <ClipboardList className="w-5 h-5 text-blue-600" />}
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isIcfes(act.type) ? 'bg-emerald-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                  {isIcfes(act.type) ? <BarChart3 className="w-5 h-5 text-emerald-600" /> : isQuizType(act.type) ? <HelpCircle className="w-5 h-5 text-purple-600" /> : <ClipboardList className="w-5 h-5 text-blue-600" />}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-xl font-bold text-slate-800">{act.title}</h2>
-                    {isQuizType(act.type) && <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">{act.type === 'QUIZ' ? 'Quiz' : 'Examen'}</span>}
+                    {isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">Simulacro ICFES</span>}
+                    {isQuizType(act.type) && !isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">{act.type === 'QUIZ' ? 'Quiz' : 'Examen'}</span>}
                   </div>
                   <p className="text-sm text-slate-400">{act.section?.title || 'Sin sección'}</p>
                 </div>
@@ -1756,6 +1783,15 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     <label className="block text-sm font-medium text-slate-700 mb-1">Puntos</label>
                     <input type="number" step="0.1" min="0.1" value={qForm.points} onChange={e => setQForm({ ...qForm, points: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base" />
                   </div>
+                  {isIcfes(act.type) && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Área ICFES</label>
+                      <select value={qForm.subjectArea} onChange={e => setQForm({ ...qForm, subjectArea: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base">
+                        <option value="">Seleccionar área...</option>
+                        {ICFES_AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Pregunta</label>
@@ -1838,9 +1874,10 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                       <span className="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-bold shrink-0">{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-base font-medium text-slate-800">{q.text}</p>
-                        <div className="flex items-center gap-3 mt-1 text-sm text-slate-400">
+                        <div className="flex items-center gap-3 mt-1 text-sm text-slate-400 flex-wrap">
                           <span className="px-2 py-0.5 bg-slate-100 rounded text-xs">{q.type === 'MULTIPLE_CHOICE' ? 'Opción múltiple' : q.type === 'TRUE_FALSE' ? 'V/F' : 'Respuesta corta'}</span>
                           <span>{Number(q.points)} pts</span>
+                          {q.subjectArea && <span className={`px-2 py-0.5 rounded text-xs text-white ${AREA_COLORS[q.subjectArea] || 'bg-slate-500'}`}>{q.subjectArea}</span>}
                           {q.correctAnswer && <span className="text-green-600">✓ {q.correctAnswer}</span>}
                         </div>
                         {q.options && Array.isArray(q.options) && (
@@ -1862,6 +1899,83 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* TEACHER: ICFES Results Dashboard */}
+        {isTeacher && isIcfes(act.type) && icfesClassResults.length > 0 && (
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-800">Resultados del Simulacro ({icfesClassResults.length} estudiantes)</h3>
+            </div>
+
+            {/* Summary averages per area */}
+            {(() => {
+              const areaAgg: Record<string, { sumPct: number; count: number }> = {}
+              icfesClassResults.forEach((s: any) => s.areas?.forEach((a: any) => {
+                if (!areaAgg[a.name]) areaAgg[a.name] = { sumPct: 0, count: 0 }
+                areaAgg[a.name].sumPct += a.percentage
+                areaAgg[a.name].count++
+              }))
+              const areaAvgs = Object.entries(areaAgg).map(([name, d]) => ({ name, avg: Math.round(d.sumPct / d.count) }))
+              const avgGlobal = icfesClassResults.length > 0 ? Math.round(icfesClassResults.reduce((s: number, r: any) => s + r.icfesGlobalScore, 0) / icfesClassResults.length) : 0
+              return (
+                <div className="p-6 border-b border-slate-100 bg-emerald-50/30">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="bg-emerald-100 rounded-xl px-4 py-2 text-center">
+                      <p className="text-xs text-emerald-600 font-medium">Promedio Global</p>
+                      <p className="text-2xl font-bold text-emerald-700">{avgGlobal}<span className="text-sm opacity-70">/500</span></p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    {areaAvgs.map(a => (
+                      <div key={a.name} className="bg-white rounded-xl border border-slate-200 p-3 text-center">
+                        <span className={`inline-block w-2.5 h-2.5 rounded-full mb-1 ${AREA_COLORS[a.name] || 'bg-slate-500'}`} />
+                        <p className="text-xs text-slate-500 truncate">{a.name}</p>
+                        <p className={`text-lg font-bold ${a.avg >= 70 ? 'text-green-600' : a.avg >= 40 ? 'text-amber-600' : 'text-red-600'}`}>{a.avg}%</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Student ranking table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50">
+                    <th className="text-left px-4 py-3 font-medium text-slate-600">#</th>
+                    <th className="text-left px-4 py-3 font-medium text-slate-600">Estudiante</th>
+                    <th className="text-center px-4 py-3 font-medium text-slate-600">Puntaje</th>
+                    <th className="text-center px-4 py-3 font-medium text-slate-600">Correctas</th>
+                    {ICFES_AREAS.map(a => (
+                      <th key={a} className="text-center px-3 py-3 font-medium text-slate-600 whitespace-nowrap">{a.split(' ')[0]}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {icfesClassResults.map((r: any, i: number) => (
+                    <tr key={r.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 text-slate-400 font-medium">{i + 1}</td>
+                      <td className="px-4 py-3 font-medium text-slate-800">{r.student.lastName} {r.student.firstName}</td>
+                      <td className="px-4 py-3 text-center font-bold text-emerald-700">{r.icfesGlobalScore}</td>
+                      <td className="px-4 py-3 text-center text-slate-600">{r.totalCorrect}/{r.totalQuestions}</td>
+                      {ICFES_AREAS.map(areaName => {
+                        const area = r.areas?.find((a: any) => a.name === areaName)
+                        return (
+                          <td key={areaName} className="px-3 py-3 text-center">
+                            {area ? (
+                              <span className={`text-sm font-medium ${area.percentage >= 70 ? 'text-green-600' : area.percentage >= 40 ? 'text-amber-600' : 'text-red-600'}`}>{area.percentage}%</span>
+                            ) : <span className="text-slate-300">—</span>}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -1928,8 +2042,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           </div>
         )}
 
-        {/* STUDENT: Quiz result view */}
-        {isStudent && isQuizType(act.type) && quizMode === 'result' && quizResult && (
+        {/* STUDENT: Quiz result view (non-ICFES) */}
+        {isStudent && isQuizType(act.type) && !isIcfes(act.type) && quizMode === 'result' && quizResult && (
           <div className="space-y-4">
             <div className="bg-white rounded-2xl border-2 border-green-200 p-6 text-center space-y-3">
               <Award className="w-14 h-14 mx-auto text-green-500" />
@@ -1968,10 +2082,54 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           </div>
         )}
 
+        {/* STUDENT: ICFES result view with area breakdown */}
+        {isStudent && isIcfes(act.type) && quizMode === 'result' && icfesResult && (
+          <div className="space-y-4">
+            {/* Global score card */}
+            <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl p-6 text-white text-center space-y-2">
+              <BarChart3 className="w-12 h-12 mx-auto opacity-80" />
+              <h3 className="text-xl font-bold">Puntaje Global ICFES</h3>
+              <p className="text-5xl font-bold">{icfesResult.icfesGlobalScore}<span className="text-xl opacity-70">/500</span></p>
+              <p className="text-sm opacity-80">{icfesResult.totalCorrect} de {icfesResult.totalQuestions} correctas ({icfesResult.globalPercentage}%)</p>
+              {icfesResult.timeSpentSeconds && (
+                <p className="text-sm opacity-70">Tiempo: {Math.floor(icfesResult.timeSpentSeconds / 60)}m {icfesResult.timeSpentSeconds % 60}s</p>
+              )}
+            </div>
+
+            {/* Area breakdown */}
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100">
+                <h3 className="text-lg font-bold text-slate-800">Resultados por Área</h3>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {icfesResult.areas?.map((area: any) => (
+                  <div key={area.name} className="px-6 py-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <span className={`w-3 h-3 rounded-full ${AREA_COLORS[area.name] || 'bg-slate-500'}`} />
+                        <span className="text-base font-medium text-slate-800">{area.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-slate-500">{area.correct}/{area.total}</span>
+                        <span className={`text-base font-bold ${area.percentage >= 70 ? 'text-green-600' : area.percentage >= 40 ? 'text-amber-600' : 'text-red-600'}`}>{area.percentage}%</span>
+                      </div>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-2.5">
+                      <div className={`h-2.5 rounded-full transition-all ${area.percentage >= 70 ? 'bg-green-500' : area.percentage >= 40 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${area.percentage}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button onClick={() => { setQuizMode('idle'); setIcfesResult(null) }} className="text-sm text-slate-500 hover:text-blue-600">← Volver</button>
+          </div>
+        )}
+
         {/* STUDENT: Quiz idle state (start or view result) */}
         {isStudent && isQuizType(act.type) && quizMode === 'idle' && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
-            <h3 className="text-lg font-bold text-slate-800">{act.type === 'QUIZ' ? 'Quiz' : 'Examen'}</h3>
+          <div className={`bg-white rounded-2xl border p-6 space-y-4 ${isIcfes(act.type) ? 'border-emerald-200' : 'border-slate-200'}`}>
+            <h3 className="text-lg font-bold text-slate-800">{isIcfes(act.type) ? 'Simulacro ICFES' : act.type === 'QUIZ' ? 'Quiz' : 'Examen'}</h3>
             {mySubmission && (mySubmission.status === 'AUTO_GRADED' || mySubmission.status === 'GRADED') ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
@@ -1982,19 +2140,25 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     <span className="text-lg font-bold text-green-700">{Number(mySubmission.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
                   )}
                 </div>
-                <button onClick={() => handleViewResult(mySubmission.id)} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 flex items-center gap-2" style={{ minHeight: '44px' }}>
-                  <Eye className="w-5 h-5" /> Ver resultados
+                <button onClick={() => isIcfes(act.type) ? handleViewIcfesResult(mySubmission.id) : handleViewResult(mySubmission.id)} className={`px-5 py-2.5 text-white rounded-xl text-sm font-semibold flex items-center gap-2 ${isIcfes(act.type) ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-purple-600 hover:bg-purple-700'}`} style={{ minHeight: '44px' }}>
+                  <Eye className="w-5 h-5" /> {isIcfes(act.type) ? 'Ver resultados ICFES' : 'Ver resultados'}
                 </button>
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-base text-slate-600">
-                  {act.type === 'QUIZ' ? 'Presentarás un quiz' : 'Presentarás un examen'} con preguntas de selección y/o respuesta corta.
-                  {act.maxScore && <span> La nota máxima es <strong>{Number(act.maxScore)}</strong>.</span>}
-                </p>
-                <button onClick={handleStartQuiz} disabled={quizSubmitting} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                {isIcfes(act.type) ? (
+                  <p className="text-base text-slate-600">
+                    Presentarás un simulacro tipo Saber 11 con preguntas organizadas por áreas: Lectura Crítica, Matemáticas, Ciencias Naturales, Sociales y Ciudadanas, e Inglés.
+                  </p>
+                ) : (
+                  <p className="text-base text-slate-600">
+                    {act.type === 'QUIZ' ? 'Presentarás un quiz' : 'Presentarás un examen'} con preguntas de selección y/o respuesta corta.
+                    {act.maxScore && <span> La nota máxima es <strong>{Number(act.maxScore)}</strong>.</span>}
+                  </p>
+                )}
+                <button onClick={handleStartQuiz} disabled={quizSubmitting} className={`px-5 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2 ${isIcfes(act.type) ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-purple-600 hover:bg-purple-700'}`} style={{ minHeight: '44px' }}>
                   {quizSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CircleDot className="w-5 h-5" />}
-                  {quizSubmitting ? 'Iniciando...' : 'Comenzar'}
+                  {quizSubmitting ? 'Iniciando...' : isIcfes(act.type) ? 'Iniciar Simulacro' : 'Comenzar'}
                 </button>
               </div>
             )}
@@ -2079,8 +2243,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
           {/* Activity type selector */}
           <div className="flex gap-2">
-            {[{ value: 'TASK', label: 'Tarea', icon: ClipboardList, color: 'blue' }, { value: 'QUIZ', label: 'Quiz', icon: HelpCircle, color: 'purple' }, { value: 'EXAM', label: 'Examen', icon: Award, color: 'red' }].map(t => (
-              <button key={t.value} onClick={() => setForm({ ...form, type: t.value })} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${form.type === t.value ? (t.color === 'blue' ? 'border-blue-500 bg-blue-50 text-blue-700' : t.color === 'purple' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-red-500 bg-red-50 text-red-700') : 'border-slate-200 text-slate-500 hover:border-slate-300'}`} style={{ minHeight: '44px' }}>
+            {[{ value: 'TASK', label: 'Tarea', icon: ClipboardList, color: 'blue' }, { value: 'QUIZ', label: 'Quiz', icon: HelpCircle, color: 'purple' }, { value: 'EXAM', label: 'Examen', icon: Award, color: 'red' }, { value: 'ICFES_SIMULATOR', label: 'Simulacro ICFES', icon: BarChart3, color: 'emerald' }].map(t => (
+              <button key={t.value} onClick={() => setForm({ ...form, type: t.value })} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${form.type === t.value ? (t.color === 'blue' ? 'border-blue-500 bg-blue-50 text-blue-700' : t.color === 'purple' ? 'border-purple-500 bg-purple-50 text-purple-700' : t.color === 'emerald' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-red-500 bg-red-50 text-red-700') : 'border-slate-200 text-slate-500 hover:border-slate-300'}`} style={{ minHeight: '44px' }}>
                 <t.icon className="w-5 h-5" /> {t.label}
               </button>
             ))}
@@ -2160,7 +2324,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               <button onClick={() => { setShowCreate(false); setAttachFile(null) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
               <button onClick={handleCreate} disabled={!form.title.trim() || !form.sectionId || creating} className={`px-5 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2 ${isQuizType(form.type) ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`} style={{ minHeight: '44px' }}>
                 {creating && <Loader2 className="w-4 h-4 animate-spin" />}
-                {creating ? 'Creando...' : `Crear ${form.type === 'TASK' ? 'Tarea' : form.type === 'QUIZ' ? 'Quiz' : 'Examen'}`}
+                {creating ? 'Creando...' : `Crear ${form.type === 'TASK' ? 'Tarea' : form.type === 'QUIZ' ? 'Quiz' : form.type === 'ICFES_SIMULATOR' ? 'Simulacro' : 'Examen'}`}
               </button>
             </div>
           </div>
@@ -2184,8 +2348,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             return (
               <button key={act.id} onClick={() => openActivity(act)} className="w-full text-left bg-white rounded-2xl border-2 border-slate-200 hover:border-blue-300 p-5 transition-all hover:shadow-sm group">
                 <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                    {isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isIcfes(act.type) ? 'bg-emerald-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                    {isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2.5 flex-wrap">
