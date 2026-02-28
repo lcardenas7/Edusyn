@@ -54,7 +54,7 @@ export default function CalendarView({
     <div className="flex-1 overflow-y-auto p-6">
       <div className="max-w-workspace mx-auto">
         {/* Month navigation */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => onMonthChange(new Date(year, month - 1, 1))}
             className="p-2 rounded-lg hover:bg-slate-100 transition-colors min-h-btn"
@@ -100,9 +100,9 @@ export default function CalendarView({
         <div className="flex gap-4">
           {/* Calendar grid */}
           <div className="flex-1">
-            <div className="bg-white rounded-card border border-slate-200 overflow-hidden">
+            <div className="bg-white rounded-xl border border-slate-100 overflow-hidden shadow-sm">
               {/* Day headers */}
-              <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-200">
+              <div className="grid grid-cols-7 bg-slate-50/80 border-b border-slate-100">
                 {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => (
                   <div key={d} className="px-2 py-2.5 text-center text-body-sm font-semibold text-slate-500">{d}</div>
                 ))}
@@ -154,8 +154,8 @@ export default function CalendarView({
 
           {/* Day detail panel */}
           <div className="w-80 flex-shrink-0">
-            <div className="bg-white rounded-card border border-slate-200 sticky top-4">
-              <div className="px-4 py-3 border-b border-slate-100">
+            <div className="bg-white rounded-xl border border-slate-100 sticky top-4 shadow-sm">
+              <div className="px-4 py-3.5 border-b border-slate-100">
                 <h3 className="text-body-sm font-semibold text-slate-800">
                   {calSelectedDay
                     ? new Date(calSelectedDay + 'T12:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -170,7 +170,7 @@ export default function CalendarView({
                   <p className="text-body-sm text-slate-400 text-center py-8">Sin eventos este día</p>
                 )}
                 {selectedDayEvents.map((ev: any) => (
-                  <div key={ev.id} className="mb-2 p-3 rounded-lg border border-slate-100 hover:border-slate-200 transition-colors">
+                  <div key={ev.id} className="mb-2.5 p-3.5 rounded-lg border border-slate-100 hover:shadow-md hover:border-slate-200 transition-all duration-150">
                     <div className="flex items-center gap-2 mb-1">
                       <div className={`w-2 h-2 rounded-full ${BOARD_TYPE_COLORS[ev.boardType] || 'bg-slate-400'}`} />
                       <span className="text-badge font-medium text-slate-400 uppercase">

@@ -31,7 +31,7 @@ const WButton = forwardRef<HTMLButtonElement, WButtonProps>(
       <button
         ref={ref}
         disabled={disabled || loading}
-        className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+        className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
         {...props}
       >
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : icon}

@@ -28,7 +28,7 @@ interface StudentNotesViewProps {
 
 export default function StudentNotesView({ board, onAddObservation, onReloadBoard }: StudentNotesViewProps) {
   return (
-    <div className="flex-1 flex gap-4 p-4 overflow-x-auto">
+    <div className="flex-1 flex gap-5 p-5 overflow-x-auto">
       {board.columns?.map(column => (
         <KanbanColumn
           key={column.id}
@@ -43,7 +43,7 @@ export default function StudentNotesView({ board, onAddObservation, onReloadBoar
             const meta = (item.metadata || {}) as any
             const cat = meta.category || 'GENERAL'
             return (
-              <div key={item.id} className="bg-slate-50 rounded-lg p-3 border border-slate-100 hover:border-slate-200 transition-colors min-h-card">
+              <div key={item.id} className="bg-white rounded-lg p-3.5 border border-slate-200/60 hover:shadow-md hover:border-slate-300/60 transition-all duration-150 min-h-card">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-body-sm font-semibold text-slate-800">{item.title}</span>
                   <WBadge variant={CAT_VARIANTS[cat] || 'default'}>

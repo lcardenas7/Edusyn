@@ -57,9 +57,9 @@ export default function KanbanCard({
     <div
       draggable={!!onDragStart}
       onDragStart={onDragStart}
-      className={`group relative bg-white border border-slate-200 rounded-lg min-h-card p-3 ${
+      className={`group relative bg-white border border-slate-200/80 rounded-lg min-h-card p-3.5 ${
         onDragStart ? 'cursor-grab active:cursor-grabbing' : ''
-      } hover:shadow-sm transition-shadow ${isDragging ? 'opacity-40' : ''}`}
+      } hover:shadow-md hover:border-slate-300 transition-all duration-150 ${isDragging ? 'opacity-40' : ''}`}
     >
       <div className="flex items-start gap-2">
         {statusIcon && onToggleStatus && (

@@ -33,10 +33,10 @@ export default function MicroCollectView({
   onUndoPay,
 }: MicroCollectViewProps) {
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="flex-1 overflow-y-auto p-6 space-y-6">
       {/* Summary bar */}
       {boardSummary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <WSummaryCard
             label="Meta"
             value={`$${(boardSummary.goalAmount || 0).toLocaleString()}`}
@@ -48,40 +48,40 @@ export default function MicroCollectView({
             icon={<DollarSign className="w-4 h-4 text-green-500" />}
             valueColor="text-green-600"
           />
-          <div className="bg-white rounded-card border border-slate-200 p-4">
-            <div className="flex items-center gap-2 mb-1">
+          <div className="bg-white rounded-card border border-slate-100 p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
               <Percent className="w-4 h-4 text-blue-500" />
-              <span className="text-body-sm text-slate-500">Progreso</span>
+              <span className="text-badge font-medium text-slate-400 uppercase tracking-wide">Progreso</span>
             </div>
-            <p className="text-metrics-lg font-bold text-blue-600">{boardSummary.percentage || 0}%</p>
-            <div className="mt-1.5 h-2 bg-slate-100 rounded-full overflow-hidden">
+            <p className="text-metrics-xl font-bold text-blue-600">{boardSummary.percentage || 0}%</p>
+            <div className="mt-2 h-2 bg-slate-100 rounded-full overflow-hidden">
               <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${Math.min(boardSummary.percentage || 0, 100)}%` }} />
             </div>
           </div>
-          <div className="bg-white rounded-card border border-slate-200 p-4">
-            <div className="flex items-center gap-2 mb-1">
+          <div className="bg-white rounded-card border border-slate-100 p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
               <Users className="w-4 h-4 text-slate-400" />
-              <span className="text-body-sm text-slate-500">Estado</span>
+              <span className="text-badge font-medium text-slate-400 uppercase tracking-wide">Estado</span>
             </div>
-            <div className="flex items-center gap-3 text-body-sm mt-1">
-              <span className="text-green-600 font-medium">{boardSummary.paidCount || 0} ✓</span>
-              <span className="text-amber-500 font-medium">{boardSummary.partialCount || 0} ~</span>
-              <span className="text-red-500 font-medium">{boardSummary.pendingCount || 0} ✗</span>
+            <div className="flex items-center gap-3 mt-2">
+              <span className="text-body-sm text-green-600 font-semibold">{boardSummary.paidCount || 0} ✓</span>
+              <span className="text-body-sm text-amber-500 font-semibold">{boardSummary.partialCount || 0} ~</span>
+              <span className="text-body-sm text-red-500 font-semibold">{boardSummary.pendingCount || 0} ✗</span>
             </div>
           </div>
         </div>
       )}
 
       {/* Student payment table */}
-      <div className="bg-white rounded-card border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-100 overflow-hidden shadow-sm">
         <table className="w-full text-body-sm">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-4 min-h-row py-3 font-medium text-slate-600">#</th>
-              <th className="text-left px-4 min-h-row py-3 font-medium text-slate-600">Estudiante</th>
-              <th className="text-right px-4 min-h-row py-3 font-medium text-slate-600">Pagado</th>
-              <th className="text-left px-4 min-h-row py-3 font-medium text-slate-600">Estado</th>
-              <th className="text-right px-4 min-h-row py-3 font-medium text-slate-600">Acción</th>
+            <tr className="bg-slate-50/80 border-b border-slate-100">
+              <th className="text-left px-5 min-h-row py-3 font-semibold text-slate-500 text-badge uppercase tracking-wide">#</th>
+              <th className="text-left px-5 min-h-row py-3 font-semibold text-slate-500 text-badge uppercase tracking-wide">Estudiante</th>
+              <th className="text-right px-5 min-h-row py-3 font-semibold text-slate-500 text-badge uppercase tracking-wide">Pagado</th>
+              <th className="text-left px-5 min-h-row py-3 font-semibold text-slate-500 text-badge uppercase tracking-wide">Estado</th>
+              <th className="text-right px-5 min-h-row py-3 font-semibold text-slate-500 text-badge uppercase tracking-wide">Acción</th>
             </tr>
           </thead>
           <tbody>
@@ -90,11 +90,11 @@ export default function MicroCollectView({
               const payStatus = meta.status || 'PENDING'
               const amountPaid = Number(meta.amountPaid) || 0
               return (
-                <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50 min-h-row">
-                  <td className="px-4 py-3 text-slate-400">{idx + 1}</td>
-                  <td className="px-4 py-3 font-medium text-slate-800">{item.title}</td>
-                  <td className="px-4 py-3 text-right font-mono text-slate-700">${amountPaid.toLocaleString()}</td>
-                  <td className="px-4 py-3">
+                <tr key={item.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors min-h-row">
+                  <td className="px-5 py-3.5 text-slate-300">{idx + 1}</td>
+                  <td className="px-5 py-3.5 font-medium text-slate-800">{item.title}</td>
+                  <td className="px-5 py-3.5 text-right font-mono text-slate-700">${amountPaid.toLocaleString()}</td>
+                  <td className="px-5 py-3.5">
                     <WBadge variant={payStatus === 'PAID' ? 'success' : payStatus === 'PARTIAL' ? 'warning' : 'danger'}>
                       {payStatus === 'PAID' ? 'Pagado' : payStatus === 'PARTIAL' ? 'Parcial' : 'Pendiente'}
                     </WBadge>

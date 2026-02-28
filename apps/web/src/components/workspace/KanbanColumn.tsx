@@ -36,29 +36,29 @@ export default function KanbanColumn({
 }: KanbanColumnProps) {
   return (
     <div
-      className={`flex-shrink-0 w-80 flex flex-col rounded-card shadow-sm border transition-colors ${
-        isDragOver ? 'border-blue-400 bg-blue-50/50' : 'border-slate-200'
+      className={`flex-shrink-0 w-80 flex flex-col rounded-xl shadow-sm border transition-all duration-200 ${
+        isDragOver ? 'border-blue-300 bg-blue-50/40 shadow-md' : 'border-slate-200/80'
       } ${bgClass}`}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
       {/* Column header */}
-      <div className="flex items-center justify-between px-3 py-3 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <h3 className="text-body-sm font-semibold text-slate-700">{title}</h3>
-          <span className={`text-badge text-slate-400 ${countBgClass} px-2 py-0.5 rounded-full`}>
+      <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100/80">
+        <div className="flex items-center gap-2.5">
+          <h3 className="text-body-sm font-bold text-slate-800">{title}</h3>
+          <span className={`text-badge font-semibold text-slate-500 ${countBgClass} px-2.5 py-0.5 rounded-full`}>
             {itemCount}
           </span>
         </div>
         <div className="flex items-center gap-1">
           {onAddItem && (
-            <button onClick={onAddItem} className="p-1.5 rounded hover:bg-white/80" title={addLabel}>
+            <button onClick={onAddItem} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors" title={addLabel}>
               <Plus className="w-4 h-4 text-slate-400" />
             </button>
           )}
           {onDelete && (
-            <button onClick={onDelete} className="p-1.5 rounded hover:bg-red-50" title="Eliminar columna">
+            <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Eliminar columna">
               <Trash2 className="w-3.5 h-3.5 text-slate-300 hover:text-red-400" />
             </button>
           )}
@@ -66,7 +66,7 @@ export default function KanbanColumn({
       </div>
 
       {/* Items */}
-      <div className={`flex-1 overflow-y-auto p-2 space-y-2 min-h-[60px] ${maxHeight}`}>
+      <div className={`flex-1 overflow-y-auto p-3 space-y-2.5 min-h-[60px] ${maxHeight}`}>
         {children}
       </div>
 

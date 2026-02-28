@@ -79,7 +79,7 @@ export default function GenericKanbanView({
   onCancelAddItem,
 }: GenericKanbanViewProps) {
   return (
-    <div className="flex-1 flex gap-4 p-4 overflow-x-auto">
+    <div className="flex-1 flex gap-5 p-5 overflow-x-auto">
       {board.columns?.map(column => (
         <KanbanColumn
           key={column.id}
@@ -191,7 +191,7 @@ export default function GenericKanbanView({
       <div className="flex-shrink-0 w-80">
         <button
           onClick={onAddColumn}
-          className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-card text-slate-400 hover:text-slate-600 hover:border-slate-400 transition-colors min-h-btn"
+          className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-200 rounded-xl text-slate-300 hover:text-slate-500 hover:border-slate-300 transition-all duration-150 min-h-btn"
         >
           <Plus className="w-5 h-5" />
           <span className="text-body-sm">Nueva columna</span>

@@ -625,7 +625,7 @@ export default function TeacherWorkspace() {
   return (
     <div className="h-full flex flex-col max-w-workspace mx-auto w-full">
       {/* Header */}
-      <div className="flex-shrink-0 px-6 py-4 border-b border-slate-200 bg-white">
+      <div className="flex-shrink-0 px-6 py-5 border-b border-slate-100 bg-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {!showCalendar && (
@@ -638,8 +638,8 @@ export default function TeacherWorkspace() {
               </button>
             )}
             <div>
-              <h1 className="text-h1 font-bold text-slate-900">Mi Espacio</h1>
-              <p className="text-body-sm text-slate-500 mt-0.5">Espacio privado de trabajo del docente</p>
+              <h1 className="text-h1-lg font-bold text-slate-900 tracking-tight">Mi Espacio</h1>
+              <p className="text-body-sm text-slate-400 mt-1">Espacio privado de trabajo del docente</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -693,7 +693,7 @@ export default function TeacherWorkspace() {
           />
 
           {/* ═══════ Main: Board Content ═══════ */}
-          <div className="flex-1 overflow-x-auto bg-slate-100">
+          <div className="flex-1 overflow-x-auto bg-slate-50/80">
             {loadingBoard ? (
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -709,12 +709,14 @@ export default function TeacherWorkspace() {
             ) : (
               <div className="h-full flex flex-col">
                 {/* Board header */}
-                <div className="flex-shrink-0 px-6 py-3 bg-white border-b border-slate-200 flex items-center gap-3 min-h-row">
-                  <span className="text-h2">{BOARD_TYPES[activeBoard.type]?.icon || '📋'}</span>
+                <div className="flex-shrink-0 px-6 py-4 bg-white border-b border-slate-100 flex items-center gap-4">
+                  <span className="text-2xl">{BOARD_TYPES[activeBoard.type]?.icon || '📋'}</span>
                   <div className="flex-1">
-                    <h2 className="text-h3 font-semibold text-slate-900">{activeBoard.title}</h2>
-                    {activeBoard.description && (
-                      <p className="text-body-sm text-slate-500">{activeBoard.description}</p>
+                    <h2 className="text-h2 font-bold text-slate-900 tracking-tight">{activeBoard.title}</h2>
+                    {activeBoard.description ? (
+                      <p className="text-body-sm text-slate-400 mt-0.5">{activeBoard.description}</p>
+                    ) : (
+                      <p className="text-body-sm text-slate-400 mt-0.5">{BOARD_TYPES[activeBoard.type]?.label || 'Tablero'}</p>
                     )}
                   </div>
                   {!['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(activeBoard.type) && (

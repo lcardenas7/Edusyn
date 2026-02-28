@@ -31,7 +31,7 @@ export default function ClassroomRolesView({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="flex-1 overflow-y-auto p-6 space-y-6">
       {/* Header with edit roles button */}
       <div className="flex items-center justify-between">
         <p className="text-body-sm text-slate-500">{availableRoles.length} roles · {Object.keys(roleAssignments).length} asignados</p>
@@ -90,16 +90,16 @@ export default function ClassroomRolesView({
           return (
             <div
               key={role}
-              className={`bg-white rounded-card border p-4 flex items-center justify-between min-h-card ${
-                assignment ? 'border-green-200' : 'border-slate-200'
+              className={`bg-white rounded-xl border p-5 flex items-center justify-between min-h-card shadow-sm hover:shadow-md transition-all duration-150 ${
+                assignment ? 'border-green-100' : 'border-slate-100'
               }`}
             >
               <div>
-                <h4 className="text-body-base font-semibold text-slate-800">{role}</h4>
+                <h4 className="text-body-base font-bold text-slate-800">{role}</h4>
                 {assignment ? (
-                  <p className="text-body-sm text-green-600 mt-0.5">{assignment.item.title}</p>
+                  <p className="text-body-sm text-green-600 font-medium mt-1">{assignment.item.title}</p>
                 ) : (
-                  <p className="text-body-sm text-slate-400 mt-0.5">Sin asignar</p>
+                  <p className="text-body-sm text-slate-300 mt-1">Sin asignar</p>
                 )}
               </div>
               <div className="flex items-center gap-2">

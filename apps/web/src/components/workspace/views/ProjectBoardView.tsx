@@ -60,8 +60,8 @@ export default function ProjectBoardView({
     <div className="flex-1 flex flex-col">
       {/* Project progress bar */}
       {total > 0 && (
-        <div className="px-4 pt-3 pb-1">
-          <div className="bg-white rounded-card border border-slate-200 p-4">
+        <div className="px-5 pt-4 pb-1">
+          <div className="bg-white rounded-xl border border-slate-100 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-4 text-body-sm">
                 <span className="text-slate-500"><span className="font-bold text-slate-700">{total}</span> tareas</span>
@@ -79,7 +79,7 @@ export default function ProjectBoardView({
       )}
 
       {/* Kanban columns */}
-      <div className="flex-1 flex gap-4 p-4 overflow-x-auto">
+      <div className="flex-1 flex gap-5 p-5 overflow-x-auto">
         {board.columns?.map(column => {
           const bg = COL_GRADIENTS[column.title] || 'bg-gradient-to-b from-slate-50 to-slate-100/50'
           return (
@@ -108,7 +108,7 @@ export default function ProjectBoardView({
                     key={item.id}
                     draggable
                     onDragStart={(e) => onDragStart(e, item)}
-                    className={`bg-white rounded-lg border-l-4 ${PRI_BORDER[pri]} border border-slate-100 p-3 min-h-card cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group ${
+                    className={`bg-white rounded-lg border-l-4 ${PRI_BORDER[pri]} border border-slate-200/60 p-3.5 min-h-card cursor-grab active:cursor-grabbing hover:shadow-md hover:border-slate-300/60 transition-all duration-150 group ${
                       dragItem?.id === item.id ? 'opacity-40' : ''
                     }`}
                   >
@@ -164,7 +164,7 @@ export default function ProjectBoardView({
         <div className="flex-shrink-0 w-80">
           <button
             onClick={onAddColumn}
-            className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-card text-slate-400 hover:text-slate-600 hover:border-slate-400 transition-colors min-h-btn"
+            className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-200 rounded-xl text-slate-300 hover:text-slate-500 hover:border-slate-300 transition-all duration-150 min-h-btn"
           >
             <Plus className="w-5 h-5" /><span className="text-body-sm">Nueva fase</span>
           </button>

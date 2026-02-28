@@ -10,12 +10,12 @@ interface WSummaryCardProps {
 
 export default function WSummaryCard({ label, value, icon, valueColor = 'text-slate-900', className = '' }: WSummaryCardProps) {
   return (
-    <div className={`bg-white rounded-card border border-slate-200 p-4 ${className}`}>
-      <div className="flex items-center gap-2 mb-1">
+    <div className={`bg-white rounded-card border border-slate-100 p-6 shadow-sm ${className}`}>
+      <div className="flex items-center gap-2 mb-2">
         {icon}
-        <span className="text-body-sm text-slate-500">{label}</span>
+        <span className="text-badge font-medium text-slate-400 uppercase tracking-wide">{label}</span>
       </div>
-      <p className={`text-metrics-lg font-bold ${valueColor}`}>{value}</p>
+      <p className={`text-metrics-xl font-bold ${valueColor}`}>{value}</p>
     </div>
   )
 }
