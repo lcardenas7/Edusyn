@@ -179,6 +179,7 @@ enum SystemModule {
   TIMETABLE          // Gestión de horarios escolares
   DIAGNOSIS          // Diagnóstico y seguimiento educativo
   TEACHER_WORKSPACE  // Espacio de trabajo privado del docente
+  VIRTUAL_CLASSROOM  // Aula virtual por asignatura
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

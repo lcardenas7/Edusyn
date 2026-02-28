@@ -21,6 +21,7 @@ export enum SystemModule {
   TIMETABLE = 'TIMETABLE',
   DIAGNOSIS = 'DIAGNOSIS',
   TEACHER_WORKSPACE = 'TEACHER_WORKSPACE',
+  VIRTUAL_CLASSROOM = 'VIRTUAL_CLASSROOM',
 }
 
 export class CreateInstitutionDto {

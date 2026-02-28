@@ -399,6 +399,19 @@ const AVAILABLE_MODULES: ModuleConfig[] = [
       { id: 'WORKSPACE_CLASS_LOG', name: 'Bitácora de Clase', description: 'Registro diario de actividades' },
     ]
   },
+  {
+    id: 'VIRTUAL_CLASSROOM',
+    name: 'Aula Virtual',
+    description: 'Clases virtuales por asignatura con contenido, materiales, anuncios y actividades',
+    features: [
+      { id: 'VCLASS_CLASSROOMS', name: 'Aulas Virtuales', description: 'Crear y gestionar aulas por asignatura' },
+      { id: 'VCLASS_MATERIALS', name: 'Materiales', description: 'Documentos, videos YouTube, enlaces e imágenes' },
+      { id: 'VCLASS_ANNOUNCEMENTS', name: 'Anuncios', description: 'Publicar anuncios en el aula' },
+      { id: 'VCLASS_ACTIVITIES', name: 'Actividades', description: 'Tareas, quizzes, exámenes y foros' },
+      { id: 'VCLASS_ICFES', name: 'Simulacro ICFES', description: 'Simulacros Saber 11 con análisis detallado' },
+      { id: 'VCLASS_GRADE_SYNC', name: 'Sincronización Notas', description: 'Integrar notas del aula con la planilla' },
+    ]
+  },
 ]
 
 // Tipo para permisos de institución (usado en el backend)

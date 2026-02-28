@@ -20,6 +20,7 @@ const statements = [
   `ALTER TYPE "SystemModule" ADD VALUE IF NOT EXISTS 'TEACHER_WORKSPACE'`,
   `ALTER TYPE "SystemModule" ADD VALUE IF NOT EXISTS 'PAYMENTS'`,
   `ALTER TYPE "SystemModule" ADD VALUE IF NOT EXISTS 'FINANCE'`,
+  `ALTER TYPE "SystemModule" ADD VALUE IF NOT EXISTS 'VIRTUAL_CLASSROOM'`,
 ];
 
 async function main() {

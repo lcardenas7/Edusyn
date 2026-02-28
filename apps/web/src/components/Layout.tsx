@@ -235,8 +235,8 @@ const institutionalNavigation: NavItem[] = [
   { name: 'Mi Espacio', href: '/my-workspace', icon: LayoutGrid, roles: ['DOCENTE', 'COORDINADOR'], module: 'TEACHER_WORKSPACE' },
 
   // Aula Virtual
-  { name: 'Aula Virtual', href: '/classroom', icon: MonitorPlay, roles: ['DOCENTE', 'COORDINADOR'] },
-  { name: 'Mis Clases', href: '/my-classes', icon: MonitorPlay, roles: ['ESTUDIANTE', 'ACUDIENTE'] },
+  { name: 'Aula Virtual', href: '/classroom', icon: MonitorPlay, roles: ['DOCENTE', 'COORDINADOR'], module: 'VIRTUAL_CLASSROOM' },
+  { name: 'Mis Clases', href: '/my-classes', icon: MonitorPlay, roles: ['ESTUDIANTE', 'ACUDIENTE'], module: 'VIRTUAL_CLASSROOM' },
 
   // Documentos y Gestión
   { name: 'Documentos', href: '/institutional-documents', icon: FolderOpen, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'SECRETARIA'] },

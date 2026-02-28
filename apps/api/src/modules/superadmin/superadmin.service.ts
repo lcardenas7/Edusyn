@@ -266,6 +266,7 @@ export class SuperadminService {
       'DIAGNOSIS': ['DIAGNOSIS_'],
       'PAYMENTS': ['PAYMENTS_'],
       'TEACHER_WORKSPACE': ['TEACHER_WORKSPACE_'],
+      'VIRTUAL_CLASSROOM': ['VCLASS_'],
     };
 
     // Eliminar módulos actuales y crear los nuevos con sus features
