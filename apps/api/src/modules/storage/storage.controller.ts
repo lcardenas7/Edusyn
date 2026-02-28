@@ -135,6 +135,50 @@ export class StorageController {
     };
   }
 
+  @Post('upload/classroom-material')
+  @Roles('DOCENTE', 'COORDINADOR')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadClassroomMaterial(
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No se proporcionó ningún archivo');
+    }
+
+    const institutionId = req.user.institutionId;
+    if (!institutionId) {
+      throw new BadRequestException('No se pudo determinar la institución del usuario');
+    }
+
+    // Max 10MB
+    if (file.size > 10 * 1024 * 1024) {
+      throw new BadRequestException('El archivo excede el límite de 10MB');
+    }
+
+    const result = await this.storageService.uploadGalleryImage(
+      institutionId,
+      file,
+      'classroom',
+    );
+
+    let signedUrl = result.url;
+    if (result.path && !result.path.startsWith('http')) {
+      try {
+        signedUrl = await this.storageService.resolveFileUrl(result.path, 3600);
+      } catch { /* usar url original */ }
+    }
+
+    return {
+      success: true,
+      data: {
+        ...result,
+        url: signedUrl,
+        path: result.path,
+      },
+    };
+  }
+
   @Get('resolve-url')
   async resolveUrl(@Query('path') path: string) {
     if (!path) throw new BadRequestException('Se requiere el parámetro "path"');

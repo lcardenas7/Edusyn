@@ -1753,4 +1753,13 @@ export const classroomApi = {
   updateAnnouncement: (announcementId: string, data: { title?: string; content?: string; isPinned?: boolean }) =>
     api.put(`/classrooms/announcements/${announcementId}`, data),
   deleteAnnouncement: (announcementId: string) => api.delete(`/classrooms/announcements/${announcementId}`),
+
+  // File upload for classroom materials (documents, images)
+  uploadMaterial: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/storage/upload/classroom-material', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
 }
