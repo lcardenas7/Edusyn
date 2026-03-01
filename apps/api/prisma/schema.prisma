@@ -1101,8 +1101,8 @@ model TeacherAssignment {
   institution  Institution @relation("RlsInstitutionTA", fields: [institutionId], references: [id])
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
   group        Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  teacher      User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  teacher      User         @relation(fields: [teacherId], references: [id], onDelete: Restrict)
 
   evaluativeActivities EvaluativeActivity[]
   evaluationPlans EvaluationPlan[]
@@ -1651,7 +1651,7 @@ model StudentGrade {
 
   institution        Institution        @relation("RlsInstitutionSG", fields: [institutionId], references: [id])
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
-  evaluativeActivity EvaluativeActivity @relation(fields: [evaluativeActivityId], references: [id], onDelete: Cascade)
+  evaluativeActivity EvaluativeActivity @relation(fields: [evaluativeActivityId], references: [id], onDelete: Restrict)
 
   @@unique([studentEnrollmentId, evaluativeActivityId])
 }
@@ -1671,7 +1671,7 @@ model PeriodFinalGrade {
   institution       Institution       @relation("RlsInstitutionPFG", fields: [institutionId], references: [id])
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
   academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
-  subject           Subject           @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subject           Subject           @relation(fields: [subjectId], references: [id], onDelete: Restrict)
   enteredBy         User              @relation("PeriodGradeEnteredBy", fields: [enteredById], references: [id])
 
   @@unique([studentEnrollmentId, academicTermId, subjectId])
@@ -1695,7 +1695,7 @@ model PartialGrade {
 
   institution        Institution       @relation("RlsInstitutionPG", fields: [institutionId], references: [id])
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
-  teacherAssignment TeacherAssignment @relation(fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
+  teacherAssignment TeacherAssignment @relation(fields: [teacherAssignmentId], references: [id], onDelete: Restrict)
   academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
 
   @@unique([studentEnrollmentId, teacherAssignmentId, academicTermId, componentType, activityIndex])
