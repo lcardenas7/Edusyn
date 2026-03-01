@@ -1,6 +1,7 @@
 /**
  * Script para agregar valores faltantes a enums de PostgreSQL.
- * Se ejecuta antes de prisma db push para evitar errores de sincronización.
+ * LEGACY: Este script ya no se usa en producción (Railway usa prisma migrate deploy).
+ * Se conserva solo como utilidad manual de emergencia.
  * 
  * IMPORTANTE: Prisma (tanto $executeRawUnsafe como db execute) envuelve 
  * queries en transacciones implícitas. PostgreSQL prohíbe ALTER TYPE ADD VALUE
