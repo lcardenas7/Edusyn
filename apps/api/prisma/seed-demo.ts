@@ -195,6 +195,14 @@ function pickAttendanceStatus(studentProfile: string, forceAbsent: boolean): str
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function seedDemo() {
+  // ─── PROTECCIÓN: Solo permitir en entornos autorizados ─────────────────
+  if (!process.env.ALLOW_DEMO_SEED && process.env.NODE_ENV === 'production') {
+    throw new Error(
+      '❌ Demo seed no permitido en este entorno.\n' +
+      '   Para habilitar, agrega la variable ALLOW_DEMO_SEED=true en Railway.'
+    );
+  }
+
   console.log('═══════════════════════════════════════════════════════════════');
   console.log('🏫 SEED DEMO - Colegio Demo Excelencia Académica');
   console.log('═══════════════════════════════════════════════════════════════\n');
@@ -222,6 +230,7 @@ async function seedDemo() {
       daneCode: DEMO_DANE_CODE,
       nit: '999999999-0',
       status: 'ACTIVE',
+      isDemo: true, // Marca como institución demo - permite seed y limpieza
       email: 'info@demo-excelencia.edu.co',
       phone: '3001234567',
       address: 'Calle 100 # 50-25, Bogotá D.C.',

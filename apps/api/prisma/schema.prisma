@@ -416,6 +416,9 @@ model Institution {
   enableDifferentialSupport Boolean            @default(false) // Activa/desactiva módulo APD
   allowTeacherAccess        Boolean            @default(true)  // Permite a docentes acceder al módulo APD
 
+  // Control de entorno
+  isDemo                    Boolean            @default(false) // Institución de demostración (permite seed demo, limpieza total)
+
   // Relaciones
   createdBy   User?             @relation("InstitutionCreatedBy", fields: [createdById], references: [id])
   modules     InstitutionModule[]  // Módulos habilitados
