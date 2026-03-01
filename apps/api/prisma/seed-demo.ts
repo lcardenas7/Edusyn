@@ -25,7 +25,7 @@ const prisma = new PrismaClient();
 // DATOS ESTÁTICOS
 // ═══════════════════════════════════════════════════════════════════════════
 
-const DEMO_INSTITUTION_SLUG = 'colegio-demo-excelencia-academica';
+const DEMO_INSTITUTION_SLUG = 'ied-del-saber';
 const DEMO_DANE_CODE = '999999999999';
 const DEMO_PASSWORD = 'Demo2026!';
 
@@ -195,8 +195,16 @@ function pickAttendanceStatus(studentProfile: string, forceAbsent: boolean): str
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function seedDemo() {
+  // ─── PROTECCIÓN: Solo permitir en entornos autorizados ─────────────────
+  if (!process.env.ALLOW_DEMO_SEED && process.env.NODE_ENV === 'production') {
+    throw new Error(
+      '❌ Demo seed no permitido en este entorno.\n' +
+      '   Para habilitar, agrega la variable ALLOW_DEMO_SEED=true en Railway.'
+    );
+  }
+
   console.log('═══════════════════════════════════════════════════════════════');
-  console.log('🏫 SEED DEMO - Colegio Demo Excelencia Académica');
+  console.log('🏫 SEED DEMO - IED DEL SABER');
   console.log('═══════════════════════════════════════════════════════════════\n');
 
   // ─── PASO 0: Verificar idempotencia ────────────────────────────────────
@@ -217,12 +225,13 @@ async function seedDemo() {
   console.log('📌 PASO 1: Creando institución...');
   const institution = await prisma.institution.create({
     data: {
-      name: 'Colegio Demo Excelencia Académica',
+      name: 'IED DEL SABER',
       slug: DEMO_INSTITUTION_SLUG,
       daneCode: DEMO_DANE_CODE,
       nit: '999999999-0',
       status: 'ACTIVE',
-      email: 'info@demo-excelencia.edu.co',
+      isDemo: true, // Marca como institución demo - permite seed y limpieza
+      email: 'info@ieddelsaber.edu.co',
       phone: '3001234567',
       address: 'Calle 100 # 50-25, Bogotá D.C.',
     },
@@ -974,7 +983,7 @@ async function seedDemo() {
   console.log('═══════════════════════════════════════════════════════════════');
   console.log('✅ SEED DEMO COMPLETADO EXITOSAMENTE');
   console.log('═══════════════════════════════════════════════════════════════\n');
-  console.log('🏫 Institución: Colegio Demo Excelencia Académica');
+  console.log('🏫 Institución: IED DEL SABER');
   console.log(`📅 Año académico: 2026 (${terms.length} períodos)`);
   console.log(`   - P1: FINALIZED (con snapshot)`);
   console.log(`   - P2: OPEN`);
