@@ -63,7 +63,7 @@ export const institutionConfigApi = {
 // Institution Profile (identidad institucional - para admin institucional)
 export const institutionProfileApi = {
   get: () => api.get('/institution-config/profile'),
-  update: (data: { name?: string; nit?: string; daneCode?: string; address?: string; phone?: string; email?: string; website?: string; logo?: string }) => 
+  update: (data: { name?: string; nit?: string; daneCode?: string; city?: string; address?: string; phone?: string; email?: string; website?: string; logo?: string }) => 
     api.put('/institution-config/profile', data),
 }
 
