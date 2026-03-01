@@ -4,6 +4,19 @@ import { seedPermissions } from './seeds/permissions.seed';
 
 const prisma = new PrismaClient();
 
+// ─── Generador determinista de notas (sin faker) ────────────────────────────
+// Produce notas entre 1.0 y 5.0 con distribución realista
+function deterministicScore(studentIdx: number, subjectIdx: number, termIdx: number, activityIdx: number): number {
+  // Base por estudiante (simula capacidad académica)
+  const studentBases = [4.2, 3.5, 2.8, 4.0, 3.8, 3.0, 4.5, 3.2, 3.6, 4.1];
+  const base = studentBases[studentIdx % studentBases.length];
+  // Variación por materia y actividad
+  const variation = ((subjectIdx * 7 + termIdx * 13 + activityIdx * 3) % 15 - 7) / 10;
+  const raw = base + variation;
+  // Clamp entre 1.0 y 5.0, redondear a 1 decimal
+  return Math.round(Math.max(1.0, Math.min(5.0, raw)) * 10) / 10;
+}
+
 async function main() {
   console.log('🌱 Iniciando seed de base de datos...\n');
 
@@ -12,17 +25,17 @@ async function main() {
   // ============================================
   console.log('📋 Creando roles...');
   
-  const roles = ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'ACUDIENTE'];
+  const roleNames = ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE', 'ACUDIENTE'];
   const createdRoles: Record<string, any> = {};
   
-  for (const roleName of roles) {
+  for (const roleName of roleNames) {
     createdRoles[roleName] = await prisma.role.upsert({
       where: { name: roleName },
       update: {},
       create: { name: roleName },
     });
   }
-  console.log(`   ✅ ${roles.length} roles creados\n`);
+  console.log(`   ✅ ${roleNames.length} roles creados\n`);
 
   // ============================================
   // 2. CREAR INSTITUCIÓN
@@ -43,7 +56,7 @@ async function main() {
   console.log(`   ✅ Institución: ${institution.name}\n`);
 
   // ============================================
-  // 2.5 HABILITAR MÓDULOS DE LA INSTITUCIÓN
+  // 2.5 HABILITAR MÓDULOS
   // ============================================
   console.log('📦 Habilitando módulos...');
   
@@ -65,60 +78,37 @@ async function main() {
     await prisma.institutionModule.upsert({
       where: { institutionId_module: { institutionId: institution.id, module: mod.module as any } },
       update: { isActive: true, features: mod.features },
-      create: {
-        institutionId: institution.id,
-        module: mod.module as any,
-        isActive: true,
-        features: mod.features,
-      },
+      create: { institutionId: institution.id, module: mod.module as any, isActive: true, features: mod.features },
     });
   }
   console.log(`   ✅ ${modulesToEnable.length} módulos habilitados\n`);
 
   // ============================================
-  // 3. CREAR SEDE PRINCIPAL
+  // 3. SEDE PRINCIPAL
   // ============================================
   console.log('🏢 Creando sede...');
   
   const campus = await prisma.campus.upsert({
     where: { institutionId_name: { institutionId: institution.id, name: 'Sede Principal' } },
     update: {},
-    create: {
-      name: 'Sede Principal',
-      address: 'Calle 45 # 23-15',
-      institutionId: institution.id,
-    },
+    create: { name: 'Sede Principal', address: 'Calle 45 # 23-15', institutionId: institution.id },
   });
   console.log(`   ✅ Sede: ${campus.name}\n`);
 
   // ============================================
-  // 4. CREAR JORNADAS
+  // 4. JORNADA
   // ============================================
-  console.log('⏰ Creando jornadas...');
+  console.log('⏰ Creando jornada...');
   
   const morningShift = await prisma.shift.upsert({
     where: { campusId_type: { campusId: campus.id, type: SchoolShift.MORNING } },
     update: {},
-    create: {
-      name: 'Mañana',
-      type: SchoolShift.MORNING,
-      campusId: campus.id,
-    },
+    create: { name: 'Mañana', type: SchoolShift.MORNING, campusId: campus.id },
   });
-
-  const afternoonShift = await prisma.shift.upsert({
-    where: { campusId_type: { campusId: campus.id, type: SchoolShift.AFTERNOON } },
-    update: {},
-    create: {
-      name: 'Tarde',
-      type: SchoolShift.AFTERNOON,
-      campusId: campus.id,
-    },
-  });
-  console.log(`   ✅ 2 jornadas creadas\n`);
+  console.log(`   ✅ Jornada: ${morningShift.name}\n`);
 
   // ============================================
-  // 5. CREAR AÑO ACADÉMICO
+  // 5. AÑO ACADÉMICO
   // ============================================
   console.log('📅 Creando año académico...');
   
@@ -127,333 +117,100 @@ async function main() {
     update: {},
     create: {
       year: 2026,
+      name: 'Año Lectivo 2026',
       startDate: new Date('2026-01-20'),
       endDate: new Date('2026-11-30'),
+      status: 'ACTIVE',
+      activatedAt: new Date('2026-01-20'),
       institutionId: institution.id,
     },
   });
   console.log(`   ✅ Año académico: ${academicYear.year}\n`);
 
   // ============================================
-  // 6. CREAR PERÍODOS ACADÉMICOS
+  // 6. PERÍODOS ACADÉMICOS (2 períodos como se solicitó)
   // ============================================
   console.log('📆 Creando períodos académicos...');
   
-  const periods = [
-    { name: 'Período 1', order: 1, weight: 25, start: '2026-01-20', end: '2026-04-05' },
-    { name: 'Período 2', order: 2, weight: 25, start: '2026-04-06', end: '2026-06-20' },
-    { name: 'Período 3', order: 3, weight: 25, start: '2026-07-15', end: '2026-09-30' },
-    { name: 'Período 4', order: 4, weight: 25, start: '2026-10-01', end: '2026-11-30' },
+  const termsData = [
+    { name: 'Período 1', order: 1, weight: 50, start: '2026-01-20', end: '2026-06-15' },
+    { name: 'Período 2', order: 2, weight: 50, start: '2026-07-15', end: '2026-11-30' },
   ];
 
-  for (const p of periods) {
-    await prisma.academicTerm.upsert({
-      where: { academicYearId_order: { academicYearId: academicYear.id, order: p.order } },
+  const terms: any[] = [];
+  for (const t of termsData) {
+    const term = await prisma.academicTerm.upsert({
+      where: { academicYearId_order: { academicYearId: academicYear.id, order: t.order } },
       update: {},
       create: {
-        name: p.name,
+        name: t.name,
         type: AcademicTermType.PERIOD,
-        order: p.order,
-        weightPercentage: p.weight,
-        startDate: new Date(p.start),
-        endDate: new Date(p.end),
+        order: t.order,
+        weightPercentage: t.weight,
+        status: 'OPEN',
+        startDate: new Date(t.start),
+        endDate: new Date(t.end),
         academicYearId: academicYear.id,
       },
     });
+    terms.push(term);
   }
-  console.log(`   ✅ ${periods.length} períodos creados\n`);
+  console.log(`   ✅ ${terms.length} períodos creados\n`);
 
   // ============================================
-  // 7. CREAR GRADOS
+  // 7. GRADO (6° Secundaria)
   // ============================================
-  console.log('🎓 Creando grados...');
+  console.log('🎓 Creando grado...');
   
-  const gradesData = [
-    { name: '6°', stage: GradeStage.BASICA_SECUNDARIA, number: 6 },
-    { name: '7°', stage: GradeStage.BASICA_SECUNDARIA, number: 7 },
-    { name: '8°', stage: GradeStage.BASICA_SECUNDARIA, number: 8 },
-    { name: '9°', stage: GradeStage.BASICA_SECUNDARIA, number: 9 },
-    { name: '10°', stage: GradeStage.MEDIA, number: 10 },
-    { name: '11°', stage: GradeStage.MEDIA, number: 11 },
-  ];
-  const createdGrades: Record<string, any> = {};
+  const grade = await prisma.grade.upsert({
+    where: { stage_name: { stage: GradeStage.BASICA_SECUNDARIA, name: '6°' } },
+    update: {},
+    create: { name: '6°', stage: GradeStage.BASICA_SECUNDARIA, number: 6 },
+  });
+  console.log(`   ✅ Grado: ${grade.name}\n`);
 
-  for (const g of gradesData) {
-    createdGrades[g.name] = await prisma.grade.upsert({
-      where: { stage_name: { stage: g.stage, name: g.name } },
+  // ============================================
+  // 8. GRUPO (6°A)
+  // ============================================
+  console.log('👥 Creando grupo...');
+  
+  const group = await prisma.group.upsert({
+    where: { campusId_shiftId_gradeId_name: { campusId: campus.id, shiftId: morningShift.id, gradeId: grade.id, name: 'A' } },
+    update: {},
+    create: { name: 'A', campusId: campus.id, gradeId: grade.id, shiftId: morningShift.id },
+  });
+  console.log(`   ✅ Grupo: 6°A\n`);
+
+  // ============================================
+  // 9. ÁREA Y ASIGNATURAS (1 área, 3 asignaturas)
+  // ============================================
+  console.log('📚 Creando área y asignaturas...');
+  
+  const area = await prisma.area.upsert({
+    where: { institutionId_name: { institutionId: institution.id, name: 'Ciencias Básicas' } },
+    update: {},
+    create: { name: 'Ciencias Básicas', code: 'CB', institutionId: institution.id, order: 1 },
+  });
+
+  const subjectsData = [
+    { name: 'Matemáticas', code: 'MAT', order: 1 },
+    { name: 'Lenguaje', code: 'LEN', order: 2 },
+    { name: 'Ciencias', code: 'CIE', order: 3 },
+  ];
+
+  const subjects: any[] = [];
+  for (const s of subjectsData) {
+    const subject = await prisma.subject.upsert({
+      where: { areaId_name: { areaId: area.id, name: s.name } },
       update: {},
-      create: {
-        name: g.name,
-        stage: g.stage,
-        number: g.number,
-      },
+      create: { name: s.name, code: s.code, areaId: area.id, order: s.order },
     });
+    subjects.push(subject);
   }
-  console.log(`   ✅ ${gradesData.length} grados creados\n`);
+  console.log(`   ✅ 1 área, ${subjects.length} asignaturas\n`);
 
   // ============================================
-  // 8. CREAR GRUPOS
-  // ============================================
-  console.log('👥 Creando grupos...');
-  
-  const groupNames = ['A', 'B'];
-  let groupCount = 0;
-
-  for (const g of gradesData) {
-    for (const groupName of groupNames) {
-      await prisma.group.upsert({
-        where: { 
-          campusId_shiftId_gradeId_name: { 
-            campusId: campus.id, 
-            shiftId: groupName === 'A' ? morningShift.id : afternoonShift.id,
-            gradeId: createdGrades[g.name].id,
-            name: groupName 
-          } 
-        },
-        update: {},
-        create: {
-          name: groupName,
-          campusId: campus.id,
-          gradeId: createdGrades[g.name].id,
-          shiftId: groupName === 'A' ? morningShift.id : afternoonShift.id,
-        },
-      });
-      groupCount++;
-    }
-  }
-  console.log(`   ✅ ${groupCount} grupos creados\n`);
-
-  // ============================================
-  // 9. CREAR ÁREAS Y ASIGNATURAS
-  // ============================================
-  console.log('📚 Creando áreas y asignaturas...');
-  
-  const areasData = [
-    { name: 'Matemáticas', subjects: ['Matemáticas', 'Geometría', 'Estadística'] },
-    { name: 'Ciencias Naturales', subjects: ['Biología', 'Química', 'Física'] },
-    { name: 'Ciencias Sociales', subjects: ['Historia', 'Geografía', 'Democracia'] },
-    { name: 'Humanidades', subjects: ['Lengua Castellana', 'Inglés', 'Filosofía'] },
-    { name: 'Educación Artística', subjects: ['Artes Plásticas', 'Música'] },
-    { name: 'Educación Física', subjects: ['Educación Física', 'Deportes'] },
-    { name: 'Tecnología', subjects: ['Tecnología e Informática'] },
-  ];
-
-  let subjectCount = 0;
-  for (const areaData of areasData) {
-    // Buscar área existente o crear nueva
-    let area = await prisma.area.findFirst({
-      where: { 
-        institutionId: institution.id, 
-        name: areaData.name,
-      },
-    });
-    
-    if (!area) {
-      area = await prisma.area.create({
-        data: {
-          name: areaData.name,
-          institutionId: institution.id,
-        },
-      });
-    }
-
-    for (const subjectName of areaData.subjects) {
-      // Buscar asignatura existente o crear nueva
-      let subject = await prisma.subject.findFirst({
-        where: { 
-          areaId: area.id, 
-          name: subjectName,
-        },
-      });
-      
-      if (!subject) {
-        subject = await prisma.subject.create({
-          data: {
-            name: subjectName,
-            areaId: area.id,
-            order: subjectCount,
-          },
-        });
-      }
-      subjectCount++;
-    }
-  }
-  console.log(`   ✅ ${areasData.length} áreas y ${subjectCount} asignaturas creadas\n`);
-
-  // ============================================
-  // 10. CREAR USUARIOS DEL SISTEMA
-  // ============================================
-  console.log('👤 Creando usuarios...');
-  
-  const hashedPassword = await bcryptjs.hash('Demo2026!', 10);
-  const superAdminPassword = await bcryptjs.hash('Super2026!', 10);
-
-  // SuperAdmin del sistema (sin institución)
-  const superAdminUser = await prisma.user.upsert({
-    where: { email: 'superadmin@edusyn.co' },
-    update: { username: 'superadmin', isSuperAdmin: true },
-    create: {
-      email: 'superadmin@edusyn.co',
-      username: 'superadmin',
-      passwordHash: superAdminPassword,
-      firstName: 'Super',
-      lastName: 'Administrador',
-      documentType: 'CC',
-      documentNumber: '0000000001',
-      isActive: true,
-      isSuperAdmin: true,
-    },
-  });
-
-  await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: superAdminUser.id, roleId: createdRoles['SUPERADMIN'].id } },
-    update: {},
-    create: { userId: superAdminUser.id, roleId: createdRoles['SUPERADMIN'].id },
-  });
-  console.log('   ✅ SuperAdmin creado: superadmin / Super2026!');
-
-  // Admin
-  const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@villasanpablo.edu.co' },
-    update: { username: 'admin' },
-    create: {
-      email: 'admin@villasanpablo.edu.co',
-      username: 'admin',
-      passwordHash: hashedPassword,
-      firstName: 'Administrador',
-      lastName: 'Sistema',
-      documentType: 'CC',
-      documentNumber: '1234567890',
-      isActive: true,
-    },
-  });
-
-  await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: adminUser.id, roleId: createdRoles['ADMIN_INSTITUTIONAL'].id } },
-    update: {},
-    create: { userId: adminUser.id, roleId: createdRoles['ADMIN_INSTITUTIONAL'].id },
-  });
-
-  // Coordinador
-  const coordinatorUser = await prisma.user.upsert({
-    where: { email: 'coordinador@villasanpablo.edu.co' },
-    update: { username: 'mcoordinadora' },
-    create: {
-      email: 'coordinador@villasanpablo.edu.co',
-      username: 'mcoordinadora',
-      passwordHash: hashedPassword,
-      firstName: 'María',
-      lastName: 'Coordinadora',
-      documentType: 'CC',
-      documentNumber: '9876543210',
-      isActive: true,
-    },
-  });
-
-  await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: coordinatorUser.id, roleId: createdRoles['COORDINADOR'].id } },
-    update: {},
-    create: { userId: coordinatorUser.id, roleId: createdRoles['COORDINADOR'].id },
-  });
-
-  // Docente de ejemplo
-  const teacherUser = await prisma.user.upsert({
-    where: { email: 'docente@villasanpablo.edu.co' },
-    update: { username: 'cdocente' },
-    create: {
-      email: 'docente@villasanpablo.edu.co',
-      username: 'cdocente',
-      passwordHash: hashedPassword,
-      firstName: 'Carlos',
-      lastName: 'Docente',
-      documentType: 'CC',
-      documentNumber: '5555555555',
-      isActive: true,
-    },
-  });
-
-  await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: teacherUser.id, roleId: createdRoles['DOCENTE'].id } },
-    update: {},
-    create: { userId: teacherUser.id, roleId: createdRoles['DOCENTE'].id },
-  });
-
-  // Asociar usuarios a la institución (InstitutionUser)
-  await prisma.institutionUser.upsert({
-    where: { userId_institutionId: { userId: adminUser.id, institutionId: institution.id } },
-    update: { isAdmin: true },
-    create: { userId: adminUser.id, institutionId: institution.id, isAdmin: true },
-  });
-
-  await prisma.institutionUser.upsert({
-    where: { userId_institutionId: { userId: coordinatorUser.id, institutionId: institution.id } },
-    update: {},
-    create: { userId: coordinatorUser.id, institutionId: institution.id, isAdmin: false },
-  });
-
-  await prisma.institutionUser.upsert({
-    where: { userId_institutionId: { userId: teacherUser.id, institutionId: institution.id } },
-    update: {},
-    create: { userId: teacherUser.id, institutionId: institution.id, isAdmin: false },
-  });
-
-  console.log(`   ✅ 3 usuarios creados y asociados a la institución\n`);
-
-  // ============================================
-  // 11. CREAR ASIGNACIONES DEL DOCENTE
-  // ============================================
-  console.log('📚 Creando asignaciones del docente...');
-
-  // Obtener algunas asignaturas y grupos para asignar al docente
-  const matematicas = await prisma.subject.findFirst({ where: { name: 'Matemáticas' } });
-  const fisica = await prisma.subject.findFirst({ where: { name: 'Física' } });
-  const grupo6A = await prisma.group.findFirst({ where: { name: 'A', grade: { name: 'Sexto' } } });
-  const grupo6B = await prisma.group.findFirst({ where: { name: 'B', grade: { name: 'Sexto' } } });
-  const grupo7A = await prisma.group.findFirst({ where: { name: 'A', grade: { name: 'Séptimo' } } });
-
-  if (matematicas && grupo6A && academicYear) {
-    await prisma.teacherAssignment.create({
-      data: {
-        institutionId: institution.id,
-        teacherId: teacherUser.id,
-        subjectId: matematicas.id,
-        groupId: grupo6A.id,
-        academicYearId: academicYear.id,
-        weeklyHours: 5,
-      },
-    });
-  }
-
-  if (matematicas && grupo6B && academicYear) {
-    await prisma.teacherAssignment.create({
-      data: {
-        institutionId: institution.id,
-        teacherId: teacherUser.id,
-        subjectId: matematicas.id,
-        groupId: grupo6B.id,
-        academicYearId: academicYear.id,
-        weeklyHours: 5,
-      },
-    });
-  }
-
-  if (fisica && grupo7A && academicYear) {
-    await prisma.teacherAssignment.create({
-      data: {
-        institutionId: institution.id,
-        teacherId: teacherUser.id,
-        subjectId: fisica.id,
-        groupId: grupo7A.id,
-        academicYearId: academicYear.id,
-        weeklyHours: 4,
-      },
-    });
-  }
-
-  console.log(`   ✅ Asignaciones creadas para el docente Carlos\n`);
-
-  // ============================================
-  // 12. CREAR ESCALA DE VALORACIÓN
+  // 10. ESCALA DE VALORACIÓN
   // ============================================
   console.log('📊 Creando escala de valoración...');
   
@@ -468,23 +225,412 @@ async function main() {
     await prisma.performanceScale.upsert({
       where: { institutionId_level: { institutionId: institution.id, level: pl.level } },
       update: {},
-      create: {
-        level: pl.level,
-        minScore: pl.minScore,
-        maxScore: pl.maxScore,
-        institutionId: institution.id,
-      },
+      create: { level: pl.level, minScore: pl.minScore, maxScore: pl.maxScore, institutionId: institution.id },
     });
   }
-  console.log(`   ✅ ${performanceLevels.length} niveles de desempeño creados\n`);
+  console.log(`   ✅ ${performanceLevels.length} niveles de desempeño\n`);
 
   // ============================================
-  // 12. CREAR PERMISOS DEL SISTEMA
+  // 11. COMPONENTES EVALUATIVOS (institucional)
+  // ============================================
+  console.log('📝 Creando componentes evaluativos...');
+
+  const componentCog = await prisma.evaluationComponent.upsert({
+    where: { institutionId_code: { institutionId: institution.id, code: 'COGNITIVO' } },
+    update: {},
+    create: { institutionId: institution.id, code: 'COGNITIVO', name: 'Cognitivo' },
+  });
+
+  const componentProc = await prisma.evaluationComponent.upsert({
+    where: { institutionId_code: { institutionId: institution.id, code: 'PROCEDIMENTAL' } },
+    update: {},
+    create: { institutionId: institution.id, code: 'PROCEDIMENTAL', name: 'Procedimental' },
+  });
+  console.log(`   ✅ 2 componentes evaluativos\n`);
+
+  // ============================================
+  // 12. USUARIOS: SuperAdmin, Admin, Coordinador, 3 Docentes
+  // ============================================
+  console.log('👤 Creando usuarios...');
+  
+  const hashedPassword = await bcryptjs.hash('Demo2026!', 10);
+
+  // SuperAdmin
+  const superAdmin = await prisma.user.upsert({
+    where: { email: 'superadmin@edusyn.co' },
+    update: {},
+    create: {
+      email: 'superadmin@edusyn.co', username: 'superadmin',
+      passwordHash: await bcryptjs.hash('Super2026!', 10),
+      firstName: 'Super', lastName: 'Administrador',
+      documentType: 'CC', documentNumber: '0000000001', isSuperAdmin: true,
+    },
+  });
+  await prisma.userRole.upsert({
+    where: { userId_roleId: { userId: superAdmin.id, roleId: createdRoles['SUPERADMIN'].id } },
+    update: {},
+    create: { userId: superAdmin.id, roleId: createdRoles['SUPERADMIN'].id },
+  });
+
+  // Admin institucional
+  const adminUser = await prisma.user.upsert({
+    where: { email: 'admin@villasanpablo.edu.co' },
+    update: {},
+    create: {
+      email: 'admin@villasanpablo.edu.co', username: 'admin',
+      passwordHash: hashedPassword,
+      firstName: 'Administrador', lastName: 'Sistema',
+      documentType: 'CC', documentNumber: '1234567890',
+    },
+  });
+  await prisma.userRole.upsert({
+    where: { userId_roleId: { userId: adminUser.id, roleId: createdRoles['ADMIN_INSTITUTIONAL'].id } },
+    update: {},
+    create: { userId: adminUser.id, roleId: createdRoles['ADMIN_INSTITUTIONAL'].id },
+  });
+  await prisma.institutionUser.upsert({
+    where: { userId_institutionId: { userId: adminUser.id, institutionId: institution.id } },
+    update: { isAdmin: true },
+    create: { userId: adminUser.id, institutionId: institution.id, isAdmin: true },
+  });
+
+  // Coordinador
+  const coordinatorUser = await prisma.user.upsert({
+    where: { email: 'coordinador@villasanpablo.edu.co' },
+    update: {},
+    create: {
+      email: 'coordinador@villasanpablo.edu.co', username: 'mcoordinadora',
+      passwordHash: hashedPassword,
+      firstName: 'María', lastName: 'Coordinadora',
+      documentType: 'CC', documentNumber: '9876543210',
+    },
+  });
+  await prisma.userRole.upsert({
+    where: { userId_roleId: { userId: coordinatorUser.id, roleId: createdRoles['COORDINADOR'].id } },
+    update: {},
+    create: { userId: coordinatorUser.id, roleId: createdRoles['COORDINADOR'].id },
+  });
+  await prisma.institutionUser.upsert({
+    where: { userId_institutionId: { userId: coordinatorUser.id, institutionId: institution.id } },
+    update: {},
+    create: { userId: coordinatorUser.id, institutionId: institution.id },
+  });
+
+  // 3 Docentes (uno por materia)
+  const teachersData = [
+    { email: 'prof.matematicas@villasanpablo.edu.co', username: 'profmat', firstName: 'Carlos', lastName: 'Ramírez', doc: '5500000001' },
+    { email: 'prof.lenguaje@villasanpablo.edu.co', username: 'proflen', firstName: 'Laura', lastName: 'Gómez', doc: '5500000002' },
+    { email: 'prof.ciencias@villasanpablo.edu.co', username: 'profcie', firstName: 'Andrés', lastName: 'Martínez', doc: '5500000003' },
+  ];
+
+  const teachers: any[] = [];
+  for (const td of teachersData) {
+    const teacher = await prisma.user.upsert({
+      where: { email: td.email },
+      update: {},
+      create: {
+        email: td.email, username: td.username,
+        passwordHash: hashedPassword,
+        firstName: td.firstName, lastName: td.lastName,
+        documentType: 'CC', documentNumber: td.doc,
+      },
+    });
+    await prisma.userRole.upsert({
+      where: { userId_roleId: { userId: teacher.id, roleId: createdRoles['DOCENTE'].id } },
+      update: {},
+      create: { userId: teacher.id, roleId: createdRoles['DOCENTE'].id },
+    });
+    await prisma.institutionUser.upsert({
+      where: { userId_institutionId: { userId: teacher.id, institutionId: institution.id } },
+      update: {},
+      create: { userId: teacher.id, institutionId: institution.id },
+    });
+    teachers.push(teacher);
+  }
+  console.log(`   ✅ 1 SuperAdmin, 1 Admin, 1 Coordinador, ${teachers.length} Docentes\n`);
+
+  // ============================================
+  // 13. ASIGNACIONES DOCENTES (3: uno por materia)
+  // ============================================
+  console.log('📚 Creando asignaciones docentes...');
+
+  const assignments: any[] = [];
+  for (let i = 0; i < subjects.length; i++) {
+    const existing = await prisma.teacherAssignment.findFirst({
+      where: {
+        academicYearId: academicYear.id,
+        groupId: group.id,
+        subjectId: subjects[i].id,
+        teacherId: teachers[i].id,
+      },
+    });
+    if (existing) {
+      assignments.push(existing);
+    } else {
+      const assignment = await prisma.teacherAssignment.create({
+        data: {
+          institutionId: institution.id,
+          teacherId: teachers[i].id,
+          subjectId: subjects[i].id,
+          groupId: group.id,
+          academicYearId: academicYear.id,
+          weeklyHours: 5,
+          startDate: new Date('2026-01-20'),
+        },
+      });
+      assignments.push(assignment);
+    }
+  }
+  console.log(`   ✅ ${assignments.length} asignaciones (1 por materia)\n`);
+
+  // ============================================
+  // 14. PLANES Y ACTIVIDADES EVALUATIVAS (2 por materia × 2 períodos = 12 total)
+  // ============================================
+  console.log('📝 Creando planes y actividades evaluativas...');
+
+  const allActivities: any[] = [];
+
+  for (let si = 0; si < assignments.length; si++) {
+    const assignment = assignments[si];
+    for (let ti = 0; ti < terms.length; ti++) {
+      const term = terms[ti];
+
+      // Plan de evaluación (1 por asignación+período)
+      const plan = await prisma.evaluationPlan.upsert({
+        where: { teacherAssignmentId_academicTermId: { teacherAssignmentId: assignment.id, academicTermId: term.id } },
+        update: {},
+        create: { teacherAssignmentId: assignment.id, academicTermId: term.id },
+      });
+
+      // Ponderaciones del plan: 60% Cognitivo, 40% Procedimental
+      await prisma.evaluationPlanComponentWeight.upsert({
+        where: { evaluationPlanId_componentId: { evaluationPlanId: plan.id, componentId: componentCog.id } },
+        update: {},
+        create: { evaluationPlanId: plan.id, componentId: componentCog.id, percentage: 60 },
+      });
+      await prisma.evaluationPlanComponentWeight.upsert({
+        where: { evaluationPlanId_componentId: { evaluationPlanId: plan.id, componentId: componentProc.id } },
+        update: {},
+        create: { evaluationPlanId: plan.id, componentId: componentProc.id, percentage: 40 },
+      });
+
+      // 2 actividades evaluativas por materia por período
+      const activityDefs = [
+        { name: `Examen ${subjectsData[si].name} P${ti + 1}`, component: componentCog, dueOffset: 30 },
+        { name: `Taller ${subjectsData[si].name} P${ti + 1}`, component: componentProc, dueOffset: 60 },
+      ];
+
+      for (const ad of activityDefs) {
+        const dueDate = new Date(term.startDate!);
+        dueDate.setDate(dueDate.getDate() + ad.dueOffset);
+
+        const activity = await prisma.evaluativeActivity.create({
+          data: {
+            institutionId: institution.id,
+            teacherAssignmentId: assignment.id,
+            academicTermId: term.id,
+            evaluationPlanId: plan.id,
+            componentId: ad.component.id,
+            name: ad.name,
+            dueDate,
+          },
+        });
+        allActivities.push({ activity, si, ti, component: ad.component });
+      }
+    }
+  }
+  console.log(`   ✅ ${allActivities.length} actividades evaluativas (2 × 3 materias × 2 períodos)\n`);
+
+  // ============================================
+  // 15. ESTUDIANTES (10)
+  // ============================================
+  console.log('🧑‍🎓 Creando estudiantes...');
+
+  const studentsData = [
+    { firstName: 'Juan', lastName: 'Pérez', doc: '1100000001' },
+    { firstName: 'María', lastName: 'López', doc: '1100000002' },
+    { firstName: 'Santiago', lastName: 'García', doc: '1100000003' },
+    { firstName: 'Valentina', lastName: 'Rodríguez', doc: '1100000004' },
+    { firstName: 'Sebastián', lastName: 'Martínez', doc: '1100000005' },
+    { firstName: 'Isabella', lastName: 'Hernández', doc: '1100000006' },
+    { firstName: 'Mateo', lastName: 'Díaz', doc: '1100000007' },
+    { firstName: 'Sofía', lastName: 'Torres', doc: '1100000008' },
+    { firstName: 'Daniel', lastName: 'Ramírez', doc: '1100000009' },
+    { firstName: 'Luciana', lastName: 'Castro', doc: '1100000010' },
+  ];
+
+  const students: any[] = [];
+  for (const sd of studentsData) {
+    const student = await prisma.student.upsert({
+      where: { institutionId_documentNumber: { institutionId: institution.id, documentNumber: sd.doc } },
+      update: {},
+      create: {
+        institutionId: institution.id,
+        documentType: 'TI',
+        documentNumber: sd.doc,
+        firstName: sd.firstName,
+        lastName: sd.lastName,
+        birthDate: new Date('2014-03-15'),
+        gender: sd.firstName.endsWith('a') ? 'F' : 'M',
+      },
+    });
+    students.push(student);
+  }
+  console.log(`   ✅ ${students.length} estudiantes\n`);
+
+  // ============================================
+  // 16. MATRÍCULAS (10, todas ACTIVE)
+  // ============================================
+  console.log('📋 Creando matrículas...');
+
+  const enrollments: any[] = [];
+  for (const student of students) {
+    const existing = await prisma.studentEnrollment.findUnique({
+      where: { studentId_academicYearId: { studentId: student.id, academicYearId: academicYear.id } },
+    });
+    if (existing) {
+      enrollments.push(existing);
+    } else {
+      const enrollment = await prisma.studentEnrollment.create({
+        data: {
+          institutionId: institution.id,
+          studentId: student.id,
+          academicYearId: academicYear.id,
+          groupId: group.id,
+          enrollmentType: 'NEW',
+          status: 'ACTIVE',
+          shift: SchoolShift.MORNING,
+          enrollmentDate: new Date('2026-01-20'),
+          enrolledById: adminUser.id,
+        },
+      });
+      enrollments.push(enrollment);
+    }
+  }
+  console.log(`   ✅ ${enrollments.length} matrículas activas\n`);
+
+  // ============================================
+  // 17. STUDENTGRADE (10 estudiantes × 12 actividades = 120)
+  // ============================================
+  console.log('📊 Creando notas por actividad (StudentGrade)...');
+
+  let studentGradeCount = 0;
+  for (let ei = 0; ei < enrollments.length; ei++) {
+    const enrollment = enrollments[ei];
+    for (const { activity, si, ti } of allActivities) {
+      const score = deterministicScore(ei, si, ti, studentGradeCount % 2);
+      await prisma.studentGrade.upsert({
+        where: { studentEnrollmentId_evaluativeActivityId: { studentEnrollmentId: enrollment.id, evaluativeActivityId: activity.id } },
+        update: { score },
+        create: {
+          institutionId: institution.id,
+          studentEnrollmentId: enrollment.id,
+          evaluativeActivityId: activity.id,
+          score,
+        },
+      });
+      studentGradeCount++;
+    }
+  }
+  console.log(`   ✅ ${studentGradeCount} notas de actividades\n`);
+
+  // ============================================
+  // 18. PARTIALGRADES (10 × 3 materias × 2 períodos × 2 componentes = 120)
+  // ============================================
+  console.log('📊 Creando notas parciales (PartialGrade)...');
+
+  let partialGradeCount = 0;
+  for (let ei = 0; ei < enrollments.length; ei++) {
+    const enrollment = enrollments[ei];
+    for (let si = 0; si < assignments.length; si++) {
+      const assignment = assignments[si];
+      for (let ti = 0; ti < terms.length; ti++) {
+        const term = terms[ti];
+        const componentTypes = [
+          { type: 'COGNITIVO', name: 'Examen' },
+          { type: 'PROCEDIMENTAL', name: 'Taller' },
+        ];
+        for (let ci = 0; ci < componentTypes.length; ci++) {
+          const ct = componentTypes[ci];
+          const score = deterministicScore(ei, si, ti, ci);
+
+          const existing = await prisma.partialGrade.findFirst({
+            where: {
+              studentEnrollmentId: enrollment.id,
+              teacherAssignmentId: assignment.id,
+              academicTermId: term.id,
+              componentType: ct.type,
+              activityIndex: 1,
+            },
+          });
+          if (!existing) {
+            await prisma.partialGrade.create({
+              data: {
+                institutionId: institution.id,
+                studentEnrollmentId: enrollment.id,
+                teacherAssignmentId: assignment.id,
+                academicTermId: term.id,
+                componentType: ct.type,
+                activityIndex: 1,
+                activityName: `${ct.name} ${subjectsData[si].name}`,
+                activityType: ct.name,
+                score,
+              },
+            });
+          }
+          partialGradeCount++;
+        }
+      }
+    }
+  }
+  console.log(`   ✅ ${partialGradeCount} notas parciales\n`);
+
+  // ============================================
+  // 19. PERIODFINALGRADE (10 × 3 materias × 2 períodos = 60)
+  // ============================================
+  console.log('📊 Creando notas finales de período (PeriodFinalGrade)...');
+
+  let periodFinalGradeCount = 0;
+  for (let ei = 0; ei < enrollments.length; ei++) {
+    const enrollment = enrollments[ei];
+    for (let si = 0; si < subjects.length; si++) {
+      const subject = subjects[si];
+      const teacher = teachers[si];
+      for (let ti = 0; ti < terms.length; ti++) {
+        const term = terms[ti];
+        // Promedio ponderado de las 2 actividades del período
+        const scoreCog = deterministicScore(ei, si, ti, 0);
+        const scoreProc = deterministicScore(ei, si, ti, 1);
+        const finalScore = Math.round((scoreCog * 0.6 + scoreProc * 0.4) * 10) / 10;
+
+        const existing = await prisma.periodFinalGrade.findUnique({
+          where: { studentEnrollmentId_academicTermId_subjectId: { studentEnrollmentId: enrollment.id, academicTermId: term.id, subjectId: subject.id } },
+        });
+        if (!existing) {
+          await prisma.periodFinalGrade.create({
+            data: {
+              institutionId: institution.id,
+              studentEnrollmentId: enrollment.id,
+              academicTermId: term.id,
+              subjectId: subject.id,
+              finalScore,
+              enteredById: teacher.id,
+            },
+          });
+        }
+        periodFinalGradeCount++;
+      }
+    }
+  }
+  console.log(`   ✅ ${periodFinalGradeCount} notas finales de período\n`);
+
+  // ============================================
+  // 20. PERMISOS DEL SISTEMA
   // ============================================
   await seedPermissions();
 
   // ============================================
-  // SEED DIMENSIONES DEL DESARROLLO (PREESCOLAR)
+  // 21. DIMENSIONES DEL DESARROLLO (PREESCOLAR)
   // ============================================
   console.log('🎨 Creando dimensiones del desarrollo...');
   
@@ -499,32 +645,37 @@ async function main() {
   ];
   
   for (const dim of dimensions) {
-    // Buscar si ya existe una dimensión con este código
     const existing = await prisma.dimension.findFirst({ where: { code: dim.code } });
     if (existing) {
-      await prisma.dimension.update({
-        where: { id: existing.id },
-        data: { name: dim.name, description: dim.description, order: dim.order },
-      });
+      await prisma.dimension.update({ where: { id: existing.id }, data: { name: dim.name, description: dim.description, order: dim.order } });
     } else {
-      await prisma.dimension.create({
-        data: { name: dim.name, code: dim.code, description: dim.description, order: dim.order },
-      });
+      await prisma.dimension.create({ data: { name: dim.name, code: dim.code, description: dim.description, order: dim.order } });
     }
   }
-  console.log(`   ✅ ${dimensions.length} dimensiones creadas\n`);
+  console.log(`   ✅ ${dimensions.length} dimensiones\n`);
 
   // ============================================
   // RESUMEN FINAL
   // ============================================
   console.log('═══════════════════════════════════════════════════════════');
   console.log('✅ SEED COMPLETADO EXITOSAMENTE');
-  console.log('═══════════════════════════════════════════════════════════\n');
-  console.log('📧 USUARIOS DE PRUEBA (contraseña: Demo2026!):\n');
-  console.log('   🔑 Admin:       admin@villasanpablo.edu.co');
-  console.log('   🔑 Coordinador: coordinador@villasanpablo.edu.co');
-  console.log('   🔑 Docente:     docente@villasanpablo.edu.co');
-  console.log('\n📌 Ahora puede importar estudiantes y docentes desde Excel.');
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log(`   Estudiantes creados:        ${students.length}`);
+  console.log(`   Matrículas activas:         ${enrollments.length}`);
+  console.log(`   Asignaciones docentes:      ${assignments.length}`);
+  console.log(`   Actividades evaluativas:    ${allActivities.length}`);
+  console.log(`   StudentGrade (por actividad):  ${studentGradeCount}`);
+  console.log(`   PartialGrade (parciales):      ${partialGradeCount}`);
+  console.log(`   PeriodFinalGrade (finales):    ${periodFinalGradeCount}`);
+  console.log(`   Total notas:                ${studentGradeCount + partialGradeCount + periodFinalGradeCount}`);
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log('\n📧 USUARIOS DE PRUEBA (contraseña: Demo2026!):');
+  console.log('   🔑 Admin:            admin@villasanpablo.edu.co');
+  console.log('   🔑 Coordinador:      coordinador@villasanpablo.edu.co');
+  console.log('   🔑 Prof. Matemáticas: prof.matematicas@villasanpablo.edu.co');
+  console.log('   🔑 Prof. Lenguaje:    prof.lenguaje@villasanpablo.edu.co');
+  console.log('   🔑 Prof. Ciencias:    prof.ciencias@villasanpablo.edu.co');
+  console.log('   🔑 SuperAdmin:       superadmin@edusyn.co (Super2026!)');
   console.log('═══════════════════════════════════════════════════════════\n');
 }
 
