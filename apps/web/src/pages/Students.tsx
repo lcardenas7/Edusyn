@@ -172,6 +172,14 @@ export default function Students() {
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
   const [processingCredentials, setProcessingCredentials] = useState(false)
 
+  // Estados para Actualización Masiva
+  const [showBulkUpdateModal, setShowBulkUpdateModal] = useState(false)
+  const [bulkUpdateFile, setBulkUpdateFile] = useState<File | null>(null)
+  const [bulkUpdatePreview, setBulkUpdatePreview] = useState<any>(null)
+  const [bulkUpdateLoading, setBulkUpdateLoading] = useState(false)
+  const [bulkUpdateStep, setBulkUpdateStep] = useState<'upload' | 'preview' | 'result'>('upload')
+  const bulkUpdateFileRef = useRef<HTMLInputElement>(null)
+
   // Estados para Listados por Grupo
   const [showListModal, setShowListModal] = useState(false)
   const [listGroupId, setListGroupId] = useState('')
@@ -1519,6 +1527,116 @@ export default function Students() {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ACTUALIZACIÓN MASIVA
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const handleExportForBulkUpdate = async () => {
+    try {
+      const { data } = await studentsApi.exportForBulkUpdate(institution?.id)
+      if (!data || data.length === 0) {
+        alert('No hay estudiantes para exportar')
+        return
+      }
+      // Generar Excel con columnas en español
+      const ws = XLSX.utils.json_to_sheet(data)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Estudiantes')
+      XLSX.writeFile(wb, `Estudiantes_Actualizar_${new Date().toISOString().split('T')[0]}.xlsx`)
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al exportar estudiantes')
+    }
+  }
+
+  const handleBulkUpdateFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setBulkUpdateFile(file)
+    setBulkUpdateLoading(true)
+    setBulkUpdatePreview(null)
+
+    try {
+      const data = await file.arrayBuffer()
+      const workbook = XLSX.read(data)
+      const sheet = workbook.Sheets[workbook.SheetNames[0]]
+      const rows = XLSX.utils.sheet_to_json(sheet)
+
+      // Enviar al backend para preview
+      const { data: preview } = await studentsApi.bulkUpdate({
+        institutionId: institution?.id,
+        rows,
+        previewOnly: true,
+      })
+      setBulkUpdatePreview(preview)
+      setBulkUpdateStep('preview')
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al procesar archivo')
+    } finally {
+      setBulkUpdateLoading(false)
+    }
+  }
+
+  const handleExecuteBulkUpdate = async () => {
+    if (!bulkUpdateFile) return
+    setBulkUpdateLoading(true)
+
+    try {
+      const data = await bulkUpdateFile.arrayBuffer()
+      const workbook = XLSX.read(data)
+      const sheet = workbook.Sheets[workbook.SheetNames[0]]
+      const rows = XLSX.utils.sheet_to_json(sheet)
+
+      const { data: result } = await studentsApi.bulkUpdate({
+        institutionId: institution?.id,
+        rows,
+        previewOnly: false,
+      })
+      setBulkUpdatePreview(result)
+      setBulkUpdateStep('result')
+
+      // Recargar estudiantes
+      const response = await studentsApi.getAll({ institutionId: institution?.id })
+      const rawData = response.data || []
+      setRawStudents(rawData)
+      const apiStudents: Student[] = rawData.map((s: any) => ({
+        id: s.id,
+        firstName: `${s.firstName || ''} ${s.secondName || ''}`.trim(),
+        lastName: `${s.lastName || ''} ${s.secondLastName || ''}`.trim(),
+        documentType: s.documentType || 'TI',
+        documentNumber: s.documentNumber || '',
+        birthDate: s.birthDate || '',
+        gender: s.gender || '',
+        address: s.address || '',
+        phone: s.phone || '',
+        email: s.email || '',
+        group: s.enrollments?.[0]?.group ? `${s.enrollments[0].group.grade?.name || ''} ${s.enrollments[0].group.name}`.trim() : '',
+        status: s.enrollments?.[0]?.status || 'ACTIVE',
+        enrollmentDate: s.enrollments?.[0]?.enrollmentDate || '',
+        parentName: s.guardians?.[0]?.guardian ? `${s.guardians[0].guardian.firstName} ${s.guardians[0].guardian.lastName}` : '',
+        parentPhone: s.guardians?.[0]?.guardian?.phone || '',
+        parentEmail: s.guardians?.[0]?.guardian?.email || '',
+        bloodType: s.bloodType || '',
+        eps: s.eps || '',
+        observations: s.observations || '',
+        hasDiagnosis: s.hasDiagnosis || false,
+        diagnosisType: s.diagnosisType || ''
+      }))
+      setStudents(apiStudents)
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al ejecutar actualización')
+    } finally {
+      setBulkUpdateLoading(false)
+    }
+  }
+
+  const closeBulkUpdateModal = () => {
+    setShowBulkUpdateModal(false)
+    setBulkUpdateFile(null)
+    setBulkUpdatePreview(null)
+    setBulkUpdateStep('upload')
+    if (bulkUpdateFileRef.current) bulkUpdateFileRef.current.value = ''
+  }
+
   return (
     <div>
       {viewMode === 'list' ? (
@@ -1554,6 +1672,10 @@ export default function Students() {
               <button onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm">
                 <Upload className="w-4 h-4" />
                 Importar
+              </button>
+              <button onClick={() => setShowBulkUpdateModal(true)} className="flex items-center gap-2 px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm" title="Actualizar datos de estudiantes existentes">
+                <RefreshCw className="w-4 h-4" />
+                Actualizar Masivo
               </button>
               <button onClick={handleExport} className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm">
                 <Download className="w-4 h-4" />
@@ -2791,6 +2913,194 @@ export default function Students() {
                   <Download className="w-4 h-4" />
                   PDF
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Actualización Masiva */}
+      {showBulkUpdateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Actualización Masiva de Estudiantes</h2>
+                <p className="text-sm text-slate-500">Actualiza datos de estudiantes existentes usando el ID interno</p>
+              </div>
+              <button onClick={closeBulkUpdateModal} className="p-2 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {bulkUpdateStep === 'upload' && (
+                <div className="space-y-6">
+                  {/* Paso 1: Descargar plantilla */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <h3 className="font-semibold text-blue-800 mb-2">Paso 1: Descargar archivo base</h3>
+                    <p className="text-sm text-blue-700 mb-3">
+                      Descarga el Excel con todos los estudiantes. La columna <code className="bg-blue-100 px-1 rounded">system_id</code> es el identificador interno y <strong>NO debe modificarse</strong>.
+                    </p>
+                    <button
+                      onClick={handleExportForBulkUpdate}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                    >
+                      <Download className="w-4 h-4" />
+                      Descargar Excel para Actualizar
+                    </button>
+                  </div>
+
+                  {/* Paso 2: Subir archivo editado */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <h3 className="font-semibold text-amber-800 mb-2">Paso 2: Subir archivo editado</h3>
+                    <p className="text-sm text-amber-700 mb-3">
+                      Edita los datos que necesites (puedes cambiar documento, nombres, etc.) y sube el archivo. El sistema validará los cambios antes de aplicarlos.
+                    </p>
+                    <input
+                      ref={bulkUpdateFileRef}
+                      type="file"
+                      accept=".xlsx,.xls"
+                      onChange={handleBulkUpdateFileChange}
+                      className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-amber-100 file:text-amber-700 hover:file:bg-amber-200"
+                    />
+                  </div>
+
+                  {bulkUpdateLoading && (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
+                      <span className="ml-3 text-slate-600">Procesando archivo...</span>
+                    </div>
+                  )}
+
+                  {/* Advertencias */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                    <h4 className="font-medium text-slate-700 mb-2 flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-500" />
+                      Importante
+                    </h4>
+                    <ul className="text-sm text-slate-600 space-y-1 list-disc list-inside">
+                      <li>Este flujo es <strong>solo para actualizar</strong> estudiantes existentes</li>
+                      <li>No se crearán estudiantes nuevos</li>
+                      <li>La columna <code className="bg-slate-200 px-1 rounded">system_id</code> debe coincidir con el ID interno</li>
+                      <li>Si cambias el documento, se validará que no exista en otro estudiante</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {bulkUpdateStep === 'preview' && bulkUpdatePreview && (
+                <div className="space-y-4">
+                  {/* Resumen */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-slate-100 rounded-xl p-4 text-center">
+                      <p className="text-2xl font-bold text-slate-700">{bulkUpdatePreview.summary?.total || 0}</p>
+                      <p className="text-sm text-slate-500">Filas en archivo</p>
+                    </div>
+                    <div className="bg-green-100 rounded-xl p-4 text-center">
+                      <p className="text-2xl font-bold text-green-700">{bulkUpdatePreview.summary?.toUpdate || bulkUpdatePreview.updates?.length || 0}</p>
+                      <p className="text-sm text-green-600">A actualizar</p>
+                    </div>
+                    <div className="bg-red-100 rounded-xl p-4 text-center">
+                      <p className="text-2xl font-bold text-red-700">{bulkUpdatePreview.errors?.length || 0}</p>
+                      <p className="text-sm text-red-600">Errores</p>
+                    </div>
+                  </div>
+
+                  {/* Errores */}
+                  {bulkUpdatePreview.errors?.length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                      <h4 className="font-semibold text-red-800 mb-2">Errores encontrados</h4>
+                      <div className="max-h-40 overflow-y-auto space-y-1">
+                        {bulkUpdatePreview.errors.map((err: any, i: number) => (
+                          <p key={i} className="text-sm text-red-700">
+                            Fila {err.row}: <strong>{err.field}</strong> - {err.message}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Preview de cambios */}
+                  {bulkUpdatePreview.updates?.length > 0 && (
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                      <h4 className="font-semibold text-green-800 mb-2">Cambios a aplicar ({bulkUpdatePreview.updates.length})</h4>
+                      <div className="max-h-60 overflow-y-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-green-100">
+                            <tr>
+                              <th className="px-2 py-1 text-left">ID</th>
+                              <th className="px-2 py-1 text-left">Campo</th>
+                              <th className="px-2 py-1 text-left">Anterior</th>
+                              <th className="px-2 py-1 text-left">Nuevo</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {bulkUpdatePreview.updates.slice(0, 50).map((upd: any, i: number) => (
+                              Object.entries(upd.changes).map(([field, change]: [string, any], j: number) => (
+                                <tr key={`${i}-${j}`} className="border-t border-green-200">
+                                  {j === 0 && <td className="px-2 py-1 font-mono text-xs" rowSpan={Object.keys(upd.changes).length}>{upd.systemId.slice(0, 8)}...</td>}
+                                  <td className="px-2 py-1">{field}</td>
+                                  <td className="px-2 py-1 text-red-600 line-through">{String(change.old || '-')}</td>
+                                  <td className="px-2 py-1 text-green-700 font-medium">{String(change.new || '-')}</td>
+                                </tr>
+                              ))
+                            ))}
+                          </tbody>
+                        </table>
+                        {bulkUpdatePreview.updates.length > 50 && (
+                          <p className="text-xs text-slate-500 mt-2">...y {bulkUpdatePreview.updates.length - 50} más</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {bulkUpdateStep === 'result' && bulkUpdatePreview && (
+                <div className="text-center py-8">
+                  {bulkUpdatePreview.success ? (
+                    <>
+                      <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                      <h3 className="text-xl font-bold text-green-700 mb-2">Actualización completada</h3>
+                      <p className="text-slate-600">
+                        Se actualizaron <strong>{bulkUpdatePreview.summary?.updated || 0}</strong> estudiantes correctamente.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                      <h3 className="text-xl font-bold text-red-700 mb-2">Error en la actualización</h3>
+                      <p className="text-slate-600">Revisa los errores y corrige el archivo.</p>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-200 flex justify-between">
+              <button onClick={closeBulkUpdateModal} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm">
+                {bulkUpdateStep === 'result' ? 'Cerrar' : 'Cancelar'}
+              </button>
+              <div className="flex gap-2">
+                {bulkUpdateStep === 'preview' && !bulkUpdatePreview?.errors?.length && bulkUpdatePreview?.updates?.length > 0 && (
+                  <button
+                    onClick={handleExecuteBulkUpdate}
+                    disabled={bulkUpdateLoading}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm"
+                  >
+                    {bulkUpdateLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    Ejecutar Actualización
+                  </button>
+                )}
+                {bulkUpdateStep === 'preview' && (
+                  <button
+                    onClick={() => { setBulkUpdateStep('upload'); setBulkUpdatePreview(null); if (bulkUpdateFileRef.current) bulkUpdateFileRef.current.value = '' }}
+                    className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm"
+                  >
+                    Subir otro archivo
+                  </button>
+                )}
               </div>
             </div>
           </div>

@@ -523,6 +523,9 @@ export const studentsApi = {
   bulkResetPassword: (studentIds: string[]) => api.post('/students/bulk-reset-password', { studentIds }),
   getCredentials: (institutionId: string) => api.get('/students/credentials/list', { params: { institutionId } }),
   bulkDeleteWithoutRecords: (institutionId: string) => api.post('/students/bulk-delete-without-records', { institutionId }),
+  // Actualización masiva segura
+  exportForBulkUpdate: (institutionId?: string) => api.get('/students/export-for-update', { params: { institutionId } }),
+  bulkUpdate: (data: { institutionId?: string; rows: any[]; previewOnly?: boolean }) => api.post('/students/bulk-update', data),
 }
 
 // Teachers

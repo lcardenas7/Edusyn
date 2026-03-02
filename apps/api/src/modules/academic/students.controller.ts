@@ -80,6 +80,34 @@ export class StudentsController {
     return this.studentsService.bulkDeleteWithoutRecords(data.institutionId);
   }
 
+  /**
+   * Exporta estudiantes con system_id para actualización masiva.
+   * El Excel generado incluye el id interno como columna inmutable.
+   */
+  @Get('export-for-update')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async exportForBulkUpdate(@Request() req: any, @Query('institutionId') institutionId?: string) {
+    const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
+    if (!instId) throw new Error('No se pudo determinar la institución');
+    return this.studentsService.getStudentsForBulkUpdate(instId);
+  }
+
+  /**
+   * Actualización masiva de estudiantes usando system_id como identificador.
+   * Permite cambiar cualquier dato incluyendo documento.
+   * previewOnly=true retorna preview sin ejecutar.
+   */
+  @Post('bulk-update')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async bulkUpdate(
+    @Request() req: any,
+    @Body() data: { institutionId?: string; rows: any[]; previewOnly?: boolean },
+  ) {
+    const instId = await resolveInstitutionId(this.prisma as any, req, data.institutionId);
+    if (!instId) throw new Error('No se pudo determinar la institución');
+    return this.studentsService.bulkUpdateStudents(instId, data.rows, data.previewOnly ?? false);
+  }
+
   @Put('enrollment/:enrollmentId/status')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async updateEnrollmentStatus(
