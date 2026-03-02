@@ -179,6 +179,7 @@ export default function Students() {
   const [bulkUpdateLoading, setBulkUpdateLoading] = useState(false)
   const [bulkUpdateStep, setBulkUpdateStep] = useState<'upload' | 'preview' | 'result'>('upload')
   const bulkUpdateFileRef = useRef<HTMLInputElement>(null)
+  const [bulkUpdateGroupFilter, setBulkUpdateGroupFilter] = useState<string>('')
 
   // Estados para Listados por Grupo
   const [showListModal, setShowListModal] = useState(false)
@@ -1533,16 +1534,28 @@ export default function Students() {
 
   const handleExportForBulkUpdate = async () => {
     try {
-      const { data } = await studentsApi.exportForBulkUpdate(institution?.id)
+      const params: { institutionId?: string; groupId?: string; academicYearId?: string } = {
+        institutionId: institution?.id,
+      }
+      if (bulkUpdateGroupFilter) {
+        params.groupId = bulkUpdateGroupFilter
+      }
+      if (currentAcademicYear?.id) {
+        params.academicYearId = currentAcademicYear.id
+      }
+      const { data } = await studentsApi.exportForBulkUpdate(params)
       if (!data || data.length === 0) {
-        alert('No hay estudiantes para exportar')
+        alert('No hay estudiantes para exportar con los filtros seleccionados')
         return
       }
-      // Generar Excel con columnas en español
+      // Generar Excel con columnas
       const ws = XLSX.utils.json_to_sheet(data)
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, 'Estudiantes')
-      XLSX.writeFile(wb, `Estudiantes_Actualizar_${new Date().toISOString().split('T')[0]}.xlsx`)
+      const groupName = bulkUpdateGroupFilter 
+        ? availableGroups.find(g => g.id === bulkUpdateGroupFilter)?.name || 'Grupo'
+        : 'Todos'
+      XLSX.writeFile(wb, `Estudiantes_Actualizar_${groupName}_${new Date().toISOString().split('T')[0]}.xlsx`)
     } catch (err: any) {
       alert(err.response?.data?.message || 'Error al exportar estudiantes')
     }
@@ -1634,6 +1647,7 @@ export default function Students() {
     setBulkUpdateFile(null)
     setBulkUpdatePreview(null)
     setBulkUpdateStep('upload')
+    setBulkUpdateGroupFilter('')
     if (bulkUpdateFileRef.current) bulkUpdateFileRef.current.value = ''
   }
 
@@ -2940,14 +2954,39 @@ export default function Students() {
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                     <h3 className="font-semibold text-blue-800 mb-2">Paso 1: Descargar archivo base</h3>
                     <p className="text-sm text-blue-700 mb-3">
-                      Descarga el Excel con todos los estudiantes. La columna <code className="bg-blue-100 px-1 rounded">system_id</code> es el identificador interno y <strong>NO debe modificarse</strong>.
+                      Selecciona el grupo que deseas actualizar y descarga el Excel. La columna <code className="bg-blue-100 px-1 rounded">system_id</code> es el identificador interno y <strong>NO debe modificarse</strong>.
                     </p>
+                    
+                    {/* Filtro de grupo */}
+                    <div className="mb-3">
+                      <label className="block text-sm font-medium text-blue-800 mb-1">Filtrar por grupo (opcional)</label>
+                      <select
+                        value={bulkUpdateGroupFilter}
+                        onChange={e => setBulkUpdateGroupFilter(e.target.value)}
+                        className="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Todos los estudiantes</option>
+                        {availableGroups
+                          .sort((a, b) => {
+                            const gradeA = a.grade?.number ?? 0
+                            const gradeB = b.grade?.number ?? 0
+                            if (gradeA !== gradeB) return gradeA - gradeB
+                            return a.name.localeCompare(b.name)
+                          })
+                          .map(g => (
+                            <option key={g.id} value={g.id}>
+                              {g.grade?.name} {g.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
                     <button
                       onClick={handleExportForBulkUpdate}
                       className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
                     >
                       <Download className="w-4 h-4" />
-                      Descargar Excel para Actualizar
+                      Descargar Excel {bulkUpdateGroupFilter ? 'del grupo seleccionado' : 'de todos'}
                     </button>
                   </div>
 
