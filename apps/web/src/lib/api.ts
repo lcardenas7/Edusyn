@@ -1831,4 +1831,14 @@ export const classroomApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
+
+  // Copy classroom & duplicate resources
+  copyClassroomTo: (classroomId: string, targetTeacherAssignmentIds: string[]) =>
+    api.post(`/classrooms/${classroomId}/copy-to`, { targetTeacherAssignmentIds }),
+  listClassroomsForCopy: (classroomId: string) =>
+    api.get(`/classrooms/${classroomId}/classrooms-for-copy`),
+  duplicateMaterial: (materialId: string, targetSectionId: string) =>
+    api.post(`/classrooms/materials/${materialId}/duplicate-to`, { targetSectionId }),
+  duplicateActivity: (activityId: string, targetSectionId: string) =>
+    api.post(`/classrooms/activities/${activityId}/duplicate-to`, { targetSectionId }),
 }

@@ -1340,4 +1340,293 @@ export class ClassroomService {
     }
     return activity;
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // COPY CLASSROOM
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Copia el contenido de un aula a otras aulas del mismo docente
+   * Copia: secciones, materiales, actividades (sin entregas), preguntas de quiz
+   */
+  async copyClassroomTo(sourceClassroomId: string, targetTeacherAssignmentIds: string[], teacherId: string) {
+    // Validate source classroom ownership
+    const source = await this.prisma.classroom.findUnique({
+      where: { id: sourceClassroomId },
+      include: {
+        teacherAssignment: { select: { teacherId: true } },
+        sections: {
+          include: {
+            materials: true,
+            activities: {
+              include: { questions: true },
+            },
+          },
+        },
+        announcements: true,
+      },
+    });
+
+    if (!source || source.teacherAssignment.teacherId !== teacherId) {
+      throw new ForbiddenException('Aula origen no encontrada o no tiene permisos');
+    }
+
+    const results: { targetId: string; classroomId?: string; error?: string }[] = [];
+
+    for (const targetAssignmentId of targetTeacherAssignmentIds) {
+      try {
+        // Validate target assignment belongs to same teacher
+        const targetAssignment = await this.prisma.teacherAssignment.findFirst({
+          where: { id: targetAssignmentId, teacherId, endDate: null },
+          include: { group: { include: { grade: true } }, subject: true },
+        });
+
+        if (!targetAssignment) {
+          results.push({ targetId: targetAssignmentId, error: 'Asignación no encontrada o no pertenece al docente' });
+          continue;
+        }
+
+        // Check if classroom already exists for this assignment
+        let targetClassroom = await this.prisma.classroom.findUnique({
+          where: { teacherAssignmentId: targetAssignmentId },
+        });
+
+        // Create classroom if it doesn't exist
+        if (!targetClassroom) {
+          const title = `${targetAssignment.subject.name} - ${targetAssignment.group.grade.name} ${targetAssignment.group.name}`;
+          targetClassroom = await this.prisma.classroom.create({
+            data: {
+              institutionId: targetAssignment.institutionId,
+              teacherAssignmentId: targetAssignmentId,
+              title,
+              color: source.color,
+            },
+          });
+        }
+
+        // Copy sections with materials and activities
+        for (const section of source.sections) {
+          const newSection = await this.prisma.classroomSection.create({
+            data: {
+              classroomId: targetClassroom.id,
+              title: section.title,
+              description: section.description,
+              sortOrder: section.sortOrder,
+              isVisible: section.isVisible,
+            },
+          });
+
+          // Copy materials
+          for (const material of section.materials) {
+            await this.prisma.classroomMaterial.create({
+              data: {
+                sectionId: newSection.id,
+                type: material.type,
+                title: material.title,
+                content: material.content,
+                fileUrl: material.fileUrl, // Keep same file reference
+                sortOrder: material.sortOrder,
+                isVisible: material.isVisible,
+              },
+            });
+          }
+
+          // Copy activities (without submissions)
+          for (const activity of section.activities) {
+            const newActivity = await this.prisma.classroomActivity.create({
+              data: {
+                sectionId: newSection.id,
+                classroomId: targetClassroom.id,
+                type: activity.type,
+                title: activity.title,
+                description: activity.description,
+                maxScore: activity.maxScore,
+                dueDate: null, // Reset due date
+                openDate: null,
+                timeLimitMinutes: activity.timeLimitMinutes,
+                allowLateSubmit: activity.allowLateSubmit,
+                maxAttempts: activity.maxAttempts,
+                shuffleQuestions: activity.shuffleQuestions,
+                showResults: activity.showResults,
+                isVisible: false, // Start as not visible
+                isPublished: false, // Start as not published
+                sortOrder: activity.sortOrder,
+                metadata: activity.metadata as any,
+              },
+            });
+
+            // Copy questions for quiz/exam
+            for (const question of activity.questions) {
+              await this.prisma.activityQuestion.create({
+                data: {
+                  activityId: newActivity.id,
+                  type: question.type,
+                  text: question.text,
+                  imageUrl: question.imageUrl,
+                  options: question.options as any,
+                  correctAnswer: question.correctAnswer,
+                  points: question.points,
+                  explanation: question.explanation,
+                  subjectArea: question.subjectArea,
+                  sortOrder: question.sortOrder,
+                },
+              });
+            }
+          }
+        }
+
+        results.push({ targetId: targetAssignmentId, classroomId: targetClassroom.id });
+      } catch (error: any) {
+        results.push({ targetId: targetAssignmentId, error: error.message || 'Error desconocido' });
+      }
+    }
+
+    return { copied: results.filter(r => r.classroomId).length, results };
+  }
+
+  /**
+   * Lista las aulas disponibles del docente para copiar contenido
+   */
+  async listTeacherClassroomsForCopy(teacherId: string, institutionId: string, excludeClassroomId?: string) {
+    const assignments = await this.prisma.teacherAssignment.findMany({
+      where: { teacherId, institutionId, endDate: null },
+      select: { id: true },
+    });
+    const assignmentIds = assignments.map(a => a.id);
+
+    return this.prisma.classroom.findMany({
+      where: {
+        teacherAssignmentId: { in: assignmentIds },
+        isActive: true,
+        ...(excludeClassroomId && { id: { not: excludeClassroomId } }),
+      },
+      select: {
+        id: true,
+        title: true,
+        color: true,
+        teacherAssignment: {
+          select: {
+            id: true,
+            group: { select: { id: true, name: true, grade: { select: { name: true } } } },
+            subject: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { title: 'asc' },
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DUPLICATE MATERIAL/ACTIVITY
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Duplica un material a otra sección (puede ser de otra aula)
+   */
+  async duplicateMaterial(materialId: string, targetSectionId: string, teacherId: string) {
+    // Validate source material ownership
+    const material = await this.validateMaterialOwnership(materialId, teacherId);
+
+    // Validate target section ownership
+    const targetSection = await this.validateSectionOwnership(targetSectionId, teacherId);
+
+    // Get max sortOrder in target section
+    const maxSort = await this.prisma.classroomMaterial.aggregate({
+      where: { sectionId: targetSectionId },
+      _max: { sortOrder: true },
+    });
+
+    const newMaterial = await this.prisma.classroomMaterial.create({
+      data: {
+        sectionId: targetSectionId,
+        type: material.type,
+        title: `${material.title} (copia)`,
+        content: material.content,
+        fileUrl: material.fileUrl,
+        sortOrder: (maxSort._max.sortOrder || 0) + 1,
+        isVisible: false,
+      },
+    });
+
+    return newMaterial;
+  }
+
+  /**
+   * Duplica una actividad a otra sección/aula (con preguntas si es quiz)
+   */
+  async duplicateActivity(activityId: string, targetSectionId: string, teacherId: string) {
+    // Validate source activity ownership
+    const activity = await this.prisma.classroomActivity.findUnique({
+      where: { id: activityId },
+      include: {
+        classroom: { include: { teacherAssignment: { select: { teacherId: true } } } },
+        questions: true,
+      },
+    });
+
+    if (!activity || activity.classroom.teacherAssignment.teacherId !== teacherId) {
+      throw new ForbiddenException('Actividad no encontrada o no tiene permisos');
+    }
+
+    // Validate target section ownership
+    const targetSection = await this.prisma.classroomSection.findUnique({
+      where: { id: targetSectionId },
+      include: {
+        classroom: { include: { teacherAssignment: { select: { teacherId: true } } } },
+      },
+    });
+
+    if (!targetSection || targetSection.classroom.teacherAssignment.teacherId !== teacherId) {
+      throw new ForbiddenException('Sección destino no encontrada o no tiene permisos');
+    }
+
+    // Get max sortOrder in target section
+    const maxSort = await this.prisma.classroomActivity.aggregate({
+      where: { sectionId: targetSectionId },
+      _max: { sortOrder: true },
+    });
+
+    // Create duplicated activity
+    const newActivity = await this.prisma.classroomActivity.create({
+      data: {
+        sectionId: targetSectionId,
+        classroomId: targetSection.classroomId,
+        type: activity.type,
+        title: `${activity.title} (copia)`,
+        description: activity.description,
+        maxScore: activity.maxScore,
+        dueDate: null,
+        openDate: null,
+        timeLimitMinutes: activity.timeLimitMinutes,
+        allowLateSubmit: activity.allowLateSubmit,
+        maxAttempts: activity.maxAttempts,
+        shuffleQuestions: activity.shuffleQuestions,
+        showResults: activity.showResults,
+        isVisible: false,
+        isPublished: false,
+        sortOrder: (maxSort._max.sortOrder || 0) + 1,
+        metadata: activity.metadata as any,
+      },
+    });
+
+    // Copy questions if any
+    for (const question of activity.questions) {
+      await this.prisma.activityQuestion.create({
+        data: {
+          activityId: newActivity.id,
+          type: question.type,
+          text: question.text,
+          imageUrl: question.imageUrl,
+          options: question.options as any,
+          correctAnswer: question.correctAnswer,
+          points: question.points,
+          explanation: question.explanation,
+          subjectArea: question.subjectArea,
+          sortOrder: question.sortOrder,
+        },
+      });
+    }
+
+    return newActivity;
+  }
 }

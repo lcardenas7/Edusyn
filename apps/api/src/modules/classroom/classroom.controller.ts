@@ -447,4 +447,42 @@ export class ClassroomController {
     const isTeacher = req.user.roles?.some((r: any) => ['DOCENTE', 'COORDINADOR'].includes(r.role || r));
     return this.service.deleteForumPost(postId, userId, !!isTeacher);
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // COPY CLASSROOM & DUPLICATE RESOURCES
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post(':id/copy-to')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async copyClassroomTo(@Param('id') id: string, @Request() req: any, @Body() body: {
+    targetTeacherAssignmentIds: string[];
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.copyClassroomTo(id, body.targetTeacherAssignmentIds, userId);
+  }
+
+  @Get(':id/classrooms-for-copy')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async listClassroomsForCopy(@Param('id') id: string, @Request() req: any) {
+    const { userId, institutionId } = await this.resolveCtx(req);
+    return this.service.listTeacherClassroomsForCopy(userId, institutionId, id);
+  }
+
+  @Post('materials/:materialId/duplicate-to')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async duplicateMaterial(@Param('materialId') materialId: string, @Request() req: any, @Body() body: {
+    targetSectionId: string;
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.duplicateMaterial(materialId, body.targetSectionId, userId);
+  }
+
+  @Post('activities/:activityId/duplicate-to')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async duplicateActivity(@Param('activityId') activityId: string, @Request() req: any, @Body() body: {
+    targetSectionId: string;
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.duplicateActivity(activityId, body.targetSectionId, userId);
+  }
 }
