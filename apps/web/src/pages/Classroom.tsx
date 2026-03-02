@@ -143,6 +143,9 @@ export default function Classroom() {
   const [selectedCopyTargets, setSelectedCopyTargets] = useState<string[]>([])
   const [copying, setCopying] = useState(false)
 
+  const [showColorModal, setShowColorModal] = useState(false)
+  const [colorDraft, setColorDraft] = useState('#3B82F6')
+
   const loadClassrooms = useCallback(async () => {
     try {
       setLoading(true)
@@ -215,6 +218,23 @@ export default function Classroom() {
       setError(err.response?.data?.message || 'Error al copiar aula')
     } finally {
       setCopying(false)
+    }
+  }
+
+  const openColorModal = () => {
+    setColorDraft(activeClassroom?.color || '#3B82F6')
+    setShowColorModal(true)
+  }
+
+  const handleSaveColor = async () => {
+    if (!activeClassroom?.id) return
+    try {
+      await classroomApi.update(activeClassroom.id, { color: colorDraft })
+      setShowColorModal(false)
+      await loadClassroom(activeClassroom.id, true)
+      loadClassrooms()
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al actualizar el color')
     }
   }
 
@@ -373,10 +393,16 @@ export default function Classroom() {
             </div>
             <div className="flex items-center gap-2">
               {isTeacher && (
-                <button onClick={() => { setShowCopyModal(true); loadCopyTargets() }} className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 rounded-xl px-3 py-2 text-white text-sm font-medium transition-colors">
-                  <Copy className="w-4 h-4" />
-                  <span className="hidden sm:inline">Copiar aula</span>
-                </button>
+                <>
+                  <button onClick={openColorModal} className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 rounded-xl px-3 py-2 text-white text-sm font-medium transition-colors" title="Cambiar color">
+                    <div className="w-3.5 h-3.5 rounded-full border border-white/70" style={{ backgroundColor: activeClassroom.color || '#3B82F6' }} />
+                    <span className="hidden sm:inline">Color</span>
+                  </button>
+                  <button onClick={() => { setShowCopyModal(true); loadCopyTargets() }} className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 rounded-xl px-3 py-2 text-white text-sm font-medium transition-colors">
+                    <Copy className="w-4 h-4" />
+                    <span className="hidden sm:inline">Copiar aula</span>
+                  </button>
+                </>
               )}
               {activeClassroom.studentCount !== undefined && (
                 <div className="hidden sm:flex items-center gap-2 bg-white/20 rounded-xl px-4 py-2">
@@ -495,6 +521,33 @@ export default function Classroom() {
                 {copying && <Loader2 className="w-4 h-4 animate-spin" />}
                 Copiar a {selectedCopyTargets.length} grupo{selectedCopyTargets.length !== 1 ? 's' : ''}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showColorModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-slate-800">Cambiar color del aula</h3>
+              <button onClick={() => setShowColorModal(false)} className="p-1.5 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <div className="flex gap-2 mb-4">
+              {COLORS.map(color => (
+                <button
+                  key={color}
+                  onClick={() => setColorDraft(color)}
+                  className={`w-8 h-8 rounded-full border-2 transition-all ${colorDraft === color ? 'border-slate-800 scale-110' : 'border-transparent'}`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowColorModal(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+              <button onClick={handleSaveColor} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">Guardar</button>
             </div>
           </div>
         </div>

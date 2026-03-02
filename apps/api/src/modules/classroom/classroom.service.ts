@@ -1373,6 +1373,16 @@ export class ClassroomService {
 
     const results: { targetId: string; classroomId?: string; error?: string }[] = [];
 
+    // Copy forum topics created by the teacher (root posts only)
+    const forumTopics = await this.prisma.forumPost.findMany({
+      where: {
+        classroomId: sourceClassroomId,
+        parentId: null,
+        authorId: teacherId,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
     for (const targetAssignmentId of targetTeacherAssignmentIds) {
       try {
         // Validate target assignment belongs to same teacher
@@ -1473,6 +1483,21 @@ export class ClassroomService {
               });
             }
           }
+        }
+
+        // Copy forum topics (teacher-created) to target classroom
+        for (const topic of forumTopics) {
+          await this.prisma.forumPost.create({
+            data: {
+              classroomId: targetClassroom.id,
+              authorId: teacherId,
+              parentId: null,
+              title: topic.title,
+              content: topic.content,
+              isAnonymous: topic.isAnonymous,
+              isPinned: topic.isPinned,
+            },
+          });
         }
 
         results.push({ targetId: targetAssignmentId, classroomId: targetClassroom.id });
