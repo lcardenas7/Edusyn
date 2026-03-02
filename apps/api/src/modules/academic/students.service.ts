@@ -494,6 +494,16 @@ export class StudentsService {
   }
 
   /**
+   * Asegura que la contraseña tenga al menos 6 caracteres
+   * Si el documento es más corto, agrega ceros al final
+   */
+  private ensureMinPasswordLength(document: string): string {
+    const minLength = 6;
+    if (document.length >= minLength) return document;
+    return document.padEnd(minLength, '0');
+  }
+
+  /**
    * Activa acceso al sistema para un estudiante
    * Crea un User asociado con rol ESTUDIANTE
    */
@@ -523,7 +533,7 @@ export class StudentsService {
 
     // Generar username y contraseña
     const username = await this.generateStudentUsername(student.firstName, student.lastName, student.documentNumber);
-    const initialPassword = student.documentNumber; // Contraseña = documento
+    const initialPassword = this.ensureMinPasswordLength(student.documentNumber); // Contraseña = documento (min 6 chars)
     const passwordHash = await bcrypt.hash(initialPassword, 10);
 
     // Generar email si no tiene
@@ -641,7 +651,7 @@ export class StudentsService {
       throw new BadRequestException('El estudiante no tiene acceso al sistema');
     }
 
-    const newPassword = student.documentNumber;
+    const newPassword = this.ensureMinPasswordLength(student.documentNumber);
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
     await this.prisma.user.update({
