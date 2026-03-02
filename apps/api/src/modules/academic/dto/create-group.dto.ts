@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class CreateGroupDto {
   @IsString()
@@ -16,4 +16,10 @@ export class CreateGroupDto {
 
   @IsString()
   name: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  maxCapacity?: number;
 }
