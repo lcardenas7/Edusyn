@@ -9,7 +9,7 @@ import {
   Bold, Italic, Underline, List, ListOrdered, Youtube,
   FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
   BarChart3, ChevronDown, ChevronUp, ChevronRight, Clock, CheckCircle2, AlertTriangle,
-  CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX,
+  CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy,
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -137,6 +137,12 @@ export default function Classroom() {
   const [availableAssignments, setAvailableAssignments] = useState<any[]>([])
   const [createForm, setCreateForm] = useState({ teacherAssignmentId: '', color: '#3B82F6' })
 
+  // Copy classroom modal
+  const [showCopyModal, setShowCopyModal] = useState(false)
+  const [copyTargets, setCopyTargets] = useState<any[]>([])
+  const [selectedCopyTargets, setSelectedCopyTargets] = useState<string[]>([])
+  const [copying, setCopying] = useState(false)
+
   const loadClassrooms = useCallback(async () => {
     try {
       setLoading(true)
@@ -182,6 +188,33 @@ export default function Classroom() {
       loadClassrooms()
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al crear aula')
+    }
+  }
+
+  // Copy classroom functions
+  const loadCopyTargets = async () => {
+    if (!activeClassroom?.id) return
+    try {
+      const { data } = await classroomApi.getAvailableAssignments()
+      // Filter out the current classroom's assignment
+      const filtered = data.filter((a: any) => a.id !== activeClassroom.teacherAssignment?.id)
+      setCopyTargets(filtered)
+    } catch {}
+  }
+
+  const handleCopyClassroom = async () => {
+    if (selectedCopyTargets.length === 0) return
+    try {
+      setCopying(true)
+      const { data } = await classroomApi.copyClassroomTo(activeClassroom.id, selectedCopyTargets)
+      setShowCopyModal(false)
+      setSelectedCopyTargets([])
+      loadClassrooms()
+      alert(`Aula copiada a ${data.copied} grupo(s) exitosamente`)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al copiar aula')
+    } finally {
+      setCopying(false)
     }
   }
 
@@ -338,13 +371,21 @@ export default function Classroom() {
                 {ta.teacher && ` · Prof. ${ta.teacher.firstName} ${ta.teacher.lastName}`}
               </p>
             </div>
-            {activeClassroom.studentCount !== undefined && (
-              <div className="hidden sm:flex items-center gap-2 bg-white/20 rounded-xl px-4 py-2">
-                <Users className="w-5 h-5 text-white" />
-                <span className="text-white font-semibold text-lg">{activeClassroom.studentCount || (activeClassroom as any)._count?.sections || '—'}</span>
-                <span className="text-white/70 text-sm">estudiantes</span>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {isTeacher && (
+                <button onClick={() => { setShowCopyModal(true); loadCopyTargets() }} className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 rounded-xl px-3 py-2 text-white text-sm font-medium transition-colors">
+                  <Copy className="w-4 h-4" />
+                  <span className="hidden sm:inline">Copiar aula</span>
+                </button>
+              )}
+              {activeClassroom.studentCount !== undefined && (
+                <div className="hidden sm:flex items-center gap-2 bg-white/20 rounded-xl px-4 py-2">
+                  <Users className="w-5 h-5 text-white" />
+                  <span className="text-white font-semibold text-lg">{activeClassroom.studentCount || (activeClassroom as any)._count?.sections || '—'}</span>
+                  <span className="text-white/70 text-sm">estudiantes</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -394,6 +435,70 @@ export default function Classroom() {
           </>
         )}
       </div>
+
+      {/* Copy Classroom Modal */}
+      {showCopyModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-800">Copiar aula a otros grupos</h3>
+              <button onClick={() => { setShowCopyModal(false); setSelectedCopyTargets([]) }} className="p-1.5 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <p className="text-sm text-slate-500">
+              Selecciona las asignaciones donde deseas copiar el contenido de esta aula (secciones, materiales, actividades y preguntas de quiz).
+            </p>
+            
+            {copyTargets.length === 0 ? (
+              <div className="text-center py-8 text-slate-400">
+                <Copy className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                <p>No hay otras asignaciones disponibles para copiar</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {copyTargets.map((a: any) => {
+                  const isSelected = selectedCopyTargets.includes(a.id)
+                  return (
+                    <label key={a.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'}`}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {
+                          if (isSelected) {
+                            setSelectedCopyTargets(prev => prev.filter(id => id !== a.id))
+                          } else {
+                            setSelectedCopyTargets(prev => [...prev, a.id])
+                          }
+                        }}
+                        className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-slate-800">{a.subject?.name}</p>
+                        <p className="text-sm text-slate-500">{a.group?.grade?.name} {a.group?.name}</p>
+                      </div>
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button onClick={() => { setShowCopyModal(false); setSelectedCopyTargets([]) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">
+                Cancelar
+              </button>
+              <button
+                onClick={handleCopyClassroom}
+                disabled={selectedCopyTargets.length === 0 || copying}
+                className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {copying && <Loader2 className="w-4 h-4 animate-spin" />}
+                Copiar a {selectedCopyTargets.length} grupo{selectedCopyTargets.length !== 1 ? 's' : ''}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -795,6 +900,15 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
     try { await classroomApi.deleteMaterial(id); onReload() } catch {}
   }
 
+  const handleDuplicateMaterial = async (materialId: string, sectionId: string) => {
+    try {
+      await classroomApi.duplicateMaterial(materialId, sectionId)
+      onReload()
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al duplicar material')
+    }
+  }
+
   const handleToggleMaterialVis = async (id: string, vis: boolean) => {
     try { await classroomApi.updateMaterial(id, { isVisible: !vis }); onReload() } catch {}
   }
@@ -943,7 +1057,7 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
             {/* Materials list - bigger cards */}
             <div className="p-4 space-y-3">
               {section.materials.filter(m => isTeacher || m.isVisible).map(material => (
-                <MaterialCard key={material.id} material={material} isTeacher={isTeacher} onToggleVis={handleToggleMaterialVis} onDelete={handleDeleteMaterial} onDownload={handleDownload} resolveFileUrl={resolveFileUrl} />
+                <MaterialCard key={material.id} material={material} isTeacher={isTeacher} onToggleVis={handleToggleMaterialVis} onDelete={handleDeleteMaterial} onDuplicate={(id) => handleDuplicateMaterial(id, section.id)} onDownload={handleDownload} resolveFileUrl={resolveFileUrl} />
               ))}
 
               {section.materials.filter(m => isTeacher || m.isVisible).length === 0 && (
@@ -1159,10 +1273,11 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
 // MATERIAL CARD (bigger, with inline previews)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDownload, resolveFileUrl }: {
+function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate, onDownload, resolveFileUrl }: {
   material: Material; isTeacher: boolean;
   onToggleVis: (id: string, vis: boolean) => void;
   onDelete: (id: string) => void;
+  onDuplicate: (id: string) => void;
   onDownload: (m: Material) => void;
   resolveFileUrl: (path: string) => Promise<string>;
 }) {
@@ -1198,6 +1313,9 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDownload, 
           </div>
           {isTeacher && (
             <div className="opacity-0 group-hover:opacity-100 flex gap-0.5 shrink-0 transition-opacity">
+              <button onClick={() => onDuplicate(material.id)} className="p-1.5 rounded-lg hover:bg-blue-50" title="Duplicar">
+                <Copy className="w-4 h-4 text-blue-400" />
+              </button>
               <button onClick={() => onToggleVis(material.id, material.isVisible)} className="p-1.5 rounded-lg hover:bg-slate-100">
                 {material.isVisible ? <EyeOff className="w-4 h-4 text-slate-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
               </button>
@@ -1398,6 +1516,15 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar esta actividad y todas sus entregas?')) return
     try { await classroomApi.deleteActivity(id); loadActivities(); setSelectedActivity(null) } catch {}
+  }
+
+  const handleDuplicateActivity = async (activityId: string, sectionId: string) => {
+    try {
+      await classroomApi.duplicateActivity(activityId, sectionId)
+      loadActivities()
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al duplicar actividad')
+    }
   }
 
   const isQuizType = (type: string) => ['QUIZ', 'EXAM', 'ICFES_SIMULATOR'].includes(type)
@@ -1726,6 +1853,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               <div className="flex gap-1 shrink-0">
                 <button onClick={() => handlePublish(act.id, act.isPublished)} className={`px-4 py-2 rounded-xl text-sm font-medium ${act.isPublished ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`} style={{ minHeight: '44px' }}>
                   {act.isPublished ? 'Despublicar' : 'Publicar'}
+                </button>
+                <button onClick={() => handleDuplicateActivity(act.id, act.sectionId)} className="p-2.5 rounded-xl hover:bg-blue-50" title="Duplicar actividad">
+                  <Copy className="w-5 h-5 text-blue-400" />
                 </button>
                 <button onClick={() => handleDelete(act.id)} className="p-2.5 rounded-xl hover:bg-red-50">
                   <Trash2 className="w-5 h-5 text-red-400" />
