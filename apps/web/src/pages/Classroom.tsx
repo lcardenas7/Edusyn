@@ -326,13 +326,13 @@ export default function Classroom() {
     <div className="min-h-[calc(100vh-64px)] bg-slate-50">
       {/* ── COLOR HEADER BAR ── */}
       <div className="relative" style={{ backgroundColor: activeClassroom.color || '#3B82F6' }}>
-        <div className="max-w-6xl mx-auto px-6 py-5">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-5">
           <button onClick={() => setActiveClassroom(null)} className="flex items-center gap-1.5 text-white/70 hover:text-white text-sm mb-2 transition-colors">
             <ChevronLeft className="w-4 h-4" /> Todas las aulas
           </button>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-white">{activeClassroom.title}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-white">{activeClassroom.title}</h1>
               <p className="text-base text-white/80 mt-1">
                 {ta.group.grade.name} {ta.group.name} · {ta.subject.name}
                 {ta.teacher && ` · Prof. ${ta.teacher.firstName} ${ta.teacher.lastName}`}
@@ -351,13 +351,13 @@ export default function Classroom() {
 
       {/* ── HORIZONTAL TAB NAVIGATION ── */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-6xl mx-auto px-6">
-          <nav className="flex gap-1 overflow-x-auto scrollbar-hide -mb-px">
+        <div className="max-w-6xl mx-auto px-2 sm:px-6">
+          <nav className="flex gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide -mb-px">
             {tabs.map(tab => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-3 sm:py-3.5 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
                   activeTab === tab.key
                     ? 'border-blue-600 text-blue-700'
                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
@@ -372,7 +372,7 @@ export default function Classroom() {
       </div>
 
       {/* ── MAIN CONTENT AREA ── */}
-      <div className="max-w-6xl mx-auto px-6 py-6">
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
         {error && (
           <div className="flex items-center gap-2 p-4 mb-5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-base">
             <AlertCircle className="w-5 h-5 shrink-0" />{error}
@@ -1772,35 +1772,39 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   const initials = st ? `${st.firstName?.[0] || ''}${st.lastName?.[0] || ''}` : '?'
                   const statusInfo = STATUS_COLORS[sub.status] || STATUS_COLORS.DRAFT
                   return (
-                    <div key={sub.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50">
+                    <div key={sub.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 hover:bg-slate-50">
                       {st?.photo ? (
                         <img src={st.photo} alt={name} className="w-10 h-10 rounded-full object-cover border border-slate-200" />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-sm font-bold text-blue-700">{initials}</div>
                       )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-base font-medium text-slate-800">{name}</p>
-                        <p className="text-sm text-slate-400">{formatDate(sub.submittedAt)}</p>
-                      </div>
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>
-                      {sub.score !== undefined && sub.score !== null && (
-                        <span className="text-base font-bold text-slate-800">{Number(sub.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
-                      )}
-                      {sub.fileUrl && (
-                        <button onClick={() => openFile(sub.fileUrl!)} className="p-2 rounded-xl hover:bg-blue-50" title="Ver archivo">
-                          <Download className="w-5 h-5 text-blue-500" />
-                        </button>
-                      )}
-                      {(sub.status === 'SUBMITTED' || sub.status === 'LATE') && (
-                        <div className="flex gap-1">
-                          <button onClick={() => { setGradingSubmission(sub); setGradeScore(''); setGradeFeedback('') }} className="px-3 py-2 bg-green-50 text-green-700 rounded-xl text-sm font-medium hover:bg-green-100" style={{ minHeight: '40px' }}>
-                            Calificar
-                          </button>
-                          <button onClick={() => handleReturn(sub)} className="px-3 py-2 bg-orange-50 text-orange-600 rounded-xl text-sm font-medium hover:bg-orange-100" style={{ minHeight: '40px' }}>
-                            Devolver
-                          </button>
+                      <div className="flex-1 min-w-0 flex items-center gap-3">
+                        <div className="flex-1">
+                          <p className="text-sm sm:text-base font-medium text-slate-800">{name}</p>
+                          <p className="text-xs sm:text-sm text-slate-400">{formatDate(sub.submittedAt)}</p>
                         </div>
-                      )}
+                        <span className={`text-xs px-2 sm:px-2.5 py-1 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>
+                        {sub.score !== undefined && sub.score !== null && (
+                          <span className="text-sm sm:text-base font-bold text-slate-800">{Number(sub.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 sm:gap-1 ml-auto sm:ml-0">
+                        {sub.fileUrl && (
+                          <button onClick={() => openFile(sub.fileUrl!)} className="p-2 rounded-xl hover:bg-blue-50" title="Ver archivo">
+                            <Download className="w-5 h-5 text-blue-500" />
+                          </button>
+                        )}
+                        {(sub.status === 'SUBMITTED' || sub.status === 'LATE') && (
+                          <div className="flex gap-1">
+                            <button onClick={() => { setGradingSubmission(sub); setGradeScore(''); setGradeFeedback('') }} className="px-2 sm:px-3 py-2 bg-green-50 text-green-700 rounded-xl text-xs sm:text-sm font-medium hover:bg-green-100" style={{ minHeight: '40px' }}>
+                              Calificar
+                            </button>
+                            <button onClick={() => handleReturn(sub)} className="px-2 sm:px-3 py-2 bg-orange-50 text-orange-600 rounded-xl text-xs sm:text-sm font-medium hover:bg-orange-100" style={{ minHeight: '40px' }}>
+                              Devolver
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )
                 })}
@@ -1851,12 +1855,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
             {/* Add/Edit question form */}
             {showAddQuestion && (
-              <div className="p-6 border-b border-slate-100 bg-purple-50/30 space-y-4">
+              <div className="p-4 sm:p-6 border-b border-slate-100 bg-purple-50/30 space-y-4">
                 <h4 className="text-base font-bold text-slate-800">{editingQuestion ? 'Editar pregunta' : 'Nueva pregunta'}</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
-                    <select value={qForm.type} onChange={e => setQForm({ ...qForm, type: e.target.value, options: e.target.value === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }] })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base">
+                    <select value={qForm.type} onChange={e => setQForm({ ...qForm, type: e.target.value, options: e.target.value === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }] })} className="w-full border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base">
                       <option value="MULTIPLE_CHOICE">Opción múltiple</option>
                       <option value="MULTIPLE_SELECT">Selección múltiple</option>
                       <option value="TRUE_FALSE">Verdadero/Falso</option>
@@ -1868,7 +1872,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Puntos</label>
-                    <input type="number" step="0.1" min="0.1" value={qForm.points} onChange={e => setQForm({ ...qForm, points: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base" />
+                    <input type="number" step="0.1" min="0.1" value={qForm.points} onChange={e => setQForm({ ...qForm, points: e.target.value })} className="w-full border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base" />
                   </div>
                   {isIcfes(act.type) && (
                     <div>
@@ -1882,7 +1886,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Pregunta</label>
-                  <textarea value={qForm.text} onChange={e => setQForm({ ...qForm, text: e.target.value })} rows={2} placeholder="Escribe la pregunta..." className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-purple-500 outline-none" />
+                  <textarea value={qForm.text} onChange={e => setQForm({ ...qForm, text: e.target.value })} rows={2} placeholder="Escribe la pregunta..." className="w-full border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base resize-none focus:ring-2 focus:ring-purple-500 outline-none" />
                 </div>
 
                 {/* Options for MULTIPLE_CHOICE */}
@@ -1892,7 +1896,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     {qForm.options.map((opt, i) => (
                       <div key={i} className="flex items-center gap-2">
                         <input type="radio" name="correctOpt" checked={qForm.correctAnswer === opt && opt !== ''} onChange={() => setQForm({ ...qForm, correctAnswer: opt })} className="accent-purple-600" />
-                        <input value={opt} onChange={e => { const opts = [...qForm.options]; opts[i] = e.target.value; setQForm({ ...qForm, options: opts }) }} placeholder={`Opción ${String.fromCharCode(65 + i)}`} className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
+                        <input value={opt} onChange={e => { const opts = [...qForm.options]; opts[i] = e.target.value; setQForm({ ...qForm, options: opts }) }} placeholder={`Opción ${String.fromCharCode(65 + i)}`} className="flex-1 border border-slate-300 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base focus:ring-2 focus:ring-purple-500 outline-none" />
                         {qForm.options.length > 2 && (
                           <button onClick={() => { const opts = qForm.options.filter((_, j) => j !== i); setQForm({ ...qForm, options: opts, correctAnswer: qForm.correctAnswer === opt ? '' : qForm.correctAnswer }) }} className="p-1.5 rounded-lg hover:bg-red-50">
                             <X className="w-4 h-4 text-red-400" />
@@ -2204,13 +2208,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
         {/* STUDENT: Quiz-taking UI for QUIZ/EXAM */}
         {isStudent && isQuizType(act.type) && quizMode === 'taking' && (
-          <div className="bg-white rounded-2xl border-2 border-purple-200 p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-800">Pregunta {quizCurrentIdx + 1} de {quizQuestions.length}</h3>
-              <div className="flex items-center gap-3">
-                <div className="flex gap-1">
+          <div className="bg-white rounded-2xl border-2 border-purple-200 p-4 sm:p-6 space-y-4 sm:space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <h3 className="text-base sm:text-lg font-bold text-slate-800">Pregunta {quizCurrentIdx + 1} de {quizQuestions.length}</h3>
+              <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto">
+                <div className="flex gap-1 flex-wrap sm:flex-nowrap">
                   {quizQuestions.map((_, i) => (
-                    <button key={i} onClick={() => setQuizCurrentIdx(i)} className={`w-8 h-8 rounded-lg text-xs font-bold ${i === quizCurrentIdx ? 'bg-purple-600 text-white' : (quizAnswers[quizQuestions[i]?.id] || (quizMultiAnswers[quizQuestions[i]?.id]?.length > 0) || quizBlankAnswers[quizQuestions[i]?.id]?.some(b => b?.trim()) || quizOrderAnswers[quizQuestions[i]?.id]?.length > 0 || Object.keys(quizMatchAnswers[quizQuestions[i]?.id] || {}).length > 0) ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{i + 1}</button>
+                    <button key={i} onClick={() => setQuizCurrentIdx(i)} className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-bold ${i === quizCurrentIdx ? 'bg-purple-600 text-white' : (quizAnswers[quizQuestions[i]?.id] || (quizMultiAnswers[quizQuestions[i]?.id]?.length > 0) || quizBlankAnswers[quizQuestions[i]?.id]?.some(b => b?.trim()) || quizOrderAnswers[quizQuestions[i]?.id]?.length > 0 || Object.keys(quizMatchAnswers[quizQuestions[i]?.id] || {}).length > 0) ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{i + 1}</button>
                   ))}
                 </div>
               </div>
@@ -2220,20 +2224,20 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               const q = quizQuestions[quizCurrentIdx]
               return (
                 <div className="space-y-4">
-                  <p className="text-lg text-slate-800 font-medium">{q.text}</p>
+                  <p className="text-base sm:text-lg text-slate-800 font-medium">{q.text}</p>
                   {q.type === 'MULTIPLE_CHOICE' && q.options && (
                     <div className="space-y-2">
                       {(q.options as string[]).map((opt: string, i: number) => (
-                        <button key={i} onClick={() => handleQuizAnswer(q.id, opt)} className={`w-full text-left px-5 py-3.5 rounded-xl border-2 text-base transition-all ${quizAnswers[q.id] === opt ? 'border-purple-500 bg-purple-50 text-purple-800 font-medium' : 'border-slate-200 hover:border-purple-300 text-slate-700'}`}>
+                        <button key={i} onClick={() => handleQuizAnswer(q.id, opt)} className={`w-full text-left px-3 sm:px-5 py-3 sm:py-3.5 rounded-xl border-2 text-sm sm:text-base transition-all ${quizAnswers[q.id] === opt ? 'border-purple-500 bg-purple-50 text-purple-800 font-medium' : 'border-slate-200 hover:border-purple-300 text-slate-700'}`}>
                           <span className="font-bold mr-3">{String.fromCharCode(65 + i)}.</span>{opt}
                         </button>
                       ))}
                     </div>
                   )}
                   {q.type === 'TRUE_FALSE' && (
-                    <div className="flex gap-4">
+                    <div className="flex gap-2 sm:gap-4">
                       {['Verdadero', 'Falso'].map(v => (
-                        <button key={v} onClick={() => handleQuizAnswer(q.id, v)} className={`flex-1 px-5 py-3.5 rounded-xl border-2 text-base font-medium transition-all ${quizAnswers[q.id] === v ? 'border-purple-500 bg-purple-50 text-purple-800' : 'border-slate-200 hover:border-purple-300 text-slate-700'}`}>
+                        <button key={v} onClick={() => handleQuizAnswer(q.id, v)} className={`flex-1 px-3 sm:px-5 py-3 sm:py-3.5 rounded-xl border-2 text-sm sm:text-base font-medium transition-all ${quizAnswers[q.id] === v ? 'border-purple-500 bg-purple-50 text-purple-800' : 'border-slate-200 hover:border-purple-300 text-slate-700'}`}>
                           {v}
                         </button>
                       ))}
@@ -2256,7 +2260,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     </div>
                   )}
                   {q.type === 'SHORT_ANSWER' && (
-                    <input value={quizAnswers[q.id] || ''} onChange={e => handleQuizAnswer(q.id, e.target.value)} placeholder="Escribe tu respuesta..." className="w-full border-2 border-slate-200 rounded-xl px-5 py-3.5 text-base focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none" />
+                    <input value={quizAnswers[q.id] || ''} onChange={e => handleQuizAnswer(q.id, e.target.value)} placeholder="Escribe tu respuesta..." className="w-full border-2 border-slate-200 rounded-xl px-3 sm:px-5 py-3 sm:py-3.5 text-sm sm:text-base focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none" />
                   )}
                   {q.type === 'FILL_BLANK' && (() => {
                     const parts = q.text.split('___')
@@ -2344,11 +2348,14 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               )
             })()}
 
-            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-              <button onClick={() => setQuizCurrentIdx(Math.max(0, quizCurrentIdx - 1))} disabled={quizCurrentIdx === 0} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl disabled:opacity-30" style={{ minHeight: '44px' }}>
-                ← Anterior
-              </button>
-              <span className="text-sm text-slate-400">{Object.keys(quizAnswers).length + Object.keys(quizMultiAnswers).filter(k => quizMultiAnswers[k]?.length > 0).length + Object.keys(quizBlankAnswers).filter(k => quizBlankAnswers[k]?.some(b => b?.trim())).length + Object.keys(quizOrderAnswers).filter(k => quizOrderAnswers[k]?.length > 0).length + Object.keys(quizMatchAnswers).filter(k => Object.keys(quizMatchAnswers[k] || {}).length > 0).length} de {quizQuestions.length} respondidas</span>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 sm:pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between w-full sm:w-auto gap-2">
+                <button onClick={() => setQuizCurrentIdx(Math.max(0, quizCurrentIdx - 1))} disabled={quizCurrentIdx === 0} className="px-3 sm:px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl disabled:opacity-30" style={{ minHeight: '44px' }}>
+                  ← Anterior
+                </button>
+                <span className="text-xs sm:text-sm text-slate-400 sm:hidden">{Object.keys(quizAnswers).length + Object.keys(quizMultiAnswers).filter(k => quizMultiAnswers[k]?.length > 0).length + Object.keys(quizBlankAnswers).filter(k => quizBlankAnswers[k]?.some(b => b?.trim())).length + Object.keys(quizOrderAnswers).filter(k => quizOrderAnswers[k]?.length > 0).length + Object.keys(quizMatchAnswers).filter(k => Object.keys(quizMatchAnswers[k] || {}).length > 0).length}/{quizQuestions.length}</span>
+              </div>
+              <span className="hidden sm:block text-sm text-slate-400">{Object.keys(quizAnswers).length + Object.keys(quizMultiAnswers).filter(k => quizMultiAnswers[k]?.length > 0).length + Object.keys(quizBlankAnswers).filter(k => quizBlankAnswers[k]?.some(b => b?.trim())).length + Object.keys(quizOrderAnswers).filter(k => quizOrderAnswers[k]?.length > 0).length + Object.keys(quizMatchAnswers).filter(k => Object.keys(quizMatchAnswers[k] || {}).length > 0).length} de {quizQuestions.length} respondidas</span>
               {quizCurrentIdx < quizQuestions.length - 1 ? (
                 <button onClick={() => setQuizCurrentIdx(quizCurrentIdx + 1)} className="px-4 py-2.5 text-sm text-purple-600 hover:bg-purple-50 rounded-xl font-medium" style={{ minHeight: '44px' }}>
                   Siguiente →
