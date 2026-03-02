@@ -2453,18 +2453,19 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     const rightItems = [...new Set(Object.values(pairs))].sort(() => Math.random() - 0.5)
                     const matches = quizMatchAnswers[q.id] || {}
                     return (
-                      <div className="space-y-3">
-                        <p className="text-sm text-slate-500 mb-2">Selecciona el elemento de la derecha que corresponde a cada elemento de la izquierda</p>
+                      <div className="space-y-4">
+                        <p className="text-sm text-slate-500">Selecciona el elemento que corresponde a cada ítem</p>
                         {leftItems.map((left, i) => (
-                          <div key={i} className="flex items-center gap-3">
-                            <div className="flex-1 p-3 bg-blue-50 border-2 border-blue-200 rounded-xl text-base text-slate-700">{left}</div>
-                            <span className="text-slate-400">→</span>
+                          <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                            <div className="flex-1 p-2.5 sm:p-3 bg-blue-50 border-2 border-blue-200 rounded-xl text-sm sm:text-base text-slate-700 font-medium">{left}</div>
+                            <span className="text-slate-400 text-center hidden sm:block">→</span>
                             <select 
                               value={matches[left] || ''} 
                               onChange={e => handleQuizMatchAnswer(q.id, left, e.target.value)}
-                              className="flex-1 p-3 border-2 border-slate-200 rounded-xl text-base focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                              className="flex-1 p-2.5 sm:p-3 border-2 border-slate-200 rounded-xl text-sm sm:text-base focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none bg-white"
+                              style={{ minHeight: '44px' }}
                             >
-                              <option value="">Seleccionar...</option>
+                              <option value="">Seleccionar respuesta...</option>
                               {rightItems.map((right, j) => (
                                 <option key={j} value={right}>{right}</option>
                               ))}
