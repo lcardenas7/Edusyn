@@ -940,6 +940,48 @@ export class ClassroomService {
       } else if (q.type === 'SHORT_ANSWER') {
         isCorrect = ans.answer?.trim().toLowerCase() === q.correctAnswer?.trim().toLowerCase();
         pointsEarned = isCorrect ? Number(q.points) : 0;
+      } else if (q.type === 'FILL_BLANK') {
+        // FILL_BLANK: correctAnswer is JSON array of blanks in order
+        // answer is JSON array of student responses
+        try {
+          const correctBlanks = JSON.parse(q.correctAnswer || '[]') as string[];
+          const studentBlanks = JSON.parse(ans.answer || '[]') as string[];
+          const allCorrect = correctBlanks.every((c, i) => 
+            c.trim().toLowerCase() === (studentBlanks[i] || '').trim().toLowerCase()
+          );
+          isCorrect = allCorrect && correctBlanks.length === studentBlanks.length;
+          pointsEarned = isCorrect ? Number(q.points) : 0;
+        } catch {
+          isCorrect = false;
+          pointsEarned = 0;
+        }
+      } else if (q.type === 'ORDERING') {
+        // ORDERING: options contains items in correct order
+        // answer is JSON array of items in student's order
+        try {
+          const correctOrder = q.options as string[];
+          const studentOrder = JSON.parse(ans.answer || '[]') as string[];
+          isCorrect = JSON.stringify(correctOrder) === JSON.stringify(studentOrder);
+          pointsEarned = isCorrect ? Number(q.points) : 0;
+        } catch {
+          isCorrect = false;
+          pointsEarned = 0;
+        }
+      } else if (q.type === 'MATCHING') {
+        // MATCHING: correctAnswer is JSON object { leftItem: rightItem, ... }
+        // answer is JSON object with student's matches
+        try {
+          const correctPairs = JSON.parse(q.correctAnswer || '{}') as Record<string, string>;
+          const studentPairs = JSON.parse(ans.answer || '{}') as Record<string, string>;
+          const allCorrect = Object.keys(correctPairs).every(k => 
+            correctPairs[k] === studentPairs[k]
+          );
+          isCorrect = allCorrect && Object.keys(correctPairs).length === Object.keys(studentPairs).length;
+          pointsEarned = isCorrect ? Number(q.points) : 0;
+        } catch {
+          isCorrect = false;
+          pointsEarned = 0;
+        }
       }
 
       totalScore += pointsEarned;
