@@ -121,6 +121,38 @@ export class TimetableExcelService {
 
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Normaliza el nombre del grupo para encontrar grupos existentes.
+   * Ejemplos:
+   *   "9C" -> "C" (extrae solo la letra)
+   *   "10A" -> "A"
+   *   "A" -> "A" (ya normalizado)
+   *   "Grupo A" -> "A"
+   */
+  private normalizeGroupName(groupName: string): string {
+    const name = groupName.trim();
+    
+    // Si es solo una letra (A, B, C, D), retornar como está
+    if (/^[A-Za-z]$/.test(name)) {
+      return name.toUpperCase();
+    }
+    
+    // Si tiene formato "9C", "10A", "11B", extraer la letra final
+    const numLetterMatch = name.match(/^\d+([A-Za-z])$/);
+    if (numLetterMatch) {
+      return numLetterMatch[1].toUpperCase();
+    }
+    
+    // Si tiene formato "Grupo A", "Grupo B", extraer la letra
+    const grupoMatch = name.match(/^grupo\s+([A-Za-z])$/i);
+    if (grupoMatch) {
+      return grupoMatch[1].toUpperCase();
+    }
+    
+    // Retornar el nombre original en minúsculas
+    return name.toLowerCase();
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // GENERAR PLANTILLA EXCEL DE CARGA ACADÉMICA (FORMATO COMPLETO)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -625,6 +657,11 @@ export class TimetableExcelService {
       const groupKey = `${row.groupName.toLowerCase()}|${gradeId}|${shiftId}|${campusId}`;
       if (groupCache.has(groupKey)) continue;
 
+      // Normalizar nombre del grupo: extraer solo la letra si tiene formato "9C", "10A", etc.
+      // Esto permite que "9C" encuentre el grupo "C" existente
+      const normalizedGroupName = this.normalizeGroupName(row.groupName);
+      
+      // Buscar primero por nombre exacto, luego por nombre normalizado
       let group = await this.prisma.group.findFirst({
         where: {
           name: { equals: row.groupName, mode: 'insensitive' },
@@ -633,13 +670,29 @@ export class TimetableExcelService {
           campusId,
         },
       });
+      
+      // Si no encuentra, buscar por nombre normalizado (ej: "9C" -> "C")
+      if (!group && normalizedGroupName !== row.groupName.toLowerCase()) {
+        group = await this.prisma.group.findFirst({
+          where: {
+            name: { equals: normalizedGroupName, mode: 'insensitive' },
+            gradeId,
+            shiftId,
+            campusId,
+          },
+        });
+        if (group) {
+          warnings.push(`Grupo "${row.groupName}" mapeado a grupo existente "${group.name}"`);
+        }
+      }
 
       if (!group) {
+        // Crear con nombre normalizado para evitar duplicados futuros
         group = await this.prisma.group.create({
-          data: { name: row.groupName, gradeId, shiftId, campusId },
+          data: { name: normalizedGroupName.toUpperCase(), gradeId, shiftId, campusId },
         });
         entitiesCreated.groups++;
-        warnings.push(`Grupo "${row.groupName}" creado automáticamente`);
+        warnings.push(`Grupo "${normalizedGroupName.toUpperCase()}" creado automáticamente`);
       }
       groupCache.set(groupKey, group.id);
     }
