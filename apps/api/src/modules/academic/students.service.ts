@@ -1213,4 +1213,284 @@ export class StudentsService {
       authorName: `${o.author.firstName} ${o.author.lastName}`,
     }));
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BULK UPDATE (Actualización Masiva Segura)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Exporta estudiantes con system_id para actualización masiva.
+   * El system_id es el id interno inmutable que se usa como ancla.
+   */
+  async getStudentsForBulkUpdate(institutionId: string) {
+    const students = await this.prisma.student.findMany({
+      where: { institutionId, isActive: true },
+      select: {
+        id: true,
+        documentType: true,
+        documentNumber: true,
+        firstName: true,
+        secondName: true,
+        lastName: true,
+        secondLastName: true,
+        birthDate: true,
+        birthPlace: true,
+        gender: true,
+        email: true,
+        phone: true,
+        address: true,
+        neighborhood: true,
+        city: true,
+        bloodType: true,
+        eps: true,
+        stratum: true,
+        ethnicity: true,
+        disability: true,
+        emergencyContact: true,
+        emergencyPhone: true,
+      },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+    });
+
+    return students.map(s => ({
+      system_id: s.id, // Columna inmutable para identificación
+      document_type: s.documentType,
+      document_number: s.documentNumber,
+      first_name: s.firstName,
+      second_name: s.secondName || '',
+      last_name: s.lastName,
+      second_last_name: s.secondLastName || '',
+      birth_date: s.birthDate ? s.birthDate.toISOString().split('T')[0] : '',
+      birth_place: s.birthPlace || '',
+      gender: s.gender || '',
+      email: s.email || '',
+      phone: s.phone || '',
+      address: s.address || '',
+      neighborhood: s.neighborhood || '',
+      city: s.city || '',
+      blood_type: s.bloodType || '',
+      eps: s.eps || '',
+      stratum: s.stratum ?? '',
+      ethnicity: s.ethnicity || '',
+      disability: s.disability || '',
+      emergency_contact: s.emergencyContact || '',
+      emergency_phone: s.emergencyPhone || '',
+    }));
+  }
+
+  /**
+   * Valida y ejecuta actualización masiva de estudiantes.
+   * Usa system_id (id interno) como identificador inmutable.
+   * Permite cambiar cualquier dato incluyendo documento.
+   */
+  async bulkUpdateStudents(
+    institutionId: string,
+    rows: Array<{
+      system_id: string;
+      document_type?: string;
+      document_number?: string;
+      first_name?: string;
+      second_name?: string;
+      last_name?: string;
+      second_last_name?: string;
+      birth_date?: string;
+      birth_place?: string;
+      gender?: string;
+      email?: string;
+      phone?: string;
+      address?: string;
+      neighborhood?: string;
+      city?: string;
+      blood_type?: string;
+      eps?: string;
+      stratum?: number | string;
+      ethnicity?: string;
+      disability?: string;
+      emergency_contact?: string;
+      emergency_phone?: string;
+    }>,
+    previewOnly: boolean = false,
+  ) {
+    const errors: Array<{ row: number; field: string; message: string }> = [];
+    const updates: Array<{ systemId: string; changes: Record<string, { old: any; new: any }> }> = [];
+
+    // 1. Extraer todos los system_ids del archivo
+    const systemIds = rows.map(r => r.system_id).filter(Boolean);
+    
+    // Validar que no haya system_ids duplicados en el archivo
+    const duplicateIds = systemIds.filter((id, idx) => systemIds.indexOf(id) !== idx);
+    if (duplicateIds.length > 0) {
+      errors.push({ row: 0, field: 'system_id', message: `IDs duplicados en archivo: ${[...new Set(duplicateIds)].join(', ')}` });
+      return { success: false, errors, updates: [], summary: { total: 0, updated: 0, errors: errors.length } };
+    }
+
+    // 2. Obtener estudiantes existentes por system_id (1 query)
+    const existingStudents = await this.prisma.student.findMany({
+      where: { id: { in: systemIds }, institutionId },
+      select: {
+        id: true,
+        documentType: true,
+        documentNumber: true,
+        firstName: true,
+        secondName: true,
+        lastName: true,
+        secondLastName: true,
+        birthDate: true,
+        birthPlace: true,
+        gender: true,
+        email: true,
+        phone: true,
+        address: true,
+        neighborhood: true,
+        city: true,
+        bloodType: true,
+        eps: true,
+        stratum: true,
+        ethnicity: true,
+        disability: true,
+        emergencyContact: true,
+        emergencyPhone: true,
+      },
+    });
+    const existingMap = new Map(existingStudents.map(s => [s.id, s]));
+
+    // 3. Validar que todos los system_ids existan
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row.system_id) {
+        errors.push({ row: i + 2, field: 'system_id', message: 'system_id es requerido' });
+        continue;
+      }
+      if (!existingMap.has(row.system_id)) {
+        errors.push({ row: i + 2, field: 'system_id', message: `Estudiante no encontrado: ${row.system_id}` });
+      }
+    }
+
+    // 4. Extraer documentos nuevos para validar conflictos
+    const newDocNumbers = rows
+      .filter(r => r.document_number && existingMap.has(r.system_id))
+      .filter(r => r.document_number !== existingMap.get(r.system_id)?.documentNumber)
+      .map(r => r.document_number!);
+
+    // 5. Verificar conflictos de documentos (1 query)
+    if (newDocNumbers.length > 0) {
+      const conflicts = await this.prisma.student.findMany({
+        where: {
+          institutionId,
+          documentNumber: { in: newDocNumbers },
+          id: { notIn: systemIds },
+        },
+        select: { id: true, documentNumber: true, firstName: true, lastName: true },
+      });
+
+      if (conflicts.length > 0) {
+        for (const conflict of conflicts) {
+          const rowIdx = rows.findIndex(r => r.document_number === conflict.documentNumber);
+          errors.push({
+            row: rowIdx + 2,
+            field: 'document_number',
+            message: `Documento ${conflict.documentNumber} ya existe para ${conflict.firstName} ${conflict.lastName}`,
+          });
+        }
+      }
+    }
+
+    // 6. Calcular cambios (diff)
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const existing = existingMap.get(row.system_id);
+      if (!existing) continue;
+
+      const changes: Record<string, { old: any; new: any }> = {};
+
+      const checkField = (field: string, oldVal: any, newVal: any) => {
+        const normalizedOld = oldVal ?? '';
+        const normalizedNew = newVal ?? '';
+        if (String(normalizedOld) !== String(normalizedNew) && normalizedNew !== '') {
+          changes[field] = { old: normalizedOld, new: normalizedNew };
+        }
+      };
+
+      checkField('documentType', existing.documentType, row.document_type);
+      checkField('documentNumber', existing.documentNumber, row.document_number);
+      checkField('firstName', existing.firstName, row.first_name);
+      checkField('secondName', existing.secondName, row.second_name);
+      checkField('lastName', existing.lastName, row.last_name);
+      checkField('secondLastName', existing.secondLastName, row.second_last_name);
+      checkField('birthPlace', existing.birthPlace, row.birth_place);
+      checkField('gender', existing.gender, row.gender);
+      checkField('email', existing.email, row.email);
+      checkField('phone', existing.phone, row.phone);
+      checkField('address', existing.address, row.address);
+      checkField('neighborhood', existing.neighborhood, row.neighborhood);
+      checkField('city', existing.city, row.city);
+      checkField('bloodType', existing.bloodType, row.blood_type);
+      checkField('eps', existing.eps, row.eps);
+      checkField('stratum', existing.stratum, row.stratum);
+      checkField('ethnicity', existing.ethnicity, row.ethnicity);
+      checkField('disability', existing.disability, row.disability);
+      checkField('emergencyContact', existing.emergencyContact, row.emergency_contact);
+      checkField('emergencyPhone', existing.emergencyPhone, row.emergency_phone);
+
+      // Fecha de nacimiento (comparar solo fecha)
+      const existingBirth = existing.birthDate ? existing.birthDate.toISOString().split('T')[0] : '';
+      if (row.birth_date && row.birth_date !== existingBirth) {
+        changes['birthDate'] = { old: existingBirth, new: row.birth_date };
+      }
+
+      if (Object.keys(changes).length > 0) {
+        updates.push({ systemId: row.system_id, changes });
+      }
+    }
+
+    // Si hay errores, retornar sin ejecutar
+    if (errors.length > 0) {
+      return {
+        success: false,
+        errors,
+        updates,
+        summary: { total: rows.length, updated: 0, errors: errors.length },
+      };
+    }
+
+    // Si es solo preview, retornar sin ejecutar
+    if (previewOnly) {
+      return {
+        success: true,
+        errors: [],
+        updates,
+        summary: { total: rows.length, toUpdate: updates.length, errors: 0 },
+      };
+    }
+
+    // 7. Ejecutar actualizaciones en transacción
+    let updatedCount = 0;
+    await this.prisma.$transaction(async (tx) => {
+      for (const update of updates) {
+        const data: Record<string, any> = {};
+        for (const [field, change] of Object.entries(update.changes)) {
+          if (field === 'birthDate') {
+            data[field] = new Date(change.new);
+          } else if (field === 'stratum') {
+            data[field] = change.new ? parseInt(String(change.new), 10) : null;
+          } else {
+            data[field] = change.new || null;
+          }
+        }
+
+        await tx.student.update({
+          where: { id: update.systemId },
+          data,
+        });
+        updatedCount++;
+      }
+    });
+
+    return {
+      success: true,
+      errors: [],
+      updates,
+      summary: { total: rows.length, updated: updatedCount, errors: 0 },
+    };
+  }
 }
