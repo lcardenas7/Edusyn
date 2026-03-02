@@ -425,7 +425,6 @@ export default function Structure() {
         const res = await academicGradesApi.create({
           name: gradeForm.name,
           stage,
-          order: gradeForm.order,
         })
         // Recargar grados desde API para obtener el ID real
         await loadGradesFromAPI()

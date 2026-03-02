@@ -543,7 +543,7 @@ export const gradesApi = {
 export const academicGradesApi = {
   getAll: (institutionId?: string) => api.get('/grades', { params: { institutionId } }),
   getActive: (institutionId?: string) => api.get('/grades/active', { params: { institutionId } }),
-  create: (data: { name: string; stage: string; order?: number }) => api.post('/grades', data),
+  create: (data: { name: string; stage: string; number?: number }) => api.post('/grades', data),
   sync: (grades: any[]) => api.post('/grades/sync', { grades }),
   delete: (id: string) => api.delete(`/grades/${id}`),
 }
