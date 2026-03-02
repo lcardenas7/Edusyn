@@ -177,4 +177,34 @@ export class TeacherAssignmentsService {
       orderBy: { startDate: 'asc' },
     });
   }
+
+  /**
+   * TEMPORAL: Eliminar toda la carga académica de la institución
+   */
+  async deleteAll(institutionId: string, academicYearId?: string) {
+    // Obtener IDs de años académicos de la institución
+    const whereYear = academicYearId 
+      ? { id: academicYearId, institutionId }
+      : { institutionId };
+    
+    const years = await this.prisma.academicYear.findMany({
+      where: whereYear,
+      select: { id: true },
+    });
+    
+    const yearIds = years.map(y => y.id);
+    
+    if (yearIds.length === 0) {
+      return { deleted: 0, message: 'No se encontraron años académicos' };
+    }
+    
+    const result = await this.prisma.teacherAssignment.deleteMany({
+      where: { academicYearId: { in: yearIds } },
+    });
+    
+    return { 
+      deleted: result.count, 
+      message: `Se eliminaron ${result.count} asignaciones de carga académica` 
+    };
+  }
 }

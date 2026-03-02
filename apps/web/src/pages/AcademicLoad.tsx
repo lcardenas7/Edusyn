@@ -9,7 +9,8 @@ import {
   Filter,
   AlertCircle,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  AlertOctagon
 } from 'lucide-react'
 import { teachersApi, groupsApi, subjectsApi, teacherAssignmentsApi, academicYearsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -363,14 +364,56 @@ export default function AcademicLoad() {
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Carga Académica</h1>
           <p className="text-sm sm:text-base text-slate-500 mt-1">Asignación de docentes a grupos y asignaturas</p>
         </div>
-        <button
-          onClick={() => openModal()}
-          disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-        >
-          <Plus className="w-4 h-4" />
-          Nueva Asignación
-        </button>
+        <div className="flex items-center gap-2">
+          {/* TEMPORAL: Botón para eliminar toda la carga */}
+          <button
+            onClick={async () => {
+              if (!confirm('⚠️ ¿Estás seguro de eliminar TODA la carga académica?\n\nEsta acción no se puede deshacer.')) return
+              if (!confirm('🚨 ÚLTIMA CONFIRMACIÓN: Se eliminarán TODAS las asignaciones de docentes.\n\n¿Continuar?')) return
+              try {
+                setSaving(true)
+                const res = await teacherAssignmentsApi.deleteAll(academicYearId || undefined)
+                alert(res.data?.message || 'Carga eliminada')
+                // Recargar datos
+                const loadsRes = await teacherAssignmentsApi.getAll({ academicYearId })
+                const mappedLoads = (loadsRes.data || []).map((a: any) => ({
+                  id: a.id,
+                  teacherId: a.teacher?.id || '',
+                  teacherName: a.teacher ? `${a.teacher.firstName || ''} ${a.teacher.lastName || ''}`.trim() : 'Sin docente',
+                  academicYearId: a.academicYearId,
+                  groupId: a.group?.id || '',
+                  groupName: a.group?.name || '',
+                  grade: a.group?.grade?.name || '',
+                  areaId: a.subject?.area?.id || '',
+                  areaName: a.subject?.area?.name || '',
+                  subjectId: a.subject?.id || '',
+                  subjectName: a.subject?.name || '',
+                  role: a.role || 'TITULAR',
+                  weeklyHours: a.weeklyHours || 0,
+                  status: a.endDate ? 'INACTIVE' : 'ACTIVE',
+                }))
+                setLoads(mappedLoads)
+              } catch (err: any) {
+                alert(err.response?.data?.message || 'Error al eliminar')
+              } finally {
+                setSaving(false)
+              }
+            }}
+            disabled={saving || loads.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+          >
+            <AlertOctagon className="w-4 h-4" />
+            Eliminar Todo
+          </button>
+          <button
+            onClick={() => openModal()}
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            <Plus className="w-4 h-4" />
+            Nueva Asignación
+          </button>
+        </div>
       </div>
 
       {/* Información importante */}

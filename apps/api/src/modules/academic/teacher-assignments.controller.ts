@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards, Request } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards, Request } from '@nestjs/common';
 
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -77,5 +77,23 @@ export class TeacherAssignmentsController {
     @Query('subjectId') subjectId: string,
   ) {
     return this.teacherAssignmentsService.getHistory(academicYearId, groupId, subjectId);
+  }
+
+  /**
+   * TEMPORAL: Eliminar toda la carga académica de la institución
+   * Solo para ADMIN_INSTITUTIONAL - usar con precaución
+   */
+  @Delete('all')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async deleteAll(
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
+    @Query('academicYearId') academicYearId?: string,
+  ) {
+    const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
+    if (!instId) {
+      return { deleted: 0, message: 'No se pudo determinar la institución' };
+    }
+    return this.teacherAssignmentsService.deleteAll(instId, academicYearId);
   }
 }
