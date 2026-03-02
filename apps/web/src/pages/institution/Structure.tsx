@@ -142,7 +142,7 @@ export default function Structure() {
   // Modal states para grupos
   const [showGroupModal, setShowGroupModal] = useState(false)
   const [editingGroup, setEditingGroup] = useState<{ gradeId: string; group: Group | null } | null>(null)
-  const [groupForm, setGroupForm] = useState({ name: '', shiftId: '', capacity: 35, directorId: '' })
+  const [groupForm, setGroupForm] = useState({ name: '', shiftId: '', capacity: 40, directorId: '' })
   const [teachers, setTeachers] = useState<any[]>([])
   const [savingGroup, setSavingGroup] = useState(false)
 
@@ -459,7 +459,7 @@ export default function Structure() {
     } else {
       setEditingGroup({ gradeId, group: null })
       // Default to first shift if available
-      setGroupForm({ name: '', shiftId: shifts[0]?.id || '', capacity: 35, directorId: '' })
+      setGroupForm({ name: '', shiftId: shifts[0]?.id || '', capacity: 40, directorId: '' })
     }
     setShowGroupModal(true)
   }
@@ -510,6 +510,7 @@ export default function Structure() {
           shiftId: groupForm.shiftId,
           gradeId,
           name: groupForm.name,
+          maxCapacity: groupForm.capacity,
         })
         await loadGradesFromAPI()
       } catch (err: any) {
@@ -1033,7 +1034,7 @@ export default function Structure() {
                   min="1"
                   max="100"
                   value={groupForm.capacity}
-                  onChange={(e) => setGroupForm({ ...groupForm, capacity: parseInt(e.target.value) || 35 })}
+                  onChange={(e) => setGroupForm({ ...groupForm, capacity: parseInt(e.target.value) || 40 })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
                 />
               </div>
