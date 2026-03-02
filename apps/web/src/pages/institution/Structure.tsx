@@ -162,7 +162,18 @@ export default function Structure() {
       try {
         // Cargar campus principal
         const campusRes = await campusesApi.getAll(authInstitution.id)
-        const campuses = campusRes.data || []
+        let campuses = campusRes.data || []
+        
+        // Si no hay campus, crear uno automáticamente
+        if (campuses.length === 0) {
+          console.log('[Structure] No campus found, creating default campus...')
+          const newCampusRes = await campusesApi.create({
+            institutionId: authInstitution.id,
+            name: 'Sede Principal',
+          })
+          campuses = [newCampusRes.data]
+        }
+        
         if (campuses.length > 0) {
           setCampusId(campuses[0].id)
           // Cargar jornadas del campus
