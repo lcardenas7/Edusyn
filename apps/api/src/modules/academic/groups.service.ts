@@ -17,6 +17,7 @@ export class GroupsService {
           gradeId: dto.gradeId,
           code: dto.code,
           name: dto.name,
+          maxCapacity: dto.maxCapacity ?? 40,
         },
         include: {
           grade: true,
