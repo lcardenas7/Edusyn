@@ -90,7 +90,7 @@ export const gradesConfigApi = {
 // Groups (Grupos)
 export const groupsApi = {
   getAll: (params?: { campusId?: string; shiftId?: string; gradeId?: string; institutionId?: string }) => api.get('/groups', { params }),
-  create: (data: { campusId: string; shiftId: string; gradeId: string; name: string; code?: string }) => api.post('/groups', data),
+  create: (data: { campusId: string; shiftId: string; gradeId: string; name: string; code?: string; maxCapacity?: number }) => api.post('/groups', data),
   update: (id: string, data: { directorId?: string | null; maxCapacity?: number; name?: string; shiftId?: string }) => api.patch(`/groups/${id}`, data),
   delete: (id: string) => api.delete(`/groups/${id}`),
 }
