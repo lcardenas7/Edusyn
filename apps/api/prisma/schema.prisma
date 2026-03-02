@@ -383,6 +383,7 @@ model Institution {
   nit         String?
   slug        String            @unique  // URL amigable para login (ej: "colegio-san-jose")
   logo        String?                    // URL del logo
+  city        String?                    // Ciudad de la institución
   address     String?                    // Dirección de la institución
   phone       String?                    // Teléfono de contacto
   email       String?                    // Email institucional
