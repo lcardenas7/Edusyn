@@ -8,7 +8,7 @@ import {
   GraduationCap, Layers, ClipboardList, BookOpen, Download,
   Bold, Italic, Underline, List, ListOrdered, Youtube,
   FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
-  BarChart3, ChevronDown, ChevronRight, Clock, CheckCircle2, AlertTriangle,
+  BarChart3, ChevronDown, ChevronUp, ChevronRight, Clock, CheckCircle2, AlertTriangle,
   CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX,
 } from 'lucide-react'
 
@@ -1326,7 +1326,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [questions, setQuestions] = useState<any[]>([])
   const [questionsLoading, setQuestionsLoading] = useState(false)
   const [showAddQuestion, setShowAddQuestion] = useState(false)
-  const [qForm, setQForm] = useState({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', points: '1', explanation: '', subjectArea: '' })
+  const [qForm, setQForm] = useState({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [] as string[], blanks: [] as string[], matchPairs: [{ left: '', right: '' }] as { left: string; right: string }[], points: '1', explanation: '', subjectArea: '' })
   const [editingQuestion, setEditingQuestion] = useState<string | null>(null)
   const [savingQuestion, setSavingQuestion] = useState(false)
 
@@ -1335,6 +1335,10 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [quizSubmission, setQuizSubmission] = useState<any>(null)
   const [quizQuestions, setQuizQuestions] = useState<any[]>([])
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({})
+  const [quizMultiAnswers, setQuizMultiAnswers] = useState<Record<string, string[]>>({})
+  const [quizBlankAnswers, setQuizBlankAnswers] = useState<Record<string, string[]>>({})
+  const [quizOrderAnswers, setQuizOrderAnswers] = useState<Record<string, string[]>>({})
+  const [quizMatchAnswers, setQuizMatchAnswers] = useState<Record<string, Record<string, string>>>({})
   const [quizCurrentIdx, setQuizCurrentIdx] = useState(0)
   const [quizSubmitting, setQuizSubmitting] = useState(false)
   const [quizResult, setQuizResult] = useState<any>(null)
@@ -1487,7 +1491,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   // Quiz question handlers (teacher)
-  const resetQForm = () => setQForm({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', points: '1', explanation: '', subjectArea: '' })
+  const resetQForm = () => setQForm({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }], points: '1', explanation: '', subjectArea: '' })
 
   const handleAddQuestion = async () => {
     if (!selectedActivity || !qForm.text.trim()) return
@@ -1497,8 +1501,19 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       if (qForm.type === 'MULTIPLE_CHOICE' || qForm.type === 'TRUE_FALSE') {
         payload.options = qForm.type === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : qForm.options.filter(o => o.trim())
         payload.correctAnswer = qForm.correctAnswer
+      } else if (qForm.type === 'MULTIPLE_SELECT') {
+        payload.options = qForm.options.filter(o => o.trim())
+        payload.correctAnswer = JSON.stringify(qForm.correctAnswers)
       } else if (qForm.type === 'SHORT_ANSWER') {
         payload.correctAnswer = qForm.correctAnswer
+      } else if (qForm.type === 'FILL_BLANK') {
+        payload.correctAnswer = JSON.stringify(qForm.blanks.filter(b => b.trim()))
+      } else if (qForm.type === 'ORDERING') {
+        payload.options = qForm.options.filter(o => o.trim())
+      } else if (qForm.type === 'MATCHING') {
+        const pairs: Record<string, string> = {}
+        qForm.matchPairs.filter(p => p.left.trim() && p.right.trim()).forEach(p => { pairs[p.left] = p.right })
+        payload.correctAnswer = JSON.stringify(pairs)
       }
       if (editingQuestion) {
         await classroomApi.updateQuestion(editingQuestion, payload)
@@ -1523,11 +1538,30 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   const startEditQuestion = (q: any) => {
+    let correctAnswers: string[] = []
+    let blanks: string[] = []
+    let matchPairs: { left: string; right: string }[] = [{ left: '', right: '' }]
+    if (q.type === 'MULTIPLE_SELECT' && q.correctAnswer) {
+      try { correctAnswers = JSON.parse(q.correctAnswer) } catch { correctAnswers = [] }
+    }
+    if (q.type === 'FILL_BLANK' && q.correctAnswer) {
+      try { blanks = JSON.parse(q.correctAnswer) } catch { blanks = [] }
+    }
+    if (q.type === 'MATCHING' && q.correctAnswer) {
+      try { 
+        const pairs = JSON.parse(q.correctAnswer) as Record<string, string>
+        matchPairs = Object.entries(pairs).map(([left, right]) => ({ left, right }))
+        if (matchPairs.length === 0) matchPairs = [{ left: '', right: '' }]
+      } catch { matchPairs = [{ left: '', right: '' }] }
+    }
     setQForm({
       type: q.type,
       text: q.text,
       options: q.type === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : (q.options || ['', '', '', '']),
       correctAnswer: q.correctAnswer || '',
+      correctAnswers,
+      blanks,
+      matchPairs,
       points: String(q.points ? Number(q.points) : 1),
       explanation: q.explanation || '',
       subjectArea: q.subjectArea || '',
@@ -1558,6 +1592,55 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     setQuizAnswers(prev => ({ ...prev, [questionId]: answer }))
     if (quizSubmission) {
       try { await classroomApi.saveQuizAnswer(quizSubmission.id, { questionId, answer }) } catch {}
+    }
+  }
+
+  const handleQuizMultiAnswer = async (questionId: string, option: string) => {
+    const current = quizMultiAnswers[questionId] || []
+    const newAnswers = current.includes(option) 
+      ? current.filter(a => a !== option)
+      : [...current, option]
+    setQuizMultiAnswers(prev => ({ ...prev, [questionId]: newAnswers }))
+    if (quizSubmission) {
+      try { await classroomApi.saveQuizAnswer(quizSubmission.id, { questionId, selectedOptions: newAnswers }) } catch {}
+    }
+  }
+
+  const handleQuizBlankAnswer = async (questionId: string, blankIdx: number, value: string) => {
+    const current = quizBlankAnswers[questionId] || []
+    const newBlanks = [...current]
+    newBlanks[blankIdx] = value
+    setQuizBlankAnswers(prev => ({ ...prev, [questionId]: newBlanks }))
+    if (quizSubmission) {
+      try { await classroomApi.saveQuizAnswer(quizSubmission.id, { questionId, answer: JSON.stringify(newBlanks) }) } catch {}
+    }
+  }
+
+  const handleQuizOrderMove = async (questionId: string, fromIdx: number, toIdx: number) => {
+    const current = quizOrderAnswers[questionId] || []
+    const newOrder = [...current]
+    const [moved] = newOrder.splice(fromIdx, 1)
+    newOrder.splice(toIdx, 0, moved)
+    setQuizOrderAnswers(prev => ({ ...prev, [questionId]: newOrder }))
+    if (quizSubmission) {
+      try { await classroomApi.saveQuizAnswer(quizSubmission.id, { questionId, answer: JSON.stringify(newOrder) }) } catch {}
+    }
+  }
+
+  const initOrderAnswer = (questionId: string, options: string[]) => {
+    if (!quizOrderAnswers[questionId]) {
+      // Shuffle options for student
+      const shuffled = [...options].sort(() => Math.random() - 0.5)
+      setQuizOrderAnswers(prev => ({ ...prev, [questionId]: shuffled }))
+    }
+  }
+
+  const handleQuizMatchAnswer = async (questionId: string, leftItem: string, rightItem: string) => {
+    const current = quizMatchAnswers[questionId] || {}
+    const newMatches = { ...current, [leftItem]: rightItem }
+    setQuizMatchAnswers(prev => ({ ...prev, [questionId]: newMatches }))
+    if (quizSubmission) {
+      try { await classroomApi.saveQuizAnswer(quizSubmission.id, { questionId, answer: JSON.stringify(newMatches) }) } catch {}
     }
   }
 
@@ -1773,10 +1856,14 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
-                    <select value={qForm.type} onChange={e => setQForm({ ...qForm, type: e.target.value, options: e.target.value === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : ['', '', '', ''], correctAnswer: '' })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base">
+                    <select value={qForm.type} onChange={e => setQForm({ ...qForm, type: e.target.value, options: e.target.value === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }] })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base">
                       <option value="MULTIPLE_CHOICE">Opción múltiple</option>
+                      <option value="MULTIPLE_SELECT">Selección múltiple</option>
                       <option value="TRUE_FALSE">Verdadero/Falso</option>
                       <option value="SHORT_ANSWER">Respuesta corta</option>
+                      <option value="FILL_BLANK">Completar espacios</option>
+                      <option value="ORDERING">Ordenar elementos</option>
+                      <option value="MATCHING">Emparejar</option>
                     </select>
                   </div>
                   <div>
@@ -1820,6 +1907,48 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   </div>
                 )}
 
+                {/* Options for MULTIPLE_SELECT */}
+                {qForm.type === 'MULTIPLE_SELECT' && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-slate-700">Opciones (marca las correctas)</label>
+                    {qForm.options.map((opt, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <input 
+                          type="checkbox" 
+                          checked={qForm.correctAnswers.includes(opt) && opt !== ''} 
+                          onChange={() => {
+                            if (!opt.trim()) return
+                            const newCorrect = qForm.correctAnswers.includes(opt)
+                              ? qForm.correctAnswers.filter(a => a !== opt)
+                              : [...qForm.correctAnswers, opt]
+                            setQForm({ ...qForm, correctAnswers: newCorrect })
+                          }} 
+                          className="accent-purple-600 w-4 h-4" 
+                        />
+                        <input value={opt} onChange={e => { 
+                          const oldOpt = qForm.options[i]
+                          const opts = [...qForm.options]; opts[i] = e.target.value
+                          const newCorrect = qForm.correctAnswers.map(a => a === oldOpt ? e.target.value : a)
+                          setQForm({ ...qForm, options: opts, correctAnswers: newCorrect }) 
+                        }} placeholder={`Opción ${String.fromCharCode(65 + i)}`} className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
+                        {qForm.options.length > 2 && (
+                          <button onClick={() => { 
+                            const opts = qForm.options.filter((_, j) => j !== i)
+                            const newCorrect = qForm.correctAnswers.filter(a => a !== opt)
+                            setQForm({ ...qForm, options: opts, correctAnswers: newCorrect }) 
+                          }} className="p-1.5 rounded-lg hover:bg-red-50">
+                            <X className="w-4 h-4 text-red-400" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {qForm.options.length < 6 && (
+                      <button onClick={() => setQForm({ ...qForm, options: [...qForm.options, ''] })} className="text-sm text-purple-600 hover:text-purple-700 font-medium">+ Agregar opción</button>
+                    )}
+                    <p className="text-xs text-slate-400">Marca con checkbox todas las respuestas correctas</p>
+                  </div>
+                )}
+
                 {/* TRUE_FALSE correct answer */}
                 {qForm.type === 'TRUE_FALSE' && (
                   <div>
@@ -1843,6 +1972,95 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   </div>
                 )}
 
+                {/* FILL_BLANK */}
+                {qForm.type === 'FILL_BLANK' && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Texto con espacios</label>
+                      <p className="text-xs text-slate-400 mb-2">Usa ___ (3 guiones bajos) donde quieras un espacio en blanco</p>
+                      <textarea 
+                        value={qForm.text} 
+                        onChange={e => {
+                          const text = e.target.value
+                          const blankCount = (text.match(/___/g) || []).length
+                          const newBlanks = [...qForm.blanks]
+                          while (newBlanks.length < blankCount) newBlanks.push('')
+                          while (newBlanks.length > blankCount) newBlanks.pop()
+                          setQForm({ ...qForm, text, blanks: newBlanks })
+                        }} 
+                        rows={3} 
+                        placeholder="Ej: La capital de Colombia es ___ y tiene ___ millones de habitantes." 
+                        className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-purple-500 outline-none" 
+                      />
+                    </div>
+                    {qForm.blanks.length > 0 && (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-slate-700">Respuestas correctas (en orden)</label>
+                        {qForm.blanks.map((blank, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-bold shrink-0">{i + 1}</span>
+                            <input 
+                              value={blank} 
+                              onChange={e => {
+                                const newBlanks = [...qForm.blanks]
+                                newBlanks[i] = e.target.value
+                                setQForm({ ...qForm, blanks: newBlanks })
+                              }} 
+                              placeholder={`Respuesta para espacio ${i + 1}`} 
+                              className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" 
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ORDERING */}
+                {qForm.type === 'ORDERING' && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-slate-700">Elementos en orden correcto</label>
+                    <p className="text-xs text-slate-400">Ingresa los elementos en el orden correcto. El estudiante los verá desordenados.</p>
+                    {qForm.options.map((opt, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-bold shrink-0">{i + 1}</span>
+                        <input value={opt} onChange={e => { const opts = [...qForm.options]; opts[i] = e.target.value; setQForm({ ...qForm, options: opts }) }} placeholder={`Elemento ${i + 1}`} className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
+                        {qForm.options.length > 2 && (
+                          <button onClick={() => { const opts = qForm.options.filter((_, j) => j !== i); setQForm({ ...qForm, options: opts }) }} className="p-1.5 rounded-lg hover:bg-red-50">
+                            <X className="w-4 h-4 text-red-400" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {qForm.options.length < 8 && (
+                      <button onClick={() => setQForm({ ...qForm, options: [...qForm.options, ''] })} className="text-sm text-purple-600 hover:text-purple-700 font-medium">+ Agregar elemento</button>
+                    )}
+                  </div>
+                )}
+
+                {/* MATCHING */}
+                {qForm.type === 'MATCHING' && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-slate-700">Pares de elementos</label>
+                    <p className="text-xs text-slate-400">Columna izquierda se empareja con columna derecha</p>
+                    {qForm.matchPairs.map((pair, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <input value={pair.left} onChange={e => { const pairs = [...qForm.matchPairs]; pairs[i] = { ...pairs[i], left: e.target.value }; setQForm({ ...qForm, matchPairs: pairs }) }} placeholder="Elemento izquierdo" className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
+                        <span className="text-slate-400">↔</span>
+                        <input value={pair.right} onChange={e => { const pairs = [...qForm.matchPairs]; pairs[i] = { ...pairs[i], right: e.target.value }; setQForm({ ...qForm, matchPairs: pairs }) }} placeholder="Elemento derecho" className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
+                        {qForm.matchPairs.length > 1 && (
+                          <button onClick={() => { const pairs = qForm.matchPairs.filter((_, j) => j !== i); setQForm({ ...qForm, matchPairs: pairs }) }} className="p-1.5 rounded-lg hover:bg-red-50">
+                            <X className="w-4 h-4 text-red-400" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {qForm.matchPairs.length < 8 && (
+                      <button onClick={() => setQForm({ ...qForm, matchPairs: [...qForm.matchPairs, { left: '', right: '' }] })} className="text-sm text-purple-600 hover:text-purple-700 font-medium">+ Agregar par</button>
+                    )}
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Explicación (opcional)</label>
                   <input value={qForm.explanation} onChange={e => setQForm({ ...qForm, explanation: e.target.value })} placeholder="Se muestra al estudiante después de enviar..." className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-purple-500 outline-none" />
@@ -1850,7 +2068,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
                 <div className="flex justify-end gap-3">
                   <button onClick={() => { setShowAddQuestion(false); setEditingQuestion(null); resetQForm() }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
-                  <button onClick={handleAddQuestion} disabled={!qForm.text.trim() || !qForm.correctAnswer || savingQuestion} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                  <button onClick={handleAddQuestion} disabled={!qForm.text.trim() || (qForm.type === 'FILL_BLANK' ? qForm.blanks.filter(b => b.trim()).length === 0 : qForm.type === 'MULTIPLE_SELECT' ? qForm.correctAnswers.length === 0 : qForm.type === 'ORDERING' ? qForm.options.filter(o => o.trim()).length < 2 : qForm.type === 'MATCHING' ? qForm.matchPairs.filter(p => p.left.trim() && p.right.trim()).length < 2 : !qForm.correctAnswer) || savingQuestion} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
                     {savingQuestion && <Loader2 className="w-4 h-4 animate-spin" />}
                     {editingQuestion ? 'Guardar cambios' : 'Agregar'}
                   </button>
@@ -1875,18 +2093,23 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                       <div className="flex-1 min-w-0">
                         <p className="text-base font-medium text-slate-800">{q.text}</p>
                         <div className="flex items-center gap-3 mt-1 text-sm text-slate-400 flex-wrap">
-                          <span className="px-2 py-0.5 bg-slate-100 rounded text-xs">{q.type === 'MULTIPLE_CHOICE' ? 'Opción múltiple' : q.type === 'TRUE_FALSE' ? 'V/F' : 'Respuesta corta'}</span>
+                          <span className="px-2 py-0.5 bg-slate-100 rounded text-xs">{q.type === 'MULTIPLE_CHOICE' ? 'Opción múltiple' : q.type === 'MULTIPLE_SELECT' ? 'Selección múltiple' : q.type === 'TRUE_FALSE' ? 'V/F' : q.type === 'FILL_BLANK' ? 'Completar' : q.type === 'ORDERING' ? 'Ordenar' : q.type === 'MATCHING' ? 'Emparejar' : 'Respuesta corta'}</span>
                           <span>{Number(q.points)} pts</span>
                           {q.subjectArea && <span className={`px-2 py-0.5 rounded text-xs text-white ${AREA_COLORS[q.subjectArea] || 'bg-slate-500'}`}>{q.subjectArea}</span>}
                           {q.correctAnswer && <span className="text-green-600">✓ {q.correctAnswer}</span>}
                         </div>
                         {q.options && Array.isArray(q.options) && (
                           <div className="flex flex-wrap gap-2 mt-2">
-                            {(q.options as string[]).map((opt: string, j: number) => (
-                              <span key={j} className={`text-xs px-2.5 py-1 rounded-full border ${opt === q.correctAnswer ? 'bg-green-50 border-green-300 text-green-700' : 'bg-white border-slate-200 text-slate-600'}`}>
-                                {String.fromCharCode(65 + j)}. {opt}
-                              </span>
-                            ))}
+                            {(q.options as string[]).map((opt: string, j: number) => {
+                              const isCorrect = q.type === 'MULTIPLE_SELECT' 
+                                ? (() => { try { return JSON.parse(q.correctAnswer || '[]').includes(opt) } catch { return false } })()
+                                : opt === q.correctAnswer
+                              return (
+                                <span key={j} className={`text-xs px-2.5 py-1 rounded-full border ${isCorrect ? 'bg-green-50 border-green-300 text-green-700' : 'bg-white border-slate-200 text-slate-600'}`}>
+                                  {String.fromCharCode(65 + j)}. {opt}
+                                </span>
+                              )
+                            })}
                           </div>
                         )}
                       </div>
@@ -1987,7 +2210,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               <div className="flex items-center gap-3">
                 <div className="flex gap-1">
                   {quizQuestions.map((_, i) => (
-                    <button key={i} onClick={() => setQuizCurrentIdx(i)} className={`w-8 h-8 rounded-lg text-xs font-bold ${i === quizCurrentIdx ? 'bg-purple-600 text-white' : quizAnswers[quizQuestions[i]?.id] ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{i + 1}</button>
+                    <button key={i} onClick={() => setQuizCurrentIdx(i)} className={`w-8 h-8 rounded-lg text-xs font-bold ${i === quizCurrentIdx ? 'bg-purple-600 text-white' : (quizAnswers[quizQuestions[i]?.id] || (quizMultiAnswers[quizQuestions[i]?.id]?.length > 0) || quizBlankAnswers[quizQuestions[i]?.id]?.some(b => b?.trim()) || quizOrderAnswers[quizQuestions[i]?.id]?.length > 0 || Object.keys(quizMatchAnswers[quizQuestions[i]?.id] || {}).length > 0) ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{i + 1}</button>
                   ))}
                 </div>
               </div>
@@ -2016,9 +2239,107 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                       ))}
                     </div>
                   )}
+                  {q.type === 'MULTIPLE_SELECT' && q.options && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-slate-500 mb-2">Selecciona todas las respuestas correctas</p>
+                      {(q.options as string[]).map((opt: string, i: number) => {
+                        const selected = (quizMultiAnswers[q.id] || []).includes(opt)
+                        return (
+                          <button key={i} onClick={() => handleQuizMultiAnswer(q.id, opt)} className={`w-full text-left px-5 py-3.5 rounded-xl border-2 text-base transition-all flex items-center gap-3 ${selected ? 'border-purple-500 bg-purple-50 text-purple-800 font-medium' : 'border-slate-200 hover:border-purple-300 text-slate-700'}`}>
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selected ? 'border-purple-500 bg-purple-500' : 'border-slate-300'}`}>
+                              {selected && <CheckCircle2 className="w-4 h-4 text-white" />}
+                            </div>
+                            <span><span className="font-bold mr-2">{String.fromCharCode(65 + i)}.</span>{opt}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
                   {q.type === 'SHORT_ANSWER' && (
                     <input value={quizAnswers[q.id] || ''} onChange={e => handleQuizAnswer(q.id, e.target.value)} placeholder="Escribe tu respuesta..." className="w-full border-2 border-slate-200 rounded-xl px-5 py-3.5 text-base focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none" />
                   )}
+                  {q.type === 'FILL_BLANK' && (() => {
+                    const parts = q.text.split('___')
+                    const blankCount = parts.length - 1
+                    const answers = quizBlankAnswers[q.id] || []
+                    return (
+                      <div className="space-y-4">
+                        <div className="text-base text-slate-700 leading-relaxed">
+                          {parts.map((part: string, i: number) => (
+                            <span key={i}>
+                              {part}
+                              {i < blankCount && (
+                                <input
+                                  value={answers[i] || ''}
+                                  onChange={e => handleQuizBlankAnswer(q.id, i, e.target.value)}
+                                  className="inline-block w-32 mx-1 px-3 py-1 border-b-2 border-purple-400 bg-purple-50 text-purple-800 font-medium text-center focus:outline-none focus:border-purple-600"
+                                  placeholder={`(${i + 1})`}
+                                />
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })()}
+                  {q.type === 'ORDERING' && (() => {
+                    initOrderAnswer(q.id, q.options as string[])
+                    const items = quizOrderAnswers[q.id] || []
+                    return (
+                      <div className="space-y-2">
+                        <p className="text-sm text-slate-500 mb-3">Arrastra o usa las flechas para ordenar los elementos</p>
+                        {items.map((item: string, i: number) => (
+                          <div key={i} className="flex items-center gap-2 p-3 bg-amber-50 border-2 border-amber-200 rounded-xl">
+                            <span className="w-7 h-7 rounded-lg bg-amber-200 text-amber-800 flex items-center justify-center text-sm font-bold shrink-0">{i + 1}</span>
+                            <span className="flex-1 text-base text-slate-700">{item}</span>
+                            <div className="flex flex-col gap-0.5">
+                              <button 
+                                onClick={() => i > 0 && handleQuizOrderMove(q.id, i, i - 1)} 
+                                disabled={i === 0}
+                                className="p-1 rounded hover:bg-amber-200 disabled:opacity-30"
+                              >
+                                <ChevronUp className="w-4 h-4 text-amber-700" />
+                              </button>
+                              <button 
+                                onClick={() => i < items.length - 1 && handleQuizOrderMove(q.id, i, i + 1)} 
+                                disabled={i === items.length - 1}
+                                className="p-1 rounded hover:bg-amber-200 disabled:opacity-30"
+                              >
+                                <ChevronDown className="w-4 h-4 text-amber-700" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+                  {q.type === 'MATCHING' && (() => {
+                    const pairs: Record<string, string> = (() => { try { return JSON.parse(q.correctAnswer || '{}') } catch { return {} } })()
+                    const leftItems = Object.keys(pairs)
+                    const rightItems = [...new Set(Object.values(pairs))].sort(() => Math.random() - 0.5)
+                    const matches = quizMatchAnswers[q.id] || {}
+                    return (
+                      <div className="space-y-3">
+                        <p className="text-sm text-slate-500 mb-2">Selecciona el elemento de la derecha que corresponde a cada elemento de la izquierda</p>
+                        {leftItems.map((left, i) => (
+                          <div key={i} className="flex items-center gap-3">
+                            <div className="flex-1 p-3 bg-blue-50 border-2 border-blue-200 rounded-xl text-base text-slate-700">{left}</div>
+                            <span className="text-slate-400">→</span>
+                            <select 
+                              value={matches[left] || ''} 
+                              onChange={e => handleQuizMatchAnswer(q.id, left, e.target.value)}
+                              className="flex-1 p-3 border-2 border-slate-200 rounded-xl text-base focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                            >
+                              <option value="">Seleccionar...</option>
+                              {rightItems.map((right, j) => (
+                                <option key={j} value={right}>{right}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
                 </div>
               )
             })()}
@@ -2027,7 +2348,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               <button onClick={() => setQuizCurrentIdx(Math.max(0, quizCurrentIdx - 1))} disabled={quizCurrentIdx === 0} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl disabled:opacity-30" style={{ minHeight: '44px' }}>
                 ← Anterior
               </button>
-              <span className="text-sm text-slate-400">{Object.keys(quizAnswers).length} de {quizQuestions.length} respondidas</span>
+              <span className="text-sm text-slate-400">{Object.keys(quizAnswers).length + Object.keys(quizMultiAnswers).filter(k => quizMultiAnswers[k]?.length > 0).length + Object.keys(quizBlankAnswers).filter(k => quizBlankAnswers[k]?.some(b => b?.trim())).length + Object.keys(quizOrderAnswers).filter(k => quizOrderAnswers[k]?.length > 0).length + Object.keys(quizMatchAnswers).filter(k => Object.keys(quizMatchAnswers[k] || {}).length > 0).length} de {quizQuestions.length} respondidas</span>
               {quizCurrentIdx < quizQuestions.length - 1 ? (
                 <button onClick={() => setQuizCurrentIdx(quizCurrentIdx + 1)} className="px-4 py-2.5 text-sm text-purple-600 hover:bg-purple-50 rounded-xl font-medium" style={{ minHeight: '44px' }}>
                   Siguiente →
