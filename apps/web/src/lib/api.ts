@@ -524,7 +524,8 @@ export const studentsApi = {
   getCredentials: (institutionId: string) => api.get('/students/credentials/list', { params: { institutionId } }),
   bulkDeleteWithoutRecords: (institutionId: string) => api.post('/students/bulk-delete-without-records', { institutionId }),
   // Actualización masiva segura
-  exportForBulkUpdate: (institutionId?: string) => api.get('/students/export-for-update', { params: { institutionId } }),
+  exportForBulkUpdate: (params?: { institutionId?: string; groupId?: string; academicYearId?: string }) => 
+    api.get('/students/export-for-update', { params }),
   bulkUpdate: (data: { institutionId?: string; rows: any[]; previewOnly?: boolean }) => api.post('/students/bulk-update', data),
 }
 

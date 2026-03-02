@@ -1221,10 +1221,43 @@ export class StudentsService {
   /**
    * Exporta estudiantes con system_id para actualización masiva.
    * El system_id es el id interno inmutable que se usa como ancla.
+   * Permite filtrar por grupo y año académico.
    */
-  async getStudentsForBulkUpdate(institutionId: string) {
+  async getStudentsForBulkUpdate(institutionId: string, filters?: { groupId?: string; academicYearId?: string }) {
+    // Si hay filtro de grupo, obtener estudiantes por matrícula
+    let studentIds: string[] | undefined;
+    let enrollmentMap: Map<string, { gradeName: string; groupName: string }> | undefined;
+
+    if (filters?.groupId || filters?.academicYearId) {
+      const enrollments = await this.prisma.studentEnrollment.findMany({
+        where: {
+          ...(filters.groupId && { groupId: filters.groupId }),
+          ...(filters.academicYearId && { academicYearId: filters.academicYearId }),
+          student: { institutionId, isActive: true },
+        },
+        select: {
+          studentId: true,
+          group: {
+            select: {
+              name: true,
+              grade: { select: { name: true } },
+            },
+          },
+        },
+      });
+      studentIds = enrollments.map(e => e.studentId);
+      enrollmentMap = new Map(enrollments.map(e => [
+        e.studentId,
+        { gradeName: e.group.grade.name, groupName: e.group.name },
+      ]));
+    }
+
     const students = await this.prisma.student.findMany({
-      where: { institutionId, isActive: true },
+      where: {
+        institutionId,
+        isActive: true,
+        ...(studentIds && { id: { in: studentIds } }),
+      },
       select: {
         id: true,
         documentType: true,
@@ -1248,34 +1281,56 @@ export class StudentsService {
         disability: true,
         emergencyContact: true,
         emergencyPhone: true,
+        enrollments: {
+          where: filters?.academicYearId ? { academicYearId: filters.academicYearId } : {},
+          select: {
+            group: {
+              select: {
+                name: true,
+                grade: { select: { name: true } },
+              },
+            },
+          },
+          take: 1,
+          orderBy: { createdAt: 'desc' },
+        },
       },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     });
 
-    return students.map(s => ({
-      system_id: s.id, // Columna inmutable para identificación
-      document_type: s.documentType,
-      document_number: s.documentNumber,
-      first_name: s.firstName,
-      second_name: s.secondName || '',
-      last_name: s.lastName,
-      second_last_name: s.secondLastName || '',
-      birth_date: s.birthDate ? s.birthDate.toISOString().split('T')[0] : '',
-      birth_place: s.birthPlace || '',
-      gender: s.gender || '',
-      email: s.email || '',
-      phone: s.phone || '',
-      address: s.address || '',
-      neighborhood: s.neighborhood || '',
-      city: s.city || '',
-      blood_type: s.bloodType || '',
-      eps: s.eps || '',
-      stratum: s.stratum ?? '',
-      ethnicity: s.ethnicity || '',
-      disability: s.disability || '',
-      emergency_contact: s.emergencyContact || '',
-      emergency_phone: s.emergencyPhone || '',
-    }));
+    return students.map(s => {
+      // Usar enrollmentMap si existe (filtro por grupo), sino usar la matrícula más reciente
+      const groupInfo = enrollmentMap?.get(s.id) || (s.enrollments[0]?.group ? {
+        gradeName: s.enrollments[0].group.grade.name,
+        groupName: s.enrollments[0].group.name,
+      } : null);
+
+      return {
+        system_id: s.id, // Columna inmutable para identificación
+        group: groupInfo ? `${groupInfo.gradeName} ${groupInfo.groupName}` : '', // Grupo del estudiante (solo lectura)
+        document_type: s.documentType,
+        document_number: s.documentNumber,
+        first_name: s.firstName,
+        second_name: s.secondName || '',
+        last_name: s.lastName,
+        second_last_name: s.secondLastName || '',
+        birth_date: s.birthDate ? s.birthDate.toISOString().split('T')[0] : '',
+        birth_place: s.birthPlace || '',
+        gender: s.gender || '',
+        email: s.email || '',
+        phone: s.phone || '',
+        address: s.address || '',
+        neighborhood: s.neighborhood || '',
+        city: s.city || '',
+        blood_type: s.bloodType || '',
+        eps: s.eps || '',
+        stratum: s.stratum ?? '',
+        ethnicity: s.ethnicity || '',
+        disability: s.disability || '',
+        emergency_contact: s.emergencyContact || '',
+        emergency_phone: s.emergencyPhone || '',
+      };
+    });
   }
 
   /**

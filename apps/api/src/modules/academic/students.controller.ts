@@ -83,13 +83,19 @@ export class StudentsController {
   /**
    * Exporta estudiantes con system_id para actualización masiva.
    * El Excel generado incluye el id interno como columna inmutable.
+   * Permite filtrar por grupo y año académico.
    */
   @Get('export-for-update')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async exportForBulkUpdate(@Request() req: any, @Query('institutionId') institutionId?: string) {
+  async exportForBulkUpdate(
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
+    @Query('groupId') groupId?: string,
+    @Query('academicYearId') academicYearId?: string,
+  ) {
     const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
     if (!instId) throw new Error('No se pudo determinar la institución');
-    return this.studentsService.getStudentsForBulkUpdate(instId);
+    return this.studentsService.getStudentsForBulkUpdate(instId, { groupId, academicYearId });
   }
 
   /**
