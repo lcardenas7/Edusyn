@@ -395,8 +395,23 @@ export default function Structure() {
     setShowGradeModal(true)
   }
 
-  const saveGrade = () => {
+  const saveGrade = async () => {
     if (!gradeForm.name.trim() || !gradeForm.levelId) return
+    
+    // Mapeo de levelCode a GradeStage (BD)
+    const levelCodeToStage: Record<string, string> = {
+      'PREESCOLAR': 'PREESCOLAR',
+      'PRIMARIA': 'BASICA_PRIMARIA',
+      'BASICA_PRIMARIA': 'BASICA_PRIMARIA',
+      'SECUNDARIA': 'BASICA_SECUNDARIA',
+      'BASICA_SECUNDARIA': 'BASICA_SECUNDARIA',
+      'MEDIA': 'MEDIA',
+    }
+    
+    // Obtener el código del nivel seleccionado
+    const selectedLevel = academicLevels.find(l => l.id === gradeForm.levelId)
+    const levelCode = selectedLevel?.code?.toUpperCase() || ''
+    const stage = levelCodeToStage[levelCode] || 'BASICA_PRIMARIA'
     
     if (editingGrade) {
       setGrades(grades.map(g => 
@@ -405,14 +420,20 @@ export default function Structure() {
           : g
       ))
     } else {
-      const newGrade: Grade = {
-        id: `grade-${Date.now()}`,
-        name: gradeForm.name,
-        levelId: gradeForm.levelId,
-        order: gradeForm.order,
-        groups: []
+      // Crear grado en la BD
+      try {
+        const res = await academicGradesApi.create({
+          name: gradeForm.name,
+          stage,
+          order: gradeForm.order,
+        })
+        // Recargar grados desde API para obtener el ID real
+        await loadGradesFromAPI()
+      } catch (err: any) {
+        console.error('[Structure] Error creating grade:', err)
+        alert(err.response?.data?.message || 'Error al crear el grado')
+        return
       }
-      setGrades([...grades, newGrade])
     }
     setShowGradeModal(false)
   }
