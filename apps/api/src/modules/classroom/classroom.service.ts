@@ -558,6 +558,104 @@ export class ClassroomService {
     });
   }
 
+  /**
+   * Asignar estudiantes específicos a una actividad (para recuperación, refuerzo, etc.)
+   */
+  async assignStudentsToActivity(activityId: string, teacherId: string, dto: {
+    studentEnrollmentIds: string[];
+    isRestrictedToAssigned: boolean;
+  }) {
+    await this.validateActivityOwnership(activityId, teacherId);
+
+    // Clear existing assignments
+    await this.prisma.activityAssignment.deleteMany({
+      where: { activityId },
+    });
+
+    // Create new assignments
+    if (dto.studentEnrollmentIds.length > 0) {
+      await this.prisma.activityAssignment.createMany({
+        data: dto.studentEnrollmentIds.map(studentEnrollmentId => ({
+          activityId,
+          studentEnrollmentId,
+        })),
+      });
+    }
+
+    // Update restriction flag
+    return this.prisma.classroomActivity.update({
+      where: { id: activityId },
+      data: { isRestrictedToAssigned: dto.isRestrictedToAssigned },
+      include: {
+        assignedStudents: {
+          include: {
+            studentEnrollment: {
+              include: { student: { select: { firstName: true, lastName: true, secondLastName: true } } },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Obtener estudiantes asignados a una actividad
+   */
+  async getActivityAssignments(activityId: string, teacherId: string) {
+    await this.validateActivityOwnership(activityId, teacherId);
+
+    return this.prisma.activityAssignment.findMany({
+      where: { activityId },
+      include: {
+        studentEnrollment: {
+          include: { student: { select: { id: true, firstName: true, lastName: true, secondLastName: true, photo: true } } },
+        },
+      },
+    });
+  }
+
+  /**
+   * Obtener estudiantes del aula para asignar a actividades
+   */
+  async getClassroomStudentsForAssignment(classroomId: string, teacherId: string) {
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: classroomId },
+      select: {
+        id: true,
+        teacherAssignment: {
+          select: {
+            teacherId: true,
+            group: {
+              select: {
+                id: true,
+                studentEnrollments: {
+                  where: { status: 'ACTIVE' },
+                  select: {
+                    id: true,
+                    student: { select: { id: true, firstName: true, lastName: true, secondLastName: true, photo: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!classroom || classroom.teacherAssignment.teacherId !== teacherId) {
+      throw new ForbiddenException('No tiene acceso a este aula');
+    }
+
+    return classroom.teacherAssignment.group.studentEnrollments.map(e => ({
+      enrollmentId: e.id,
+      studentId: e.student.id,
+      firstName: e.student.firstName,
+      lastName: e.student.lastName,
+      secondLastName: e.student.secondLastName,
+      photo: e.student.photo,
+    }));
+  }
+
   async deleteActivity(activityId: string, teacherId: string) {
     await this.validateActivityOwnership(activityId, teacherId);
     await this.prisma.classroomActivity.delete({ where: { id: activityId } });

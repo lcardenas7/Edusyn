@@ -250,6 +250,30 @@ export class ClassroomController {
     return this.service.unpublishActivity(activityId, userId);
   }
 
+  @Put('activities/:activityId/assign-students')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async assignStudentsToActivity(@Param('activityId') activityId: string, @Request() req: any, @Body() body: {
+    studentEnrollmentIds: string[];
+    isRestrictedToAssigned: boolean;
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.assignStudentsToActivity(activityId, userId, body);
+  }
+
+  @Get('activities/:activityId/assignments')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async getActivityAssignments(@Param('activityId') activityId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.getActivityAssignments(activityId, userId);
+  }
+
+  @Get(':id/students-for-assignment')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async getClassroomStudentsForAssignment(@Param('id') classroomId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.getClassroomStudentsForAssignment(classroomId, userId);
+  }
+
   @Delete('activities/:activityId')
   @Roles('DOCENTE', 'COORDINADOR')
   async deleteActivity(@Param('activityId') activityId: string, @Request() req: any) {
