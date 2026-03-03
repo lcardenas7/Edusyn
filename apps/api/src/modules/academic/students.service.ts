@@ -1362,6 +1362,22 @@ export class StudentsService {
     const errors: Array<{ row: number; field: string; message: string }> = [];
     const updates: Array<{ systemId: string; changes: Record<string, { old: any; new: any }> }> = [];
 
+    // Helper: convertir valor de fecha (puede ser número Excel o string) a string YYYY-MM-DD
+    const parseExcelDateToString = (value: any): string | undefined => {
+      if (!value) return undefined;
+      let date: Date;
+      // Si es número, es un serial de Excel (días desde 1900-01-01)
+      if (typeof value === 'number') {
+        // Excel usa 1900-01-01 como día 1, ajuste para timestamp Unix
+        const unixDays = value - 25569;
+        date = new Date(unixDays * 86400 * 1000);
+      } else {
+        date = new Date(value);
+      }
+      if (isNaN(date.getTime())) return undefined;
+      return date.toISOString().split('T')[0];
+    };
+
     // 0. Normalizar datos de Excel (soporta nombres en inglés snake_case y español)
     const normalizedRows = rows.map((row: any) => {
       // Mapear nombres en español a inglés snake_case
@@ -1375,7 +1391,7 @@ export class StudentsService {
         second_name: getValue('second_name', 'Segundo Nombre') || undefined,
         last_name: getValue('last_name', 'Primer Apellido') || undefined,
         second_last_name: getValue('second_last_name', 'Segundo Apellido') || undefined,
-        birth_date: getValue('birth_date', 'Fecha Nacimiento') || undefined,
+        birth_date: parseExcelDateToString(getValue('birth_date', 'Fecha Nacimiento')),
         gender: getValue('gender', 'Genero') || undefined,
         address: getValue('address', 'Direccion') || undefined,
         phone: getValue('phone', 'Telefono') != null ? String(getValue('phone', 'Telefono')).trim() : undefined,
@@ -1550,7 +1566,12 @@ export class StudentsService {
         const data: Record<string, any> = {};
         for (const [field, change] of Object.entries(update.changes)) {
           if (field === 'birthDate') {
-            data[field] = new Date(change.new);
+            // birth_date ya viene normalizada como string YYYY-MM-DD
+            const date = new Date(change.new);
+            if (!isNaN(date.getTime())) {
+              data[field] = date;
+            }
+            // Si no es válida, simplemente no actualizamos ese campo
           } else if (field === 'stratum') {
             data[field] = change.new ? parseInt(String(change.new), 10) : null;
           } else {
