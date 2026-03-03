@@ -656,8 +656,20 @@ export class ClassroomService {
     }));
   }
 
-  async deleteActivity(activityId: string, teacherId: string) {
+  async deleteActivity(activityId: string, teacherId: string, force = false) {
     await this.validateActivityOwnership(activityId, teacherId);
+
+    const submissionCount = await this.prisma.activitySubmission.count({ where: { activityId } });
+
+    if (submissionCount > 0 && !force) {
+      return {
+        success: false,
+        requiresConfirmation: true,
+        submissionCount,
+        message: `Esta actividad tiene ${submissionCount} entrega(s). ¿Está seguro de eliminarla? Se perderán todas las entregas y calificaciones.`,
+      };
+    }
+
     await this.prisma.classroomActivity.delete({ where: { id: activityId } });
     return { success: true };
   }

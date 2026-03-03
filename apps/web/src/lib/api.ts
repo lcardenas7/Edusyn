@@ -1786,7 +1786,7 @@ export const classroomApi = {
     api.get(`/classrooms/activities/${activityId}/assignments`),
   getStudentsForAssignment: (classroomId: string) =>
     api.get(`/classrooms/${classroomId}/students-for-assignment`),
-  deleteActivity: (activityId: string) => api.delete(`/classrooms/activities/${activityId}`),
+  deleteActivity: (activityId: string, force = false) => api.delete(`/classrooms/activities/${activityId}`, { params: force ? { force: 'true' } : {} }),
 
   // Submissions
   submitTask: (activityId: string, data: { content?: string; fileUrl?: string }) =>

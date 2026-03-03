@@ -572,6 +572,9 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError }: 
   // Student dashboard
   if (isStudent) {
     const firstName = user?.firstName || 'Estudiante'
+    const allActivities = sections.flatMap(s => (s as any).activities || [])
+    const formatShortDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) : null
+    const TYPE_LABELS: Record<string, string> = { TASK: 'Tarea', QUIZ: 'Quiz', EXAM: 'Examen', ICFES_SIMULATOR: 'ICFES', FORUM: 'Foro', GAME: 'Juego' }
     return (
       <div className="space-y-6">
         {/* Welcome */}
@@ -586,13 +589,31 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError }: 
           <div className="bg-white rounded-2xl border-2 border-orange-200 overflow-hidden">
             <div className="bg-gradient-to-r from-orange-500 to-orange-400 px-5 py-3 flex items-center gap-2.5">
               <ClipboardList className="w-6 h-6 text-white" />
-              <h3 className="text-lg font-bold text-white">Actividades Pendientes</h3>
+              <h3 className="text-lg font-bold text-white">Actividades ({allActivities.length})</h3>
             </div>
             <div className="p-5">
-              <p className="text-base text-slate-600">Las actividades aparecerán aquí próximamente</p>
-              <button className="mt-4 px-5 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 transition-colors">
-                Ver pendientes
-              </button>
+              {allActivities.length === 0 ? (
+                <p className="text-base text-slate-500">No hay actividades publicadas aún</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {allActivities.slice(0, 4).map((a: any) => (
+                    <div key={a.id} className="flex items-center gap-2.5">
+                      <ClipboardList className="w-5 h-5 text-orange-500 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-700 truncate">{a.title}</p>
+                        <div className="flex items-center gap-2 text-xs text-slate-400">
+                          <span className="px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded font-medium">{TYPE_LABELS[a.type] || a.type}</span>
+                          {a.dueDate && <span className={new Date(a.dueDate) < new Date() ? 'text-red-500 font-medium' : ''}>
+                            {formatShortDate(a.dueDate)}
+                          </span>}
+                          {a.maxScore && <span>Nota: {Number(a.maxScore)}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {allActivities.length > 4 && <p className="text-xs text-slate-400">+{allActivities.length - 4} más</p>}
+                </div>
+              )}
             </div>
           </div>
 
@@ -1794,8 +1815,15 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar esta actividad y todas sus entregas?')) return
-    try { await classroomApi.deleteActivity(id); loadActivities(); setSelectedActivity(null) } catch {}
+    if (!confirm('¿Eliminar esta actividad?')) return
+    try {
+      const { data } = await classroomApi.deleteActivity(id)
+      if (data.requiresConfirmation) {
+        if (!confirm(`⚠️ ${data.message}\n\nEsta acción NO se puede deshacer.`)) return
+        await classroomApi.deleteActivity(id, true)
+      }
+      loadActivities(); setSelectedActivity(null)
+    } catch {}
   }
 
   const startEditActivity = (act: Activity) => {
