@@ -304,6 +304,13 @@ export class ClassroomController {
     return this.service.returnSubmission(submissionId, userId, body);
   }
 
+  @Delete('submissions/:submissionId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async deleteSubmission(@Param('submissionId') submissionId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.deleteSubmission(submissionId, userId);
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // QUIZ / EXAM – Questions
   // ═══════════════════════════════════════════════════════════════════════════

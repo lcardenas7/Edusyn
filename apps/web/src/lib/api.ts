@@ -1791,6 +1791,8 @@ export const classroomApi = {
     api.put(`/classrooms/submissions/${submissionId}/grade`, data),
   returnSubmission: (submissionId: string, data: { feedback?: string }) =>
     api.put(`/classrooms/submissions/${submissionId}/return`, data),
+  deleteSubmission: (submissionId: string) =>
+    api.delete(`/classrooms/submissions/${submissionId}`),
 
   // Quiz / Exam – Questions
   addQuestion: (activityId: string, data: any) =>

@@ -1473,6 +1473,33 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
   resolveFileUrl: (path: string) => Promise<string>;
 }) {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [docUrl, setDocUrl] = useState<string | null>(null)
+  const [showPreview, setShowPreview] = useState(false)
+  const [loadingDoc, setLoadingDoc] = useState(false)
+
+  // Detectar tipo de documento por extensión
+  const getDocType = (url: string): 'pdf' | 'image' | 'office' | 'other' => {
+    const ext = url.split('.').pop()?.toLowerCase().split('?')[0] || ''
+    if (ext === 'pdf') return 'pdf'
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return 'image'
+    if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) return 'office'
+    return 'other'
+  }
+
+  const handlePreview = async () => {
+    if (!material.fileUrl) return
+    setLoadingDoc(true)
+    try {
+      const url = await resolveFileUrl(material.fileUrl)
+      setDocUrl(url)
+      setShowPreview(true)
+    } catch {
+      // Fallback to download
+      onDownload(material)
+    } finally {
+      setLoadingDoc(false)
+    }
+  }
 
   useEffect(() => {
     if (material.type === 'IMAGE' && material.fileUrl) {
@@ -1556,18 +1583,69 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
         )}
 
         {material.type === 'DOCUMENT' && material.fileUrl && (
-          <button onClick={() => onDownload(material)} className="flex items-center gap-3 mt-3 w-full px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors text-left group/doc">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
-              <FileText className="w-5 h-5 text-blue-600" />
+          <div className="mt-3 space-y-2">
+            <div className="flex gap-2">
+              <button 
+                onClick={handlePreview} 
+                disabled={loadingDoc}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors text-sm text-blue-700 font-medium disabled:opacity-50"
+              >
+                {loadingDoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+                Visualizar
+              </button>
+              <button 
+                onClick={() => onDownload(material)} 
+                className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors text-sm text-slate-600"
+              >
+                <Download className="w-4 h-4" />
+                Descargar
+              </button>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-blue-800 group-hover/doc:underline">{material.title}</p>
-              <p className="text-xs text-blue-500">Haz clic para abrir el documento</p>
-            </div>
-            <Download className="w-4 h-4 text-blue-400 shrink-0" />
-          </button>
+          </div>
         )}
       </div>
+
+      {/* Document Preview Modal */}
+      {showPreview && docUrl && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowPreview(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-5xl h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between shrink-0">
+              <h3 className="font-bold text-slate-800 truncate">{material.title}</h3>
+              <div className="flex items-center gap-2">
+                <button onClick={() => onDownload(material)} className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg">
+                  <Download className="w-4 h-4" /> Descargar
+                </button>
+                <button onClick={() => setShowPreview(false)} className="p-1.5 hover:bg-slate-100 rounded-lg">
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-hidden bg-slate-100">
+              {getDocType(docUrl) === 'pdf' ? (
+                <iframe src={docUrl} className="w-full h-full" title={material.title} />
+              ) : getDocType(docUrl) === 'image' ? (
+                <div className="w-full h-full flex items-center justify-center p-4">
+                  <img src={docUrl} alt={material.title} className="max-w-full max-h-full object-contain" />
+                </div>
+              ) : getDocType(docUrl) === 'office' ? (
+                <iframe 
+                  src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(docUrl)}`} 
+                  className="w-full h-full" 
+                  title={material.title}
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-4 p-8">
+                  <FileText className="w-16 h-16 text-slate-300" />
+                  <p className="text-slate-500 text-center">Este tipo de archivo no se puede previsualizar.<br/>Usa el botón de descargar.</p>
+                  <button onClick={() => onDownload(material)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <Download className="w-4 h-4" /> Descargar archivo
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1621,6 +1699,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   // Student submit (TASK)
   const [submitContent, setSubmitContent] = useState('')
   const [submitFile, setSubmitFile] = useState<File | null>(null)
+  const [submitLink, setSubmitLink] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [mySubmission, setMySubmission] = useState<any>(null)
   const submitFileRef = useRef<HTMLInputElement>(null)
@@ -1709,12 +1788,47 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     try { await classroomApi.deleteActivity(id); loadActivities(); setSelectedActivity(null) } catch {}
   }
 
-  const handleDuplicateActivity = async (activityId: string, sectionId: string) => {
+  const openDuplicateActivityModal = async (activityId: string, activityTitle: string) => {
+    setDuplicateActivityModal({ activityId, activityTitle })
+    setDuplicateTargetType('same')
+    setSelectedTargetClassroom(null)
+    setTargetClassroomSections([])
+    // Load other classrooms
+    setLoadingClassroomsForDup(true)
     try {
-      await classroomApi.duplicateActivity(activityId, sectionId)
+      const res = await classroomApi.listClassroomsForCopy(classroom.id)
+      setAvailableClassroomsForDup(res.data || [])
+    } catch {
+      setAvailableClassroomsForDup([])
+    } finally {
+      setLoadingClassroomsForDup(false)
+    }
+  }
+
+  const handleSelectTargetClassroom = async (c: any) => {
+    setSelectedTargetClassroom(c)
+    setLoadingTargetSections(true)
+    try {
+      const res = await classroomApi.getById(c.id)
+      setTargetClassroomSections(res.data.sections || [])
+    } catch {
+      setTargetClassroomSections([])
+    } finally {
+      setLoadingTargetSections(false)
+    }
+  }
+
+  const handleDuplicateActivityToSection = async (targetSectionId: string) => {
+    if (!duplicateActivityModal) return
+    setDuplicatingActivity(true)
+    try {
+      await classroomApi.duplicateActivity(duplicateActivityModal.activityId, targetSectionId)
+      setDuplicateActivityModal(null)
       loadActivities()
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al duplicar actividad')
+    } finally {
+      setDuplicatingActivity(false)
     }
   }
 
@@ -1731,6 +1845,16 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [icfesResult, setIcfesResult] = useState<any>(null)
   const [icfesClassResults, setIcfesClassResults] = useState<any[]>([])
   const [icfesLoading, setIcfesLoading] = useState(false)
+
+  // Duplicate activity modal
+  const [duplicateActivityModal, setDuplicateActivityModal] = useState<{ activityId: string; activityTitle: string } | null>(null)
+  const [duplicateTargetType, setDuplicateTargetType] = useState<'same' | 'other'>('same')
+  const [availableClassroomsForDup, setAvailableClassroomsForDup] = useState<any[]>([])
+  const [selectedTargetClassroom, setSelectedTargetClassroom] = useState<any>(null)
+  const [targetClassroomSections, setTargetClassroomSections] = useState<Section[]>([])
+  const [loadingClassroomsForDup, setLoadingClassroomsForDup] = useState(false)
+  const [loadingTargetSections, setLoadingTargetSections] = useState(false)
+  const [duplicatingActivity, setDuplicatingActivity] = useState(false)
 
   const loadQuestions = async (activityId: string) => {
     setQuestionsLoading(true)
@@ -1772,9 +1896,14 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         const { data } = await classroomApi.uploadMaterial(submitFile)
         fileUrl = data.data.path || data.data.url
       }
-      await classroomApi.submitTask(selectedActivity.id, { content: submitContent || undefined, fileUrl })
+      // Combinar contenido con enlace si existe
+      const fullContent = submitLink 
+        ? (submitContent ? `${submitContent}\n\n📎 Enlace: ${submitLink}` : `📎 Enlace: ${submitLink}`)
+        : submitContent || undefined
+      await classroomApi.submitTask(selectedActivity.id, { content: fullContent, fileUrl })
       setSubmitContent('')
       setSubmitFile(null)
+      setSubmitLink('')
       const { data } = await classroomApi.getMySubmission(selectedActivity.id)
       setMySubmission(data)
       loadActivities()
@@ -1794,6 +1923,21 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al calificar')
     } finally { setGrading(false) }
+  }
+
+  const handleDeleteSubmission = async (sub: Submission) => {
+    const studentName = sub.studentEnrollment?.student
+      ? `${sub.studentEnrollment.student.firstName} ${sub.studentEnrollment.student.lastName}`
+      : 'este estudiante'
+    if (!confirm(`¿Eliminar el intento de ${studentName}?\n\nEsto permitirá al estudiante volver a intentar la actividad.`)) return
+    try {
+      await classroomApi.deleteSubmission(sub.id)
+      // Reload submissions
+      const { data } = await classroomApi.listSubmissions(selectedActivity!.id)
+      setSubmissions(data)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al eliminar intento')
+    }
   }
 
   const handleReturn = async (sub: Submission) => {
@@ -2045,7 +2189,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 <button onClick={() => handlePublish(act.id, act.isPublished)} className={`px-4 py-2 rounded-xl text-sm font-medium ${act.isPublished ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`} style={{ minHeight: '44px' }}>
                   {act.isPublished ? 'Despublicar' : 'Publicar'}
                 </button>
-                <button onClick={() => handleDuplicateActivity(act.id, act.sectionId)} className="p-2.5 rounded-xl hover:bg-blue-50" title="Duplicar actividad">
+                <button onClick={() => openDuplicateActivityModal(act.id, act.title)} className="p-2.5 rounded-xl hover:bg-blue-50" title="Duplicar actividad">
                   <Copy className="w-5 h-5 text-blue-400" />
                 </button>
                 <button onClick={() => handleDelete(act.id)} className="p-2.5 rounded-xl hover:bg-red-50">
@@ -2110,6 +2254,18 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                         )}
                       </div>
                       <div className="flex items-center gap-2 sm:gap-1 ml-auto sm:ml-0">
+                        {/* Mostrar enlace externo si existe en el contenido */}
+                        {sub.content && sub.content.match(/https?:\/\/[^\s]+/) && (
+                          <a 
+                            href={sub.content.match(/https?:\/\/[^\s]+/)?.[0]} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="p-2 rounded-xl hover:bg-green-50" 
+                            title="Ver enlace externo"
+                          >
+                            <ExternalLink className="w-5 h-5 text-green-500" />
+                          </a>
+                        )}
                         {sub.fileUrl && (
                           <button onClick={() => openFile(sub.fileUrl!)} className="p-2 rounded-xl hover:bg-blue-50" title="Ver archivo">
                             <Download className="w-5 h-5 text-blue-500" />
@@ -2125,6 +2281,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                             </button>
                           </div>
                         )}
+                        <button onClick={() => handleDeleteSubmission(sub)} className="p-2 rounded-xl hover:bg-red-50" title="Eliminar intento">
+                          <Trash2 className="w-4 h-4 text-red-400" />
+                        </button>
                       </div>
                     </div>
                   )
@@ -2143,7 +2302,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 {gradingSubmission.studentEnrollment?.student?.firstName} {gradingSubmission.studentEnrollment?.student?.lastName}
               </p>
               {gradingSubmission.content && (
-                <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 max-h-40 overflow-y-auto whitespace-pre-wrap">{gradingSubmission.content}</div>
+                <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 max-h-40 overflow-y-auto whitespace-pre-wrap">
+                  {gradingSubmission.content.split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
+                    part.match(/^https?:\/\//) ? (
+                      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">{part}</a>
+                    ) : part
+                  )}
+                </div>
               )}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Nota (máx {act.maxScore ? Number(act.maxScore) : '5.0'})</label>
@@ -2849,6 +3014,25 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             ) : (
               <div className="space-y-4">
                 <textarea value={submitContent} onChange={e => setSubmitContent(e.target.value)} rows={4} placeholder="Escribe tu respuesta aquí (opcional)..." className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-blue-500 outline-none" />
+                
+                {/* Enlace externo */}
+                <div className="relative">
+                  <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input 
+                    value={submitLink} 
+                    onChange={e => setSubmitLink(e.target.value)} 
+                    placeholder="Pega un enlace externo (Google Docs, Canva, etc.)" 
+                    className="w-full border border-slate-300 rounded-xl pl-11 pr-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                {submitLink && (
+                  <div className="flex items-center gap-3 px-4 py-3 bg-green-50 rounded-xl border border-green-200">
+                    <ExternalLink className="w-5 h-5 text-green-500" />
+                    <a href={submitLink} target="_blank" rel="noopener noreferrer" className="text-sm text-green-700 hover:underline flex-1 truncate">{submitLink}</a>
+                    <button onClick={() => setSubmitLink('')} className="p-1 rounded-lg hover:bg-green-100"><X className="w-4 h-4 text-green-600" /></button>
+                  </div>
+                )}
+
                 <input ref={submitFileRef} type="file" className="hidden" onChange={e => setSubmitFile(e.target.files?.[0] || null)} />
                 {submitFile ? (
                   <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
@@ -2861,7 +3045,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   <button onClick={() => submitFileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
                     <Upload className="w-5 h-5" /> Subir archivo
                   </button>
-                  <button onClick={handleStudentSubmit} disabled={(!submitContent.trim() && !submitFile) || submitting} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                  <button onClick={handleStudentSubmit} disabled={(!submitContent.trim() && !submitFile && !submitLink.trim()) || submitting} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
                     {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                     {submitting ? 'Entregando...' : 'Entregar actividad'}
                   </button>
@@ -3028,6 +3212,137 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               </button>
             )
           })}
+        </div>
+      )}
+
+      {/* ── DUPLICATE ACTIVITY MODAL ── */}
+      {duplicateActivityModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between shrink-0">
+              <h3 className="font-bold text-slate-800">Duplicar actividad</h3>
+              <button onClick={() => setDuplicateActivityModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto flex-1">
+              <p className="text-sm text-slate-600 mb-4">
+                Duplicando: <span className="font-medium text-slate-800">{duplicateActivityModal.activityTitle}</span>
+              </p>
+
+              {/* Tabs: Same classroom / Other classroom */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => { setDuplicateTargetType('same'); setSelectedTargetClassroom(null) }}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${duplicateTargetType === 'same' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                >
+                  Esta aula
+                </button>
+                <button
+                  onClick={() => setDuplicateTargetType('other')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${duplicateTargetType === 'other' ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                >
+                  Otra aula
+                </button>
+              </div>
+
+              {duplicateTargetType === 'same' ? (
+                <>
+                  <p className="text-xs text-slate-500 mb-3">Selecciona la sección destino:</p>
+                  {sections.length === 0 ? (
+                    <p className="text-sm text-slate-500 text-center py-8">No hay secciones disponibles</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {sections.map((s: Section) => (
+                        <button
+                          key={s.id}
+                          onClick={() => handleDuplicateActivityToSection(s.id)}
+                          disabled={duplicatingActivity}
+                          className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left disabled:opacity-50"
+                        >
+                          <FolderOpen className="w-5 h-5 text-slate-400" />
+                          <span className="font-medium text-slate-700">{s.title}</span>
+                          {duplicatingActivity && <Loader2 className="w-4 h-4 animate-spin text-blue-600 ml-auto" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {!selectedTargetClassroom ? (
+                    <>
+                      <p className="text-xs text-slate-500 mb-3">Selecciona el aula destino:</p>
+                      {loadingClassroomsForDup ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
+                        </div>
+                      ) : availableClassroomsForDup.length === 0 ? (
+                        <p className="text-sm text-slate-500 text-center py-8">No hay otras aulas disponibles</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {availableClassroomsForDup.map((c: any) => (
+                            <button
+                              key={c.id}
+                              onClick={() => handleSelectTargetClassroom(c)}
+                              className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-violet-300 hover:bg-violet-50 transition-colors text-left"
+                            >
+                              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: c.color || '#6366f1' }}>
+                                {c.title?.charAt(0) || 'A'}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-slate-800 truncate">{c.title}</p>
+                                <p className="text-xs text-slate-500 truncate">{c.groupName} • {c.subjectName}</p>
+                              </div>
+                              <ChevronRight className="w-4 h-4 text-slate-400" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => setSelectedTargetClassroom(null)} className="flex items-center gap-2 text-sm text-violet-600 hover:text-violet-700 mb-3">
+                        <ChevronLeft className="w-4 h-4" /> Cambiar aula
+                      </button>
+                      <div className="flex items-center gap-3 p-3 bg-violet-50 rounded-lg border border-violet-200 mb-4">
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: selectedTargetClassroom.color || '#6366f1' }}>
+                          {selectedTargetClassroom.title?.charAt(0) || 'A'}
+                        </div>
+                        <div>
+                          <p className="font-medium text-slate-800">{selectedTargetClassroom.title}</p>
+                          <p className="text-xs text-slate-500">{selectedTargetClassroom.groupName} • {selectedTargetClassroom.subjectName}</p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-500 mb-3">Selecciona la sección destino:</p>
+                      {loadingTargetSections ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
+                        </div>
+                      ) : targetClassroomSections.length === 0 ? (
+                        <p className="text-sm text-slate-500 text-center py-8">Esta aula no tiene secciones</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {targetClassroomSections.map((s: Section) => (
+                            <button
+                              key={s.id}
+                              onClick={() => handleDuplicateActivityToSection(s.id)}
+                              disabled={duplicatingActivity}
+                              className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-violet-300 hover:bg-violet-50 transition-colors text-left disabled:opacity-50"
+                            >
+                              <FolderOpen className="w-5 h-5 text-slate-400" />
+                              <span className="font-medium text-slate-700">{s.title}</span>
+                              {duplicatingActivity && <Loader2 className="w-4 h-4 animate-spin text-violet-600 ml-auto" />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

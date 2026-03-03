@@ -723,6 +723,45 @@ export class ClassroomService {
     });
   }
 
+  /**
+   * Elimina un intento de quiz/examen (solo el docente puede hacerlo)
+   * Esto permite al estudiante volver a intentar
+   */
+  async deleteSubmission(submissionId: string, teacherId: string) {
+    const submission = await this.prisma.activitySubmission.findUnique({
+      where: { id: submissionId },
+      include: {
+        activity: {
+          include: {
+            classroom: { select: { teacherAssignment: { select: { teacherId: true } } } },
+          },
+        },
+        studentEnrollment: {
+          include: { student: { select: { firstName: true, lastName: true } } },
+        },
+      },
+    });
+
+    if (!submission || submission.activity.classroom.teacherAssignment.teacherId !== teacherId) {
+      throw new ForbiddenException('Entrega no encontrada o no tiene permisos');
+    }
+
+    // Delete answers first (if quiz)
+    await this.prisma.questionAnswer.deleteMany({
+      where: { submissionId },
+    });
+
+    // Delete the submission
+    await this.prisma.activitySubmission.delete({
+      where: { id: submissionId },
+    });
+
+    return {
+      success: true,
+      message: `Intento eliminado para ${submission.studentEnrollment.student.firstName} ${submission.studentEnrollment.student.lastName}`,
+    };
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // QUIZ / EXAM – Questions CRUD
   // ═══════════════════════════════════════════════════════════════════════════
