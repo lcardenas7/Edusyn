@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx'
 
 // Plantilla para Estudiantes (soporta múltiples formatos de grupo)
+// Esta plantilla es para CREAR nuevos estudiantes. Para actualizar existentes, usar "Actualización Masiva"
 export const studentTemplateColumns = [
   { header: 'Tipo Documento', key: 'documentType', example: 'TI', required: true, options: 'TI, CC, RC, CE' },
   { header: 'Numero Documento', key: 'documentNumber', example: '1001234567', required: true },

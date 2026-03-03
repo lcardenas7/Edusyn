@@ -351,7 +351,7 @@ export class StudentsService {
       const studentData = data.students[i];
       
       try {
-        // 1. Crear o actualizar estudiante
+        // 1. Buscar estudiante existente por documento
         let student = await this.prisma.student.findUnique({
           where: {
             institutionId_documentNumber: {
@@ -362,7 +362,7 @@ export class StudentsService {
         });
 
         if (student) {
-          // Actualizar estudiante existente
+          // Actualizar estudiante existente (solo datos básicos, no documento)
           student = await this.prisma.student.update({
             where: { id: student.id },
             data: {
@@ -1305,30 +1305,23 @@ export class StudentsService {
         groupName: s.enrollments[0].group.name,
       } : null);
 
+      // Formato simplificado: mismas columnas que la plantilla de importación + system_id
       return {
-        system_id: s.id, // Columna inmutable para identificación
-        group: groupInfo ? `${groupInfo.gradeName} ${groupInfo.groupName}` : '', // Grupo del estudiante (solo lectura)
-        document_type: s.documentType,
-        document_number: s.documentNumber,
-        first_name: s.firstName,
-        second_name: s.secondName || '',
-        last_name: s.lastName,
-        second_last_name: s.secondLastName || '',
-        birth_date: s.birthDate ? s.birthDate.toISOString().split('T')[0] : '',
-        birth_place: s.birthPlace || '',
-        gender: s.gender || '',
-        email: s.email || '',
-        phone: s.phone || '',
-        address: s.address || '',
-        neighborhood: s.neighborhood || '',
-        city: s.city || '',
-        blood_type: s.bloodType || '',
-        eps: s.eps || '',
-        stratum: s.stratum ?? '',
-        ethnicity: s.ethnicity || '',
-        disability: s.disability || '',
-        emergency_contact: s.emergencyContact || '',
-        emergency_phone: s.emergencyPhone || '',
+        system_id: s.id, // Columna inmutable para identificación (NO MODIFICAR)
+        Grupo: groupInfo ? `${groupInfo.gradeName} ${groupInfo.groupName}` : '', // Solo lectura
+        'Tipo Documento': s.documentType,
+        'Numero Documento': s.documentNumber,
+        'Primer Nombre': s.firstName,
+        'Segundo Nombre': s.secondName || '',
+        'Primer Apellido': s.lastName,
+        'Segundo Apellido': s.secondLastName || '',
+        'Fecha Nacimiento': s.birthDate ? s.birthDate.toISOString().split('T')[0] : '',
+        Genero: s.gender || '',
+        Direccion: s.address || '',
+        Telefono: s.phone || '',
+        Email: s.email || '',
+        EPS: s.eps || '',
+        'Tipo Sangre': s.bloodType || '',
       };
     });
   }
@@ -1342,8 +1335,8 @@ export class StudentsService {
     institutionId: string,
     rows: Array<{
       system_id: string;
-      document_type?: string;
-      document_number?: string;
+      document_type?: string | number;
+      document_number?: string | number;
       first_name?: string;
       second_name?: string;
       last_name?: string;
@@ -1352,7 +1345,7 @@ export class StudentsService {
       birth_place?: string;
       gender?: string;
       email?: string;
-      phone?: string;
+      phone?: string | number;
       address?: string;
       neighborhood?: string;
       city?: string;
@@ -1362,15 +1355,47 @@ export class StudentsService {
       ethnicity?: string;
       disability?: string;
       emergency_contact?: string;
-      emergency_phone?: string;
+      emergency_phone?: string | number;
     }>,
     previewOnly: boolean = false,
   ) {
     const errors: Array<{ row: number; field: string; message: string }> = [];
     const updates: Array<{ systemId: string; changes: Record<string, { old: any; new: any }> }> = [];
 
+    // 0. Normalizar datos de Excel (soporta nombres en inglés snake_case y español)
+    const normalizedRows = rows.map((row: any) => {
+      // Mapear nombres en español a inglés snake_case
+      const getValue = (enKey: string, esKey: string) => row[enKey] ?? row[esKey];
+      
+      return {
+        system_id: String(row.system_id || '').trim(),
+        document_type: getValue('document_type', 'Tipo Documento') != null ? String(getValue('document_type', 'Tipo Documento')).trim() : undefined,
+        document_number: getValue('document_number', 'Numero Documento') != null ? String(getValue('document_number', 'Numero Documento')).trim() : undefined,
+        first_name: getValue('first_name', 'Primer Nombre') || undefined,
+        second_name: getValue('second_name', 'Segundo Nombre') || undefined,
+        last_name: getValue('last_name', 'Primer Apellido') || undefined,
+        second_last_name: getValue('second_last_name', 'Segundo Apellido') || undefined,
+        birth_date: getValue('birth_date', 'Fecha Nacimiento') || undefined,
+        gender: getValue('gender', 'Genero') || undefined,
+        address: getValue('address', 'Direccion') || undefined,
+        phone: getValue('phone', 'Telefono') != null ? String(getValue('phone', 'Telefono')).trim() : undefined,
+        email: getValue('email', 'Email') || undefined,
+        blood_type: getValue('blood_type', 'Tipo Sangre') || undefined,
+        eps: getValue('eps', 'EPS') || undefined,
+        // Campos adicionales (solo inglés, para compatibilidad)
+        birth_place: row.birth_place || undefined,
+        neighborhood: row.neighborhood || undefined,
+        city: row.city || undefined,
+        stratum: row.stratum != null ? (typeof row.stratum === 'number' ? row.stratum : parseInt(String(row.stratum), 10) || undefined) : undefined,
+        ethnicity: row.ethnicity || undefined,
+        disability: row.disability || undefined,
+        emergency_contact: row.emergency_contact || undefined,
+        emergency_phone: row.emergency_phone != null ? String(row.emergency_phone).trim() : undefined,
+      };
+    });
+
     // 1. Extraer todos los system_ids del archivo
-    const systemIds = rows.map(r => r.system_id).filter(Boolean);
+    const systemIds = normalizedRows.map(r => r.system_id).filter(Boolean);
     
     // Validar que no haya system_ids duplicados en el archivo
     const duplicateIds = systemIds.filter((id, idx) => systemIds.indexOf(id) !== idx);
@@ -1410,8 +1435,8 @@ export class StudentsService {
     const existingMap = new Map(existingStudents.map(s => [s.id, s]));
 
     // 3. Validar que todos los system_ids existan
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
+    for (let i = 0; i < normalizedRows.length; i++) {
+      const row = normalizedRows[i];
       if (!row.system_id) {
         errors.push({ row: i + 2, field: 'system_id', message: 'system_id es requerido' });
         continue;
@@ -1422,10 +1447,10 @@ export class StudentsService {
     }
 
     // 4. Extraer documentos nuevos para validar conflictos
-    const newDocNumbers = rows
+    const newDocNumbers = normalizedRows
       .filter(r => r.document_number && existingMap.has(r.system_id))
       .filter(r => r.document_number !== existingMap.get(r.system_id)?.documentNumber)
-      .map(r => r.document_number!);
+      .map(r => String(r.document_number));
 
     // 5. Verificar conflictos de documentos (1 query)
     if (newDocNumbers.length > 0) {
@@ -1440,7 +1465,7 @@ export class StudentsService {
 
       if (conflicts.length > 0) {
         for (const conflict of conflicts) {
-          const rowIdx = rows.findIndex(r => r.document_number === conflict.documentNumber);
+          const rowIdx = normalizedRows.findIndex(r => r.document_number === conflict.documentNumber);
           errors.push({
             row: rowIdx + 2,
             field: 'document_number',
@@ -1451,8 +1476,8 @@ export class StudentsService {
     }
 
     // 6. Calcular cambios (diff)
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
+    for (let i = 0; i < normalizedRows.length; i++) {
+      const row = normalizedRows[i];
       const existing = existingMap.get(row.system_id);
       if (!existing) continue;
 
