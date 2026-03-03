@@ -276,9 +276,9 @@ export class ClassroomController {
 
   @Delete('activities/:activityId')
   @Roles('DOCENTE', 'COORDINADOR')
-  async deleteActivity(@Param('activityId') activityId: string, @Request() req: any) {
+  async deleteActivity(@Param('activityId') activityId: string, @Request() req: any, @Query('force') force?: string) {
     const { userId } = await this.resolveCtx(req);
-    return this.service.deleteActivity(activityId, userId);
+    return this.service.deleteActivity(activityId, userId, force === 'true');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
