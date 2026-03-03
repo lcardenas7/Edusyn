@@ -860,6 +860,50 @@ export class ClassroomService {
     });
   }
 
+  async getMyGrades(classroomId: string, studentUserId: string) {
+    // Get classroom to find the group
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: classroomId },
+      select: { teacherAssignment: { select: { groupId: true } } },
+    });
+    if (!classroom) return { submissions: [], pending: [] };
+
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: {
+        student: { userId: studentUserId },
+        status: 'ACTIVE',
+        groupId: classroom.teacherAssignment.groupId,
+      },
+      select: { id: true },
+    });
+    if (!enrollment) return { submissions: [], pending: [] };
+
+    const submissions = await this.prisma.activitySubmission.findMany({
+      where: {
+        studentEnrollmentId: enrollment.id,
+        activity: { classroomId, isPublished: true },
+      },
+      orderBy: { submittedAt: 'desc' },
+      include: {
+        activity: {
+          select: { id: true, title: true, type: true, maxScore: true, dueDate: true, section: { select: { title: true } } },
+        },
+      },
+    });
+
+    // Also get activities without submissions (pending)
+    const activities = await this.prisma.classroomActivity.findMany({
+      where: { classroomId, isPublished: true, isVisible: true },
+      select: { id: true, title: true, type: true, maxScore: true, dueDate: true, section: { select: { title: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const submittedIds = new Set(submissions.map(s => s.activity.id));
+    const pending = activities.filter(a => !submittedIds.has(a.id));
+
+    return { submissions, pending };
+  }
+
   /**
    * Elimina un intento de quiz/examen (solo el docente puede hacerlo)
    * Esto permite al estudiante volver a intentar
