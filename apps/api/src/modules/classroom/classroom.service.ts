@@ -546,7 +546,7 @@ export class ClassroomService {
     await this.validateActivityOwnership(activityId, teacherId);
     return this.prisma.classroomActivity.update({
       where: { id: activityId },
-      data: { isPublished: true },
+      data: { isPublished: true, isVisible: true },
     });
   }
 
@@ -1764,7 +1764,7 @@ export class ClassroomService {
         maxAttempts: activity.maxAttempts,
         shuffleQuestions: activity.shuffleQuestions,
         showResults: activity.showResults,
-        isVisible: false,
+        isVisible: true,
         isPublished: false,
         sortOrder: (maxSort._max.sortOrder || 0) + 1,
         metadata: activity.metadata as any,
