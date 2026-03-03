@@ -1846,4 +1846,6 @@ export const classroomApi = {
     api.post(`/classrooms/materials/${materialId}/duplicate-to`, { targetSectionId }),
   duplicateActivity: (activityId: string, targetSectionId: string) =>
     api.post(`/classrooms/activities/${activityId}/duplicate-to`, { targetSectionId }),
+  copySectionToClassroom: (sectionId: string, targetClassroomId: string) =>
+    api.post(`/classrooms/sections/${sectionId}/copy-to`, { targetClassroomId }),
 }

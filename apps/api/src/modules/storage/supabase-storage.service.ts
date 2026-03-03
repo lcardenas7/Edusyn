@@ -116,6 +116,51 @@ export class SupabaseStorageService {
   }
 
   /**
+   * Tipos permitidos para materiales del aula virtual
+   * PDF, Word, Excel, PowerPoint, imágenes. Máximo 10MB
+   */
+  static readonly CLASSROOM_ALLOWED_TYPES = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+  ];
+  static readonly CLASSROOM_MAX_SIZE_MB = 10;
+
+  /**
+   * Sube un material para el aula virtual
+   * Ruta: galeria/institucion/{institutionId}/classroom/{fileName}
+   * Tipos: PDF, Word, Excel, PowerPoint, imágenes. Máximo 10MB
+   */
+  async uploadClassroomMaterial(
+    institutionId: string,
+    file: Express.Multer.File,
+  ): Promise<UploadResult> {
+    if (!this.isConfigured()) {
+      throw new BadRequestException('Storage no configurado');
+    }
+
+    this.validateFile(
+      file,
+      SupabaseStorageService.CLASSROOM_ALLOWED_TYPES,
+      SupabaseStorageService.CLASSROOM_MAX_SIZE_MB,
+    );
+
+    const ext = this.getFileExtension(file.originalname);
+    const safeName = this.slugify(file.originalname.replace(/\.[^.]+$/, ''));
+    const fileName = `${safeName}_${Date.now()}.${ext}`;
+    const path = `institucion/${institutionId}/classroom/${fileName}`;
+
+    return this.uploadFile(this.buckets.galeria, path, file);
+  }
+
+  /**
    * Sube un adjunto de mensaje/comunicación
    * Ruta: institucion/{institutionId}/mensajes/{messageId}/{fileName}
    * Tipos: PDF, Word, imágenes. Máximo 5MB

@@ -151,15 +151,14 @@ export class StorageController {
       throw new BadRequestException('No se pudo determinar la institución del usuario');
     }
 
-    // Max 10MB
+    // Max 10MB (validación adicional, el servicio también valida)
     if (file.size > 10 * 1024 * 1024) {
       throw new BadRequestException('El archivo excede el límite de 10MB');
     }
 
-    const result = await this.storageService.uploadGalleryImage(
+    const result = await this.storageService.uploadClassroomMaterial(
       institutionId,
       file,
-      'classroom',
     );
 
     let signedUrl = result.url;

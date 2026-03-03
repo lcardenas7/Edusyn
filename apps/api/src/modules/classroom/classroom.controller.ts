@@ -485,4 +485,15 @@ export class ClassroomController {
     const { userId } = await this.resolveCtx(req);
     return this.service.duplicateActivity(activityId, body.targetSectionId, userId);
   }
+
+  @Post('sections/:sectionId/copy-to')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async copySectionToClassroom(
+    @Param('sectionId') sectionId: string,
+    @Request() req: any,
+    @Body() body: { targetClassroomId: string },
+  ) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.copySectionToClassroom(sectionId, body.targetClassroomId, userId);
+  }
 }

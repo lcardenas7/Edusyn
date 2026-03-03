@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -1653,5 +1653,137 @@ export class ClassroomService {
     }
 
     return newActivity;
+  }
+
+  /**
+   * Copia una sección completa (con materiales y actividades) a otro aula
+   */
+  async copySectionToClassroom(
+    sectionId: string,
+    targetClassroomId: string,
+    teacherId: string,
+  ) {
+    // Validate source section ownership
+    const sourceSection = await this.prisma.classroomSection.findUnique({
+      where: { id: sectionId },
+      include: {
+        classroom: { include: { teacherAssignment: { select: { teacherId: true } } } },
+        materials: { orderBy: { sortOrder: 'asc' } },
+        activities: {
+          orderBy: { sortOrder: 'asc' },
+          include: { questions: { orderBy: { sortOrder: 'asc' } } },
+        },
+      },
+    });
+
+    if (!sourceSection || sourceSection.classroom.teacherAssignment.teacherId !== teacherId) {
+      throw new ForbiddenException('Sección no encontrada o no tiene permisos');
+    }
+
+    // Validate target classroom ownership
+    const targetClassroom = await this.prisma.classroom.findUnique({
+      where: { id: targetClassroomId },
+      include: { teacherAssignment: { select: { teacherId: true } } },
+    });
+
+    if (!targetClassroom || targetClassroom.teacherAssignment.teacherId !== teacherId) {
+      throw new ForbiddenException('Aula destino no encontrada o no tiene permisos');
+    }
+
+    // Check if section with same name already exists in target classroom
+    const existingSection = await this.prisma.classroomSection.findFirst({
+      where: {
+        classroomId: targetClassroomId,
+        title: sourceSection.title,
+      },
+    });
+
+    if (existingSection) {
+      throw new BadRequestException(
+        `Ya existe una sección llamada "${sourceSection.title}" en el aula destino. Renombre la sección existente o la sección a copiar antes de continuar.`,
+      );
+    }
+
+    // Get max sortOrder in target classroom sections
+    const maxSort = await this.prisma.classroomSection.aggregate({
+      where: { classroomId: targetClassroomId },
+      _max: { sortOrder: true },
+    });
+
+    // Create new section in target classroom
+    const newSection = await this.prisma.classroomSection.create({
+      data: {
+        classroomId: targetClassroomId,
+        title: sourceSection.title,
+        description: sourceSection.description,
+        sortOrder: (maxSort._max.sortOrder || 0) + 1,
+        isVisible: sourceSection.isVisible,
+      },
+    });
+
+    // Copy materials
+    for (const material of sourceSection.materials) {
+      await this.prisma.classroomMaterial.create({
+        data: {
+          sectionId: newSection.id,
+          type: material.type,
+          title: material.title,
+          content: material.content,
+          fileUrl: material.fileUrl, // Keep same file reference
+          sortOrder: material.sortOrder,
+          isVisible: material.isVisible,
+        },
+      });
+    }
+
+    // Copy activities (without submissions)
+    for (const activity of sourceSection.activities) {
+      const newActivity = await this.prisma.classroomActivity.create({
+        data: {
+          sectionId: newSection.id,
+          classroomId: targetClassroomId,
+          type: activity.type,
+          title: activity.title,
+          description: activity.description,
+          maxScore: activity.maxScore,
+          dueDate: null, // Reset due date
+          openDate: null,
+          timeLimitMinutes: activity.timeLimitMinutes,
+          allowLateSubmit: activity.allowLateSubmit,
+          maxAttempts: activity.maxAttempts,
+          shuffleQuestions: activity.shuffleQuestions,
+          showResults: activity.showResults,
+          isVisible: false, // Start as not visible
+          isPublished: false, // Start as not published
+          sortOrder: activity.sortOrder,
+          metadata: activity.metadata as any,
+        },
+      });
+
+      // Copy questions for quiz/exam
+      for (const question of activity.questions) {
+        await this.prisma.activityQuestion.create({
+          data: {
+            activityId: newActivity.id,
+            type: question.type,
+            text: question.text,
+            imageUrl: question.imageUrl,
+            options: question.options as any,
+            correctAnswer: question.correctAnswer,
+            points: question.points,
+            explanation: question.explanation,
+            subjectArea: question.subjectArea,
+            sortOrder: question.sortOrder,
+          },
+        });
+      }
+    }
+
+    return {
+      success: true,
+      newSectionId: newSection.id,
+      materialsCopied: sourceSection.materials.length,
+      activitiesCopied: sourceSection.activities.length,
+    };
   }
 }

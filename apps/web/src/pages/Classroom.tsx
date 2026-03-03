@@ -921,6 +921,16 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Copy section modal
+  const [copySectionModal, setCopySectionModal] = useState<{ sectionId: string; sectionTitle: string } | null>(null)
+  const [availableClassrooms, setAvailableClassrooms] = useState<any[]>([])
+  const [loadingClassrooms, setLoadingClassrooms] = useState(false)
+  const [copyingSection, setCopyingSection] = useState(false)
+
+  // Duplicate material modal
+  const [duplicateMaterialModal, setDuplicateMaterialModal] = useState<{ materialId: string; materialTitle: string } | null>(null)
+  const [duplicatingMaterial, setDuplicatingMaterial] = useState(false)
+
   const handleAddSection = async () => {
     if (!newSectionTitle.trim()) return
     try {
@@ -953,12 +963,48 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
     try { await classroomApi.deleteMaterial(id); onReload() } catch {}
   }
 
-  const handleDuplicateMaterial = async (materialId: string, sectionId: string) => {
+  const openDuplicateMaterialModal = (materialId: string, materialTitle: string) => {
+    setDuplicateMaterialModal({ materialId, materialTitle })
+  }
+
+  const handleDuplicateMaterialToSection = async (targetSectionId: string) => {
+    if (!duplicateMaterialModal) return
+    setDuplicatingMaterial(true)
     try {
-      await classroomApi.duplicateMaterial(materialId, sectionId)
+      await classroomApi.duplicateMaterial(duplicateMaterialModal.materialId, targetSectionId)
+      setDuplicateMaterialModal(null)
       onReload()
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al duplicar material')
+    } finally {
+      setDuplicatingMaterial(false)
+    }
+  }
+
+  const openCopySectionModal = async (sectionId: string, sectionTitle: string) => {
+    setCopySectionModal({ sectionId, sectionTitle })
+    setLoadingClassrooms(true)
+    try {
+      const res = await classroomApi.listClassroomsForCopy(classroom.id)
+      setAvailableClassrooms(res.data || [])
+    } catch {
+      setAvailableClassrooms([])
+    } finally {
+      setLoadingClassrooms(false)
+    }
+  }
+
+  const handleCopySectionToClassroom = async (targetClassroomId: string) => {
+    if (!copySectionModal) return
+    setCopyingSection(true)
+    try {
+      const result = await classroomApi.copySectionToClassroom(copySectionModal.sectionId, targetClassroomId)
+      alert(`Sección copiada exitosamente.\nMateriales: ${result.data.materialsCopied}\nActividades: ${result.data.activitiesCopied}`)
+      setCopySectionModal(null)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al copiar sección')
+    } finally {
+      setCopyingSection(false)
     }
   }
 
@@ -1100,6 +1146,9 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
                   <button onClick={() => handleToggleVis(section.id, section.isVisible)} className="p-1.5 rounded-lg hover:bg-slate-100" title={section.isVisible ? 'Ocultar' : 'Mostrar'}>
                     {section.isVisible ? <EyeOff className="w-4 h-4 text-slate-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
                   </button>
+                  <button onClick={() => openCopySectionModal(section.id, section.title)} className="p-1.5 rounded-lg hover:bg-violet-50" title="Copiar a otra aula">
+                    <Copy className="w-4 h-4 text-violet-400" />
+                  </button>
                   <button onClick={() => handleDeleteSection(section.id)} className="p-1.5 rounded-lg hover:bg-red-50" title="Eliminar">
                     <Trash2 className="w-4 h-4 text-red-400" />
                   </button>
@@ -1110,7 +1159,7 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
             {/* Materials list - bigger cards */}
             <div className="p-4 space-y-3">
               {section.materials.filter(m => isTeacher || m.isVisible).map(material => (
-                <MaterialCard key={material.id} material={material} isTeacher={isTeacher} onToggleVis={handleToggleMaterialVis} onDelete={handleDeleteMaterial} onDuplicate={(id) => handleDuplicateMaterial(id, section.id)} onDownload={handleDownload} resolveFileUrl={resolveFileUrl} />
+                <MaterialCard key={material.id} material={material} isTeacher={isTeacher} onToggleVis={handleToggleMaterialVis} onDelete={handleDeleteMaterial} onDuplicate={(id, title) => openDuplicateMaterialModal(id, title)} onDownload={handleDownload} resolveFileUrl={resolveFileUrl} />
               ))}
 
               {section.materials.filter(m => isTeacher || m.isVisible).length === 0 && (
@@ -1318,6 +1367,95 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
           </div>
         </div>
       )}
+
+      {/* ── DUPLICATE MATERIAL MODAL ── */}
+      {duplicateMaterialModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md">
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800">Duplicar recurso a otra sección</h3>
+              <button onClick={() => setDuplicateMaterialModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <div className="p-5">
+              <p className="text-sm text-slate-600 mb-4">
+                Duplicando: <span className="font-medium text-slate-800">{duplicateMaterialModal.materialTitle}</span>
+              </p>
+              <p className="text-xs text-slate-500 mb-3">Selecciona la sección destino:</p>
+              {sections.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-8">No hay secciones disponibles</p>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {sections.map((s: Section) => (
+                    <button
+                      key={s.id}
+                      onClick={() => handleDuplicateMaterialToSection(s.id)}
+                      disabled={duplicatingMaterial}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left disabled:opacity-50"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                        <FolderOpen className="w-4 h-4 text-slate-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-slate-800 truncate">{s.title}</p>
+                        <p className="text-xs text-slate-500">{s.materials.length} recursos • {s.activities?.length || 0} actividades</p>
+                      </div>
+                      {duplicatingMaterial && <Loader2 className="w-4 h-4 animate-spin text-blue-600" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── COPY SECTION MODAL ── */}
+      {copySectionModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md">
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800">Copiar sección a otra aula</h3>
+              <button onClick={() => setCopySectionModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <div className="p-5">
+              <p className="text-sm text-slate-600 mb-4">
+                Copiando: <span className="font-medium text-slate-800">{copySectionModal.sectionTitle}</span>
+              </p>
+              {loadingClassrooms ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
+                </div>
+              ) : availableClassrooms.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-8">No hay otras aulas disponibles</p>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {availableClassrooms.map((c: any) => (
+                    <button
+                      key={c.id}
+                      onClick={() => handleCopySectionToClassroom(c.id)}
+                      disabled={copyingSection}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-violet-300 hover:bg-violet-50 transition-colors text-left disabled:opacity-50"
+                    >
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: c.color || '#6366f1' }}>
+                        {c.title?.charAt(0) || 'A'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-slate-800 truncate">{c.title}</p>
+                        <p className="text-xs text-slate-500 truncate">{c.groupName} • {c.subjectName}</p>
+                      </div>
+                      {copyingSection && <Loader2 className="w-4 h-4 animate-spin text-violet-600" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1330,7 +1468,7 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
   material: Material; isTeacher: boolean;
   onToggleVis: (id: string, vis: boolean) => void;
   onDelete: (id: string) => void;
-  onDuplicate: (id: string) => void;
+  onDuplicate: (id: string, title: string) => void;
   onDownload: (m: Material) => void;
   resolveFileUrl: (path: string) => Promise<string>;
 }) {
@@ -1366,7 +1504,7 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
           </div>
           {isTeacher && (
             <div className="opacity-0 group-hover:opacity-100 flex gap-0.5 shrink-0 transition-opacity">
-              <button onClick={() => onDuplicate(material.id)} className="p-1.5 rounded-lg hover:bg-blue-50" title="Duplicar">
+              <button onClick={() => onDuplicate(material.id, material.title)} className="p-1.5 rounded-lg hover:bg-blue-50" title="Duplicar a otra sección">
                 <Copy className="w-4 h-4 text-blue-400" />
               </button>
               <button onClick={() => onToggleVis(material.id, material.isVisible)} className="p-1.5 rounded-lg hover:bg-slate-100">
