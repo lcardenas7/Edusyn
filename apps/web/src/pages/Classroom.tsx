@@ -1839,6 +1839,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [qForm, setQForm] = useState({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [] as string[], blanks: [] as string[], matchPairs: [{ left: '', right: '' }] as { left: string; right: string }[], points: '1', explanation: '', subjectArea: '' })
   const [editingQuestion, setEditingQuestion] = useState<string | null>(null)
   const [savingQuestion, setSavingQuestion] = useState(false)
+  const questionFormRef = useRef<HTMLDivElement>(null)
 
   // Quiz taking (student)
   const [quizMode, setQuizMode] = useState<'idle' | 'taking' | 'result'>('idle')
@@ -2262,6 +2263,10 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     })
     setEditingQuestion(q.id)
     setShowAddQuestion(true)
+    // Scroll al formulario después de que se renderice
+    setTimeout(() => {
+      questionFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 100)
   }
 
   // Quiz taking handlers (student)
@@ -2619,7 +2624,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
             {/* Add/Edit question form */}
             {showAddQuestion && (
-              <div className="p-4 sm:p-6 border-b border-slate-100 bg-purple-50/30 space-y-4">
+              <div ref={questionFormRef} className="p-4 sm:p-6 border-b border-slate-100 bg-purple-50/30 space-y-4">
                 <h4 className="text-base font-bold text-slate-800">{editingQuestion ? 'Editar pregunta' : 'Nueva pregunta'}</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
