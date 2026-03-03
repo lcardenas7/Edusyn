@@ -1776,8 +1776,16 @@ export const classroomApi = {
     openDate?: string; allowLateSubmit?: boolean; isVisible?: boolean;
     attachmentUrl?: string; attachmentName?: string;
   }) => api.put(`/classrooms/activities/${activityId}`, data),
-  publishActivity: (activityId: string) => api.put(`/classrooms/activities/${activityId}/publish`),
-  unpublishActivity: (activityId: string) => api.put(`/classrooms/activities/${activityId}/unpublish`),
+  publishActivity: (activityId: string) =>
+    api.put(`/classrooms/activities/${activityId}/publish`),
+  unpublishActivity: (activityId: string) =>
+    api.put(`/classrooms/activities/${activityId}/unpublish`),
+  assignStudentsToActivity: (activityId: string, data: { studentEnrollmentIds: string[]; isRestrictedToAssigned: boolean }) =>
+    api.put(`/classrooms/activities/${activityId}/assign-students`, data),
+  getActivityAssignments: (activityId: string) =>
+    api.get(`/classrooms/activities/${activityId}/assignments`),
+  getStudentsForAssignment: (classroomId: string) =>
+    api.get(`/classrooms/${classroomId}/students-for-assignment`),
   deleteActivity: (activityId: string) => api.delete(`/classrooms/activities/${activityId}`),
 
   // Submissions

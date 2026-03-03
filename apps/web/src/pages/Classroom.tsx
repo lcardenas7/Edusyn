@@ -9,7 +9,7 @@ import {
   Bold, Italic, Underline, List, ListOrdered, Youtube,
   FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
   BarChart3, ChevronDown, ChevronUp, ChevronRight, Clock, CheckCircle2, AlertTriangle,
-  CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy,
+  CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check,
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1832,6 +1832,54 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     }
   }
 
+  const openAssignStudentsModal = async (activityId: string, activityTitle: string) => {
+    setAssignStudentsModal({ activityId, activityTitle })
+    setSelectedStudentIds([])
+    setIsRestrictedToAssigned(false)
+    setLoadingStudents(true)
+    try {
+      // Load classroom students
+      const studentsRes = await classroomApi.getStudentsForAssignment(classroom.id)
+      setClassroomStudents(studentsRes.data || [])
+      // Load existing assignments
+      const assignmentsRes = await classroomApi.getActivityAssignments(activityId)
+      const assignedIds = (assignmentsRes.data || []).map((a: any) => a.studentEnrollment.id)
+      setSelectedStudentIds(assignedIds)
+      // Check if activity is restricted
+      const activityRes = await classroomApi.getActivity(activityId)
+      setIsRestrictedToAssigned(activityRes.data?.isRestrictedToAssigned || false)
+    } catch {
+      setClassroomStudents([])
+    } finally {
+      setLoadingStudents(false)
+    }
+  }
+
+  const handleSaveAssignments = async () => {
+    if (!assignStudentsModal) return
+    setSavingAssignments(true)
+    try {
+      await classroomApi.assignStudentsToActivity(assignStudentsModal.activityId, {
+        studentEnrollmentIds: selectedStudentIds,
+        isRestrictedToAssigned,
+      })
+      setAssignStudentsModal(null)
+      loadActivities()
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al asignar estudiantes')
+    } finally {
+      setSavingAssignments(false)
+    }
+  }
+
+  const toggleStudentSelection = (enrollmentId: string) => {
+    setSelectedStudentIds(prev => 
+      prev.includes(enrollmentId) 
+        ? prev.filter(id => id !== enrollmentId)
+        : [...prev, enrollmentId]
+    )
+  }
+
   const isQuizType = (type: string) => ['QUIZ', 'EXAM', 'ICFES_SIMULATOR'].includes(type)
   const isIcfes = (type: string) => type === 'ICFES_SIMULATOR'
 
@@ -1855,6 +1903,14 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [loadingClassroomsForDup, setLoadingClassroomsForDup] = useState(false)
   const [loadingTargetSections, setLoadingTargetSections] = useState(false)
   const [duplicatingActivity, setDuplicatingActivity] = useState(false)
+
+  // Assign students modal
+  const [assignStudentsModal, setAssignStudentsModal] = useState<{ activityId: string; activityTitle: string } | null>(null)
+  const [classroomStudents, setClassroomStudents] = useState<any[]>([])
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
+  const [isRestrictedToAssigned, setIsRestrictedToAssigned] = useState(false)
+  const [loadingStudents, setLoadingStudents] = useState(false)
+  const [savingAssignments, setSavingAssignments] = useState(false)
 
   const loadQuestions = async (activityId: string) => {
     setQuestionsLoading(true)
@@ -2188,6 +2244,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               <div className="flex gap-1 shrink-0">
                 <button onClick={() => handlePublish(act.id, act.isPublished)} className={`px-4 py-2 rounded-xl text-sm font-medium ${act.isPublished ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`} style={{ minHeight: '44px' }}>
                   {act.isPublished ? 'Despublicar' : 'Publicar'}
+                </button>
+                <button onClick={() => openAssignStudentsModal(act.id, act.title)} className="p-2.5 rounded-xl hover:bg-violet-50" title="Asignar estudiantes">
+                  <Users className="w-5 h-5 text-violet-400" />
                 </button>
                 <button onClick={() => openDuplicateActivityModal(act.id, act.title)} className="p-2.5 rounded-xl hover:bg-blue-50" title="Duplicar actividad">
                   <Copy className="w-5 h-5 text-blue-400" />
@@ -3052,6 +3111,223 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── DUPLICATE ACTIVITY MODAL (in detail view) ── */}
+        {duplicateActivityModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+              <div className="p-5 border-b border-slate-200 flex items-center justify-between shrink-0">
+                <h3 className="font-bold text-slate-800">Duplicar actividad</h3>
+                <button onClick={() => setDuplicateActivityModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+              <div className="p-5 overflow-y-auto flex-1">
+                <p className="text-sm text-slate-600 mb-4">
+                  Duplicando: <span className="font-medium text-slate-800">{duplicateActivityModal.activityTitle}</span>
+                </p>
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={() => { setDuplicateTargetType('same'); setSelectedTargetClassroom(null) }}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${duplicateTargetType === 'same' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                  >
+                    Esta aula
+                  </button>
+                  <button
+                    onClick={() => setDuplicateTargetType('other')}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${duplicateTargetType === 'other' ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                  >
+                    Otra aula
+                  </button>
+                </div>
+                {duplicateTargetType === 'same' ? (
+                  <>
+                    <p className="text-xs text-slate-500 mb-3">Selecciona la sección destino:</p>
+                    {sections.length === 0 ? (
+                      <p className="text-sm text-slate-500 text-center py-8">No hay secciones disponibles</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {sections.map((s: Section) => (
+                          <button
+                            key={s.id}
+                            onClick={() => handleDuplicateActivityToSection(s.id)}
+                            disabled={duplicatingActivity}
+                            className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left disabled:opacity-50"
+                          >
+                            <FolderOpen className="w-5 h-5 text-slate-400" />
+                            <span className="font-medium text-slate-700">{s.title}</span>
+                            {duplicatingActivity && <Loader2 className="w-4 h-4 animate-spin text-blue-600 ml-auto" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {!selectedTargetClassroom ? (
+                      <>
+                        <p className="text-xs text-slate-500 mb-3">Selecciona el aula destino:</p>
+                        {loadingClassroomsForDup ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
+                          </div>
+                        ) : availableClassroomsForDup.length === 0 ? (
+                          <p className="text-sm text-slate-500 text-center py-8">No hay otras aulas disponibles</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {availableClassroomsForDup.map((c: any) => (
+                              <button
+                                key={c.id}
+                                onClick={() => handleSelectTargetClassroom(c)}
+                                className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-violet-300 hover:bg-violet-50 transition-colors text-left"
+                              >
+                                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: c.color || '#6366f1' }}>
+                                  {c.title?.charAt(0) || 'A'}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-slate-800 truncate">{c.title}</p>
+                                  <p className="text-xs text-slate-500 truncate">{c.groupName} • {c.subjectName}</p>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-slate-400" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => setSelectedTargetClassroom(null)} className="flex items-center gap-2 text-sm text-violet-600 hover:text-violet-700 mb-3">
+                          <ChevronLeft className="w-4 h-4" /> Cambiar aula
+                        </button>
+                        <div className="flex items-center gap-3 p-3 bg-violet-50 rounded-lg border border-violet-200 mb-4">
+                          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: selectedTargetClassroom.color || '#6366f1' }}>
+                            {selectedTargetClassroom.title?.charAt(0) || 'A'}
+                          </div>
+                          <div>
+                            <p className="font-medium text-slate-800">{selectedTargetClassroom.title}</p>
+                            <p className="text-xs text-slate-500">{selectedTargetClassroom.groupName} • {selectedTargetClassroom.subjectName}</p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-slate-500 mb-3">Selecciona la sección destino:</p>
+                        {loadingTargetSections ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
+                          </div>
+                        ) : targetClassroomSections.length === 0 ? (
+                          <p className="text-sm text-slate-500 text-center py-8">Esta aula no tiene secciones</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {targetClassroomSections.map((s: Section) => (
+                              <button
+                                key={s.id}
+                                onClick={() => handleDuplicateActivityToSection(s.id)}
+                                disabled={duplicatingActivity}
+                                className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-violet-300 hover:bg-violet-50 transition-colors text-left disabled:opacity-50"
+                              >
+                                <FolderOpen className="w-5 h-5 text-slate-400" />
+                                <span className="font-medium text-slate-700">{s.title}</span>
+                                {duplicatingActivity && <Loader2 className="w-4 h-4 animate-spin text-violet-600 ml-auto" />}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── ASSIGN STUDENTS MODAL (in detail view) ── */}
+        {assignStudentsModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+              <div className="p-5 border-b border-slate-200 flex items-center justify-between shrink-0">
+                <h3 className="font-bold text-slate-800">Asignar estudiantes</h3>
+                <button onClick={() => setAssignStudentsModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+              <div className="p-5 overflow-y-auto flex-1">
+                <p className="text-sm text-slate-600 mb-4">
+                  Actividad: <span className="font-medium text-slate-800">{assignStudentsModal.activityTitle}</span>
+                </p>
+
+                {/* Restriction toggle */}
+                <div className="flex items-center gap-3 p-3 bg-violet-50 rounded-lg border border-violet-200 mb-4">
+                  <input
+                    type="checkbox"
+                    id="restrictToAssigned"
+                    checked={isRestrictedToAssigned}
+                    onChange={e => setIsRestrictedToAssigned(e.target.checked)}
+                    className="w-4 h-4 text-violet-600 rounded"
+                  />
+                  <label htmlFor="restrictToAssigned" className="text-sm text-violet-800">
+                    <strong>Solo para seleccionados</strong> — La actividad solo será visible para los estudiantes marcados (útil para recuperaciones)
+                  </label>
+                </div>
+
+                {loadingStudents ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
+                  </div>
+                ) : classroomStudents.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-8">No hay estudiantes en este aula</p>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs text-slate-500">{selectedStudentIds.length} de {classroomStudents.length} seleccionados</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => setSelectedStudentIds(classroomStudents.map(s => s.enrollmentId))} className="text-xs text-blue-600 hover:underline">
+                          Seleccionar todos
+                        </button>
+                        <button onClick={() => setSelectedStudentIds([])} className="text-xs text-slate-500 hover:underline">
+                          Ninguno
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-1 max-h-64 overflow-y-auto">
+                      {classroomStudents.map((s: any) => (
+                        <button
+                          key={s.enrollmentId}
+                          onClick={() => toggleStudentSelection(s.enrollmentId)}
+                          className={`w-full flex items-center gap-3 p-2.5 rounded-lg border transition-colors text-left ${selectedStudentIds.includes(s.enrollmentId) ? 'border-violet-300 bg-violet-50' : 'border-slate-200 hover:border-slate-300'}`}
+                        >
+                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedStudentIds.includes(s.enrollmentId) ? 'border-violet-500 bg-violet-500' : 'border-slate-300'}`}>
+                            {selectedStudentIds.includes(s.enrollmentId) && <Check className="w-3 h-3 text-white" />}
+                          </div>
+                          {s.photo ? (
+                            <img src={s.photo} alt="" className="w-8 h-8 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                              {s.firstName?.[0]}{s.lastName?.[0]}
+                            </div>
+                          )}
+                          <span className="text-sm text-slate-700">{s.lastName}{s.secondLastName ? ` ${s.secondLastName}` : ''}, {s.firstName}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="p-4 border-t border-slate-200 flex justify-end gap-3 shrink-0">
+                <button onClick={() => setAssignStudentsModal(null)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveAssignments}
+                  disabled={savingAssignments}
+                  className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium hover:bg-violet-700 disabled:opacity-50 flex items-center gap-2"
+                >
+                  {savingAssignments && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Guardar asignación
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

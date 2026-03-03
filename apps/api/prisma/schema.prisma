@@ -1507,6 +1507,7 @@ model StudentEnrollment {
   
   // Aula Virtual
   classroomSubmissions    ActivitySubmission[]    @relation("ClassroomSubmissions")
+  activityAssignments     ActivityAssignment[]
 
   @@unique([studentId, academicYearId])
 }
@@ -4734,10 +4735,29 @@ model ClassroomActivity {
   questions   ActivityQuestion[]
   submissions ActivitySubmission[]
   forumPosts  ForumPost[]
+  assignedStudents ActivityAssignment[]
+
+  // Si está vacío, la actividad es para todos. Si tiene registros, solo para esos estudiantes.
+  isRestrictedToAssigned Boolean @default(false)
 
   @@index([classroomId])
   @@index([sectionId])
   @@index([dueDate])
+}
+
+// Asignación de actividades a estudiantes específicos (recuperación, refuerzo, etc.)
+model ActivityAssignment {
+  id                  String   @id @default(cuid())
+  activityId          String
+  studentEnrollmentId String
+  createdAt           DateTime @default(now())
+
+  activity          ClassroomActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, studentEnrollmentId])
+  @@index([activityId])
+  @@index([studentEnrollmentId])
 }
 
 model ActivityQuestion {
