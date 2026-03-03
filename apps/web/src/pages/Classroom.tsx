@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { classroomApi, storageApi } from '../lib/api'
+import { classroomApi, storageApi, liveSessionApi } from '../lib/api'
+import LiveQuiz from '../components/LiveQuiz'
 import {
   Plus, Loader2, AlertCircle, ChevronLeft, Users, Megaphone,
   FolderOpen, FileText, Video, Link2, ImageIcon, Type, Eye, EyeOff,
@@ -9,7 +10,7 @@ import {
   Bold, Italic, Underline, List, ListOrdered, Youtube,
   FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
   BarChart3, ChevronDown, ChevronUp, ChevronRight, Clock, CheckCircle2, AlertTriangle,
-  CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check,
+  CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check, Zap,
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1859,6 +1860,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [editForm, setEditForm] = useState({ title: '', description: '', maxScore: '', dueDate: '', allowLateSubmit: false })
   const [savingEdit, setSavingEdit] = useState(false)
 
+  // Live Quiz
+  const [showLiveQuiz, setShowLiveQuiz] = useState(false)
+  const [liveQuizActivityId, setLiveQuizActivityId] = useState('')
+  const [liveQuizActivityTitle, setLiveQuizActivityTitle] = useState('')
+  const [activeLiveSession, setActiveLiveSession] = useState<any>(null)
+
   const sections: Section[] = classroom.sections || []
 
   const loadActivities = useCallback(async () => {
@@ -1870,6 +1877,14 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }, [classroom.id, isStudent])
 
   useEffect(() => { loadActivities() }, [loadActivities])
+
+  // Check for active live session (student)
+  useEffect(() => {
+    if (!isStudent) return
+    liveSessionApi.getActive(classroom.id).then(({ data }) => {
+      if (data && data.id) setActiveLiveSession(data)
+    }).catch(() => {})
+  }, [classroom.id, isStudent])
 
   const handleCreate = async () => {
     if (!form.title.trim() || !form.sectionId) return
@@ -2617,9 +2632,16 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-800">Preguntas ({questions.length})</h3>
-              <button onClick={() => { resetQForm(); setEditingQuestion(null); setShowAddQuestion(true) }} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700" style={{ minHeight: '40px' }}>
-                <Plus className="w-4 h-4" /> Agregar pregunta
-              </button>
+              <div className="flex gap-2">
+                {questions.length >= 1 && (
+                  <button onClick={() => { setLiveQuizActivityId(act.id); setLiveQuizActivityTitle(act.title); setShowLiveQuiz(true) }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl text-sm font-semibold hover:from-yellow-600 hover:to-orange-600 shadow-sm" style={{ minHeight: '40px' }}>
+                    <Zap className="w-4 h-4" /> Live Quiz
+                  </button>
+                )}
+                <button onClick={() => { resetQForm(); setEditingQuestion(null); setShowAddQuestion(true) }} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700" style={{ minHeight: '40px' }}>
+                  <Plus className="w-4 h-4" /> Agregar pregunta
+                </button>
+              </div>
             </div>
 
             {/* Add/Edit question form */}
@@ -3678,6 +3700,33 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             </div>
           </div>
         </div>
+      )}
+
+      {/* Live Quiz banner (student) */}
+      {isStudent && activeLiveSession && (
+        <button
+          onClick={() => setShowLiveQuiz(true)}
+          className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl text-white hover:from-yellow-600 hover:to-orange-600 transition-all shadow-lg shadow-orange-500/20 animate-pulse"
+        >
+          <Zap className="w-8 h-8 shrink-0" />
+          <div className="flex-1 text-left">
+            <p className="font-bold text-lg">¡Live Quiz en curso!</p>
+            <p className="text-white/80 text-sm">Tu profesor ha iniciado un quiz en vivo. ¡Únete ahora!</p>
+          </div>
+          <ChevronRight className="w-6 h-6 shrink-0" />
+        </button>
+      )}
+
+      {/* Live Quiz overlay */}
+      {showLiveQuiz && (
+        <LiveQuiz
+          classroomId={classroom.id}
+          isTeacher={isTeacher}
+          onClose={() => { setShowLiveQuiz(false); setActiveLiveSession(null) }}
+          activityId={isTeacher ? liveQuizActivityId : undefined}
+          activityTitle={isTeacher ? liveQuizActivityTitle : undefined}
+          sessionId={isStudent && activeLiveSession ? activeLiveSession.id : undefined}
+        />
       )}
 
       {/* Activities list */}

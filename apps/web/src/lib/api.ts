@@ -1863,3 +1863,21 @@ export const classroomApi = {
   copySectionToClassroom: (sectionId: string, targetClassroomId: string) =>
     api.post(`/classrooms/sections/${sectionId}/copy-to`, { targetClassroomId }),
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LIVE QUIZ (Kahoot-like)
+// ═══════════════════════════════════════════════════════════════════════════
+export const liveSessionApi = {
+  create: (data: { classroomId: string; activityId: string; mode?: string; config?: any }) =>
+    api.post('/live-session/create', data),
+  get: (sessionId: string) => api.get(`/live-session/${sessionId}`),
+  getActive: (classroomId: string) => api.get(`/live-session/active/${classroomId}`),
+  start: (sessionId: string) => api.post(`/live-session/${sessionId}/start`),
+  nextQuestion: (sessionId: string) => api.post(`/live-session/${sessionId}/next-question`),
+  closeQuestion: (sessionId: string) => api.post(`/live-session/${sessionId}/close-question`),
+  showRanking: (sessionId: string) => api.post(`/live-session/${sessionId}/show-ranking`),
+  finish: (sessionId: string) => api.post(`/live-session/${sessionId}/finish`),
+  answer: (sessionId: string, data: { questionId: string; answer: string; responseTimeMs: number }) =>
+    api.post(`/live-session/${sessionId}/answer`, data),
+  streamUrl: (sessionId: string) => `${api.defaults.baseURL}/live-session/${sessionId}/stream`,
+}
