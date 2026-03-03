@@ -176,6 +176,13 @@ export class ClassroomController {
     return this.service.updateAnnouncement(announcementId, userId, body);
   }
 
+  @Post('announcements/:announcementId/copy')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async copyAnnouncement(@Param('announcementId') announcementId: string, @Request() req: any, @Body() body: { targetClassroomId: string }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.copyAnnouncementToClassroom(announcementId, body.targetClassroomId, userId);
+  }
+
   @Delete('announcements/:announcementId')
   @Roles('DOCENTE', 'COORDINADOR')
   async deleteAnnouncement(@Param('announcementId') announcementId: string, @Request() req: any) {
