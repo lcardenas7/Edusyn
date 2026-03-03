@@ -695,6 +695,79 @@ export class StudentsService {
   }
 
   /**
+   * Regenera credenciales (username + password) de estudiantes sin acceso activo.
+   * Solo afecta estudiantes que nunca han iniciado sesión (mustChangePassword=true).
+   * Útil cuando se actualizaron documentos pero los usernames quedaron con datos viejos.
+   */
+  async bulkRegenerateCredentials(studentIds: string[]) {
+    const results = {
+      regenerated: 0,
+      skipped: 0,
+      errors: [] as { studentId: string; error: string }[],
+    };
+
+    // Obtener estudiantes con su información de usuario
+    const students = await this.prisma.student.findMany({
+      where: { id: { in: studentIds } },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            mustChangePassword: true,
+          },
+        },
+      },
+    });
+
+    for (const student of students) {
+      try {
+        // Si no tiene usuario, saltar
+        if (!student.userId || !student.user) {
+          results.errors.push({
+            studentId: student.id,
+            error: 'El estudiante no tiene usuario creado',
+          });
+          continue;
+        }
+
+        // Si ya tiene acceso activo (ya inició sesión), saltar para no romper su acceso
+        if (!student.user.mustChangePassword) {
+          results.skipped++;
+          continue;
+        }
+
+        // Regenerar username y contraseña
+        const newUsername = await this.generateStudentUsername(
+          student.firstName,
+          student.lastName,
+          student.documentNumber,
+        );
+        const newPassword = this.ensureMinPasswordLength(student.documentNumber);
+        const passwordHash = await bcrypt.hash(newPassword, 10);
+
+        await this.prisma.user.update({
+          where: { id: student.userId },
+          data: {
+            username: newUsername,
+            passwordHash,
+            mustChangePassword: true,
+          },
+        });
+
+        results.regenerated++;
+      } catch (error: any) {
+        results.errors.push({
+          studentId: student.id,
+          error: error.message || 'Error desconocido',
+        });
+      }
+    }
+
+    return results;
+  }
+
+  /**
    * Obtiene las credenciales de estudiantes de una institución
    * Retorna solo estudiantes que tienen acceso al sistema (userId != null)
    */
