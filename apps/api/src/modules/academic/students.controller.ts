@@ -74,6 +74,17 @@ export class StudentsController {
     return this.studentsService.bulkResetPassword(data.studentIds);
   }
 
+  /**
+   * Regenera credenciales (username + password) de estudiantes sin acceso activo.
+   * Útil cuando se actualizaron documentos pero los usernames quedaron con datos viejos.
+   * Solo afecta estudiantes que nunca han iniciado sesión (mustChangePassword=true).
+   */
+  @Post('bulk-regenerate-credentials')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async bulkRegenerateCredentials(@Body() data: { studentIds: string[] }) {
+    return this.studentsService.bulkRegenerateCredentials(data.studentIds);
+  }
+
   @Post('bulk-delete-without-records')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
   async bulkDeleteWithoutRecords(@Body() data: { institutionId: string }) {

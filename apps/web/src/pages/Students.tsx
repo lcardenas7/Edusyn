@@ -711,6 +711,26 @@ export default function Students() {
     }
   }
 
+  const handleBulkRegenerateCredentials = async () => {
+    const studentsToRegenerate = filteredCredentialStudents.filter(s => s.hasAccess && s.mustChangePassword)
+    if (studentsToRegenerate.length === 0) {
+      alert('No hay estudiantes elegibles para regenerar.\nSolo se pueden regenerar credenciales de estudiantes que nunca han iniciado sesión.')
+      return
+    }
+    if (!confirm(`¿Regenerar usuario y contraseña para ${studentsToRegenerate.length} estudiantes?\n\nEsto actualizará el username basándose en el documento actual.\nSolo afecta estudiantes que nunca han iniciado sesión.`)) return
+    
+    setProcessingCredentials(true)
+    try {
+      const result = await studentsApi.bulkRegenerateCredentials(studentsToRegenerate.map(s => s.id))
+      alert(`Credenciales regeneradas: ${result.data.regenerated}\nOmitidos (ya tienen acceso activo): ${result.data.skipped}${result.data.errors?.length > 0 ? `\nErrores: ${result.data.errors.length}` : ''}`)
+      await loadCredentialStudents()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al regenerar credenciales')
+    } finally {
+      setProcessingCredentials(false)
+    }
+  }
+
   const handleExportCredentials = () => {
     const studentsWithAccess = filteredCredentialStudents.filter(s => s.hasAccess)
     if (studentsWithAccess.length === 0) {
@@ -2424,6 +2444,15 @@ export default function Students() {
                 >
                   {processingCredentials ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                   Reset Masivo ({filteredCredentialStudents.filter(s => s.hasAccess).length})
+                </button>
+                <button
+                  onClick={handleBulkRegenerateCredentials}
+                  disabled={processingCredentials}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 text-sm disabled:opacity-50"
+                  title="Regenerar username y contraseña para estudiantes que nunca han iniciado sesión"
+                >
+                  {processingCredentials ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  Regenerar Usuarios ({filteredCredentialStudents.filter(s => s.hasAccess && s.mustChangePassword).length})
                 </button>
               </div>
             </div>
