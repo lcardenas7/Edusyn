@@ -380,6 +380,33 @@ export class ClassroomService {
     });
   }
 
+  async copyAnnouncementToClassroom(announcementId: string, targetClassroomId: string, teacherId: string) {
+    const ann = await this.prisma.classroomAnnouncement.findUnique({
+      where: { id: announcementId },
+      include: { classroom: { select: { teacherAssignment: { select: { teacherId: true } } } } },
+    });
+    if (!ann || ann.classroom.teacherAssignment.teacherId !== teacherId) {
+      throw new ForbiddenException('Anuncio no encontrado o no tiene permisos');
+    }
+
+    await this.validateClassroomOwnership(targetClassroomId, teacherId);
+
+    return this.prisma.classroomAnnouncement.create({
+      data: {
+        classroomId: targetClassroomId,
+        authorId: teacherId,
+        title: ann.title,
+        content: ann.content,
+        isPinned: false,
+        attachmentUrl: ann.attachmentUrl,
+        attachmentName: ann.attachmentName,
+      },
+      include: {
+        author: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+  }
+
   async deleteAnnouncement(announcementId: string, teacherId: string) {
     const ann = await this.prisma.classroomAnnouncement.findUnique({
       where: { id: announcementId },

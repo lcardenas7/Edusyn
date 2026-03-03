@@ -787,7 +787,22 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // Copy announcement modal
+  const [copyModal, setCopyModal] = useState<{ announcementId: string; title: string } | null>(null)
+  const [availableClassrooms, setAvailableClassrooms] = useState<any[]>([])
+  const [loadingClassrooms, setLoadingClassrooms] = useState(false)
+  const [copying, setCopying] = useState(false)
+
+  // Image preview
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
+
   const announcements: Announcement[] = classroom.announcements || []
+
+  const isImageFile = (name?: string, url?: string) => {
+    if (!name && !url) return false
+    const ext = (name || url || '').toLowerCase().split('.').pop()
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext || '')
+  }
 
   const handleSubmit = async () => {
     if (!form.title.trim() || !form.content.trim()) return
@@ -821,6 +836,34 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
 
   const openAttachment = async (url: string) => {
     try { const { data } = await storageApi.resolveUrl(url); window.open(data.url, '_blank') } catch { window.open(url, '_blank') }
+  }
+
+  const openCopyModal = async (announcementId: string, title: string) => {
+    setCopyModal({ announcementId, title })
+    setLoadingClassrooms(true)
+    try {
+      const { data } = await classroomApi.listClassroomsForCopy(classroom.id)
+      setAvailableClassrooms(data || [])
+    } catch { setAvailableClassrooms([]) }
+    finally { setLoadingClassrooms(false) }
+  }
+
+  const handleCopyToClassroom = async (targetClassroomId: string) => {
+    if (!copyModal) return
+    setCopying(true)
+    try {
+      await classroomApi.copyAnnouncement(copyModal.announcementId, targetClassroomId)
+      setCopyModal(null)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al copiar anuncio')
+    } finally { setCopying(false) }
+  }
+
+  const openImagePreview = async (url: string) => {
+    try {
+      const { data } = await storageApi.resolveUrl(url)
+      setPreviewImage(data.url)
+    } catch { setPreviewImage(url) }
   }
 
   return (
@@ -891,11 +934,17 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
                   </div>
                   <p className="text-base text-slate-600 mt-3 whitespace-pre-wrap leading-relaxed">{a.content}</p>
                   {a.attachmentUrl && (
-                    <button onClick={() => openAttachment(a.attachmentUrl!)} className="flex items-center gap-3 mt-4 px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors group w-full sm:w-auto">
-                      <File className="w-5 h-5 text-blue-500" />
-                      <span className="text-base text-slate-700 group-hover:text-blue-600 truncate">{a.attachmentName || 'Archivo adjunto'}</span>
-                      <Download className="w-4 h-4 text-slate-400 ml-auto shrink-0" />
-                    </button>
+                    isImageFile(a.attachmentName, a.attachmentUrl) ? (
+                      <div className="mt-4">
+                        <ImagePreview url={a.attachmentUrl} name={a.attachmentName} onExpand={() => openImagePreview(a.attachmentUrl!)} />
+                      </div>
+                    ) : (
+                      <button onClick={() => openAttachment(a.attachmentUrl!)} className="flex items-center gap-3 mt-4 px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors group w-full sm:w-auto">
+                        <File className="w-5 h-5 text-blue-500" />
+                        <span className="text-base text-slate-700 group-hover:text-blue-600 truncate">{a.attachmentName || 'Archivo adjunto'}</span>
+                        <Download className="w-4 h-4 text-slate-400 ml-auto shrink-0" />
+                      </button>
+                    )
                   )}
                   <p className="text-sm text-slate-400 mt-4">
                     {a.author.firstName} {a.author.lastName} · {new Date(a.createdAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -903,6 +952,9 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
                 </div>
                 {isTeacher && (
                   <div className="flex gap-1 shrink-0">
+                    <button onClick={() => openCopyModal(a.id, a.title)} className="p-2 rounded-xl hover:bg-blue-50" title="Copiar a otro curso">
+                      <Copy className="w-5 h-5 text-blue-400" />
+                    </button>
                     <button onClick={() => handleTogglePin(a.id, a.isPinned)} className="p-2 rounded-xl hover:bg-slate-100" title={a.isPinned ? 'Desfijar' : 'Fijar'}>
                       {a.isPinned ? <PinOff className="w-5 h-5 text-slate-400" /> : <Pin className="w-5 h-5 text-slate-400" />}
                     </button>
@@ -916,6 +968,61 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
           ))}
         </div>
       )}
+
+      {/* Copy announcement modal */}
+      {copyModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+            <h3 className="text-lg font-bold text-slate-800 mb-1">Copiar anuncio</h3>
+            <p className="text-sm text-slate-500 mb-4 truncate">"{copyModal.title}"</p>
+            {loadingClassrooms ? (
+              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+            ) : availableClassrooms.length === 0 ? (
+              <p className="text-center text-slate-500 py-8">No tienes otras aulas disponibles</p>
+            ) : (
+              <div className="space-y-2">
+                {availableClassrooms.map(c => (
+                  <button key={c.id} onClick={() => handleCopyToClassroom(c.id)} disabled={copying} className="w-full text-left px-4 py-3 rounded-xl border border-slate-200 hover:bg-blue-50 hover:border-blue-300 transition-colors disabled:opacity-50">
+                    <p className="font-medium text-slate-800">{c.title}</p>
+                    <p className="text-xs text-slate-400">{c.teacherAssignment?.group?.grade?.name} {c.teacherAssignment?.group?.name}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex justify-end mt-4">
+              <button onClick={() => setCopyModal(null)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image preview modal */}
+      {previewImage && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setPreviewImage(null)}>
+          <div className="relative max-w-4xl max-h-[90vh]">
+            <img src={previewImage} alt="Vista previa" className="max-w-full max-h-[90vh] object-contain rounded-lg" />
+            <button onClick={() => setPreviewImage(null)} className="absolute top-2 right-2 p-2 bg-black/50 rounded-full hover:bg-black/70">
+              <X className="w-5 h-5 text-white" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ImagePreview({ url, name, onExpand }: { url: string; name?: string; onExpand: () => void }) {
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null)
+  useEffect(() => {
+    storageApi.resolveUrl(url).then(({ data }) => setResolvedUrl(data.url)).catch(() => setResolvedUrl(url))
+  }, [url])
+  if (!resolvedUrl) return <div className="w-full h-48 bg-slate-100 rounded-xl animate-pulse" />
+  return (
+    <div className="relative group">
+      <img src={resolvedUrl} alt={name || 'Imagen'} className="max-w-full max-h-64 rounded-xl border border-slate-200 cursor-pointer" onClick={onExpand} />
+      <button onClick={onExpand} className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors rounded-xl">
+        <Eye className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+      </button>
     </div>
   )
 }

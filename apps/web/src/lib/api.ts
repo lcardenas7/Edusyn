@@ -1760,6 +1760,8 @@ export const classroomApi = {
   updateAnnouncement: (announcementId: string, data: { title?: string; content?: string; isPinned?: boolean; attachmentUrl?: string; attachmentName?: string }) =>
     api.put(`/classrooms/announcements/${announcementId}`, data),
   deleteAnnouncement: (announcementId: string) => api.delete(`/classrooms/announcements/${announcementId}`),
+  copyAnnouncement: (announcementId: string, targetClassroomId: string) =>
+    api.post(`/classrooms/announcements/${announcementId}/copy`, { targetClassroomId }),
 
   // Activities
   createActivity: (classroomId: string, data: {
