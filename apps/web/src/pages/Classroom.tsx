@@ -2200,8 +2200,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       } else if (qForm.type === 'ORDERING') {
         payload.options = qForm.options.filter(o => o.trim())
       } else if (qForm.type === 'MATCHING') {
+        const validPairs = qForm.matchPairs.filter(p => p.left.trim() && p.right.trim())
+        const leftItems = validPairs.map(p => p.left)
+        const rightItems = [...new Set(validPairs.map(p => p.right))]
         const pairs: Record<string, string> = {}
-        qForm.matchPairs.filter(p => p.left.trim() && p.right.trim()).forEach(p => { pairs[p.left] = p.right })
+        validPairs.forEach(p => { pairs[p.left] = p.right })
+        // options = { left: [...], right: [...] } para mostrar al estudiante
+        payload.options = { left: leftItems, right: rightItems }
         payload.correctAnswer = JSON.stringify(pairs)
       }
       if (editingQuestion) {
@@ -3077,14 +3082,29 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     )
                   })()}
                   {q.type === 'MATCHING' && (() => {
-                    const pairs: Record<string, string> = (() => { try { return JSON.parse(q.correctAnswer || '{}') } catch { return {} } })()
-                    const leftItems = Object.keys(pairs)
-                    const rightItems = [...new Set(Object.values(pairs))].sort(() => Math.random() - 0.5)
+                    // options puede ser { left: [...], right: [...] } o legacy (parsear de correctAnswer)
+                    let leftItems: string[] = []
+                    let rightItems: string[] = []
+                    if (q.options && typeof q.options === 'object' && 'left' in q.options) {
+                      leftItems = (q.options as any).left || []
+                      rightItems = (q.options as any).right || []
+                    } else if (q.correctAnswer) {
+                      // Fallback para preguntas legacy
+                      try {
+                        const pairs = JSON.parse(q.correctAnswer)
+                        leftItems = Object.keys(pairs)
+                        rightItems = [...new Set(Object.values(pairs) as string[])]
+                      } catch {}
+                    }
+                    // Mezclar opciones de la derecha para que no estén en orden
+                    const shuffledRight = [...rightItems].sort(() => Math.random() - 0.5)
                     const matches = quizMatchAnswers[q.id] || {}
                     return (
                       <div className="space-y-4">
                         <p className="text-sm text-slate-500">Selecciona el elemento que corresponde a cada ítem</p>
-                        {leftItems.map((left, i) => (
+                        {leftItems.length === 0 ? (
+                          <p className="text-sm text-red-500">Error: No hay elementos para emparejar</p>
+                        ) : leftItems.map((left, i) => (
                           <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
                             <div className="flex-1 p-2.5 sm:p-3 bg-blue-50 border-2 border-blue-200 rounded-xl text-sm sm:text-base text-slate-700 font-medium">{left}</div>
                             <span className="text-slate-400 text-center hidden sm:block">→</span>
@@ -3095,7 +3115,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                               style={{ minHeight: '44px' }}
                             >
                               <option value="">Seleccionar respuesta...</option>
-                              {rightItems.map((right, j) => (
+                              {shuffledRight.map((right, j) => (
                                 <option key={j} value={right}>{right}</option>
                               ))}
                             </select>
