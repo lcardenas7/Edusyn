@@ -1731,6 +1731,11 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [quizSubmitting, setQuizSubmitting] = useState(false)
   const [quizResult, setQuizResult] = useState<any>(null)
 
+  // Edit activity
+  const [editingActivity, setEditingActivity] = useState(false)
+  const [editForm, setEditForm] = useState({ title: '', description: '', maxScore: '', dueDate: '', allowLateSubmit: false })
+  const [savingEdit, setSavingEdit] = useState(false)
+
   const sections: Section[] = classroom.sections || []
 
   const loadActivities = useCallback(async () => {
@@ -1779,6 +1784,11 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     try {
       if (published) await classroomApi.unpublishActivity(id)
       else await classroomApi.publishActivity(id)
+      // Actualizar UI inmediatamente
+      if (selectedActivity && selectedActivity.id === id) {
+        setSelectedActivity({ ...selectedActivity, isPublished: !published, isVisible: true })
+      }
+      setActivities(prev => prev.map(a => a.id === id ? { ...a, isPublished: !published, isVisible: true } : a))
       loadActivities()
     } catch {}
   }
@@ -1786,6 +1796,38 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar esta actividad y todas sus entregas?')) return
     try { await classroomApi.deleteActivity(id); loadActivities(); setSelectedActivity(null) } catch {}
+  }
+
+  const startEditActivity = (act: Activity) => {
+    setEditForm({
+      title: act.title,
+      description: act.description || '',
+      maxScore: act.maxScore ? String(Number(act.maxScore)) : '5',
+      dueDate: act.dueDate ? new Date(act.dueDate).toISOString().slice(0, 16) : '',
+      allowLateSubmit: act.allowLateSubmit || false,
+    })
+    setEditingActivity(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!selectedActivity || !editForm.title.trim()) return
+    setSavingEdit(true)
+    try {
+      await classroomApi.updateActivity(selectedActivity.id, {
+        title: editForm.title,
+        description: editForm.description || undefined,
+        maxScore: parseFloat(editForm.maxScore) || 5,
+        dueDate: editForm.dueDate || undefined,
+        allowLateSubmit: editForm.allowLateSubmit,
+      })
+      setEditingActivity(false)
+      // Refresh activity detail
+      const { data } = await classroomApi.getActivity(selectedActivity.id)
+      setSelectedActivity(data)
+      loadActivities()
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al actualizar actividad')
+    } finally { setSavingEdit(false) }
   }
 
   const openDuplicateActivityModal = async (activityId: string, activityTitle: string) => {
@@ -2216,63 +2258,106 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
         {/* Activity header card */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isIcfes(act.type) ? 'bg-emerald-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                  {isIcfes(act.type) ? <BarChart3 className="w-5 h-5 text-emerald-600" /> : isQuizType(act.type) ? <HelpCircle className="w-5 h-5 text-purple-600" /> : <ClipboardList className="w-5 h-5 text-blue-600" />}
+          {editingActivity ? (
+            /* ── INLINE EDIT FORM ── */
+            <div className="space-y-4">
+              <h3 className="font-bold text-slate-800 text-lg">Editar actividad</h3>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Título</label>
+                <input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
+                <textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} rows={4} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Nota máxima</label>
+                  <input type="number" step="0.1" min="0" value={editForm.maxScore} onChange={e => setEditForm(f => ({ ...f, maxScore: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold text-slate-800">{act.title}</h2>
-                    {isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">Simulacro ICFES</span>}
-                    {isQuizType(act.type) && !isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">{act.type === 'QUIZ' ? 'Quiz' : 'Examen'}</span>}
-                  </div>
-                  <p className="text-sm text-slate-400">{act.section?.title || 'Sin sección'}</p>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Fecha límite</label>
+                  <input type="datetime-local" value={editForm.dueDate} onChange={e => setEditForm(f => ({ ...f, dueDate: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                 </div>
               </div>
-              {act.description && <p className="text-base text-slate-600 mt-3 whitespace-pre-wrap leading-relaxed">{act.description}</p>}
-              {meta?.attachmentUrl && (
-                <button onClick={() => openFile(meta.attachmentUrl)} className="flex items-center gap-3 mt-4 px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors group">
-                  <File className="w-5 h-5 text-blue-500" />
-                  <span className="text-base text-slate-700 group-hover:text-blue-600">{meta.attachmentName || 'Archivo adjunto'}</span>
-                  <Download className="w-4 h-4 text-slate-400 ml-auto" />
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" checked={editForm.allowLateSubmit} onChange={e => setEditForm(f => ({ ...f, allowLateSubmit: e.target.checked }))} className="w-4 h-4 rounded text-blue-600" />
+                Permitir entrega tardía
+              </label>
+              <div className="flex gap-3 pt-2">
+                <button onClick={handleSaveEdit} disabled={savingEdit} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+                  {savingEdit && <Loader2 className="w-4 h-4 animate-spin" />} Guardar cambios
                 </button>
-              )}
-            </div>
-            {isTeacher && (
-              <div className="flex gap-1 shrink-0">
-                <button onClick={() => handlePublish(act.id, act.isPublished)} className={`px-4 py-2 rounded-xl text-sm font-medium ${act.isPublished ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`} style={{ minHeight: '44px' }}>
-                  {act.isPublished ? 'Despublicar' : 'Publicar'}
-                </button>
-                <button onClick={() => openAssignStudentsModal(act.id, act.title)} className="p-2.5 rounded-xl hover:bg-violet-50" title="Asignar estudiantes">
-                  <Users className="w-5 h-5 text-violet-400" />
-                </button>
-                <button onClick={() => openDuplicateActivityModal(act.id, act.title)} className="p-2.5 rounded-xl hover:bg-blue-50" title="Duplicar actividad">
-                  <Copy className="w-5 h-5 text-blue-400" />
-                </button>
-                <button onClick={() => handleDelete(act.id)} className="p-2.5 rounded-xl hover:bg-red-50">
-                  <Trash2 className="w-5 h-5 text-red-400" />
+                <button onClick={() => setEditingActivity(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">
+                  Cancelar
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            /* ── DISPLAY MODE ── */
+            <>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isIcfes(act.type) ? 'bg-emerald-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                      {isIcfes(act.type) ? <BarChart3 className="w-5 h-5 text-emerald-600" /> : isQuizType(act.type) ? <HelpCircle className="w-5 h-5 text-purple-600" /> : <ClipboardList className="w-5 h-5 text-blue-600" />}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-xl font-bold text-slate-800">{act.title}</h2>
+                        {isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">Simulacro ICFES</span>}
+                        {isQuizType(act.type) && !isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">{act.type === 'QUIZ' ? 'Quiz' : 'Examen'}</span>}
+                      </div>
+                      <p className="text-sm text-slate-400">{act.section?.title || 'Sin sección'}</p>
+                    </div>
+                  </div>
+                  {act.description && <p className="text-base text-slate-600 mt-3 whitespace-pre-wrap leading-relaxed">{act.description}</p>}
+                  {meta?.attachmentUrl && (
+                    <button onClick={() => openFile(meta.attachmentUrl)} className="flex items-center gap-3 mt-4 px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors group">
+                      <File className="w-5 h-5 text-blue-500" />
+                      <span className="text-base text-slate-700 group-hover:text-blue-600">{meta.attachmentName || 'Archivo adjunto'}</span>
+                      <Download className="w-4 h-4 text-slate-400 ml-auto" />
+                    </button>
+                  )}
+                </div>
+                {isTeacher && (
+                  <div className="flex gap-1 shrink-0">
+                    <button onClick={() => handlePublish(act.id, act.isPublished)} className={`px-4 py-2 rounded-xl text-sm font-medium ${act.isPublished ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`} style={{ minHeight: '44px' }}>
+                      {act.isPublished ? 'Despublicar' : 'Publicar'}
+                    </button>
+                    <button onClick={() => startEditActivity(act)} className="p-2.5 rounded-xl hover:bg-amber-50" title="Editar actividad">
+                      <Pencil className="w-5 h-5 text-amber-400" />
+                    </button>
+                    <button onClick={() => openAssignStudentsModal(act.id, act.title)} className="p-2.5 rounded-xl hover:bg-violet-50" title="Asignar estudiantes">
+                      <Users className="w-5 h-5 text-violet-400" />
+                    </button>
+                    <button onClick={() => openDuplicateActivityModal(act.id, act.title)} className="p-2.5 rounded-xl hover:bg-blue-50" title="Duplicar actividad">
+                      <Copy className="w-5 h-5 text-blue-400" />
+                    </button>
+                    <button onClick={() => handleDelete(act.id)} className="p-2.5 rounded-xl hover:bg-red-50">
+                      <Trash2 className="w-5 h-5 text-red-400" />
+                    </button>
+                  </div>
+                )}
+              </div>
 
-          {/* Meta info */}
-          <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-slate-100">
-            <div className="flex items-center gap-2 text-sm">
-              <BarChart3 className="w-4 h-4 text-slate-400" />
-              <span className="text-slate-600">Nota máx: <strong>{act.maxScore ? Number(act.maxScore) : '—'}</strong></span>
-            </div>
-            <div className={`flex items-center gap-2 text-sm ${isDuePast(act.dueDate) ? 'text-red-600' : 'text-slate-600'}`}>
-              <Clock className="w-4 h-4" />
-              <span>Fecha límite: <strong>{formatDate(act.dueDate)}</strong></span>
-            </div>
-            {act.allowLateSubmit && <span className="text-xs px-2.5 py-1 bg-amber-50 text-amber-600 rounded-full">Permite entrega tardía</span>}
-            <span className={`text-xs px-2.5 py-1 rounded-full ${act.isPublished ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
-              {act.isPublished ? 'Publicada' : 'Borrador'}
-            </span>
-          </div>
+              {/* Meta info */}
+              <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-slate-100">
+                <div className="flex items-center gap-2 text-sm">
+                  <BarChart3 className="w-4 h-4 text-slate-400" />
+                  <span className="text-slate-600">Nota máx: <strong>{act.maxScore ? Number(act.maxScore) : '—'}</strong></span>
+                </div>
+                <div className={`flex items-center gap-2 text-sm ${isDuePast(act.dueDate) ? 'text-red-600' : 'text-slate-600'}`}>
+                  <Clock className="w-4 h-4" />
+                  <span>Fecha límite: <strong>{formatDate(act.dueDate)}</strong></span>
+                </div>
+                {act.allowLateSubmit && <span className="text-xs px-2.5 py-1 bg-amber-50 text-amber-600 rounded-full">Permite entrega tardía</span>}
+                <span className={`text-xs px-2.5 py-1 rounded-full ${act.isPublished ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
+                  {act.isPublished ? 'Publicada' : 'Borrador'}
+                </span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* TEACHER: Submissions list */}
