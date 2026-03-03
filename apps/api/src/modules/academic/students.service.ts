@@ -1446,6 +1446,15 @@ export class StudentsService {
         disability: true,
         emergencyContact: true,
         emergencyPhone: true,
+        // Para actualización de credenciales
+        userId: true,
+        user: {
+          select: {
+            id: true,
+            username: true,
+            mustChangePassword: true,
+          },
+        },
       },
     });
     const existingMap = new Map(existingStudents.map(s => [s.id, s]));
@@ -1561,9 +1570,18 @@ export class StudentsService {
 
     // 7. Ejecutar actualizaciones en transacción
     let updatedCount = 0;
+    let credentialsUpdated = 0;
+    
     await this.prisma.$transaction(async (tx) => {
       for (const update of updates) {
+        const existing = existingMap.get(update.systemId);
+        if (!existing) continue;
+
         const data: Record<string, any> = {};
+        let newDocumentNumber: string | null = null;
+        let newFirstName: string | null = null;
+        let newLastName: string | null = null;
+
         for (const [field, change] of Object.entries(update.changes)) {
           if (field === 'birthDate') {
             // birth_date ya viene normalizada como string YYYY-MM-DD
@@ -1577,13 +1595,54 @@ export class StudentsService {
           } else {
             data[field] = change.new || null;
           }
+
+          // Capturar cambios relevantes para credenciales
+          if (field === 'documentNumber') newDocumentNumber = change.new;
+          if (field === 'firstName') newFirstName = change.new;
+          if (field === 'lastName') newLastName = change.new;
         }
 
+        // Actualizar estudiante
         await tx.student.update({
           where: { id: update.systemId },
           data,
         });
         updatedCount++;
+
+        // Si cambió el documento y el estudiante tiene usuario, actualizar credenciales
+        if (newDocumentNumber && existing.userId && existing.user) {
+          const hasActiveAccess = !existing.user.mustChangePassword; // Ya inició sesión si cambió contraseña
+          
+          if (hasActiveAccess) {
+            // Solo actualizar contraseña (mantener username para no romper acceso)
+            const newPassword = this.ensureMinPasswordLength(newDocumentNumber);
+            const passwordHash = await bcrypt.hash(newPassword, 10);
+            await tx.user.update({
+              where: { id: existing.userId },
+              data: { 
+                passwordHash,
+                mustChangePassword: true, // Forzar cambio en próximo login
+              },
+            });
+          } else {
+            // Regenerar username y contraseña (nunca ha iniciado sesión)
+            const firstName = newFirstName || existing.firstName;
+            const lastName = newLastName || existing.lastName;
+            const newUsername = await this.generateStudentUsername(firstName, lastName, newDocumentNumber);
+            const newPassword = this.ensureMinPasswordLength(newDocumentNumber);
+            const passwordHash = await bcrypt.hash(newPassword, 10);
+            
+            await tx.user.update({
+              where: { id: existing.userId },
+              data: {
+                username: newUsername,
+                passwordHash,
+                mustChangePassword: true,
+              },
+            });
+          }
+          credentialsUpdated++;
+        }
       }
     });
 
@@ -1591,7 +1650,12 @@ export class StudentsService {
       success: true,
       errors: [],
       updates,
-      summary: { total: rows.length, updated: updatedCount, errors: 0 },
+      summary: { 
+        total: rows.length, 
+        updated: updatedCount, 
+        credentialsUpdated,
+        errors: 0 
+      },
     };
   }
 }
