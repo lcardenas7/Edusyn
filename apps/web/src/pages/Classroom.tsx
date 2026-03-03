@@ -451,13 +451,13 @@ export default function Classroom() {
           <div className="flex items-center justify-center py-24"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
         ) : (
           <>
-            {activeTab === 'home' && <HomeTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} user={user} onReload={reloadClassroom} setError={setError} />}
+            {activeTab === 'home' && <HomeTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} user={user} onReload={reloadClassroom} setError={setError} setActiveTab={setActiveTab} />}
             {activeTab === 'announcements' && <AnnouncementsTab classroom={activeClassroom} isTeacher={!!isTeacher} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'content' && <ContentTab classroom={activeClassroom} isTeacher={!!isTeacher} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'activities' && <ActivitiesTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'forum' && <ForumTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} user={user} setError={setError} />}
             {activeTab === 'students' && <StudentsTab classroomId={activeClassroom.id} />}
-            {activeTab === 'grades' && <GradesTab />}
+            {activeTab === 'grades' && <GradesTab classroomId={activeClassroom.id} />}
           </>
         )}
       </div>
@@ -560,8 +560,8 @@ export default function Classroom() {
 // TAB: INICIO (Dashboard diferenciado docente/estudiante)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError }: {
-  classroom: any; isTeacher: boolean; isStudent: boolean; user: any; onReload: () => void; setError: (e: string) => void
+function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, setActiveTab }: {
+  classroom: any; isTeacher: boolean; isStudent: boolean; user: any; onReload: () => void; setError: (e: string) => void; setActiveTab: (tab: TabKey) => void
 }) {
   const announcements: Announcement[] = classroom.announcements || []
   const sections: Section[] = classroom.sections || []
@@ -647,7 +647,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError }: 
             </div>
             <div className="p-5">
               <p className="text-base text-slate-600">Tus calificaciones aparecerán aquí</p>
-              <button className="mt-4 px-5 py-2.5 bg-green-500 text-white rounded-xl text-sm font-semibold hover:bg-green-600 transition-colors">
+              <button onClick={() => setActiveTab('grades')} className="mt-4 px-5 py-2.5 bg-green-500 text-white rounded-xl text-sm font-semibold hover:bg-green-600 transition-colors">
                 Ver calificaciones
               </button>
             </div>
@@ -672,7 +672,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError }: 
                   ))}
                 </div>
               )}
-              <button className="mt-4 px-5 py-2.5 bg-purple-500 text-white rounded-xl text-sm font-semibold hover:bg-purple-600 transition-colors">
+              <button onClick={() => setActiveTab('content')} className="mt-4 px-5 py-2.5 bg-purple-500 text-white rounded-xl text-sm font-semibold hover:bg-purple-600 transition-colors">
                 Ver materiales
               </button>
             </div>
@@ -4105,46 +4105,138 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TAB: MIS NOTAS (placeholder para estudiantes)
+// TAB: MIS NOTAS (calificaciones del estudiante)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function GradesTab() {
+function GradesTab({ classroomId }: { classroomId: string }) {
+  const [loading, setLoading] = useState(true)
+  const [submissions, setSubmissions] = useState<any[]>([])
+  const [pending, setPending] = useState<any[]>([])
+
+  useEffect(() => {
+    loadGrades()
+  }, [classroomId])
+
+  const loadGrades = async () => {
+    try {
+      setLoading(true)
+      const { data } = await classroomApi.getMyGrades(classroomId)
+      setSubmissions(data.submissions || [])
+      setPending(data.pending || [])
+    } catch { }
+    finally { setLoading(false) }
+  }
+
+  const TYPE_LABELS: Record<string, string> = { TASK: 'Tarea', QUIZ: 'Quiz', EXAM: 'Examen', ICFES_SIMULATOR: 'ICFES', FORUM: 'Foro', GAME: 'Juego' }
+  const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+    DRAFT: { label: 'Borrador', color: 'bg-slate-100 text-slate-600' },
+    SUBMITTED: { label: 'Entregado', color: 'bg-blue-100 text-blue-700' },
+    GRADED: { label: 'Calificado', color: 'bg-green-100 text-green-700' },
+    RETURNED: { label: 'Devuelto', color: 'bg-amber-100 text-amber-700' },
+    LATE: { label: 'Tardío', color: 'bg-red-100 text-red-700' },
+    AUTO_GRADED: { label: 'Auto-calificado', color: 'bg-purple-100 text-purple-700' },
+  }
+
+  const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) : '—'
+
+  if (loading) {
+    return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+  }
+
+  const totalActivities = submissions.length + pending.length
+  const gradedCount = submissions.filter(s => s.status === 'GRADED' || s.status === 'AUTO_GRADED').length
+  const totalScore = submissions.filter(s => s.score != null).reduce((acc, s) => acc + Number(s.score), 0)
+  const totalMax = submissions.filter(s => s.score != null).reduce((acc, s) => acc + Number(s.activity?.maxScore || 0), 0)
+  const avgPercent = totalMax > 0 ? Math.round((totalScore / totalMax) * 100) : null
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-slate-800">Mis Calificaciones</h2>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
-        <BarChart3 className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-        <h3 className="text-xl font-bold text-slate-700">Próximamente</h3>
-        <p className="text-base text-slate-500 mt-2 max-w-lg mx-auto">
-          Aquí podrás ver todas tus calificaciones del curso, organizadas por actividad con tu nota, fecha de entrega y retroalimentación del docente.
-        </p>
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <p className="text-2xl font-bold text-slate-800">{totalActivities}</p>
+          <p className="text-sm text-slate-500">Actividades</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <p className="text-2xl font-bold text-green-600">{gradedCount}</p>
+          <p className="text-sm text-slate-500">Calificadas</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <p className="text-2xl font-bold text-amber-600">{pending.length}</p>
+          <p className="text-sm text-slate-500">Pendientes</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <p className="text-2xl font-bold text-blue-600">{avgPercent != null ? `${avgPercent}%` : '—'}</p>
+          <p className="text-sm text-slate-500">Promedio</p>
+        </div>
       </div>
 
-      {/* Preview table structure */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden opacity-70">
-        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-          <h3 className="text-base font-bold text-slate-700">Vista previa de calificaciones</h3>
+      {totalActivities === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
+          <BarChart3 className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+          <p className="text-lg font-medium text-slate-500">No hay actividades publicadas aún</p>
         </div>
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-slate-100">
-              <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Actividad</th>
-              <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Fecha límite</th>
-              <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Estado</th>
-              <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Nota</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-b border-slate-50">
-              <td className="px-6 py-3 text-sm text-slate-500">—</td>
-              <td className="px-6 py-3 text-sm text-slate-500">—</td>
-              <td className="px-6 py-3"><span className="text-xs px-2.5 py-1 bg-slate-100 text-slate-500 rounded-full">Sin datos</span></td>
-              <td className="px-6 py-3 text-sm text-slate-500">—</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50">
+                <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Actividad</th>
+                <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Tipo</th>
+                <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Fecha límite</th>
+                <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Estado</th>
+                <th className="text-left px-6 py-3 text-sm font-semibold text-slate-600">Nota</th>
+              </tr>
+            </thead>
+            <tbody>
+              {submissions.map(sub => {
+                const st = STATUS_LABELS[sub.status] || { label: sub.status, color: 'bg-slate-100 text-slate-600' }
+                const isGraded = sub.status === 'GRADED' || sub.status === 'AUTO_GRADED'
+                return (
+                  <tr key={sub.id} className="border-b border-slate-50 hover:bg-slate-25">
+                    <td className="px-6 py-3">
+                      <p className="text-sm font-medium text-slate-800">{sub.activity?.title}</p>
+                      {sub.activity?.section?.title && <p className="text-xs text-slate-400">{sub.activity.section.title}</p>}
+                    </td>
+                    <td className="px-6 py-3">
+                      <span className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded">{TYPE_LABELS[sub.activity?.type] || sub.activity?.type}</span>
+                    </td>
+                    <td className="px-6 py-3 text-sm text-slate-500">{formatDate(sub.activity?.dueDate)}</td>
+                    <td className="px-6 py-3">
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${st.color}`}>{st.label}</span>
+                    </td>
+                    <td className="px-6 py-3">
+                      {isGraded ? (
+                        <span className="text-sm font-bold text-slate-800">{Number(sub.score).toFixed(1)} / {Number(sub.activity?.maxScore || 5).toFixed(1)}</span>
+                      ) : (
+                        <span className="text-sm text-slate-400">—</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+              {pending.map(act => (
+                <tr key={act.id} className="border-b border-slate-50 bg-amber-25">
+                  <td className="px-6 py-3">
+                    <p className="text-sm font-medium text-slate-800">{act.title}</p>
+                    {act.section?.title && <p className="text-xs text-slate-400">{act.section.title}</p>}
+                  </td>
+                  <td className="px-6 py-3">
+                    <span className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded">{TYPE_LABELS[act.type] || act.type}</span>
+                  </td>
+                  <td className="px-6 py-3 text-sm text-slate-500">{formatDate(act.dueDate)}</td>
+                  <td className="px-6 py-3">
+                    <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-amber-100 text-amber-700">Pendiente</span>
+                  </td>
+                  <td className="px-6 py-3 text-sm text-slate-400">—</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

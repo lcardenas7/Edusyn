@@ -1797,6 +1797,8 @@ export const classroomApi = {
     api.get(`/classrooms/activities/${activityId}/submissions`),
   getMySubmission: (activityId: string) =>
     api.get(`/classrooms/activities/${activityId}/my-submission`),
+  getMyGrades: (classroomId: string) =>
+    api.get(`/classrooms/${classroomId}/my-grades`),
   gradeSubmission: (submissionId: string, data: { score: number; feedback?: string }) =>
     api.put(`/classrooms/submissions/${submissionId}/grade`, data),
   returnSubmission: (submissionId: string, data: { feedback?: string }) =>

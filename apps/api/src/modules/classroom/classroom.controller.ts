@@ -316,6 +316,13 @@ export class ClassroomController {
     return this.service.getMySubmission(activityId, userId);
   }
 
+  @Get(':id/my-grades')
+  @Roles('ESTUDIANTE')
+  async getMyGrades(@Param('id') classroomId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.getMyGrades(classroomId, userId);
+  }
+
   @Put('submissions/:submissionId/grade')
   @Roles('DOCENTE', 'COORDINADOR')
   async gradeSubmission(@Param('submissionId') submissionId: string, @Request() req: any, @Body() body: {
