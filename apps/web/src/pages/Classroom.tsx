@@ -586,7 +586,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
         {/* Dashboard cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {/* Actividades pendientes */}
-          <div className="bg-white rounded-2xl border-2 border-orange-200 overflow-hidden">
+          <div className="bg-white rounded-2xl border-2 border-orange-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('activities')}>
             <div className="bg-gradient-to-r from-orange-500 to-orange-400 px-5 py-3 flex items-center gap-2.5">
               <ClipboardList className="w-6 h-6 text-white" />
               <h3 className="text-lg font-bold text-white">Actividades ({allActivities.length})</h3>
@@ -618,7 +618,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
           </div>
 
           {/* Anuncios recientes */}
-          <div className="bg-white rounded-2xl border-2 border-blue-200 overflow-hidden">
+          <div className="bg-white rounded-2xl border-2 border-blue-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('announcements')}>
             <div className="bg-gradient-to-r from-blue-500 to-blue-400 px-5 py-3 flex items-center gap-2.5">
               <Megaphone className="w-6 h-6 text-white" />
               <h3 className="text-lg font-bold text-white">Anuncios Recientes</h3>
@@ -640,21 +640,18 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
           </div>
 
           {/* Mis Calificaciones */}
-          <div className="bg-white rounded-2xl border-2 border-green-200 overflow-hidden">
+          <div className="bg-white rounded-2xl border-2 border-green-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('grades')}>
             <div className="bg-gradient-to-r from-green-500 to-green-400 px-5 py-3 flex items-center gap-2.5">
               <BarChart3 className="w-6 h-6 text-white" />
               <h3 className="text-lg font-bold text-white">Mis Calificaciones</h3>
             </div>
             <div className="p-5">
               <p className="text-base text-slate-600">Tus calificaciones aparecerán aquí</p>
-              <button onClick={() => setActiveTab('grades')} className="mt-4 px-5 py-2.5 bg-green-500 text-white rounded-xl text-sm font-semibold hover:bg-green-600 transition-colors">
-                Ver calificaciones
-              </button>
             </div>
           </div>
 
           {/* Contenidos del Curso */}
-          <div className="bg-white rounded-2xl border-2 border-purple-200 overflow-hidden">
+          <div className="bg-white rounded-2xl border-2 border-purple-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('content')}>
             <div className="bg-gradient-to-r from-purple-500 to-purple-400 px-5 py-3 flex items-center gap-2.5">
               <BookOpen className="w-6 h-6 text-white" />
               <h3 className="text-lg font-bold text-white">Contenidos del Curso</h3>
@@ -672,9 +669,6 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
                   ))}
                 </div>
               )}
-              <button onClick={() => setActiveTab('content')} className="mt-4 px-5 py-2.5 bg-purple-500 text-white rounded-xl text-sm font-semibold hover:bg-purple-600 transition-colors">
-                Ver materiales
-              </button>
             </div>
           </div>
         </div>
