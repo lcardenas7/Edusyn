@@ -585,7 +585,7 @@ model Campus {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Restrict)
   shifts      Shift[]
   groups      Group[]
   rooms       Room[]
@@ -681,7 +681,7 @@ model Area {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  institution       Institution          @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  institution       Institution          @relation(fields: [institutionId], references: [id], onDelete: Restrict)
   subjects          Subject[]
   templateAreas     TemplateArea[]
   finalRecoveryPlans FinalRecoveryPlan[]
@@ -926,7 +926,7 @@ model AcademicYear {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  institution       Institution        @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  institution       Institution        @relation(fields: [institutionId], references: [id], onDelete: Restrict)
   activatedBy       User?              @relation("YearActivatedBy", fields: [activatedById], references: [id])
   closedBy          User?              @relation("YearClosedBy", fields: [closedById], references: [id])
   
@@ -1675,7 +1675,7 @@ model StudentGrade {
   institutionId       String
   studentEnrollmentId String
   evaluativeActivityId String
-  score               Decimal  @db.Decimal(3, 1)
+  score               Decimal  @db.Decimal(5, 2)
   observations        String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -1693,7 +1693,7 @@ model PeriodFinalGrade {
   studentEnrollmentId String
   academicTermId      String
   subjectId           String
-  finalScore          Decimal  @db.Decimal(3, 1)
+  finalScore          Decimal  @db.Decimal(5, 2)
   observations        String?
   enteredById         String
   createdAt           DateTime @default(now())
@@ -1719,7 +1719,7 @@ model PartialGrade {
   activityIndex       Int      // Índice de la actividad (1, 2, 3, etc.)
   activityName        String   // Nombre de la actividad
   activityType        String?  // Tipo de actividad (Examen, Taller, etc.)
-  score               Decimal  @db.Decimal(3, 1)
+  score               Decimal  @db.Decimal(5, 2)
   observations        String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -1763,7 +1763,7 @@ model FinalComponentGrade {
   studentEnrollmentId String
   teacherAssignmentId String
   finalComponentId    String
-  grade               Decimal  @db.Decimal(3, 1)
+  grade               Decimal  @db.Decimal(5, 2)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -1786,7 +1786,7 @@ model FinalComponentGrade {
    id           String   @id @default(cuid())
    academicTermId String
    cutoffDate   DateTime
-   riskThresholdScore Decimal @db.Decimal(3, 1)
+   riskThresholdScore Decimal @db.Decimal(5, 2)
    createdAt    DateTime @default(now())
    updatedAt    DateTime @updatedAt
 
@@ -1802,7 +1802,7 @@ model FinalComponentGrade {
    studentEnrollmentId String
    academicTermId      String
    cutoffDate          DateTime
-   computedGrade       Decimal? @db.Decimal(3, 1)
+   computedGrade       Decimal? @db.Decimal(5, 2)
    performanceLevel    PerformanceLevel?
    status              PreventiveAlertStatus @default(OPEN)
    recoveryPlan        String?
@@ -2296,16 +2296,16 @@ model RecoveryConfig {
   academicYearId        String
   
   // Configuración general
-  minPassingScore       Decimal  @db.Decimal(3, 1) @default(3.0)
+  minPassingScore       Decimal  @db.Decimal(5, 2) @default(3.0)
   
   // Recuperación por período
   periodRecoveryEnabled Boolean  @default(true)
-  periodMaxScore        Decimal  @db.Decimal(3, 1) @default(3.0)
+  periodMaxScore        Decimal  @db.Decimal(5, 2) @default(3.0)
   periodImpactType      RecoveryImpactType @default(ADJUST_TO_MINIMUM)
   
   // Recuperación final
   finalRecoveryEnabled  Boolean  @default(true)
-  finalMaxScore         Decimal  @db.Decimal(3, 1) @default(3.0)
+  finalMaxScore         Decimal  @db.Decimal(5, 2) @default(3.0)
   finalImpactType       RecoveryImpactType @default(ADJUST_TO_MINIMUM)
   maxAreasRecoverable   Int      @default(2)
   
@@ -2337,7 +2337,7 @@ model PeriodRecovery {
   subjectId             String
   
   // Nota original que generó la recuperación
-  originalScore         Decimal  @db.Decimal(3, 1)
+  originalScore         Decimal  @db.Decimal(5, 2)
   
   // Información de la recuperación
   status                RecoveryStatus @default(PENDING)
@@ -2349,8 +2349,8 @@ model PeriodRecovery {
   reinforcedDimension   String?  @default("COGNITIVA")
   
   // Resultado
-  recoveryScore         Decimal? @db.Decimal(3, 1)
-  finalScore            Decimal? @db.Decimal(3, 1)
+  recoveryScore         Decimal? @db.Decimal(5, 2)
+  finalScore            Decimal? @db.Decimal(5, 2)
   impactType            RecoveryImpactType?
   
   // Evidencias y observaciones
@@ -2367,7 +2367,7 @@ model PeriodRecovery {
   institution        Institution       @relation("RlsInstitutionPR", fields: [institutionId], references: [id])
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
   academicTerm      AcademicTerm      @relation("PeriodRecoveryTerm", fields: [academicTermId], references: [id], onDelete: Cascade)
-  subject           Subject           @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subject           Subject           @relation(fields: [subjectId], references: [id], onDelete: Restrict)
   assignedBy        User              @relation("RecoveryAssignedBy", fields: [assignedById], references: [id])
   evaluatedBy       User?             @relation("RecoveryEvaluatedBy", fields: [evaluatedById], references: [id])
 
@@ -2385,7 +2385,7 @@ model FinalRecoveryPlan {
   areaId                String
   
   // Nota final del área que generó el plan
-  originalAreaScore     Decimal  @db.Decimal(3, 1)
+  originalAreaScore     Decimal  @db.Decimal(5, 2)
   
   // Estado del plan
   status                RecoveryStatus @default(PENDING)
@@ -2401,8 +2401,8 @@ model FinalRecoveryPlan {
   completedDate         DateTime?
   
   // Resultado
-  recoveryScore         Decimal? @db.Decimal(3, 1)
-  finalAreaScore        Decimal? @db.Decimal(3, 1)
+  recoveryScore         Decimal? @db.Decimal(5, 2)
+  finalAreaScore        Decimal? @db.Decimal(5, 2)
   impactType            RecoveryImpactType?
   
   // Evidencias y observaciones
@@ -4669,7 +4669,7 @@ model Classroom {
   updatedAt           DateTime @updatedAt
 
   institution       Institution       @relation("RlsInstitutionCR", fields: [institutionId], references: [id])
-  teacherAssignment TeacherAssignment  @relation("ClassroomAssignment", fields: [teacherAssignmentId], references: [id], onDelete: Cascade)
+  teacherAssignment TeacherAssignment  @relation("ClassroomAssignment", fields: [teacherAssignmentId], references: [id], onDelete: Restrict)
   sections          ClassroomSection[]
   announcements     ClassroomAnnouncement[]
   activities        ClassroomActivity[]
@@ -4737,7 +4737,7 @@ model ClassroomActivity {
   title       String
   description String?               @db.Text
 
-  maxScore         Decimal?  @db.Decimal(3,1)
+  maxScore         Decimal?  @db.Decimal(5,2)
   dueDate          DateTime?
   openDate         DateTime?
   timeLimitMinutes Int?
@@ -4796,7 +4796,7 @@ model ActivityQuestion {
   imageUrl          String?
   options           Json?
   correctAnswer     String?      @db.Text
-  points            Decimal      @db.Decimal(3,1) @default(1.0)
+  points            Decimal      @db.Decimal(5,2) @default(1.0)
   explanation       String?      @db.Text
   wrongExplanations Json?
   subjectArea       String?
@@ -4820,7 +4820,7 @@ model ActivitySubmission {
   content          String?  @db.Text
   fileUrl          String?
 
-  score            Decimal? @db.Decimal(3,1)
+  score            Decimal? @db.Decimal(5,2)
   feedback         String?  @db.Text
   gradedAt         DateTime?
   gradedById       String?
@@ -4852,7 +4852,7 @@ model QuestionAnswer {
   answer          String?  @db.Text
   selectedOptions Json?
   isCorrect       Boolean?
-  pointsEarned    Decimal? @db.Decimal(3,1)
+  pointsEarned    Decimal? @db.Decimal(5,2)
 
   submission   ActivitySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   question     ActivityQuestion   @relation(fields: [questionId], references: [id], onDelete: Cascade)
