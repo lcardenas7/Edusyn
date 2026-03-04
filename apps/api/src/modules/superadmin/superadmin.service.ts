@@ -184,11 +184,19 @@ export class SuperadminService {
       });
 
       // 6. Vincular usuario a la institución como admin
-      await tx.institutionUser.create({
+      const adminInstitutionUser = await tx.institutionUser.create({
         data: {
           userId: adminUser.id,
           institutionId: institution.id,
           isAdmin: true,
+        },
+      });
+
+      // 7. Dual-write: asignar rol por tenant (InstitutionUserRole)
+      await tx.institutionUserRole.create({
+        data: {
+          institutionUserId: adminInstitutionUser.id,
+          roleId: adminRole.id,
         },
       });
 

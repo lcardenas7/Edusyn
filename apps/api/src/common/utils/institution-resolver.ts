@@ -19,14 +19,18 @@ export async function resolveInstitutionId(
     return undefined;
   }
 
+  // 0. Si TenantGuard ya resolvió el institutionId, usarlo directamente
+  if (req.resolvedInstitutionId) {
+    return req.resolvedInstitutionId;
+  }
+
   // 1. SUPERADMIN puede enviar institutionId explícito (para administrar cualquier institución)
-  const isSuperAdmin = user.isSuperAdmin === true || 
-    user.roles?.some((r: any) => 
-      r.role?.name === 'SUPERADMIN' || 
-      r.role?.name === 'SUPER_ADMIN' ||
-      r.roleName === 'SUPERADMIN' ||
-      r.roleName === 'SUPER_ADMIN'
-    );
+  const isSuperAdmin = user.isSuperAdmin === true ||
+    (Array.isArray(user.roles) && user.roles.some((r: any) =>
+      r === 'SUPERADMIN' || r === 'SUPER_ADMIN' ||
+      r?.role?.name === 'SUPERADMIN' || r?.role?.name === 'SUPER_ADMIN' ||
+      r?.roleName === 'SUPERADMIN' || r?.roleName === 'SUPER_ADMIN'
+    ));
 
   if (isSuperAdmin && queryInstitutionId) {
     console.log(`[InstitutionResolver] SUPERADMIN usando institutionId del query: ${queryInstitutionId}`);
@@ -64,13 +68,12 @@ export async function resolveInstitutionId(
 export function isSuperAdmin(user: any): boolean {
   if (!user) return false;
   
-  return user.isSuperAdmin === true || 
-    user.roles?.some((r: any) => 
-      r.role?.name === 'SUPERADMIN' || 
-      r.role?.name === 'SUPER_ADMIN' ||
-      r.roleName === 'SUPERADMIN' ||
-      r.roleName === 'SUPER_ADMIN'
-    );
+  return user.isSuperAdmin === true ||
+    (Array.isArray(user.roles) && user.roles.some((r: any) =>
+      r === 'SUPERADMIN' || r === 'SUPER_ADMIN' ||
+      r?.role?.name === 'SUPERADMIN' || r?.role?.name === 'SUPER_ADMIN' ||
+      r?.roleName === 'SUPERADMIN' || r?.roleName === 'SUPER_ADMIN'
+    ));
 }
 
 /**

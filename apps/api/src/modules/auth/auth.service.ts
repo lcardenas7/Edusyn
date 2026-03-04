@@ -1,7 +1,9 @@
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
+import { PrismaService } from '../../prisma/prisma.service';
 import { UsersService } from '../iam/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -11,6 +13,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -51,40 +54,85 @@ export class AuthService {
       throw new UnauthorizedException('Tu cuenta ha sido desactivada. Contacta al administrador de tu institución.');
     }
 
-    // Obtener institución del usuario
-    const userInstitution = await this.usersService.findUserInstitution(user.id);
-    
-    // Si se especifica institutionId, validar que el usuario pertenezca a esa institución
-    if (dto.institutionId) {
-      // Si el usuario no tiene institución asignada o no coincide con la solicitada
-      if (!userInstitution || userInstitution.id !== dto.institutionId) {
-        throw new UnauthorizedException('No tienes acceso a esta institución. Verifica que estés ingresando a tu institución correcta.');
-      }
-    }
+    const isSuperAdmin = user.isSuperAdmin === true;
 
-    const roleNames = user.roles.map((r) => r.role.name);
-
-    // Incluir institutionId en el token JWT
-    const accessToken = await this.jwtService.signAsync({
-      sub: user.id,
-      email: user.email,
-      roles: roleNames,
-      institutionId: userInstitution?.id || null,
+    // Obtener TODAS las instituciones del usuario
+    const allInstitutionUsers = await this.prisma.institutionUser.findMany({
+      where: { userId: user.id, isActive: true },
+      include: {
+        institution: { select: { id: true, name: true, slug: true, logo: true, status: true } },
+        institutionUserRoles: { include: { role: true } },
+      },
+      orderBy: { joinedAt: 'asc' },
     });
 
-    return {
-      access_token: accessToken,
-      mustChangePassword: (user as any).mustChangePassword || false,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        roles: user.roles,
-        institution: userInstitution || undefined,
-        isSuperAdmin: (user as any).isSuperAdmin === true,
+    // Si se especifica institutionId, validar pertenencia
+    if (dto.institutionId) {
+      const targetIu = allInstitutionUsers.find(iu => iu.institutionId === dto.institutionId);
+      if (!targetIu) {
+        throw new UnauthorizedException('No tienes acceso a esta institución. Verifica que estés ingresando a tu institución correcta.');
+      }
+      return this.signTokenForInstitution(user, targetIu, isSuperAdmin);
+    }
+
+    // Sin institutionId especificado
+    if (allInstitutionUsers.length === 1) {
+      // Solo una institución → login directo
+      return this.signTokenForInstitution(user, allInstitutionUsers[0], isSuperAdmin);
+    }
+
+    if (allInstitutionUsers.length > 1) {
+      // Múltiples instituciones → retornar selector
+      return {
+        requiresInstitutionSelection: true,
+        institutions: allInstitutionUsers.map(iu => ({
+          id: iu.institutionId,
+          name: iu.institution.name,
+          slug: iu.institution.slug,
+          logo: iu.institution.logo,
+          roles: iu.institutionUserRoles.map(iur => iur.role.name),
+        })),
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          isSuperAdmin,
+        },
+      };
+    }
+
+    // Sin instituciones — solo SuperAdmin puede proceder sin tenant
+    if (isSuperAdmin) {
+      return this.signTokenWithoutInstitution(user);
+    }
+
+    throw new UnauthorizedException('Tu cuenta no está vinculada a ninguna institución. Contacta al administrador.');
+  }
+
+  async switchInstitution(userId: string, institutionId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, firstName: true, lastName: true, isSuperAdmin: true, isActive: true },
+    });
+
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('Usuario no válido');
+    }
+
+    const targetIu = await this.prisma.institutionUser.findUnique({
+      where: { userId_institutionId: { userId, institutionId } },
+      include: {
+        institution: { select: { id: true, name: true, slug: true, logo: true, status: true } },
+        institutionUserRoles: { include: { role: true } },
       },
-    };
+    });
+
+    if (!targetIu || !targetIu.isActive) {
+      throw new UnauthorizedException('No tienes acceso a esta institución.');
+    }
+
+    return this.signTokenForInstitution(user, targetIu, user.isSuperAdmin);
   }
 
   async getProfile(userId: string) {
@@ -128,5 +176,110 @@ export class AuthService {
     await this.usersService.updatePassword(userId, newPasswordHash);
 
     return { message: 'Contraseña actualizada correctamente' };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PRIVATE: Token signing helpers
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // TODO [DEUDA TÉCNICA]: Implementar blacklist de jti para revocación de tokens.
+  // Estado actual: switchInstitution genera nuevo jti pero el token anterior
+  // sigue vivo hasta su TTL. Mitigación actual: TTL escalonado (2h-24h) +
+  // TenantGuard bloquea cross-tenant con token viejo.
+  // Para implementar: tabla TokenRevocation(jti, expiresAt) o Redis set,
+  // validar en JwtStrategy.validate() que jti no esté revocado.
+
+  private async signTokenForInstitution(
+    user: { id: string; email: string; firstName: string; lastName: string },
+    iu: {
+      id: string;
+      institutionId: string;
+      institution: { id: string; name: string; slug: string; logo: string | null; status: string };
+      institutionUserRoles: Array<{ role: { name: string } }>;
+    },
+    isSuperAdmin: boolean,
+  ) {
+    // Roles from InstitutionUserRole (per-tenant)
+    const tenantRoles = iu.institutionUserRoles.map(iur => iur.role.name);
+
+    // Fallback: if InstitutionUserRole is empty (pre-migration users), read from global UserRole
+    let roles = tenantRoles;
+    if (roles.length === 0) {
+      const globalRoles = await this.prisma.userRole.findMany({
+        where: { userId: user.id },
+        include: { role: true },
+      });
+      roles = globalRoles.map(r => r.role.name);
+    }
+
+    // TTL escalonado por nivel de privilegio
+    const ttl = this.getTtlForRoles(roles, isSuperAdmin);
+
+    const accessToken = await this.jwtService.signAsync(
+      {
+        sub: user.id,
+        email: user.email,
+        roles,
+        institutionId: iu.institutionId,
+        isSuperAdmin,
+        institutionUserId: iu.id,
+        jti: crypto.randomUUID(),
+      },
+      { expiresIn: ttl },
+    );
+
+    return {
+      access_token: accessToken,
+      mustChangePassword: false,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roles,
+        institution: iu.institution,
+        isSuperAdmin,
+      },
+    };
+  }
+
+  private async signTokenWithoutInstitution(
+    user: { id: string; email: string; firstName: string; lastName: string; isSuperAdmin: boolean },
+  ) {
+    const accessToken = await this.jwtService.signAsync(
+      {
+        sub: user.id,
+        email: user.email,
+        roles: ['SUPERADMIN'],
+        institutionId: null,
+        isSuperAdmin: true,
+        institutionUserId: null,
+        jti: crypto.randomUUID(),
+      },
+      { expiresIn: 7200 },
+    );
+
+    return {
+      access_token: accessToken,
+      mustChangePassword: false,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roles: ['SUPERADMIN'],
+        institution: undefined,
+        isSuperAdmin: true,
+      },
+    };
+  }
+
+  private getTtlForRoles(roles: string[], isSuperAdmin: boolean): number {
+    if (isSuperAdmin) return 2 * 3600;       // 2h
+    if (roles.includes('ADMIN_INSTITUTIONAL')) return 4 * 3600;  // 4h
+    if (roles.includes('COORDINADOR') || roles.includes('RECTOR')) return 8 * 3600; // 8h
+    if (roles.includes('DOCENTE')) return 8 * 3600;  // 8h
+    // ESTUDIANTE, ACUDIENTE, etc.
+    return 24 * 3600; // 24h
   }
 }

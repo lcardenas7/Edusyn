@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Get, Param, Query, UseGuards, Request, NotFoundException } from '@nestjs/common';
+import { Body, Controller, Post, Get, Param, Query, UseGuards, Request, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 
 import { AuthService } from './auth.service';
@@ -16,11 +16,42 @@ export class AuthController {
     private readonly prisma: PrismaService,
   ) {}
 
+  // Jerarquía de roles: un usuario solo puede asignar roles de nivel inferior al suyo
+  private static readonly ROLE_HIERARCHY: Record<string, number> = {
+    SUPERADMIN: 100,
+    ADMIN_INSTITUTIONAL: 90,
+    RECTOR: 80,
+    COORDINADOR: 70,
+    SECRETARIA: 60,
+    ORIENTADOR: 60,
+    BIBLIOTECARIO: 60,
+    AUXILIAR: 60,
+    DOCENTE: 50,
+    ESTUDIANTE: 10,
+    ACUDIENTE: 10,
+  };
+
   @Post('register')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
   @Throttle({ default: { ttl: 60000, limit: 10 } })
-  async register(@Body() dto: RegisterDto) {
+  async register(@Request() req, @Body() dto: RegisterDto) {
+    // Validar jerarquía de roles: no puede asignar roles >= su propio nivel
+    const callerRoles: string[] = req.user.roles || [];
+    const callerIsSuperAdmin = req.user.isSuperAdmin === true;
+    const callerMaxLevel = callerIsSuperAdmin
+      ? 100
+      : Math.max(...callerRoles.map(r => AuthController.ROLE_HIERARCHY[r] || 0), 0);
+
+    for (const requestedRole of dto.roles) {
+      const requestedLevel = AuthController.ROLE_HIERARCHY[requestedRole] || 50;
+      if (requestedLevel >= callerMaxLevel && !callerIsSuperAdmin) {
+        throw new ForbiddenException(
+          `No puedes asignar el rol "${requestedRole}". Solo puedes asignar roles de nivel inferior al tuyo.`,
+        );
+      }
+    }
+
     return this.authService.register(dto);
   }
 
@@ -88,6 +119,15 @@ export class AuthController {
     @Body() body: { currentPassword: string; newPassword: string },
   ) {
     return this.authService.changePassword(req.user.id, body.currentPassword, body.newPassword);
+  }
+
+  @Post('switch-institution')
+  @UseGuards(JwtAuthGuard)
+  async switchInstitution(
+    @Request() req,
+    @Body() body: { institutionId: string },
+  ) {
+    return this.authService.switchInstitution(req.user.id, body.institutionId);
   }
 
   @Get('institution/:slug')

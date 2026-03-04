@@ -310,22 +310,40 @@ export class UsersController {
     if (body.role) {
       const currentRoles = updatedUser.roles.map(r => r.role.name);
       if (!currentRoles.includes(body.role)) {
-        // Eliminar roles actuales de staff (no tocar DOCENTE ni ESTUDIANTE si existen)
         const staffRoles = ['COORDINADOR', 'SECRETARIA', 'ORIENTADOR', 'BIBLIOTECARIO', 'AUXILIAR', 'ADMIN_INSTITUTIONAL'];
-        await this.prisma.userRole.deleteMany({
-          where: {
-            userId: id,
-            role: { name: { in: staffRoles } },
-          },
-        });
 
-        // Asignar nuevo rol
-        const newRole = await this.prisma.role.findUnique({ where: { name: body.role } });
-        if (newRole) {
-          await this.prisma.userRole.create({
-            data: { userId: id, roleId: newRole.id },
+        await this.prisma.$transaction(async (tx) => {
+          // Eliminar roles actuales de staff (no tocar DOCENTE ni ESTUDIANTE si existen)
+          await tx.userRole.deleteMany({
+            where: {
+              userId: id,
+              role: { name: { in: staffRoles } },
+            },
           });
-        }
+
+          // Asignar nuevo rol
+          const newRole = await tx.role.findUnique({ where: { name: body.role } });
+          if (newRole) {
+            await tx.userRole.create({
+              data: { userId: id, roleId: newRole.id },
+            });
+
+            // Dual-write: actualizar InstitutionUserRole por tenant
+            const oldStaffRoleRecords = await tx.role.findMany({ where: { name: { in: staffRoles } } });
+            const oldStaffRoleIds = oldStaffRoleRecords.map(r => r.id);
+            const userInstitutionUsers = await tx.institutionUser.findMany({ where: { userId: id } });
+            for (const iu of userInstitutionUsers) {
+              await tx.institutionUserRole.deleteMany({
+                where: { institutionUserId: iu.id, roleId: { in: oldStaffRoleIds } },
+              });
+              await tx.institutionUserRole.upsert({
+                where: { institutionUserId_roleId: { institutionUserId: iu.id, roleId: newRole.id } },
+                create: { institutionUserId: iu.id, roleId: newRole.id },
+                update: {},
+              });
+            }
+          }
+        });
       }
     }
 
@@ -585,13 +603,28 @@ export class UsersController {
       return { message: 'El usuario ya está vinculado a esta institución', alreadyLinked: true };
     }
 
-    // Crear el vínculo
-    await this.prisma.institutionUser.create({
-      data: {
-        userId,
-        institutionId: institutionUser.institutionId,
-        isAdmin: false,
+    // Crear el vínculo + dual-write en transacción
+    const newIu = await this.prisma.$transaction(async (tx) => {
+      const createdIu = await tx.institutionUser.create({
+        data: {
+          userId,
+          institutionId: institutionUser.institutionId,
+          isAdmin: false,
+        }
+      });
+
+      // Dual-write: copiar roles globales del usuario a InstitutionUserRole
+      const userRoles = await tx.userRole.findMany({
+        where: { userId },
+      });
+      for (const ur of userRoles) {
+        await tx.institutionUserRole.upsert({
+          where: { institutionUserId_roleId: { institutionUserId: createdIu.id, roleId: ur.roleId } },
+          create: { institutionUserId: createdIu.id, roleId: ur.roleId },
+          update: {},
+        });
       }
+      return createdIu;
     });
 
     return { 

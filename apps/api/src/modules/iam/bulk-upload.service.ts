@@ -389,31 +389,46 @@ export class BulkUploadService {
         const initialPassword = row.documentNumber || 'temporal123';
         const passwordHash = await bcrypt.hash(initialPassword, 10);
 
-        // Crear usuario
-        const user = await this.prisma.user.create({
-          data: {
-            email: row.email,
-            username,
-            firstName: row.firstName,
-            lastName: row.lastName,
-            passwordHash,
-            documentType: row.documentType as any,
-            documentNumber: row.documentNumber,
-            phone: row.phone,
-            isActive: true,
-            mustChangePassword: true,
-            roles: {
-              create: {
-                roleId: docenteRole.id,
+        // Crear usuario + dual-write en transacción
+        const user = await this.prisma.$transaction(async (tx) => {
+          const created = await tx.user.create({
+            data: {
+              email: row.email,
+              username,
+              firstName: row.firstName,
+              lastName: row.lastName,
+              passwordHash,
+              documentType: row.documentType as any,
+              documentNumber: row.documentNumber,
+              phone: row.phone,
+              isActive: true,
+              mustChangePassword: true,
+              roles: {
+                create: {
+                  roleId: docenteRole.id,
+                },
               },
-            },
-            institutionUsers: {
-              create: {
-                institutionId,
-                isAdmin: false,
+              institutionUsers: {
+                create: {
+                  institutionId,
+                  isAdmin: false,
+                },
               },
-            },
-          } as any,
+            } as any,
+          });
+
+          // Dual-write: InstitutionUserRole
+          const iu = await tx.institutionUser.findUnique({
+            where: { userId_institutionId: { userId: created.id, institutionId } },
+          });
+          if (iu) {
+            await tx.institutionUserRole.upsert({
+              where: { institutionUserId_roleId: { institutionUserId: iu.id, roleId: docenteRole.id } },
+              create: { institutionUserId: iu.id, roleId: docenteRole.id },
+              update: {},
+            });
+          }
+          return created;
         });
 
         result.success++;
@@ -796,31 +811,46 @@ export class BulkUploadService {
         const initialPassword = row.documentNumber || 'temporal123';
         const passwordHash = await bcrypt.hash(initialPassword, 10);
 
-        // Crear usuario
-        const user = await this.prisma.user.create({
-          data: {
-            email: row.email,
-            username,
-            firstName: row.firstName,
-            lastName: row.lastName,
-            passwordHash,
-            documentType: row.documentType as any,
-            documentNumber: row.documentNumber,
-            phone: row.phone,
-            isActive: true,
-            mustChangePassword: true,
-            roles: {
-              create: {
-                roleId: role.id,
+        // Crear usuario + dual-write en transacción
+        const user = await this.prisma.$transaction(async (tx) => {
+          const created = await tx.user.create({
+            data: {
+              email: row.email,
+              username,
+              firstName: row.firstName,
+              lastName: row.lastName,
+              passwordHash,
+              documentType: row.documentType as any,
+              documentNumber: row.documentNumber,
+              phone: row.phone,
+              isActive: true,
+              mustChangePassword: true,
+              roles: {
+                create: {
+                  roleId: role.id,
+                },
               },
-            },
-            institutionUsers: {
-              create: {
-                institutionId,
-                isAdmin: false,
+              institutionUsers: {
+                create: {
+                  institutionId,
+                  isAdmin: false,
+                },
               },
-            },
-          } as any,
+            } as any,
+          });
+
+          // Dual-write: InstitutionUserRole
+          const iuStaff = await tx.institutionUser.findUnique({
+            where: { userId_institutionId: { userId: created.id, institutionId } },
+          });
+          if (iuStaff) {
+            await tx.institutionUserRole.upsert({
+              where: { institutionUserId_roleId: { institutionUserId: iuStaff.id, roleId: role.id } },
+              create: { institutionUserId: iuStaff.id, roleId: role.id },
+              update: {},
+            });
+          }
+          return created;
         });
 
         result.success++;

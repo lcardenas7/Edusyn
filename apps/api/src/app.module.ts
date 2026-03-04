@@ -36,6 +36,7 @@ import { TeacherWorkspaceModule } from './modules/teacher-workspace/teacher-work
 import { ClassroomModule } from './modules/classroom/classroom.module';
 import { LiveSessionModule } from './modules/live-session/live-session.module';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
+import { TenantGuard } from './modules/auth/guards/tenant.guard';
 
 @Module({
   imports: [
@@ -84,6 +85,10 @@ import { TenantContextInterceptor } from './common/interceptors/tenant-context.i
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: TenantGuard,
     },
     {
       provide: APP_INTERCEPTOR,

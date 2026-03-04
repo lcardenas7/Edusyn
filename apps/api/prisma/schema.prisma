@@ -366,6 +366,7 @@ model Role {
   updatedAt DateTime   @updatedAt
 
   users UserRole[]
+  institutionUserRoles InstitutionUserRole[]  // Asignaciones por tenant
 }
 
 model UserRole {
@@ -555,7 +556,25 @@ model InstitutionUser {
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   
+  institutionUserRoles InstitutionUserRole[]  // Roles del usuario EN esta institución
+
   @@unique([userId, institutionId])
+}
+
+// Roles del usuario POR institución (reemplaza UserRole global gradualmente)
+model InstitutionUserRole {
+  id                String   @id @default(cuid())
+  institutionUserId String
+  roleId            String
+  assignedAt        DateTime @default(now())
+  assignedById      String?  // Quién asignó el rol (auditoría)
+
+  institutionUser   InstitutionUser @relation(fields: [institutionUserId], references: [id], onDelete: Cascade)
+  role              Role            @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionUserId, roleId])
+  @@index([institutionUserId])
+  @@index([roleId])
 }
 
 model Campus {

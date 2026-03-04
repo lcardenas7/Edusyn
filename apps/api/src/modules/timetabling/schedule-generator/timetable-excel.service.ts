@@ -887,19 +887,33 @@ export class TimetableExcelService {
           : `${baseUsername}${existingUsernames.length}`;
 
         try {
-          user = await this.prisma.user.create({
-            data: {
-              email: autoEmail,
-              username,
-              firstName,
-              lastName,
-              passwordHash,
-              documentNumber: row.teacherDocument || null,
-              isActive: true,
-              mustChangePassword: true,
-              roles: { create: { roleId: docenteRole.id } },
-              institutionUsers: { create: { institutionId, isAdmin: false } },
-            } as any,
+          user = await this.prisma.$transaction(async (tx) => {
+            const created = await tx.user.create({
+              data: {
+                email: autoEmail,
+                username,
+                firstName,
+                lastName,
+                passwordHash,
+                documentNumber: row.teacherDocument || null,
+                isActive: true,
+                mustChangePassword: true,
+                roles: { create: { roleId: docenteRole.id } },
+                institutionUsers: { create: { institutionId, isAdmin: false } },
+              } as any,
+            });
+            // Dual-write: InstitutionUserRole
+            const iuTeacher = await tx.institutionUser.findUnique({
+              where: { userId_institutionId: { userId: created.id, institutionId } },
+            });
+            if (iuTeacher) {
+              await tx.institutionUserRole.upsert({
+                where: { institutionUserId_roleId: { institutionUserId: iuTeacher.id, roleId: docenteRole.id } },
+                create: { institutionUserId: iuTeacher.id, roleId: docenteRole.id },
+                update: {},
+              });
+            }
+            return created;
           });
           entitiesCreated.teachers++;
           const emailNote = row.teacherEmail ? row.teacherEmail : `email auto: ${autoEmail}`;

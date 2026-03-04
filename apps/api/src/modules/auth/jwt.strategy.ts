@@ -8,6 +8,9 @@ export type JwtPayload = {
   email: string;
   roles: string[];
   institutionId?: string | null;
+  isSuperAdmin?: boolean;
+  institutionUserId?: string | null;
+  jti?: string;
 };
 
 @Injectable()
@@ -26,6 +29,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       email: payload.email, 
       roles: payload.roles,
       institutionId: payload.institutionId || null,
+      isSuperAdmin: payload.isSuperAdmin === true,
+      institutionUserId: payload.institutionUserId || null,
+      jti: payload.jti || null,
     };
   }
 }
