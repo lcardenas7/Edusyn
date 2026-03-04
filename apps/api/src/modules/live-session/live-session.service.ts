@@ -362,12 +362,15 @@ export class LiveSessionService {
   }
 
   async finishSession(sessionId: string, teacherId: string) {
-    await this.validateTeacherSession(sessionId, teacherId);
+    const session = await this.validateTeacherSession(sessionId, teacherId);
 
     const updated = await this.prisma.liveSession.update({
       where: { id: sessionId },
       data: { status: 'FINISHED', finishedAt: new Date() },
     });
+
+    // Auto-generate grades for ALL students
+    await this.autoGradeFromLiveQuiz(sessionId, session.activityId);
 
     const ranking = await this.getRanking(sessionId, 10);
     this.broadcast(sessionId, { type: 'SESSION_FINISHED', data: ranking });
@@ -376,6 +379,142 @@ export class LiveSessionService {
     setTimeout(() => this.cleanupStream(sessionId), 5000);
 
     return { session: updated, ranking };
+  }
+
+  /**
+   * Auto-grade: creates ActivitySubmission + QuestionAnswer for every student
+   * in the group. For TEAM mode, team members who didn't answer get the team's
+   * average score. For INDIVIDUAL mode, students who didn't participate get 0.
+   */
+  private async autoGradeFromLiveQuiz(sessionId: string, activityId: string) {
+    try {
+      const session = await this.prisma.liveSession.findUnique({
+        where: { id: sessionId },
+        select: { id: true, mode: true, classroomId: true },
+      });
+      if (!session) return;
+
+      const classroom = await this.prisma.classroom.findUnique({
+        where: { id: session.classroomId },
+        include: { teacherAssignment: { select: { groupId: true, academicYearId: true } } },
+      });
+      if (!classroom) return;
+
+      const activity = await this.prisma.classroomActivity.findUnique({
+        where: { id: activityId },
+        select: { id: true, maxScore: true },
+      });
+      if (!activity) return;
+
+      // Get all questions and their total points
+      const questions = await this.prisma.activityQuestion.findMany({
+        where: { activityId },
+        orderBy: { sortOrder: 'asc' },
+        select: { id: true, points: true },
+      });
+      const totalPossiblePoints = questions.reduce((s, q) => s + Number(q.points), 0);
+      const maxScore = activity.maxScore ? Number(activity.maxScore) : totalPossiblePoints;
+
+      // Get all enrolled students
+      const enrollments = await this.prisma.studentEnrollment.findMany({
+        where: {
+          groupId: classroom.teacherAssignment.groupId,
+          academicYearId: classroom.teacherAssignment.academicYearId,
+          status: 'ACTIVE',
+        },
+        select: { id: true },
+      });
+
+      // Get all live answers for this session
+      const liveAnswers = await this.prisma.liveSessionAnswer.findMany({
+        where: { sessionId },
+        select: { studentEnrollmentId: true, questionId: true, isCorrect: true, points: true, answer: true, teamId: true },
+      });
+
+      // Build per-student score map
+      const studentScores = new Map<string, { totalPoints: number; answeredQuestions: Set<string>; answers: typeof liveAnswers }>();
+      for (const la of liveAnswers) {
+        if (!studentScores.has(la.studentEnrollmentId)) {
+          studentScores.set(la.studentEnrollmentId, { totalPoints: 0, answeredQuestions: new Set(), answers: [] });
+        }
+        const entry = studentScores.get(la.studentEnrollmentId)!;
+        entry.totalPoints += la.points;
+        entry.answeredQuestions.add(la.questionId);
+        entry.answers.push(la);
+      }
+
+      // For TEAM mode: compute team average scores for members without answers
+      let teamAvgScores = new Map<string, number>();
+      if (session.mode === 'TEAM') {
+        // Get team membership
+        const teamMembers = await this.prisma.liveSessionTeamMember.findMany({
+          where: { team: { sessionId } },
+          select: { studentEnrollmentId: true, teamId: true },
+        });
+
+        // Compute team totals from live answers
+        const teamTotals = new Map<string, { sum: number; count: number }>();
+        for (const la of liveAnswers) {
+          if (la.teamId) {
+            if (!teamTotals.has(la.teamId)) teamTotals.set(la.teamId, { sum: 0, count: 0 });
+            // Only count unique students per team
+          }
+        }
+        // Group answers by team
+        const teamStudentPoints = new Map<string, number[]>();
+        for (const tm of teamMembers) {
+          const score = studentScores.get(tm.studentEnrollmentId)?.totalPoints || 0;
+          if (!teamStudentPoints.has(tm.teamId)) teamStudentPoints.set(tm.teamId, []);
+          teamStudentPoints.get(tm.teamId)!.push(score);
+        }
+        for (const [teamId, points] of teamStudentPoints) {
+          const activePoints = points.filter(p => p > 0);
+          const avg = activePoints.length > 0 ? activePoints.reduce((s, p) => s + p, 0) / activePoints.length : 0;
+          teamAvgScores.set(teamId, avg);
+        }
+
+        // Assign team average to members without answers
+        for (const tm of teamMembers) {
+          if (!studentScores.has(tm.studentEnrollmentId)) {
+            const avgPts = teamAvgScores.get(tm.teamId) || 0;
+            studentScores.set(tm.studentEnrollmentId, { totalPoints: avgPts, answeredQuestions: new Set(), answers: [] });
+          }
+        }
+      }
+
+      // Now create ActivitySubmission for each enrolled student
+      const now = new Date();
+      for (const enrollment of enrollments) {
+        // Skip if submission already exists
+        const existing = await this.prisma.activitySubmission.findFirst({
+          where: { activityId, studentEnrollmentId: enrollment.id },
+        });
+        if (existing) continue;
+
+        const scoreData = studentScores.get(enrollment.id);
+        const rawPoints = scoreData?.totalPoints || 0;
+        // Normalize live quiz points to maxScore scale
+        // Live points are based on speed (up to points*1000), so normalize
+        const maxLivePoints = totalPossiblePoints * 1000;
+        const normalizedScore = maxLivePoints > 0 ? (rawPoints / maxLivePoints) * maxScore : 0;
+        const clampedScore = Math.min(Math.max(Math.round(normalizedScore * 10) / 10, 0), maxScore);
+
+        await this.prisma.activitySubmission.create({
+          data: {
+            activityId,
+            studentEnrollmentId: enrollment.id,
+            status: 'AUTO_GRADED',
+            score: clampedScore,
+            submittedAt: now,
+            gradedAt: now,
+            content: `Live Quiz — ${rawPoints > 0 ? Math.round(rawPoints).toLocaleString() + ' pts' : 'Sin participación'}`,
+          },
+        });
+      }
+    } catch (err) {
+      // Don't fail the session finish if grading fails
+      console.error('Auto-grade from live quiz failed:', err);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -450,6 +589,205 @@ export class LiveSessionService {
       color: teamMap.get(r.teamId!)?.color || '#6366f1',
       totalPoints: Math.round(r._sum.points || 0),
     }));
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Team Management
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async createTeams(sessionId: string, teacherId: string, teams: { name: string; color?: string }[]) {
+    const session = await this.validateTeacherSession(sessionId, teacherId);
+    if (session.mode !== 'TEAM') {
+      throw new BadRequestException('La sesión no está en modo equipos');
+    }
+    // Delete existing teams
+    await this.prisma.liveSessionTeamMember.deleteMany({
+      where: { team: { sessionId } },
+    });
+    await this.prisma.liveSessionTeam.deleteMany({ where: { sessionId } });
+
+    const TEAM_COLORS = ['#6366f1', '#f43f5e', '#22c55e', '#f97316', '#06b6d4', '#8b5cf6', '#eab308', '#ec4899'];
+    const created = await Promise.all(
+      teams.map((t, i) =>
+        this.prisma.liveSessionTeam.create({
+          data: {
+            sessionId,
+            name: t.name,
+            color: t.color || TEAM_COLORS[i % TEAM_COLORS.length],
+          },
+        }),
+      ),
+    );
+
+    // Broadcast updated teams
+    this.broadcast(sessionId, {
+      type: 'TEAMS_UPDATED' as any,
+      data: created,
+    });
+
+    return created;
+  }
+
+  async getTeams(sessionId: string) {
+    return this.prisma.liveSessionTeam.findMany({
+      where: { sessionId },
+      include: {
+        members: {
+          include: {
+            studentEnrollment: {
+              include: { student: { select: { firstName: true, lastName: true } } },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async addPartnerToTeam(sessionId: string, teamId: string, studentEnrollmentId: string, requesterId: string) {
+    const session = await this.prisma.liveSession.findUnique({
+      where: { id: sessionId },
+      select: { id: true, mode: true, status: true, classroomId: true },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+    if (session.mode !== 'TEAM') throw new BadRequestException('La sesión no está en modo equipos');
+    if (session.status === 'FINISHED') throw new BadRequestException('La sesión ya finalizó');
+
+    // Verify the requester is in this team (or is the teacher)
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: session.classroomId },
+      include: { teacherAssignment: { select: { groupId: true, academicYearId: true, teacherId: true } } },
+    });
+    if (!classroom) throw new NotFoundException('Aula no encontrada');
+
+    const isTeacher = classroom.teacherAssignment.teacherId === requesterId;
+    if (!isTeacher) {
+      // Verify requester is enrolled and in this team
+      const requesterEnrollment = await this.prisma.studentEnrollment.findFirst({
+        where: {
+          student: { userId: requesterId },
+          groupId: classroom.teacherAssignment.groupId,
+          academicYearId: classroom.teacherAssignment.academicYearId,
+          status: 'ACTIVE',
+        },
+      });
+      if (!requesterEnrollment) throw new ForbiddenException('No está matriculado');
+      const requesterMember = await this.prisma.liveSessionTeamMember.findFirst({
+        where: { studentEnrollmentId: requesterEnrollment.id, teamId },
+      });
+      if (!requesterMember) throw new ForbiddenException('No perteneces a este equipo');
+    }
+
+    // Verify target student is enrolled in same group
+    const targetEnrollment = await this.prisma.studentEnrollment.findUnique({
+      where: { id: studentEnrollmentId },
+      select: { id: true, groupId: true, academicYearId: true },
+    });
+    if (!targetEnrollment || targetEnrollment.groupId !== classroom.teacherAssignment.groupId) {
+      throw new BadRequestException('El estudiante no pertenece a este grupo');
+    }
+
+    // Remove from any existing team
+    await this.prisma.liveSessionTeamMember.deleteMany({
+      where: { studentEnrollmentId, team: { sessionId } },
+    });
+
+    // Add to team
+    await this.prisma.liveSessionTeamMember.create({
+      data: { teamId, studentEnrollmentId },
+    });
+
+    // Broadcast
+    const teams = await this.getTeams(sessionId);
+    this.broadcast(sessionId, { type: 'TEAMS_UPDATED' as any, data: teams });
+    return { success: true };
+  }
+
+  async searchGroupStudents(sessionId: string, query: string) {
+    const session = await this.prisma.liveSession.findUnique({
+      where: { id: sessionId },
+      select: { classroomId: true },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: session.classroomId },
+      include: { teacherAssignment: { select: { groupId: true, academicYearId: true } } },
+    });
+    if (!classroom) throw new NotFoundException('Aula no encontrada');
+
+    // Get all enrolled students in this group
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: {
+        groupId: classroom.teacherAssignment.groupId,
+        academicYearId: classroom.teacherAssignment.academicYearId,
+        status: 'ACTIVE',
+        student: query ? {
+          OR: [
+            { firstName: { contains: query, mode: 'insensitive' } },
+            { lastName: { contains: query, mode: 'insensitive' } },
+          ],
+        } : undefined,
+      },
+      include: { student: { select: { firstName: true, lastName: true } } },
+      take: 20,
+      orderBy: { student: { lastName: 'asc' } },
+    });
+
+    // Check which are already in a team
+    const memberRecords = await this.prisma.liveSessionTeamMember.findMany({
+      where: { studentEnrollmentId: { in: enrollments.map(e => e.id) }, team: { sessionId } },
+      select: { studentEnrollmentId: true, teamId: true },
+    });
+    const teamMap = new Map(memberRecords.map(m => [m.studentEnrollmentId, m.teamId]));
+
+    return enrollments.map(e => ({
+      enrollmentId: e.id,
+      name: `${e.student.firstName} ${e.student.lastName}`,
+      teamId: teamMap.get(e.id) || null,
+    }));
+  }
+
+  async joinTeam(sessionId: string, teamId: string, userId: string) {
+    const session = await this.prisma.liveSession.findUnique({
+      where: { id: sessionId },
+      select: { id: true, mode: true, status: true, classroomId: true },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+    if (session.mode !== 'TEAM') throw new BadRequestException('La sesión no está en modo equipos');
+    if (session.status === 'FINISHED') throw new BadRequestException('La sesión ya finalizó');
+
+    // Get enrollment
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: session.classroomId },
+      include: { teacherAssignment: { select: { groupId: true, academicYearId: true } } },
+    });
+    if (!classroom) throw new NotFoundException('Aula no encontrada');
+
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: {
+        student: { userId },
+        groupId: classroom.teacherAssignment.groupId,
+        academicYearId: classroom.teacherAssignment.academicYearId,
+        status: 'ACTIVE',
+      },
+    });
+    if (!enrollment) throw new ForbiddenException('No está matriculado');
+
+    // Remove from any existing team in this session
+    await this.prisma.liveSessionTeamMember.deleteMany({
+      where: { studentEnrollmentId: enrollment.id, team: { sessionId } },
+    });
+
+    // Join the new team
+    const member = await this.prisma.liveSessionTeamMember.create({
+      data: { teamId, studentEnrollmentId: enrollment.id },
+    });
+
+    // Broadcast updated teams
+    const teams = await this.getTeams(sessionId);
+    this.broadcast(sessionId, { type: 'TEAMS_UPDATED' as any, data: teams });
+
+    return member;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

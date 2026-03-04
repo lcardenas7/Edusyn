@@ -50,7 +50,7 @@ function getAvatarColor(name: string) {
 export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, activityTitle, sessionId: initialSessionId }: LiveQuizProps) {
   const [sessionId, setSessionId] = useState(initialSessionId || '')
   const [session, setSession] = useState<any>(null)
-  const [phase, setPhase] = useState<'loading' | 'lobby' | 'question' | 'answer_reveal' | 'ranking' | 'finished'>('loading')
+  const [phase, setPhase] = useState<'setup' | 'loading' | 'lobby' | 'question' | 'answer_reveal' | 'ranking' | 'finished'>('setup')
   const [error, setError] = useState('')
 
   // Current question state
@@ -77,6 +77,25 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   const [totalAnswered, setTotalAnswered] = useState(0)
   const [ranking, setRanking] = useState<RankEntry[]>([])
 
+  // Team mode
+  const [mode, setMode] = useState<'INDIVIDUAL' | 'TEAM'>('INDIVIDUAL')
+  const [teams, setTeams] = useState<any[]>([])
+  const [myTeamId, setMyTeamId] = useState<string | null>(null)
+  const [teamSetupNames, setTeamSetupNames] = useState(['Equipo 1', 'Equipo 2'])
+  const [joiningTeam, setJoiningTeam] = useState(false)
+
+  // Add partner (search students to add to my team)
+  const [showAddPartner, setShowAddPartner] = useState(false)
+  const [partnerSearch, setPartnerSearch] = useState('')
+  const [partnerResults, setPartnerResults] = useState<any[]>([])
+  const [searchingPartner, setSearchingPartner] = useState(false)
+  const [addingPartner, setAddingPartner] = useState('')
+
+  // Time config
+  const [globalTimeLimit, setGlobalTimeLimit] = useState(15)
+  const [autoCloseOnTimeout, setAutoCloseOnTimeout] = useState(true)
+  const autoCloseRef = useRef(true)
+
   // Reveal state
   const [correctAnswer, setCorrectAnswer] = useState<string | null>(null)
   const [explanation, setExplanation] = useState<string | null>(null)
@@ -96,11 +115,14 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
   useEffect(() => {
     if (isTeacher && activityId) {
-      createSession()
+      // Show setup phase for teacher to pick mode
+      setPhase('setup')
     } else if (initialSessionId) {
+      setPhase('loading')
       setSessionId(initialSessionId)
       loadSession(initialSessionId)
     } else {
+      setPhase('loading')
       checkActiveSession()
     }
     return () => {
@@ -111,15 +133,29 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   }, [])
 
   const createSession = async () => {
+    setPhase('loading')
     try {
-      const { data } = await liveSessionApi.create({ classroomId, activityId: activityId! })
+      const { data } = await liveSessionApi.create({ classroomId, activityId: activityId!, mode, config: { timeLimitOverride: globalTimeLimit, autoClose: autoCloseOnTimeout } })
+      autoCloseRef.current = autoCloseOnTimeout
       setSessionId(data.id)
       setSession(data)
+      setMode(data.mode || 'INDIVIDUAL')
       setTotalQuestions(data.activity?.questions?.length || 0)
-      setPhase('lobby')
       connectSSE(data.id)
+      // If team mode, create teams
+      if (mode === 'TEAM') {
+        try {
+          const validTeams = teamSetupNames.filter(n => n.trim()).map(n => ({ name: n }))
+          if (validTeams.length >= 2) {
+            const { data: createdTeams } = await liveSessionApi.createTeams(data.id, validTeams)
+            setTeams(createdTeams)
+          }
+        } catch {}
+      }
+      setPhase('lobby')
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al crear sesión')
+      setPhase('loading')
     }
   }
 
@@ -127,7 +163,13 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     try {
       const { data } = await liveSessionApi.get(sid)
       setSession(data)
+      setMode(data.mode || 'INDIVIDUAL')
       setTotalQuestions(data.activity?.questions?.length || 0)
+      if (data.teams?.length) setTeams(data.teams)
+      // Sync autoClose from session config
+      const cfg = (data.config as any) || {}
+      autoCloseRef.current = cfg.autoClose ?? false
+      setAutoCloseOnTimeout(cfg.autoClose ?? false)
       if (data.status === 'FINISHED') {
         setPhase('finished')
       } else if (data.status === 'WAITING') {
@@ -223,6 +265,11 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       stopTimer()
     })
 
+    es.addEventListener('TEAMS_UPDATED', (e: any) => {
+      const data = JSON.parse(e.data)
+      setTeams(data)
+    })
+
     es.addEventListener('PING', () => { /* keep alive */ })
 
     es.onerror = () => {
@@ -241,6 +288,10 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       setTimeLeft(prev => {
         if (prev <= 1) {
           stopTimer()
+          // Auto-close question when timer expires (teacher only)
+          if (isTeacher && autoCloseRef.current) {
+            handleCloseQuestion()
+          }
           return 0
         }
         return prev - 1
@@ -394,6 +445,25 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     submitAnswer(JSON.stringify(blankAnswers))
   }
 
+  // Partner search
+  const handleSearchPartner = async (q: string) => {
+    setPartnerSearch(q)
+    if (!sessionId) return
+    setSearchingPartner(true)
+    try {
+      const { data } = await liveSessionApi.searchStudents(sessionId, q)
+      setPartnerResults(data)
+    } catch {} finally { setSearchingPartner(false) }
+  }
+
+  const handleAddPartner = async (enrollmentId: string) => {
+    if (!myTeamId || !sessionId || addingPartner) return
+    setAddingPartner(enrollmentId)
+    try {
+      await liveSessionApi.addPartner(sessionId, myTeamId, enrollmentId)
+    } catch {} finally { setAddingPartner('') }
+  }
+
   const handleOrderMove = (from: number, to: number) => {
     if (answered) return
     const arr = [...orderAnswers]
@@ -454,6 +524,100 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         <div className="mx-4 mt-2 p-3 bg-red-500/20 border border-red-500/40 rounded-xl text-red-300 text-sm text-center">{error}</div>
       )}
 
+      {/* SETUP (teacher picks mode + team names) */}
+      {phase === 'setup' && isTeacher && (
+        <div className="flex flex-col items-center justify-center min-h-[80vh] px-4 space-y-8">
+          <div className="text-center space-y-3">
+            <Zap className="w-16 h-16 text-yellow-400 mx-auto" />
+            <h1 className="text-3xl sm:text-4xl font-black text-white">
+              {activityTitle || 'Live Quiz'}
+            </h1>
+            <p className="text-indigo-300">Configura la sesión antes de iniciar</p>
+          </div>
+
+          <div className="w-full max-w-md space-y-6">
+            {/* Mode selector */}
+            <div className="space-y-2">
+              <p className="text-white/80 font-semibold text-sm text-center">Modalidad</p>
+              <div className="flex gap-3">
+                <button onClick={() => setMode('INDIVIDUAL')} className={`flex-1 p-4 rounded-2xl border-2 transition-all text-center ${mode === 'INDIVIDUAL' ? 'border-indigo-400 bg-indigo-500/20' : 'border-white/10 bg-white/5 hover:border-white/30'}`}>
+                  <Users className="w-8 h-8 mx-auto mb-2 text-indigo-400" />
+                  <p className="text-white font-semibold">Individual</p>
+                  <p className="text-white/40 text-xs mt-1">Cada estudiante compite solo</p>
+                </button>
+                <button onClick={() => setMode('TEAM')} className={`flex-1 p-4 rounded-2xl border-2 transition-all text-center ${mode === 'TEAM' ? 'border-purple-400 bg-purple-500/20' : 'border-white/10 bg-white/5 hover:border-white/30'}`}>
+                  <Award className="w-8 h-8 mx-auto mb-2 text-purple-400" />
+                  <p className="text-white font-semibold">Equipos</p>
+                  <p className="text-white/40 text-xs mt-1">Los estudiantes eligen un equipo</p>
+                </button>
+              </div>
+            </div>
+
+            {/* Team names editor (only in TEAM mode) */}
+            {mode === 'TEAM' && (
+              <div className="bg-white/5 rounded-2xl p-4 space-y-3">
+                <p className="text-white/80 font-semibold text-sm">Nombres de equipos</p>
+                {teamSetupNames.map((name, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: ['#6366f1', '#f43f5e', '#22c55e', '#f97316', '#06b6d4', '#8b5cf6', '#eab308', '#ec4899'][i % 8] }} />
+                    <input
+                      value={name}
+                      onChange={e => { const arr = [...teamSetupNames]; arr[i] = e.target.value; setTeamSetupNames(arr) }}
+                      className="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
+                      placeholder={`Equipo ${i + 1}`}
+                    />
+                    {teamSetupNames.length > 2 && (
+                      <button onClick={() => setTeamSetupNames(teamSetupNames.filter((_, j) => j !== i))} className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400">
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {teamSetupNames.length < 8 && (
+                  <button onClick={() => setTeamSetupNames([...teamSetupNames, `Equipo ${teamSetupNames.length + 1}`])} className="text-sm text-indigo-400 hover:text-indigo-300 font-medium">
+                    + Agregar equipo
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Time config */}
+            <div className="bg-white/5 rounded-2xl p-4 space-y-3">
+              <p className="text-white/80 font-semibold text-sm">Tiempo por pregunta</p>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min={5}
+                  max={120}
+                  step={5}
+                  value={globalTimeLimit}
+                  onChange={e => setGlobalTimeLimit(Number(e.target.value))}
+                  className="flex-1 accent-indigo-500"
+                />
+                <span className="text-white font-bold text-lg w-16 text-center">{globalTimeLimit}s</span>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoCloseOnTimeout}
+                  onChange={e => setAutoCloseOnTimeout(e.target.checked)}
+                  className="w-4 h-4 rounded accent-indigo-500"
+                />
+                <span className="text-white/60 text-sm">Cerrar pregunta automáticamente al agotar el tiempo</span>
+              </label>
+            </div>
+
+            {/* Create session button */}
+            <button
+              onClick={createSession}
+              className="w-full px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl text-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg shadow-green-500/30 flex items-center justify-center gap-3"
+            >
+              <Play className="w-6 h-6" /> Crear sesión
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* LOADING */}
       {phase === 'loading' && (
         <div className="flex items-center justify-center h-[80vh]">
@@ -469,12 +633,31 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             <h1 className="text-3xl sm:text-5xl font-black text-white">
               {activityTitle || session?.activity?.title || 'Live Quiz'}
             </h1>
-            <p className="text-indigo-300 text-lg">{totalQuestions} preguntas</p>
+            <p className="text-indigo-300 text-lg">
+              {totalQuestions} preguntas
+              {mode === 'TEAM' && <span className="ml-2 px-2 py-0.5 bg-purple-500/30 text-purple-300 rounded-full text-xs font-bold">EQUIPOS</span>}
+            </p>
           </div>
 
           {isTeacher ? (
-            <div className="space-y-4 text-center">
-              <p className="text-white/60">Los estudiantes pueden unirse desde su aula virtual</p>
+            <div className="space-y-6 w-full max-w-md">
+              {/* Team display (teacher, TEAM mode) */}
+              {mode === 'TEAM' && teams.length > 0 && (
+                <div className="bg-white/5 rounded-2xl p-4 space-y-3">
+                  <p className="text-white/80 font-semibold text-center text-sm">Equipos creados</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {teams.map((t: any) => (
+                      <div key={t.id} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10" style={{ backgroundColor: t.color + '20' }}>
+                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
+                        <span className="text-white text-sm font-medium truncate">{t.name}</span>
+                        <span className="text-white/40 text-xs ml-auto">{t.members?.length || 0}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <p className="text-white/60 text-center text-sm">Los estudiantes pueden unirse desde su aula virtual</p>
               <button
                 onClick={handleNextQuestion}
                 className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl text-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg shadow-green-500/30 flex items-center gap-3 mx-auto"
@@ -483,11 +666,99 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               </button>
             </div>
           ) : (
-            <div className="text-center space-y-3">
-              <div className="w-20 h-20 rounded-full bg-indigo-500/30 flex items-center justify-center mx-auto">
-                <Users className="w-10 h-10 text-indigo-400" />
-              </div>
-              <p className="text-white/60 text-lg">Esperando a que el profesor inicie...</p>
+            <div className="text-center space-y-4 w-full max-w-md">
+              {/* Student: Team selection */}
+              {mode === 'TEAM' && teams.length > 0 ? (
+                <div className="space-y-4">
+                  <p className="text-white/80 font-semibold">Elige tu equipo</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {teams.map((t: any) => {
+                      const isSelected = myTeamId === t.id
+                      const memberCount = t.members?.length || 0
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={async () => {
+                            if (isSelected || joiningTeam) return
+                            setJoiningTeam(true)
+                            try {
+                              await liveSessionApi.joinTeam(sessionId, t.id)
+                              setMyTeamId(t.id)
+                            } catch {}
+                            setJoiningTeam(false)
+                          }}
+                          disabled={joiningTeam}
+                          className={`p-4 rounded-2xl border-2 transition-all text-center ${isSelected ? 'border-white/60 bg-white/15 scale-105' : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/30'}`}
+                        >
+                          <div className="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-bold text-lg" style={{ backgroundColor: t.color }}>
+                            {t.name.charAt(0)}
+                          </div>
+                          <p className="text-white font-semibold text-sm">{t.name}</p>
+                          <p className="text-white/40 text-xs">{memberCount} miembros</p>
+                          {isSelected && <p className="text-green-400 text-xs font-bold mt-1">✓ Tu equipo</p>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {myTeamId && !showAddPartner && (
+                    <div className="space-y-3">
+                      <p className="text-indigo-300 text-sm animate-pulse">Esperando a que el profesor inicie...</p>
+                      <button onClick={() => { setShowAddPartner(true); handleSearchPartner('') }} className="text-sm text-white/50 hover:text-white/80 underline">
+                        + Agregar compañero sin celular a mi equipo
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Add partner search panel */}
+                  {myTeamId && showAddPartner && (
+                    <div className="bg-white/5 rounded-2xl p-4 space-y-3 text-left">
+                      <div className="flex items-center justify-between">
+                        <p className="text-white/80 font-semibold text-sm">Agregar compañero a mi equipo</p>
+                        <button onClick={() => setShowAddPartner(false)} className="text-white/40 hover:text-white/80 text-xs">Cerrar</button>
+                      </div>
+                      <input
+                        value={partnerSearch}
+                        onChange={e => handleSearchPartner(e.target.value)}
+                        placeholder="Buscar estudiante..."
+                        className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
+                      />
+                      <div className="max-h-40 overflow-y-auto space-y-1">
+                        {searchingPartner ? (
+                          <p className="text-white/30 text-xs text-center py-2">Buscando...</p>
+                        ) : partnerResults.length === 0 ? (
+                          <p className="text-white/30 text-xs text-center py-2">Sin resultados</p>
+                        ) : (
+                          partnerResults.map((s: any) => (
+                            <div key={s.enrollmentId} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10">
+                              <span className="text-white text-sm">{s.name}</span>
+                              {s.teamId === myTeamId ? (
+                                <span className="text-green-400 text-xs font-bold">✓ En tu equipo</span>
+                              ) : s.teamId ? (
+                                <span className="text-white/30 text-xs">En otro equipo</span>
+                              ) : (
+                                <button
+                                  onClick={() => handleAddPartner(s.enrollmentId)}
+                                  disabled={!!addingPartner}
+                                  className="px-3 py-1 bg-indigo-500/30 text-indigo-300 rounded-lg text-xs font-semibold hover:bg-indigo-500/50 disabled:opacity-50"
+                                >
+                                  {addingPartner === s.enrollmentId ? '...' : 'Agregar'}
+                                </button>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="w-20 h-20 rounded-full bg-indigo-500/30 flex items-center justify-center mx-auto">
+                    <Users className="w-10 h-10 text-indigo-400" />
+                  </div>
+                  <p className="text-white/60 text-lg">Esperando a que el profesor inicie...</p>
+                </div>
+              )}
             </div>
           )}
         </div>

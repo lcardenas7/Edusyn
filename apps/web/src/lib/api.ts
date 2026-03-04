@@ -1806,6 +1806,16 @@ export const classroomApi = {
   deleteSubmission: (submissionId: string) =>
     api.delete(`/classrooms/submissions/${submissionId}`),
 
+  // Quiz / Exam – Question Contexts
+  createContext: (activityId: string, data: { title?: string; text?: string; imageUrl?: string; viewPolicy?: string }) =>
+    api.post(`/classrooms/activities/${activityId}/contexts`, data),
+  listContexts: (activityId: string) =>
+    api.get(`/classrooms/activities/${activityId}/contexts`),
+  updateContext: (contextId: string, data: { title?: string; text?: string; imageUrl?: string; viewPolicy?: string }) =>
+    api.put(`/classrooms/contexts/${contextId}`, data),
+  deleteContext: (contextId: string) =>
+    api.delete(`/classrooms/contexts/${contextId}`),
+
   // Quiz / Exam – Questions
   addQuestion: (activityId: string, data: any) =>
     api.post(`/classrooms/activities/${activityId}/questions`, data),
@@ -1867,6 +1877,30 @@ export const classroomApi = {
 // ═══════════════════════════════════════════════════════════════════════════
 // LIVE QUIZ (Kahoot-like)
 // ═══════════════════════════════════════════════════════════════════════════
+/**
+ * Convierte una key de R2 o URL firmada a una URL proxy estable que nunca expira.
+ * Usa el endpoint GET /storage/public?path=... que sirve archivos directamente.
+ * Solo funciona para prefijos permitidos: galeria/, firmas/.
+ */
+export function toPublicFileUrl(storedValue: string | null | undefined): string {
+  if (!storedValue) return ''
+  // Si ya es una URL proxy, devolverla tal cual
+  if (storedValue.includes('/storage/public?path=')) return storedValue
+  // Extraer key de una URL firmada de R2
+  let key = storedValue
+  if (storedValue.startsWith('http')) {
+    try {
+      const url = new URL(storedValue)
+      const parts = url.pathname.split('/').filter(Boolean)
+      // Quitar bucket name del path: /edusyn-files/galeria/... → galeria/...
+      key = parts.length > 1 ? parts.slice(1).join('/') : parts.join('/')
+    } catch { return storedValue }
+  }
+  // Solo proxiar prefijos permitidos
+  if (!key.startsWith('galeria/') && !key.startsWith('firmas/')) return storedValue
+  return `${API_BASE_URL}/storage/public?path=${encodeURIComponent(key)}`
+}
+
 export const liveSessionApi = {
   create: (data: { classroomId: string; activityId: string; mode?: string; config?: any }) =>
     api.post('/live-session/create', data),
@@ -1880,4 +1914,14 @@ export const liveSessionApi = {
   answer: (sessionId: string, data: { questionId: string; answer: string; responseTimeMs: number }) =>
     api.post(`/live-session/${sessionId}/answer`, data),
   streamUrl: (sessionId: string) => `${api.defaults.baseURL}/live-session/${sessionId}/stream`,
+  createTeams: (sessionId: string, teams: { name: string; color?: string }[]) =>
+    api.post(`/live-session/${sessionId}/teams`, { teams }),
+  getTeams: (sessionId: string) =>
+    api.get(`/live-session/${sessionId}/teams`),
+  joinTeam: (sessionId: string, teamId: string) =>
+    api.post(`/live-session/${sessionId}/join-team`, { teamId }),
+  addPartner: (sessionId: string, teamId: string, studentEnrollmentId: string) =>
+    api.post(`/live-session/${sessionId}/add-partner`, { teamId, studentEnrollmentId }),
+  searchStudents: (sessionId: string, query?: string) =>
+    api.get(`/live-session/${sessionId}/search-students`, { params: { q: query } }),
 }

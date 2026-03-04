@@ -350,6 +350,41 @@ export class ClassroomController {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // QUIZ / EXAM – Question Contexts
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('activities/:activityId/contexts')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async createContext(@Param('activityId') activityId: string, @Request() req: any, @Body() body: {
+    title?: string; text?: string; imageUrl?: string; viewPolicy?: string;
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.createContext(activityId, userId, body);
+  }
+
+  @Get('activities/:activityId/contexts')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async listContexts(@Param('activityId') activityId: string) {
+    return this.service.listContexts(activityId);
+  }
+
+  @Put('contexts/:contextId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async updateContext(@Param('contextId') contextId: string, @Request() req: any, @Body() body: {
+    title?: string; text?: string; imageUrl?: string; viewPolicy?: string;
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.updateContext(contextId, userId, body);
+  }
+
+  @Delete('contexts/:contextId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async deleteContext(@Param('contextId') contextId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.deleteContext(contextId, userId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // QUIZ / EXAM – Questions
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -357,7 +392,7 @@ export class ClassroomController {
   @Roles('DOCENTE', 'COORDINADOR')
   async addQuestion(@Param('activityId') activityId: string, @Request() req: any, @Body() body: {
     type: string; text: string; options?: any; correctAnswer?: string;
-    points?: number; explanation?: string; imageUrl?: string;
+    points?: number; explanation?: string; imageUrl?: string; contextId?: string;
   }) {
     const { userId } = await this.resolveCtx(req);
     return this.service.addQuestion(activityId, userId, body);

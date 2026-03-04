@@ -4760,6 +4760,7 @@ model ClassroomActivity {
   section     ClassroomSection      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   classroom   Classroom             @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   questions   ActivityQuestion[]
+  contexts    QuestionContext[]
   submissions ActivitySubmission[]
   forumPosts  ForumPost[]
   assignedStudents ActivityAssignment[]
@@ -4788,9 +4789,26 @@ model ActivityAssignment {
   @@index([studentEnrollmentId])
 }
 
+// Contexto compartido por varias preguntas (texto de lectura, imagen, enunciado)
+model QuestionContext {
+  id          String  @id @default(cuid())
+  activityId  String
+  title       String? // Título opcional del contexto
+  text        String? @db.Text // Texto/pasaje de lectura
+  imageUrl    String? // Imagen del contexto
+  viewPolicy  String  @default("ALWAYS") // ONCE = solo antes de responder, ALWAYS = disponible durante las preguntas
+  sortOrder   Int     @default(0)
+
+  activity  ClassroomActivity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  questions ActivityQuestion[]
+
+  @@index([activityId])
+}
+
 model ActivityQuestion {
   id                String       @id @default(cuid())
   activityId        String
+  contextId         String?
   type              QuestionType
   text              String       @db.Text
   imageUrl          String?
@@ -4803,11 +4821,13 @@ model ActivityQuestion {
   competency        String?
   sortOrder         Int          @default(0)
 
-  activity    ClassroomActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  activity    ClassroomActivity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  context     QuestionContext?   @relation(fields: [contextId], references: [id], onDelete: SetNull)
   answers     QuestionAnswer[]
   liveAnswers LiveSessionAnswer[]
 
   @@index([activityId])
+  @@index([contextId])
 }
 
 model ActivitySubmission {

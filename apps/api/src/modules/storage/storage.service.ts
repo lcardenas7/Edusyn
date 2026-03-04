@@ -132,6 +132,31 @@ export class StorageService {
   }
 
   /**
+   * Descarga un archivo del bucket y devuelve su contenido como Buffer + contentType.
+   */
+  async getObject(key: string): Promise<{ body: Buffer; contentType: string }> {
+    this.ensureConfigured();
+
+    const response = await this.client!.send(
+      new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      }),
+    );
+
+    const stream = response.Body as NodeJS.ReadableStream;
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.from(chunk));
+    }
+
+    return {
+      body: Buffer.concat(chunks),
+      contentType: response.ContentType || 'application/octet-stream',
+    };
+  }
+
+  /**
    * Elimina un archivo del bucket.
    */
   async delete(key: string): Promise<void> {

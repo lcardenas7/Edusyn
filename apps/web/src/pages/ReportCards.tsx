@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { reportsApi, groupsApi, academicYearsApi, academicTermsApi, capabilitiesApi, institutionConfigApi, storageApi } from '../lib/api'
+import { reportsApi, groupsApi, academicYearsApi, academicTermsApi, capabilitiesApi, institutionConfigApi, storageApi, toPublicFileUrl } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
 interface StudentRow {
@@ -478,7 +478,7 @@ export default function ReportCards() {
       <!-- Header -->
       <table style="width:100%;border-bottom:2px solid #cbd5e1;padding-bottom:10px;margin-bottom:10px;border-collapse:collapse;">
         <tr>
-          ${config.showLogo && config.logoUrl ? `<td style="width:80px;padding-right:12px;vertical-align:middle;"><img src="${config.logoUrl}" style="width:80px;height:80px;object-fit:contain;" /></td>` : ''}
+          ${config.showLogo && config.logoUrl ? `<td style="width:80px;padding-right:12px;vertical-align:middle;"><img src="${toPublicFileUrl(config.logoUrl)}" style="width:80px;height:80px;object-fit:contain;" /></td>` : ''}
           <td style="text-align:center;line-height:1.3;vertical-align:middle;">
             <h2 style="font-size:15px;font-weight:700;text-transform:uppercase;margin:0;color:#0f172a;">${data.institution?.name || institution?.name || ''}</h2>
             ${config.headerResolution ? `<p style="font-size:10px;color:#475569;margin:1px 0;">${config.headerResolution}</p>` : ''}
@@ -534,7 +534,7 @@ export default function ReportCards() {
         <tr>${enabledSigs.map(sig => `
           <td style="width:${sigWidth}%;text-align:center;padding:0 8px;vertical-align:bottom;">
             <div style="height:50px;border-bottom:2px solid #94a3b8;margin-bottom:4px;text-align:center;">
-              ${sig.signatureImageUrl ? `<img src="${sig.signatureImageUrl}" style="height:45px;object-fit:contain;" />` : '<span style="color:#cbd5e1;font-size:9px;">Firma</span>'}
+              ${sig.signatureImageUrl ? `<img src="${toPublicFileUrl(sig.signatureImageUrl)}" style="height:45px;object-fit:contain;" />` : '<span style="color:#cbd5e1;font-size:9px;">Firma</span>'}
             </div>
             <p style="font-weight:700;font-size:10px;margin:2px 0;">${sig.name || '_______________'}</p>
             <p style="color:#64748b;font-size:9px;margin:0;">${sig.label}</p>
@@ -1037,7 +1037,7 @@ export default function ReportCards() {
                     {config.showLogo && (
                       <div className="flex-shrink-0">
                         {config.logoUrl ? (
-                          <img src={logoPreviewUrl || config.logoUrl} alt="Escudo" className="w-24 h-24 object-contain" />
+                          <img src={logoPreviewUrl || toPublicFileUrl(config.logoUrl)} alt="Escudo" className="w-24 h-24 object-contain" />
                         ) : (
                           <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center">
                             <GraduationCap className="w-12 h-12 text-slate-400" />
@@ -1235,7 +1235,7 @@ export default function ReportCards() {
                         <div key={sig.role}>
                           <div className="h-16 border-b-2 border-slate-400 mb-1 flex items-end justify-center">
                             {sig.signatureImageUrl ? (
-                              <img src={sig.signatureImageUrl} alt={`Firma ${sig.label}`} className="h-14 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; const span = document.createElement('span'); span.className = 'text-slate-300 text-[10px]'; span.textContent = 'Firma'; e.currentTarget.parentElement?.appendChild(span) }} />
+                              <img src={toPublicFileUrl(sig.signatureImageUrl)} alt={`Firma ${sig.label}`} className="h-14 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; const span = document.createElement('span'); span.className = 'text-slate-300 text-[10px]'; span.textContent = 'Firma'; e.currentTarget.parentElement?.appendChild(span) }} />
                             ) : (
                               <span className="text-slate-300 text-[10px] mb-1">Firma</span>
                             )}
@@ -1290,7 +1290,7 @@ export default function ReportCards() {
                       <label className="block text-xs font-medium text-slate-600 mb-1">Escudo / Logo Institucional</label>
                       {configDraft.logoUrl ? (
                         <div className="flex items-center gap-3 mb-2">
-                          <img src={logoPreviewUrl || config.logoUrl || configDraft.logoUrl} alt="Escudo" className="w-14 h-14 object-contain rounded border border-slate-200" />
+                          <img src={logoPreviewUrl || toPublicFileUrl(config.logoUrl) || toPublicFileUrl(configDraft.logoUrl)} alt="Escudo" className="w-14 h-14 object-contain rounded border border-slate-200" />
                           <button type="button" onClick={() => { setConfigDraft({...configDraft, logoUrl: ''}); setLogoPreviewUrl(''); }} className="text-xs text-red-500 hover:text-red-700">Eliminar</button>
                         </div>
                       ) : null}
@@ -1458,7 +1458,7 @@ export default function ReportCards() {
                           </div>
                           {sig.signatureImageUrl && (
                             <div className="mt-1.5 flex items-center gap-2 p-1.5 bg-slate-50 rounded border">
-                              <img src={sig.signatureImageUrl} alt="Firma" className="h-10 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                              <img src={toPublicFileUrl(sig.signatureImageUrl)} alt="Firma" className="h-10 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
                               <span className="text-xs text-green-600">Firma cargada</span>
                             </div>
                           )}

@@ -159,6 +159,61 @@ export class LiveSessionController {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // Team Endpoints
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/teams')
+  async createTeams(
+    @Param('id') sessionId: string,
+    @Request() req: any,
+    @Body() body: { teams: { name: string; color?: string }[] },
+  ) {
+    await this.verifySessionTenant(sessionId, req.user.institutionId);
+    return this.liveSessionService.createTeams(sessionId, req.user.id, body.teams);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/teams')
+  async getTeams(@Param('id') sessionId: string, @Request() req: any) {
+    await this.verifySessionTenant(sessionId, req.user.institutionId);
+    return this.liveSessionService.getTeams(sessionId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/join-team')
+  async joinTeam(
+    @Param('id') sessionId: string,
+    @Request() req: any,
+    @Body() body: { teamId: string },
+  ) {
+    await this.verifySessionTenant(sessionId, req.user.institutionId);
+    return this.liveSessionService.joinTeam(sessionId, body.teamId, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/add-partner')
+  async addPartner(
+    @Param('id') sessionId: string,
+    @Request() req: any,
+    @Body() body: { teamId: string; studentEnrollmentId: string },
+  ) {
+    await this.verifySessionTenant(sessionId, req.user.institutionId);
+    return this.liveSessionService.addPartnerToTeam(sessionId, body.teamId, body.studentEnrollmentId, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/search-students')
+  async searchStudents(
+    @Param('id') sessionId: string,
+    @Request() req: any,
+    @Query('q') query?: string,
+  ) {
+    await this.verifySessionTenant(sessionId, req.user.institutionId);
+    return this.liveSessionService.searchGroupStudents(sessionId, query || '');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // Student Endpoint
   // ═══════════════════════════════════════════════════════════════════════════
 

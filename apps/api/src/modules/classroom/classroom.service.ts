@@ -944,13 +944,81 @@ export class ClassroomService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // QUIZ / EXAM – Question Contexts CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async createContext(activityId: string, teacherId: string, dto: {
+    title?: string; text?: string; imageUrl?: string; viewPolicy?: string;
+  }) {
+    await this.validateActivityOwnership(activityId, teacherId);
+    const maxSort = await this.prisma.questionContext.aggregate({
+      where: { activityId },
+      _max: { sortOrder: true },
+    });
+    return this.prisma.questionContext.create({
+      data: {
+        activityId,
+        title: dto.title,
+        text: dto.text,
+        imageUrl: dto.imageUrl,
+        viewPolicy: dto.viewPolicy || 'ALWAYS',
+        sortOrder: (maxSort._max.sortOrder ?? -1) + 1,
+      },
+    });
+  }
+
+  async updateContext(contextId: string, teacherId: string, dto: {
+    title?: string; text?: string; imageUrl?: string; viewPolicy?: string;
+  }) {
+    const ctx = await this.prisma.questionContext.findUnique({
+      where: { id: contextId },
+      include: { activity: { select: { classroomId: true } } },
+    });
+    if (!ctx) throw new NotFoundException('Contexto no encontrado');
+    await this.validateClassroomOwnership(ctx.activity.classroomId, teacherId);
+    return this.prisma.questionContext.update({
+      where: { id: contextId },
+      data: {
+        title: dto.title,
+        text: dto.text,
+        imageUrl: dto.imageUrl,
+        viewPolicy: dto.viewPolicy,
+      },
+    });
+  }
+
+  async deleteContext(contextId: string, teacherId: string) {
+    const ctx = await this.prisma.questionContext.findUnique({
+      where: { id: contextId },
+      include: { activity: { select: { classroomId: true } } },
+    });
+    if (!ctx) throw new NotFoundException('Contexto no encontrado');
+    await this.validateClassroomOwnership(ctx.activity.classroomId, teacherId);
+    // Unlink questions, then delete
+    await this.prisma.activityQuestion.updateMany({
+      where: { contextId },
+      data: { contextId: null },
+    });
+    await this.prisma.questionContext.delete({ where: { id: contextId } });
+    return { success: true };
+  }
+
+  async listContexts(activityId: string) {
+    return this.prisma.questionContext.findMany({
+      where: { activityId },
+      orderBy: { sortOrder: 'asc' },
+      include: { questions: { select: { id: true, text: true, sortOrder: true }, orderBy: { sortOrder: 'asc' } } },
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // QUIZ / EXAM – Questions CRUD
   // ═══════════════════════════════════════════════════════════════════════════
 
   async addQuestion(activityId: string, teacherId: string, dto: {
     type: string; text: string; options?: any; correctAnswer?: string;
     points?: number; explanation?: string; imageUrl?: string;
-    subjectArea?: string; competency?: string;
+    subjectArea?: string; competency?: string; contextId?: string;
   }) {
     const activity = await this.validateActivityOwnership(activityId, teacherId);
     const maxSort = await this.prisma.activityQuestion.aggregate({
@@ -960,6 +1028,7 @@ export class ClassroomService {
     return this.prisma.activityQuestion.create({
       data: {
         activityId,
+        contextId: dto.contextId || null,
         type: dto.type as any,
         text: dto.text,
         options: dto.options,
@@ -977,7 +1046,7 @@ export class ClassroomService {
   async updateQuestion(questionId: string, teacherId: string, dto: {
     text?: string; options?: any; correctAnswer?: string;
     points?: number; explanation?: string; imageUrl?: string;
-    subjectArea?: string; competency?: string;
+    subjectArea?: string; competency?: string; contextId?: string | null;
   }) {
     const q = await this.prisma.activityQuestion.findUnique({
       where: { id: questionId },
@@ -986,18 +1055,21 @@ export class ClassroomService {
     if (!q) throw new NotFoundException('Pregunta no encontrada');
     await this.validateClassroomOwnership(q.activity.classroomId, teacherId);
 
+    const data: any = {
+      text: dto.text,
+      options: dto.options,
+      correctAnswer: dto.correctAnswer,
+      points: dto.points,
+      explanation: dto.explanation,
+      imageUrl: dto.imageUrl,
+      subjectArea: dto.subjectArea,
+      competency: dto.competency,
+    };
+    if (dto.contextId !== undefined) data.contextId = dto.contextId;
+
     return this.prisma.activityQuestion.update({
       where: { id: questionId },
-      data: {
-        text: dto.text,
-        options: dto.options,
-        correctAnswer: dto.correctAnswer,
-        points: dto.points,
-        explanation: dto.explanation,
-        imageUrl: dto.imageUrl,
-        subjectArea: dto.subjectArea,
-        competency: dto.competency,
-      },
+      data,
     });
   }
 
@@ -1016,6 +1088,7 @@ export class ClassroomService {
     const questions = await this.prisma.activityQuestion.findMany({
       where: { activityId },
       orderBy: { sortOrder: 'asc' },
+      include: { context: true },
     });
     if (!includeAnswers) {
       return questions.map(q => ({ ...q, correctAnswer: undefined, explanation: undefined }));

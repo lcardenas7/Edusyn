@@ -1837,10 +1837,19 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [questions, setQuestions] = useState<any[]>([])
   const [questionsLoading, setQuestionsLoading] = useState(false)
   const [showAddQuestion, setShowAddQuestion] = useState(false)
-  const [qForm, setQForm] = useState({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [] as string[], blanks: [] as string[], matchPairs: [{ left: '', right: '' }] as { left: string; right: string }[], points: '1', explanation: '', subjectArea: '' })
+  const [qForm, setQForm] = useState({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [] as string[], blanks: [] as string[], matchPairs: [{ left: '', right: '' }] as { left: string; right: string }[], points: '1', explanation: '', subjectArea: '', contextId: '' })
   const [editingQuestion, setEditingQuestion] = useState<string | null>(null)
   const [savingQuestion, setSavingQuestion] = useState(false)
   const questionFormRef = useRef<HTMLDivElement>(null)
+
+  // Question Contexts
+  const [contexts, setContexts] = useState<any[]>([])
+  const [showContextForm, setShowContextForm] = useState(false)
+  const [editingContextId, setEditingContextId] = useState<string | null>(null)
+  const [ctxForm, setCtxForm] = useState({ title: '', text: '', imageUrl: '', viewPolicy: 'ALWAYS' })
+  const [savingContext, setSavingContext] = useState(false)
+  const [contextModalData, setContextModalData] = useState<any>(null) // for student context viewing
+  const [viewedOnceContexts, setViewedOnceContexts] = useState<Set<string>>(new Set()) // track ONCE contexts already shown
 
   // Quiz taking (student)
   const [quizMode, setQuizMode] = useState<'idle' | 'taking' | 'result'>('idle')
@@ -2102,8 +2111,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const loadQuestions = async (activityId: string) => {
     setQuestionsLoading(true)
     try {
-      const { data } = await classroomApi.listQuestions(activityId)
-      setQuestions(data)
+      const [qRes, cRes] = await Promise.all([
+        classroomApi.listQuestions(activityId),
+        classroomApi.listContexts(activityId),
+      ])
+      setQuestions(qRes.data)
+      setContexts(cRes.data)
     } catch {} finally { setQuestionsLoading(false) }
   }
 
@@ -2196,13 +2209,46 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   // Quiz question handlers (teacher)
-  const resetQForm = () => setQForm({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }], points: '1', explanation: '', subjectArea: '' })
+  const resetQForm = () => setQForm({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }], points: '1', explanation: '', subjectArea: '', contextId: '' })
+
+  // Context handlers (teacher)
+  const resetCtxForm = () => { setCtxForm({ title: '', text: '', imageUrl: '', viewPolicy: 'ALWAYS' }); setEditingContextId(null); setShowContextForm(false) }
+
+  const handleSaveContext = async () => {
+    if (!selectedActivity) return
+    setSavingContext(true)
+    try {
+      if (editingContextId) {
+        await classroomApi.updateContext(editingContextId, ctxForm)
+      } else {
+        await classroomApi.createContext(selectedActivity.id, ctxForm)
+      }
+      resetCtxForm()
+      loadQuestions(selectedActivity.id)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al guardar contexto')
+    } finally { setSavingContext(false) }
+  }
+
+  const handleDeleteContext = async (ctxId: string) => {
+    if (!confirm('¿Eliminar este contexto? Las preguntas asociadas se desvinculan pero no se eliminan.')) return
+    try {
+      await classroomApi.deleteContext(ctxId)
+      if (selectedActivity) loadQuestions(selectedActivity.id)
+    } catch {}
+  }
+
+  const startEditContext = (ctx: any) => {
+    setCtxForm({ title: ctx.title || '', text: ctx.text || '', imageUrl: ctx.imageUrl || '', viewPolicy: ctx.viewPolicy || 'ALWAYS' })
+    setEditingContextId(ctx.id)
+    setShowContextForm(true)
+  }
 
   const handleAddQuestion = async () => {
     if (!selectedActivity || !qForm.text.trim()) return
     try {
       setSavingQuestion(true)
-      const payload: any = { type: qForm.type, text: qForm.text, points: parseFloat(qForm.points) || 1, explanation: qForm.explanation || undefined, subjectArea: qForm.subjectArea || undefined }
+      const payload: any = { type: qForm.type, text: qForm.text, points: parseFloat(qForm.points) || 1, explanation: qForm.explanation || undefined, subjectArea: qForm.subjectArea || undefined, contextId: qForm.contextId || undefined }
       if (qForm.type === 'MULTIPLE_CHOICE' || qForm.type === 'TRUE_FALSE') {
         payload.options = qForm.type === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : qForm.options.filter(o => o.trim())
         payload.correctAnswer = qForm.correctAnswer
@@ -2275,6 +2321,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       points: String(q.points ? Number(q.points) : 1),
       explanation: q.explanation || '',
       subjectArea: q.subjectArea || '',
+      contextId: q.contextId || '',
     })
     setEditingQuestion(q.id)
     setShowAddQuestion(true)
@@ -2638,11 +2685,67 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     <Zap className="w-4 h-4" /> Live Quiz
                   </button>
                 )}
+                <button onClick={() => { resetCtxForm(); setShowContextForm(true) }} className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600" style={{ minHeight: '40px' }}>
+                  <FileText className="w-4 h-4" /> + Contexto
+                </button>
                 <button onClick={() => { resetQForm(); setEditingQuestion(null); setShowAddQuestion(true) }} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700" style={{ minHeight: '40px' }}>
                   <Plus className="w-4 h-4" /> Agregar pregunta
                 </button>
               </div>
             </div>
+
+            {/* Context form (create/edit) */}
+            {showContextForm && (
+              <div className="p-4 sm:p-6 border-b border-slate-100 bg-amber-50/40 space-y-3">
+                <h4 className="text-base font-bold text-slate-800">{editingContextId ? 'Editar contexto' : 'Nuevo contexto de lectura'}</h4>
+                <p className="text-xs text-slate-500">Un contexto es un texto o imagen compartido por varias preguntas (ej: lectura comprensiva, enunciado, gráfico).</p>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Título (opcional)</label>
+                  <input value={ctxForm.title} onChange={e => setCtxForm({ ...ctxForm, title: e.target.value })} placeholder="Ej: Texto 1, Gráfico de barras..." className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-amber-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Texto del contexto</label>
+                  <textarea value={ctxForm.text} onChange={e => setCtxForm({ ...ctxForm, text: e.target.value })} rows={5} placeholder="Pega aquí el texto de lectura, enunciado, caso de estudio..." className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-y focus:ring-2 focus:ring-amber-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">URL de imagen (opcional)</label>
+                  <input value={ctxForm.imageUrl} onChange={e => setCtxForm({ ...ctxForm, imageUrl: e.target.value })} placeholder="https://..." className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-base focus:ring-2 focus:ring-amber-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Visibilidad del contexto</label>
+                  <select value={ctxForm.viewPolicy} onChange={e => setCtxForm({ ...ctxForm, viewPolicy: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-base">
+                    <option value="ALWAYS">Siempre visible (el estudiante puede verlo durante todas las preguntas)</option>
+                    <option value="ONCE">Solo una vez (el estudiante lo ve antes de las preguntas, luego se oculta)</option>
+                  </select>
+                </div>
+                <div className="flex justify-end gap-3">
+                  <button onClick={resetCtxForm} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+                  <button onClick={handleSaveContext} disabled={(!ctxForm.text.trim() && !ctxForm.imageUrl.trim()) || savingContext} className="px-5 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600 disabled:opacity-50 flex items-center gap-2">
+                    {savingContext && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {editingContextId ? 'Guardar cambios' : 'Crear contexto'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Existing contexts list */}
+            {contexts.length > 0 && (
+              <div className="px-6 py-3 border-b border-slate-100 bg-amber-50/20">
+                <p className="text-xs font-medium text-amber-700 mb-2">Contextos ({contexts.length})</p>
+                <div className="flex flex-wrap gap-2">
+                  {contexts.map(ctx => (
+                    <div key={ctx.id} className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-800 rounded-lg text-xs font-medium border border-amber-200">
+                      <FileText className="w-3.5 h-3.5" />
+                      <span className="max-w-[200px] truncate">{ctx.title || (ctx.text?.slice(0, 40) + '...')}</span>
+                      <span className="text-amber-500">({ctx.questions?.length || 0} preg.)</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] ${ctx.viewPolicy === 'ONCE' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{ctx.viewPolicy === 'ONCE' ? '1 vez' : 'siempre'}</span>
+                      <button onClick={() => startEditContext(ctx)} className="p-0.5 hover:bg-amber-200 rounded"><Pencil className="w-3 h-3" /></button>
+                      <button onClick={() => handleDeleteContext(ctx.id)} className="p-0.5 hover:bg-red-200 rounded"><Trash2 className="w-3 h-3 text-red-500" /></button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Add/Edit question form */}
             {showAddQuestion && (
@@ -2671,6 +2774,15 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                       <select value={qForm.subjectArea} onChange={e => setQForm({ ...qForm, subjectArea: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base">
                         <option value="">Seleccionar área...</option>
                         {ICFES_AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  {contexts.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Contexto (opcional)</label>
+                      <select value={qForm.contextId} onChange={e => setQForm({ ...qForm, contextId: e.target.value })} className="w-full border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base">
+                        <option value="">Sin contexto</option>
+                        {contexts.map(ctx => <option key={ctx.id} value={ctx.id}>{ctx.title || (ctx.text?.slice(0, 50) + '...')}</option>)}
                       </select>
                     </div>
                   )}
@@ -2891,6 +3003,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                           <span className="px-2 py-0.5 bg-slate-100 rounded text-xs">{q.type === 'MULTIPLE_CHOICE' ? 'Opción múltiple' : q.type === 'MULTIPLE_SELECT' ? 'Selección múltiple' : q.type === 'TRUE_FALSE' ? 'V/F' : q.type === 'FILL_BLANK' ? 'Completar' : q.type === 'ORDERING' ? 'Ordenar' : q.type === 'MATCHING' ? 'Emparejar' : 'Respuesta corta'}</span>
                           <span>{Number(q.points)} pts</span>
                           {q.subjectArea && <span className={`px-2 py-0.5 rounded text-xs text-white ${AREA_COLORS[q.subjectArea] || 'bg-slate-500'}`}>{q.subjectArea}</span>}
+                          {q.context && <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs border border-amber-200">{q.context.title || 'Contexto'}</span>}
                           {q.correctAnswer && <span className="text-green-600">✓ {q.correctAnswer}</span>}
                         </div>
                         {q.options && Array.isArray(q.options) && (
@@ -3013,8 +3126,30 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
             {quizQuestions[quizCurrentIdx] && (() => {
               const q = quizQuestions[quizCurrentIdx]
+              const qCtx = q.context
+              // Auto-show ONCE context if not yet viewed
+              if (qCtx && qCtx.viewPolicy === 'ONCE' && !viewedOnceContexts.has(qCtx.id) && !contextModalData) {
+                setTimeout(() => {
+                  setContextModalData(qCtx)
+                  setViewedOnceContexts(prev => new Set([...prev, qCtx.id]))
+                }, 100)
+              }
+              const onceAlreadyViewed = qCtx && qCtx.viewPolicy === 'ONCE' && viewedOnceContexts.has(qCtx.id)
               return (
                 <div className="space-y-4">
+                  {qCtx && qCtx.viewPolicy === 'ALWAYS' && (
+                    <button onClick={() => setContextModalData(qCtx)} className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 hover:bg-amber-100 transition-colors w-full text-left">
+                      <FileText className="w-5 h-5 shrink-0" />
+                      <span className="font-medium">{qCtx.title || 'Ver contexto de lectura'}</span>
+                      <span className="ml-auto text-xs text-amber-500">Clic para ver</span>
+                    </button>
+                  )}
+                  {onceAlreadyViewed && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-400">
+                      <FileText className="w-4 h-4" />
+                      <span>{qCtx.title || 'Contexto de lectura'} — ya fue mostrado</span>
+                    </div>
+                  )}
                   <p className="text-base sm:text-lg text-slate-800 font-medium">{q.text}</p>
                   {q.type === 'MULTIPLE_CHOICE' && q.options && (
                     <div className="space-y-2">
@@ -3501,6 +3636,46 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               </div>
             </div>
           </div>
+        )}
+
+        {/* Context viewing modal (student) */}
+        {contextModalData && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setContextModalData(null)}>
+            <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0 bg-amber-50">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-amber-600" />
+                  <h3 className="font-bold text-slate-800">{contextModalData.title || 'Contexto de lectura'}</h3>
+                </div>
+                <button onClick={() => setContextModalData(null)} className="p-1 hover:bg-amber-100 rounded-lg">
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto flex-1 space-y-4">
+                {contextModalData.imageUrl && (
+                  <img src={contextModalData.imageUrl} alt="Contexto" className="max-w-full rounded-xl border border-slate-200" />
+                )}
+                {contextModalData.text && (
+                  <div className="text-base text-slate-700 leading-relaxed whitespace-pre-wrap">{contextModalData.text}</div>
+                )}
+              </div>
+              <div className="px-6 py-3 border-t border-slate-200 flex justify-end shrink-0">
+                <button onClick={() => setContextModalData(null)} className="px-5 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Live Quiz overlay (inside detail view) */}
+        {showLiveQuiz && (
+          <LiveQuiz
+            classroomId={classroom.id}
+            isTeacher={isTeacher}
+            onClose={() => { setShowLiveQuiz(false); setActiveLiveSession(null) }}
+            activityId={isTeacher ? liveQuizActivityId : undefined}
+            activityTitle={isTeacher ? liveQuizActivityTitle : undefined}
+            sessionId={isStudent && activeLiveSession ? activeLiveSession.id : undefined}
+          />
         )}
 
         {/* ── ASSIGN STUDENTS MODAL (in detail view) ── */}
