@@ -216,7 +216,7 @@ export default function AcademicReports() {
                 studentGradesMap.set(studentId, {
                   id: studentId,
                   name: student ? [student.lastName, student.secondLastName, student.firstName, student.secondName].filter(Boolean).join(' ').toUpperCase() : 'Estudiante',
-                  group: g.studentEnrollment?.group?.name || '',
+                  group: g.studentEnrollment?.group ? `${g.studentEnrollment.group.grade?.name || ''} ${g.studentEnrollment.group.name}`.trim() : '',
                   grades: {}
                 })
               }

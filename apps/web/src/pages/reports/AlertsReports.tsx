@@ -23,9 +23,9 @@ interface ReportItem {
 }
 
 const alertsReports: ReportItem[] = [
-  { id: 'alert-low-performance', name: 'Bajo rendimiento', description: 'Estudiantes con promedio inferior a 3.5', icon: TrendingDown, feature: 'RPT_ALERT_LOW' },
-  { id: 'alert-fail-risk', name: 'Riesgo de reprobación', description: 'Estudiantes con 2+ materias perdidas', icon: AlertTriangle, feature: 'RPT_ALERT_FAIL' },
-  { id: 'alert-attendance', name: 'Alertas de asistencia', description: 'Estudiantes con asistencia crítica', icon: Users, feature: 'RPT_ALERT_ATT' },
+  { id: 'alert-low-performance', name: 'Bajo rendimiento', description: 'Estudiantes con promedio inferior a 3.5', icon: TrendingDown },
+  { id: 'alert-fail-risk', name: 'Riesgo de reprobación', description: 'Estudiantes con 2+ materias perdidas', icon: AlertTriangle },
+  { id: 'alert-attendance', name: 'Alertas de asistencia', description: 'Estudiantes con asistencia crítica', icon: Users },
 ]
 
 export default function AlertsReports() {

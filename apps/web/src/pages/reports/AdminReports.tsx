@@ -26,14 +26,14 @@ interface ReportItem {
 }
 
 const adminReports: ReportItem[] = [
-  { id: 'load-teacher', name: 'Carga docente', description: 'Horas, materias y grupos asignados por docente', icon: Users, feature: 'RPT_LOAD_TEACHER' },
-  { id: 'load-group', name: 'Carga por grupo', description: 'Materias y docentes asignados por grupo', icon: GraduationCap, feature: 'RPT_LOAD_GROUP' },
-  { id: 'teachers-active', name: 'Docentes activos', description: 'Listado de docentes con asignación', icon: UserCheck, feature: 'RPT_TEACHERS_ACTIVE' },
-  { id: 'teachers-no-load', name: 'Docentes sin carga', description: 'Docentes sin asignación académica', icon: UserX, feature: 'RPT_TEACHERS_NOLOAD' },
-  { id: 'coverage', name: 'Cobertura académica', description: 'Porcentaje de asignaturas cubiertas', icon: ClipboardList, feature: 'RPT_COVERAGE' },
-  { id: 'hours-summary', name: 'Resumen de horas', description: 'Total de horas por nivel y jornada', icon: BarChart3, feature: 'RPT_HOURS' },
-  { id: 'staff-list', name: 'Listado de personal', description: 'Directivos, docentes y administrativos', icon: Users, feature: 'RPT_STAFF' },
-  { id: 'enrollment-summary', name: 'Resumen de matrícula', description: 'Estudiantes por grado y grupo', icon: GraduationCap, feature: 'RPT_ENROLLMENT' },
+  { id: 'load-teacher', name: 'Carga docente', description: 'Horas, materias y grupos asignados por docente', icon: Users },
+  { id: 'load-group', name: 'Carga por grupo', description: 'Materias y docentes asignados por grupo', icon: GraduationCap },
+  { id: 'teachers-active', name: 'Docentes activos', description: 'Listado de docentes con asignación', icon: UserCheck },
+  { id: 'teachers-no-load', name: 'Docentes sin carga', description: 'Docentes sin asignación académica', icon: UserX },
+  { id: 'coverage', name: 'Cobertura académica', description: 'Porcentaje de asignaturas cubiertas', icon: ClipboardList },
+  { id: 'hours-summary', name: 'Resumen de horas', description: 'Total de horas por nivel y jornada', icon: BarChart3 },
+  { id: 'staff-list', name: 'Listado de personal', description: 'Directivos, docentes y administrativos', icon: Users },
+  { id: 'enrollment-summary', name: 'Resumen de matrícula', description: 'Estudiantes por grado y grupo', icon: GraduationCap },
 ]
 
 export default function AdminReports() {

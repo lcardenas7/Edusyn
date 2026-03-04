@@ -23,11 +23,11 @@ interface ReportItem {
 }
 
 const bulletinsReports: ReportItem[] = [
-  { id: 'report-partial', name: 'Boletín parcial', description: 'Informe de notas por período', icon: FileText, feature: 'RPT_BULLETIN_PARTIAL' },
-  { id: 'report-final', name: 'Boletín final', description: 'Informe consolidado del año', icon: Award, feature: 'RPT_BULLETIN_FINAL' },
-  { id: 'report-certificate', name: 'Certificado de notas', description: 'Documento oficial de calificaciones', icon: ClipboardList, feature: 'RPT_CERTIFICATE' },
-  { id: 'report-constancy', name: 'Constancia de estudio', description: 'Certificación de matrícula activa', icon: GraduationCap, feature: 'RPT_CONSTANCY' },
-  { id: 'report-promotion', name: 'Acta de promoción', description: 'Documento de promoción al siguiente grado', icon: Award, feature: 'RPT_PROMOTION_ACT' },
+  { id: 'report-partial', name: 'Boletín parcial', description: 'Informe de notas por período', icon: FileText },
+  { id: 'report-final', name: 'Boletín final', description: 'Informe consolidado del año', icon: Award },
+  { id: 'report-certificate', name: 'Certificado de notas', description: 'Documento oficial de calificaciones', icon: ClipboardList },
+  { id: 'report-constancy', name: 'Constancia de estudio', description: 'Certificación de matrícula activa', icon: GraduationCap },
+  { id: 'report-promotion', name: 'Acta de promoción', description: 'Documento de promoción al siguiente grado', icon: Award },
 ]
 
 export default function BulletinsReports() {

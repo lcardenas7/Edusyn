@@ -71,6 +71,7 @@ export class PeriodFinalGradesService {
         studentEnrollment: {
           include: {
             student: true,
+            group: { include: { grade: true } },
           },
         },
         subject: true,

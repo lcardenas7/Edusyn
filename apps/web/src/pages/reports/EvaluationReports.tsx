@@ -23,12 +23,12 @@ interface ReportItem {
 }
 
 const evaluationReports: ReportItem[] = [
-  { id: 'eval-compliance', name: 'Cumplimiento SIEE', description: 'Verificación del sistema de evaluación institucional', icon: CheckCircle, feature: 'RPT_EVAL_COMPLIANCE' },
-  { id: 'eval-criteria', name: 'Criterios de evaluación', description: 'Configuración de criterios por asignatura', icon: ClipboardList, feature: 'RPT_EVAL_CRITERIA' },
-  { id: 'eval-weights', name: 'Pesos de períodos', description: 'Distribución de porcentajes por período', icon: BarChart3, feature: 'RPT_EVAL_WEIGHTS' },
-  { id: 'eval-recovery', name: 'Políticas de recuperación', description: 'Configuración de actividades de recuperación', icon: FileText, feature: 'RPT_EVAL_RECOVERY' },
-  { id: 'eval-promotion', name: 'Criterios de promoción', description: 'Reglas para promoción de estudiantes', icon: Users, feature: 'RPT_EVAL_PROMOTION' },
-  { id: 'eval-scale', name: 'Escala de valoración', description: 'Niveles de desempeño configurados', icon: BarChart3, feature: 'RPT_EVAL_SCALE' },
+  { id: 'eval-compliance', name: 'Cumplimiento SIEE', description: 'Verificación del sistema de evaluación institucional', icon: CheckCircle },
+  { id: 'eval-criteria', name: 'Criterios de evaluación', description: 'Configuración de criterios por asignatura', icon: ClipboardList },
+  { id: 'eval-weights', name: 'Pesos de períodos', description: 'Distribución de porcentajes por período', icon: BarChart3 },
+  { id: 'eval-recovery', name: 'Políticas de recuperación', description: 'Configuración de actividades de recuperación', icon: FileText },
+  { id: 'eval-promotion', name: 'Criterios de promoción', description: 'Reglas para promoción de estudiantes', icon: Users },
+  { id: 'eval-scale', name: 'Escala de valoración', description: 'Niveles de desempeño configurados', icon: BarChart3 },
 ]
 
 export default function EvaluationReports() {
