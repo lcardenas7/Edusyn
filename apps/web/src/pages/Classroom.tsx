@@ -2731,18 +2731,40 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             {/* Existing contexts list */}
             {contexts.length > 0 && (
               <div className="px-6 py-3 border-b border-slate-100 bg-amber-50/20">
-                <p className="text-xs font-medium text-amber-700 mb-2">Contextos ({contexts.length})</p>
-                <div className="flex flex-wrap gap-2">
-                  {contexts.map(ctx => (
-                    <div key={ctx.id} className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-800 rounded-lg text-xs font-medium border border-amber-200">
-                      <FileText className="w-3.5 h-3.5" />
-                      <span className="max-w-[200px] truncate">{ctx.title || (ctx.text?.slice(0, 40) + '...')}</span>
-                      <span className="text-amber-500">({ctx.questions?.length || 0} preg.)</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] ${ctx.viewPolicy === 'ONCE' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{ctx.viewPolicy === 'ONCE' ? '1 vez' : 'siempre'}</span>
-                      <button onClick={() => startEditContext(ctx)} className="p-0.5 hover:bg-amber-200 rounded"><Pencil className="w-3 h-3" /></button>
-                      <button onClick={() => handleDeleteContext(ctx.id)} className="p-0.5 hover:bg-red-200 rounded"><Trash2 className="w-3 h-3 text-red-500" /></button>
-                    </div>
-                  ))}
+                <p className="text-xs font-medium text-amber-700 mb-2">Contextos de lectura ({contexts.length})</p>
+                <div className="space-y-2">
+                  {contexts.map(ctx => {
+                    const linkedQuestions = questions.filter(q => q.contextId === ctx.id)
+                    return (
+                      <div key={ctx.id} className="bg-amber-100 border border-amber-200 rounded-xl overflow-hidden">
+                        <div className="flex items-center gap-2 px-3 py-2">
+                          <FileText className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span className="font-medium text-amber-800 text-sm truncate flex-1">{ctx.title || (ctx.text?.slice(0, 50) + '...')}</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${ctx.viewPolicy === 'ONCE' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                            {ctx.viewPolicy === 'ONCE' ? 'UNA VEZ' : 'SIEMPRE'}
+                          </span>
+                          <button onClick={() => startEditContext(ctx)} className="p-1 hover:bg-amber-200 rounded-lg"><Pencil className="w-3.5 h-3.5 text-amber-700" /></button>
+                          <button onClick={() => handleDeleteContext(ctx.id)} className="p-1 hover:bg-red-200 rounded-lg"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
+                        </div>
+                        {linkedQuestions.length > 0 ? (
+                          <div className="px-3 py-2 bg-amber-50 border-t border-amber-200">
+                            <p className="text-[10px] text-amber-600 font-semibold mb-1">PREGUNTAS VINCULADAS ({linkedQuestions.length})</p>
+                            <div className="flex flex-wrap gap-1">
+                              {linkedQuestions.map((q, i) => (
+                                <span key={q.id} className="px-2 py-0.5 bg-white border border-amber-200 rounded text-xs text-slate-600">
+                                  P{questions.findIndex(qq => qq.id === q.id) + 1}: {q.text.slice(0, 30)}{q.text.length > 30 ? '...' : ''}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="px-3 py-2 bg-amber-50/50 border-t border-amber-200">
+                            <p className="text-[10px] text-amber-400 italic">Sin preguntas vinculadas — selecciona este contexto al crear una pregunta</p>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
