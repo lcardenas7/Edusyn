@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, GraduationCap, FileText, AlertTriangle, Phone, Mail, MapPin, Users, CheckCircle2, XCircle, FileSpreadsheet, Heart, UserPlus, Loader2, Key, Shield, Printer, RefreshCw, EyeOff, Lock, Unlock } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { generateTemplate, parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
-import api, { studentsApi, guardiansApi, academicYearLifecycleApi, groupsApi, enrollmentsApi, observerApi } from '../lib/api'
+import api, { studentsApi, guardiansApi, academicYearLifecycleApi, groupsApi, enrollmentsApi, observerApi, staffApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import { DiagnosisBadge } from '../components/StudentBadges'
 
@@ -171,6 +171,8 @@ export default function Students() {
   const [credentialsAccessFilter, setCredentialsAccessFilter] = useState<'ALL' | 'WITH_ACCESS' | 'WITHOUT_ACCESS'>('ALL')
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
   const [processingCredentials, setProcessingCredentials] = useState(false)
+  const [editingUsernameId, setEditingUsernameId] = useState<string | null>(null)
+  const [editingUsernameValue, setEditingUsernameValue] = useState('')
 
   // Estados para Actualización Masiva
   const [showBulkUpdateModal, setShowBulkUpdateModal] = useState(false)
@@ -2505,7 +2507,65 @@ export default function Students() {
                         </td>
                         <td className="px-4 py-3">
                           {student.hasAccess ? (
-                            <code className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-mono">{student.username}</code>
+                            editingUsernameId === student.id ? (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="text"
+                                  value={editingUsernameValue}
+                                  onChange={e => setEditingUsernameValue(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
+                                  className="w-28 px-2 py-1 border border-blue-300 rounded text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none"
+                                  autoFocus
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                      (async () => {
+                                        if (!editingUsernameValue || editingUsernameValue.length < 3) { alert('El usuario debe tener al menos 3 caracteres'); return }
+                                        try {
+                                          setProcessingCredentials(true)
+                                          await staffApi.updateUsername(student.userId!, editingUsernameValue)
+                                          setCredentialStudents(prev => prev.map(s => s.id === student.id ? { ...s, username: editingUsernameValue } : s))
+                                          setEditingUsernameId(null)
+                                        } catch (err: any) {
+                                          alert(err.response?.data?.message || 'Error al actualizar usuario')
+                                        } finally { setProcessingCredentials(false) }
+                                      })()
+                                    }
+                                    if (e.key === 'Escape') setEditingUsernameId(null)
+                                  }}
+                                />
+                                <button
+                                  onClick={async () => {
+                                    if (!editingUsernameValue || editingUsernameValue.length < 3) { alert('El usuario debe tener al menos 3 caracteres'); return }
+                                    try {
+                                      setProcessingCredentials(true)
+                                      await staffApi.updateUsername(student.userId!, editingUsernameValue)
+                                      setCredentialStudents(prev => prev.map(s => s.id === student.id ? { ...s, username: editingUsernameValue } : s))
+                                      setEditingUsernameId(null)
+                                    } catch (err: any) {
+                                      alert(err.response?.data?.message || 'Error al actualizar usuario')
+                                    } finally { setProcessingCredentials(false) }
+                                  }}
+                                  disabled={processingCredentials}
+                                  className="p-1 hover:bg-green-50 rounded text-green-600 disabled:opacity-50"
+                                  title="Guardar"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => setEditingUsernameId(null)} className="p-1 hover:bg-red-50 rounded text-red-400" title="Cancelar">
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1">
+                                <code className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-mono">{student.username}</code>
+                                <button
+                                  onClick={() => { setEditingUsernameId(student.id); setEditingUsernameValue(student.username || '') }}
+                                  className="p-1 hover:bg-blue-50 rounded text-slate-400 hover:text-blue-600"
+                                  title="Editar usuario"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            )
                           ) : (
                             <span className="text-xs text-slate-400">—</span>
                           )}
