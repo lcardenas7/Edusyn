@@ -413,6 +413,8 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   const handleStart = async () => {
     try {
       await liveSessionApi.start(sessionId)
+      // After starting, immediately launch first question
+      await liveSessionApi.nextQuestion(sessionId)
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error')
     }
@@ -805,7 +807,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                   : 'Los estudiantes pueden unirse desde su aula virtual'}
               </p>
               <button
-                onClick={handleNextQuestion}
+                onClick={handleStart}
                 className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl text-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg shadow-green-500/30 flex items-center gap-3 mx-auto"
               >
                 <Play className="w-6 h-6" /> Iniciar primera pregunta
