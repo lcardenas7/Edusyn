@@ -797,6 +797,15 @@ export class ClassroomService {
       throw new ForbiddenException('Entrega no encontrada o no tiene permisos');
     }
 
+    // Validar que la nota no exceda la nota máxima de la actividad
+    const maxScore = submission.activity.maxScore ? Number(submission.activity.maxScore) : null;
+    if (dto.score < 0) {
+      throw new BadRequestException('La nota no puede ser negativa');
+    }
+    if (maxScore !== null && dto.score > maxScore) {
+      throw new BadRequestException(`La nota no puede ser mayor a ${maxScore}`);
+    }
+
     return this.prisma.activitySubmission.update({
       where: { id: submissionId },
       data: {

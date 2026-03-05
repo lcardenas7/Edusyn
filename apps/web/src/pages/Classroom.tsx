@@ -1828,11 +1828,14 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [mySubmission, setMySubmission] = useState<any>(null)
   const submitFileRef = useRef<HTMLInputElement>(null)
 
-  // Grading
+  // Grading & Review Panel
   const [gradingSubmission, setGradingSubmission] = useState<Submission | null>(null)
   const [gradeScore, setGradeScore] = useState('')
   const [gradeFeedback, setGradeFeedback] = useState('')
   const [grading, setGrading] = useState(false)
+  const [reviewingSubmission, setReviewingSubmission] = useState<Submission | null>(null)
+  const [reviewFileUrl, setReviewFileUrl] = useState<string | null>(null)
+  const [reviewFileLoading, setReviewFileLoading] = useState(false)
 
   // Quiz questions (teacher)
   const [questions, setQuestions] = useState<any[]>([])
@@ -2285,6 +2288,75 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     try { const { data } = await storageApi.resolveUrl(url); window.open(data.url, '_blank') } catch { window.open(url, '_blank') }
   }
 
+  // Review panel helpers
+  const openReviewPanel = async (sub: Submission) => {
+    setReviewingSubmission(sub)
+    setGradeScore(sub.score !== undefined && sub.score !== null ? String(Number(sub.score)) : '')
+    setGradeFeedback(sub.feedback || '')
+    setReviewFileUrl(null)
+    if (sub.fileUrl) {
+      setReviewFileLoading(true)
+      try {
+        const { data } = await storageApi.resolveUrl(sub.fileUrl)
+        setReviewFileUrl(data.url)
+      } catch { setReviewFileUrl(sub.fileUrl) }
+      finally { setReviewFileLoading(false) }
+    }
+  }
+
+  const navigateReview = async (dir: -1 | 1) => {
+    if (!reviewingSubmission) return
+    const idx = submissions.findIndex(s => s.id === reviewingSubmission.id)
+    const next = submissions[idx + dir]
+    if (next) openReviewPanel(next)
+  }
+
+  const handleReviewGrade = async () => {
+    if (!reviewingSubmission || !gradeScore) return
+    try {
+      setGrading(true)
+      await classroomApi.gradeSubmission(reviewingSubmission.id, { score: parseFloat(gradeScore), feedback: gradeFeedback || undefined })
+      // Move to next ungraded or stay
+      const idx = submissions.findIndex(s => s.id === reviewingSubmission.id)
+      const nextUngraded = submissions.slice(idx + 1).find(s => s.status === 'SUBMITTED' || s.status === 'LATE')
+      if (selectedActivity) {
+        const { data } = await classroomApi.listSubmissions(selectedActivity.id)
+        setSubmissions(data)
+        if (nextUngraded) {
+          const refreshed = data.find((s: Submission) => s.id === nextUngraded.id)
+          if (refreshed) openReviewPanel(refreshed)
+          else setReviewingSubmission(null)
+        } else {
+          setReviewingSubmission(null)
+        }
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al calificar')
+    } finally { setGrading(false) }
+  }
+
+  const getFilePreviewType = (url: string): 'image' | 'pdf' | 'office' | 'unknown' => {
+    const lower = url.toLowerCase()
+    if (/\.(jpg|jpeg|png|gif|webp|bmp|svg)/.test(lower)) return 'image'
+    if (/\.pdf/.test(lower)) return 'pdf'
+    if (/\.(doc|docx|xls|xlsx|ppt|pptx|odt|ods|odp)/.test(lower)) return 'office'
+    return 'unknown'
+  }
+
+  // Keyboard navigation for review panel
+  useEffect(() => {
+    if (!reviewingSubmission) return
+    const handler = (e: KeyboardEvent) => {
+      // Don't navigate if user is typing in input/textarea
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.key === 'ArrowLeft') navigateReview(-1)
+      if (e.key === 'ArrowRight') navigateReview(1)
+      if (e.key === 'Escape') setReviewingSubmission(null)
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [reviewingSubmission, submissions])
+
   // Quiz question handlers (teacher)
   const resetQForm = () => setQForm({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }], points: '1', explanation: '', subjectArea: '', contextId: '' })
 
@@ -2666,6 +2738,11 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-800">Entregas ({submissions.length})</h3>
+              {submissions.filter(s => s.status === 'SUBMITTED' || s.status === 'LATE').length > 0 && (
+                <span className="text-xs px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full font-medium">
+                  {submissions.filter(s => s.status === 'SUBMITTED' || s.status === 'LATE').length} pendientes
+                </span>
+              )}
             </div>
             {submissionsLoading ? (
               <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
@@ -2682,7 +2759,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   const initials = st ? `${st.firstName?.[0] || ''}${st.lastName?.[0] || ''}` : '?'
                   const statusInfo = STATUS_COLORS[sub.status] || STATUS_COLORS.DRAFT
                   return (
-                    <div key={sub.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 hover:bg-slate-50">
+                    <div key={sub.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 hover:bg-slate-50 cursor-pointer group" onClick={() => openReviewPanel(sub)}>
                       {st?.photo ? (
                         <img src={st.photo} alt={name} className="w-10 h-10 rounded-full object-cover border border-slate-200" />
                       ) : (
@@ -2691,41 +2768,29 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                       <div className="flex-1 min-w-0 flex items-center gap-3">
                         <div className="flex-1">
                           <p className="text-sm sm:text-base font-medium text-slate-800">{name}</p>
-                          <p className="text-xs sm:text-sm text-slate-400">{formatDate(sub.submittedAt)}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs sm:text-sm text-slate-400">{formatDate(sub.submittedAt)}</p>
+                            {sub.fileUrl && <Paperclip className="w-3 h-3 text-slate-400" />}
+                            {sub.content && sub.content.match(/https?:\/\/[^\s]+/) && <Link2 className="w-3 h-3 text-slate-400" />}
+                          </div>
                         </div>
                         <span className={`text-xs px-2 sm:px-2.5 py-1 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>
                         {sub.score !== undefined && sub.score !== null && (
                           <span className="text-sm sm:text-base font-bold text-slate-800">{Number(sub.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 sm:gap-1 ml-auto sm:ml-0">
-                        {/* Mostrar enlace externo si existe en el contenido */}
-                        {sub.content && sub.content.match(/https?:\/\/[^\s]+/) && (
-                          <a 
-                            href={sub.content.match(/https?:\/\/[^\s]+/)?.[0]} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="p-2 rounded-xl hover:bg-green-50" 
-                            title="Ver enlace externo"
-                          >
-                            <ExternalLink className="w-5 h-5 text-green-500" />
-                          </a>
-                        )}
+                      <div className="flex items-center gap-1 ml-auto sm:ml-0" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => openReviewPanel(sub)} className="px-2 sm:px-3 py-2 bg-blue-50 text-blue-700 rounded-xl text-xs sm:text-sm font-medium hover:bg-blue-100 flex items-center gap-1" style={{ minHeight: '40px' }}>
+                          <Eye className="w-4 h-4" /> Revisar
+                        </button>
                         {sub.fileUrl && (
-                          <button onClick={() => openFile(sub.fileUrl!)} className="p-2 rounded-xl hover:bg-blue-50" title="Ver archivo">
-                            <Download className="w-5 h-5 text-blue-500" />
+                          <button onClick={() => openFile(sub.fileUrl!)} className="p-2 rounded-xl hover:bg-slate-100" title="Descargar archivo">
+                            <Download className="w-4 h-4 text-slate-500" />
                           </button>
                         )}
-                        {(sub.status === 'SUBMITTED' || sub.status === 'LATE') && (
-                          <div className="flex gap-1">
-                            <button onClick={() => { setGradingSubmission(sub); setGradeScore(''); setGradeFeedback('') }} className="px-2 sm:px-3 py-2 bg-green-50 text-green-700 rounded-xl text-xs sm:text-sm font-medium hover:bg-green-100" style={{ minHeight: '40px' }}>
-                              Calificar
-                            </button>
-                            <button onClick={() => handleReturn(sub)} className="px-2 sm:px-3 py-2 bg-orange-50 text-orange-600 rounded-xl text-xs sm:text-sm font-medium hover:bg-orange-100" style={{ minHeight: '40px' }}>
-                              Devolver
-                            </button>
-                          </div>
-                        )}
+                        <button onClick={() => handleReturn(sub)} className="p-2 rounded-xl hover:bg-orange-50" title="Devolver">
+                          <RotateCcw className="w-4 h-4 text-orange-500" />
+                        </button>
                         <button onClick={() => handleDeleteSubmission(sub)} className="p-2 rounded-xl hover:bg-red-50" title="Eliminar intento">
                           <Trash2 className="w-4 h-4 text-red-400" />
                         </button>
@@ -2738,41 +2803,243 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           </div>
         )}
 
-        {/* TEACHER: Grading modal */}
-        {gradingSubmission && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4">
-              <h3 className="text-lg font-bold text-slate-800">Calificar entrega</h3>
-              <p className="text-sm text-slate-500">
-                {gradingSubmission.studentEnrollment?.student?.firstName} {gradingSubmission.studentEnrollment?.student?.lastName}
-              </p>
-              {gradingSubmission.content && (
-                <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 max-h-40 overflow-y-auto whitespace-pre-wrap">
-                  {gradingSubmission.content.split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
-                    part.match(/^https?:\/\//) ? (
-                      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">{part}</a>
-                    ) : part
+        {/* TEACHER: Fullscreen Review & Grading Panel */}
+        {reviewingSubmission && (() => {
+          const revSt = reviewingSubmission.studentEnrollment?.student
+          const revName = revSt ? `${revSt.firstName} ${revSt.lastName}${revSt.secondLastName ? ' ' + revSt.secondLastName : ''}` : 'Estudiante'
+          const revInitials = revSt ? `${revSt.firstName?.[0] || ''}${revSt.lastName?.[0] || ''}` : '?'
+          const revStatusInfo = STATUS_COLORS[reviewingSubmission.status] || STATUS_COLORS.DRAFT
+          const revIdx = submissions.findIndex(s => s.id === reviewingSubmission.id)
+          const hasPrev = revIdx > 0
+          const hasNext = revIdx < submissions.length - 1
+          const pendingCount = submissions.filter(s => s.status === 'SUBMITTED' || s.status === 'LATE').length
+          const fileType = reviewFileUrl ? getFilePreviewType(reviewFileUrl) : null
+
+          return (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex flex-col">
+              {/* Header */}
+              <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setReviewingSubmission(null)} className="p-2 rounded-xl hover:bg-slate-100">
+                    <X className="w-5 h-5 text-slate-500" />
+                  </button>
+                  {revSt?.photo ? (
+                    <img src={revSt.photo} alt={revName} className="w-9 h-9 rounded-full object-cover border border-slate-200" />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-sm font-bold text-blue-700">{revInitials}</div>
+                  )}
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800">{revName}</p>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${revStatusInfo.bg} ${revStatusInfo.text}`}>{revStatusInfo.label}</span>
+                      <span className="text-xs text-slate-400">{formatDate(reviewingSubmission.submittedAt)}</span>
+                      {reviewingSubmission.score !== undefined && reviewingSubmission.score !== null && (
+                        <span className="text-xs font-bold text-slate-700">{Number(reviewingSubmission.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {pendingCount > 0 && (
+                    <span className="text-xs px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full font-medium hidden sm:inline-flex">
+                      {pendingCount} pendientes
+                    </span>
+                  )}
+                  <span className="text-xs text-slate-400">{revIdx + 1} / {submissions.length}</span>
+                  <button onClick={() => navigateReview(-1)} disabled={!hasPrev} className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed" title="Anterior">
+                    <ChevronLeft className="w-5 h-5 text-slate-600" />
+                  </button>
+                  <button onClick={() => navigateReview(1)} disabled={!hasNext} className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed" title="Siguiente">
+                    <ChevronRight className="w-5 h-5 text-slate-600" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Body: Split view */}
+              <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+                {/* Left: File preview / Content */}
+                <div className="flex-1 bg-slate-100 overflow-auto min-h-0">
+                  {reviewFileLoading ? (
+                    <div className="flex items-center justify-center h-full">
+                      <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                    </div>
+                  ) : reviewFileUrl ? (
+                    <div className="h-full flex flex-col">
+                      {/* File preview toolbar */}
+                      <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-between shrink-0">
+                        <div className="flex items-center gap-2">
+                          <File className="w-4 h-4 text-slate-400" />
+                          <span className="text-xs text-slate-600 font-medium truncate max-w-[200px]">
+                            {reviewingSubmission.fileUrl?.split('/').pop() || 'Archivo adjunto'}
+                          </span>
+                          {fileType === 'image' && <span className="text-xs px-2 py-0.5 bg-purple-50 text-purple-600 rounded-full">Imagen</span>}
+                          {fileType === 'pdf' && <span className="text-xs px-2 py-0.5 bg-red-50 text-red-600 rounded-full">PDF</span>}
+                          {fileType === 'office' && <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">Documento</span>}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => window.open(reviewFileUrl, '_blank')} className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 flex items-center gap-1">
+                            <ExternalLink className="w-3 h-3" /> Abrir
+                          </button>
+                          <a href={reviewFileUrl} download className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 flex items-center gap-1">
+                            <Download className="w-3 h-3" /> Descargar
+                          </a>
+                        </div>
+                      </div>
+                      {/* File preview area */}
+                      <div className="flex-1 overflow-auto">
+                        {fileType === 'image' && (
+                          <div className="flex items-center justify-center h-full p-4 bg-slate-900/5">
+                            <img src={reviewFileUrl} alt="Entrega" className="max-w-full max-h-full object-contain rounded-lg shadow-lg" />
+                          </div>
+                        )}
+                        {fileType === 'pdf' && (
+                          <iframe src={reviewFileUrl} className="w-full h-full border-0" title="Preview PDF" />
+                        )}
+                        {fileType === 'office' && (
+                          <iframe
+                            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(reviewFileUrl)}`}
+                            className="w-full h-full border-0"
+                            title="Preview documento"
+                          />
+                        )}
+                        {fileType === 'unknown' && (
+                          <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
+                            <File className="w-16 h-16 opacity-40" />
+                            <p className="text-sm">No se puede previsualizar este tipo de archivo</p>
+                            <div className="flex gap-2">
+                              <button onClick={() => window.open(reviewFileUrl, '_blank')} className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 flex items-center gap-2">
+                                <ExternalLink className="w-4 h-4" /> Abrir en nueva pestaña
+                              </button>
+                              <a href={reviewFileUrl} download className="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-300 flex items-center gap-2">
+                                <Download className="w-4 h-4" /> Descargar
+                              </a>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : reviewingSubmission.content ? (
+                    <div className="p-6 max-w-3xl mx-auto">
+                      <h4 className="text-sm font-semibold text-slate-500 mb-3 flex items-center gap-2">
+                        <FileText className="w-4 h-4" /> Contenido de la entrega
+                      </h4>
+                      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                        {reviewingSubmission.content.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
+                          part.match(/^https?:\/\//) ? (
+                            <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all inline-flex items-center gap-1">
+                              {part} <ExternalLink className="w-3 h-3 inline" />
+                            </a>
+                          ) : part
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                      <FileText className="w-16 h-16 opacity-30 mb-3" />
+                      <p className="text-sm">Sin archivo ni contenido adjunto</p>
+                    </div>
                   )}
                 </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nota (máx {act.maxScore ? Number(act.maxScore) : '5.0'})</label>
-                <input type="number" step="0.1" min="0" max={act.maxScore ? Number(act.maxScore) : 5} value={gradeScore} onChange={e => setGradeScore(e.target.value)} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Retroalimentación (opcional)</label>
-                <textarea value={gradeFeedback} onChange={e => setGradeFeedback(e.target.value)} rows={3} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Comentarios para el estudiante..." />
-              </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setGradingSubmission(null)} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
-                <button onClick={handleGrade} disabled={!gradeScore || grading} className="px-5 py-2.5 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
-                  {grading && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {grading ? 'Guardando...' : 'Guardar nota'}
-                </button>
+
+                {/* Right: Grading sidebar */}
+                <div className="w-full lg:w-96 bg-white border-t lg:border-t-0 lg:border-l border-slate-200 flex flex-col shrink-0 overflow-auto">
+                  <div className="p-5 space-y-5 flex-1">
+                    {/* Student content (if both file + text exist) */}
+                    {reviewingSubmission.content && reviewFileUrl && (
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Texto del estudiante</label>
+                        <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 max-h-32 overflow-y-auto whitespace-pre-wrap border border-slate-100">
+                          {reviewingSubmission.content.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
+                            part.match(/^https?:\/\//) ? (
+                              <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">{part}</a>
+                            ) : part
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* External links */}
+                    {reviewingSubmission.content && reviewingSubmission.content.match(/https?:\/\/[^\s]+/) && (
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Enlaces</label>
+                        <div className="space-y-1">
+                          {(reviewingSubmission.content.match(/https?:\/\/[^\s]+/g) || []).map((link, i) => (
+                            <a key={i} href={link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg text-sm text-blue-700 hover:bg-blue-100 truncate">
+                              <ExternalLink className="w-4 h-4 shrink-0" />
+                              <span className="truncate">{link}</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Grade input */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">
+                        Calificación (máx {act.maxScore ? Number(act.maxScore) : '5.0'})
+                      </label>
+                      <input
+                        type="number" step="0.1" min="0" max={act.maxScore ? Number(act.maxScore) : 5}
+                        value={gradeScore} onChange={e => setGradeScore(e.target.value)}
+                        className="w-full border border-slate-300 rounded-xl px-4 py-3 text-lg font-bold text-center focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="0.0"
+                      />
+                    </div>
+
+                    {/* Feedback */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Retroalimentación</label>
+                      <textarea
+                        value={gradeFeedback} onChange={e => setGradeFeedback(e.target.value)}
+                        rows={4}
+                        className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="Comentarios para el estudiante..."
+                      />
+                    </div>
+
+                    {/* Previous feedback if graded */}
+                    {reviewingSubmission.feedback && reviewingSubmission.status === 'GRADED' && (
+                      <div className="bg-green-50 rounded-xl p-4 border border-green-100">
+                        <p className="text-xs font-semibold text-green-700 mb-1">Retroalimentación anterior</p>
+                        <p className="text-sm text-green-800 whitespace-pre-wrap">{reviewingSubmission.feedback}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="p-5 border-t border-slate-100 space-y-3 bg-slate-50 shrink-0">
+                    <button
+                      onClick={handleReviewGrade}
+                      disabled={!gradeScore || grading}
+                      className="w-full px-5 py-3 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+                    >
+                      {grading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      {grading ? 'Guardando...' : hasNext ? 'Calificar y siguiente →' : 'Calificar'}
+                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { handleReturn(reviewingSubmission); setReviewingSubmission(null) }}
+                        className="flex-1 px-4 py-2.5 bg-orange-50 text-orange-600 rounded-xl text-sm font-medium hover:bg-orange-100 flex items-center justify-center gap-1.5"
+                      >
+                        <RotateCcw className="w-4 h-4" /> Devolver
+                      </button>
+                      <button
+                        onClick={() => setReviewingSubmission(null)}
+                        className="flex-1 px-4 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 flex items-center justify-center gap-1.5"
+                      >
+                        Cerrar
+                      </button>
+                    </div>
+                    {/* Keyboard shortcuts hint */}
+                    <p className="text-center text-xs text-slate-400">
+                      Usa ← → para navegar entre entregas
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* TEACHER: Question Editor for QUIZ/EXAM */}
         {isTeacher && isQuizType(act.type) && (
