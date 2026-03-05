@@ -319,14 +319,37 @@ export class LiveSessionService {
     });
 
     // Broadcast progress (1 query)
-    const progress = await this.prisma.liveSessionAnswer.count({
+    const totalAnswered = await this.prisma.liveSessionAnswer.count({
       where: { sessionId, questionId },
     });
 
+    // Count total connected students (those who have answered at least one question in this session)
+    const totalConnected = await this.prisma.liveSessionAnswer.groupBy({
+      by: ['studentEnrollmentId'],
+      where: { sessionId },
+    }).then(r => r.length);
+    
+    // Use max of: students who answered this question OR students who have participated in session
+    const expectedStudents = Math.max(totalAnswered, totalConnected);
+
     this.broadcast(sessionId, {
       type: 'ANSWER_PROGRESS',
-      data: { questionId, totalAnswered: progress },
+      data: { questionId, totalAnswered, totalExpected: expectedStudents },
     });
+
+    // Auto-close question if all connected students have answered
+    if (totalAnswered >= expectedStudents && expectedStudents > 0) {
+      // Get the correct answer for current question
+      const currentQuestion = questions[session.currentQuestionIdx];
+      this.broadcast(sessionId, {
+        type: 'QUESTION_CLOSED',
+        data: {
+          questionId: currentQuestion.id,
+          correctAnswer: currentQuestion.correctAnswer,
+          autoClose: true,
+        },
+      });
+    }
 
     return { isCorrect, points: saved.points };
   }
