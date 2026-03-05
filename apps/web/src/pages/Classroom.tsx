@@ -2683,10 +2683,10 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 <div className="flex flex-wrap gap-2">
                   {questions.length >= 1 && (
                     <button onClick={() => { setLiveQuizActivityId(act.id); setLiveQuizActivityTitle(act.title); setShowLiveQuiz(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:from-yellow-600 hover:to-orange-600 shadow-sm">
-                      <Zap className="w-4 h-4" /> <span className="hidden xs:inline">Live</span> Quiz
+                      <Zap className="w-4 h-4" /> <span className="hidden sm:inline">Quiz En Vivo</span><span className="sm:hidden">En Vivo</span>
                     </button>
                   )}
-                  <button onClick={() => { resetCtxForm(); setShowContextForm(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-amber-600">
+                  <button onClick={() => { resetCtxForm(); setShowContextForm(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-teal-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-teal-600">
                     <FileText className="w-4 h-4" /> <span className="hidden sm:inline">+</span> Contexto
                   </button>
                   <button onClick={() => { resetQForm(); setEditingQuestion(null); setShowAddQuestion(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-purple-700">
