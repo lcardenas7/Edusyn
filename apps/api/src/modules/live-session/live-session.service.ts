@@ -181,7 +181,7 @@ export class LiveSessionService {
     const questions = await this.prisma.activityQuestion.findMany({
       where: { activityId: session.activityId },
       orderBy: { sortOrder: 'asc' },
-      select: { id: true, type: true, text: true, imageUrl: true, options: true, points: true, sortOrder: true },
+      select: { id: true, type: true, text: true, imageUrl: true, options: true, points: true, sortOrder: true, context: { select: { id: true, title: true, text: true, imageUrl: true } } },
     });
 
     const nextIdx = session.currentQuestionIdx + 1;
@@ -216,6 +216,7 @@ export class LiveSessionService {
         isBonus,
         multiplier,
         timeLimit,
+        context: q.context || null,
       },
     });
 

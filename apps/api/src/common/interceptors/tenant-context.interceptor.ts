@@ -78,7 +78,7 @@ export class TenantContextInterceptor implements NestInterceptor {
           },
           {
             maxWait: 10000,  // 10s max wait for a connection from pool
-            timeout: 30000,  // 30s transaction timeout (adjust if needed)
+            timeout: 60000,  // 60s transaction timeout (file uploads may take longer)
           },
         )
         .then(() => {

@@ -1005,6 +1005,21 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             </div>
           </div>
 
+          {/* Context (reading passage / shared context) */}
+          {currentQuestion.context && (
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 backdrop-blur-sm">
+              {currentQuestion.context.title && (
+                <p className="text-amber-300 font-semibold text-sm mb-2 uppercase tracking-wide">{currentQuestion.context.title}</p>
+              )}
+              {currentQuestion.context.text && (
+                <p className="text-white/90 text-sm leading-relaxed whitespace-pre-line">{currentQuestion.context.text}</p>
+              )}
+              {currentQuestion.context.imageUrl && (
+                <img src={currentQuestion.context.imageUrl} alt="" className="mt-3 max-h-48 rounded-xl mx-auto object-contain" />
+              )}
+            </div>
+          )}
+
           {/* Question text + image */}
           <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm">
             <p className="text-xl sm:text-2xl font-bold text-white leading-relaxed">{currentQuestion.text}</p>
