@@ -8,7 +8,7 @@ export class TeachersService {
   constructor(private prisma: PrismaService) {}
 
   // Generar username: inicialNombre + apellido (ej: lcardenas)
-  private async generateUsername(firstName: string, lastName: string, _documentNumber: string): Promise<string> {
+  private async generateUsername(firstName: string, lastName: string, _documentNumber: string, excludeUserId?: string): Promise<string> {
     const firstLetter = firstName.toLowerCase().charAt(0);
     const cleanLastName = lastName.toLowerCase()
       .normalize('NFD')
@@ -20,7 +20,9 @@ export class TeachersService {
     let username = baseUsername;
     let counter = 1;
     
-    while (await this.prisma.user.findUnique({ where: { username } })) {
+    while (true) {
+      const existing = await this.prisma.user.findUnique({ where: { username } });
+      if (!existing || (excludeUserId && existing.id === excludeUserId)) break;
       username = `${baseUsername}${counter}`;
       counter++;
     }
@@ -218,22 +220,8 @@ export class TeachersService {
       ...(dto.isActive !== undefined && { isActive: dto.isActive }),
     };
 
-    // Si cambia el documento, actualizar contraseña y username
-    if (dto.documentNumber) {
-      const currentUser = await this.prisma.user.findUnique({ where: { id } });
-      if (currentUser) {
-        // Nueva contraseña = nuevo documento
-        const newPasswordHash = await bcryptjs.hash(dto.documentNumber, 10);
-        updateData.passwordHash = newPasswordHash;
-        updateData.mustChangePassword = true; // Forzar cambio de contraseña
-        
-        // Regenerar username con el nuevo documento
-        const firstName = dto.firstName || currentUser.firstName;
-        const lastName = dto.lastName || currentUser.lastName;
-        const newUsername = await this.generateUsername(firstName, lastName, dto.documentNumber);
-        updateData.username = newUsername;
-      }
-    }
+    // NOTA: No se modifica username ni contraseña al actualizar datos del docente.
+    // El username se asigna solo al crear. La contraseña se gestiona vía cambio de contraseña al iniciar sesión.
 
     return this.prisma.user.update({
       where: { id },
