@@ -2497,46 +2497,46 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           ) : (
             /* ── DISPLAY MODE ── */
             <>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isIcfes(act.type) ? 'bg-emerald-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start gap-3 mb-2">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isIcfes(act.type) ? 'bg-emerald-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
                       {isIcfes(act.type) ? <BarChart3 className="w-5 h-5 text-emerald-600" /> : isQuizType(act.type) ? <HelpCircle className="w-5 h-5 text-purple-600" /> : <ClipboardList className="w-5 h-5 text-blue-600" />}
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-bold text-slate-800">{act.title}</h2>
-                        {isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">Simulacro ICFES</span>}
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-lg sm:text-xl font-bold text-slate-800 break-words">{act.title}</h2>
+                        {isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium whitespace-nowrap">Simulacro ICFES</span>}
                         {isQuizType(act.type) && !isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">{act.type === 'QUIZ' ? 'Quiz' : 'Examen'}</span>}
                       </div>
                       <p className="text-sm text-slate-400">{act.section?.title || 'Sin sección'}</p>
                     </div>
                   </div>
-                  {act.description && <p className="text-base text-slate-600 mt-3 whitespace-pre-wrap leading-relaxed">{act.description}</p>}
+                  {act.description && <p className="text-sm sm:text-base text-slate-600 mt-3 whitespace-pre-wrap leading-relaxed">{act.description}</p>}
                   {meta?.attachmentUrl && (
-                    <button onClick={() => openFile(meta.attachmentUrl)} className="flex items-center gap-3 mt-4 px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors group">
-                      <File className="w-5 h-5 text-blue-500" />
-                      <span className="text-base text-slate-700 group-hover:text-blue-600">{meta.attachmentName || 'Archivo adjunto'}</span>
-                      <Download className="w-4 h-4 text-slate-400 ml-auto" />
+                    <button onClick={() => openFile(meta.attachmentUrl)} className="flex items-center gap-3 mt-4 px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors group w-full sm:w-auto">
+                      <File className="w-5 h-5 text-blue-500 shrink-0" />
+                      <span className="text-sm sm:text-base text-slate-700 group-hover:text-blue-600 truncate">{meta.attachmentName || 'Archivo adjunto'}</span>
+                      <Download className="w-4 h-4 text-slate-400 ml-auto shrink-0" />
                     </button>
                   )}
                 </div>
                 {isTeacher && (
-                  <div className="flex gap-1 shrink-0">
-                    <button onClick={() => handlePublish(act.id, act.isPublished)} className={`px-4 py-2 rounded-xl text-sm font-medium ${act.isPublished ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`} style={{ minHeight: '44px' }}>
+                  <div className="flex flex-wrap gap-1 shrink-0">
+                    <button onClick={() => handlePublish(act.id, act.isPublished)} className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium ${act.isPublished ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>
                       {act.isPublished ? 'Despublicar' : 'Publicar'}
                     </button>
-                    <button onClick={() => startEditActivity(act)} className="p-2.5 rounded-xl hover:bg-amber-50" title="Editar actividad">
-                      <Pencil className="w-5 h-5 text-amber-400" />
+                    <button onClick={() => startEditActivity(act)} className="p-2 sm:p-2.5 rounded-xl hover:bg-amber-50" title="Editar actividad">
+                      <Pencil className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
                     </button>
-                    <button onClick={() => openAssignStudentsModal(act.id, act.title)} className="p-2.5 rounded-xl hover:bg-violet-50" title="Asignar estudiantes">
-                      <Users className="w-5 h-5 text-violet-400" />
+                    <button onClick={() => openAssignStudentsModal(act.id, act.title)} className="p-2 sm:p-2.5 rounded-xl hover:bg-violet-50" title="Asignar estudiantes">
+                      <Users className="w-4 h-4 sm:w-5 sm:h-5 text-violet-400" />
                     </button>
-                    <button onClick={() => openDuplicateActivityModal(act.id, act.title)} className="p-2.5 rounded-xl hover:bg-blue-50" title="Duplicar actividad">
-                      <Copy className="w-5 h-5 text-blue-400" />
+                    <button onClick={() => openDuplicateActivityModal(act.id, act.title)} className="p-2 sm:p-2.5 rounded-xl hover:bg-blue-50" title="Duplicar actividad">
+                      <Copy className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
                     </button>
-                    <button onClick={() => handleDelete(act.id)} className="p-2.5 rounded-xl hover:bg-red-50">
-                      <Trash2 className="w-5 h-5 text-red-400" />
+                    <button onClick={() => handleDelete(act.id)} className="p-2 sm:p-2.5 rounded-xl hover:bg-red-50">
+                      <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
                     </button>
                   </div>
                 )}
@@ -2677,20 +2677,22 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         {/* TEACHER: Question Editor for QUIZ/EXAM */}
         {isTeacher && isQuizType(act.type) && (
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-800">Preguntas ({questions.length})</h3>
-              <div className="flex gap-2">
-                {questions.length >= 1 && (
-                  <button onClick={() => { setLiveQuizActivityId(act.id); setLiveQuizActivityTitle(act.title); setShowLiveQuiz(true) }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl text-sm font-semibold hover:from-yellow-600 hover:to-orange-600 shadow-sm" style={{ minHeight: '40px' }}>
-                    <Zap className="w-4 h-4" /> Live Quiz
+            <div className="px-4 sm:px-6 py-4 border-b border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <h3 className="text-lg font-bold text-slate-800">Preguntas ({questions.length})</h3>
+                <div className="flex flex-wrap gap-2">
+                  {questions.length >= 1 && (
+                    <button onClick={() => { setLiveQuizActivityId(act.id); setLiveQuizActivityTitle(act.title); setShowLiveQuiz(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:from-yellow-600 hover:to-orange-600 shadow-sm">
+                      <Zap className="w-4 h-4" /> <span className="hidden xs:inline">Live</span> Quiz
+                    </button>
+                  )}
+                  <button onClick={() => { resetCtxForm(); setShowContextForm(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-amber-600">
+                    <FileText className="w-4 h-4" /> <span className="hidden sm:inline">+</span> Contexto
                   </button>
-                )}
-                <button onClick={() => { resetCtxForm(); setShowContextForm(true) }} className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600" style={{ minHeight: '40px' }}>
-                  <FileText className="w-4 h-4" /> + Contexto
-                </button>
-                <button onClick={() => { resetQForm(); setEditingQuestion(null); setShowAddQuestion(true) }} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700" style={{ minHeight: '40px' }}>
-                  <Plus className="w-4 h-4" /> Agregar pregunta
-                </button>
+                  <button onClick={() => { resetQForm(); setEditingQuestion(null); setShowAddQuestion(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-purple-700">
+                    <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Agregar</span><span className="sm:hidden">+</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -3016,36 +3018,36 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             ) : (
               <div className="divide-y divide-slate-100">
                 {questions.map((q, i) => (
-                  <div key={q.id} className="px-6 py-4 hover:bg-slate-50">
-                    <div className="flex items-start gap-3">
-                      <span className="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-bold shrink-0">{i + 1}</span>
+                  <div key={q.id} className="px-3 sm:px-6 py-3 sm:py-4 hover:bg-slate-50">
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-xs sm:text-sm font-bold shrink-0">{i + 1}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-base font-medium text-slate-800">{q.text}</p>
-                        <div className="flex items-center gap-3 mt-1 text-sm text-slate-400 flex-wrap">
-                          <span className="px-2 py-0.5 bg-slate-100 rounded text-xs">{q.type === 'MULTIPLE_CHOICE' ? 'Opción múltiple' : q.type === 'MULTIPLE_SELECT' ? 'Selección múltiple' : q.type === 'TRUE_FALSE' ? 'V/F' : q.type === 'FILL_BLANK' ? 'Completar' : q.type === 'ORDERING' ? 'Ordenar' : q.type === 'MATCHING' ? 'Emparejar' : 'Respuesta corta'}</span>
+                        <p className="text-sm sm:text-base font-medium text-slate-800">{q.text}</p>
+                        <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs sm:text-sm text-slate-400 flex-wrap">
+                          <span className="px-1.5 sm:px-2 py-0.5 bg-slate-100 rounded text-[10px] sm:text-xs">{q.type === 'MULTIPLE_CHOICE' ? 'Opción múltiple' : q.type === 'MULTIPLE_SELECT' ? 'Selección múltiple' : q.type === 'TRUE_FALSE' ? 'V/F' : q.type === 'FILL_BLANK' ? 'Completar' : q.type === 'ORDERING' ? 'Ordenar' : q.type === 'MATCHING' ? 'Emparejar' : 'Respuesta corta'}</span>
                           <span>{Number(q.points)} pts</span>
-                          {q.subjectArea && <span className={`px-2 py-0.5 rounded text-xs text-white ${AREA_COLORS[q.subjectArea] || 'bg-slate-500'}`}>{q.subjectArea}</span>}
-                          {q.context && <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs border border-amber-200">{q.context.title || 'Contexto'}</span>}
-                          {q.correctAnswer && <span className="text-green-600">✓ {q.correctAnswer}</span>}
+                          {q.subjectArea && <span className={`px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs text-white ${AREA_COLORS[q.subjectArea] || 'bg-slate-500'}`}>{q.subjectArea}</span>}
+                          {q.context && <span className="px-1.5 sm:px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] sm:text-xs border border-amber-200">{q.context.title || 'Contexto'}</span>}
+                          {q.correctAnswer && <span className="text-green-600 text-xs">✓ {q.correctAnswer.length > 20 ? q.correctAnswer.slice(0, 20) + '...' : q.correctAnswer}</span>}
                         </div>
                         {q.options && Array.isArray(q.options) && (
-                          <div className="flex flex-wrap gap-2 mt-2">
+                          <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
                             {(q.options as string[]).map((opt: string, j: number) => {
                               const isCorrect = q.type === 'MULTIPLE_SELECT' 
                                 ? (() => { try { return JSON.parse(q.correctAnswer || '[]').includes(opt) } catch { return false } })()
                                 : opt === q.correctAnswer
                               return (
-                                <span key={j} className={`text-xs px-2.5 py-1 rounded-full border ${isCorrect ? 'bg-green-50 border-green-300 text-green-700' : 'bg-white border-slate-200 text-slate-600'}`}>
-                                  {String.fromCharCode(65 + j)}. {opt}
+                                <span key={j} className={`text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border ${isCorrect ? 'bg-green-50 border-green-300 text-green-700' : 'bg-white border-slate-200 text-slate-600'}`}>
+                                  {String.fromCharCode(65 + j)}. {opt.length > 15 ? opt.slice(0, 15) + '...' : opt}
                                 </span>
                               )
                             })}
                           </div>
                         )}
                       </div>
-                      <div className="flex gap-1 shrink-0">
-                        <button onClick={() => startEditQuestion(q)} className="p-2 rounded-xl hover:bg-slate-100"><Pencil className="w-4 h-4 text-slate-400" /></button>
-                        <button onClick={() => handleDeleteQuestion(q.id)} className="p-2 rounded-xl hover:bg-red-50"><Trash2 className="w-4 h-4 text-red-400" /></button>
+                      <div className="flex gap-0.5 sm:gap-1 shrink-0">
+                        <button onClick={() => startEditQuestion(q)} className="p-1.5 sm:p-2 rounded-xl hover:bg-slate-100"><Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" /></button>
+                        <button onClick={() => handleDeleteQuestion(q.id)} className="p-1.5 sm:p-2 rounded-xl hover:bg-red-50"><Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400" /></button>
                       </div>
                     </div>
                   </div>

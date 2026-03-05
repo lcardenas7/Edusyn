@@ -213,6 +213,17 @@ export class LiveSessionController {
     return this.liveSessionService.searchGroupStudents(sessionId, query || '');
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/create-team')
+  async createTeam(
+    @Param('id') sessionId: string,
+    @Request() req: any,
+    @Body() body: { name: string },
+  ) {
+    await this.verifySessionTenant(sessionId, req.user.institutionId);
+    return this.liveSessionService.createTeamByStudent(sessionId, body.name, req.user.id);
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // Student Endpoint
   // ═══════════════════════════════════════════════════════════════════════════

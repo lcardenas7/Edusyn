@@ -102,6 +102,11 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   const [groupStudents, setGroupStudents] = useState<any[]>([])
   const [teamAssignments, setTeamAssignments] = useState<Record<string, string>>({}) // enrollmentId -> teamId
 
+  // Student create team
+  const [showCreateTeam, setShowCreateTeam] = useState(false)
+  const [newTeamName, setNewTeamName] = useState('')
+  const [creatingTeam, setCreatingTeam] = useState(false)
+
   // Reveal state
   const [correctAnswer, setCorrectAnswer] = useState<string | null>(null)
   const [explanation, setExplanation] = useState<string | null>(null)
@@ -109,7 +114,6 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   // Music (teacher only)
   const [musicOn, setMusicOn] = useState(false)
   const audioCtxRef = useRef<AudioContext | null>(null)
-  const oscRef = useRef<OscillatorNode | null>(null)
 
   // SSE
   const eventSourceRef = useRef<EventSource | null>(null)
@@ -313,37 +317,82 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MUSIC (Web Audio API - lightweight tones, no mp3 files)
+  // MUSIC (Web Audio API - dynamic quiz music)
   // ═══════════════════════════════════════════════════════════════════════════
+  const musicIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const startMusic = () => {
     if (audioCtxRef.current) return
     const ctx = new AudioContext()
     audioCtxRef.current = ctx
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.type = 'sine'
-    osc.frequency.value = 220
-    gain.gain.value = 0.03
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.start()
-    // Modulate frequency for ambient feel
-    const lfo = ctx.createOscillator()
-    const lfoGain = ctx.createGain()
-    lfo.frequency.value = 0.3
-    lfoGain.gain.value = 30
-    lfo.connect(lfoGain)
-    lfoGain.connect(osc.frequency)
-    lfo.start()
-    oscRef.current = osc
+
+    // Quiz-style arpeggio pattern (C major pentatonic + variations)
+    const notes = [261.6, 329.6, 392, 523.3, 392, 329.6, 293.7, 349.2, 440, 523.3, 440, 349.2]
+    let noteIndex = 0
+    let beatCount = 0
+
+    const playNote = () => {
+      if (!audioCtxRef.current) return
+      const now = audioCtxRef.current.currentTime
+
+      // Main synth voice
+      const osc = audioCtxRef.current.createOscillator()
+      const gain = audioCtxRef.current.createGain()
+      
+      // Alternate between square and triangle for variety
+      osc.type = beatCount % 8 < 4 ? 'square' : 'triangle'
+      osc.frequency.value = notes[noteIndex]
+      
+      gain.gain.setValueAtTime(0.08, now)
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15)
+      
+      osc.connect(gain)
+      gain.connect(audioCtxRef.current.destination)
+      osc.start(now)
+      osc.stop(now + 0.15)
+
+      // Add bass on every 4th beat
+      if (beatCount % 4 === 0) {
+        const bassOsc = audioCtxRef.current.createOscillator()
+        const bassGain = audioCtxRef.current.createGain()
+        bassOsc.type = 'sine'
+        bassOsc.frequency.value = notes[noteIndex] / 2
+        bassGain.gain.setValueAtTime(0.06, now)
+        bassGain.gain.exponentialRampToValueAtTime(0.01, now + 0.3)
+        bassOsc.connect(bassGain)
+        bassGain.connect(audioCtxRef.current.destination)
+        bassOsc.start(now)
+        bassOsc.stop(now + 0.3)
+      }
+
+      // Add high sparkle on every 8th beat
+      if (beatCount % 8 === 0) {
+        const highOsc = audioCtxRef.current.createOscillator()
+        const highGain = audioCtxRef.current.createGain()
+        highOsc.type = 'sine'
+        highOsc.frequency.value = notes[noteIndex] * 2
+        highGain.gain.setValueAtTime(0.03, now)
+        highGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1)
+        highOsc.connect(highGain)
+        highGain.connect(audioCtxRef.current.destination)
+        highOsc.start(now)
+        highOsc.stop(now + 0.1)
+      }
+
+      noteIndex = (noteIndex + 1) % notes.length
+      beatCount++
+    }
+
+    // Play at 140 BPM (approx 214ms per 8th note)
+    playNote()
+    musicIntervalRef.current = setInterval(playNote, 214)
     setMusicOn(true)
   }
 
   const stopMusic = () => {
-    if (oscRef.current) {
-      try { oscRef.current.stop() } catch {}
-      oscRef.current = null
+    if (musicIntervalRef.current) {
+      clearInterval(musicIntervalRef.current)
+      musicIntervalRef.current = null
     }
     if (audioCtxRef.current) {
       try { audioCtxRef.current.close() } catch {}
@@ -468,6 +517,19 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     try {
       await liveSessionApi.addPartner(sessionId, myTeamId, enrollmentId)
     } catch {} finally { setAddingPartner('') }
+  }
+
+  const handleCreateTeam = async () => {
+    if (!sessionId || !newTeamName.trim() || creatingTeam) return
+    setCreatingTeam(true)
+    try {
+      const { data } = await liveSessionApi.createTeamByStudent(sessionId, newTeamName.trim())
+      setMyTeamId(data.id)
+      setNewTeamName('')
+      setShowCreateTeam(false)
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al crear equipo')
+    } finally { setCreatingTeam(false) }
   }
 
   const handleOrderMove = (from: number, to: number) => {
@@ -752,8 +814,8 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
           ) : (
             <div className="text-center space-y-4 w-full max-w-md">
               {/* Student: Team selection or waiting for assignment */}
-              {mode === 'TEAM' && teams.length > 0 ? (
-                (session?.config as any)?.teamAssignment === 'TEACHER_ASSIGNED' ? (
+              {mode === 'TEAM' ? (
+                (session?.config as any)?.teamAssignment === 'TEACHER_ASSIGNED' && teams.length > 0 ? (
                   // Teacher assigns teams - student just waits
                   <div className="space-y-4">
                     <p className="text-white/80 font-semibold">Equipos</p>
@@ -781,38 +843,84 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                     </p>
                   </div>
                 ) : (
-                  // Students choose teams
+                  // Students choose or create teams (Kahoot-style)
                   <div className="space-y-4">
-                    <p className="text-white/80 font-semibold">Elige tu equipo</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {teams.map((t: any) => {
-                        const isSelected = myTeamId === t.id
-                        const memberCount = t.members?.length || 0
-                        return (
+                    <p className="text-white/80 font-semibold">
+                      {teams.length > 0 ? 'Únete a un equipo o crea uno nuevo' : 'Crea tu equipo'}
+                    </p>
+
+                    {/* Existing teams grid */}
+                    {teams.length > 0 && (
+                      <div className="grid grid-cols-2 gap-3">
+                        {teams.map((t: any) => {
+                          const isSelected = myTeamId === t.id
+                          const memberCount = t.members?.length || 0
+                          return (
+                            <button
+                              key={t.id}
+                              onClick={async () => {
+                                if (isSelected || joiningTeam) return
+                                setJoiningTeam(true)
+                                try {
+                                  await liveSessionApi.joinTeam(sessionId, t.id)
+                                  setMyTeamId(t.id)
+                                } catch {}
+                                setJoiningTeam(false)
+                              }}
+                              disabled={joiningTeam}
+                              className={`p-4 rounded-2xl border-2 transition-all text-center ${isSelected ? 'border-white/60 bg-white/15 scale-105' : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/30'}`}
+                            >
+                              <div className="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-bold text-lg" style={{ backgroundColor: t.color }}>
+                                {t.name.charAt(0)}
+                              </div>
+                              <p className="text-white font-semibold text-sm">{t.name}</p>
+                              <p className="text-white/40 text-xs">{memberCount} miembros</p>
+                              {isSelected && <p className="text-green-400 text-xs font-bold mt-1">✓ Tu equipo</p>}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {/* Create team form */}
+                    {!myTeamId && !showCreateTeam && (
+                      <button
+                        onClick={() => setShowCreateTeam(true)}
+                        className="w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-indigo-700 transition-all"
+                      >
+                        + Crear nuevo equipo
+                      </button>
+                    )}
+
+                    {showCreateTeam && (
+                      <div className="bg-white/5 rounded-2xl p-4 space-y-3">
+                        <p className="text-white/80 font-semibold text-sm">Nombre de tu equipo</p>
+                        <input
+                          value={newTeamName}
+                          onChange={e => setNewTeamName(e.target.value)}
+                          placeholder="Ej: Los Campeones, Equipo Rocket..."
+                          maxLength={30}
+                          className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-purple-500"
+                          onKeyDown={e => e.key === 'Enter' && handleCreateTeam()}
+                        />
+                        <div className="flex gap-2">
                           <button
-                            key={t.id}
-                            onClick={async () => {
-                              if (isSelected || joiningTeam) return
-                              setJoiningTeam(true)
-                              try {
-                                await liveSessionApi.joinTeam(sessionId, t.id)
-                                setMyTeamId(t.id)
-                              } catch {}
-                              setJoiningTeam(false)
-                            }}
-                            disabled={joiningTeam}
-                            className={`p-4 rounded-2xl border-2 transition-all text-center ${isSelected ? 'border-white/60 bg-white/15 scale-105' : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/30'}`}
+                            onClick={() => { setShowCreateTeam(false); setNewTeamName('') }}
+                            className="flex-1 px-4 py-2 bg-white/10 text-white/60 rounded-xl text-sm hover:bg-white/20"
                           >
-                            <div className="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-bold text-lg" style={{ backgroundColor: t.color }}>
-                              {t.name.charAt(0)}
-                            </div>
-                            <p className="text-white font-semibold text-sm">{t.name}</p>
-                            <p className="text-white/40 text-xs">{memberCount} miembros</p>
-                            {isSelected && <p className="text-green-400 text-xs font-bold mt-1">✓ Tu equipo</p>}
+                            Cancelar
                           </button>
-                        )
-                      })}
-                    </div>
+                          <button
+                            onClick={handleCreateTeam}
+                            disabled={!newTeamName.trim() || creatingTeam}
+                            className="flex-1 px-4 py-2 bg-purple-500 text-white rounded-xl text-sm font-semibold hover:bg-purple-600 disabled:opacity-50"
+                          >
+                            {creatingTeam ? 'Creando...' : 'Crear equipo'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {myTeamId && !showAddPartner && (
                       <div className="space-y-3">
                         <p className="text-indigo-300 text-sm animate-pulse">Esperando a que el profesor inicie...</p>

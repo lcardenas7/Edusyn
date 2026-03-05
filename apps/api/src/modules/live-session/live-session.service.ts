@@ -628,6 +628,76 @@ export class LiveSessionService {
     return created;
   }
 
+  // Student creates a team (Kahoot-style)
+  async createTeamByStudent(sessionId: string, teamName: string, userId: string) {
+    const session = await this.prisma.liveSession.findUnique({
+      where: { id: sessionId },
+      select: { id: true, mode: true, status: true, classroomId: true, config: true },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+    if (session.mode !== 'TEAM') throw new BadRequestException('La sesión no está en modo equipos');
+    if (session.status === 'FINISHED') throw new BadRequestException('La sesión ya finalizó');
+
+    // Check if teamAssignment allows student creation
+    const config = (session.config as any) || {};
+    if (config.teamAssignment === 'TEACHER_ASSIGNED') {
+      throw new ForbiddenException('El docente asigna los equipos en esta sesión');
+    }
+
+    // Get student enrollment
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: session.classroomId },
+      include: { teacherAssignment: { select: { groupId: true, academicYearId: true } } },
+    });
+    if (!classroom) throw new NotFoundException('Aula no encontrada');
+
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: {
+        student: { userId },
+        groupId: classroom.teacherAssignment.groupId,
+        academicYearId: classroom.teacherAssignment.academicYearId,
+        status: 'ACTIVE',
+      },
+    });
+    if (!enrollment) throw new ForbiddenException('No está matriculado en este grupo');
+
+    // Check if team name already exists
+    const existing = await this.prisma.liveSessionTeam.findFirst({
+      where: { sessionId, name: { equals: teamName.trim(), mode: 'insensitive' } },
+    });
+    if (existing) throw new BadRequestException('Ya existe un equipo con ese nombre');
+
+    // Limit max teams
+    const teamCount = await this.prisma.liveSessionTeam.count({ where: { sessionId } });
+    if (teamCount >= 12) throw new BadRequestException('Máximo 12 equipos permitidos');
+
+    // Remove student from any existing team
+    await this.prisma.liveSessionTeamMember.deleteMany({
+      where: { studentEnrollmentId: enrollment.id, team: { sessionId } },
+    });
+
+    // Create team with random color
+    const TEAM_COLORS = ['#6366f1', '#f43f5e', '#22c55e', '#f97316', '#06b6d4', '#8b5cf6', '#eab308', '#ec4899', '#14b8a6', '#f472b6', '#84cc16', '#a855f7'];
+    const team = await this.prisma.liveSessionTeam.create({
+      data: {
+        sessionId,
+        name: teamName.trim(),
+        color: TEAM_COLORS[teamCount % TEAM_COLORS.length],
+      },
+    });
+
+    // Add creator as first member
+    await this.prisma.liveSessionTeamMember.create({
+      data: { teamId: team.id, studentEnrollmentId: enrollment.id },
+    });
+
+    // Broadcast updated teams
+    const teams = await this.getTeams(sessionId);
+    this.broadcast(sessionId, { type: 'TEAMS_UPDATED' as any, data: teams });
+
+    return team;
+  }
+
   async getTeams(sessionId: string) {
     return this.prisma.liveSessionTeam.findMany({
       where: { sessionId },
