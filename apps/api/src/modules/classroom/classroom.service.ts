@@ -2079,4 +2079,433 @@ export class ClassroomService {
       activitiesCopied: sourceSection.activities.length,
     };
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GRADEBOOK SYNC — Activities → Planilla de Notas
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Resolve grading scale from Institution.academicLevelsConfig JSON.
+   * Matches by grade stage/name against levels' grades[] array.
+   */
+  private async resolveScale(institutionId: string, gradeStage: string, gradeName: string) {
+    const institution = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { academicLevelsConfig: true, gradingConfig: true },
+    });
+    const levels = (institution?.academicLevelsConfig as any[]) || [];
+    // Match by stage name (e.g., PRIMARIA) or by grade name in level.grades[]
+    const level = levels.find((l: any) =>
+      l.code?.toUpperCase() === gradeStage ||
+      l.name?.toUpperCase() === gradeStage ||
+      (l.grades || []).some((g: string) => g === gradeName)
+    );
+    return {
+      min: level?.minGrade ?? 1,
+      max: level?.maxGrade ?? 5,
+      passing: level?.minPassingGrade ?? 3,
+      gradingConfig: institution?.gradingConfig as any,
+    };
+  }
+
+  /**
+   * Get gradebook configuration for a classroom (evaluative processes, active term, scale).
+   * Chain: Classroom → TeacherAssignment → Group → Grade → AcademicLevel → gradingConfig
+   */
+  async getGradebookConfig(classroomId: string, teacherId: string) {
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: classroomId },
+      include: {
+        teacherAssignment: {
+          include: {
+            group: {
+              include: { grade: true },
+            },
+          },
+        },
+      },
+    });
+    if (!classroom || classroom.teacherAssignment.teacherId !== teacherId) {
+      throw new ForbiddenException('No tiene permisos sobre esta aula');
+    }
+
+    const ta = classroom.teacherAssignment;
+    const grade = ta.group.grade;
+
+    // Resolve scale from Institution.academicLevelsConfig JSON
+    const scaleInfo = await this.resolveScale(classroom.institutionId, grade.stage, grade.name);
+
+    // Get active academic term
+    const activeTerm = await this.prisma.academicTerm.findFirst({
+      where: {
+        academicYearId: ta.academicYearId,
+        status: { in: ['OPEN', 'CLOSED'] },
+      },
+      orderBy: { startDate: 'asc' },
+      select: { id: true, name: true, status: true },
+    });
+
+    // Get existing PartialGrades for this assignment+term to know which slots are taken
+    const existingGrades = activeTerm ? await this.prisma.partialGrade.findMany({
+      where: {
+        teacherAssignmentId: ta.id,
+        academicTermId: activeTerm.id,
+      },
+      select: { componentType: true, activityIndex: true, activityName: true },
+      distinct: ['componentType', 'activityIndex'],
+    }) : [];
+
+    // Get activities already linked to gradebook
+    const linkedActivities = await this.prisma.classroomActivity.findMany({
+      where: { classroomId, syncToGradebook: true },
+      select: { id: true, title: true, gradebookComponent: true, gradebookIndex: true },
+    });
+
+    const gradingCfg = scaleInfo.gradingConfig || { evaluationProcesses: [] };
+    const processes = (gradingCfg.evaluationProcesses || []).map((p: any) => ({
+      code: p.code || p.name?.toUpperCase().replace(/\s+/g, '_'),
+      name: p.name,
+      weight: p.weightPercentage,
+      subprocesses: p.subprocesses || [],
+    }));
+
+    return {
+      teacherAssignmentId: ta.id,
+      academicTermId: activeTerm?.id || null,
+      academicTermName: activeTerm?.name || null,
+      academicTermStatus: activeTerm?.status || null,
+      scale: { min: scaleInfo.min, max: scaleInfo.max, passing: scaleInfo.passing },
+      processes,
+      existingSlots: existingGrades,
+      linkedActivities,
+    };
+  }
+
+  /**
+   * Update gradebook link for an activity (configure sync destination).
+   */
+  async updateGradebookLink(activityId: string, teacherId: string, dto: {
+    syncToGradebook: boolean;
+    gradebookComponent?: string;
+    gradebookIndex?: number;
+  }) {
+    await this.validateActivityOwnership(activityId, teacherId);
+
+    return this.prisma.classroomActivity.update({
+      where: { id: activityId },
+      data: {
+        syncToGradebook: dto.syncToGradebook,
+        gradebookComponent: dto.syncToGradebook ? dto.gradebookComponent : null,
+        gradebookIndex: dto.syncToGradebook ? dto.gradebookIndex : null,
+      },
+      select: { id: true, syncToGradebook: true, gradebookComponent: true, gradebookIndex: true },
+    });
+  }
+
+  /**
+   * Preview sync: shows what would happen without writing anything.
+   */
+  async previewGradebookSync(activityId: string, teacherId: string) {
+    const activity = await this.prisma.classroomActivity.findUnique({
+      where: { id: activityId },
+      include: {
+        classroom: {
+          include: {
+            teacherAssignment: {
+              include: {
+                group: { include: { grade: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!activity || activity.classroom.teacherAssignment.teacherId !== teacherId) {
+      throw new ForbiddenException('No tiene permisos');
+    }
+    if (!activity.syncToGradebook || !activity.gradebookComponent || activity.gradebookIndex == null) {
+      throw new BadRequestException('La actividad no está vinculada a la planilla');
+    }
+
+    const ta = activity.classroom.teacherAssignment;
+    const maxScore = activity.maxScore ? Number(activity.maxScore) : 5;
+
+    // Get scale
+    const scaleInfo = await this.resolveScale(activity.classroom.institutionId, ta.group.grade.stage, ta.group.grade.name);
+    const scaleMin = scaleInfo.min;
+    const scaleMax = scaleInfo.max;
+
+    // Get active term
+    const activeTerm = await this.prisma.academicTerm.findFirst({
+      where: { academicYearId: ta.academicYearId, status: { in: ['OPEN', 'CLOSED'] } },
+      orderBy: { startDate: 'asc' },
+      select: { id: true, name: true, status: true },
+    });
+    if (!activeTerm) throw new BadRequestException('No hay período académico activo');
+    if (activeTerm.status === 'FINALIZED') throw new ForbiddenException('El período está finalizado');
+
+    // Get all enrolled students
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: { groupId: ta.groupId, academicYearId: ta.academicYearId, status: 'ACTIVE' },
+      include: { student: { select: { firstName: true, lastName: true } } },
+    });
+
+    // Get best submission per student (MAX score across attempts)
+    const submissions = await this.prisma.activitySubmission.findMany({
+      where: {
+        activityId: activity.id,
+        status: { in: ['GRADED', 'AUTO_GRADED'] },
+      },
+      select: { studentEnrollmentId: true, score: true, gradedAt: true, attemptNumber: true, syncedToGradebook: true },
+    });
+
+    // Build best score per student
+    const bestScores = new Map<string, { score: number; gradedAt: Date | null; attempts: number; synced: boolean }>();
+    for (const sub of submissions) {
+      const score = sub.score ? Number(sub.score) : 0;
+      const existing = bestScores.get(sub.studentEnrollmentId);
+      if (!existing || score > existing.score) {
+        bestScores.set(sub.studentEnrollmentId, {
+          score,
+          gradedAt: sub.gradedAt,
+          attempts: (existing?.attempts || 0) + 1,
+          synced: sub.syncedToGradebook,
+        });
+      } else {
+        existing.attempts++;
+      }
+    }
+
+    // Get existing PartialGrades for this slot
+    const existingGrades = await this.prisma.partialGrade.findMany({
+      where: {
+        teacherAssignmentId: ta.id,
+        academicTermId: activeTerm.id,
+        componentType: activity.gradebookComponent!,
+        activityIndex: activity.gradebookIndex!,
+      },
+      select: { studentEnrollmentId: true, score: true, updatedAt: true },
+    });
+    const existingGradeMap = new Map(existingGrades.map(g => [g.studentEnrollmentId, { score: Number(g.score), updatedAt: g.updatedAt }]));
+
+    // Build preview rows
+    const rows = enrollments.map(enr => {
+      const best = bestScores.get(enr.id);
+      const existing = existingGradeMap.get(enr.id);
+
+      // Normalize score to institutional scale
+      const activityScore = best?.score || 0;
+      const normalizedScore = maxScore > 0
+        ? Math.round(((activityScore / maxScore) * (scaleMax - scaleMin) + scaleMin) * 10) / 10
+        : scaleMin;
+      const clampedScore = Math.min(Math.max(normalizedScore, scaleMin), scaleMax);
+
+      let action: 'create' | 'update' | 'skip' | 'conflict' | 'no_submission' = 'no_submission';
+      if (!best) {
+        action = 'no_submission';
+      } else if (!existing) {
+        action = 'create';
+      } else if (existing.score === clampedScore) {
+        action = 'skip'; // Already in sync
+      } else if (best.gradedAt && existing.updatedAt > best.gradedAt) {
+        action = 'conflict'; // Teacher edited in planilla after grading
+      } else {
+        action = 'update';
+      }
+
+      return {
+        studentEnrollmentId: enr.id,
+        studentName: `${enr.student.firstName} ${enr.student.lastName}`,
+        activityScore: best ? activityScore : null,
+        normalizedScore: best ? clampedScore : null,
+        existingGrade: existing?.score ?? null,
+        action,
+        attempts: best?.attempts || 0,
+      };
+    });
+
+    return {
+      activityId: activity.id,
+      activityTitle: activity.title,
+      destination: {
+        component: activity.gradebookComponent,
+        index: activity.gradebookIndex,
+        termName: activeTerm.name,
+        termId: activeTerm.id,
+      },
+      scale: { min: scaleMin, max: scaleMax },
+      maxScore,
+      rows,
+      summary: {
+        total: rows.length,
+        toCreate: rows.filter(r => r.action === 'create').length,
+        toUpdate: rows.filter(r => r.action === 'update').length,
+        conflicts: rows.filter(r => r.action === 'conflict').length,
+        noSubmission: rows.filter(r => r.action === 'no_submission').length,
+        alreadySynced: rows.filter(r => r.action === 'skip').length,
+      },
+    };
+  }
+
+  /**
+   * Execute sync: write grades to planilla (PartialGrade).
+   * Only writes for specified students (from preview confirmation).
+   */
+  async syncToGradebook(activityId: string, teacherId: string, dto: {
+    studentEnrollmentIds?: string[]; // If empty, sync all eligible
+    includeConflicts?: boolean; // Force overwrite planilla edits
+    includeNoSubmission?: boolean; // Write minGrade for students without submissions
+  }) {
+    const activity = await this.prisma.classroomActivity.findUnique({
+      where: { id: activityId },
+      include: {
+        classroom: {
+          include: {
+            teacherAssignment: {
+              include: {
+                group: { include: { grade: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!activity || activity.classroom.teacherAssignment.teacherId !== teacherId) {
+      throw new ForbiddenException('No tiene permisos');
+    }
+    if (!activity.syncToGradebook || !activity.gradebookComponent || activity.gradebookIndex == null) {
+      throw new BadRequestException('La actividad no está vinculada a la planilla');
+    }
+
+    const ta = activity.classroom.teacherAssignment;
+    const maxScore = activity.maxScore ? Number(activity.maxScore) : 5;
+
+    // Get scale
+    const scaleInfo2 = await this.resolveScale(activity.classroom.institutionId, ta.group.grade.stage, ta.group.grade.name);
+    const scaleMin = scaleInfo2.min;
+    const scaleMax = scaleInfo2.max;
+
+    // Get active term + guard
+    const activeTerm = await this.prisma.academicTerm.findFirst({
+      where: { academicYearId: ta.academicYearId, status: { in: ['OPEN', 'CLOSED'] } },
+      orderBy: { startDate: 'asc' },
+      select: { id: true, status: true },
+    });
+    if (!activeTerm) throw new BadRequestException('No hay período académico activo');
+    if (activeTerm.status === 'FINALIZED') throw new ForbiddenException('El período está finalizado');
+
+    // Get enrollments
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: { groupId: ta.groupId, academicYearId: ta.academicYearId, status: 'ACTIVE' },
+      select: { id: true },
+    });
+    const targetIds = dto.studentEnrollmentIds?.length
+      ? enrollments.filter(e => dto.studentEnrollmentIds!.includes(e.id)).map(e => e.id)
+      : enrollments.map(e => e.id);
+
+    // Get best submission per student
+    const submissions = await this.prisma.activitySubmission.findMany({
+      where: {
+        activityId: activity.id,
+        status: { in: ['GRADED', 'AUTO_GRADED'] },
+        studentEnrollmentId: { in: targetIds },
+      },
+      select: { id: true, studentEnrollmentId: true, score: true, gradedAt: true },
+      orderBy: { score: 'desc' },
+    });
+
+    const bestSubmissions = new Map<string, { id: string; score: number; gradedAt: Date | null }>();
+    for (const sub of submissions) {
+      if (!bestSubmissions.has(sub.studentEnrollmentId)) {
+        bestSubmissions.set(sub.studentEnrollmentId, {
+          id: sub.id,
+          score: sub.score ? Number(sub.score) : 0,
+          gradedAt: sub.gradedAt,
+        });
+      }
+    }
+
+    // Get existing planilla grades for conflict detection
+    const existingGrades = await this.prisma.partialGrade.findMany({
+      where: {
+        teacherAssignmentId: ta.id,
+        academicTermId: activeTerm.id,
+        componentType: activity.gradebookComponent!,
+        activityIndex: activity.gradebookIndex!,
+        studentEnrollmentId: { in: targetIds },
+      },
+      select: { studentEnrollmentId: true, updatedAt: true },
+    });
+    const existingMap = new Map(existingGrades.map(g => [g.studentEnrollmentId, g.updatedAt]));
+
+    let synced = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+
+    for (const enrollmentId of targetIds) {
+      const best = bestSubmissions.get(enrollmentId);
+
+      if (!best && !dto.includeNoSubmission) {
+        skipped++;
+        continue;
+      }
+
+      const activityScore = best?.score || 0;
+      const normalizedScore = maxScore > 0
+        ? Math.round(((activityScore / maxScore) * (scaleMax - scaleMin) + scaleMin) * 10) / 10
+        : scaleMin;
+      const clampedScore = Math.min(Math.max(normalizedScore, scaleMin), scaleMax);
+
+      // Conflict check: if planilla was edited after grading, skip unless forced
+      const existingUpdatedAt = existingMap.get(enrollmentId);
+      if (existingUpdatedAt && best?.gradedAt && existingUpdatedAt > best.gradedAt && !dto.includeConflicts) {
+        skipped++;
+        continue;
+      }
+
+      try {
+        await this.prisma.partialGrade.upsert({
+          where: {
+            studentEnrollmentId_teacherAssignmentId_academicTermId_componentType_activityIndex: {
+              studentEnrollmentId: enrollmentId,
+              teacherAssignmentId: ta.id,
+              academicTermId: activeTerm.id,
+              componentType: activity.gradebookComponent!,
+              activityIndex: activity.gradebookIndex!,
+            },
+          },
+          update: {
+            score: clampedScore,
+            activityName: activity.title,
+            activityType: activity.type,
+          },
+          create: {
+            institutionId: activity.classroom.institutionId,
+            studentEnrollmentId: enrollmentId,
+            teacherAssignmentId: ta.id,
+            academicTermId: activeTerm.id,
+            componentType: activity.gradebookComponent!,
+            activityIndex: activity.gradebookIndex!,
+            activityName: activity.title,
+            activityType: activity.type,
+            score: clampedScore,
+          },
+        });
+
+        // Mark submission as synced
+        if (best) {
+          await this.prisma.activitySubmission.update({
+            where: { id: best.id },
+            data: { syncedToGradebook: true },
+          });
+        }
+
+        synced++;
+      } catch (err: any) {
+        errors.push(`Error for enrollment ${enrollmentId}: ${err.message}`);
+      }
+    }
+
+    return { synced, skipped, errors, total: targetIds.length };
+  }
 }

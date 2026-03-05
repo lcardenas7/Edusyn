@@ -576,4 +576,44 @@ export class ClassroomController {
     const { userId } = await this.resolveCtx(req);
     return this.service.copySectionToClassroom(sectionId, body.targetClassroomId, userId);
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GRADEBOOK SYNC
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get(':classroomId/gradebook-config')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async getGradebookConfig(@Param('classroomId') classroomId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.getGradebookConfig(classroomId, userId);
+  }
+
+  @Put('activities/:activityId/gradebook-link')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async updateGradebookLink(@Param('activityId') activityId: string, @Request() req: any, @Body() body: {
+    syncToGradebook: boolean;
+    gradebookComponent?: string;
+    gradebookIndex?: number;
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.updateGradebookLink(activityId, userId, body);
+  }
+
+  @Get('activities/:activityId/sync-preview')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async previewGradebookSync(@Param('activityId') activityId: string, @Request() req: any) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.previewGradebookSync(activityId, userId);
+  }
+
+  @Post('activities/:activityId/sync-gradebook')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async syncToGradebook(@Param('activityId') activityId: string, @Request() req: any, @Body() body: {
+    studentEnrollmentIds?: string[];
+    includeConflicts?: boolean;
+    includeNoSubmission?: boolean;
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.syncToGradebook(activityId, userId, body);
+  }
 }

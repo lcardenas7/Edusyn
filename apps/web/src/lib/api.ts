@@ -1872,6 +1872,16 @@ export const classroomApi = {
     api.post(`/classrooms/activities/${activityId}/duplicate-to`, { targetSectionId }),
   copySectionToClassroom: (sectionId: string, targetClassroomId: string) =>
     api.post(`/classrooms/sections/${sectionId}/copy-to`, { targetClassroomId }),
+
+  // Gradebook sync
+  getGradebookConfig: (classroomId: string) =>
+    api.get(`/classrooms/${classroomId}/gradebook-config`),
+  updateGradebookLink: (activityId: string, data: { syncToGradebook: boolean; gradebookComponent?: string; gradebookIndex?: number }) =>
+    api.put(`/classrooms/activities/${activityId}/gradebook-link`, data),
+  previewGradebookSync: (activityId: string) =>
+    api.get(`/classrooms/activities/${activityId}/sync-preview`),
+  syncToGradebook: (activityId: string, data: { studentEnrollmentIds?: string[]; includeConflicts?: boolean; includeNoSubmission?: boolean }) =>
+    api.post(`/classrooms/activities/${activityId}/sync-gradebook`, data),
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

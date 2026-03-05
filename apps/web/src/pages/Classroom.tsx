@@ -10,7 +10,7 @@ import {
   Bold, Italic, Underline, List, ListOrdered, Youtube,
   FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
   BarChart3, ChevronDown, ChevronUp, ChevronRight, Clock, CheckCircle2, AlertTriangle,
-  CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check, Zap,
+  CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check, Zap, RefreshCw,
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1782,6 +1782,7 @@ interface Activity {
   title: string; description?: string; maxScore?: number;
   dueDate?: string; openDate?: string; allowLateSubmit: boolean;
   isVisible: boolean; isPublished: boolean; metadata?: any;
+  syncToGradebook?: boolean; gradebookComponent?: string; gradebookIndex?: number;
   createdAt: string; updatedAt: string;
   section?: { id: string; title: string };
   _count?: { submissions: number };
@@ -1874,6 +1875,18 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [liveQuizActivityId, setLiveQuizActivityId] = useState('')
   const [liveQuizActivityTitle, setLiveQuizActivityTitle] = useState('')
   const [activeLiveSession, setActiveLiveSession] = useState<any>(null)
+
+  // Gradebook sync
+  const [gradebookConfig, setGradebookConfig] = useState<any>(null)
+  const [showGradebookLink, setShowGradebookLink] = useState(false)
+  const [gradebookLinkForm, setGradebookLinkForm] = useState({ syncToGradebook: false, gradebookComponent: '', gradebookIndex: 1 })
+  const [savingLink, setSavingLink] = useState(false)
+  const [showSyncPreview, setShowSyncPreview] = useState(false)
+  const [syncPreview, setSyncPreview] = useState<any>(null)
+  const [syncPreviewLoading, setSyncPreviewLoading] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncIncludeConflicts, setSyncIncludeConflicts] = useState(false)
+  const [syncIncludeNoSubmission, setSyncIncludeNoSubmission] = useState(false)
 
   const sections: Section[] = classroom.sections || []
 
@@ -1982,6 +1995,70 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al actualizar actividad')
     } finally { setSavingEdit(false) }
+  }
+
+  // Gradebook sync handlers
+  const loadGradebookConfig = async () => {
+    try {
+      const { data } = await classroomApi.getGradebookConfig(classroom.id)
+      setGradebookConfig(data)
+    } catch {}
+  }
+
+  const openGradebookLink = async (act: Activity) => {
+    await loadGradebookConfig()
+    setGradebookLinkForm({
+      syncToGradebook: act.syncToGradebook || false,
+      gradebookComponent: act.gradebookComponent || '',
+      gradebookIndex: act.gradebookIndex || 1,
+    })
+    setShowGradebookLink(true)
+  }
+
+  const handleSaveGradebookLink = async () => {
+    if (!selectedActivity) return
+    setSavingLink(true)
+    try {
+      await classroomApi.updateGradebookLink(selectedActivity.id, gradebookLinkForm)
+      const { data } = await classroomApi.getActivity(selectedActivity.id)
+      setSelectedActivity(data)
+      setShowGradebookLink(false)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al vincular')
+    } finally { setSavingLink(false) }
+  }
+
+  const openSyncPreview = async () => {
+    if (!selectedActivity) return
+    setSyncPreviewLoading(true)
+    setShowSyncPreview(true)
+    setSyncIncludeConflicts(false)
+    setSyncIncludeNoSubmission(false)
+    try {
+      const { data } = await classroomApi.previewGradebookSync(selectedActivity.id)
+      setSyncPreview(data)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al cargar preview')
+      setShowSyncPreview(false)
+    } finally { setSyncPreviewLoading(false) }
+  }
+
+  const handleSync = async () => {
+    if (!selectedActivity || !syncPreview) return
+    setSyncing(true)
+    try {
+      const { data } = await classroomApi.syncToGradebook(selectedActivity.id, {
+        includeConflicts: syncIncludeConflicts,
+        includeNoSubmission: syncIncludeNoSubmission,
+      })
+      setShowSyncPreview(false)
+      alert(`✅ Sincronización completada:\n• ${data.synced} notas escritas\n• ${data.skipped} omitidas\n${data.errors?.length ? '• ' + data.errors.length + ' errores' : ''}`)
+      // Refresh activity
+      const res = await classroomApi.getActivity(selectedActivity.id)
+      setSelectedActivity(res.data)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al sincronizar')
+    } finally { setSyncing(false) }
   }
 
   const openDuplicateActivityModal = async (activityId: string, activityTitle: string) => {
@@ -2557,6 +2634,29 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   {act.isPublished ? 'Publicada' : 'Borrador'}
                 </span>
               </div>
+
+              {/* Gradebook sync status (teacher only) */}
+              {isTeacher && (
+                <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+                  {act.syncToGradebook ? (
+                    <>
+                      <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200 flex items-center gap-1">
+                        <BarChart3 className="w-3 h-3" /> Vinculada: {act.gradebookComponent} #{act.gradebookIndex}
+                      </span>
+                      <button onClick={openSyncPreview} className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-1">
+                        <RefreshCw className="w-3 h-3" /> Sincronizar con planilla
+                      </button>
+                      <button onClick={() => openGradebookLink(act)} className="text-xs px-2.5 py-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg">
+                        Cambiar destino
+                      </button>
+                    </>
+                  ) : (
+                    <button onClick={() => openGradebookLink(act)} className="text-xs px-3 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg font-medium flex items-center gap-1">
+                      <BarChart3 className="w-3 h-3" /> Vincular a planilla
+                    </button>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
@@ -3685,6 +3785,145 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               </div>
               <div className="px-6 py-3 border-t border-slate-200 flex justify-end shrink-0">
                 <button onClick={() => setContextModalData(null)} className="px-5 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── GRADEBOOK LINK MODAL ── */}
+        {showGradebookLink && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowGradebookLink(false)}>
+            <div className="bg-white rounded-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+              <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+                <h3 className="font-bold text-slate-800">Vincular a planilla de notas</h3>
+                <button onClick={() => setShowGradebookLink(false)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button>
+              </div>
+              <div className="p-5 space-y-4">
+                {!gradebookConfig?.academicTermId && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">No hay período académico activo. Configure los períodos primero.</div>
+                )}
+                {gradebookConfig?.academicTermId && (
+                  <>
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
+                      Período: <strong>{gradebookConfig.academicTermName}</strong> · Escala: {gradebookConfig.scale.min} - {gradebookConfig.scale.max}
+                    </div>
+                    <label className="flex items-center gap-3">
+                      <input type="checkbox" checked={gradebookLinkForm.syncToGradebook} onChange={e => setGradebookLinkForm(f => ({ ...f, syncToGradebook: e.target.checked }))} className="w-4 h-4 rounded text-blue-600" />
+                      <span className="text-sm font-medium text-slate-700">Sincronizar con planilla</span>
+                    </label>
+                    {gradebookLinkForm.syncToGradebook && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Componente destino</label>
+                          <select value={gradebookLinkForm.gradebookComponent} onChange={e => setGradebookLinkForm(f => ({ ...f, gradebookComponent: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                            <option value="">Seleccionar...</option>
+                            {(gradebookConfig.processes || []).map((p: any) => (
+                              <option key={p.code} value={p.code}>{p.name} ({p.weight}%)</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Índice de actividad</label>
+                          <input type="number" min={1} max={20} value={gradebookLinkForm.gradebookIndex} onChange={e => setGradebookLinkForm(f => ({ ...f, gradebookIndex: parseInt(e.target.value) || 1 }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                          <p className="text-xs text-slate-400 mt-1">Columna en la planilla (1, 2, 3...)</p>
+                          {gradebookConfig.existingSlots?.filter((s: any) => s.componentType === gradebookLinkForm.gradebookComponent && s.activityIndex === gradebookLinkForm.gradebookIndex).length > 0 && (
+                            <p className="text-xs text-amber-600 mt-1">⚠️ Este slot ya tiene notas: "{gradebookConfig.existingSlots.find((s: any) => s.componentType === gradebookLinkForm.gradebookComponent && s.activityIndex === gradebookLinkForm.gradebookIndex)?.activityName}"</p>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+              <div className="p-5 border-t border-slate-200 flex justify-end gap-3">
+                <button onClick={() => setShowGradebookLink(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+                <button onClick={handleSaveGradebookLink} disabled={savingLink || (gradebookLinkForm.syncToGradebook && !gradebookLinkForm.gradebookComponent)} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+                  {savingLink && <Loader2 className="w-4 h-4 animate-spin" />} Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── SYNC PREVIEW MODAL ── */}
+        {showSyncPreview && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowSyncPreview(false)}>
+            <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="p-5 border-b border-slate-200 flex items-center justify-between shrink-0">
+                <h3 className="font-bold text-slate-800">Preview de sincronización</h3>
+                <button onClick={() => setShowSyncPreview(false)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button>
+              </div>
+              <div className="p-5 overflow-y-auto flex-1">
+                {syncPreviewLoading ? (
+                  <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+                ) : syncPreview ? (
+                  <div className="space-y-4">
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
+                      <strong>{syncPreview.activityTitle}</strong> → {syncPreview.destination.component} #{syncPreview.destination.index} · {syncPreview.destination.termName}
+                    </div>
+
+                    {/* Summary */}
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                      <div className="p-2 bg-green-50 rounded-lg text-center"><p className="text-lg font-bold text-green-700">{syncPreview.summary.toCreate}</p><p className="text-[10px] text-green-600">Nuevas</p></div>
+                      <div className="p-2 bg-blue-50 rounded-lg text-center"><p className="text-lg font-bold text-blue-700">{syncPreview.summary.toUpdate}</p><p className="text-[10px] text-blue-600">Actualizar</p></div>
+                      <div className="p-2 bg-amber-50 rounded-lg text-center"><p className="text-lg font-bold text-amber-700">{syncPreview.summary.conflicts}</p><p className="text-[10px] text-amber-600">Conflictos</p></div>
+                      <div className="p-2 bg-slate-50 rounded-lg text-center"><p className="text-lg font-bold text-slate-600">{syncPreview.summary.alreadySynced}</p><p className="text-[10px] text-slate-500">Sin cambio</p></div>
+                      <div className="p-2 bg-red-50 rounded-lg text-center"><p className="text-lg font-bold text-red-600">{syncPreview.summary.noSubmission}</p><p className="text-[10px] text-red-500">Sin entrega</p></div>
+                    </div>
+
+                    {/* Table */}
+                    <div className="border border-slate-200 rounded-xl overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th className="text-left px-3 py-2 text-xs font-medium text-slate-500">Estudiante</th>
+                            <th className="text-center px-2 py-2 text-xs font-medium text-slate-500">Nota aula</th>
+                            <th className="text-center px-2 py-2 text-xs font-medium text-slate-500">Normalizada</th>
+                            <th className="text-center px-2 py-2 text-xs font-medium text-slate-500">En planilla</th>
+                            <th className="text-center px-2 py-2 text-xs font-medium text-slate-500">Acción</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {syncPreview.rows.map((row: any) => (
+                            <tr key={row.studentEnrollmentId} className="hover:bg-slate-50">
+                              <td className="px-3 py-2 text-slate-700">{row.studentName}</td>
+                              <td className="text-center px-2 py-2">{row.activityScore != null ? row.activityScore : '—'}</td>
+                              <td className="text-center px-2 py-2 font-medium">{row.normalizedScore != null ? row.normalizedScore : '—'}</td>
+                              <td className="text-center px-2 py-2">{row.existingGrade != null ? row.existingGrade : '—'}</td>
+                              <td className="text-center px-2 py-2">
+                                {row.action === 'create' && <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Crear</span>}
+                                {row.action === 'update' && <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">Actualizar</span>}
+                                {row.action === 'skip' && <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">Sin cambio</span>}
+                                {row.action === 'conflict' && <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">⚠️ Conflicto</span>}
+                                {row.action === 'no_submission' && <span className="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded-full">Sin entrega</span>}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Options */}
+                    {syncPreview.summary.conflicts > 0 && (
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={syncIncludeConflicts} onChange={e => setSyncIncludeConflicts(e.target.checked)} className="w-4 h-4 rounded text-amber-600" />
+                        <span className="text-slate-600">Sobrescribir notas editadas en planilla ({syncPreview.summary.conflicts} conflictos)</span>
+                      </label>
+                    )}
+                    {syncPreview.summary.noSubmission > 0 && (
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={syncIncludeNoSubmission} onChange={e => setSyncIncludeNoSubmission(e.target.checked)} className="w-4 h-4 rounded text-red-600" />
+                        <span className="text-slate-600">Incluir nota mínima para estudiantes sin entrega ({syncPreview.summary.noSubmission})</span>
+                      </label>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+              <div className="p-5 border-t border-slate-200 flex justify-end gap-3 shrink-0">
+                <button onClick={() => setShowSyncPreview(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+                <button onClick={handleSync} disabled={syncing || !syncPreview || (syncPreview?.summary.toCreate === 0 && syncPreview?.summary.toUpdate === 0 && !syncIncludeConflicts && !syncIncludeNoSubmission)} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+                  {syncing && <Loader2 className="w-4 h-4 animate-spin" />} Confirmar sincronización
+                </button>
               </div>
             </div>
           </div>
