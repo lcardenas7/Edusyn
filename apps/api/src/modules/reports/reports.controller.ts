@@ -194,6 +194,20 @@ export class ReportsController {
     return this.reportsService.getStudentRanking(institutionId, academicYearId, groupId, termId);
   }
 
+  @Get('academic/institutional-ranking')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getInstitutionalRanking(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('termId') termId?: string,
+    @Query('groupId') groupId?: string,
+    @Query('gradeId') gradeId?: string,
+    @Query('stage') stage?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getInstitutionalRanking(institutionId, academicYearId, termId, { groupId, gradeId, stage });
+  }
+
   @Get('academic/grade-distribution')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getGradeDistribution(

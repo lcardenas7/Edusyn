@@ -381,6 +381,8 @@ export const reportsApi = {
     api.get('/reports/academic/area-consolidated', { params: { academicYearId, groupId, termId } }),
   getStudentRanking: (academicYearId: string, groupId: string, termId?: string) =>
     api.get('/reports/academic/student-ranking', { params: { academicYearId, groupId, termId } }),
+  getInstitutionalRanking: (academicYearId: string, params?: { termId?: string; groupId?: string; gradeId?: string; stage?: string }) =>
+    api.get('/reports/academic/institutional-ranking', { params: { academicYearId, ...params } }),
   getGradeDistribution: (academicYearId: string, groupId: string, params?: { subjectId?: string; termId?: string }) =>
     api.get('/reports/academic/grade-distribution', { params: { academicYearId, groupId, ...params } }),
   getFailedSubjects: (academicYearId: string, groupId: string, termId?: string) =>

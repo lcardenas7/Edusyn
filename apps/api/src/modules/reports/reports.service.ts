@@ -1157,6 +1157,118 @@ export class ReportsService {
   }
 
   /**
+   * Reporte 3B: Ranking institucional de estudiantes
+   * Soporta filtros flexibles: toda la institución, por grado, por nivel educativo, o por grupo
+   */
+  async getInstitutionalRanking(
+    institutionId: string,
+    academicYearId: string,
+    termId?: string,
+    filters?: { groupId?: string; gradeId?: string; stage?: string },
+  ) {
+    const rulesCtx = await this.institutionContext.getContext(institutionId);
+
+    // Construir where clause para matrículas
+    const enrollmentWhere: any = {
+      institutionId,
+      academicYearId,
+      status: EnrollmentStatus.ACTIVE,
+    };
+
+    if (filters?.groupId) {
+      enrollmentWhere.groupId = filters.groupId;
+    } else if (filters?.gradeId) {
+      enrollmentWhere.group = { gradeId: filters.gradeId };
+    } else if (filters?.stage) {
+      enrollmentWhere.group = { grade: { stage: filters.stage } };
+    }
+
+    // Obtener todas las matrículas que cumplen el filtro
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: enrollmentWhere,
+      include: {
+        student: { select: { firstName: true, lastName: true } },
+        group: { select: { name: true, grade: { select: { name: true, stage: true } } } },
+      },
+    });
+
+    if (enrollments.length === 0) {
+      return { meta: { totalStudents: 0, scope: this.getRankingScope(filters) }, results: [] };
+    }
+
+    const enrollmentIds = enrollments.map(e => e.id);
+
+    // Obtener notas finales de período para estas matrículas
+    const termWhere: any = { studentEnrollmentId: { in: enrollmentIds } };
+    if (termId) {
+      termWhere.academicTermId = termId;
+    }
+
+    const periodGrades = await this.prisma.periodFinalGrade.findMany({
+      where: termWhere,
+      select: {
+        studentEnrollmentId: true,
+        finalScore: true,
+      },
+    });
+
+    // Agrupar por estudiante
+    const studentMap = new Map<string, { name: string; group: string; grade: string; stage: string; scores: number[] }>();
+    
+    for (const enrollment of enrollments) {
+      const key = enrollment.id;
+      studentMap.set(key, {
+        name: `${enrollment.student.lastName} ${enrollment.student.firstName}`,
+        group: `${enrollment.group.grade.name} ${enrollment.group.name}`,
+        grade: enrollment.group.grade.name,
+        stage: enrollment.group.grade.stage,
+        scores: [],
+      });
+    }
+
+    for (const pg of periodGrades) {
+      const student = studentMap.get(pg.studentEnrollmentId);
+      if (student && pg.finalScore !== null) {
+        student.scores.push(Number(pg.finalScore));
+      }
+    }
+
+    // Calcular promedios y ordenar
+    const results = Array.from(studentMap.entries())
+      .filter(([_, data]) => data.scores.length > 0)
+      .map(([_, data]) => {
+        const avg = data.scores.reduce((a, b) => a + b, 0) / data.scores.length;
+        return {
+          studentName: data.name,
+          group: data.group,
+          grade: data.grade,
+          stage: data.stage,
+          average: Math.round(avg * 100) / 100,
+          subjectCount: data.scores.length,
+          performance: getPerformanceLevel(avg, rulesCtx).label,
+        };
+      })
+      .sort((a, b) => b.average - a.average)
+      .map((r, idx) => ({ position: idx + 1, ...r }));
+
+    return {
+      meta: {
+        totalStudents: results.length,
+        scope: this.getRankingScope(filters),
+        termId,
+      },
+      results,
+    };
+  }
+
+  private getRankingScope(filters?: { groupId?: string; gradeId?: string; stage?: string }): string {
+    if (filters?.groupId) return 'group';
+    if (filters?.gradeId) return 'grade';
+    if (filters?.stage) return 'stage';
+    return 'institution';
+  }
+
+  /**
    * Reporte 4: Distribución de notas
    * ¿Cómo se distribuyen las notas?
    */

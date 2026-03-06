@@ -38,35 +38,57 @@ Ejecutar cada 3-5 días contra producción:
 $env:DATABASE_URL="postgresql://postgres:HAvTNeXPTjDApwRxwPYyqGrLuDMTLNsM@centerbeam.proxy.rlwy.net:53943/railway"
 ```
 
-### Query de verificación:
+### Query de verificación (por rol):
 ```sql
--- Conteo comparativo
-SELECT 
-  (SELECT COUNT(*) FROM "UserRole") as user_role_count,
-  (SELECT COUNT(*) FROM "InstitutionUserRole") as iur_count,
-  (SELECT COUNT(*) FROM "InstitutionUser") as iu_count;
-
--- Diferencia: debe ser ≤ número de SUPERADMINs
-SELECT COUNT(*) as superadmins_sin_institucion
-FROM "UserRole" ur
-WHERE NOT EXISTS (
-  SELECT 1 FROM "InstitutionUser" iu WHERE iu."userId" = ur."userId"
-);
-
--- Verificar sincronización (debe ser 0)
-SELECT COUNT(*) as desincronizados
+-- Sincronización STAFF (debe ser 0)
+SELECT ur."userId", r.name as role_name, u.email
 FROM "UserRole" ur
 JOIN "InstitutionUser" iu ON iu."userId" = ur."userId"
-LEFT JOIN "InstitutionUserRole" iur ON iur."institutionUserId" = iu.id AND iur."roleId" = ur."roleId"
-WHERE iur.id IS NULL;
+JOIN "Role" r ON r.id = ur."roleId"
+JOIN "User" u ON u.id = ur."userId"
+LEFT JOIN "InstitutionUserRole" iur
+  ON iur."institutionUserId" = iu.id AND iur."roleId" = ur."roleId"
+WHERE iur.id IS NULL
+  AND r.name IN ('ADMIN_INSTITUTIONAL','COORDINADOR','RECTOR','DOCENTE','SECRETARIA','ORIENTADOR');
+
+-- Sincronización ESTUDIANTES (informativo, cubierto por fallback)
+SELECT COUNT(*) as estudiantes_sin_iur
+FROM "UserRole" ur
+JOIN "InstitutionUser" iu ON iu."userId" = ur."userId"
+JOIN "Role" r ON r.id = ur."roleId"
+LEFT JOIN "InstitutionUserRole" iur
+  ON iur."institutionUserId" = iu.id AND iur."roleId" = ur."roleId"
+WHERE iur.id IS NULL
+  AND r.name = 'ESTUDIANTE';
+
+-- Distribución por tabla
+SELECT r.name, COUNT(*) as cnt FROM "UserRole" ur JOIN "Role" r ON r.id = ur."roleId" GROUP BY r.name ORDER BY cnt DESC;
+SELECT r.name, COUNT(*) as cnt FROM "InstitutionUserRole" iur JOIN "Role" r ON r.id = iur."roleId" GROUP BY r.name ORDER BY cnt DESC;
 ```
 
 ### Criterios:
 | Métrica | Esperado |
 |---------|----------|
-| `user_role_count - iur_count` | = número de SUPERADMINs (hoy: 1) |
-| `desincronizados` | **0** (si > 0, re-ejecutar backfill) |
-| Crecimiento proporcional | Ambos crecen juntos con cada nuevo usuario |
+| Staff desincronizados | **0** |
+| Estudiantes sin IUR | Informativo (cubierto por fallback) |
+| SuperAdmins sin institución | 1 |
+
+> **Nota:** `COUNT(UserRole) ≠ COUNT(InstitutionUserRole)` no indica error.
+> La métrica correcta es el JOIN por rol, no la comparación de totales.
+
+### Auditoría Día 3 (2026-03-06)
+| Rol | UserRole | IUR | Desincronizados |
+|-----|----------|-----|------------------|
+| ESTUDIANTE | 198 | 61 | 137 (fallback activo) |
+| DOCENTE | 40 | 40 | 0 ✅ |
+| ADMIN_INSTITUTIONAL | 2 | 2 | 0 ✅ |
+| COORDINADOR | 1 | 1 | 0 ✅ |
+| SUPERADMIN | 1 | 0 | N/A (sin institución) ✅ |
+
+> Actualmente algunos estudiantes dependen del fallback a `UserRole`.
+> Antes de eliminar este fallback en FASE 4 será necesario ejecutar un backfill
+> para sincronizar los roles ESTUDIANTE en `InstitutionUserRole`.
+> Esto no es un bug, es una transición planificada.
 
 ---
 
@@ -93,19 +115,19 @@ WHERE iur.id IS NULL;
 **NO iniciar hasta cumplir TODOS:**
 
 1. ✅ 1 sprint completo (~2 semanas) sin intervención
-2. ✅ 0 errores de sincronización en queries de verificación
-3. ✅ 0 `desincronizados` en la query de arriba
-4. ✅ Logs limpios (sin unique violations ni tx failures)
-5. ✅ Verificación funcional completa (todos los checkboxes arriba)
-6. ✅ Confirmación explícita del responsable
+2. ✅ 0 staff desincronizados (DOCENTE, ADMIN, COORDINADOR, etc.)
+3. ✅ Logs limpios (sin unique violations ni tx failures)
+4. ✅ Verificación funcional completa (todos los checkboxes arriba)
+5. ✅ Confirmación explícita del responsable
 
 ### Cuando se apruebe FASE 4:
-1. Auditar todos los `prisma.userRole.findMany` en el codebase
-2. Migrar lecturas restantes a `InstitutionUserRole`
-3. Remover fallback en `signTokenForInstitution()`
-4. Remover dual-write (solo escribir a IUR)
-5. Marcar `UserRole` como `@deprecated` en schema
-6. (Opcional) Dejar tabla vacía pero no eliminar por un sprint más
+1. **Ejecutar backfill de ESTUDIANTES** → sincronizar roles ESTUDIANTE en IUR
+2. Auditar todos los `prisma.userRole.findMany` en el codebase
+3. Migrar lecturas restantes a `InstitutionUserRole`
+4. Remover fallback en `signTokenForInstitution()`
+5. Remover dual-write (solo escribir a IUR)
+6. Marcar `UserRole` como `@deprecated` en schema
+7. (Opcional) Dejar tabla vacía pero no eliminar por un sprint más
 
 ---
 

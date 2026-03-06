@@ -30,6 +30,7 @@ const reportBlocks: ReportBlock[] = [
       { id: 'avg-subject', name: 'Promedio por asignatura', description: '¿Qué asignatura tiene mejor o peor rendimiento?', icon: BookOpen },
       { id: 'avg-area', name: 'Promedio por áreas', description: '¿Qué área tiene mejor o peor rendimiento?', icon: FileSpreadsheet },
       { id: 'ranking-students', name: 'Ranking de estudiantes', description: '¿Quiénes son los mejores y peores del grupo?', icon: TrendingUp },
+      { id: 'ranking-institutional', name: 'Ranking institucional', description: 'Ranking de toda la institución, por grado o nivel educativo', icon: Users },
       { id: 'grade-distribution', name: 'Distribución de notas', description: '¿Cómo se distribuyen las calificaciones?', icon: BarChart3 },
     ],
   },
@@ -110,6 +111,7 @@ export default function AcademicReports() {
   const [showReport, setShowReport] = useState(false)
   const [loadingReport, setLoadingReport] = useState(false)
   const [filterLevel, setFilterLevel] = useState('all')
+  const [filterGradeId, setFilterGradeId] = useState('all')
   const [showOnlyFailed, setShowOnlyFailed] = useState(false)
   const [showGrades, setShowGrades] = useState(true)
   const [showPerformance, setShowPerformance] = useState(false)
@@ -260,6 +262,16 @@ export default function AcademicReports() {
         case 'ranking-students': {
           if (filterGrade === 'all') break
           const res = await reportsApi.getStudentRanking(filterYear, filterGrade, filterPeriod || undefined)
+          setReportData(res.data)
+          break
+        }
+        case 'ranking-institutional': {
+          const params: any = {}
+          if (filterPeriod) params.termId = filterPeriod
+          if (filterGrade !== 'all') params.groupId = filterGrade
+          else if (filterGradeId !== 'all') params.gradeId = filterGradeId
+          else if (filterLevel !== 'all') params.stage = filterLevel
+          const res = await reportsApi.getInstitutionalRanking(filterYear, params)
           setReportData(res.data)
           break
         }
@@ -548,6 +560,17 @@ export default function AcademicReports() {
       </select>
     </div>
   )
+  // Unique grades from groups
+  const uniqueGrades = Array.from(new Map(groups.map((g: any) => [g.grade?.id, { id: g.grade?.id, name: g.grade?.name }])).values()).filter(g => g.id)
+  const SelectGrade = () => (
+    <div>
+      <label className="block text-xs font-medium text-slate-600 mb-1">Grado</label>
+      <select value={filterGradeId} onChange={(e) => setFilterGradeId(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
+        <option value="all">Todos</option>
+        {uniqueGrades.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
+      </select>
+    </div>
+  )
   const BtnSearch = ({ label = 'Buscar' }: { label?: string }) => (
     <div className="flex items-end">
       <button onClick={() => loadReportData(selectedReport!)} className={`px-4 py-1.5 ${style.btnBg} text-white rounded text-sm ${style.btnHover} w-full`}>{label}</button>
@@ -592,6 +615,12 @@ export default function AcademicReports() {
 
       case 'ranking-students':
         return wrap(<><SelectYear /><SelectGroup required /><SelectTerm /><BtnSearch /></>, 4)
+
+      case 'ranking-institutional':
+        return wrap(<><SelectYear /><SelectGroup /><SelectGrade /><SelectStage /><SelectTerm /><BtnSearch /></>, 6,
+          <div className={`${style.bg} rounded-lg p-3 text-sm ${style.text}`}>
+            <strong>💡</strong> Deja todos los filtros vacíos para ver el ranking de toda la institución. Puedes filtrar por grupo, grado o nivel educativo.
+          </div>)
 
       case 'grade-distribution':
         return wrap(<><SelectYear /><SelectGroup required /><SelectSubject /><SelectTerm /><BtnSearch /></>, 5)
@@ -747,7 +776,14 @@ export default function AcademicReports() {
       const bestSubj = avgResults.reduce((best: any, r: any) => (!best || (r.average || 0) > (best.average || 0)) ? r : best, null)
       const worstSubj = avgResults.reduce((worst: any, r: any) => (!worst || (r.average || 0) < (worst.average || 0)) ? r : worst, null)
       const avgApproval = totalSubj > 0 ? (avgResults.reduce((s: number, r: any) => s + (r.approvalRate || 0), 0) / totalSubj) : 0
-      const chartData = avgResults.map((r: any) => ({ name: r.subjectName?.length > 12 ? r.subjectName.substring(0, 12) + '…' : r.subjectName, Promedio: r.average, 'Aprobación %': r.approvalRate }))
+      // Color según nivel de desempeño: Superior (verde), Alto (azul), Básico (amarillo), Bajo (rojo)
+      const getBarColor = (avg: number) => {
+        if (avg >= 4.6) return '#22c55e' // Superior - verde
+        if (avg >= 4.0) return '#3b82f6' // Alto - azul
+        if (avg >= minPassingGrade) return '#f59e0b' // Básico - amarillo/naranja
+        return '#ef4444' // Bajo - rojo
+      }
+      const chartData = avgResults.map((r: any) => ({ name: r.subjectName?.length > 12 ? r.subjectName.substring(0, 12) + '…' : r.subjectName, Promedio: r.average, 'Aprobación %': r.approvalRate, fill: getBarColor(r.average || 0) }))
       return (
         <div className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -765,7 +801,11 @@ export default function AcademicReports() {
                   <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-35} textAnchor="end" interval={0} />
                   <YAxis domain={[0, scaleMax]} tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Bar dataKey="Promedio" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Promedio" radius={[4, 4, 0, 0]}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Bar>
                   {/* Reference line for passing grade */}
                   <CartesianGrid horizontal={false} vertical={false} />
                 </BarChart>
@@ -806,7 +846,14 @@ export default function AcademicReports() {
       const generalAvg = totalAreas > 0 ? (areaResults.reduce((s: number, r: any) => s + (r.average || 0), 0) / totalAreas) : 0
       const bestArea = areaResults.reduce((best: any, r: any) => (!best || (r.average || 0) > (best.average || 0)) ? r : best, null)
       const worstArea = areaResults.reduce((worst: any, r: any) => (!worst || (r.average || 0) < (worst.average || 0)) ? r : worst, null)
-      const chartData = areaResults.map((r: any) => ({ name: r.areaName?.length > 15 ? r.areaName.substring(0, 15) + '…' : r.areaName, Promedio: r.average, 'Aprobación %': r.approvalRate }))
+      // Color según nivel de desempeño
+      const getBarColor = (avg: number) => {
+        if (avg >= 4.6) return '#22c55e' // Superior - verde
+        if (avg >= 4.0) return '#3b82f6' // Alto - azul
+        if (avg >= minPassingGrade) return '#f59e0b' // Básico - amarillo
+        return '#ef4444' // Bajo - rojo
+      }
+      const chartData = areaResults.map((r: any) => ({ name: r.areaName?.length > 15 ? r.areaName.substring(0, 15) + '…' : r.areaName, Promedio: r.average, 'Aprobación %': r.approvalRate, fill: getBarColor(r.average || 0) }))
       return (
         <div className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -824,7 +871,11 @@ export default function AcademicReports() {
                   <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-25} textAnchor="end" interval={0} />
                   <YAxis domain={[0, scaleMax]} tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Bar dataKey="Promedio" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Promedio" radius={[4, 4, 0, 0]}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-area-${index}`} fill={entry.fill} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -960,6 +1011,74 @@ export default function AcademicReports() {
             <tbody>
               {rkData.map((r: any, i: number) => (
                 <tr key={i} className={`border-b hover:bg-slate-50 ${i < 3 ? 'bg-green-50' : ''}`}>
+                  <td className="px-3 py-2 text-center font-bold">{r.position}</td>
+                  <td className="px-3 py-2 font-medium">{r.studentName}</td>
+                  <td className="px-3 py-2">{r.group}</td>
+                  <td className="px-3 py-2 text-center font-medium">{r.average?.toFixed(2)}</td>
+                  <td className="px-3 py-2 text-center">{r.subjectCount}</td>
+                  <td className="px-3 py-2 text-center">{perfBadge(r.performance)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          </div>
+        </div>
+      )
+    }
+
+    // ── Ranking institucional ──
+    if (selectedReport === 'ranking-institutional' && reportData?.results) {
+      const rkData = reportData.results as any[]
+      const rkTotal = rkData.length
+      const rkAvg = rkTotal > 0 ? (rkData.reduce((s: number, r: any) => s + (r.average || 0), 0) / rkTotal) : 0
+      const rkTop = rkData[0]
+      const rkAbovePass = rkData.filter((r: any) => (r.average || 0) >= minPassingGrade).length
+      const scopeLabel = reportData.meta?.scope === 'institution' ? 'Toda la institución' : reportData.meta?.scope === 'grade' ? 'Por grado' : reportData.meta?.scope === 'stage' ? 'Por nivel' : 'Por grupo'
+      // Color bars by performance
+      const getBarColor = (avg: number) => {
+        if (avg >= 4.6) return '#22c55e'
+        if (avg >= 4.0) return '#3b82f6'
+        if (avg >= minPassingGrade) return '#f59e0b'
+        return '#ef4444'
+      }
+      const top20 = rkData.slice(0, 20).map(r => ({ name: r.studentName?.split(' ').slice(0, 2).join(' '), Promedio: r.average, fill: getBarColor(r.average) }))
+      return (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center"><p className="text-xs text-slate-500 uppercase font-medium">Alcance</p><p className="text-sm font-bold text-slate-700">{scopeLabel}</p></div>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"><p className="text-xs text-blue-500 uppercase font-medium">Total Estudiantes</p><p className="text-2xl font-bold text-blue-700">{rkTotal}</p></div>
+            <div className={`${rkAvg >= minPassingGrade ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-xl p-3 text-center`}><p className="text-xs text-slate-500 uppercase font-medium">Promedio General</p><p className={`text-2xl font-bold ${rkAvg >= minPassingGrade ? 'text-green-700' : 'text-red-700'}`}>{rkAvg.toFixed(2)}</p></div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center"><p className="text-xs text-amber-500 uppercase font-medium">Mejor Estudiante</p><p className="text-sm font-bold text-amber-700 truncate">{rkTop?.studentName || '-'}</p><p className="text-xs text-amber-600">{rkTop?.average?.toFixed(2)}</p></div>
+            <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center"><p className="text-xs text-green-500 uppercase font-medium">Aprobados</p><p className="text-2xl font-bold text-green-700">{rkAbovePass}</p><p className="text-xs text-slate-400">{((rkAbovePass / rkTotal) * 100).toFixed(0)}%</p></div>
+          </div>
+          {top20.length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4">
+              <h4 className="text-sm font-medium text-slate-700 mb-3">Top 20 Estudiantes</h4>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={top20} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 9 }} angle={-35} textAnchor="end" interval={0} />
+                  <YAxis domain={[0, scaleMax]} tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="Promedio" radius={[4, 4, 0, 0]}>
+                    {top20.map((entry, index) => (
+                      <Cell key={`cell-inst-${index}`} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-100"><tr>
+              <th className="px-3 py-2 text-center">Pos.</th><th className="px-3 py-2 text-left">Estudiante</th>
+              <th className="px-3 py-2 text-left">Grupo</th><th className="px-3 py-2 text-center">Promedio</th>
+              <th className="px-3 py-2 text-center">Asignaturas</th><th className="px-3 py-2 text-center">Desempeño</th>
+            </tr></thead>
+            <tbody>
+              {rkData.map((r: any, i: number) => (
+                <tr key={i} className={`border-b hover:bg-slate-50 ${i < 3 ? 'bg-green-50' : i >= rkTotal - 3 ? 'bg-red-50' : ''}`}>
                   <td className="px-3 py-2 text-center font-bold">{r.position}</td>
                   <td className="px-3 py-2 font-medium">{r.studentName}</td>
                   <td className="px-3 py-2">{r.group}</td>
