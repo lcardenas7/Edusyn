@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { classroomApi, storageApi, liveSessionApi } from '../lib/api'
 import LiveQuiz from '../components/LiveQuiz'
+const RichTextEditor = lazy(() => import('../components/RichTextEditor'))
+import { RichContent, isRichTextEmpty } from '../components/RichTextEditor'
 import {
   Plus, Loader2, AlertCircle, ChevronLeft, Users, Megaphone,
   FolderOpen, FileText, Video, Link2, ImageIcon, Type, Eye, EyeOff,
@@ -800,7 +802,7 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
   }
 
   const handleSubmit = async () => {
-    if (!form.title.trim() || !form.content.trim()) return
+    if (!form.title.trim() || isRichTextEmpty(form.content)) return
     try {
       setUploading(true)
       let attachmentUrl: string | undefined
@@ -881,13 +883,9 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
             className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             autoFocus
           />
-          <textarea
-            value={form.content}
-            onChange={e => setForm({ ...form, content: e.target.value })}
-            placeholder="Escribe tu anuncio aquí..."
-            rows={4}
-            className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-          />
+          <Suspense fallback={<div className="h-32 bg-slate-50 rounded-xl animate-pulse" />}>
+            <RichTextEditor value={form.content} onChange={v => setForm({ ...form, content: v })} placeholder="Escribe tu anuncio aquí..." />
+          </Suspense>
           <input ref={fileRef} type="file" className="hidden" onChange={e => setAttachmentFile(e.target.files?.[0] || null)} />
           {attachmentFile && (
             <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
@@ -902,7 +900,7 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
             </button>
             <div className="flex gap-3">
               <button onClick={() => { setShowForm(false); setAttachmentFile(null) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
-              <button onClick={handleSubmit} disabled={!form.title.trim() || !form.content.trim() || uploading} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+              <button onClick={handleSubmit} disabled={!form.title.trim() || isRichTextEmpty(form.content) || uploading} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
                 {uploading && <Loader2 className="w-4 h-4 animate-spin" />}
                 {uploading ? 'Publicando...' : 'Publicar'}
               </button>
@@ -927,7 +925,7 @@ function AnnouncementsTab({ classroom, isTeacher, onReload, setError }: {
                     {a.isPinned && <Pin className="w-5 h-5 text-yellow-500 shrink-0" />}
                     <h3 className="text-lg font-bold text-slate-800">{a.title}</h3>
                   </div>
-                  <p className="text-base text-slate-600 mt-3 whitespace-pre-wrap leading-relaxed">{a.content}</p>
+                  <RichContent html={a.content} className="mt-3 text-base text-slate-600" />
                   {a.attachmentUrl && (
                     isImageFile(a.attachmentName, a.attachmentUrl) ? (
                       <div className="mt-4">
@@ -1349,28 +1347,13 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
                 />
               </div>
 
-              {/* TEXT type - with formatting toolbar */}
+              {/* TEXT type - rich text editor */}
               {materialModal.type === 'TEXT' && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Contenido</label>
-                  <div className="border border-slate-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
-                    <div className="flex items-center gap-0.5 px-2 py-1.5 bg-slate-50 border-b border-slate-200">
-                      <button onClick={() => insertFormatting('bold')} className="p-1.5 rounded hover:bg-slate-200" title="Negrita"><Bold className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => insertFormatting('italic')} className="p-1.5 rounded hover:bg-slate-200" title="Cursiva"><Italic className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => insertFormatting('underline')} className="p-1.5 rounded hover:bg-slate-200" title="Subrayado"><Underline className="w-3.5 h-3.5" /></button>
-                      <div className="w-px h-4 bg-slate-300 mx-1" />
-                      <button onClick={() => insertFormatting('ul')} className="p-1.5 rounded hover:bg-slate-200" title="Lista"><List className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => insertFormatting('ol')} className="p-1.5 rounded hover:bg-slate-200" title="Lista numerada"><ListOrdered className="w-3.5 h-3.5" /></button>
-                    </div>
-                    <textarea
-                      id="material-text-editor"
-                      value={materialContent}
-                      onChange={e => setMaterialContent(e.target.value)}
-                      placeholder="Escribe el contenido aquí... Puedes usar **negrita**, *cursiva*, y listas."
-                      rows={6}
-                      className="w-full px-3 py-2 text-sm resize-none outline-none"
-                    />
-                  </div>
+                  <Suspense fallback={<div className="h-40 bg-slate-50 rounded-xl animate-pulse" />}>
+                    <RichTextEditor value={materialContent} onChange={setMaterialContent} placeholder="Escribe el contenido aquí..." />
+                  </Suspense>
                 </div>
               )}
 
@@ -1670,7 +1653,7 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
         {/* Content area */}
         {material.type === 'TEXT' && material.content && (
           <div className="mt-3 px-1">
-            <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{material.content}</p>
+            <RichContent html={material.content} className="text-sm text-slate-600" />
           </div>
         )}
 
@@ -1781,7 +1764,7 @@ interface Activity {
   id: string; sectionId: string; classroomId: string; type: string;
   title: string; description?: string; maxScore?: number;
   dueDate?: string; openDate?: string; allowLateSubmit: boolean;
-  isVisible: boolean; isPublished: boolean; metadata?: any;
+  isVisible: boolean; isPublished: boolean; scheduledPublishAt?: string | null; metadata?: any;
   syncToGradebook?: boolean; gradebookComponent?: string; gradebookIndex?: number;
   createdAt: string; updatedAt: string;
   section?: { id: string; title: string };
@@ -1864,9 +1847,14 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [quizBlankAnswers, setQuizBlankAnswers] = useState<Record<string, string[]>>({})
   const [quizOrderAnswers, setQuizOrderAnswers] = useState<Record<string, string[]>>({})
   const [quizMatchAnswers, setQuizMatchAnswers] = useState<Record<string, Record<string, string>>>({})
+  const [quizShuffledRight, setQuizShuffledRight] = useState<Record<string, string[]>>({})
   const [quizCurrentIdx, setQuizCurrentIdx] = useState(0)
   const [quizSubmitting, setQuizSubmitting] = useState(false)
   const [quizResult, setQuizResult] = useState<any>(null)
+
+  // Schedule publish
+  const [showScheduleModal, setShowScheduleModal] = useState<string | null>(null)
+  const [scheduleDate, setScheduleDate] = useState('')
 
   // Edit activity
   const [editingActivity, setEditingActivity] = useState(false)
@@ -1947,11 +1935,23 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     try {
       if (published) await classroomApi.unpublishActivity(id)
       else await classroomApi.publishActivity(id)
-      // Actualizar UI inmediatamente
       if (selectedActivity && selectedActivity.id === id) {
-        setSelectedActivity({ ...selectedActivity, isPublished: !published, isVisible: true })
+        setSelectedActivity({ ...selectedActivity, isPublished: !published, isVisible: true, scheduledPublishAt: null })
       }
-      setActivities(prev => prev.map(a => a.id === id ? { ...a, isPublished: !published, isVisible: true } : a))
+      setActivities(prev => prev.map(a => a.id === id ? { ...a, isPublished: !published, isVisible: true, scheduledPublishAt: null } : a))
+      loadActivities()
+    } catch {}
+  }
+
+  const handleSchedulePublish = async (id: string, dateTime: string) => {
+    try {
+      await classroomApi.publishActivity(id, { scheduledPublishAt: dateTime })
+      if (selectedActivity && selectedActivity.id === id) {
+        setSelectedActivity({ ...selectedActivity, scheduledPublishAt: dateTime, isPublished: false })
+      }
+      setActivities(prev => prev.map(a => a.id === id ? { ...a, scheduledPublishAt: dateTime, isPublished: false } : a))
+      setScheduleDate('')
+      setShowScheduleModal(null)
       loadActivities()
     } catch {}
   }
@@ -2488,6 +2488,26 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       const { data } = await classroomApi.startQuiz(selectedActivity.id)
       setQuizSubmission(data.submission)
       setQuizQuestions(data.questions)
+      // Pre-shuffle right-side items for MATCHING questions (once, stable)
+      const shuffled: Record<string, string[]> = {}
+      for (const q of data.questions) {
+        if (q.type === 'MATCHING') {
+          let rightItems: string[] = []
+          if (q.options && typeof q.options === 'object' && 'left' in q.options) {
+            rightItems = (q.options as any).right || []
+          } else if (q.correctAnswer) {
+            try { rightItems = [...new Set(Object.values(JSON.parse(q.correctAnswer)) as string[])] } catch {}
+          }
+          // Fisher-Yates shuffle
+          const arr = [...rightItems]
+          for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]]
+          }
+          shuffled[q.id] = arr
+        }
+      }
+      setQuizShuffledRight(shuffled)
       const existing: Record<string, string> = {}
       ;(data.answers || []).forEach((a: any) => { if (a.answer) existing[a.questionId] = a.answer })
       setQuizAnswers(existing)
@@ -2618,7 +2638,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
-                <textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} rows={4} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                <Suspense fallback={<div className="h-32 bg-slate-50 rounded-xl animate-pulse" />}>
+                  <RichTextEditor value={editForm.description} onChange={v => setEditForm(f => ({ ...f, description: v }))} placeholder="Descripción e instrucciones..." />
+                </Suspense>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -2661,7 +2683,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                       <p className="text-sm text-slate-400">{act.section?.title || 'Sin sección'}</p>
                     </div>
                   </div>
-                  {act.description && <p className="text-sm sm:text-base text-slate-600 mt-3 whitespace-pre-wrap leading-relaxed">{act.description}</p>}
+                  {act.description && <RichContent html={act.description} className="mt-3 text-sm sm:text-base text-slate-600" />}
                   {meta?.attachmentUrl && (
                     <button onClick={() => openFile(meta.attachmentUrl)} className="flex items-center gap-3 mt-4 px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors group w-full sm:w-auto">
                       <File className="w-5 h-5 text-blue-500 shrink-0" />
@@ -2675,6 +2697,11 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     <button onClick={() => handlePublish(act.id, act.isPublished)} className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium ${act.isPublished ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>
                       {act.isPublished ? 'Despublicar' : 'Publicar'}
                     </button>
+                    {!act.isPublished && (
+                      <button onClick={() => { setShowScheduleModal(act.id); setScheduleDate(act.scheduledPublishAt ? new Date(act.scheduledPublishAt).toISOString().slice(0, 16) : '') }} className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium ${act.scheduledPublishAt ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`} title="Programar publicación">
+                        <Clock className="w-4 h-4 inline mr-1" />{act.scheduledPublishAt ? new Date(act.scheduledPublishAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Programar'}
+                      </button>
+                    )}
                     <button onClick={() => startEditActivity(act)} className="p-2 sm:p-2.5 rounded-xl hover:bg-amber-50" title="Editar actividad">
                       <Pencil className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
                     </button>
@@ -3074,7 +3101,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Texto del contexto</label>
-                  <textarea value={ctxForm.text} onChange={e => setCtxForm({ ...ctxForm, text: e.target.value })} rows={5} placeholder="Pega aquí el texto de lectura, enunciado, caso de estudio..." className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-y focus:ring-2 focus:ring-amber-500 outline-none" />
+                  <Suspense fallback={<div className="h-32 bg-slate-50 rounded-xl animate-pulse" />}>
+                    <RichTextEditor value={ctxForm.text} onChange={v => setCtxForm({ ...ctxForm, text: v })} placeholder="Pega aquí el texto de lectura, enunciado, caso de estudio..." />
+                  </Suspense>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">URL de imagen (opcional)</label>
@@ -3089,7 +3118,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 </div>
                 <div className="flex justify-end gap-3">
                   <button onClick={resetCtxForm} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
-                  <button onClick={handleSaveContext} disabled={(!ctxForm.text.trim() && !ctxForm.imageUrl.trim()) || savingContext} className="px-5 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600 disabled:opacity-50 flex items-center gap-2">
+                  <button onClick={handleSaveContext} disabled={(isRichTextEmpty(ctxForm.text) && !ctxForm.imageUrl.trim()) || savingContext} className="px-5 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600 disabled:opacity-50 flex items-center gap-2">
                     {savingContext && <Loader2 className="w-4 h-4 animate-spin" />}
                     {editingContextId ? 'Guardar cambios' : 'Crear contexto'}
                   </button>
@@ -3637,20 +3666,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   {q.type === 'MATCHING' && (() => {
                     // options puede ser { left: [...], right: [...] } o legacy (parsear de correctAnswer)
                     let leftItems: string[] = []
-                    let rightItems: string[] = []
                     if (q.options && typeof q.options === 'object' && 'left' in q.options) {
                       leftItems = (q.options as any).left || []
-                      rightItems = (q.options as any).right || []
                     } else if (q.correctAnswer) {
-                      // Fallback para preguntas legacy
-                      try {
-                        const pairs = JSON.parse(q.correctAnswer)
-                        leftItems = Object.keys(pairs)
-                        rightItems = [...new Set(Object.values(pairs) as string[])]
-                      } catch {}
+                      try { leftItems = Object.keys(JSON.parse(q.correctAnswer)) } catch {}
                     }
-                    // Mezclar opciones de la derecha para que no estén en orden
-                    const shuffledRight = [...rightItems].sort(() => Math.random() - 0.5)
+                    // Usar opciones pre-shuffled (estables entre re-renders)
+                    const shuffledRight = quizShuffledRight[q.id] || []
                     const matches = quizMatchAnswers[q.id] || {}
                     return (
                       <div className="space-y-4">
@@ -4047,11 +4069,41 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   <img src={contextModalData.imageUrl} alt="Contexto" className="max-w-full rounded-xl border border-slate-200" />
                 )}
                 {contextModalData.text && (
-                  <div className="text-base text-slate-700 leading-relaxed whitespace-pre-wrap">{contextModalData.text}</div>
+                  <RichContent html={contextModalData.text} className="text-base text-slate-700" />
                 )}
               </div>
               <div className="px-6 py-3 border-t border-slate-200 flex justify-end shrink-0">
                 <button onClick={() => setContextModalData(null)} className="px-5 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── SCHEDULE PUBLISH MODAL ── */}
+        {showScheduleModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowScheduleModal(null)}>
+            <div className="bg-white rounded-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+              <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Clock className="w-5 h-5 text-blue-500" /> Programar publicación</h3>
+                <button onClick={() => setShowScheduleModal(null)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button>
+              </div>
+              <div className="p-5 space-y-4">
+                <p className="text-sm text-slate-500">La actividad se publicará automáticamente en la fecha y hora seleccionada.</p>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Fecha y hora</label>
+                  <input type="datetime-local" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div className="flex justify-end gap-3">
+                  {activities.find(a => a.id === showScheduleModal)?.scheduledPublishAt && (
+                    <button onClick={() => { handlePublish(showScheduleModal, false); setShowScheduleModal(null) }} className="px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl">
+                      Cancelar programación
+                    </button>
+                  )}
+                  <button onClick={() => setShowScheduleModal(null)} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cerrar</button>
+                  <button onClick={() => { if (scheduleDate) handleSchedulePublish(showScheduleModal, scheduleDate) }} disabled={!scheduleDate} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
+                    Programar
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -4327,7 +4379,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           </div>
 
           <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder={isQuizType(form.type) ? 'Título del quiz/examen' : 'Título de la tarea'} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
-          <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder={isQuizType(form.type) ? 'Instrucciones para el estudiante...' : 'Instrucciones y descripción...'} rows={3} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-blue-500 outline-none" />
+          <Suspense fallback={<div className="h-32 bg-slate-50 rounded-xl animate-pulse" />}>
+            <RichTextEditor value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder={isQuizType(form.type) ? 'Instrucciones para el estudiante...' : 'Instrucciones y descripción...'} />
+          </Suspense>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Sección</label>
@@ -4657,7 +4711,7 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
   useEffect(() => { loadPosts() }, [loadPosts])
 
   const handleCreate = async () => {
-    if (!form.title.trim() || !form.content.trim()) return
+    if (!form.title.trim() || isRichTextEmpty(form.content)) return
     try {
       setCreating(true)
       await classroomApi.createForumPost(classroom.id, { title: form.title, content: form.content })
@@ -4678,7 +4732,7 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
   }
 
   const handleReply = async () => {
-    if (!replyContent.trim() || !selectedPost) return
+    if (isRichTextEmpty(replyContent) || !selectedPost) return
     try {
       setReplying(true)
       await classroomApi.createForumPost(classroom.id, {
@@ -4733,7 +4787,7 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
                     {post.isPinned && <Pin className="w-4 h-4 text-yellow-500" />}
                     <h2 className="text-xl font-bold text-slate-800">{post.title || 'Sin título'}</h2>
                   </div>
-                  <p className="text-base text-slate-600 whitespace-pre-wrap leading-relaxed">{post.content}</p>
+                  <RichContent html={post.content} className="text-base text-slate-600" />
                   <p className="text-sm text-slate-400 mt-4">
                     {post.author.firstName} {post.author.lastName} · {formatDate(post.createdAt)}
                   </p>
@@ -4758,7 +4812,7 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
               <h3 className="text-base font-bold text-slate-700">{post.replies?.length || 0} Respuesta(s)</h3>
               {post.replies?.map(reply => (
                 <div key={reply.id} className="bg-white rounded-2xl border border-slate-200 p-5 ml-4">
-                  <p className="text-base text-slate-700 whitespace-pre-wrap">{reply.content}</p>
+                  <RichContent html={reply.content} className="text-base text-slate-700" />
                   <div className="flex items-center justify-between mt-3">
                     <p className="text-sm text-slate-400">
                       {reply.author.firstName} {reply.author.lastName} · {formatDate(reply.createdAt)}
@@ -4775,7 +4829,7 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
                     <div className="mt-3 ml-4 space-y-2 border-l-2 border-slate-100 pl-4">
                       {reply.replies.map((nested: any) => (
                         <div key={nested.id} className="py-2">
-                          <p className="text-sm text-slate-700 whitespace-pre-wrap">{nested.content}</p>
+                          <RichContent html={nested.content} className="text-sm text-slate-700" />
                           <div className="flex items-center justify-between mt-1">
                             <p className="text-xs text-slate-400">{nested.author.firstName} {nested.author.lastName} · {formatDate(nested.createdAt)}</p>
                             {(isTeacher || nested.authorId === currentUserId) && (
@@ -4798,9 +4852,11 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
                   <button onClick={() => setReplyToId(null)} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
                 </div>
               )}
-              <textarea value={replyContent} onChange={e => setReplyContent(e.target.value)} rows={3} placeholder="Escribe tu respuesta..." className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-blue-500 outline-none" />
+              <Suspense fallback={<div className="h-24 bg-slate-50 rounded-xl animate-pulse" />}>
+                <RichTextEditor value={replyContent} onChange={setReplyContent} placeholder="Escribe tu respuesta..." minimal />
+              </Suspense>
               <div className="flex justify-end">
-                <button onClick={handleReply} disabled={!replyContent.trim() || replying} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                <button onClick={handleReply} disabled={isRichTextEmpty(replyContent) || replying} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
                   {replying && <Loader2 className="w-4 h-4 animate-spin" />}
                   {replying ? 'Enviando...' : 'Responder'}
                 </button>
@@ -4827,10 +4883,12 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
         <div className="bg-white border-2 border-blue-200 rounded-2xl p-6 space-y-4">
           <h3 className="text-lg font-bold text-slate-800">Nuevo Tema de Discusión</h3>
           <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Título del tema" className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
-          <textarea value={form.content} onChange={e => setForm({ ...form, content: e.target.value })} placeholder="Describe el tema de discusión..." rows={4} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base resize-none focus:ring-2 focus:ring-blue-500 outline-none" />
+          <Suspense fallback={<div className="h-32 bg-slate-50 rounded-xl animate-pulse" />}>
+            <RichTextEditor value={form.content} onChange={v => setForm({ ...form, content: v })} placeholder="Describe el tema de discusión..." />
+          </Suspense>
           <div className="flex justify-end gap-3">
             <button onClick={() => setShowCreate(false)} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
-            <button onClick={handleCreate} disabled={!form.title.trim() || !form.content.trim() || creating} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+            <button onClick={handleCreate} disabled={!form.title.trim() || isRichTextEmpty(form.content) || creating} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
               {creating && <Loader2 className="w-4 h-4 animate-spin" />}
               {creating ? 'Publicando...' : 'Publicar Tema'}
             </button>

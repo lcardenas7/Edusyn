@@ -245,9 +245,9 @@ export class ClassroomController {
 
   @Put('activities/:activityId/publish')
   @Roles('DOCENTE', 'COORDINADOR')
-  async publishActivity(@Param('activityId') activityId: string, @Request() req: any) {
+  async publishActivity(@Param('activityId') activityId: string, @Request() req: any, @Body() body?: { scheduledPublishAt?: string }) {
     const { userId } = await this.resolveCtx(req);
-    return this.service.publishActivity(activityId, userId);
+    return this.service.publishActivity(activityId, userId, body);
   }
 
   @Put('activities/:activityId/unpublish')

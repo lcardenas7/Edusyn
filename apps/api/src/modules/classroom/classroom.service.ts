@@ -569,11 +569,21 @@ export class ClassroomService {
     });
   }
 
-  async publishActivity(activityId: string, teacherId: string) {
+  async publishActivity(activityId: string, teacherId: string, dto?: { scheduledPublishAt?: string }) {
     await this.validateActivityOwnership(activityId, teacherId);
+
+    // Si se envía una fecha programada, no publicar aún
+    if (dto?.scheduledPublishAt) {
+      return this.prisma.classroomActivity.update({
+        where: { id: activityId },
+        data: { scheduledPublishAt: new Date(dto.scheduledPublishAt), isPublished: false },
+      });
+    }
+
+    // Publicar inmediatamente y limpiar cualquier programación previa
     return this.prisma.classroomActivity.update({
       where: { id: activityId },
-      data: { isPublished: true, isVisible: true },
+      data: { isPublished: true, isVisible: true, scheduledPublishAt: null },
     });
   }
 
@@ -581,8 +591,28 @@ export class ClassroomService {
     await this.validateActivityOwnership(activityId, teacherId);
     return this.prisma.classroomActivity.update({
       where: { id: activityId },
-      data: { isPublished: false },
+      data: { isPublished: false, scheduledPublishAt: null },
     });
+  }
+
+  /**
+   * Procesa actividades con publicación programada cuya fecha ya pasó.
+   * Llamado por el cron job cada minuto.
+   */
+  async processScheduledPublications(): Promise<number> {
+    const now = new Date();
+    const result = await this.prisma.classroomActivity.updateMany({
+      where: {
+        isPublished: false,
+        scheduledPublishAt: { lte: now },
+      },
+      data: {
+        isPublished: true,
+        isVisible: true,
+        scheduledPublishAt: null,
+      },
+    });
+    return result.count;
   }
 
   /**

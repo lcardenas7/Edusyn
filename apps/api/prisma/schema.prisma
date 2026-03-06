@@ -4750,9 +4750,10 @@ model ClassroomActivity {
   gradebookComponent String?
   gradebookIndex     Int?
 
-  isVisible   Boolean  @default(true)
-  isPublished Boolean  @default(false)
-  sortOrder   Int      @default(0)
+  isVisible          Boolean   @default(true)
+  isPublished        Boolean   @default(false)
+  scheduledPublishAt DateTime?
+  sortOrder          Int       @default(0)
   metadata    Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

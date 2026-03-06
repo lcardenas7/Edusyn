@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
@@ -47,6 +48,7 @@ import { TenantGuard } from './modules/auth/guards/tenant.guard';
       ttl: 60000,
       limit: 100,
     }]),
+    ScheduleModule.forRoot(),
     PrismaModule,
     InstitutionContextModule,
     IamModule,

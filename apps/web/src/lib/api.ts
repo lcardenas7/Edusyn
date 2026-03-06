@@ -1778,8 +1778,8 @@ export const classroomApi = {
     openDate?: string; allowLateSubmit?: boolean; isVisible?: boolean;
     attachmentUrl?: string; attachmentName?: string;
   }) => api.put(`/classrooms/activities/${activityId}`, data),
-  publishActivity: (activityId: string) =>
-    api.put(`/classrooms/activities/${activityId}/publish`),
+  publishActivity: (activityId: string, body?: { scheduledPublishAt?: string }) =>
+    api.put(`/classrooms/activities/${activityId}/publish`, body || {}),
   unpublishActivity: (activityId: string) =>
     api.put(`/classrooms/activities/${activityId}/unpublish`),
   assignStudentsToActivity: (activityId: string, data: { studentEnrollmentIds: string[]; isRestrictedToAssigned: boolean }) =>
