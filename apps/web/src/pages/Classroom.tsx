@@ -1945,7 +1945,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
   const handleSchedulePublish = async (id: string, dateTime: string) => {
     try {
-      await classroomApi.publishActivity(id, { scheduledPublishAt: dateTime })
+      // datetime-local gives local time string, convert to full ISO with timezone
+      const isoDate = new Date(dateTime).toISOString()
+      await classroomApi.publishActivity(id, { scheduledPublishAt: isoDate })
       if (selectedActivity && selectedActivity.id === id) {
         setSelectedActivity({ ...selectedActivity, scheduledPublishAt: dateTime, isPublished: false })
       }
@@ -2613,6 +2615,11 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
   const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
   const isDuePast = (d?: string) => d ? new Date(d) < new Date() : false
+  // Convert Date to local datetime-local input value (YYYY-MM-DDTHH:MM)
+  const toLocalDatetimeStr = (d: Date) => {
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
 
   if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
 
@@ -2698,7 +2705,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                       {act.isPublished ? 'Despublicar' : 'Publicar'}
                     </button>
                     {!act.isPublished && (
-                      <button onClick={() => { setShowScheduleModal(act.id); setScheduleDate(act.scheduledPublishAt ? new Date(act.scheduledPublishAt).toISOString().slice(0, 16) : '') }} className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium ${act.scheduledPublishAt ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`} title="Programar publicación">
+                      <button onClick={() => { setShowScheduleModal(act.id); setScheduleDate(act.scheduledPublishAt ? toLocalDatetimeStr(new Date(act.scheduledPublishAt)) : '') }} className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium ${act.scheduledPublishAt ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`} title="Programar publicación">
                         <Clock className="w-4 h-4 inline mr-1" />{act.scheduledPublishAt ? new Date(act.scheduledPublishAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Programar'}
                       </button>
                     )}
