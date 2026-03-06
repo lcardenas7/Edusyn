@@ -4707,6 +4707,10 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
   const [replying, setReplying] = useState(false)
   const [replyToId, setReplyToId] = useState<string | null>(null)
 
+  // Edit forum post
+  const [editingPostId, setEditingPostId] = useState<string | null>(null)
+  const [editPostForm, setEditPostForm] = useState({ title: '', content: '' })
+
   const loadPosts = useCallback(async () => {
     try {
       setLoading(true)
@@ -4768,6 +4772,22 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
     } catch {}
   }
 
+  const startEditPost = (post: { id: string; title?: string; content: string }) => {
+    setEditingPostId(post.id)
+    setEditPostForm({ title: post.title || '', content: post.content })
+  }
+
+  const handleUpdatePost = async () => {
+    if (!editingPostId || isRichTextEmpty(editPostForm.content)) return
+    try {
+      await classroomApi.updateForumPost(editingPostId, editPostForm)
+      setEditingPostId(null)
+      setEditPostForm({ title: '', content: '' })
+      if (selectedPost) openThread(selectedPost)
+      loadPosts()
+    } catch {}
+  }
+
   const formatDate = (d: string) => new Date(d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
   const currentUserId = user?.id
 
@@ -4787,62 +4807,116 @@ function ForumTab({ classroom, isTeacher, isStudent, user, setError }: {
         ) : (
           <>
             {/* Main post */}
-            <div className={`bg-white rounded-2xl border-2 p-6 ${post.isPinned ? 'border-yellow-300' : 'border-slate-200'}`}>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2.5 mb-2">
-                    {post.isPinned && <Pin className="w-4 h-4 text-yellow-500" />}
-                    <h2 className="text-xl font-bold text-slate-800">{post.title || 'Sin título'}</h2>
+            <div className={`bg-white rounded-2xl border-2 p-6 overflow-hidden ${post.isPinned ? 'border-yellow-300' : 'border-slate-200'}`}>
+              {editingPostId === post.id ? (
+                <div className="space-y-3">
+                  <input value={editPostForm.title} onChange={e => setEditPostForm(f => ({ ...f, title: e.target.value }))} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-base font-semibold focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Título del tema" />
+                  <Suspense fallback={<div className="h-32 bg-slate-50 rounded-xl animate-pulse" />}>
+                    <RichTextEditor value={editPostForm.content} onChange={v => setEditPostForm(f => ({ ...f, content: v }))} placeholder="Contenido..." />
+                  </Suspense>
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => setEditingPostId(null)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+                    <button onClick={handleUpdatePost} disabled={isRichTextEmpty(editPostForm.content)} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">Guardar</button>
                   </div>
-                  <RichContent html={post.content} className="text-base text-slate-600" />
-                  <p className="text-sm text-slate-400 mt-4">
-                    {post.author.firstName} {post.author.lastName} · {formatDate(post.createdAt)}
-                  </p>
                 </div>
-                <div className="flex gap-1 shrink-0">
-                  {isTeacher && (
-                    <button onClick={() => handlePin(post.id)} className="p-2 rounded-xl hover:bg-slate-100" title={post.isPinned ? 'Desfijar' : 'Fijar'}>
-                      {post.isPinned ? <PinOff className="w-5 h-5 text-slate-400" /> : <Pin className="w-5 h-5 text-slate-400" />}
-                    </button>
-                  )}
-                  {(isTeacher || post.authorId === currentUserId) && (
-                    <button onClick={() => handleDeletePost(post.id)} className="p-2 rounded-xl hover:bg-red-50">
-                      <Trash2 className="w-5 h-5 text-red-400" />
-                    </button>
-                  )}
+              ) : (
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2.5 mb-2">
+                      {post.isPinned && <Pin className="w-4 h-4 text-yellow-500" />}
+                      <h2 className="text-xl font-bold text-slate-800">{post.title || 'Sin título'}</h2>
+                    </div>
+                    <RichContent html={post.content} className="text-base text-slate-600 break-words overflow-hidden" />
+                    <p className="text-sm text-slate-400 mt-4">
+                      {post.author.firstName} {post.author.lastName} · {formatDate(post.createdAt)}
+                    </p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    {isTeacher && (
+                      <button onClick={() => handlePin(post.id)} className="p-2 rounded-xl hover:bg-slate-100" title={post.isPinned ? 'Desfijar' : 'Fijar'}>
+                        {post.isPinned ? <PinOff className="w-5 h-5 text-slate-400" /> : <Pin className="w-5 h-5 text-slate-400" />}
+                      </button>
+                    )}
+                    {(isTeacher || post.authorId === currentUserId) && (
+                      <button onClick={() => startEditPost(post)} className="p-2 rounded-xl hover:bg-amber-50" title="Editar">
+                        <Pencil className="w-5 h-5 text-amber-400" />
+                      </button>
+                    )}
+                    {(isTeacher || post.authorId === currentUserId) && (
+                      <button onClick={() => handleDeletePost(post.id)} className="p-2 rounded-xl hover:bg-red-50">
+                        <Trash2 className="w-5 h-5 text-red-400" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Replies */}
             <div className="space-y-3">
               <h3 className="text-base font-bold text-slate-700">{post.replies?.length || 0} Respuesta(s)</h3>
               {post.replies?.map(reply => (
-                <div key={reply.id} className="bg-white rounded-2xl border border-slate-200 p-5 ml-4">
-                  <RichContent html={reply.content} className="text-base text-slate-700" />
-                  <div className="flex items-center justify-between mt-3">
-                    <p className="text-sm text-slate-400">
-                      {reply.author.firstName} {reply.author.lastName} · {formatDate(reply.createdAt)}
-                    </p>
-                    <div className="flex gap-1">
-                      <button onClick={() => setReplyToId(reply.id)} className="text-xs text-blue-500 hover:text-blue-700 px-2 py-1 rounded hover:bg-blue-50">Responder</button>
-                      {(isTeacher || reply.authorId === currentUserId) && (
-                        <button onClick={() => handleDeletePost(reply.id)} className="p-1 rounded hover:bg-red-50"><Trash2 className="w-4 h-4 text-red-400" /></button>
-                      )}
+                <div key={reply.id} className="bg-white rounded-2xl border border-slate-200 p-5 ml-4 overflow-hidden">
+                  {editingPostId === reply.id ? (
+                    <div className="space-y-3">
+                      <Suspense fallback={<div className="h-24 bg-slate-50 rounded-xl animate-pulse" />}>
+                        <RichTextEditor value={editPostForm.content} onChange={v => setEditPostForm(f => ({ ...f, content: v }))} placeholder="Contenido..." minimal />
+                      </Suspense>
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => setEditingPostId(null)} className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+                        <button onClick={handleUpdatePost} disabled={isRichTextEmpty(editPostForm.content)} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 disabled:opacity-50">Guardar</button>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      <RichContent html={reply.content} className="text-base text-slate-700 break-words overflow-hidden" />
+                      <div className="flex items-center justify-between mt-3">
+                        <p className="text-sm text-slate-400">
+                          {reply.author.firstName} {reply.author.lastName} · {formatDate(reply.createdAt)}
+                        </p>
+                        <div className="flex gap-1">
+                          <button onClick={() => setReplyToId(reply.id)} className="text-xs text-blue-500 hover:text-blue-700 px-2 py-1 rounded hover:bg-blue-50">Responder</button>
+                          {(isTeacher || reply.authorId === currentUserId) && (
+                            <button onClick={() => startEditPost(reply)} className="p-1 rounded hover:bg-amber-50" title="Editar"><Pencil className="w-4 h-4 text-amber-400" /></button>
+                          )}
+                          {(isTeacher || reply.authorId === currentUserId) && (
+                            <button onClick={() => handleDeletePost(reply.id)} className="p-1 rounded hover:bg-red-50"><Trash2 className="w-4 h-4 text-red-400" /></button>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
                   {/* Nested replies (level 2) */}
                   {reply.replies && reply.replies.length > 0 && (
                     <div className="mt-3 ml-4 space-y-2 border-l-2 border-slate-100 pl-4">
                       {reply.replies.map((nested: any) => (
                         <div key={nested.id} className="py-2">
-                          <RichContent html={nested.content} className="text-sm text-slate-700" />
-                          <div className="flex items-center justify-between mt-1">
-                            <p className="text-xs text-slate-400">{nested.author.firstName} {nested.author.lastName} · {formatDate(nested.createdAt)}</p>
-                            {(isTeacher || nested.authorId === currentUserId) && (
-                              <button onClick={() => handleDeletePost(nested.id)} className="p-0.5 rounded hover:bg-red-50"><Trash2 className="w-3.5 h-3.5 text-red-400" /></button>
-                            )}
-                          </div>
+                          {editingPostId === nested.id ? (
+                            <div className="space-y-2">
+                              <Suspense fallback={<div className="h-20 bg-slate-50 rounded-xl animate-pulse" />}>
+                                <RichTextEditor value={editPostForm.content} onChange={v => setEditPostForm(f => ({ ...f, content: v }))} placeholder="Contenido..." minimal />
+                              </Suspense>
+                              <div className="flex justify-end gap-2">
+                                <button onClick={() => setEditingPostId(null)} className="px-3 py-1 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+                                <button onClick={handleUpdatePost} disabled={isRichTextEmpty(editPostForm.content)} className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 disabled:opacity-50">Guardar</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <RichContent html={nested.content} className="text-sm text-slate-700 break-words overflow-hidden" />
+                              <div className="flex items-center justify-between mt-1">
+                                <p className="text-xs text-slate-400">{nested.author.firstName} {nested.author.lastName} · {formatDate(nested.createdAt)}</p>
+                                <div className="flex gap-1">
+                                  {(isTeacher || nested.authorId === currentUserId) && (
+                                    <button onClick={() => startEditPost(nested)} className="p-0.5 rounded hover:bg-amber-50" title="Editar"><Pencil className="w-3.5 h-3.5 text-amber-400" /></button>
+                                  )}
+                                  {(isTeacher || nested.authorId === currentUserId) && (
+                                    <button onClick={() => handleDeletePost(nested.id)} className="p-0.5 rounded hover:bg-red-50"><Trash2 className="w-3.5 h-3.5 text-red-400" /></button>
+                                  )}
+                                </div>
+                              </div>
+                            </>
+                          )}
                         </div>
                       ))}
                     </div>

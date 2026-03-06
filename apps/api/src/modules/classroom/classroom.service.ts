@@ -1579,6 +1579,24 @@ export class ClassroomService {
     });
   }
 
+  async updateForumPost(postId: string, userId: string, isTeacher: boolean, dto: { title?: string; content?: string }) {
+    const post = await this.prisma.forumPost.findUnique({ where: { id: postId } });
+    if (!post) throw new NotFoundException('Publicación no encontrada');
+
+    if (post.authorId !== userId) {
+      if (!isTeacher || !post.classroomId) throw new ForbiddenException('No tiene permisos');
+      await this.validateClassroomOwnership(post.classroomId, userId);
+    }
+
+    return this.prisma.forumPost.update({
+      where: { id: postId },
+      data: {
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.content !== undefined && { content: dto.content }),
+      },
+    });
+  }
+
   async deleteForumPost(postId: string, userId: string, isTeacher: boolean) {
     const post = await this.prisma.forumPost.findUnique({ where: { id: postId } });
     if (!post) throw new NotFoundException('Publicación no encontrada');

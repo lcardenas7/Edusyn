@@ -1850,6 +1850,7 @@ export const classroomApi = {
   listForumPosts: (classroomId: string) => api.get(`/classrooms/${classroomId}/forum`),
   getForumPost: (postId: string) => api.get(`/classrooms/forum/${postId}`),
   togglePinForumPost: (postId: string) => api.put(`/classrooms/forum/${postId}/pin`),
+  updateForumPost: (postId: string, data: { title?: string; content?: string }) => api.put(`/classrooms/forum/${postId}`, data),
   deleteForumPost: (postId: string) => api.delete(`/classrooms/forum/${postId}`),
 
   // File upload for classroom materials (documents, images)

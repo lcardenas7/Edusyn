@@ -520,6 +520,14 @@ export class ClassroomController {
     return this.service.togglePinForumPost(postId, userId);
   }
 
+  @Put('forum/:postId')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async updateForumPost(@Param('postId') postId: string, @Request() req: any, @Body() body: { title?: string; content?: string }) {
+    const { userId } = await this.resolveCtx(req);
+    const isTeacher = req.user.roles?.some((r: any) => ['DOCENTE', 'COORDINADOR'].includes(r.role || r));
+    return this.service.updateForumPost(postId, userId, !!isTeacher, body);
+  }
+
   @Delete('forum/:postId')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
   async deleteForumPost(@Param('postId') postId: string, @Request() req: any) {
