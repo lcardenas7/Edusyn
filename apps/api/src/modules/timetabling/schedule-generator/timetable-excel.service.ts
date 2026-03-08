@@ -604,18 +604,18 @@ export class TimetableExcelService {
       if (gradeCache.has(gradeKey)) continue;
 
       let grade = await this.prisma.grade.findFirst({
-        where: { name: { equals: row.gradeName, mode: 'insensitive' } },
+        where: { institutionId, name: { equals: row.gradeName, mode: 'insensitive' } },
       });
 
       if (!grade) {
         const mapped = GRADE_MAPPING[gradeKey];
         if (mapped) {
           grade = await this.prisma.grade.findFirst({
-            where: { stage: mapped.stage, name: { equals: mapped.name, mode: 'insensitive' } },
+            where: { institutionId, stage: mapped.stage, name: { equals: mapped.name, mode: 'insensitive' } },
           });
           if (!grade) {
             grade = await this.prisma.grade.create({
-              data: { stage: mapped.stage, number: mapped.number, name: mapped.name },
+              data: { institutionId, stage: mapped.stage, number: mapped.number, name: mapped.name },
             });
             entitiesCreated.grades++;
             warnings.push(`Grado "${mapped.name}" creado automáticamente`);
@@ -627,7 +627,7 @@ export class TimetableExcelService {
             const num = parseInt(numMatch[1], 10);
             const stage: GradeStage = num <= 0 ? 'PREESCOLAR' : num <= 5 ? 'BASICA_PRIMARIA' : num <= 9 ? 'BASICA_SECUNDARIA' : 'MEDIA';
             grade = await this.prisma.grade.create({
-              data: { stage, number: num, name: row.gradeName },
+              data: { institutionId, stage, number: num, name: row.gradeName },
             });
             entitiesCreated.grades++;
             warnings.push(`Grado "${row.gradeName}" creado como ${stage}`);

@@ -146,9 +146,9 @@ async function restore() {
   let totalGroups = 0;
   for (const gc of gradesConfig) {
     const grade = await prisma.grade.upsert({
-      where: { stage_name: { stage: gc.stage, name: gc.name } },
+      where: { institutionId_stage_name: { institutionId: institution.id, stage: gc.stage, name: gc.name } },
       update: { number: gc.number },
-      create: { name: gc.name, stage: gc.stage, number: gc.number },
+      create: { institutionId: institution.id, name: gc.name, stage: gc.stage, number: gc.number },
     });
 
     for (const gName of gc.groups) {

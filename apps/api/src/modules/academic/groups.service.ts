@@ -9,6 +9,18 @@ export class GroupsService {
 
   async create(dto: CreateGroupDto) {
     console.log('[GroupsService] Creating group with dto:', dto);
+
+    // Validar que el grado pertenece a la misma institución que el campus
+    const [campus, grade] = await Promise.all([
+      this.prisma.campus.findUnique({ where: { id: dto.campusId }, select: { institutionId: true } }),
+      this.prisma.grade.findUnique({ where: { id: dto.gradeId }, select: { institutionId: true } }),
+    ]);
+    if (!campus) throw new Error('Campus no encontrado.');
+    if (!grade) throw new Error('Grado no encontrado.');
+    if (campus.institutionId !== grade.institutionId) {
+      throw new Error('El grado no pertenece a la misma institución que el campus.');
+    }
+
     try {
       const group = await this.prisma.group.create({
         data: {

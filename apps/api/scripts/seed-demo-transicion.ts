@@ -205,11 +205,12 @@ async function main() {
   // ─── PASO 1: Crear Grado Transición con DIMENSIONS ────────────────
   console.log('🎓 PASO 1: Creando grado Transición...');
   let gradeTransicion = await prisma.grade.findFirst({
-    where: { stage: GradeStage.PREESCOLAR, name: 'Transición' },
+    where: { institutionId: institution.id, stage: GradeStage.PREESCOLAR, name: 'Transición' },
   });
   if (!gradeTransicion) {
     gradeTransicion = await prisma.grade.create({
       data: {
+        institutionId: institution.id,
         name: 'Transición',
         stage: GradeStage.PREESCOLAR,
         number: 0,

@@ -18,8 +18,9 @@ export class GradesController {
 
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async create(@Body() dto: CreateGradeDto) {
-    return this.gradesService.create(dto);
+  async create(@Body() dto: CreateGradeDto, @Request() req: any) {
+    const instId = await requireInstitutionId(this.prisma as any, req, (dto as any).institutionId);
+    return this.gradesService.create({ ...dto, institutionId: instId });
   }
 
   // Administrativo: devuelve TODOS los grados (incluso sin grupos)

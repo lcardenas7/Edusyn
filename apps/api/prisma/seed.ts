@@ -163,9 +163,9 @@ async function main() {
   console.log('🎓 Creando grado...');
   
   const grade = await prisma.grade.upsert({
-    where: { stage_name: { stage: GradeStage.BASICA_SECUNDARIA, name: '6°' } },
+    where: { institutionId_stage_name: { institutionId: institution.id, stage: GradeStage.BASICA_SECUNDARIA, name: '6°' } },
     update: {},
-    create: { name: '6°', stage: GradeStage.BASICA_SECUNDARIA, number: 6 },
+    create: { institutionId: institution.id, name: '6°', stage: GradeStage.BASICA_SECUNDARIA, number: 6 },
   });
   console.log(`   ✅ Grado: ${grade.name}\n`);
 

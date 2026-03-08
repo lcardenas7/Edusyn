@@ -433,6 +433,7 @@ model Institution {
   users     InstitutionUser[] // Usuarios de esta institución
 
   campuses                    Campus[]
+  grades                      Grade[]
   areas                       Area[]
   academicTemplates           AcademicTemplate[]
   academicYears               AcademicYear[]
@@ -614,10 +615,11 @@ model Shift {
 }
 
 model Grade {
-  id     String     @id @default(cuid())
-  stage  GradeStage
-  number Int?
-  name   String
+  id            String     @id @default(cuid())
+  institutionId String
+  stage         GradeStage
+  number        Int?
+  name          String
 
   // 🆕 Estructura académica del grado (define comportamiento del sistema)
   academicStructure AcademicStructureType @default(AREAS_SUBJECTS)
@@ -625,6 +627,7 @@ model Grade {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  institution          Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   groups               Group[]
   elections            Election[] // Elecciones de representante de grado
   gradeTemplates       GradeTemplate[] // Plantillas académicas por año (una por año académico)
@@ -632,7 +635,8 @@ model Grade {
   achievementBank      AchievementBank[]
   workspaceBoards      WorkspaceBoard[]      @relation("WorkspaceBoardGrade")
 
-  @@unique([stage, name])
+  @@unique([institutionId, stage, name])
+  @@index([institutionId])
 }
 
 model Group {

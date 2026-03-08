@@ -350,13 +350,13 @@ async function seedDemo() {
   const groupMap: Record<string, any> = {};
 
   for (const gc of GRADES_CONFIG) {
-    // Upsert grade (los grados son globales, no por institución)
+    // Buscar o crear grado PARA ESTA INSTITUCIÓN
     let grade = await prisma.grade.findFirst({
-      where: { stage: gc.stage, name: gc.name },
+      where: { institutionId: institution.id, stage: gc.stage, name: gc.name },
     });
     if (!grade) {
       grade = await prisma.grade.create({
-        data: { name: gc.name, stage: gc.stage, number: gc.number },
+        data: { institutionId: institution.id, name: gc.name, stage: gc.stage, number: gc.number },
       });
     }
     gradeMap[gc.name] = grade;

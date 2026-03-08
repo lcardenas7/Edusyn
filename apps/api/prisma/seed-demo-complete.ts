@@ -227,9 +227,9 @@ async function seedDemo() {
 
   for (const gc of GRADES_CFG) {
     const grade = await prisma.grade.upsert({
-      where: { stage_name: { stage: gc.stage, name: gc.name } },
+      where: { institutionId_stage_name: { institutionId: institution.id, stage: gc.stage, name: gc.name } },
       update: {},
-      create: { name: gc.name, stage: gc.stage, number: gc.order },
+      create: { institutionId: institution.id, name: gc.name, stage: gc.stage, number: gc.order },
     });
     gradeMap[gc.name] = grade;
     for (const gName of ['A', 'B']) {

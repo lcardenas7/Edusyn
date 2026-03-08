@@ -21,9 +21,10 @@ interface SyncGradeDto {
 export class GradesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateGradeDto) {
+  async create(dto: CreateGradeDto & { institutionId: string }) {
     return this.prisma.grade.create({
       data: {
+        institutionId: dto.institutionId,
         stage: dto.stage,
         number: dto.number,
         name: dto.name,
@@ -37,15 +38,13 @@ export class GradesService {
     });
   }
 
-  // Administrativo: devuelve TODOS los grados con sus grupos de la institución
+  // Administrativo: devuelve grados de la institución con sus grupos
   // Usado por: Structure.tsx, creación de grupos, administración
   async listByInstitution(institutionId: string) {
     return this.prisma.grade.findMany({
+      where: { institutionId },
       include: {
         groups: {
-          where: {
-            campus: { institutionId }
-          },
           include: {
             campus: true,
             shift: true,
@@ -57,22 +56,16 @@ export class GradesService {
     });
   }
 
-  // Operativo: solo grados que tienen al menos un grupo en la institución
+  // Operativo: solo grados que tienen al menos un grupo
   // Usado por: finanzas, filtros, reportes, módulos operativos
   async listActiveByInstitution(institutionId: string) {
     return this.prisma.grade.findMany({
       where: {
-        groups: {
-          some: {
-            campus: { institutionId },
-          },
-        },
+        institutionId,
+        groups: { some: {} },
       },
       include: {
         groups: {
-          where: {
-            campus: { institutionId }
-          },
           include: {
             campus: true,
             shift: true,
@@ -84,24 +77,19 @@ export class GradesService {
     });
   }
 
-  async delete(id: string, institutionId?: string) {
-    // Contar grupos asociados a este grado EN la institución del usuario
-    const groupCount = institutionId
-      ? await this.prisma.group.count({
-          where: { gradeId: id, campus: { institutionId } },
-        })
-      : await this.prisma.group.count({ where: { gradeId: id } });
-
-    if (groupCount > 0) {
-      throw new Error(`No se puede eliminar el grado porque tiene ${groupCount} grupo(s) asociados. Elimine los grupos primero.`);
+  async delete(id: string, institutionId: string) {
+    // Verificar que el grado pertenece a esta institución
+    const grade = await this.prisma.grade.findFirst({
+      where: { id, institutionId },
+    });
+    if (!grade) {
+      throw new Error('Grado no encontrado en esta institución.');
     }
 
-    // Verificar si otras instituciones usan este grado (tiene grupos de otras instituciones)
-    const totalGroupCount = await this.prisma.group.count({ where: { gradeId: id } });
-    if (totalGroupCount > 0) {
-      // Otras instituciones usan este grado — no se puede eliminar físicamente
-      // pero tampoco debería aparecer en la lista de esta institución si no tiene grupos
-      throw new Error('Este grado es compartido y está en uso por otra institución. No se puede eliminar.');
+    // Contar grupos asociados
+    const groupCount = await this.prisma.group.count({ where: { gradeId: id } });
+    if (groupCount > 0) {
+      throw new Error(`No se puede eliminar el grado porque tiene ${groupCount} grupo(s) asociados. Elimine los grupos primero.`);
     }
 
     return this.prisma.grade.delete({ where: { id } });
@@ -171,20 +159,21 @@ export class GradesService {
     for (const gradeData of grades) {
       const stage = levelToStage[gradeData.level] || GradeStage.BASICA_PRIMARIA;
 
-      // Buscar o crear el grado
+      // Buscar o crear el grado PARA ESTA INSTITUCIÓN
       let grade = await this.prisma.grade.findFirst({
-        where: { name: gradeData.name }
+        where: { institutionId, name: gradeData.name }
       });
 
       if (!grade) {
         grade = await this.prisma.grade.create({
           data: {
+            institutionId,
             name: gradeData.name,
             stage,
             number: gradeData.order,
           }
         });
-        console.log(`[GradesService] Grado creado: ${grade.name}`);
+        console.log(`[GradesService] Grado creado: ${grade.name} para institución ${institutionId}`);
       }
 
       // Crear grupos para este grado
