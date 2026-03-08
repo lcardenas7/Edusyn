@@ -1,13 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { RecoveryStatus } from '@prisma/client';
+import { RecoveryStatus, RecoveryActivityType } from '@prisma/client';
 import { RecoveryConfigService } from './recovery-config.service';
+import { RecoveryEngineService } from './recovery-engine.service';
 
 @Injectable()
 export class FinalRecoveryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: RecoveryConfigService,
+    private readonly engine: RecoveryEngineService,
   ) {}
 
   async detectAreasNeedingRecovery(
@@ -87,6 +89,7 @@ export class FinalRecoveryService {
     academicYearId: string;
     areaId: string;
     originalAreaScore: number;
+    activityType?: RecoveryActivityType;
     activities?: string;
     objectives?: string;
     resources?: string;
@@ -95,12 +98,60 @@ export class FinalRecoveryService {
     responsibleTeacherId: string;
     supervisorId?: string;
   }) {
-    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: data.studentEnrollmentId }, select: { institutionId: true } });
+    const enr = await this.prisma.studentEnrollment.findUnique({
+      where: { id: data.studentEnrollmentId },
+      select: { institutionId: true },
+    });
+    if (!enr) throw new BadRequestException('Matrícula no encontrada');
+
+    // Validar que la recuperación final esté permitida
+    const validation = await this.engine.validateRecoveryCreation({
+      institutionId: enr.institutionId,
+      academicYearId: data.academicYearId,
+      type: 'FINAL',
+    });
+    if (!validation.allowed) throw new BadRequestException(validation.reason);
+
+    // Validar intentos restantes
+    const rule = await this.engine.getApplicableRule({
+      institutionId: enr.institutionId,
+      academicYearId: data.academicYearId,
+      type: 'FINAL',
+      activityType: data.activityType,
+    });
+
+    const attemptCheck = await this.engine.validateAttempt({
+      studentEnrollmentId: data.studentEnrollmentId,
+      areaId: data.areaId,
+      academicYearId: data.academicYearId,
+      maxAttempts: rule.maxAttempts,
+      type: 'FINAL',
+    });
+    if (!attemptCheck.canAttempt) throw new BadRequestException(attemptCheck.reason);
+
+    // Actualizar promotionStatus a PENDING_RECOVERY
+    await this.prisma.studentEnrollment.update({
+      where: { id: data.studentEnrollmentId },
+      data: { promotionStatus: 'PENDING_RECOVERY' },
+    });
+
     return this.prisma.finalRecoveryPlan.create({
       data: {
-        ...data,
-        institutionId: enr!.institutionId,
-        status: 'PENDING',
+        studentEnrollmentId: data.studentEnrollmentId,
+        academicYearId: data.academicYearId,
+        areaId: data.areaId,
+        originalAreaScore: data.originalAreaScore,
+        activityType: data.activityType,
+        activities: data.activities,
+        objectives: data.objectives,
+        resources: data.resources,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        responsibleTeacherId: data.responsibleTeacherId,
+        supervisorId: data.supervisorId,
+        institutionId: enr.institutionId,
+        attemptNumber: attemptCheck.currentAttempt,
+        status: 'ASSIGNED',
       },
       include: {
         studentEnrollment: {
@@ -191,47 +242,40 @@ export class FinalRecoveryService {
       where: { id },
     });
 
-    if (!plan) throw new Error('Recovery plan not found');
+    if (!plan) throw new BadRequestException('Plan de recuperación no encontrado');
+
+    // Obtener regla aplicable (granular o general)
+    const rule = await this.engine.getApplicableRule({
+      institutionId,
+      academicYearId: plan.academicYearId,
+      type: 'FINAL',
+      activityType: plan.activityType || undefined,
+    });
 
     const config = await this.configService.getOrCreateDefaultConfig(
       institutionId,
       plan.academicYearId,
     );
 
-    const originalScore = Number(plan.originalAreaScore);
-    const recoveryScore = data.recoveryScore;
-    const maxScore = Number(config.finalMaxScore);
-    const minPassing = Number(config.minPassingScore);
-
-    let finalAreaScore: number;
-
-    switch (config.finalImpactType) {
-      case 'ADJUST_TO_MINIMUM':
-        finalAreaScore = Math.min(recoveryScore >= minPassing ? minPassing : recoveryScore, maxScore);
-        break;
-      case 'AVERAGE_WITH_ORIGINAL':
-        finalAreaScore = Math.min((originalScore + recoveryScore) / 2, maxScore);
-        break;
-      case 'REPLACE_IF_HIGHER':
-        finalAreaScore = Math.min(Math.max(originalScore, recoveryScore), maxScore);
-        break;
-      case 'QUALITATIVE_ONLY':
-        finalAreaScore = originalScore;
-        break;
-      default:
-        finalAreaScore = Math.min(recoveryScore, maxScore);
-    }
+    // Usar el engine para calcular impacto
+    const { finalScore: finalAreaScore } = this.engine.calculateRecoveryImpact({
+      originalScore: Number(plan.originalAreaScore),
+      recoveryScore: data.recoveryScore,
+      maxScore: rule.maxScore,
+      minPassingScore: Number(config.minPassingScore),
+      impactType: rule.impactType,
+    });
 
     return this.prisma.finalRecoveryPlan.update({
       where: { id },
       data: {
         recoveryScore: data.recoveryScore,
         finalAreaScore,
-        impactType: config.finalImpactType,
+        impactType: rule.impactType,
         evidences: data.evidences,
         observations: data.observations,
         completedDate: new Date(),
-        status: 'COMPLETED',
+        status: 'REVIEW_PENDING',
       },
     });
   }
@@ -248,7 +292,7 @@ export class FinalRecoveryService {
       where: { id },
     });
 
-    if (!plan) throw new Error('Recovery plan not found');
+    if (!plan) throw new BadRequestException('Plan de recuperación no encontrado');
 
     const config = await this.configService.getOrCreateDefaultConfig(
       institutionId,
@@ -259,7 +303,7 @@ export class FinalRecoveryService {
     const finalScore = plan.finalAreaScore ? Number(plan.finalAreaScore) : 0;
     const status: RecoveryStatus = finalScore >= minPassing ? 'APPROVED' : 'NOT_APPROVED';
 
-    return this.prisma.finalRecoveryPlan.update({
+    const updated = await this.prisma.finalRecoveryPlan.update({
       where: { id },
       data: {
         finalDecision: data.finalDecision,
@@ -268,18 +312,21 @@ export class FinalRecoveryService {
         status,
       },
     });
+
+    // Recalcular promotionStatus del estudiante
+    await this.engine.recalculatePromotionStatus(
+      plan.studentEnrollmentId,
+      institutionId,
+    );
+
+    return updated;
   }
 
-  async getRecoveryStats(academicYearId: string) {
-    const plans = await this.prisma.finalRecoveryPlan.groupBy({
-      by: ['status'],
-      where: { academicYearId },
-      _count: true,
+  async getRecoveryStats(academicYearId: string, institutionId: string) {
+    return this.engine.getEnrichedStats({
+      academicYearId,
+      institutionId,
+      type: 'FINAL',
     });
-
-    return plans.reduce((acc, p) => {
-      acc[p.status] = p._count;
-      return acc;
-    }, {} as Record<string, number>);
   }
 }

@@ -14,6 +14,11 @@ export class RecoveryConfigService {
           academicYearId,
         },
       },
+      include: {
+        recoveryRules: {
+          orderBy: [{ appliesTo: 'asc' }, { activityType: 'asc' }],
+        },
+      },
     });
   }
 
@@ -24,10 +29,15 @@ export class RecoveryConfigService {
     periodRecoveryEnabled?: boolean;
     periodMaxScore?: number;
     periodImpactType?: RecoveryImpactType;
+    periodRecoveryMaxAttempts?: number;
     finalRecoveryEnabled?: boolean;
     finalMaxScore?: number;
     finalImpactType?: RecoveryImpactType;
+    finalRecoveryMaxAttempts?: number;
     maxAreasRecoverable?: number;
+    maxSubjectsRecoverable?: number;
+    autoRetainAreas?: number;
+    autoRetainSubjects?: number;
     periodRecoveryStartDate?: Date;
     periodRecoveryEndDate?: Date;
     finalRecoveryStartDate?: Date;
@@ -54,27 +64,79 @@ export class RecoveryConfigService {
   }
 
   async getOrCreateDefaultConfig(institutionId: string, academicYearId: string) {
-    let config = await this.getConfig(institutionId, academicYearId);
+    const existing = await this.prisma.recoveryConfig.findUnique({
+      where: {
+        institutionId_academicYearId: { institutionId, academicYearId },
+      },
+    });
     
-    if (!config) {
-      config = await this.prisma.recoveryConfig.create({
-        data: {
-          institutionId,
-          academicYearId,
-          minPassingScore: 3.0,
-          periodRecoveryEnabled: true,
-          periodMaxScore: 3.0,
-          periodImpactType: 'ADJUST_TO_MINIMUM',
-          finalRecoveryEnabled: true,
-          finalMaxScore: 3.0,
-          finalImpactType: 'ADJUST_TO_MINIMUM',
-          maxAreasRecoverable: 2,
-          requiresAcademicCouncilAct: true,
-          requiresPromotionAct: true,
+    if (existing) return existing;
+
+    return this.prisma.recoveryConfig.create({
+      data: {
+        institutionId,
+        academicYearId,
+        minPassingScore: 3.0,
+        periodRecoveryEnabled: true,
+        periodMaxScore: 3.0,
+        periodImpactType: 'ADJUST_TO_MINIMUM',
+        periodRecoveryMaxAttempts: 1,
+        finalRecoveryEnabled: true,
+        finalMaxScore: 3.0,
+        finalImpactType: 'ADJUST_TO_MINIMUM',
+        finalRecoveryMaxAttempts: 1,
+        maxAreasRecoverable: 2,
+        requiresAcademicCouncilAct: true,
+        requiresPromotionAct: true,
+      },
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CRUD DE REGLAS GRANULARES (RecoveryRule)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async upsertRule(data: {
+    recoveryConfigId: string;
+    institutionId: string;
+    appliesTo: 'PERIOD' | 'FINAL';
+    activityType: string;
+    maxScore: number;
+    impactType?: RecoveryImpactType;
+    maxAttempts?: number;
+    isEnabled?: boolean;
+    label?: string;
+    description?: string;
+  }) {
+    const { recoveryConfigId, institutionId, appliesTo, activityType, ...ruleData } = data;
+
+    return this.prisma.recoveryRule.upsert({
+      where: {
+        recoveryConfigId_appliesTo_activityType: {
+          recoveryConfigId,
+          appliesTo,
+          activityType: activityType as any,
         },
-      });
-    }
-    
-    return config;
+      },
+      update: ruleData,
+      create: {
+        recoveryConfigId,
+        institutionId,
+        appliesTo,
+        activityType: activityType as any,
+        ...ruleData,
+      },
+    });
+  }
+
+  async deleteRule(id: string) {
+    return this.prisma.recoveryRule.delete({ where: { id } });
+  }
+
+  async listRules(recoveryConfigId: string) {
+    return this.prisma.recoveryRule.findMany({
+      where: { recoveryConfigId },
+      orderBy: [{ appliesTo: 'asc' }, { activityType: 'asc' }],
+    });
   }
 }

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { classroomApi, storageApi, liveSessionApi } from '../lib/api'
 import LiveQuiz from '../components/LiveQuiz'
+import { CreateSelfAssessmentForm, StudentSelfAssessment, SelfAssessmentResults } from '../components/SelfAssessmentUI'
 const RichTextEditor = lazy(() => import('../components/RichTextEditor'))
 import { RichContent, isRichTextEmpty } from '../components/RichTextEditor'
 import {
@@ -12,7 +13,7 @@ import {
   Bold, Italic, Underline, List, ListOrdered, Youtube,
   FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
   BarChart3, ChevronDown, ChevronUp, ChevronRight, Clock, CheckCircle2, AlertTriangle,
-  CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check, Zap, RefreshCw,
+  CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check, Zap, RefreshCw, Sparkles,
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2160,6 +2161,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
   const isQuizType = (type: string) => ['QUIZ', 'EXAM', 'ICFES_SIMULATOR'].includes(type)
   const isIcfes = (type: string) => type === 'ICFES_SIMULATOR'
+  const isSelfAssessment = (type: string) => type === 'SELF_ASSESSMENT'
 
   const ICFES_AREAS = ['Lectura Crítica', 'Matemáticas', 'Ciencias Naturales', 'Sociales y Ciudadanas', 'Inglés']
   const AREA_COLORS: Record<string, string> = {
@@ -2678,12 +2680,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start gap-3 mb-2">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isIcfes(act.type) ? 'bg-emerald-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                      {isIcfes(act.type) ? <BarChart3 className="w-5 h-5 text-emerald-600" /> : isQuizType(act.type) ? <HelpCircle className="w-5 h-5 text-purple-600" /> : <ClipboardList className="w-5 h-5 text-blue-600" />}
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                      {isSelfAssessment(act.type) ? <Sparkles className="w-5 h-5 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-5 h-5 text-emerald-600" /> : isQuizType(act.type) ? <HelpCircle className="w-5 h-5 text-purple-600" /> : <ClipboardList className="w-5 h-5 text-blue-600" />}
                     </div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-lg sm:text-xl font-bold text-slate-800 break-words">{act.title}</h2>
+                        {isSelfAssessment(act.type) && <span className="text-xs px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full font-medium whitespace-nowrap">Autoevaluación</span>}
                         {isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium whitespace-nowrap">Simulacro ICFES</span>}
                         {isQuizType(act.type) && !isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">{act.type === 'QUIZ' ? 'Quiz' : 'Examen'}</span>}
                       </div>
@@ -2767,8 +2770,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           )}
         </div>
 
-        {/* TEACHER: Submissions list */}
-        {isTeacher && (
+        {/* TEACHER: Submissions list (not for self-assessment, handled by SelfAssessmentResults) */}
+        {isTeacher && !isSelfAssessment(act.type) && (
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-800">Entregas ({submissions.length})</h3>
@@ -3855,8 +3858,18 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           </div>
         )}
 
+        {/* STUDENT: Self-Assessment UI */}
+        {isStudent && isSelfAssessment(act.type) && (
+          <StudentSelfAssessment activity={act} onSubmitted={() => openActivity(act)} />
+        )}
+
+        {/* TEACHER: Self-Assessment Results */}
+        {isTeacher && isSelfAssessment(act.type) && (
+          <SelfAssessmentResults activity={act} />
+        )}
+
         {/* STUDENT: My submission / submit form (TASK only) */}
-        {isStudent && !isQuizType(act.type) && (
+        {isStudent && !isQuizType(act.type) && !isSelfAssessment(act.type) && (
           <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
             <h3 className="text-lg font-bold text-slate-800">Tu entrega</h3>
             {mySubmission ? (
@@ -4373,18 +4386,28 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
       {/* Create form */}
       {showCreate && (
-        <div className={`bg-white border-2 rounded-2xl p-6 space-y-4 ${isQuizType(form.type) ? 'border-purple-200' : 'border-blue-200'}`}>
+        <div className={`bg-white border-2 rounded-2xl p-6 space-y-4 ${isSelfAssessment(form.type) ? 'border-teal-200' : isQuizType(form.type) ? 'border-purple-200' : 'border-blue-200'}`}>
           <h3 className="text-lg font-bold text-slate-800">Nueva Actividad</h3>
 
           {/* Activity type selector */}
-          <div className="flex gap-2">
-            {[{ value: 'TASK', label: 'Tarea', icon: ClipboardList, color: 'blue' }, { value: 'QUIZ', label: 'Quiz', icon: HelpCircle, color: 'purple' }, { value: 'EXAM', label: 'Examen', icon: Award, color: 'red' }, { value: 'ICFES_SIMULATOR', label: 'Simulacro ICFES', icon: BarChart3, color: 'emerald' }].map(t => (
-              <button key={t.value} onClick={() => setForm({ ...form, type: t.value })} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${form.type === t.value ? (t.color === 'blue' ? 'border-blue-500 bg-blue-50 text-blue-700' : t.color === 'purple' ? 'border-purple-500 bg-purple-50 text-purple-700' : t.color === 'emerald' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-red-500 bg-red-50 text-red-700') : 'border-slate-200 text-slate-500 hover:border-slate-300'}`} style={{ minHeight: '44px' }}>
+          <div className="flex gap-2 flex-wrap">
+            {[{ value: 'TASK', label: 'Tarea', icon: ClipboardList, color: 'blue' }, { value: 'QUIZ', label: 'Quiz', icon: HelpCircle, color: 'purple' }, { value: 'EXAM', label: 'Examen', icon: Award, color: 'red' }, { value: 'ICFES_SIMULATOR', label: 'Simulacro ICFES', icon: BarChart3, color: 'emerald' }, { value: 'SELF_ASSESSMENT', label: 'Autoevaluación', icon: Sparkles, color: 'teal' }].map(t => (
+              <button key={t.value} onClick={() => setForm({ ...form, type: t.value })} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${form.type === t.value ? (t.color === 'blue' ? 'border-blue-500 bg-blue-50 text-blue-700' : t.color === 'purple' ? 'border-purple-500 bg-purple-50 text-purple-700' : t.color === 'emerald' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : t.color === 'teal' ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-red-500 bg-red-50 text-red-700') : 'border-slate-200 text-slate-500 hover:border-slate-300'}`} style={{ minHeight: '44px' }}>
                 <t.icon className="w-5 h-5" /> {t.label}
               </button>
             ))}
           </div>
 
+          {/* Self-Assessment: delegate to specialized form */}
+          {isSelfAssessment(form.type) ? (
+            <CreateSelfAssessmentForm
+              classroomId={classroom.id}
+              sectionId={form.sectionId || sections[0]?.id || ''}
+              onCreated={() => { setShowCreate(false); loadActivities() }}
+              onCancel={() => setShowCreate(false)}
+            />
+          ) : (
+          <>
           <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder={isQuizType(form.type) ? 'Título del quiz/examen' : 'Título de la tarea'} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
           <Suspense fallback={<div className="h-32 bg-slate-50 rounded-xl animate-pulse" />}>
             <RichTextEditor value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder={isQuizType(form.type) ? 'Instrucciones para el estudiante...' : 'Instrucciones y descripción...'} />
@@ -4465,6 +4488,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               </button>
             </div>
           </div>
+          </>
+          )}
         </div>
       )}
 
@@ -4512,13 +4537,14 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             return (
               <button key={act.id} onClick={() => openActivity(act)} className="w-full text-left bg-white rounded-2xl border-2 border-slate-200 hover:border-blue-300 p-5 transition-all hover:shadow-sm group">
                 <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isIcfes(act.type) ? 'bg-emerald-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                    {isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                    {isSelfAssessment(act.type) ? <Sparkles className="w-6 h-6 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <h3 className="text-base font-bold text-slate-800 group-hover:text-blue-700">{act.title}</h3>
                       <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>
+                      {isSelfAssessment(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-teal-50 text-teal-700">Autoevaluación</span>}
                       {studentStatus && (
                         <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${studentStatus.bg} ${studentStatus.text}`}>{studentStatus.label}</span>
                       )}

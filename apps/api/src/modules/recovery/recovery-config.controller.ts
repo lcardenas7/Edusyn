@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseGuards, Request } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards, Request } from '@nestjs/common';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -22,6 +22,10 @@ export class RecoveryConfigController {
     @Query('institutionId') institutionId?: string,
   ) {
     const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    // Devuelve config completa con reglas granulares incluidas
+    const config = await this.configService.getConfig(instId, academicYearId);
+    if (config) return config;
+    // Si no existe, crear con defaults y devolver
     return this.configService.getOrCreateDefaultConfig(instId, academicYearId);
   }
 
@@ -29,5 +33,25 @@ export class RecoveryConfigController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
   async upsertConfig(@Body() data: any) {
     return this.configService.upsertConfig(data);
+  }
+
+  // ─── Reglas granulares ───
+
+  @Get(':configId/rules')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async listRules(@Param('configId') configId: string) {
+    return this.configService.listRules(configId);
+  }
+
+  @Post('rules')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async upsertRule(@Body() data: any) {
+    return this.configService.upsertRule(data);
+  }
+
+  @Delete('rules/:id')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async deleteRule(@Param('id') id: string) {
+    return this.configService.deleteRule(id);
   }
 }

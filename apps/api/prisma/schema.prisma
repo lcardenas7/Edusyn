@@ -253,6 +253,7 @@ model User {
   // Recuperaciones
   periodRecoveriesAssigned  PeriodRecovery[]        @relation("RecoveryAssignedBy")
   periodRecoveriesEvaluated PeriodRecovery[]        @relation("RecoveryEvaluatedBy")
+  periodRecoveriesReviewed  PeriodRecovery[]        @relation("RecoveryReviewedBy")
   finalRecoveriesTeacher    FinalRecoveryPlan[]     @relation("FinalRecoveryTeacher")
   finalRecoveriesSupervisor FinalRecoveryPlan[]     @relation("FinalRecoverySupervisor")
   finalRecoveriesApprover   FinalRecoveryPlan[]     @relation("FinalRecoveryApprover")
@@ -449,6 +450,7 @@ model Institution {
   galleryImages               GalleryImage[]
   events                      Event[]
   recoveryConfigs             RecoveryConfig[]
+  recoveryRules               RecoveryRule[]
   academicActs                AcademicAct[]
   performanceLevelComplements PerformanceLevelComplement[]
   performanceConfig           PerformanceConfig?
@@ -1486,7 +1488,8 @@ model StudentEnrollment {
   withdrawalReason String? // Motivo del retiro
 
   // Trazabilidad de promoción
-  promotedFromId String? @unique // Matrícula del año anterior (1:1)
+  promotedFromId  String?          @unique // Matrícula del año anterior (1:1)
+  promotionStatus PromotionStatus  @default(IN_PROGRESS)
 
   // Observaciones y auditoría
   observations String? // Observaciones de matrícula
@@ -2295,10 +2298,22 @@ enum RecoveryType {
   FINAL // Recuperación final (plan de apoyo)
 }
 
+// Tipo de actividad de recuperación (modalidad pedagógica)
+enum RecoveryActivityType {
+  REINFORCEMENT // Refuerzo: actividad complementaria simple
+  LEVELING // Nivelación: curso corto de refuerzo
+  EXAM // Habilitación: examen formal
+  VALIDATION // Validación: prueba completa de competencias
+  WORKSHOP // Taller: actividad práctica dirigida
+  PROJECT // Proyecto: trabajo de investigación o aplicación
+}
+
 enum RecoveryStatus {
   PENDING // Pendiente de iniciar
-  IN_PROGRESS // En proceso
-  COMPLETED // Completada
+  ASSIGNED // Asignado a docente pero no iniciado
+  IN_PROGRESS // En proceso de ejecución
+  COMPLETED // Completada por el estudiante
+  REVIEW_PENDING // Pendiente de revisión por coordinador
   APPROVED // Aprobada
   NOT_APPROVED // No aprobada
   CANCELLED // Cancelada
@@ -2309,6 +2324,17 @@ enum RecoveryImpactType {
   AVERAGE_WITH_ORIGINAL // Promediar con nota original
   REPLACE_IF_HIGHER // Reemplazar solo si es mayor
   QUALITATIVE_ONLY // Solo registro cualitativo (no afecta nota)
+}
+
+// Estado de promoción del estudiante (calculado tras recuperaciones)
+enum PromotionStatus {
+  IN_PROGRESS // Año en curso
+  PROMOTED // Promovido directamente
+  PROMOTED_AFTER_RECOVERY // Promovido después de recuperación
+  RETAINED // Repitente
+  PENDING_RECOVERY // Pendiente de recuperación final
+  TRANSFERRED // Trasladado
+  WITHDRAWN // Retirado
 }
 
 // AcademicActType movido a la sección de enums de Año Lectivo (línea ~102)
@@ -2323,15 +2349,22 @@ model RecoveryConfig {
   minPassingScore Decimal @default(3.0) @db.Decimal(5, 2)
 
   // Recuperación por período
-  periodRecoveryEnabled Boolean            @default(true)
-  periodMaxScore        Decimal            @default(3.0) @db.Decimal(5, 2)
-  periodImpactType      RecoveryImpactType @default(ADJUST_TO_MINIMUM)
+  periodRecoveryEnabled    Boolean            @default(true)
+  periodMaxScore           Decimal            @default(3.0) @db.Decimal(5, 2)
+  periodImpactType         RecoveryImpactType @default(ADJUST_TO_MINIMUM)
+  periodRecoveryMaxAttempts Int               @default(1)
 
   // Recuperación final
-  finalRecoveryEnabled Boolean            @default(true)
-  finalMaxScore        Decimal            @default(3.0) @db.Decimal(5, 2)
-  finalImpactType      RecoveryImpactType @default(ADJUST_TO_MINIMUM)
-  maxAreasRecoverable  Int                @default(2)
+  finalRecoveryEnabled    Boolean            @default(true)
+  finalMaxScore           Decimal            @default(3.0) @db.Decimal(5, 2)
+  finalImpactType         RecoveryImpactType @default(ADJUST_TO_MINIMUM)
+  finalRecoveryMaxAttempts Int               @default(1)
+  maxAreasRecoverable     Int                @default(2)
+  maxSubjectsRecoverable  Int?               // Máx. asignaturas recuperables (null = sin límite)
+
+  // Umbrales de reprobación automática
+  autoRetainAreas    Int? // Si pierde >= N áreas → repite automáticamente
+  autoRetainSubjects Int? // Si pierde >= N asignaturas → repite automáticamente
 
   // Fechas de ventanas de recuperación
   periodRecoveryStartDate DateTime?
@@ -2343,6 +2376,9 @@ model RecoveryConfig {
   requiresAcademicCouncilAct Boolean @default(true)
   requiresPromotionAct       Boolean @default(true)
 
+  // Reglas granulares por tipo de actividad (relación)
+  recoveryRules RecoveryRule[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2350,6 +2386,37 @@ model RecoveryConfig {
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
 
   @@unique([institutionId, academicYearId])
+}
+
+// Regla de recuperación granular (por tipo de actividad y alcance)
+model RecoveryRule {
+  id               String @id @default(cuid())
+  recoveryConfigId String
+  institutionId    String
+
+  // Alcance: PERIOD o FINAL
+  appliesTo    RecoveryType
+  // Tipo de actividad pedagógica
+  activityType RecoveryActivityType
+
+  // Configuración de la regla
+  maxScore    Decimal            @db.Decimal(5, 2)
+  impactType  RecoveryImpactType @default(ADJUST_TO_MINIMUM)
+  maxAttempts Int                @default(1)
+  isEnabled   Boolean            @default(true)
+
+  // Descripción para UI
+  label       String? // Ej: "Habilitación de período"
+  description String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recoveryConfig RecoveryConfig @relation(fields: [recoveryConfigId], references: [id], onDelete: Cascade)
+  institution    Institution    @relation(fields: [institutionId], references: [id])
+
+  @@unique([recoveryConfigId, appliesTo, activityType])
+  @@index([institutionId])
 }
 
 // Recuperación por período
@@ -2364,10 +2431,12 @@ model PeriodRecovery {
   originalScore Decimal @db.Decimal(5, 2)
 
   // Información de la recuperación
-  status              RecoveryStatus @default(PENDING)
-  activityDescription String?        @db.Text
+  status              RecoveryStatus       @default(PENDING)
+  activityType        RecoveryActivityType? // Tipo de actividad de recuperación
+  activityDescription String?              @db.Text
   scheduledDate       DateTime?
   completedDate       DateTime?
+  attemptNumber       Int                  @default(1)
 
   // Dimensión reforzada
   reinforcedDimension String? @default("COGNITIVA")
@@ -2384,6 +2453,7 @@ model PeriodRecovery {
   // Responsables
   assignedById  String
   evaluatedById String?
+  reviewedById  String? // Coordinador que revisó
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2394,6 +2464,7 @@ model PeriodRecovery {
   subject           Subject           @relation(fields: [subjectId], references: [id], onDelete: Restrict)
   assignedBy        User              @relation("RecoveryAssignedBy", fields: [assignedById], references: [id])
   evaluatedBy       User?             @relation("RecoveryEvaluatedBy", fields: [evaluatedById], references: [id])
+  reviewedBy        User?             @relation("RecoveryReviewedBy", fields: [reviewedById], references: [id])
 
   @@index([studentEnrollmentId])
   @@index([academicTermId])
@@ -2412,7 +2483,8 @@ model FinalRecoveryPlan {
   originalAreaScore Decimal @db.Decimal(5, 2)
 
   // Estado del plan
-  status RecoveryStatus @default(PENDING)
+  status       RecoveryStatus       @default(PENDING)
+  activityType RecoveryActivityType? // Tipo de actividad de recuperación final
 
   // Plan de actividades
   activities String? @db.Text
@@ -2423,6 +2495,7 @@ model FinalRecoveryPlan {
   startDate     DateTime?
   endDate       DateTime?
   completedDate DateTime?
+  attemptNumber Int       @default(1)
 
   // Resultado
   recoveryScore  Decimal?            @db.Decimal(5, 2)
@@ -2475,6 +2548,11 @@ model AcademicAct {
   content   String  @db.Text
   decisions String? @db.Text
   attendees String? @db.Text
+
+  // Participantes y adjuntos estructurados
+  participants Json?  // [{name, role, document, signature?}]
+  attachments  Json?  // [{name, url, type}]
+  notes        String? @db.Text
 
   // Relaciones opcionales
   studentEnrollmentId String?

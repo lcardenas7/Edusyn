@@ -82,7 +82,12 @@ export class FinalRecoveryController {
 
   @Get('stats')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async getStats(@Query('academicYearId') academicYearId: string) {
-    return this.finalRecoveryService.getRecoveryStats(academicYearId);
+  async getStats(
+    @Query('academicYearId') academicYearId: string,
+    @Req() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.finalRecoveryService.getRecoveryStats(academicYearId, instId);
   }
 }

@@ -1869,7 +1869,7 @@ export const classroomApi = {
   createActivity: (classroomId: string, data: {
     sectionId: string; type: string; title: string; description?: string;
     maxScore?: number; dueDate?: string; openDate?: string; allowLateSubmit?: boolean;
-    attachmentUrl?: string; attachmentName?: string;
+    attachmentUrl?: string; attachmentName?: string; rubricId?: string;
   }) => api.post(`/classrooms/${classroomId}/activities`, data),
   listActivities: (classroomId: string, role?: string) =>
     api.get(`/classrooms/${classroomId}/activities`, { params: { role } }),

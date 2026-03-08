@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { RecoveryStatus, RecoveryImpactType } from '@prisma/client';
+import { RecoveryStatus, RecoveryImpactType, RecoveryActivityType } from '@prisma/client';
 import { RecoveryConfigService } from './recovery-config.service';
+import { RecoveryEngineService } from './recovery-engine.service';
 
 // Tipos para la configuración de áreas
 interface AreaConfig {
@@ -16,6 +17,7 @@ export class PeriodRecoveryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: RecoveryConfigService,
+    private readonly engine: RecoveryEngineService,
   ) {}
 
   /**
@@ -279,17 +281,60 @@ export class PeriodRecoveryService {
     academicTermId: string;
     subjectId: string;
     originalScore: number;
+    activityType?: RecoveryActivityType;
     activityDescription?: string;
     scheduledDate?: Date;
     reinforcedDimension?: string;
     assignedById: string;
   }) {
-    const enr = await this.prisma.studentEnrollment.findUnique({ where: { id: data.studentEnrollmentId }, select: { institutionId: true } });
+    const enr = await this.prisma.studentEnrollment.findUnique({
+      where: { id: data.studentEnrollmentId },
+      select: { institutionId: true, academicYearId: true },
+    });
+    if (!enr) throw new BadRequestException('Matrícula no encontrada');
+
+    // Validar que la recuperación esté permitida
+    const term = await this.prisma.academicTerm.findUnique({ where: { id: data.academicTermId } });
+    if (!term) throw new BadRequestException('Período no encontrado');
+
+    const validation = await this.engine.validateRecoveryCreation({
+      institutionId: enr.institutionId,
+      academicYearId: enr.academicYearId,
+      type: 'PERIOD',
+    });
+    if (!validation.allowed) throw new BadRequestException(validation.reason);
+
+    // Validar intentos restantes
+    const rule = await this.engine.getApplicableRule({
+      institutionId: enr.institutionId,
+      academicYearId: enr.academicYearId,
+      type: 'PERIOD',
+      activityType: data.activityType,
+    });
+
+    const attemptCheck = await this.engine.validateAttempt({
+      studentEnrollmentId: data.studentEnrollmentId,
+      subjectId: data.subjectId,
+      academicTermId: data.academicTermId,
+      maxAttempts: rule.maxAttempts,
+      type: 'PERIOD',
+    });
+    if (!attemptCheck.canAttempt) throw new BadRequestException(attemptCheck.reason);
+
     return this.prisma.periodRecovery.create({
       data: {
-        ...data,
-        institutionId: enr!.institutionId,
-        status: 'PENDING',
+        studentEnrollmentId: data.studentEnrollmentId,
+        academicTermId: data.academicTermId,
+        subjectId: data.subjectId,
+        originalScore: data.originalScore,
+        activityType: data.activityType,
+        activityDescription: data.activityDescription,
+        scheduledDate: data.scheduledDate,
+        reinforcedDimension: data.reinforcedDimension,
+        assignedById: data.assignedById,
+        institutionId: enr.institutionId,
+        attemptNumber: attemptCheck.currentAttempt,
+        status: 'ASSIGNED',
       },
       include: {
         studentEnrollment: {
@@ -377,52 +422,41 @@ export class PeriodRecoveryService {
       },
     });
 
-    if (!recovery) throw new Error('Recovery not found');
+    if (!recovery) throw new BadRequestException('Recuperación no encontrada');
+
+    // Obtener regla aplicable (granular o general)
+    const rule = await this.engine.getApplicableRule({
+      institutionId,
+      academicYearId: recovery.academicTerm.academicYearId,
+      type: 'PERIOD',
+      activityType: recovery.activityType || undefined,
+    });
 
     const config = await this.configService.getOrCreateDefaultConfig(
       institutionId,
       recovery.academicTerm.academicYearId,
     );
 
-    // Calcular nota final según el tipo de impacto configurado
-    const originalScore = Number(recovery.originalScore);
-    const recoveryScore = data.recoveryScore;
-    const maxScore = Number(config.periodMaxScore);
-    const minPassing = Number(config.minPassingScore);
-
-    let finalScore: number;
-    let status: RecoveryStatus;
-
-    switch (config.periodImpactType) {
-      case 'ADJUST_TO_MINIMUM':
-        finalScore = Math.min(recoveryScore >= minPassing ? minPassing : recoveryScore, maxScore);
-        break;
-      case 'AVERAGE_WITH_ORIGINAL':
-        finalScore = Math.min((originalScore + recoveryScore) / 2, maxScore);
-        break;
-      case 'REPLACE_IF_HIGHER':
-        finalScore = Math.min(Math.max(originalScore, recoveryScore), maxScore);
-        break;
-      case 'QUALITATIVE_ONLY':
-        finalScore = originalScore; // No cambia la nota
-        break;
-      default:
-        finalScore = Math.min(recoveryScore, maxScore);
-    }
-
-    status = finalScore >= minPassing ? 'APPROVED' : 'NOT_APPROVED';
+    // Usar el engine para calcular impacto
+    const { finalScore, status } = this.engine.calculateRecoveryImpact({
+      originalScore: Number(recovery.originalScore),
+      recoveryScore: data.recoveryScore,
+      maxScore: rule.maxScore,
+      minPassingScore: Number(config.minPassingScore),
+      impactType: rule.impactType,
+    });
 
     return this.prisma.periodRecovery.update({
       where: { id },
       data: {
         recoveryScore: data.recoveryScore,
         finalScore,
-        impactType: config.periodImpactType,
+        impactType: rule.impactType,
         evidences: data.evidences,
         observations: data.observations,
         evaluatedById: data.evaluatedById,
         completedDate: new Date(),
-        status,
+        status: 'REVIEW_PENDING',
       },
       include: {
         studentEnrollment: {
@@ -433,16 +467,62 @@ export class PeriodRecoveryService {
     });
   }
 
-  async getRecoveryStats(academicTermId: string) {
-    const recoveries = await this.prisma.periodRecovery.groupBy({
-      by: ['status'],
-      where: { academicTermId },
-      _count: true,
-    });
+  /**
+   * Coordinador aprueba/rechaza el resultado de una recuperación.
+   * Flujo: REVIEW_PENDING → APPROVED / NOT_APPROVED
+   */
+  async reviewResult(
+    id: string,
+    data: {
+      approved: boolean;
+      reviewedById: string;
+      observations?: string;
+    },
+  ) {
+    const recovery = await this.prisma.periodRecovery.findUnique({ where: { id } });
+    if (!recovery) throw new BadRequestException('Recuperación no encontrada');
+    if (recovery.status !== 'REVIEW_PENDING') {
+      throw new BadRequestException('Solo se pueden revisar recuperaciones en estado REVIEW_PENDING');
+    }
 
-    return recoveries.reduce((acc, r) => {
-      acc[r.status] = r._count;
-      return acc;
-    }, {} as Record<string, number>);
+    const config = await this.configService.getOrCreateDefaultConfig(
+      recovery.institutionId,
+      (await this.prisma.academicTerm.findUnique({ where: { id: recovery.academicTermId } }))!.academicYearId,
+    );
+
+    // Si aprueba, recalcular nota final; si rechaza, mantener nota original
+    let finalStatus: RecoveryStatus;
+    let finalScore = recovery.finalScore;
+
+    if (data.approved) {
+      finalStatus = Number(recovery.finalScore) >= Number(config.minPassingScore) ? 'APPROVED' : 'NOT_APPROVED';
+    } else {
+      finalStatus = 'NOT_APPROVED';
+      finalScore = recovery.originalScore;
+    }
+
+    return this.prisma.periodRecovery.update({
+      where: { id },
+      data: {
+        status: finalStatus,
+        reviewedById: data.reviewedById,
+        observations: data.observations
+          ? `${recovery.observations || ''}\n[Revisión]: ${data.observations}`
+          : recovery.observations,
+      },
+      include: {
+        studentEnrollment: { include: { student: true } },
+        subject: true,
+        reviewedBy: { select: { firstName: true, lastName: true } },
+      },
+    });
+  }
+
+  async getRecoveryStats(academicTermId: string, institutionId: string) {
+    return this.engine.getEnrichedStats({
+      academicTermId,
+      institutionId,
+      type: 'PERIOD',
+    });
   }
 }

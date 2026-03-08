@@ -210,6 +210,7 @@ export class ClassroomController {
     allowLateSubmit?: boolean;
     attachmentUrl?: string;
     attachmentName?: string;
+    rubricId?: string;
   }) {
     const { userId } = await this.resolveCtx(req);
     return this.service.createActivity(classroomId, userId, body);

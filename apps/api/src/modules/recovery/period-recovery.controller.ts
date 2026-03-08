@@ -71,9 +71,27 @@ export class PeriodRecoveryController {
     );
   }
 
+  @Patch(':id/review')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async reviewResult(
+    @Param('id') id: string,
+    @Body() data: any,
+    @Req() req: any,
+  ) {
+    return this.periodRecoveryService.reviewResult(id, {
+      ...data,
+      reviewedById: req.user.id,
+    });
+  }
+
   @Get('stats')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
-  async getStats(@Query('academicTermId') academicTermId: string) {
-    return this.periodRecoveryService.getRecoveryStats(academicTermId);
+  async getStats(
+    @Query('academicTermId') academicTermId: string,
+    @Req() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.periodRecoveryService.getRecoveryStats(academicTermId, instId);
   }
 }

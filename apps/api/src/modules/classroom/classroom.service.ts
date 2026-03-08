@@ -438,6 +438,7 @@ export class ClassroomService {
     showResults?: boolean;
     maxAttempts?: number;
     timeLimitMinutes?: number;
+    rubricId?: string;
   }) {
     const classroom = await this.validateClassroomOwnership(classroomId, teacherId);
     // Validate section belongs to this classroom
@@ -445,6 +446,12 @@ export class ClassroomService {
       where: { id: dto.sectionId, classroom: { id: classroomId } },
     });
     if (!section) throw new ForbiddenException('Sección no encontrada en esta aula');
+
+    // Build metadata
+    let metadata: any = undefined;
+    if (dto.attachmentUrl) {
+      metadata = { attachmentUrl: dto.attachmentUrl, attachmentName: dto.attachmentName };
+    }
 
     return this.prisma.classroomActivity.create({
       data: {
@@ -461,7 +468,8 @@ export class ClassroomService {
         showResults: dto.showResults ?? true,
         maxAttempts: dto.maxAttempts ?? 1,
         timeLimitMinutes: dto.timeLimitMinutes,
-        metadata: dto.attachmentUrl ? { attachmentUrl: dto.attachmentUrl, attachmentName: dto.attachmentName } : undefined,
+        metadata,
+        rubricId: dto.rubricId || undefined,
         isPublished: false,
       },
       include: {
@@ -511,8 +519,16 @@ export class ClassroomService {
         section: { select: { id: true, title: true } },
         classroom: {
           select: {
-            id: true, title: true,
+            id: true, title: true, institutionId: true,
             teacherAssignment: { select: { teacherId: true, groupId: true, academicYearId: true } },
+          },
+        },
+        rubric: {
+          include: {
+            criteria: {
+              include: { levels: { orderBy: { order: 'asc' } } },
+              orderBy: { order: 'asc' },
+            },
           },
         },
         _count: { select: { submissions: true } },
