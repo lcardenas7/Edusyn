@@ -455,6 +455,88 @@ export default function AcademicReports() {
       reportData.results.forEach((r: any) => {
         csvContent += `"${r.teacherName}","${r.subjectName}","${r.groupName}",${r.average ?? '-'},${r.approvalRate ?? '-'},${r.totalStudents}\n`
       })
+    } else if (selectedReport === 'min-grade-consolidated' && reportData?.students) {
+      const rTerms = reportData.terms || []
+      const rSubjects = reportData.subjectColumns || []
+      const rStudents = reportData.students || []
+      // Header: Nro, Estudiante, then for each subject: Period1..PeriodN, Necesita
+      const subHeaders = rSubjects.flatMap((s: any) => [
+        ...rTerms.map((t: any) => `"${s.subjectName} - ${t.name}"`),
+        `"${s.subjectName} - Necesita"`,
+      ])
+      csvContent = `Nro,Estudiante,${subHeaders.join(',')},Promedio,Reprobadas\n`
+      rStudents.forEach((st: any, idx: number) => {
+        const cells = (st.subjects || []).flatMap((subj: any) => [
+          ...(subj.termGrades || []).map((tg: any) => tg.grade !== null ? tg.grade.toFixed(1) : '-'),
+          subj.status === 'approved' ? '—' : subj.minimumRequired !== null ? subj.minimumRequired.toFixed(1) : '-',
+        ])
+        csvContent += `${idx + 1},"${st.studentName}",${cells.join(',')},${st.generalAverage?.toFixed(1) ?? '-'},${st.totalFailed}\n`
+      })
+    } else if (selectedReport === 'cons-areas' && reportData?.students) {
+      const caCols = reportData.areaCols || []
+      const caStudents = reportData.students || []
+      csvContent = `Nro,Estudiante,${caCols.map((c: any) => `"${c.areaName}"`).join(',')},Promedio,Áreas Reprobadas\n`
+      caStudents.forEach((st: any, idx: number) => {
+        const grades = (st.areaGrades || []).map((ag: any) => ag.average !== null ? ag.average.toFixed(1) : '-').join(',')
+        csvContent += `${idx + 1},"${st.studentName}",${grades},${st.generalAverage?.toFixed(1) ?? '-'},${st.failedAreas}\n`
+      })
+    } else if (selectedReport === 'avg-area' && reportData?.results) {
+      csvContent = 'Área,Promedio,Aprobación %,Reprobación %,Asignaturas\n'
+      reportData.results.forEach((r: any) => {
+        csvContent += `"${r.areaName}",${r.average?.toFixed(1) ?? '-'},${r.approvalRate?.toFixed(1) ?? '-'},${r.failRate?.toFixed(1) ?? '-'},${r.subjectCount}\n`
+      })
+    } else if (selectedReport === 'ranking-institutional' && reportData?.results) {
+      csvContent = 'Posición,Estudiante,Grupo,Promedio,Asignaturas,Desempeño\n'
+      reportData.results.forEach((r: any) => {
+        csvContent += `${r.position},"${r.studentName}","${r.group}",${r.average?.toFixed(2) ?? '-'},${r.subjectCount},"${r.performance}"\n`
+      })
+    } else if (selectedReport === 'comparative' && reportData?.results) {
+      const termNames = reportData.termNames || []
+      csvContent = `Estudiante,Grupo,${termNames.map((t: string) => `"${t}"`).join(',')},Tendencia\n`
+      reportData.results.forEach((r: any) => {
+        const avgs = (r.termAverages || []).map((a: any) => a?.toFixed(1) ?? '-').join(',')
+        csvContent += `"${r.studentName}","${r.group}",${avgs},"${r.trend === 'up' ? 'Sube' : r.trend === 'down' ? 'Baja' : 'Estable'}"\n`
+      })
+    } else if (selectedReport === 'student-history' && reportData?.years) {
+      csvContent = `Historial Académico: ${reportData.studentName}\n\n`
+      reportData.years.forEach((year: any) => {
+        const termHeaders = (year.terms || []).map((t: any) => `"${t.termName}"`).join(',')
+        csvContent += `"${year.yearName} - ${year.groupName}"\nAsignatura,${termHeaders},Final\n`
+        ;(year.subjects || []).forEach((s: any) => {
+          const tGrades = (s.termGrades || []).map((g: any) => g?.toFixed(1) ?? '-').join(',')
+          csvContent += `"${s.subjectName}",${tGrades},${s.finalGrade?.toFixed(1) ?? '-'}\n`
+        })
+        csvContent += '\n'
+      })
+    } else if (selectedReport === 'subject-analysis' && reportData?.students) {
+      csvContent = `Análisis: ${reportData.subjectName} (${reportData.areaName})\n\nEstudiante,Promedio,Desempeño\n`
+      reportData.students.forEach((s: any) => {
+        csvContent += `"${s.studentName}",${s.average?.toFixed(1) ?? '-'},"${s.performance}"\n`
+      })
+    } else if (selectedReport === 'institutional-stats' && reportData?.institutional) {
+      const inst = reportData.institutional
+      csvContent = `Promedio Institucional,${inst.average}\nAprobación %,${inst.approvalRate}\nEstudiantes,${inst.totalStudents}\nGrupos,${inst.totalGroups}\n\n`
+      csvContent += 'Nivel Educativo,Promedio,Aprobación %,Estudiantes,Grupos\n'
+      ;(reportData.stages || []).forEach((s: any) => {
+        csvContent += `"${s.stageLabel}",${s.average},${s.approvalRate},${s.totalStudents},${s.totalGroups}\n`
+        if (s.groupRanking) {
+          s.groupRanking.forEach((g: any, i: number) => {
+            csvContent += `"  ${i + 1}. ${g.groupName}",${g.average},${g.approvalRate}%,${g.totalStudents},\n`
+          })
+        }
+      })
+    } else if (selectedReport === 'annual-comparison' && reportData?.results) {
+      csvContent = 'Año,Promedio,Δ Prom.,Aprobación %,Δ Aprob.,Estudiantes,Δ Est.,Grupos\n'
+      reportData.results.forEach((yr: any) => {
+        csvContent += `"${yr.yearName}",${yr.average},${yr.avgVariation ?? '-'},${yr.approvalRate}%,${yr.approvalVariation !== null ? yr.approvalVariation + '%' : '-'},${yr.totalStudents},${yr.studentVariation ?? '-'},${yr.totalGroups}\n`
+      })
+    } else if (selectedReport === 'completeness-status' && reportData?.groups) {
+      csvContent = 'Grupo,Asignatura,Docente,Notas %,Logros %\n'
+      ;(reportData.groups || []).forEach((g: any) => {
+        ;(g.subjects || []).forEach((s: any) => {
+          csvContent += `"${g.groupName}","${s.subjectName}","${s.teacherName}",${s.gradeCompleteness}%,${s.achievementCompleteness}%\n`
+        })
+      })
     }
 
     if (!csvContent || csvContent.split('\n').length <= 1) {
@@ -2009,7 +2091,20 @@ export default function AcademicReports() {
           <button onClick={exportToCSV} className={`flex items-center gap-2 px-3 py-2 ${style.btnBg} text-white rounded-lg ${style.btnHover} text-sm`}>
             <Download className="w-4 h-4" /> Exportar CSV
           </button>
-          <button onClick={() => window.print()} className="flex items-center gap-2 px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 text-sm">
+          <button onClick={() => {
+            const wideReports = ['min-grade-consolidated', 'cons-subjects', 'cons-areas', 'failed-subjects', 'recovery-list', 'completeness-status']
+            const isWide = wideReports.includes(selectedReport || '')
+            if (isWide) {
+              const style = document.createElement('style')
+              style.id = 'print-landscape-override'
+              style.textContent = '@media print { @page { size: landscape; margin: 5mm; } table { font-size: 7px !important; } th, td { padding: 1px 2px !important; } }'
+              document.head.appendChild(style)
+              window.print()
+              setTimeout(() => style.remove(), 500)
+            } else {
+              window.print()
+            }
+          }} className="flex items-center gap-2 px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 text-sm">
             <Printer className="w-4 h-4" /> Imprimir
           </button>
         </div>

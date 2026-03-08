@@ -46,6 +46,9 @@ async function bootstrap() {
     }),
   );
 
+  // 🔄 Graceful shutdown — cierra Prisma, SSE streams, etc. al recibir SIGTERM
+  app.enableShutdownHooks();
+
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

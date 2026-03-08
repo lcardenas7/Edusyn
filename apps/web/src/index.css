@@ -82,3 +82,62 @@ body {
 .rich-content a { color: #2563eb; text-decoration: underline; }
 .rich-content pre { background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 8px; overflow-x: auto; }
 .rich-content img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PRINT STYLES — Reportes Académicos
+   ═══════════════════════════════════════════════════════════════════════ */
+@media print {
+  /* Preserve colors in print */
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    background: #fff !important;
+  }
+
+  /* Default: portrait with minimal margins */
+  @page { margin: 8mm 6mm; }
+
+  /* Hide navigation, sidebar, buttons, filters, charts */
+  nav, aside, header,
+  [class*="sidebar"], [class*="Sidebar"],
+  button, .no-print,
+  .recharts-wrapper,
+  select, input[type="text"], input[type="date"],
+  [class*="bg-amber-600"][class*="text-white"],
+  [class*="bg-emerald-600"], [class*="bg-slate-600"],
+  [class*="bg-green-600"][class*="text-white"],
+  [class*="bg-purple-600"][class*="text-white"] {
+    display: none !important;
+  }
+
+  /* Show the report content full width */
+  main, [class*="max-w-"] {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Scale down text for wide tables */
+  table { font-size: 9px !important; }
+  th, td { padding: 2px 3px !important; }
+
+  /* Remove sticky positioning (breaks in print) */
+  [class*="sticky"] {
+    position: static !important;
+  }
+
+  /* Keep table headers on each page */
+  thead { display: table-header-group; }
+  tr { page-break-inside: avoid; }
+
+  /* KPI cards: keep but compact */
+  [class*="grid-cols"] {
+    gap: 4px !important;
+  }
+  [class*="rounded-xl"] {
+    border-radius: 4px !important;
+    padding: 4px 6px !important;
+  }
+}
+
+/* Landscape override — injected dynamically by smartPrint() for wide reports */
