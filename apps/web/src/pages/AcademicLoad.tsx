@@ -10,7 +10,9 @@ import {
   AlertCircle,
   CheckCircle,
   AlertTriangle,
-  AlertOctagon
+  AlertOctagon,
+  ArrowRightLeft,
+  Loader2
 } from 'lucide-react'
 import { teachersApi, groupsApi, subjectsApi, teacherAssignmentsApi, academicYearsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -74,6 +76,15 @@ export default function AcademicLoad() {
   const [filterGroup, setFilterGroup] = useState<string>('')
   const [filterArea, setFilterArea] = useState<string>('')
   const [filterShift, setFilterShift] = useState<string>('')
+
+  // Transfer Modal State
+  const [showTransferModal, setShowTransferModal] = useState(false)
+  const [transferFrom, setTransferFrom] = useState<string>('')
+  const [transferTo, setTransferTo] = useState<string>('')
+  const [transferReason, setTransferReason] = useState<string>('')
+  const [transferLoading, setTransferLoading] = useState(false)
+  const [transferPreview, setTransferPreview] = useState<any>(null)
+  const [selectedAssignments, setSelectedAssignments] = useState<string[]>([])
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -365,6 +376,22 @@ export default function AcademicLoad() {
           <p className="text-sm sm:text-base text-slate-500 mt-1">Asignación de docentes a grupos y asignaturas</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Botón Transferir Carga */}
+          <button
+            onClick={() => {
+              setTransferFrom('')
+              setTransferTo('')
+              setTransferReason('')
+              setTransferPreview(null)
+              setSelectedAssignments([])
+              setShowTransferModal(true)
+            }}
+            disabled={saving || teachers.length < 2}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50"
+          >
+            <ArrowRightLeft className="w-4 h-4" />
+            Transferir Carga
+          </button>
           {/* TEMPORAL: Botón para eliminar toda la carga */}
           <button
             onClick={async () => {
@@ -732,6 +759,231 @@ export default function AcademicLoad() {
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 {editingLoad ? 'Guardar Cambios' : 'Crear Asignación'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Transferir Carga */}
+      {showTransferModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                  <ArrowRightLeft className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Transferir Carga Docente</h3>
+                  <p className="text-sm text-slate-500">Transfiere todas las asignaciones de un docente a otro</p>
+                </div>
+              </div>
+              <button onClick={() => setShowTransferModal(false)} className="p-1 hover:bg-slate-100 rounded">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Docente Saliente */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Docente Saliente <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={transferFrom}
+                  onChange={async (e) => {
+                    setTransferFrom(e.target.value)
+                    setTransferPreview(null)
+                    setSelectedAssignments([])
+                    if (e.target.value) {
+                      try {
+                        setTransferLoading(true)
+                        const res = await teacherAssignmentsApi.getTeacherLoad(e.target.value, academicYearId)
+                        setTransferPreview(res.data)
+                        setSelectedAssignments(res.data.summary?.map((s: any) => s.id) || [])
+                      } catch (err) {
+                        console.error('Error loading teacher load:', err)
+                      } finally {
+                        setTransferLoading(false)
+                      }
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                >
+                  <option value="">Seleccione el docente que se va</option>
+                  {teachers.filter(t => t.id !== transferTo).map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Preview de carga */}
+              {transferLoading && (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-amber-600" />
+                  <span className="ml-2 text-slate-600">Cargando asignaciones...</span>
+                </div>
+              )}
+
+              {transferPreview && !transferLoading && (
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-slate-700">Asignaciones a transferir</span>
+                    <span className="text-sm text-slate-500">{transferPreview.totalHours} horas/semana</span>
+                  </div>
+                  {transferPreview.summary?.length > 0 ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {transferPreview.summary.map((item: any) => (
+                        <label key={item.id} className="flex items-center gap-3 p-2 bg-white rounded border border-slate-200 cursor-pointer hover:bg-amber-50">
+                          <input
+                            type="checkbox"
+                            checked={selectedAssignments.includes(item.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedAssignments([...selectedAssignments, item.id])
+                              } else {
+                                setSelectedAssignments(selectedAssignments.filter(id => id !== item.id))
+                              }
+                            }}
+                            className="w-4 h-4 text-amber-600 rounded"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-slate-800">{item.subject}</div>
+                            <div className="text-xs text-slate-500">{item.group} • {item.area} • {item.weeklyHours}h/sem</div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500 text-center py-4">Este docente no tiene asignaciones activas</p>
+                  )}
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-200">
+                    <button
+                      onClick={() => setSelectedAssignments(transferPreview.summary?.map((s: any) => s.id) || [])}
+                      className="text-xs text-amber-600 hover:underline"
+                    >
+                      Seleccionar todas
+                    </button>
+                    <button
+                      onClick={() => setSelectedAssignments([])}
+                      className="text-xs text-slate-500 hover:underline"
+                    >
+                      Deseleccionar todas
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Docente Reemplazo */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Docente de Reemplazo <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={transferTo}
+                  onChange={(e) => setTransferTo(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                >
+                  <option value="">Seleccione el docente de reemplazo</option>
+                  {teachers.filter(t => t.id !== transferFrom).map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Razón */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Razón del cambio <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={transferReason}
+                  onChange={(e) => setTransferReason(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                >
+                  <option value="">Seleccione la razón</option>
+                  <option value="Renuncia">Renuncia</option>
+                  <option value="Traslado">Traslado a otra institución</option>
+                  <option value="Licencia">Licencia (maternidad, enfermedad, etc.)</option>
+                  <option value="Terminación de contrato">Terminación de contrato</option>
+                  <option value="Reorganización institucional">Reorganización institucional</option>
+                  <option value="Otro">Otro</option>
+                </select>
+              </div>
+
+              {/* Resumen */}
+              {transferFrom && transferTo && transferReason && selectedAssignments.length > 0 && (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-medium text-amber-800">Resumen de la transferencia:</p>
+                      <p className="text-amber-700 mt-1">
+                        Se transferirán <strong>{selectedAssignments.length} asignaciones</strong> de{' '}
+                        <strong>{teachers.find(t => t.id === transferFrom)?.name}</strong> a{' '}
+                        <strong>{teachers.find(t => t.id === transferTo)?.name}</strong>.
+                      </p>
+                      <p className="text-amber-600 text-xs mt-2">
+                        Las notas y asistencia registradas se conservarán vinculadas al docente original.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="sticky bottom-0 bg-white px-6 py-4 border-t border-slate-200 flex gap-3">
+              <button
+                onClick={() => setShowTransferModal(false)}
+                className="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  if (!transferFrom || !transferTo || !transferReason || selectedAssignments.length === 0) return
+                  try {
+                    setTransferLoading(true)
+                    const res = await teacherAssignmentsApi.transfer({
+                      fromTeacherId: transferFrom,
+                      toTeacherId: transferTo,
+                      reason: transferReason,
+                      academicYearId,
+                      assignmentIds: selectedAssignments,
+                    })
+                    alert(`✅ Transferencia exitosa: ${res.data.transferredCount} asignaciones transferidas de ${res.data.fromTeacher} a ${res.data.toTeacher}`)
+                    setShowTransferModal(false)
+                    // Recargar asignaciones
+                    const loadsRes = await teacherAssignmentsApi.getAll({ academicYearId })
+                    const mappedLoads = (loadsRes.data || []).map((a: any) => ({
+                      id: a.id,
+                      teacherId: a.teacher?.id || '',
+                      teacherName: a.teacher ? `${a.teacher.firstName || ''} ${a.teacher.lastName || ''}`.trim().toUpperCase() : 'Sin docente',
+                      academicYearId: a.academicYearId,
+                      groupId: a.group?.id || '',
+                      groupName: a.group?.name || '',
+                      grade: a.group?.grade?.name || '',
+                      areaId: a.subject?.area?.id || '',
+                      areaName: a.subject?.area?.name || '',
+                      subjectId: a.subject?.id || '',
+                      subjectName: a.subject?.name || '',
+                      role: 'TITULAR' as const,
+                      weeklyHours: a.weeklyHours || 0,
+                      status: a.endDate ? 'INACTIVE' : 'ACTIVE' as const,
+                    }))
+                    setLoads(mappedLoads)
+                  } catch (err: any) {
+                    alert(err.response?.data?.message || 'Error al transferir carga')
+                  } finally {
+                    setTransferLoading(false)
+                  }
+                }}
+                disabled={!transferFrom || !transferTo || !transferReason || selectedAssignments.length === 0 || transferLoading}
+                className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {transferLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />}
+                Transferir Carga
               </button>
             </div>
           </div>

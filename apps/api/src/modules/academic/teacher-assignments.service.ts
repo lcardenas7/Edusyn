@@ -179,6 +179,162 @@ export class TeacherAssignmentsService {
   }
 
   /**
+   * Transferir TODA la carga activa de un docente a otro.
+   * Útil cuando un docente se va y llega su reemplazo.
+   * 
+   * @param fromTeacherId - Docente saliente
+   * @param toTeacherId - Docente de reemplazo
+   * @param institutionId - Institución
+   * @param academicYearId - Año académico (opcional, si no se especifica usa el activo)
+   * @param reason - Razón del cambio
+   * @param assignmentIds - IDs específicos a transferir (opcional, si no se especifica transfiere todas)
+   */
+  async transferFullLoad(params: {
+    fromTeacherId: string;
+    toTeacherId: string;
+    institutionId: string;
+    academicYearId?: string;
+    reason: string;
+    assignmentIds?: string[];
+    effectiveDate?: Date;
+  }) {
+    const { fromTeacherId, toTeacherId, institutionId, reason, assignmentIds, effectiveDate } = params;
+
+    // Validar que ambos docentes existan
+    const [fromTeacher, toTeacher] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: fromTeacherId }, select: { id: true, firstName: true, lastName: true } }),
+      this.prisma.user.findUnique({ where: { id: toTeacherId }, select: { id: true, firstName: true, lastName: true } }),
+    ]);
+
+    if (!fromTeacher) throw new NotFoundException('Docente saliente no encontrado');
+    if (!toTeacher) throw new NotFoundException('Docente de reemplazo no encontrado');
+    if (fromTeacherId === toTeacherId) throw new BadRequestException('El docente saliente y el reemplazo no pueden ser el mismo');
+
+    // Determinar año académico
+    let yearId = params.academicYearId;
+    if (!yearId) {
+      const activeYear = await this.prisma.academicYear.findFirst({
+        where: { institutionId, status: 'ACTIVE' },
+        select: { id: true },
+      });
+      if (!activeYear) throw new BadRequestException('No hay año académico activo');
+      yearId = activeYear.id;
+    }
+
+    // Obtener asignaciones activas del docente saliente
+    const whereClause: any = {
+      teacherId: fromTeacherId,
+      academicYearId: yearId,
+      endDate: null,
+    };
+
+    if (assignmentIds && assignmentIds.length > 0) {
+      whereClause.id = { in: assignmentIds };
+    }
+
+    const activeAssignments = await this.prisma.teacherAssignment.findMany({
+      where: whereClause,
+      include: this.assignmentIncludes,
+    });
+
+    if (activeAssignments.length === 0) {
+      throw new BadRequestException('El docente no tiene asignaciones activas para transferir');
+    }
+
+    const transferDate = effectiveDate || new Date();
+
+    // Transacción: cerrar todas las asignaciones y crear nuevas
+    const result = await this.prisma.$transaction(async (tx) => {
+      const closedAssignments: any[] = [];
+      const newAssignments: any[] = [];
+
+      for (const assignment of activeAssignments) {
+        // 1. Cerrar la asignación actual
+        const closed = await tx.teacherAssignment.update({
+          where: { id: assignment.id },
+          data: {
+            endDate: transferDate,
+            endReason: reason,
+          },
+        });
+        closedAssignments.push(closed);
+
+        // 2. Crear nueva asignación para el docente reemplazo
+        const newAssignment = await tx.teacherAssignment.create({
+          data: {
+            institutionId: assignment.institutionId,
+            academicYearId: assignment.academicYearId,
+            groupId: assignment.groupId,
+            subjectId: assignment.subjectId,
+            teacherId: toTeacherId,
+            weeklyHours: assignment.weeklyHours,
+            startDate: transferDate,
+          },
+          include: this.assignmentIncludes,
+        });
+        newAssignments.push(newAssignment);
+
+        // 3. Transferir entradas de horario a la nueva asignación
+        await tx.scheduleEntry.updateMany({
+          where: { teacherAssignmentId: assignment.id },
+          data: { teacherAssignmentId: newAssignment.id },
+        });
+      }
+
+      return { closedAssignments, newAssignments };
+    });
+
+    return {
+      success: true,
+      fromTeacher: `${fromTeacher.firstName} ${fromTeacher.lastName}`,
+      toTeacher: `${toTeacher.firstName} ${toTeacher.lastName}`,
+      transferredCount: result.newAssignments.length,
+      effectiveDate: transferDate,
+      reason,
+      assignments: result.newAssignments,
+    };
+  }
+
+  /**
+   * Obtener resumen de carga de un docente (para preview antes de transferir)
+   */
+  async getTeacherLoadSummary(teacherId: string, institutionId: string, academicYearId?: string) {
+    let yearId = academicYearId;
+    if (!yearId) {
+      const activeYear = await this.prisma.academicYear.findFirst({
+        where: { institutionId, status: 'ACTIVE' },
+        select: { id: true },
+      });
+      if (!activeYear) return { assignments: [], totalHours: 0 };
+      yearId = activeYear.id;
+    }
+
+    const assignments = await this.prisma.teacherAssignment.findMany({
+      where: {
+        teacherId,
+        academicYearId: yearId,
+        endDate: null,
+      },
+      include: this.assignmentIncludes,
+      orderBy: [{ group: { name: 'asc' } }, { subject: { name: 'asc' } }],
+    });
+
+    const totalHours = assignments.reduce((sum, a) => sum + a.weeklyHours, 0);
+
+    return {
+      assignments,
+      totalHours,
+      summary: assignments.map(a => ({
+        id: a.id,
+        group: `${a.group.grade.name} - ${a.group.name}`,
+        subject: a.subject.name,
+        area: a.subject.area?.name || 'Sin área',
+        weeklyHours: a.weeklyHours,
+      })),
+    };
+  }
+
+  /**
    * TEMPORAL: Eliminar toda la carga académica de la institución
    */
   async deleteAll(institutionId: string, academicYearId?: string) {

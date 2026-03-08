@@ -80,6 +80,52 @@ export class TeacherAssignmentsController {
   }
 
   /**
+   * Obtener resumen de carga de un docente (para preview antes de transferir)
+   */
+  @Get('teacher-load/:teacherId')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async getTeacherLoad(
+    @Request() req: any,
+    @Param('teacherId') teacherId: string,
+    @Query('institutionId') institutionId?: string,
+    @Query('academicYearId') academicYearId?: string,
+  ) {
+    const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
+    if (!instId) throw new Error('No se pudo determinar la institución');
+    return this.teacherAssignmentsService.getTeacherLoadSummary(teacherId, instId, academicYearId);
+  }
+
+  /**
+   * Transferir toda la carga de un docente a otro
+   */
+  @Post('transfer')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async transferLoad(
+    @Request() req: any,
+    @Body() body: {
+      fromTeacherId: string;
+      toTeacherId: string;
+      reason: string;
+      academicYearId?: string;
+      assignmentIds?: string[];
+      effectiveDate?: string;
+    },
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
+    if (!instId) throw new Error('No se pudo determinar la institución');
+    return this.teacherAssignmentsService.transferFullLoad({
+      fromTeacherId: body.fromTeacherId,
+      toTeacherId: body.toTeacherId,
+      institutionId: instId,
+      academicYearId: body.academicYearId,
+      reason: body.reason,
+      assignmentIds: body.assignmentIds,
+      effectiveDate: body.effectiveDate ? new Date(body.effectiveDate) : undefined,
+    });
+  }
+
+  /**
    * TEMPORAL: Eliminar toda la carga académica de la institución
    * Solo para ADMIN_INSTITUTIONAL - usar con precaución
    */

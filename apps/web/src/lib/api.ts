@@ -213,9 +213,31 @@ export const academicTermsApi = {
 
 // Teacher Assignments (Carga Academica)
 export const teacherAssignmentsApi = {
-  getAll: (params?: { academicYearId?: string; groupId?: string; teacherId?: string }) => api.get('/teacher-assignments', { params }),
+  getAll: (params?: { academicYearId?: string; groupId?: string; teacherId?: string; activeOnly?: boolean }) => api.get('/teacher-assignments', { params }),
   create: (data: { academicYearId: string; groupId: string; subjectId: string; teacherId: string; weeklyHours?: number }) => api.post('/teacher-assignments', data),
   deleteAll: (academicYearId?: string) => api.delete('/teacher-assignments/all', { params: { academicYearId } }),
+  
+  // Reemplazo individual
+  replace: (id: string, data: { newTeacherId: string; reason: string; endDate?: string }) => 
+    api.post(`/teacher-assignments/${id}/replace`, data),
+  end: (id: string, data: { reason: string; endDate?: string }) => 
+    api.post(`/teacher-assignments/${id}/end`, data),
+  
+  // Historial
+  getHistory: (params: { academicYearId: string; groupId: string; subjectId: string }) => 
+    api.get('/teacher-assignments/history', { params }),
+  
+  // Transferencia de carga completa
+  getTeacherLoad: (teacherId: string, academicYearId?: string) => 
+    api.get(`/teacher-assignments/teacher-load/${teacherId}`, { params: { academicYearId } }),
+  transfer: (data: { 
+    fromTeacherId: string; 
+    toTeacherId: string; 
+    reason: string; 
+    academicYearId?: string;
+    assignmentIds?: string[];
+    effectiveDate?: string;
+  }) => api.post('/teacher-assignments/transfer', data),
 }
 
 // Evaluation Components
