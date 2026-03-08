@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import {
   Heart, Plus, Save, CheckCircle, Clock, XCircle, Users, FileText, Calendar,
-  AlertTriangle, ChevronDown, ChevronUp, X, Shield, Activity, BarChart3,
+  AlertTriangle, ChevronDown, ChevronUp, ChevronRight, X, Shield, Activity, BarChart3,
   Search, Star, TrendingUp, Settings, Eye, Edit3, ClipboardList, UserPlus,
   BookOpen, Paperclip, Trash2, PenTool, Tag, PieChart, Target,
 } from 'lucide-react'
@@ -150,9 +150,10 @@ export default function DifferentialSupport() {
   const [dashboardData, setDashboardData] = useState<any>(null)
   const [dashboardLoading, setDashboardLoading] = useState(false)
 
-  // Alertas y Cruce Académico
+  // Alertas, Cruce Académico y Estadísticas de Diagnóstico
   const [alertsData, setAlertsData] = useState<any>(null)
   const [academicCrossover, setAcademicCrossover] = useState<any>(null)
+  const [diagnosisStats, setDiagnosisStats] = useState<any>(null)
 
   // General
   const [saving, setSaving] = useState(false)
@@ -459,13 +460,14 @@ export default function DifferentialSupport() {
   const loadDashboard = useCallback(async () => {
     setDashboardLoading(true)
     try {
-      const [catRes, progRes, gradeRes, riskRes, idxRes, alertsRes, crossoverRes] = await Promise.all([
+      const [catRes, progRes, gradeRes, riskRes, idxRes, alertsRes, crossoverRes, diagRes] = await Promise.all([
         apdApi.getReportByCategory(), apdApi.getReportProgress(), apdApi.getReportByGrade(), apdApi.getReportAtRisk(), apdApi.getInclusionIndex(),
-        apdApi.getAlerts(), apdApi.getAcademicCrossover(),
+        apdApi.getAlerts(), apdApi.getAcademicCrossover(), apdApi.getDiagnosisStats(),
       ])
       setDashboardData({ category: catRes.data, progress: progRes.data, grade: gradeRes.data, risk: riskRes.data, index: idxRes.data })
       setAlertsData(alertsRes.data)
       setAcademicCrossover(crossoverRes.data)
+      setDiagnosisStats(diagRes.data)
     } catch { showMsg('error', 'Error al cargar dashboard') }
     finally { setDashboardLoading(false) }
   }, [])
@@ -766,6 +768,83 @@ export default function DifferentialSupport() {
           {dashboardLoading ? <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" /></div>
           : dashboardData ? (
             <div className="space-y-6">
+              {/* ═══════════ FUNNEL DE ATENCIÓN (Diagnóstico → Perfil → Plan) ═══════════ */}
+              {diagnosisStats && (
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 px-6 py-4 border-b border-slate-200">
+                    <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                      <Users className="w-5 h-5 text-purple-600" />
+                      Flujo de Atención a la Diversidad
+                    </h2>
+                    <p className="text-sm text-slate-500 mt-1">Seguimiento desde el diagnóstico hasta la intervención activa</p>
+                  </div>
+                  <div className="p-6">
+                    {/* Cards principales */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <div className="bg-slate-50 rounded-xl p-4 text-center border border-slate-200">
+                        <div className="text-3xl font-bold text-slate-700">{diagnosisStats.summary?.totalStudents || 0}</div>
+                        <div className="text-xs text-slate-500 mt-1">Total Estudiantes</div>
+                      </div>
+                      <div className="bg-blue-50 rounded-xl p-4 text-center border border-blue-200">
+                        <div className="text-3xl font-bold text-blue-700">{diagnosisStats.summary?.withDiagnosis || 0}</div>
+                        <div className="text-xs text-blue-600 mt-1">Con Diagnóstico</div>
+                        <div className="text-xs text-blue-500 mt-0.5">{diagnosisStats.summary?.diagnosisRate || 0}% del total</div>
+                      </div>
+                      <div className="bg-purple-50 rounded-xl p-4 text-center border border-purple-200">
+                        <div className="text-3xl font-bold text-purple-700">{diagnosisStats.summary?.withProfile || 0}</div>
+                        <div className="text-xs text-purple-600 mt-1">Con Perfil APD</div>
+                      </div>
+                      <div className="bg-green-50 rounded-xl p-4 text-center border border-green-200">
+                        <div className="text-3xl font-bold text-green-700">{diagnosisStats.summary?.withActivePlan || 0}</div>
+                        <div className="text-xs text-green-600 mt-1">Con Plan Activo</div>
+                      </div>
+                    </div>
+
+                    {/* Funnel visual */}
+                    <div className="flex items-center justify-center gap-2 mb-6">
+                      <div className="flex items-center gap-2 px-4 py-2 bg-blue-100 rounded-lg">
+                        <span className="text-sm font-medium text-blue-800">Diagnóstico</span>
+                        <span className="text-lg font-bold text-blue-700">{diagnosisStats.funnel?.diagnosed || 0}</span>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-slate-400" />
+                      <div className="flex items-center gap-2 px-4 py-2 bg-purple-100 rounded-lg">
+                        <span className="text-sm font-medium text-purple-800">Perfil APD</span>
+                        <span className="text-lg font-bold text-purple-700">{diagnosisStats.summary?.withProfile || 0}</span>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-slate-400" />
+                      <div className="flex items-center gap-2 px-4 py-2 bg-green-100 rounded-lg">
+                        <span className="text-sm font-medium text-green-800">Plan Activo</span>
+                        <span className="text-lg font-bold text-green-700">{diagnosisStats.summary?.withActivePlan || 0}</span>
+                      </div>
+                    </div>
+
+                    {/* Alertas de pendientes */}
+                    {(diagnosisStats.alerts?.pendingProfile > 0 || diagnosisStats.alerts?.pendingPlan > 0) && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {diagnosisStats.alerts?.pendingProfile > 0 && (
+                          <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                            <div>
+                              <div className="text-sm font-medium text-amber-800">{diagnosisStats.alerts.pendingProfile} estudiantes con diagnóstico sin perfil APD</div>
+                              <div className="text-xs text-amber-600">Requieren crear perfil de acompañamiento</div>
+                            </div>
+                          </div>
+                        )}
+                        {diagnosisStats.alerts?.pendingPlan > 0 && (
+                          <div className="flex items-center gap-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                            <FileText className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                            <div>
+                              <div className="text-sm font-medium text-orange-800">{diagnosisStats.alerts.pendingPlan} perfiles sin plan activo</div>
+                              <div className="text-xs text-orange-600">Evaluar si requieren intervención</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Índice de Inclusión */}
               {dashboardData.index && (
                 <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 text-white">

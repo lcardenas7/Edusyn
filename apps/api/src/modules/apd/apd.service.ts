@@ -705,11 +705,47 @@ export class ApdService {
   // CATEGORÍAS DE ACOMPAÑAMIENTO (configurables por institución)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async getCategories(institutionId: string) {
-    return this.prisma.supportCategory.findMany({
+  // Categorías predeterminadas según normativa MEN Colombia
+  private readonly DEFAULT_CATEGORIES = [
+    { name: 'TDAH', description: 'Trastorno por Déficit de Atención e Hiperactividad', sortOrder: 1 },
+    { name: 'TEA', description: 'Trastorno del Espectro Autista', sortOrder: 2 },
+    { name: 'Discapacidad Cognitiva', description: 'Discapacidad intelectual', sortOrder: 3 },
+    { name: 'Discapacidad Física', description: 'Limitaciones motrices o físicas', sortOrder: 4 },
+    { name: 'Discapacidad Visual', description: 'Baja visión o ceguera', sortOrder: 5 },
+    { name: 'Discapacidad Auditiva', description: 'Hipoacusia o sordera', sortOrder: 6 },
+    { name: 'Dificultades de Aprendizaje', description: 'Dislexia, discalculia, disgrafía', sortOrder: 7 },
+    { name: 'Trastornos del Lenguaje', description: 'Dificultades en comunicación verbal', sortOrder: 8 },
+    { name: 'Talentos Excepcionales', description: 'Capacidades o talentos superiores', sortOrder: 9 },
+    { name: 'Situación de Vulnerabilidad', description: 'Desplazamiento, condiciones socioeconómicas', sortOrder: 10 },
+    { name: 'Trastorno de Conducta', description: 'Dificultades comportamentales significativas', sortOrder: 11 },
+    { name: 'Otra condición', description: 'Condiciones no listadas anteriormente', sortOrder: 99 },
+  ];
+
+  async getCategories(institutionId: string, autoSeed = true) {
+    let categories = await this.prisma.supportCategory.findMany({
       where: { institutionId },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
+
+    // Si no hay categorías y autoSeed está activo, crear las predeterminadas
+    if (categories.length === 0 && autoSeed) {
+      await this.prisma.supportCategory.createMany({
+        data: this.DEFAULT_CATEGORIES.map(cat => ({
+          institutionId,
+          name: cat.name,
+          description: cat.description,
+          sortOrder: cat.sortOrder,
+          active: true,
+        })),
+        skipDuplicates: true,
+      });
+      categories = await this.prisma.supportCategory.findMany({
+        where: { institutionId },
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      });
+    }
+
+    return categories;
   }
 
   async createCategory(
@@ -1199,5 +1235,164 @@ export class ApdService {
         direction: trend > 5 ? 'UP' : trend < -5 ? 'DOWN' : 'STABLE',
       },
     };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ESTADÍSTICAS DE DIAGNÓSTICO (separado de planes)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Obtiene estadísticas detalladas de estudiantes con diagnóstico vs perfiles APD vs planes.
+   * Esto permite ver claramente:
+   * - Cuántos estudiantes tienen diagnóstico registrado (en tabla Student)
+   * - Cuántos tienen perfil APD creado
+   * - Cuántos tienen plan activo de intervención
+   */
+  async getDiagnosisStats(institutionId: string) {
+    const [
+      // Estudiantes con diagnóstico marcado en su ficha
+      studentsWithDiagnosis,
+      // Estudiantes con perfil APD
+      studentsWithProfile,
+      // Estudiantes con plan activo
+      studentsWithActivePlan,
+      // Total de estudiantes activos
+      totalStudents,
+      // Distribución por tipo de diagnóstico
+      diagnosisByType,
+      // Perfiles por categoría
+      profilesByCategory,
+    ] = await Promise.all([
+      this.prisma.student.count({
+        where: { institutionId, isActive: true, hasDiagnosis: true },
+      }),
+      this.prisma.educationalSupportProfile.count({
+        where: { institutionId, active: true },
+      }),
+      this.prisma.pedagogicalSupportPlan.findMany({
+        where: { institutionId, status: 'ACTIVE' },
+        select: { studentEnrollmentId: true },
+        distinct: ['studentEnrollmentId'],
+      }),
+      this.prisma.student.count({
+        where: { institutionId, isActive: true },
+      }),
+      this.prisma.student.groupBy({
+        by: ['diagnosisType'],
+        where: { institutionId, isActive: true, hasDiagnosis: true, diagnosisType: { not: null } },
+        _count: { id: true },
+      }),
+      this.prisma.educationalSupportProfile.groupBy({
+        by: ['supportCategory'],
+        where: { institutionId, active: true },
+        _count: { id: true },
+      }),
+    ]);
+
+    // Estudiantes con diagnóstico pero SIN perfil APD
+    const studentsWithDiagnosisNoProfile = await this.prisma.student.count({
+      where: {
+        institutionId,
+        isActive: true,
+        hasDiagnosis: true,
+        educationalSupportProfiles: { none: {} },
+      },
+    });
+
+    // Estudiantes con perfil APD pero SIN plan activo
+    const profilesWithoutActivePlan = await this.prisma.educationalSupportProfile.count({
+      where: {
+        institutionId,
+        active: true,
+        supportPlans: { none: { status: 'ACTIVE' } },
+      },
+    });
+
+    return {
+      // Resumen principal (para cards del dashboard)
+      summary: {
+        totalStudents,
+        withDiagnosis: studentsWithDiagnosis,
+        withProfile: studentsWithProfile,
+        withActivePlan: studentsWithActivePlan.length,
+        diagnosisRate: totalStudents > 0 ? Math.round((studentsWithDiagnosis / totalStudents) * 1000) / 10 : 0,
+      },
+
+      // Flujo de atención (funnel)
+      funnel: {
+        diagnosed: studentsWithDiagnosis,
+        diagnosedWithoutProfile: studentsWithDiagnosisNoProfile,
+        profiledWithoutPlan: profilesWithoutActivePlan,
+        withActivePlan: studentsWithActivePlan.length,
+      },
+
+      // Distribución por tipo de diagnóstico (de tabla Student)
+      diagnosisByType: diagnosisByType.map(d => ({
+        type: d.diagnosisType || 'Sin especificar',
+        count: d._count.id,
+      })).sort((a, b) => b.count - a.count),
+
+      // Distribución por categoría APD (de perfiles)
+      profilesByCategory: profilesByCategory.map(p => ({
+        category: p.supportCategory,
+        count: p._count.id,
+      })).sort((a, b) => b.count - a.count),
+
+      // Alertas de atención
+      alerts: {
+        pendingProfile: studentsWithDiagnosisNoProfile,
+        pendingPlan: profilesWithoutActivePlan,
+      },
+    };
+  }
+
+  /**
+   * Crea o actualiza perfil APD automáticamente cuando se marca hasDiagnosis en Student.
+   * Se llama desde el servicio de estudiantes cuando se actualiza el campo hasDiagnosis.
+   */
+  async syncProfileFromDiagnosis(
+    studentId: string,
+    institutionId: string,
+    diagnosisData: {
+      hasDiagnosis: boolean;
+      diagnosisType?: string;
+      diagnosisDetails?: string;
+    },
+  ) {
+    // Si se desmarca el diagnóstico, no hacemos nada (el perfil queda histórico)
+    if (!diagnosisData.hasDiagnosis) {
+      return null;
+    }
+
+    // Buscar si ya existe un perfil
+    const existingProfile = await this.prisma.educationalSupportProfile.findUnique({
+      where: { institutionId_studentId: { institutionId, studentId } },
+    });
+
+    if (existingProfile) {
+      // Actualizar categoría si cambió el tipo de diagnóstico
+      if (diagnosisData.diagnosisType && diagnosisData.diagnosisType !== existingProfile.supportCategory) {
+        return this.prisma.educationalSupportProfile.update({
+          where: { id: existingProfile.id },
+          data: {
+            supportCategory: diagnosisData.diagnosisType,
+            pedagogicalNotes: diagnosisData.diagnosisDetails || existingProfile.pedagogicalNotes,
+            active: true,
+          },
+        });
+      }
+      return existingProfile;
+    }
+
+    // Crear nuevo perfil
+    return this.prisma.educationalSupportProfile.create({
+      data: {
+        institutionId,
+        studentId,
+        supportCategory: diagnosisData.diagnosisType || 'Otra condición',
+        pedagogicalNotes: diagnosisData.diagnosisDetails || null,
+        active: true,
+      },
+    });
   }
 }

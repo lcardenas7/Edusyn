@@ -1773,6 +1773,9 @@ export const apdApi = {
   // Índice de inclusión
   getInclusionIndex: () => api.get('/apd/inclusion-index'),
 
+  // Estadísticas de diagnóstico (funnel: diagnóstico → perfil → plan)
+  getDiagnosisStats: () => api.get('/apd/diagnosis-stats'),
+
   // Alertas automáticas
   getAlerts: () => api.get('/apd/alerts'),
 

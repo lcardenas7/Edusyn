@@ -518,6 +518,20 @@ export class ApdController {
     return this.apdService.getInclusionIndex(instId);
   }
 
+  /**
+   * Estadísticas de diagnóstico vs perfiles vs planes.
+   * Muestra el funnel: Diagnóstico → Perfil APD → Plan Activo
+   */
+  @Get('diagnosis-stats')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA')
+  async getDiagnosisStats(
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.apdService.getDiagnosisStats(instId);
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // ALERTAS AUTOMÁTICAS
   // ═══════════════════════════════════════════════════════════════════════════
