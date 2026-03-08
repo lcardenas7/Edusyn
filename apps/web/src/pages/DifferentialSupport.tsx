@@ -74,8 +74,8 @@ export default function DifferentialSupport() {
   const [allowTeacher, setAllowTeacher] = useState(true)
   const [configLoading, setConfigLoading] = useState(true)
 
-  // Tabs
-  const [activeTab, setActiveTab] = useState<Tab>('profiles')
+  // Tabs - Dashboard por defecto para mayor impacto visual
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard')
 
   // Categories (configurable)
   const [categories, setCategories] = useState<any[]>([])
