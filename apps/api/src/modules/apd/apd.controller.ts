@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Delete,
   Body,
   Param,
   Query,
@@ -14,6 +15,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ApdService } from './apd.service';
+import { ApdAlertsService } from './apd-alerts.service';
+import { ApdAcademicService } from './apd-academic.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
@@ -30,6 +33,8 @@ import { requireInstitutionId } from '../../common/utils/institution-resolver';
 export class ApdController {
   constructor(
     private readonly apdService: ApdService,
+    private readonly alertsService: ApdAlertsService,
+    private readonly academicService: ApdAcademicService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -92,7 +97,12 @@ export class ApdController {
       institutionId?: string;
       studentId: string;
       supportCategory: string;
+      supportCategoryId?: string;
       pedagogicalNotes?: string;
+      learningBarriers?: string;
+      strengths?: string;
+      supportNeeds?: string;
+      learningStyleObservations?: string;
       parentConsentAccepted?: boolean;
       consentDate?: string;
       consentDocumentUrl?: string;
@@ -114,7 +124,12 @@ export class ApdController {
     @Body() body: {
       institutionId?: string;
       supportCategory?: string;
+      supportCategoryId?: string;
       pedagogicalNotes?: string;
+      learningBarriers?: string;
+      strengths?: string;
+      supportNeeds?: string;
+      learningStyleObservations?: string;
       parentConsentAccepted?: boolean;
       consentDate?: string;
       consentDocumentUrl?: string;
@@ -180,6 +195,7 @@ export class ApdController {
       academicTermId: string;
       supportProfileId?: string;
       achievementId?: string;
+      planType?: 'APD' | 'PIAR';
       supportStrategy: string;
       familyCommitment?: string;
       followUpDate?: string;
@@ -187,6 +203,9 @@ export class ApdController {
       objectives?: any;
       adaptationStrategies?: any;
       evaluationAdjustments?: any;
+      planApprovedByFamily?: boolean;
+      familyApprovalDate?: string;
+      familySignatureUrl?: string;
     },
   ) {
     const instId = await requireInstitutionId(this.prisma as any, req, body.institutionId);
@@ -204,6 +223,7 @@ export class ApdController {
     @Param('id') id: string,
     @Body() body: {
       institutionId?: string;
+      planType?: 'APD' | 'PIAR';
       supportStrategy?: string;
       familyCommitment?: string;
       followUpDate?: string;
@@ -211,6 +231,9 @@ export class ApdController {
       objectives?: any;
       adaptationStrategies?: any;
       evaluationAdjustments?: any;
+      planApprovedByFamily?: boolean;
+      familyApprovalDate?: string;
+      familySignatureUrl?: string;
       status?: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
     },
   ) {
@@ -246,6 +269,7 @@ export class ApdController {
       originalActivityDescription?: string;
       teacherFinalActivity?: string;
       adaptationLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+      adjustmentType?: 'CURRICULAR' | 'METHODOLOGICAL' | 'EVALUATIVE' | 'COMMUNICATION' | 'ENVIRONMENTAL';
     },
   ) {
     const instId = await requireInstitutionId(this.prisma as any, req, body.institutionId);
@@ -264,6 +288,7 @@ export class ApdController {
       originalActivityDescription?: string;
       teacherFinalActivity?: string;
       adaptationLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+      adjustmentType?: 'CURRICULAR' | 'METHODOLOGICAL' | 'EVALUATIVE' | 'COMMUNICATION' | 'ENVIRONMENTAL';
       completionStatus?: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
       teacherFeedback?: string;
       studentPerformanceScore?: number;
@@ -292,5 +317,234 @@ export class ApdController {
     const instId = await requireInstitutionId(this.prisma as any, req, body.institutionId);
     await this.validateTeacherAccess(req, instId);
     return this.apdService.createProgressLog(body, instId, req.user.id);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CATEGORÍAS DE ACOMPAÑAMIENTO (configurables)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('categories')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE')
+  async getCategories(
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.apdService.getCategories(instId);
+  }
+
+  @Post('categories')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'RECTOR')
+  async createCategory(
+    @Request() req: any,
+    @Body() body: { institutionId?: string; name: string; description?: string; sortOrder?: number },
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, body.institutionId);
+    return this.apdService.createCategory(instId, body);
+  }
+
+  @Put('categories/:id')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'RECTOR')
+  async updateCategory(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() body: { institutionId?: string; name?: string; description?: string; active?: boolean; sortOrder?: number },
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, body.institutionId);
+    return this.apdService.updateCategory(id, instId, body);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PARTICIPANTES DEL PLAN (equipo interdisciplinario)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('participants')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE')
+  async addParticipant(
+    @Request() req: any,
+    @Body() body: {
+      institutionId?: string;
+      supportPlanId: string;
+      userId?: string;
+      role: 'TEACHER' | 'COUNSELOR' | 'COORDINATOR' | 'FAMILY_MEMBER' | 'EXTERNAL_SPECIALIST';
+      fullName?: string;
+      relationship?: string;
+      observations?: string;
+    },
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, body.institutionId);
+    await this.validateTeacherAccess(req, instId);
+    return this.apdService.addParticipant(body, instId, req.user.id);
+  }
+
+  @Delete('participants/:id')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA')
+  async removeParticipant(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.apdService.removeParticipant(id, instId);
+  }
+
+  @Put('participants/:id/sign')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE')
+  async signParticipant(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() body: { institutionId?: string; signatureUrl?: string },
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, body.institutionId);
+    return this.apdService.signParticipant(id, instId, body);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ASIGNATURAS VINCULADAS AL PLAN
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('plan-subjects')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE')
+  async addPlanSubject(
+    @Request() req: any,
+    @Body() body: {
+      institutionId?: string;
+      supportPlanId: string;
+      subjectId: string;
+      teacherId?: string;
+      specificNotes?: string;
+    },
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, body.institutionId);
+    await this.validateTeacherAccess(req, instId);
+    return this.apdService.addPlanSubject(body, instId);
+  }
+
+  @Delete('plan-subjects/:id')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA')
+  async removePlanSubject(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.apdService.removePlanSubject(id, instId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DOCUMENTOS DE SOPORTE
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('documents')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE')
+  async addDocument(
+    @Request() req: any,
+    @Body() body: {
+      institutionId?: string;
+      supportPlanId: string;
+      type: 'EVIDENCE' | 'FAMILY_DOCUMENT' | 'ASSESSMENT' | 'REPORT';
+      fileName: string;
+      fileUrl: string;
+      description?: string;
+    },
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, body.institutionId);
+    await this.validateTeacherAccess(req, instId);
+    return this.apdService.addDocument(body, instId, req.user.id);
+  }
+
+  @Delete('documents/:id')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA')
+  async removeDocument(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.apdService.removeDocument(id, instId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // REPORTES APD / PIAR + ÍNDICE DE INCLUSIÓN
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('reports/category')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA')
+  async getReportByCategory(
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.apdService.getReportByCategory(instId);
+  }
+
+  @Get('reports/progress')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA')
+  async getReportProgress(
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.apdService.getReportProgress(instId);
+  }
+
+  @Get('reports/grades')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA')
+  async getReportByGrade(
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.apdService.getReportByGrade(instId);
+  }
+
+  @Get('reports/at-risk')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA')
+  async getReportAtRisk(
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.apdService.getReportAtRisk(instId);
+  }
+
+  @Get('inclusion-index')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
+  async getInclusionIndex(
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.apdService.getInclusionIndex(instId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ALERTAS AUTOMÁTICAS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('alerts')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE')
+  async getAlerts(
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    await this.validateTeacherAccess(req, instId);
+    return this.alertsService.getAlerts(instId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CRUCE RENDIMIENTO ACADÉMICO VS APD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('academic-crossover')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA')
+  async getAcademicCrossover(
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
+    @Query('academicTermId') academicTermId?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.academicService.getAcademicCrossover(instId, academicTermId);
   }
 }

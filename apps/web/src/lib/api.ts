@@ -1614,14 +1614,24 @@ export const apdApi = {
   createProfile: (data: {
     studentId: string;
     supportCategory: string;
+    supportCategoryId?: string;
     pedagogicalNotes?: string;
+    learningBarriers?: string;
+    strengths?: string;
+    supportNeeds?: string;
+    learningStyleObservations?: string;
     parentConsentAccepted?: boolean;
     consentDate?: string;
     consentDocumentUrl?: string;
   }) => api.post('/apd/profiles', data),
   updateProfile: (id: string, data: {
     supportCategory?: string;
+    supportCategoryId?: string;
     pedagogicalNotes?: string;
+    learningBarriers?: string;
+    strengths?: string;
+    supportNeeds?: string;
+    learningStyleObservations?: string;
     parentConsentAccepted?: boolean;
     consentDate?: string;
     consentDocumentUrl?: string;
@@ -1638,6 +1648,7 @@ export const apdApi = {
     academicTermId: string;
     supportProfileId?: string;
     achievementId?: string;
+    planType?: 'APD' | 'PIAR';
     supportStrategy: string;
     familyCommitment?: string;
     followUpDate?: string;
@@ -1645,8 +1656,12 @@ export const apdApi = {
     objectives?: any;
     adaptationStrategies?: any;
     evaluationAdjustments?: any;
+    planApprovedByFamily?: boolean;
+    familyApprovalDate?: string;
+    familySignatureUrl?: string;
   }) => api.post('/apd/plans', data),
   updatePlan: (id: string, data: {
+    planType?: 'APD' | 'PIAR';
     supportStrategy?: string;
     familyCommitment?: string;
     followUpDate?: string;
@@ -1654,6 +1669,9 @@ export const apdApi = {
     objectives?: any;
     adaptationStrategies?: any;
     evaluationAdjustments?: any;
+    planApprovedByFamily?: boolean;
+    familyApprovalDate?: string;
+    familySignatureUrl?: string;
     status?: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
   }) => api.put(`/apd/plans/${id}`, data),
   getPlan: (id: string) => api.get(`/apd/plans/${id}`),
@@ -1665,12 +1683,14 @@ export const apdApi = {
     originalActivityDescription?: string;
     teacherFinalActivity?: string;
     adaptationLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+    adjustmentType?: 'CURRICULAR' | 'METHODOLOGICAL' | 'EVALUATIVE' | 'COMMUNICATION' | 'ENVIRONMENTAL';
   }) => api.post('/apd/activities', data),
   updateActivity: (id: string, data: {
     topic?: string;
     originalActivityDescription?: string;
     teacherFinalActivity?: string;
     adaptationLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+    adjustmentType?: 'CURRICULAR' | 'METHODOLOGICAL' | 'EVALUATIVE' | 'COMMUNICATION' | 'ENVIRONMENTAL';
     completionStatus?: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
     teacherFeedback?: string;
     studentPerformanceScore?: number;
@@ -1682,6 +1702,61 @@ export const apdApi = {
     progressIndicator: number;
     qualitativeObservation?: string;
   }) => api.post('/apd/progress-logs', data),
+
+  // Categorías de acompañamiento (configurables por institución)
+  getCategories: () => api.get('/apd/categories'),
+  createCategory: (data: { name: string; description?: string; sortOrder?: number }) =>
+    api.post('/apd/categories', data),
+  updateCategory: (id: string, data: { name?: string; description?: string; active?: boolean; sortOrder?: number }) =>
+    api.put(`/apd/categories/${id}`, data),
+
+  // Participantes del plan (equipo interdisciplinario)
+  addParticipant: (data: {
+    supportPlanId: string;
+    userId?: string;
+    role: 'TEACHER' | 'COUNSELOR' | 'COORDINATOR' | 'FAMILY_MEMBER' | 'EXTERNAL_SPECIALIST';
+    fullName?: string;
+    relationship?: string;
+    observations?: string;
+  }) => api.post('/apd/participants', data),
+  removeParticipant: (id: string) => api.delete(`/apd/participants/${id}`),
+  signParticipant: (id: string, data: { signatureUrl?: string }) =>
+    api.put(`/apd/participants/${id}/sign`, data),
+
+  // Asignaturas vinculadas al plan
+  addPlanSubject: (data: {
+    supportPlanId: string;
+    subjectId: string;
+    teacherId?: string;
+    specificNotes?: string;
+  }) => api.post('/apd/plan-subjects', data),
+  removePlanSubject: (id: string) => api.delete(`/apd/plan-subjects/${id}`),
+
+  // Documentos de soporte
+  addDocument: (data: {
+    supportPlanId: string;
+    type: 'EVIDENCE' | 'FAMILY_DOCUMENT' | 'ASSESSMENT' | 'REPORT';
+    fileName: string;
+    fileUrl: string;
+    description?: string;
+  }) => api.post('/apd/documents', data),
+  removeDocument: (id: string) => api.delete(`/apd/documents/${id}`),
+
+  // Reportes APD/PIAR
+  getReportByCategory: () => api.get('/apd/reports/category'),
+  getReportProgress: () => api.get('/apd/reports/progress'),
+  getReportByGrade: () => api.get('/apd/reports/grades'),
+  getReportAtRisk: () => api.get('/apd/reports/at-risk'),
+
+  // Índice de inclusión
+  getInclusionIndex: () => api.get('/apd/inclusion-index'),
+
+  // Alertas automáticas
+  getAlerts: () => api.get('/apd/alerts'),
+
+  // Cruce rendimiento académico vs APD
+  getAcademicCrossover: (params?: { academicTermId?: string }) =>
+    api.get('/apd/academic-crossover', { params }),
 }
 
 // Teacher Workspace
