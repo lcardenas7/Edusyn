@@ -84,12 +84,26 @@ export class GradesService {
     });
   }
 
-  async delete(id: string) {
-    // Check for related groups
-    const groupCount = await this.prisma.group.count({ where: { gradeId: id } });
+  async delete(id: string, institutionId?: string) {
+    // Contar grupos asociados a este grado EN la institución del usuario
+    const groupCount = institutionId
+      ? await this.prisma.group.count({
+          where: { gradeId: id, campus: { institutionId } },
+        })
+      : await this.prisma.group.count({ where: { gradeId: id } });
+
     if (groupCount > 0) {
       throw new Error(`No se puede eliminar el grado porque tiene ${groupCount} grupo(s) asociados. Elimine los grupos primero.`);
     }
+
+    // Verificar si otras instituciones usan este grado (tiene grupos de otras instituciones)
+    const totalGroupCount = await this.prisma.group.count({ where: { gradeId: id } });
+    if (totalGroupCount > 0) {
+      // Otras instituciones usan este grado — no se puede eliminar físicamente
+      // pero tampoco debería aparecer en la lista de esta institución si no tiene grupos
+      throw new Error('Este grado es compartido y está en uso por otra institución. No se puede eliminar.');
+    }
+
     return this.prisma.grade.delete({ where: { id } });
   }
 

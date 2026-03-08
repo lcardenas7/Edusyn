@@ -53,9 +53,10 @@ export class GradesController {
 
   @Delete(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
-  async delete(@Param('id') id: string) {
+  async delete(@Param('id') id: string, @Request() req: any, @Query('institutionId') institutionId?: string) {
     try {
-      return await this.gradesService.delete(id);
+      const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+      return await this.gradesService.delete(id, instId);
     } catch (err: any) {
       throw new BadRequestException(err.message);
     }

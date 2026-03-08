@@ -160,7 +160,7 @@ export class StudentsService {
   }
 
   async update(id: string, dto: UpdateStudentDto) {
-    return this.prisma.student.update({
+    const updated = await this.prisma.student.update({
       where: { id },
       data: {
         ...(dto.documentType && { documentType: dto.documentType }),
@@ -203,6 +203,70 @@ export class StudentsService {
         ...(dto.previousSchool !== undefined && { previousSchool: dto.previousSchool }),
         ...(dto.photo !== undefined && { photo: dto.photo }),
         ...(dto.observations !== undefined && { observations: dto.observations }),
+      },
+    });
+
+    // Sincronizar perfil APD automáticamente si se marcó hasDiagnosis
+    if (dto.hasDiagnosis !== undefined) {
+      try {
+        await this.syncDiagnosisToApdProfile(updated);
+      } catch (err) {
+        // No bloquear la actualización del estudiante si falla la sincronización APD
+        console.warn('APD profile sync failed (non-blocking):', err?.message || err);
+      }
+    }
+
+    return updated;
+  }
+
+  /**
+   * Sincroniza el diagnóstico del estudiante con un perfil APD.
+   * Se ejecuta automáticamente al actualizar hasDiagnosis.
+   * Usa Prisma directamente para evitar dependencia circular con ApdModule.
+   */
+  private async syncDiagnosisToApdProfile(student: any) {
+    if (!student.hasDiagnosis || !student.institutionId) return null;
+
+    // Verificar si el módulo APD está activo para esta institución
+    const institution = await this.prisma.institution.findUnique({
+      where: { id: student.institutionId },
+      select: { enableDifferentialSupport: true },
+    });
+    // Solo crear perfil si el módulo APD está habilitado
+    if (!institution?.enableDifferentialSupport) return null;
+
+    const existingProfile = await this.prisma.educationalSupportProfile.findUnique({
+      where: {
+        institutionId_studentId: {
+          institutionId: student.institutionId,
+          studentId: student.id,
+        },
+      },
+    });
+
+    if (existingProfile) {
+      // Actualizar categoría si cambió el tipo de diagnóstico
+      if (student.diagnosisType && student.diagnosisType !== existingProfile.supportCategory) {
+        return this.prisma.educationalSupportProfile.update({
+          where: { id: existingProfile.id },
+          data: {
+            supportCategory: student.diagnosisType,
+            pedagogicalNotes: student.diagnosisDetails || existingProfile.pedagogicalNotes,
+            active: true,
+          },
+        });
+      }
+      return existingProfile;
+    }
+
+    // Crear nuevo perfil
+    return this.prisma.educationalSupportProfile.create({
+      data: {
+        institutionId: student.institutionId,
+        studentId: student.id,
+        supportCategory: student.diagnosisType || 'Otra condición',
+        pedagogicalNotes: student.diagnosisDetails || null,
+        active: true,
       },
     });
   }

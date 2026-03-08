@@ -768,93 +768,85 @@ export default function DifferentialSupport() {
           {dashboardLoading ? <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" /></div>
           : dashboardData ? (
             <div className="space-y-6">
-              {/* ═══════════ FUNNEL DE ATENCIÓN (Diagnóstico → Perfil → Plan) ═══════════ */}
-              {diagnosisStats && (
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 px-6 py-4 border-b border-slate-200">
-                    <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                      <Users className="w-5 h-5 text-purple-600" />
-                      Flujo de Atención a la Diversidad
-                    </h2>
-                    <p className="text-sm text-slate-500 mt-1">Seguimiento desde el diagnóstico hasta la intervención activa</p>
+              {/* ═══════════ HERO: ÍNDICE DE INCLUSIÓN + MÉTRICAS PRINCIPALES ═══════════ */}
+              <div className="bg-gradient-to-br from-purple-600 via-indigo-600 to-purple-700 rounded-2xl p-6 text-white shadow-lg">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                  {/* Índice principal */}
+                  <div className="flex items-center gap-5">
+                    <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border-4 border-white/30">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold leading-none">{dashboardData?.index?.index?.toFixed(1) || '0.0'}%</div>
+                        <div className="text-[10px] text-white/80 mt-0.5">Inclusión</div>
+                      </div>
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold flex items-center gap-2"><Target className="w-5 h-5" /> Índice de Inclusión</h2>
+                      <p className="text-sm text-white/70 mt-1">Acompañamiento Pedagógico Diferencial</p>
+                    </div>
                   </div>
-                  <div className="p-6">
-                    {/* Cards principales */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                      <div className="bg-slate-50 rounded-xl p-4 text-center border border-slate-200">
-                        <div className="text-3xl font-bold text-slate-700">{diagnosisStats.summary?.totalStudents || 0}</div>
-                        <div className="text-xs text-slate-500 mt-1">Total Estudiantes</div>
-                      </div>
-                      <div className="bg-blue-50 rounded-xl p-4 text-center border border-blue-200">
-                        <div className="text-3xl font-bold text-blue-700">{diagnosisStats.summary?.withDiagnosis || 0}</div>
-                        <div className="text-xs text-blue-600 mt-1">Con Diagnóstico</div>
-                        <div className="text-xs text-blue-500 mt-0.5">{diagnosisStats.summary?.diagnosisRate || 0}% del total</div>
-                      </div>
-                      <div className="bg-purple-50 rounded-xl p-4 text-center border border-purple-200">
-                        <div className="text-3xl font-bold text-purple-700">{diagnosisStats.summary?.withProfile || 0}</div>
-                        <div className="text-xs text-purple-600 mt-1">Con Perfil APD</div>
-                      </div>
-                      <div className="bg-green-50 rounded-xl p-4 text-center border border-green-200">
-                        <div className="text-3xl font-bold text-green-700">{diagnosisStats.summary?.withActivePlan || 0}</div>
-                        <div className="text-xs text-green-600 mt-1">Con Plan Activo</div>
-                      </div>
+                  {/* Métricas compactas */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-white/15 backdrop-blur-sm rounded-xl px-5 py-3 text-center">
+                      <div className="text-2xl font-bold">{dashboardData?.index?.totalProfiles || diagnosisStats?.summary?.withProfile || 0}</div>
+                      <div className="text-xs text-white/80">Perfiles</div>
                     </div>
-
-                    {/* Funnel visual */}
-                    <div className="flex items-center justify-center gap-2 mb-6">
-                      <div className="flex items-center gap-2 px-4 py-2 bg-blue-100 rounded-lg">
-                        <span className="text-sm font-medium text-blue-800">Diagnóstico</span>
-                        <span className="text-lg font-bold text-blue-700">{diagnosisStats.funnel?.diagnosed || 0}</span>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-slate-400" />
-                      <div className="flex items-center gap-2 px-4 py-2 bg-purple-100 rounded-lg">
-                        <span className="text-sm font-medium text-purple-800">Perfil APD</span>
-                        <span className="text-lg font-bold text-purple-700">{diagnosisStats.summary?.withProfile || 0}</span>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-slate-400" />
-                      <div className="flex items-center gap-2 px-4 py-2 bg-green-100 rounded-lg">
-                        <span className="text-sm font-medium text-green-800">Plan Activo</span>
-                        <span className="text-lg font-bold text-green-700">{diagnosisStats.summary?.withActivePlan || 0}</span>
-                      </div>
+                    <div className="bg-white/15 backdrop-blur-sm rounded-xl px-5 py-3 text-center">
+                      <div className="text-2xl font-bold">{dashboardData?.index?.activePlans || diagnosisStats?.summary?.withActivePlan || 0}</div>
+                      <div className="text-xs text-white/80">Planes Activos</div>
                     </div>
-
-                    {/* Alertas de pendientes */}
-                    {(diagnosisStats.alerts?.pendingProfile > 0 || diagnosisStats.alerts?.pendingPlan > 0) && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {diagnosisStats.alerts?.pendingProfile > 0 && (
-                          <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-                            <div>
-                              <div className="text-sm font-medium text-amber-800">{diagnosisStats.alerts.pendingProfile} estudiantes con diagnóstico sin perfil APD</div>
-                              <div className="text-xs text-amber-600">Requieren crear perfil de acompañamiento</div>
-                            </div>
-                          </div>
-                        )}
-                        {diagnosisStats.alerts?.pendingPlan > 0 && (
-                          <div className="flex items-center gap-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                            <FileText className="w-5 h-5 text-orange-500 flex-shrink-0" />
-                            <div>
-                              <div className="text-sm font-medium text-orange-800">{diagnosisStats.alerts.pendingPlan} perfiles sin plan activo</div>
-                              <div className="text-xs text-orange-600">Evaluar si requieren intervención</div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    <div className="bg-white/15 backdrop-blur-sm rounded-xl px-5 py-3 text-center">
+                      <div className="text-2xl font-bold">{dashboardData?.index?.completedPlans || 0}</div>
+                      <div className="text-xs text-white/80">Completados</div>
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* Índice de Inclusión */}
-              {dashboardData.index && (
-                <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 text-white">
-                  <div className="flex items-center gap-3 mb-4"><Target className="w-6 h-6" /><h2 className="text-lg font-bold">Índice de Inclusión Institucional</h2></div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-white/20 rounded-lg p-4 text-center"><div className="text-3xl font-bold">{dashboardData.index.index?.toFixed(1) || '—'}%</div><div className="text-xs text-white/80 mt-1">Índice General</div></div>
-                    <div className="bg-white/20 rounded-lg p-4 text-center"><div className="text-3xl font-bold">{dashboardData.index.totalProfiles || 0}</div><div className="text-xs text-white/80 mt-1">Perfiles</div></div>
-                    <div className="bg-white/20 rounded-lg p-4 text-center"><div className="text-3xl font-bold">{dashboardData.index.activePlans || 0}</div><div className="text-xs text-white/80 mt-1">Planes Activos</div></div>
-                    <div className="bg-white/20 rounded-lg p-4 text-center"><div className="text-3xl font-bold">{dashboardData.index.completedPlans || 0}</div><div className="text-xs text-white/80 mt-1">Completados</div></div>
+              {/* ═══════════ FUNNEL DE ATENCIÓN (Diagnóstico → Perfil → Plan) ═══════════ */}
+              {diagnosisStats && (
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-purple-500" /> Flujo de Atención
+                    </h3>
+                    <span className="text-xs text-slate-500">{diagnosisStats.summary?.totalStudents || 0} estudiantes activos</span>
                   </div>
+                  {/* Funnel horizontal con barras proporcionales */}
+                  <div className="space-y-3">
+                    {[
+                      { label: 'Con Diagnóstico', value: diagnosisStats.summary?.withDiagnosis || 0, color: 'bg-blue-500', bg: 'bg-blue-50', text: 'text-blue-700', pct: diagnosisStats.summary?.diagnosisRate || 0 },
+                      { label: 'Con Perfil APD', value: diagnosisStats.summary?.withProfile || 0, color: 'bg-purple-500', bg: 'bg-purple-50', text: 'text-purple-700', pct: diagnosisStats.summary?.totalStudents > 0 ? Math.round((diagnosisStats.summary.withProfile / diagnosisStats.summary.totalStudents) * 1000) / 10 : 0 },
+                      { label: 'Con Plan Activo', value: diagnosisStats.summary?.withActivePlan || 0, color: 'bg-green-500', bg: 'bg-green-50', text: 'text-green-700', pct: diagnosisStats.summary?.totalStudents > 0 ? Math.round((diagnosisStats.summary.withActivePlan / diagnosisStats.summary.totalStudents) * 1000) / 10 : 0 },
+                    ].map((item, i) => (
+                      <div key={i} className={`flex items-center gap-3 p-3 rounded-lg ${item.bg}`}>
+                        <div className="w-32 flex-shrink-0">
+                          <div className={`text-sm font-medium ${item.text}`}>{item.label}</div>
+                        </div>
+                        <div className="flex-1 bg-white/60 rounded-full h-3 overflow-hidden">
+                          <div className={`h-full rounded-full ${item.color} transition-all duration-500`} style={{ width: `${Math.min(100, Math.max(2, (item.value / Math.max(1, diagnosisStats.summary?.totalStudents)) * 100))}%` }} />
+                        </div>
+                        <div className={`text-lg font-bold ${item.text} w-10 text-right`}>{item.value}</div>
+                        <div className="text-xs text-slate-500 w-12 text-right">{item.pct}%</div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Alertas compactas */}
+                  {(diagnosisStats.alerts?.pendingProfile > 0 || diagnosisStats.alerts?.pendingPlan > 0) && (
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      {diagnosisStats.alerts?.pendingProfile > 0 && (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                          <AlertTriangle className="w-4 h-4 text-amber-500" />
+                          <span className="text-sm text-amber-800"><strong>{diagnosisStats.alerts.pendingProfile}</strong> con diagnóstico sin perfil</span>
+                        </div>
+                      )}
+                      {diagnosisStats.alerts?.pendingPlan > 0 && (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 border border-orange-200 rounded-lg">
+                          <FileText className="w-4 h-4 text-orange-500" />
+                          <span className="text-sm text-orange-800"><strong>{diagnosisStats.alerts.pendingPlan}</strong> perfiles sin plan activo</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
