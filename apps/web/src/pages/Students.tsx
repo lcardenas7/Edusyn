@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, GraduationCap, FileText, AlertTriangle, Phone, Mail, MapPin, Users, CheckCircle2, XCircle, FileSpreadsheet, Heart, UserPlus, Loader2, Key, Shield, Printer, RefreshCw, EyeOff, Lock, Unlock } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { generateTemplate, parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
-import api, { studentsApi, guardiansApi, academicYearLifecycleApi, groupsApi, enrollmentsApi, observerApi, staffApi } from '../lib/api'
+import api, { studentsApi, guardiansApi, academicYearLifecycleApi, groupsApi, enrollmentsApi, observerApi, staffApi, apdApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import { DiagnosisBadge } from '../components/StudentBadges'
 
@@ -32,6 +32,10 @@ interface Student {
   photo?: string
   hasDiagnosis?: boolean
   diagnosisType?: string
+  diagnosisDetails?: string
+  diagnosisEntity?: string
+  diagnosisDate?: string
+  diagnosisSupports?: string
 }
 
 interface AcademicHistory {
@@ -158,6 +162,9 @@ export default function Students() {
   const [enrollNow, setEnrollNow] = useState(true) // Por defecto activado para nuevos
   const [selectedGroupId, setSelectedGroupId] = useState<string>('')
   
+  // Categorías de diagnóstico (desde APD)
+  const [diagnosisCategories, setDiagnosisCategories] = useState<{ id: string; name: string; description?: string }[]>([])
+  
   // Estados para crear acceso masivo
   const [creatingAccess, setCreatingAccess] = useState(false)
   const [showAccessModal, setShowAccessModal] = useState(false)
@@ -214,6 +221,28 @@ export default function Students() {
         // Cargar grupos disponibles
         const groupsRes = await groupsApi.getAll()
         setAvailableGroups(groupsRes.data || [])
+        
+        // Cargar categorías de diagnóstico (desde APD)
+        try {
+          const categoriesRes = await apdApi.getCategories()
+          setDiagnosisCategories(categoriesRes.data || [])
+        } catch (err) {
+          // Si el módulo APD no está activo, usamos categorías por defecto
+          setDiagnosisCategories([
+            { id: '1', name: 'TDAH', description: 'Trastorno por Déficit de Atención e Hiperactividad' },
+            { id: '2', name: 'TEA', description: 'Trastorno del Espectro Autista' },
+            { id: '3', name: 'Discapacidad Cognitiva', description: 'Discapacidad intelectual' },
+            { id: '4', name: 'Discapacidad Física', description: 'Limitaciones motrices o físicas' },
+            { id: '5', name: 'Discapacidad Visual', description: 'Baja visión o ceguera' },
+            { id: '6', name: 'Discapacidad Auditiva', description: 'Hipoacusia o sordera' },
+            { id: '7', name: 'Dificultades de Aprendizaje', description: 'Dislexia, discalculia, disgrafía' },
+            { id: '8', name: 'Trastornos del Lenguaje', description: 'Dificultades en comunicación verbal' },
+            { id: '9', name: 'Talentos Excepcionales', description: 'Capacidades o talentos superiores' },
+            { id: '10', name: 'Situación de Vulnerabilidad', description: 'Desplazamiento, condiciones socioeconómicas' },
+            { id: '11', name: 'Trastorno de Conducta', description: 'Dificultades comportamentales significativas' },
+            { id: '99', name: 'Otra condición', description: 'Condiciones no listadas anteriormente' },
+          ])
+        }
       } catch (err) {
         console.error('Error loading initial data:', err)
       }
@@ -254,7 +283,11 @@ export default function Students() {
           eps: s.eps || '',
           observations: s.observations || '',
           hasDiagnosis: s.hasDiagnosis || false,
-          diagnosisType: s.diagnosisType || ''
+          diagnosisType: s.diagnosisType || '',
+          diagnosisDetails: s.diagnosisDetails || '',
+          diagnosisEntity: s.diagnosisEntity || '',
+          diagnosisDate: s.diagnosisDate || '',
+          diagnosisSupports: s.diagnosisSupports || ''
         }))
         setStudents(apiStudents)
       } catch (err: any) {
@@ -402,6 +435,10 @@ export default function Students() {
           observations: formData.observations || null,
           hasDiagnosis: formData.hasDiagnosis || false,
           diagnosisType: formData.diagnosisType || null,
+          diagnosisDetails: (formData as any).diagnosisDetails || null,
+          diagnosisEntity: (formData as any).diagnosisEntity || null,
+          diagnosisDate: (formData as any).diagnosisDate || null,
+          diagnosisSupports: (formData as any).diagnosisSupports || null,
         })
 
         // Actualizar o crear acudiente si hay datos
@@ -2289,8 +2326,9 @@ export default function Students() {
               {/* ── Diagnóstico Educativo ── */}
               <fieldset className="border border-purple-200 rounded-lg p-4 bg-purple-50/30">
                 <legend className="px-2 text-sm font-semibold text-purple-700 flex items-center gap-1.5"><Heart className="w-4 h-4 text-purple-500" /> Diagnóstico Educativo</legend>
-                <p className="text-xs text-purple-600 mb-3">Si el estudiante tiene un diagnóstico (TDAH, TEA, Dislexia, etc.), actívelo aquí para que los docentes lo identifiquen.</p>
-                <div className="grid grid-cols-2 gap-3 mt-1">
+                <p className="text-xs text-purple-600 mb-3">Si el estudiante tiene un diagnóstico, regístrelo aquí para identificarlo y activar el seguimiento correspondiente.</p>
+                
+                <div className="space-y-4">
                   <div className="flex items-center gap-3">
                     <input 
                       type="checkbox" 
@@ -2301,17 +2339,94 @@ export default function Students() {
                     />
                     <label htmlFor="hasDiagnosis" className="text-sm font-medium text-purple-800">Estudiante con diagnóstico</label>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-purple-700 mb-1">Tipo de Diagnóstico</label>
-                    <input 
-                      type="text" 
-                      value={formData.diagnosisType || ''} 
-                      onChange={(e) => setFormData({ ...formData, diagnosisType: e.target.value })} 
-                      disabled={!formData.hasDiagnosis}
-                      placeholder="Ej: TDAH, TEA, Dislexia..."
-                      className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none disabled:bg-slate-100 disabled:text-slate-400" 
-                    />
-                  </div>
+
+                  {formData.hasDiagnosis && (
+                    <div className="space-y-4 pl-7 border-l-2 border-purple-200">
+                      {/* Tipo de diagnóstico */}
+                      <div>
+                        <label className="block text-xs font-medium text-purple-700 mb-1">Tipo de Diagnóstico *</label>
+                        <select
+                          value={formData.diagnosisType || ''}
+                          onChange={(e) => setFormData({ ...formData, diagnosisType: e.target.value })}
+                          className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                        >
+                          <option value="">Seleccione una categoría</option>
+                          {diagnosisCategories.map(cat => (
+                            <option key={cat.id} value={cat.name}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                        {formData.diagnosisType && (
+                          <p className="text-xs text-purple-600 mt-1">
+                            {diagnosisCategories.find(c => c.name === formData.diagnosisType)?.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Detalles del diagnóstico */}
+                      <div>
+                        <label className="block text-xs font-medium text-purple-700 mb-1">Detalles del Diagnóstico</label>
+                        <textarea
+                          value={(formData as any).diagnosisDetails || ''}
+                          onChange={(e) => setFormData({ ...formData, diagnosisDetails: e.target.value })}
+                          placeholder="Descripción detallada del diagnóstico, características principales, etc."
+                          className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none"
+                          rows={3}
+                        />
+                      </div>
+
+                      {/* Entidad que emitió el diagnóstico */}
+                      <div>
+                        <label className="block text-xs font-medium text-purple-700 mb-1">Entidad que emitió el diagnóstico</label>
+                        <input
+                          type="text"
+                          value={(formData as any).diagnosisEntity || ''}
+                          onChange={(e) => setFormData({ ...formData, diagnosisEntity: e.target.value })}
+                          placeholder="Ej: Instituto Neurocognitivo, Hospital San Juan de Dios..."
+                          className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                        />
+                      </div>
+
+                      {/* Fecha del diagnóstico */}
+                      <div>
+                        <label className="block text-xs font-medium text-purple-700 mb-1">Fecha del diagnóstico</label>
+                        <input
+                          type="date"
+                          value={(formData as any).diagnosisDate ? new Date((formData as any).diagnosisDate).toISOString().split('T')[0] : ''}
+                          onChange={(e) => setFormData({ ...formData, diagnosisDate: e.target.value })}
+                          className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                        />
+                      </div>
+
+                      {/* Apoyos recomendados */}
+                      <div>
+                        <label className="block text-xs font-medium text-purple-700 mb-1">Apoyos y ajustes recomendados</label>
+                        <textarea
+                          value={(formData as any).diagnosisSupports || ''}
+                          onChange={(e) => setFormData({ ...formData, diagnosisSupports: e.target.value })}
+                          placeholder="Ajustes razonables, apoyos pedagógicos, adaptaciones curriculares recomendadas..."
+                          className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none"
+                          rows={2}
+                        />
+                      </div>
+
+                      {/* Nota informativa */}
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                          <div className="text-xs text-blue-700">
+                            <p className="font-medium mb-1">Importante:</p>
+                            <ul className="space-y-0.5">
+                              <li>• Esta información solo será visible para docentes y personal autorizado</li>
+                              <li>• Si el módulo APD está activo, se creará automáticamente un perfil de acompañamiento</li>
+                              <li>• Los docentes podrán identificar al estudiante y aplicar ajustes razonables</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </fieldset>
 
