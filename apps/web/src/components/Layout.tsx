@@ -49,6 +49,7 @@ import {
   FileDown,
   LayoutGrid,
   MonitorPlay,
+  Sparkles,
 } from 'lucide-react'
 
 type Role = 'SUPER_ADMIN' | 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE' | 'SECRETARIA' | 'RECTOR' | 'PSICOLOGA'
@@ -59,6 +60,7 @@ interface NavItem {
   icon: any
   roles: Role[]
   module?: string  // Módulo requerido para mostrar este item
+  requiresDimensions?: boolean  // Solo mostrar si el usuario tiene grupos con estructura DIMENSIONS
   children?: NavItem[]
 }
 
@@ -167,7 +169,7 @@ const institutionalNavigation: NavItem[] = [
       { name: 'Nota Final Período', href: '/period-final-grades', icon: FileText, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
       { name: 'Logros y Juicios', href: '/achievements', icon: Target, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'PERFORMANCE' },
       { name: 'Recuperaciones', href: '/recoveries', icon: RefreshCw, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'RECOVERY' },
-      { name: 'Acompañamiento', href: '/pedagogical-support', icon: Heart, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'ACADEMIC' },
+      { name: 'Acompañamiento', href: '/pedagogical-support', icon: Sparkles, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'ACADEMIC', requiresDimensions: true },
       { name: 'Inclusión Educativa', href: '/differential-support', icon: Heart, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE'], module: 'DIAGNOSIS' },
     ]
   },
@@ -248,6 +250,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [expandedMenus, setExpandedMenus] = useState<string[]>([])
+  const [hasDimensionsGroups, setHasDimensionsGroups] = useState(false)
   
   // Estado para modal de cambio de contraseña
   const [showPasswordModal, setShowPasswordModal] = useState(false)
@@ -276,6 +279,25 @@ export default function Layout({ children }: { children: ReactNode }) {
     return () => clearInterval(interval)
   }, [fetchUnreadCount])
 
+  // Verificar si el usuario tiene grupos con estructura DIMENSIONS (preescolar)
+  useEffect(() => {
+    const checkDimensionsGroups = async () => {
+      try {
+        // Obtener grupos del usuario y verificar si alguno tiene estructura DIMENSIONS
+        const res = await import('../lib/api').then(m => m.groupsApi.getAll())
+        const groups = res.data || []
+        const hasDimensions = groups.some((g: any) => 
+          g.grade?.academicStructure === 'DIMENSIONS'
+        )
+        setHasDimensionsGroups(hasDimensions)
+      } catch {
+        // Si falla, asumir que no tiene grupos DIMENSIONS
+        setHasDimensionsGroups(false)
+      }
+    }
+    checkDimensionsGroups()
+  }, [])
+
   const userRoles = useMemo(() => {
     if (!user?.roles) return []
     return user.roles.map((r: any) => typeof r === 'string' ? r : r.role?.name || r.name).filter(Boolean)
@@ -296,6 +318,13 @@ export default function Layout({ children }: { children: ReactNode }) {
       const hasRole = item.roles.some((role: Role) => userRoles.includes(role))
       if (!hasRole) return false
       
+      // Verificar si requiere grupos con estructura DIMENSIONS (preescolar)
+      // Admin y Coordinador siempre ven el menú, solo docentes se filtran
+      if (item.requiresDimensions && !hasDimensionsGroups) {
+        const isAdminOrCoord = userRoles.includes('ADMIN_INSTITUTIONAL') || userRoles.includes('COORDINADOR')
+        if (!isAdminOrCoord) return false
+      }
+      
       // Si no tiene módulo definido o es SuperAdmin, mostrar
       if (!item.module || isSuperAdmin) return true
       
@@ -311,7 +340,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       }))
       // Filtrar items padre que quedaron sin hijos
       .filter((item: NavItem) => !item.children || item.children.length > 0)
-  }, [userRoles, navigation, isSuperAdmin, hasModule])
+  }, [userRoles, navigation, isSuperAdmin, hasModule, hasDimensionsGroups])
 
   // Auto-expandir menú si la ruta actual está en un submenú
   useMemo(() => {

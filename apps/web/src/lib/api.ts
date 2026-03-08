@@ -1985,6 +1985,68 @@ export const classroomApi = {
     api.get(`/classrooms/activities/${activityId}/sync-preview`),
   syncToGradebook: (activityId: string, data: { studentEnrollmentIds?: string[]; includeConflicts?: boolean; includeNoSubmission?: boolean }) =>
     api.post(`/classrooms/activities/${activityId}/sync-gradebook`, data),
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EVALUACIÓN ACTITUDINAL (Autoevaluación, Coevaluación)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Rúbricas
+  listRubrics: (type?: 'SELF_ASSESSMENT' | 'PEER_ASSESSMENT' | 'TEACHER_ASSESSMENT') =>
+    api.get('/classrooms/rubrics', { params: { type } }),
+  getRubric: (id: string) => api.get(`/classrooms/rubrics/${id}`),
+  createRubric: (data: {
+    name: string;
+    description?: string;
+    type: 'SELF_ASSESSMENT' | 'PEER_ASSESSMENT' | 'TEACHER_ASSESSMENT';
+    targetProcess?: string;
+    isDefault?: boolean;
+    criteria: {
+      name: string;
+      description?: string;
+      weight: number;
+      order: number;
+      levels: { score: number; label: string; description?: string; order: number }[];
+    }[];
+  }) => api.post('/classrooms/rubrics', data),
+  updateRubric: (id: string, data: {
+    name?: string;
+    description?: string;
+    targetProcess?: string;
+    isDefault?: boolean;
+    isActive?: boolean;
+    criteria?: {
+      name: string;
+      description?: string;
+      weight: number;
+      order: number;
+      levels: { score: number; label: string; description?: string; order: number }[];
+    }[];
+  }) => api.put(`/classrooms/rubrics/${id}`, data),
+  deleteRubric: (id: string) => api.delete(`/classrooms/rubrics/${id}`),
+  seedDefaultRubrics: () => api.post('/classrooms/rubrics/seed-defaults'),
+
+  // Autoevaluación
+  submitSelfAssessment: (activityId: string, data: {
+    responses: { criterionId: string; levelId: string }[];
+    reflection?: string;
+  }) => api.post(`/classrooms/activities/${activityId}/self-assessment`, data),
+
+  // Coevaluación
+  getPendingPeerAssessments: (activityId: string) =>
+    api.get(`/classrooms/activities/${activityId}/peer-assessments/pending`),
+  submitPeerAssessment: (activityId: string, data: {
+    targetEnrollmentId: string;
+    responses: { criterionId: string; levelId: string }[];
+    reflection?: string;
+  }) => api.post(`/classrooms/activities/${activityId}/peer-assessment`, data),
+  createPeerAssessmentPairs: (activityId: string, data: { mode?: 'random' | 'all'; peersPerStudent?: number }) =>
+    api.post(`/classrooms/activities/${activityId}/peer-assessment/create-pairs`, data),
+
+  // Resultados y sincronización
+  getAttitudinalResults: (activityId: string) =>
+    api.get(`/classrooms/activities/${activityId}/attitudinal-results`),
+  syncAttitudinalToGradebook: (activityId: string, academicTermId: string) =>
+    api.post(`/classrooms/activities/${activityId}/attitudinal-sync`, { academicTermId }),
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

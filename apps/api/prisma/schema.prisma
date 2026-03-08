@@ -360,6 +360,9 @@ model User {
 
   // Live Quiz
   liveSessionsAsTeacher LiveSession[] @relation("LiveSessionTeacher")
+
+  // Evaluación Actitudinal
+  createdRubrics AttitudinalRubric[] @relation("AttitudinalRubricCreator")
 }
 
 model Role {
@@ -532,6 +535,9 @@ model Institution {
 
   // Aula Virtual
   rlsClassrooms Classroom[] @relation("RlsInstitutionCR")
+
+  // Evaluación Actitudinal
+  attitudinalRubrics AttitudinalRubric[] @relation("InstitutionAttitudinalRubrics")
 }
 
 // Módulos habilitados por institución
@@ -1543,6 +1549,12 @@ model StudentEnrollment {
   // Live Quiz
   liveSessionAnswers LiveSessionAnswer[]
   liveTeamMembers    LiveSessionTeamMember[]
+
+  // Evaluación Actitudinal
+  attitudinalAsEvaluator AttitudinalSubmission[] @relation("AttitudinalEvaluator")
+  attitudinalAsTarget    AttitudinalSubmission[] @relation("AttitudinalTarget")
+  peerAsEvaluator        PeerAssessmentPair[]    @relation("PeerEvaluator")
+  peerAsTarget           PeerAssessmentPair[]    @relation("PeerTarget")
 
   @@unique([studentId, academicYearId])
 }
@@ -4807,6 +4819,8 @@ enum ClassroomActivityType {
   GAME
   EXAM
   ICFES_SIMULATOR
+  SELF_ASSESSMENT // Autoevaluación actitudinal
+  PEER_ASSESSMENT // Coevaluación actitudinal
 }
 
 enum QuestionType {
@@ -4941,6 +4955,12 @@ model ClassroomActivity {
   // Si está vacío, la actividad es para todos. Si tiene registros, solo para esos estudiantes.
   isRestrictedToAssigned Boolean       @default(false)
   liveSessions           LiveSession[]
+
+  // Evaluación Actitudinal
+  rubricId                String? // Rúbrica asociada (para SELF_ASSESSMENT, PEER_ASSESSMENT)
+  rubric                  AttitudinalRubric?      @relation("ActivityRubric", fields: [rubricId], references: [id], onDelete: SetNull)
+  attitudinalSubmissions  AttitudinalSubmission[]
+  peerAssessmentPairs     PeerAssessmentPair[]
 
   @@index([classroomId])
   @@index([sectionId])
@@ -5157,4 +5177,130 @@ model LiveSessionTeamMember {
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, studentEnrollmentId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EVALUACIÓN ACTITUDINAL (Autoevaluación, Coevaluación, Heteroevaluación)
+// Rúbricas configurables por institución para procesos actitudinales
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum AttitudinalRubricType {
+  SELF_ASSESSMENT // Autoevaluación (estudiante se evalúa a sí mismo)
+  PEER_ASSESSMENT // Coevaluación (estudiante evalúa a compañeros)
+  TEACHER_ASSESSMENT // Heteroevaluación (docente evalúa actitud del estudiante)
+}
+
+// Rúbrica institucional para evaluación actitudinal
+model AttitudinalRubric {
+  id            String               @id @default(cuid())
+  institutionId String
+  name          String // "Rúbrica de Autoevaluación P1", "Coevaluación Trabajo en Equipo"
+  description   String?
+  type          AttitudinalRubricType
+  targetProcess String? // Nombre del subproceso actitudinal al que aplica (ej: "Autoevaluación")
+  isDefault     Boolean              @default(false) // Rúbrica por defecto para este tipo
+  isActive      Boolean              @default(true)
+  createdById   String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  institution Institution              @relation("InstitutionAttitudinalRubrics", fields: [institutionId], references: [id], onDelete: Cascade)
+  createdBy   User?                    @relation("AttitudinalRubricCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  criteria    AttitudinalCriterion[]
+  activities  ClassroomActivity[]      @relation("ActivityRubric")
+  submissions AttitudinalSubmission[]
+
+  @@unique([institutionId, name])
+  @@index([institutionId, type])
+  @@index([institutionId, isDefault])
+}
+
+// Criterio de evaluación dentro de una rúbrica
+model AttitudinalCriterion {
+  id          String  @id @default(cuid())
+  rubricId    String
+  name        String // "Responsabilidad", "Trabajo en equipo", "Puntualidad"
+  description String? // Descripción detallada del criterio
+  weight      Int     @default(100) // Peso porcentual (suma de todos = 100)
+  order       Int     @default(0)
+
+  rubric    AttitudinalRubric          @relation(fields: [rubricId], references: [id], onDelete: Cascade)
+  levels    CriterionLevel[]
+  responses AttitudinalCriterionResponse[]
+
+  @@index([rubricId])
+}
+
+// Niveles de desempeño para cada criterio (escala de valoración)
+model CriterionLevel {
+  id          String  @id @default(cuid())
+  criterionId String
+  score       Decimal @db.Decimal(3, 1) // Valor numérico (ej: 5.0, 4.0, 3.0, 2.0, 1.0)
+  label       String // "Siempre", "Casi siempre", "A veces", "Rara vez", "Nunca"
+  description String? // Descripción de qué significa este nivel
+  order       Int     @default(0)
+
+  criterion AttitudinalCriterion           @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+  responses AttitudinalCriterionResponse[]
+
+  @@index([criterionId])
+}
+
+// Envío de evaluación actitudinal (autoevaluación o coevaluación)
+model AttitudinalSubmission {
+  id                    String   @id @default(cuid())
+  activityId            String
+  rubricId              String
+  evaluatorEnrollmentId String // Quien evalúa
+  targetEnrollmentId    String? // A quien evalúa (null si es autoevaluación)
+  reflection            String?  @db.Text // Reflexión o justificación del estudiante
+  calculatedScore       Decimal? @db.Decimal(3, 2) // Nota calculada según pesos
+  syncedToGradebook     Boolean  @default(false)
+  syncedAt              DateTime?
+  submittedAt           DateTime @default(now())
+
+  activity            ClassroomActivity                @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  rubric              AttitudinalRubric                @relation(fields: [rubricId], references: [id], onDelete: Restrict)
+  evaluatorEnrollment StudentEnrollment                @relation("AttitudinalEvaluator", fields: [evaluatorEnrollmentId], references: [id], onDelete: Cascade)
+  targetEnrollment    StudentEnrollment?               @relation("AttitudinalTarget", fields: [targetEnrollmentId], references: [id], onDelete: Cascade)
+  responses           AttitudinalCriterionResponse[]
+
+  @@unique([activityId, evaluatorEnrollmentId, targetEnrollmentId])
+  @@index([activityId])
+  @@index([evaluatorEnrollmentId])
+  @@index([targetEnrollmentId])
+}
+
+// Respuesta individual a cada criterio de la rúbrica
+model AttitudinalCriterionResponse {
+  id           String @id @default(cuid())
+  submissionId String
+  criterionId  String
+  levelId      String // Nivel seleccionado
+
+  submission AttitudinalSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  criterion  AttitudinalCriterion  @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+  level      CriterionLevel        @relation(fields: [levelId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, criterionId])
+  @@index([submissionId])
+}
+
+// Asignación de pares para coevaluación
+model PeerAssessmentPair {
+  id                    String    @id @default(cuid())
+  activityId            String
+  evaluatorEnrollmentId String // Quien debe evaluar
+  targetEnrollmentId    String // A quien debe evaluar
+  isCompleted           Boolean   @default(false)
+  completedAt           DateTime?
+  createdAt             DateTime  @default(now())
+
+  activity            ClassroomActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  evaluatorEnrollment StudentEnrollment @relation("PeerEvaluator", fields: [evaluatorEnrollmentId], references: [id], onDelete: Cascade)
+  targetEnrollment    StudentEnrollment @relation("PeerTarget", fields: [targetEnrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, evaluatorEnrollmentId, targetEnrollmentId])
+  @@index([activityId])
+  @@index([evaluatorEnrollmentId])
 }

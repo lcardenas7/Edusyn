@@ -3,14 +3,17 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ClassroomService } from './classroom.service';
+import { AttitudinalService } from './attitudinal.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { resolveInstitutionId } from '../../common/utils/institution-resolver';
+import { AttitudinalRubricType } from '@prisma/client';
 
 @Controller('classrooms')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ClassroomController {
   constructor(
     private readonly service: ClassroomService,
+    private readonly attitudinalService: AttitudinalService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -623,5 +626,169 @@ export class ClassroomController {
   }) {
     const { userId } = await this.resolveCtx(req);
     return this.service.syncToGradebook(activityId, userId, body);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EVALUACIÓN ACTITUDINAL - RÚBRICAS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('rubrics')
+  @Roles('DOCENTE', 'COORDINADOR', 'ADMIN_INSTITUTIONAL')
+  async listRubrics(@Request() req: any, @Query('type') type?: AttitudinalRubricType) {
+    const { institutionId } = await this.resolveCtx(req);
+    return this.attitudinalService.listRubrics(institutionId, type);
+  }
+
+  @Get('rubrics/:id')
+  @Roles('DOCENTE', 'COORDINADOR', 'ADMIN_INSTITUTIONAL')
+  async getRubric(@Param('id') id: string) {
+    return this.attitudinalService.getRubric(id);
+  }
+
+  @Post('rubrics')
+  @Roles('COORDINADOR', 'ADMIN_INSTITUTIONAL')
+  async createRubric(@Request() req: any, @Body() body: {
+    name: string;
+    description?: string;
+    type: AttitudinalRubricType;
+    targetProcess?: string;
+    isDefault?: boolean;
+    criteria: {
+      name: string;
+      description?: string;
+      weight: number;
+      order: number;
+      levels: { score: number; label: string; description?: string; order: number }[];
+    }[];
+  }) {
+    const { institutionId, userId } = await this.resolveCtx(req);
+    return this.attitudinalService.createRubric({ ...body, institutionId, createdById: userId });
+  }
+
+  @Put('rubrics/:id')
+  @Roles('COORDINADOR', 'ADMIN_INSTITUTIONAL')
+  async updateRubric(@Param('id') id: string, @Body() body: {
+    name?: string;
+    description?: string;
+    targetProcess?: string;
+    isDefault?: boolean;
+    isActive?: boolean;
+    criteria?: {
+      name: string;
+      description?: string;
+      weight: number;
+      order: number;
+      levels: { score: number; label: string; description?: string; order: number }[];
+    }[];
+  }) {
+    return this.attitudinalService.updateRubric(id, body);
+  }
+
+  @Delete('rubrics/:id')
+  @Roles('ADMIN_INSTITUTIONAL')
+  async deleteRubric(@Param('id') id: string) {
+    return this.attitudinalService.deleteRubric(id);
+  }
+
+  @Post('rubrics/seed-defaults')
+  @Roles('ADMIN_INSTITUTIONAL')
+  async seedDefaultRubrics(@Request() req: any) {
+    const { institutionId, userId } = await this.resolveCtx(req);
+    return this.attitudinalService.seedDefaultRubrics(institutionId, userId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EVALUACIÓN ACTITUDINAL - AUTOEVALUACIÓN
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('activities/:activityId/self-assessment')
+  @Roles('ESTUDIANTE')
+  async submitSelfAssessment(@Param('activityId') activityId: string, @Request() req: any, @Body() body: {
+    responses: { criterionId: string; levelId: string }[];
+    reflection?: string;
+  }) {
+    const userId = req.user.id;
+    // Obtener enrollment del estudiante
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { student: { userId }, status: 'ACTIVE' },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!enrollment) throw new Error('No se encontró matrícula activa');
+    
+    return this.attitudinalService.submitSelfAssessment({
+      activityId,
+      evaluatorEnrollmentId: enrollment.id,
+      responses: body.responses,
+      reflection: body.reflection,
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EVALUACIÓN ACTITUDINAL - COEVALUACIÓN
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('activities/:activityId/peer-assessments/pending')
+  @Roles('ESTUDIANTE')
+  async getPendingPeerAssessments(@Param('activityId') activityId: string, @Request() req: any) {
+    const userId = req.user.id;
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { student: { userId }, status: 'ACTIVE' },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!enrollment) throw new Error('No se encontró matrícula activa');
+    
+    return this.attitudinalService.getPendingPeerAssessments(activityId, enrollment.id);
+  }
+
+  @Post('activities/:activityId/peer-assessment')
+  @Roles('ESTUDIANTE')
+  async submitPeerAssessment(@Param('activityId') activityId: string, @Request() req: any, @Body() body: {
+    targetEnrollmentId: string;
+    responses: { criterionId: string; levelId: string }[];
+    reflection?: string;
+  }) {
+    const userId = req.user.id;
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { student: { userId }, status: 'ACTIVE' },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!enrollment) throw new Error('No se encontró matrícula activa');
+    
+    return this.attitudinalService.submitPeerAssessment({
+      activityId,
+      evaluatorEnrollmentId: enrollment.id,
+      targetEnrollmentId: body.targetEnrollmentId,
+      responses: body.responses,
+      reflection: body.reflection,
+    });
+  }
+
+  @Post('activities/:activityId/peer-assessment/create-pairs')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async createPeerAssessmentPairs(@Param('activityId') activityId: string, @Body() body: {
+    mode?: 'random' | 'all';
+    peersPerStudent?: number;
+  }) {
+    return this.attitudinalService.createPeerAssessmentPairs(
+      activityId,
+      body.mode || 'random',
+      body.peersPerStudent || 3,
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EVALUACIÓN ACTITUDINAL - RESULTADOS Y SINCRONIZACIÓN
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('activities/:activityId/attitudinal-results')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async getAttitudinalResults(@Param('activityId') activityId: string) {
+    return this.attitudinalService.getActivityResults(activityId);
+  }
+
+  @Post('activities/:activityId/attitudinal-sync')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async syncAttitudinalToGradebook(@Param('activityId') activityId: string, @Body() body: { academicTermId: string }) {
+    return this.attitudinalService.syncToGradebook(activityId, body.academicTermId);
   }
 }
