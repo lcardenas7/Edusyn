@@ -63,6 +63,11 @@ export class LiveSessionController {
   // SSE Stream — GET /live-session/:id/stream
   // ═══════════════════════════════════════════════════════════════════════════
 
+  // ⚠️ NO agregar @UseGuards(JwtAuthGuard) aquí. El SSE mantiene la conexión abierta
+  // indefinidamente. Si JwtAuthGuard se activa, el TenantContextInterceptor abre una
+  // transacción interactiva que bloquea 1 conexión del pool POR CADA cliente SSE.
+  // Con 35 estudiantes = 35 conexiones bloqueadas permanentemente → pool agotado.
+  // La auth se hace manualmente via query param token (línea siguiente).
   @SkipTenantCheck()
   @Sse(':id/stream')
   stream(@Param('id') sessionId: string, @Query('token') token?: string): Observable<MessageEvent> {

@@ -1,9 +1,13 @@
 import {
   Injectable,
+  Logger,
+  OnModuleDestroy,
   ForbiddenException,
   NotFoundException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Subject } from 'rxjs';
 
@@ -23,13 +27,22 @@ export interface LiveEvent {
 }
 
 @Injectable()
-export class LiveSessionService {
+export class LiveSessionService implements OnModuleDestroy {
+  private readonly logger = new Logger(LiveSessionService.name);
   // Map of sessionId → Subject for SSE broadcasting
   private streams = new Map<string, Subject<LiveEvent>>();
   // Map of sessionId → heartbeat interval
   private heartbeats = new Map<string, ReturnType<typeof setInterval>>();
+  // Map of sessionId → creation timestamp (for orphan detection)
+  private streamCreatedAt = new Map<string, number>();
 
   constructor(private prisma: PrismaService) {}
+
+  onModuleDestroy() {
+    for (const sessionId of [...this.streams.keys()]) {
+      this.cleanupStream(sessionId);
+    }
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SSE Stream Management
@@ -39,6 +52,7 @@ export class LiveSessionService {
     if (!this.streams.has(sessionId)) {
       const subject = new Subject<LiveEvent>();
       this.streams.set(sessionId, subject);
+      this.streamCreatedAt.set(sessionId, Date.now());
       // Heartbeat every 25s to keep Railway connection alive
       const hb = setInterval(() => {
         subject.next({ type: 'PING', data: { ts: Date.now() } });
@@ -57,10 +71,48 @@ export class LiveSessionService {
     const hb = this.heartbeats.get(sessionId);
     if (hb) clearInterval(hb);
     this.heartbeats.delete(sessionId);
+    this.streamCreatedAt.delete(sessionId);
     const stream = this.streams.get(sessionId);
     if (stream) {
       stream.complete();
       this.streams.delete(sessionId);
+    }
+  }
+
+  /**
+   * Limpia streams huérfanos: sesiones que ya terminaron en BD
+   * o que llevan más de 2 horas abiertas sin actividad.
+   * Llamado por LiveSessionCronService cada 5 minutos.
+   */
+  async cleanupOrphanedStreams() {
+    const sessionIds = [...this.streams.keys()];
+    if (sessionIds.length === 0) return;
+
+    const TWO_HOURS = 2 * 60 * 60 * 1000;
+    let cleaned = 0;
+
+    // Check which sessions are still ACTIVE/WAITING in DB
+    const activeSessions = await this.prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "LiveSession"
+      WHERE id = ANY(${sessionIds})
+        AND status IN ('ACTIVE', 'WAITING')
+    `;
+    const activeIds = new Set(activeSessions.map(s => s.id));
+
+    for (const sessionId of sessionIds) {
+      const isActive = activeIds.has(sessionId);
+      const createdAt = this.streamCreatedAt.get(sessionId) || 0;
+      const age = Date.now() - createdAt;
+
+      // Clean if: session finished/doesn't exist in DB, OR stream older than 2h
+      if (!isActive || age > TWO_HOURS) {
+        this.cleanupStream(sessionId);
+        cleaned++;
+      }
+    }
+
+    if (cleaned > 0) {
+      this.logger.log(`Cleaned ${cleaned} orphaned SSE streams (${this.streams.size} remaining)`);
     }
   }
 
@@ -305,19 +357,27 @@ export class LiveSessionService {
       teamId = membership?.teamId || null;
     }
 
-    // Save answer (1 query)
-    const saved = await this.prisma.liveSessionAnswer.create({
-      data: {
-        sessionId,
-        questionId,
-        studentEnrollmentId: enrollment.id,
-        teamId,
-        answer,
-        isCorrect,
-        responseTimeMs: Math.min(responseTimeMs, timeLimit),
-        points,
-      },
-    });
+    // Save answer (1 query) — catch duplicate from concurrent submission
+    let saved;
+    try {
+      saved = await this.prisma.liveSessionAnswer.create({
+        data: {
+          sessionId,
+          questionId,
+          studentEnrollmentId: enrollment.id,
+          teamId,
+          answer,
+          isCorrect,
+          responseTimeMs: Math.min(responseTimeMs, timeLimit),
+          points,
+        },
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        throw new ConflictException('Ya respondió esta pregunta');
+      }
+      throw e;
+    }
 
     // Broadcast progress (1 query)
     const totalAnswered = await this.prisma.liveSessionAnswer.count({
