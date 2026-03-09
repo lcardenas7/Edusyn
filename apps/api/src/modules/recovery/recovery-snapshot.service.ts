@@ -33,7 +33,7 @@ export class RecoverySnapshotService {
         academicTerm: {
           select: { id: true, name: true, status: true, academicYearId: true }
         },
-        closedBy: { select: { id: true, name: true } }
+        closedBy: { select: { id: true, firstName: true, lastName: true } }
       }
     });
 
@@ -90,7 +90,7 @@ export class RecoverySnapshotService {
         recoveryPhaseStatus: config.recoveryPhaseStatus,
         snapshotCreatedAt: config.snapshotCreatedAt,
         closedAt: config.closedAt,
-        closedBy: config.closedBy
+        closedBy: config.closedBy ? { id: config.closedBy.id, name: `${config.closedBy.firstName} ${config.closedBy.lastName}` } : null
       },
       stats,
       canCloseWindow: config.isOpen && stats.pending === 0 && stats.inProgress === 0,
@@ -409,8 +409,8 @@ export class RecoverySnapshotService {
         order: 3,
         name: 'Registro de Resultados',
         description: 'Docentes registran las notas de las actividades de recuperación',
-        status: status.stats.total === 0 ? 'pending' :
-                status.stats.pending > 0 || status.stats.inProgress > 0 ? 'in_progress' : 'completed',
+        status: (status.stats?.total ?? 0) === 0 ? 'pending' :
+                (status.stats?.pending ?? 0) > 0 || (status.stats?.inProgress ?? 0) > 0 ? 'in_progress' : 'completed',
         icon: 'FileEdit',
         details: status.stats
       },
@@ -443,16 +443,18 @@ export class RecoverySnapshotService {
       }
     ];
 
+    const stats = status.stats ?? { total: 0, pending: 0, inProgress: 0, completed: 0, approved: 0, notApproved: 0 };
+
     return {
       academicTermId,
       currentPhase: status.config?.recoveryPhaseStatus || 'NOT_CONFIGURED',
       steps,
       summary: {
-        totalRecoveries: status.stats.total,
-        completed: status.stats.completed + status.stats.approved + status.stats.notApproved,
-        pending: status.stats.pending + status.stats.inProgress,
-        approved: status.stats.approved,
-        notApproved: status.stats.notApproved
+        totalRecoveries: stats.total,
+        completed: stats.completed + stats.approved + stats.notApproved,
+        pending: stats.pending + stats.inProgress,
+        approved: stats.approved,
+        notApproved: stats.notApproved
       }
     };
   }
