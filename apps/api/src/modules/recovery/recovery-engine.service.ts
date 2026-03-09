@@ -301,10 +301,13 @@ export class RecoveryEngineService {
 
   /**
    * Valida si una recuperación puede ser creada según la configuración.
+   * Para recuperación de período, usa RecoveryPeriodConfig (ventana por período específico).
+   * Para recuperación final, usa RecoveryConfig (ventana general del año).
    */
   async validateRecoveryCreation(params: {
     institutionId: string;
     academicYearId: string;
+    academicTermId?: string;
     type: 'PERIOD' | 'FINAL';
   }): Promise<{ allowed: boolean; reason?: string }> {
     const config = await this.configService.getOrCreateDefaultConfig(
@@ -320,9 +323,31 @@ export class RecoveryEngineService {
       return { allowed: false, reason: 'La recuperación final está deshabilitada para esta institución' };
     }
 
-    // Verificar ventana de fechas
     const now = new Date();
+
     if (params.type === 'PERIOD') {
+      // Usar RecoveryPeriodConfig para ventana específica del período
+      if (params.academicTermId) {
+        const periodConfig = await this.prisma.recoveryPeriodConfig.findUnique({
+          where: { academicTermId: params.academicTermId },
+          include: { academicTerm: { select: { name: true } } },
+        });
+
+        if (periodConfig) {
+          if (!periodConfig.isOpen) {
+            return { allowed: false, reason: `La ventana de recuperación del ${periodConfig.academicTerm.name} está cerrada` };
+          }
+          if (periodConfig.openDate && now < periodConfig.openDate) {
+            return { allowed: false, reason: `La ventana de recuperación de período abre el ${periodConfig.openDate.toLocaleDateString('es-CO')}` };
+          }
+          if (periodConfig.closeDate && now > periodConfig.closeDate) {
+            return { allowed: false, reason: `La ventana de recuperación de período cerró el ${periodConfig.closeDate.toLocaleDateString('es-CO')}` };
+          }
+          return { allowed: true };
+        }
+      }
+
+      // Fallback a configuración general si no hay RecoveryPeriodConfig
       if (config.periodRecoveryStartDate && now < config.periodRecoveryStartDate) {
         return { allowed: false, reason: `La ventana de recuperación de período abre el ${config.periodRecoveryStartDate.toLocaleDateString('es-CO')}` };
       }
@@ -330,6 +355,7 @@ export class RecoveryEngineService {
         return { allowed: false, reason: `La ventana de recuperación de período cerró el ${config.periodRecoveryEndDate.toLocaleDateString('es-CO')}` };
       }
     } else {
+      // Recuperación final usa configuración general
       if (config.finalRecoveryStartDate && now < config.finalRecoveryStartDate) {
         return { allowed: false, reason: `La ventana de recuperación final abre el ${config.finalRecoveryStartDate.toLocaleDateString('es-CO')}` };
       }

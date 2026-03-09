@@ -300,6 +300,7 @@ export class PeriodRecoveryService {
     const validation = await this.engine.validateRecoveryCreation({
       institutionId: enr.institutionId,
       academicYearId: enr.academicYearId,
+      academicTermId: data.academicTermId,
       type: 'PERIOD',
     });
     if (!validation.allowed) throw new BadRequestException(validation.reason);
