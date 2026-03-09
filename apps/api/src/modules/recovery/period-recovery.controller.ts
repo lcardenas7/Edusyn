@@ -3,6 +3,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { PeriodRecoveryService } from './period-recovery.service';
+import { RecoverySnapshotService } from './recovery-snapshot.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
@@ -11,6 +12,7 @@ import { requireInstitutionId } from '../../common/utils/institution-resolver';
 export class PeriodRecoveryController {
   constructor(
     private readonly periodRecoveryService: PeriodRecoveryService,
+    private readonly snapshotService: RecoverySnapshotService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -93,5 +95,79 @@ export class PeriodRecoveryController {
   ) {
     const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
     return this.periodRecoveryService.getRecoveryStats(academicTermId, instId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GESTIÓN DE SNAPSHOTS DE RECUPERACIÓN
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Obtiene el estado actual del proceso de recuperación de un período
+   */
+  @Get('snapshot-status')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async getRecoveryStatus(@Query('academicTermId') academicTermId: string) {
+    return this.snapshotService.getRecoveryStatus(academicTermId);
+  }
+
+  /**
+   * Obtiene el flujo de trabajo completo para mostrar en UI
+   */
+  @Get('workflow')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async getRecoveryWorkflow(@Query('academicTermId') academicTermId: string) {
+    return this.snapshotService.getRecoveryWorkflow(academicTermId);
+  }
+
+  /**
+   * Cierra la ventana de recuperación de un período
+   */
+  @Post('close-window')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async closeRecoveryWindow(
+    @Body() data: { academicTermId: string; force?: boolean },
+    @Req() req: any,
+  ) {
+    return this.snapshotService.closeRecoveryWindow(
+      data.academicTermId,
+      req.user.id,
+      data.force || false,
+    );
+  }
+
+  /**
+   * Crea snapshots POST_RECOVERY para actualizar boletines
+   */
+  @Post('create-snapshot')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async createPostRecoverySnapshots(
+    @Body() data: { academicTermId: string },
+    @Req() req: any,
+  ) {
+    return this.snapshotService.createPostRecoverySnapshots(
+      data.academicTermId,
+      req.user.id,
+    );
+  }
+
+  /**
+   * Finaliza el proceso de recuperación del período
+   */
+  @Post('finalize')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async finalizeRecoveryProcess(@Body() data: { academicTermId: string }) {
+    return this.snapshotService.finalizeRecoveryProcess(data.academicTermId);
+  }
+
+  /**
+   * Compara snapshots inicial y POST_RECOVERY de un estudiante
+   */
+  @Get('compare-snapshots')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async compareSnapshots(
+    @Query('academicTermId') academicTermId: string,
+    @Query('studentEnrollmentId') studentEnrollmentId: string,
+  ) {
+    return this.snapshotService.compareSnapshots(academicTermId, studentEnrollmentId);
   }
 }

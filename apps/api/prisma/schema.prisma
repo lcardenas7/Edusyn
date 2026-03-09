@@ -336,8 +336,9 @@ model User {
   measuresApplied     PedagogicalMeasure[]
 
   // Snapshot legal de boletines
-  snapshotsGenerated TermReportCardSnapshot[] @relation("SnapshotGeneratedBy")
-  termsReopened      TermReopeningRecord[]    @relation("TermReopenedBy")
+  snapshotsGenerated       TermReportCardSnapshot[] @relation("SnapshotGeneratedBy")
+  termsReopened            TermReopeningRecord[]    @relation("TermReopenedBy")
+  recoveryWindowsClosed    RecoveryPeriodConfig[]   @relation("RecoveryClosedBy")
 
   // Acompañamiento pedagógico
   pedagogicalSupportsCompleted PedagogicalSupportPlan[] @relation("PedagogicalSupportCompletedBy")
@@ -1066,13 +1067,15 @@ model AcademicTerm {
 // ═══════════════════════════════════════════════════════════════════════════
 
 model TermReportCardSnapshot {
-  id                  String   @id @default(cuid())
+  id                  String             @id @default(cuid())
   academicTermId      String
   studentEnrollmentId String
   version             Int
-  generatedAt         DateTime @default(now())
+  snapshotType        ReportCardSnapshotType @default(INITIAL_CLOSE)
+  generatedAt         DateTime           @default(now())
   generatedById       String?
   data                Json // Boletín completo congelado (mismo DTO de buildGroupReportCards)
+  recoveryChanges     Json? // Cambios aplicados por recuperación (solo para POST_RECOVERY)
 
   academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Cascade)
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
@@ -1081,6 +1084,15 @@ model TermReportCardSnapshot {
   @@unique([academicTermId, studentEnrollmentId, version])
   @@index([academicTermId])
   @@index([studentEnrollmentId])
+  @@index([academicTermId, snapshotType])
+}
+
+// Tipo de snapshot de boletín
+enum ReportCardSnapshotType {
+  INITIAL_CLOSE    // Cierre inicial del período (antes de recuperación)
+  POST_RECOVERY    // Después de aplicar recuperaciones
+  FINAL_CLOSE      // Cierre definitivo del período
+  REOPENED         // Reapertura por corrección
 }
 
 model TermReopeningRecord {
@@ -1114,17 +1126,31 @@ model GradingPeriodConfig {
 
 // Configuración de ventana de recuperaciones por período
 model RecoveryPeriodConfig {
-  id             String    @id @default(cuid())
-  academicTermId String    @unique
-  isOpen         Boolean   @default(false)
-  openDate       DateTime?
-  closeDate      DateTime?
-  allowLateEntry Boolean   @default(false)
-  lateEntryDays  Int       @default(0)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                  String                    @id @default(cuid())
+  academicTermId      String                    @unique
+  isOpen              Boolean                   @default(false)
+  openDate            DateTime?
+  closeDate           DateTime?
+  allowLateEntry      Boolean                   @default(false)
+  lateEntryDays       Int                       @default(0)
+  recoveryPhaseStatus RecoveryPhaseStatus       @default(NOT_STARTED)
+  snapshotCreatedAt   DateTime? // Fecha en que se creó el snapshot POST_RECOVERY
+  closedById          String? // Usuario que cerró la ventana
+  closedAt            DateTime? // Fecha de cierre manual
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
 
   academicTerm AcademicTerm @relation("RecoveryPeriodConfig", fields: [academicTermId], references: [id], onDelete: Cascade)
+  closedBy     User?        @relation("RecoveryClosedBy", fields: [closedById], references: [id])
+}
+
+// Estado del proceso de recuperación del período
+enum RecoveryPhaseStatus {
+  NOT_STARTED      // Ventana no ha abierto
+  IN_PROGRESS      // Ventana abierta, recuperaciones en curso
+  PENDING_SNAPSHOT // Ventana cerrada, pendiente crear snapshot
+  SNAPSHOT_CREATED // Snapshot POST_RECOVERY creado
+  FINALIZED        // Proceso completamente finalizado
 }
 
 model TeacherAssignment {

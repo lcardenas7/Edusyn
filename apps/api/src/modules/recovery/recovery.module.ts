@@ -8,6 +8,7 @@ import { FinalRecoveryController } from './final-recovery.controller';
 import { AcademicActsService } from './academic-acts.service';
 import { AcademicActsController } from './academic-acts.controller';
 import { RecoveryEngineService } from './recovery-engine.service';
+import { RecoverySnapshotService } from './recovery-snapshot.service';
 
 @Module({
   controllers: [
@@ -19,6 +20,7 @@ import { RecoveryEngineService } from './recovery-engine.service';
   providers: [
     RecoveryConfigService,
     RecoveryEngineService,
+    RecoverySnapshotService,
     PeriodRecoveryService,
     FinalRecoveryService,
     AcademicActsService,
@@ -26,6 +28,7 @@ import { RecoveryEngineService } from './recovery-engine.service';
   exports: [
     RecoveryConfigService,
     RecoveryEngineService,
+    RecoverySnapshotService,
     PeriodRecoveryService,
     FinalRecoveryService,
     AcademicActsService,
