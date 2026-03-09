@@ -1412,7 +1412,10 @@ export default function Recoveries() {
                     setMessage({ type: 'success', text: 'Plan de recuperación creado correctamente' })
                     setTimeout(() => setMessage(null), 3000)
                     setShowRecoveryPlanModal(false)
+                    // Refrescar ambas listas: recuperaciones y estudiantes con bajo rendimiento
                     loadPeriodRecoveries()
+                    // Remover el estudiante de la lista de failingStudents
+                    setFailingStudents(prev => prev.filter(s => s.enrollmentId !== selectedStudentForRecovery.enrollmentId))
                   } catch (err: any) {
                     console.error('Error creating recovery plan:', err)
                     setMessage({ type: 'error', text: err.response?.data?.message || 'Error al crear el plan de recuperación' })
