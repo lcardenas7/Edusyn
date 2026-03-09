@@ -15,7 +15,7 @@ export class RecoveryConfigController {
   ) {}
 
   @Get()
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getConfig(
     @Request() req: any,
     @Query('academicYearId') academicYearId: string,

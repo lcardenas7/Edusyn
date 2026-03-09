@@ -87,7 +87,7 @@ export class PeriodRecoveryController {
   }
 
   @Get('stats')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getStats(
     @Query('academicTermId') academicTermId: string,
     @Req() req: any,
