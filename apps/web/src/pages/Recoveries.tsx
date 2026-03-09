@@ -121,6 +121,16 @@ export default function Recoveries() {
     recoveryDate: new Date().toISOString().split('T')[0],
   })
 
+  // Estado para el modal de registrar nota de recuperación
+  const [showRegisterGradeModal, setShowRegisterGradeModal] = useState(false)
+  const [selectedRecoveryForGrade, setSelectedRecoveryForGrade] = useState<any>(null)
+  const [registerGradeForm, setRegisterGradeForm] = useState({
+    recoveryScore: '',
+    evidences: '',
+    observations: '',
+  })
+  const [savingGrade, setSavingGrade] = useState(false)
+
   const isAdmin = user?.roles?.some((r: any) => 
     ['SUPERADMIN', 'ADMIN_INSTITUTIONAL'].includes(r.role?.name || r.name)
   )
@@ -496,6 +506,29 @@ export default function Recoveries() {
     )
   }
 
+  const handleRegisterGrade = async () => {
+    if (!selectedRecoveryForGrade || !registerGradeForm.recoveryScore || !institutionId) return
+    setSavingGrade(true)
+    try {
+      await periodRecoveryApi.registerResult(selectedRecoveryForGrade.id, {
+        recoveryScore: parseFloat(registerGradeForm.recoveryScore),
+        evidences: registerGradeForm.evidences || undefined,
+        observations: registerGradeForm.observations || undefined,
+      }, institutionId)
+      setMessage({ type: 'success', text: 'Nota de recuperación registrada correctamente' })
+      setShowRegisterGradeModal(false)
+      setSelectedRecoveryForGrade(null)
+      setRegisterGradeForm({ recoveryScore: '', evidences: '', observations: '' })
+      loadPeriodRecoveries()
+    } catch (err: any) {
+      console.error('Error registering grade:', err)
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Error al registrar la nota' })
+    } finally {
+      setSavingGrade(false)
+      setTimeout(() => setMessage(null), 3000)
+    }
+  }
+
   // Filtrar asignaturas por grupo seleccionado
   const filteredSubjects = useMemo(() => {
     if (!selectedGroupId || selectedGroupId === 'all') return subjects
@@ -818,6 +851,7 @@ export default function Recoveries() {
                       <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase">Nota Recuperación</th>
                       <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase">Nota Final</th>
                       <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase">Estado</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -863,6 +897,33 @@ export default function Recoveries() {
                         </td>
                         <td className="px-6 py-4 text-center">
                           {renderStatusBadge(recovery.status)}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {['ASSIGNED', 'IN_PROGRESS'].includes(recovery.status) && (
+                            <button
+                              onClick={() => {
+                                setSelectedRecoveryForGrade(recovery)
+                                setRegisterGradeForm({
+                                  recoveryScore: '',
+                                  evidences: '',
+                                  observations: '',
+                                })
+                                setShowRegisterGradeModal(true)
+                              }}
+                              disabled={!recoveryPeriodOpen && isTeacher}
+                              className={`px-3 py-1.5 text-sm rounded-lg ${
+                                !recoveryPeriodOpen && isTeacher
+                                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                  : 'bg-green-600 text-white hover:bg-green-700'
+                              }`}
+                              title={!recoveryPeriodOpen && isTeacher ? recoveryPeriodMessage : 'Registrar nota de recuperación'}
+                            >
+                              Registrar Nota
+                            </button>
+                          )}
+                          {['APPROVED', 'NOT_APPROVED', 'COMPLETED'].includes(recovery.status) && (
+                            <span className="text-xs text-slate-400">Completado</span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -1364,6 +1425,93 @@ export default function Recoveries() {
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 {saving ? 'Guardando...' : 'Crear Plan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para registrar nota de recuperación */}
+      {showRegisterGradeModal && selectedRecoveryForGrade && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="px-6 py-4 border-b border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-900">Registrar Nota de Recuperación</h3>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-slate-50 rounded-lg p-4">
+                <p className="font-medium text-slate-900">
+                  {selectedRecoveryForGrade.studentEnrollment?.student?.lastName} {selectedRecoveryForGrade.studentEnrollment?.student?.firstName}
+                </p>
+                <p className="text-sm text-slate-600">{selectedRecoveryForGrade.subject?.name}</p>
+                <p className="text-sm text-slate-500 mt-1">
+                  Nota original: <span className="font-medium text-red-600">{Number(selectedRecoveryForGrade.originalScore).toFixed(1)}</span>
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Nota de Recuperación *
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="1"
+                  max={config.periodMaxScore}
+                  value={registerGradeForm.recoveryScore}
+                  onChange={(e) => setRegisterGradeForm({ ...registerGradeForm, recoveryScore: e.target.value })}
+                  placeholder="Ej: 3.5"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Nota máxima alcanzable: {config.periodMaxScore}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Evidencias (opcional)
+                </label>
+                <input
+                  type="text"
+                  value={registerGradeForm.evidences}
+                  onChange={(e) => setRegisterGradeForm({ ...registerGradeForm, evidences: e.target.value })}
+                  placeholder="Ej: Taller entregado, Sustentación oral"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Observaciones (opcional)
+                </label>
+                <textarea
+                  value={registerGradeForm.observations}
+                  onChange={(e) => setRegisterGradeForm({ ...registerGradeForm, observations: e.target.value })}
+                  placeholder="Observaciones sobre el desempeño del estudiante"
+                  rows={2}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowRegisterGradeModal(false)
+                  setSelectedRecoveryForGrade(null)
+                }}
+                className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleRegisterGrade}
+                disabled={savingGrade || !registerGradeForm.recoveryScore}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              >
+                {savingGrade ? 'Guardando...' : 'Registrar Nota'}
               </button>
             </div>
           </div>
