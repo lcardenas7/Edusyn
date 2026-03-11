@@ -111,6 +111,9 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   const [correctAnswer, setCorrectAnswer] = useState<string | null>(null)
   const [explanation, setExplanation] = useState<string | null>(null)
 
+  // Context expand/collapse
+  const [contextExpanded, setContextExpanded] = useState(false)
+
   // Music (teacher only)
   const [musicOn, setMusicOn] = useState(false)
   const audioCtxRef = useRef<AudioContext | null>(null)
@@ -243,6 +246,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       setAnswerResult(null)
       setCorrectAnswer(null)
       setExplanation(null)
+      setContextExpanded(false)
       setTotalAnswered(0)
       setAnswerStartTime(Date.now())
       setPhase('question')
@@ -1007,15 +1011,31 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
           {/* Context (reading passage / shared context) */}
           {currentQuestion.context && (
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 backdrop-blur-sm">
-              {currentQuestion.context.title && (
-                <p className="text-amber-300 font-semibold text-sm mb-2 uppercase tracking-wide">{currentQuestion.context.title}</p>
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl backdrop-blur-sm overflow-hidden">
+              <button
+                onClick={() => setContextExpanded(prev => !prev)}
+                className="w-full flex items-center justify-between px-5 py-3 hover:bg-amber-500/10 transition-colors"
+              >
+                <span className="text-amber-300 font-semibold text-sm uppercase tracking-wide flex items-center gap-2">
+                  📖 {currentQuestion.context.title || 'Contexto / Lectura'}
+                </span>
+                <ChevronRight className={`w-4 h-4 text-amber-300 transition-transform duration-200 ${contextExpanded ? 'rotate-90' : ''}`} />
+              </button>
+              {contextExpanded && (
+                <div className="px-5 pb-4 space-y-3">
+                  {currentQuestion.context.text && (
+                    <p className="text-white/90 text-sm leading-relaxed whitespace-pre-line">{currentQuestion.context.text}</p>
+                  )}
+                  {currentQuestion.context.imageUrl && (
+                    <img src={currentQuestion.context.imageUrl} alt="" className="max-h-48 rounded-xl mx-auto object-contain" />
+                  )}
+                </div>
               )}
-              {currentQuestion.context.text && (
-                <p className="text-white/90 text-sm leading-relaxed whitespace-pre-line">{currentQuestion.context.text}</p>
-              )}
-              {currentQuestion.context.imageUrl && (
-                <img src={currentQuestion.context.imageUrl} alt="" className="mt-3 max-h-48 rounded-xl mx-auto object-contain" />
+              {!contextExpanded && currentQuestion.context.text && (
+                <p className="px-5 pb-3 text-white/50 text-xs truncate">
+                  {currentQuestion.context.text.substring(0, 120)}...
+                  <span className="text-amber-400 ml-1 font-medium">Toca para leer</span>
+                </p>
               )}
             </div>
           )}

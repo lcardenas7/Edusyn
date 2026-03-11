@@ -89,7 +89,7 @@ export class LiveSessionController {
     return subject.asObservable().pipe(
       map((event: LiveEvent) => ({
         type: event.type,
-        data: JSON.stringify(event.data),
+        data: event.data,
       } as MessageEvent)),
     );
   }
