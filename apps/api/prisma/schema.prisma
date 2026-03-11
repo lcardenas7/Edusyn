@@ -5021,7 +5021,7 @@ model ClassroomAnnouncement {
 
 model ClassroomActivity {
   id          String                @id @default(cuid())
-  sectionId   String
+  sectionId   String? // Nullable para permitir actividades huérfanas al borrar sección
   classroomId String
   type        ClassroomActivityType
   title       String
@@ -5048,7 +5048,7 @@ model ClassroomActivity {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  section          ClassroomSection     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  section          ClassroomSection?    @relation(fields: [sectionId], references: [id], onDelete: SetNull)
   classroom        Classroom            @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   questions        ActivityQuestion[]
   contexts         QuestionContext[]

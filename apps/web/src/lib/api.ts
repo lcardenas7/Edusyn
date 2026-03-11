@@ -1847,7 +1847,7 @@ export const classroomApi = {
     api.post(`/classrooms/${classroomId}/sections`, data),
   updateSection: (sectionId: string, data: { title?: string; description?: string; isVisible?: boolean; sortOrder?: number }) =>
     api.put(`/classrooms/sections/${sectionId}`, data),
-  deleteSection: (sectionId: string) => api.delete(`/classrooms/sections/${sectionId}`),
+  deleteSection: (sectionId: string, force = false) => api.delete(`/classrooms/sections/${sectionId}?force=${force}`),
 
   // Materials
   createMaterial: (sectionId: string, data: { type: string; title: string; content?: string; fileUrl?: string }) =>

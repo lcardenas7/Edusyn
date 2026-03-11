@@ -264,8 +264,33 @@ export class ClassroomService {
     });
   }
 
-  async deleteSection(sectionId: string, teacherId: string) {
+  async deleteSection(sectionId: string, teacherId: string, force = false) {
     await this.validateSectionOwnership(sectionId, teacherId);
+
+    // Verificar si hay actividades con entregas en esta sección
+    const activitiesWithSubmissions = await this.prisma.classroomActivity.findMany({
+      where: { sectionId },
+      select: {
+        id: true,
+        title: true,
+        _count: { select: { submissions: true } },
+      },
+    });
+
+    const totalSubmissions = activitiesWithSubmissions.reduce((sum, a) => sum + a._count.submissions, 0);
+
+    if (totalSubmissions > 0 && !force) {
+      return {
+        success: false,
+        requiresConfirmation: true,
+        activitiesCount: activitiesWithSubmissions.length,
+        submissionsCount: totalSubmissions,
+        message: `Esta sección tiene ${activitiesWithSubmissions.length} actividad(es) con ${totalSubmissions} entrega(s). Las actividades quedarán sin sección pero NO se perderán las entregas. ¿Continuar?`,
+      };
+    }
+
+    // Las actividades quedarán con sectionId = null (SetNull en schema)
+    // pero NO se borrarán las entregas
     await this.prisma.classroomSection.delete({ where: { id: sectionId } });
     return { success: true };
   }

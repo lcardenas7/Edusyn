@@ -290,39 +290,71 @@ export default function Classroom() {
               {isStudent ? 'Tus docentes crearán las aulas de tus asignaturas' : 'Crea tu primera aula para comenzar a publicar contenido'}
             </p>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {classrooms.map(c => (
-              <button
-                key={c.id}
-                onClick={() => loadClassroom(c.id)}
-                className="text-left bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all group"
-              >
-                <div className="h-2" style={{ backgroundColor: c.color || '#3B82F6' }} />
-                <div className="p-4">
-                  <h3 className="font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">
-                    {c.title}
+        ) : (() => {
+          // Agrupar aulas por grado
+          const groupedByGrade = classrooms.reduce((acc, c) => {
+            const gradeName = c.teacherAssignment.group.grade.name
+            if (!acc[gradeName]) acc[gradeName] = []
+            acc[gradeName].push(c)
+            return acc
+          }, {} as Record<string, ClassroomListItem[]>)
+          
+          // Ordenar grados naturalmente (Sexto, Séptimo, Octavo, etc.)
+          const gradeOrder = ['Preescolar', 'Transición', 'Primero', 'Segundo', 'Tercero', 'Cuarto', 'Quinto', 'Sexto', 'Séptimo', 'Octavo', 'Noveno', 'Décimo', 'Undécimo', 'Once']
+          const sortedGrades = Object.keys(groupedByGrade).sort((a, b) => {
+            const aIdx = gradeOrder.findIndex(g => a.toLowerCase().includes(g.toLowerCase()))
+            const bIdx = gradeOrder.findIndex(g => b.toLowerCase().includes(g.toLowerCase()))
+            if (aIdx === -1 && bIdx === -1) return a.localeCompare(b)
+            if (aIdx === -1) return 1
+            if (bIdx === -1) return -1
+            return aIdx - bIdx
+          })
+
+          return (
+            <div className="space-y-6">
+              {sortedGrades.map(gradeName => (
+                <div key={gradeName}>
+                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4" />
+                    {gradeName}
+                    <span className="text-xs font-normal text-slate-400">({groupedByGrade[gradeName].length})</span>
                   </h3>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {c.teacherAssignment.group.grade.name} {c.teacherAssignment.group.name} · {c.teacherAssignment.subject.name}
-                  </p>
-                  {isStudent && c.teacherAssignment.teacher && (
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Prof. {c.teacherAssignment.teacher.firstName} {c.teacherAssignment.teacher.lastName}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-3 mt-3 text-xs text-slate-400">
-                    <span className="flex items-center gap-1"><Layers className="w-3.5 h-3.5" />{c._count.sections}</span>
-                    <span className="flex items-center gap-1"><Megaphone className="w-3.5 h-3.5" />{c._count.announcements}</span>
-                    {c.studentCount !== undefined && (
-                      <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />{c.studentCount}</span>
-                    )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {groupedByGrade[gradeName].map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => loadClassroom(c.id)}
+                        className="text-left bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all group"
+                      >
+                        <div className="h-2" style={{ backgroundColor: c.color || '#3B82F6' }} />
+                        <div className="p-4">
+                          <h3 className="font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">
+                            {c.title}
+                          </h3>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {c.teacherAssignment.group.name} · {c.teacherAssignment.subject.name}
+                          </p>
+                          {isStudent && c.teacherAssignment.teacher && (
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              Prof. {c.teacherAssignment.teacher.firstName} {c.teacherAssignment.teacher.lastName}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-3 mt-3 text-xs text-slate-400">
+                            <span className="flex items-center gap-1"><Layers className="w-3.5 h-3.5" />{c._count.sections}</span>
+                            <span className="flex items-center gap-1"><Megaphone className="w-3.5 h-3.5" />{c._count.announcements}</span>
+                            {c.studentCount !== undefined && (
+                              <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />{c.studentCount}</span>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 </div>
-              </button>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )
+        })()}
 
         {/* Create Modal */}
         {showCreate && (
@@ -1073,8 +1105,22 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
   }
 
   const handleDeleteSection = async (sectionId: string) => {
-    if (!confirm('¿Eliminar esta sección y todos sus materiales?')) return
-    try { await classroomApi.deleteSection(sectionId); onReload() } catch (err: any) { setError(err.response?.data?.message || 'Error') }
+    try {
+      // Primer intento sin force para verificar si hay entregas
+      const res = await classroomApi.deleteSection(sectionId, false)
+      if (res.data.requiresConfirmation) {
+        // Hay actividades con entregas - pedir confirmación especial
+        const confirmed = confirm(res.data.message)
+        if (confirmed) {
+          await classroomApi.deleteSection(sectionId, true)
+          onReload()
+        }
+      } else if (res.data.success) {
+        onReload()
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al eliminar sección')
+    }
   }
 
   const handleToggleVis = async (sectionId: string, vis: boolean) => {
@@ -1132,6 +1178,10 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
 
   const handleToggleMaterialVis = async (id: string, vis: boolean) => {
     try { await classroomApi.updateMaterial(id, { isVisible: !vis }); onReload() } catch {}
+  }
+
+  const handleUpdateMaterialTitle = async (id: string, title: string) => {
+    try { await classroomApi.updateMaterial(id, { title }); onReload() } catch {}
   }
 
   const openMaterialModal = (sectionId: string, type: string) => {
@@ -1281,7 +1331,7 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
             {/* Materials list - bigger cards */}
             <div className="p-4 space-y-3">
               {section.materials.filter(m => isTeacher || m.isVisible).map(material => (
-                <MaterialCard key={material.id} material={material} isTeacher={isTeacher} onToggleVis={handleToggleMaterialVis} onDelete={handleDeleteMaterial} onDuplicate={(id, title) => openDuplicateMaterialModal(id, title)} onDownload={handleDownload} resolveFileUrl={resolveFileUrl} />
+                <MaterialCard key={material.id} material={material} isTeacher={isTeacher} onToggleVis={handleToggleMaterialVis} onDelete={handleDeleteMaterial} onDuplicate={(id, title) => openDuplicateMaterialModal(id, title)} onDownload={handleDownload} onUpdateTitle={handleUpdateMaterialTitle} resolveFileUrl={resolveFileUrl} />
               ))}
 
               {section.materials.filter(m => isTeacher || m.isVisible).length === 0 && (
@@ -1571,18 +1621,21 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
 // MATERIAL CARD (bigger, with inline previews)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate, onDownload, resolveFileUrl }: {
+function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate, onDownload, onUpdateTitle, resolveFileUrl }: {
   material: Material; isTeacher: boolean;
   onToggleVis: (id: string, vis: boolean) => void;
   onDelete: (id: string) => void;
   onDuplicate: (id: string, title: string) => void;
   onDownload: (m: Material) => void;
+  onUpdateTitle: (id: string, title: string) => void;
   resolveFileUrl: (path: string) => Promise<string>;
 }) {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [docUrl, setDocUrl] = useState<string | null>(null)
   const [showPreview, setShowPreview] = useState(false)
   const [loadingDoc, setLoadingDoc] = useState(false)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleValue, setTitleValue] = useState(material.title)
 
   // Detectar tipo de documento por extensión
   const getDocType = (url: string): 'pdf' | 'image' | 'office' | 'other' => {
@@ -1632,12 +1685,42 @@ function MaterialCard({ material, isTeacher, onToggleVis, onDelete, onDuplicate,
               {getMaterialIcon(material.type, 'w-5 h-5')}
             </div>
             <div className="flex-1 min-w-0">
-              <h5 className="text-sm font-semibold text-slate-800">{material.title}</h5>
+              {editingTitle ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={titleValue}
+                    onChange={e => setTitleValue(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && titleValue.trim()) {
+                        onUpdateTitle(material.id, titleValue.trim())
+                        setEditingTitle(false)
+                      } else if (e.key === 'Escape') {
+                        setTitleValue(material.title)
+                        setEditingTitle(false)
+                      }
+                    }}
+                    className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autoFocus
+                  />
+                  <button onClick={() => { if (titleValue.trim()) { onUpdateTitle(material.id, titleValue.trim()); setEditingTitle(false) } }} className="p-1 text-green-600 hover:bg-green-50 rounded">
+                    <Check className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => { setTitleValue(material.title); setEditingTitle(false) }} className="p-1 text-slate-400 hover:bg-slate-100 rounded">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <h5 className="text-sm font-semibold text-slate-800">{material.title}</h5>
+              )}
               <span className="text-[11px] text-slate-400">{getMaterialLabel(material.type)}</span>
             </div>
           </div>
-          {isTeacher && (
+          {isTeacher && !editingTitle && (
             <div className="opacity-0 group-hover:opacity-100 flex gap-0.5 shrink-0 transition-opacity">
+              <button onClick={() => setEditingTitle(true)} className="p-1.5 rounded-lg hover:bg-amber-50" title="Editar nombre">
+                <Pencil className="w-4 h-4 text-amber-500" />
+              </button>
               <button onClick={() => onDuplicate(material.id, material.title)} className="p-1.5 rounded-lg hover:bg-blue-50" title="Duplicar a otra sección">
                 <Copy className="w-4 h-4 text-blue-400" />
               </button>

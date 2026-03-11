@@ -112,9 +112,13 @@ export class ClassroomController {
 
   @Delete('sections/:sectionId')
   @Roles('DOCENTE', 'COORDINADOR')
-  async deleteSection(@Param('sectionId') sectionId: string, @Request() req: any) {
+  async deleteSection(
+    @Param('sectionId') sectionId: string,
+    @Query('force') force: string,
+    @Request() req: any,
+  ) {
     const { userId } = await this.resolveCtx(req);
-    return this.service.deleteSection(sectionId, userId);
+    return this.service.deleteSection(sectionId, userId, force === 'true');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
