@@ -50,6 +50,7 @@ export class ObserverService {
         date: new Date(dto.date),
         type: dto.type,
         category: dto.category,
+        subcategory: dto.subcategory || null,
         description: dto.description,
         actionTaken: dto.actionTaken,
         requiresFollowUp: dto.requiresFollowUp ?? false,
@@ -458,5 +459,263 @@ export class ObserverService {
     ]);
 
     return { pendingCommitments, pendingReferrals, upcomingCitations, recentActas };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ESTADÍSTICAS CONVIVENCIALES (para coordinadores — informes de período)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async getConvivencialStats(
+    institutionId: string,
+    academicYearId: string,
+    filters?: { groupId?: string; gradeId?: string; startDate?: string; endDate?: string },
+  ) {
+    const baseWhere: any = {
+      institutionId,
+      studentEnrollment: {
+        academicYearId,
+        ...(filters?.groupId ? { groupId: filters.groupId } : {}),
+        ...(filters?.gradeId ? { group: { gradeId: filters.gradeId } } : {}),
+      },
+      ...(filters?.startDate && filters?.endDate
+        ? { date: { gte: new Date(filters.startDate), lte: new Date(filters.endDate) } }
+        : {}),
+    };
+
+    // Fetch observations + parallel counts for related modules
+    const [observations, totalEnrollments, commitments, citations, referrals, measures] = await Promise.all([
+      this.prisma.studentObservation.findMany({
+        where: baseWhere,
+        select: {
+          id: true,
+          type: true,
+          category: true,
+          subcategory: true,
+          status: true,
+          date: true,
+          parentNotified: true,
+          requiresFollowUp: true,
+          studentEnrollmentId: true,
+          studentEnrollment: {
+            select: {
+              id: true,
+              student: { select: { id: true, firstName: true, lastName: true } },
+              group: { select: { id: true, name: true, grade: { select: { id: true, name: true } } } },
+            },
+          },
+        },
+      }),
+      this.prisma.studentEnrollment.count({
+        where: {
+          academicYearId,
+          group: {
+            campus: { institutionId },
+            ...(filters?.groupId ? { id: filters.groupId } : {}),
+            ...(filters?.gradeId ? { gradeId: filters.gradeId } : {}),
+          },
+          status: 'ACTIVE',
+        },
+      }),
+      this.prisma.observerCommitment.findMany({
+        where: {
+          studentEnrollment: {
+            academicYearId,
+            group: { campus: { institutionId } },
+            ...(filters?.groupId ? { groupId: filters.groupId } : {}),
+          },
+        },
+        select: { id: true, status: true },
+      }),
+      this.prisma.guardianCitation.findMany({
+        where: {
+          studentEnrollment: {
+            academicYearId,
+            group: { campus: { institutionId } },
+            ...(filters?.groupId ? { groupId: filters.groupId } : {}),
+          },
+        },
+        select: { id: true, attended: true },
+      }),
+      this.prisma.observerReferral.findMany({
+        where: {
+          studentEnrollment: {
+            academicYearId,
+            group: { campus: { institutionId } },
+            ...(filters?.groupId ? { groupId: filters.groupId } : {}),
+          },
+        },
+        select: { id: true, status: true, referredToRole: true },
+      }),
+      this.prisma.pedagogicalMeasure.findMany({
+        where: {
+          studentEnrollment: {
+            academicYearId,
+            group: { campus: { institutionId } },
+            ...(filters?.groupId ? { groupId: filters.groupId } : {}),
+          },
+        },
+        select: { id: true, status: true, measureType: true },
+      }),
+    ]);
+
+    const uniqueStudents = new Set(observations.map(o => o.studentEnrollmentId));
+
+    // ── Distribuciones básicas ──
+    const byType: Record<string, number> = {};
+    const byCategory: Record<string, number> = {};
+    const bySubcategory: Record<string, number> = {};
+    const byStatus: Record<string, number> = {};
+    const byGroup: Record<string, { name: string; count: number; positive: number; negative: number; students: Set<string> }> = {};
+    const monthlyTrend: Record<string, { total: number; positive: number; negative: number }> = {};
+    const byGrade: Record<string, { name: string; count: number; positive: number; negative: number }> = {};
+    let positiveCount = 0;
+    let negativeCount = 0;
+    let parentNotifiedCount = 0;
+    let requiresFollowUpCount = 0;
+    const NEGATIVE_TYPES = ['BEHAVIORAL_MILD', 'ACTA_TYPE_I', 'ACTA_TYPE_II', 'ACTA_TYPE_III'];
+
+    observations.forEach(o => {
+      byType[o.type] = (byType[o.type] || 0) + 1;
+      byCategory[o.category] = (byCategory[o.category] || 0) + 1;
+      if (o.subcategory) bySubcategory[o.subcategory] = (bySubcategory[o.subcategory] || 0) + 1;
+      byStatus[o.status] = (byStatus[o.status] || 0) + 1;
+
+      const isPositive = o.type === 'POSITIVE';
+      const isNegative = NEGATIVE_TYPES.includes(o.type);
+      if (isPositive) positiveCount++;
+      if (isNegative) negativeCount++;
+      if (o.parentNotified) parentNotifiedCount++;
+      if (o.requiresFollowUp) requiresFollowUpCount++;
+
+      // Grupo
+      const gId = o.studentEnrollment.group.id;
+      const gName = `${o.studentEnrollment.group.grade?.name || ''} ${o.studentEnrollment.group.name}`.trim();
+      if (!byGroup[gId]) byGroup[gId] = { name: gName, count: 0, positive: 0, negative: 0, students: new Set() };
+      byGroup[gId].count++;
+      if (isPositive) byGroup[gId].positive++;
+      if (isNegative) byGroup[gId].negative++;
+      byGroup[gId].students.add(o.studentEnrollmentId);
+
+      // Grado
+      const gradeId = o.studentEnrollment.group.grade?.id || 'SIN_GRADO';
+      const gradeName = o.studentEnrollment.group.grade?.name || 'Sin Grado';
+      if (!byGrade[gradeId]) byGrade[gradeId] = { name: gradeName, count: 0, positive: 0, negative: 0 };
+      byGrade[gradeId].count++;
+      if (isPositive) byGrade[gradeId].positive++;
+      if (isNegative) byGrade[gradeId].negative++;
+
+      // Tendencia mensual
+      const month = new Date(o.date).toISOString().slice(0, 7);
+      if (!monthlyTrend[month]) monthlyTrend[month] = { total: 0, positive: 0, negative: 0 };
+      monthlyTrend[month].total++;
+      if (isPositive) monthlyTrend[month].positive++;
+      if (isNegative) monthlyTrend[month].negative++;
+    });
+
+    // ── Top estudiantes reincidentes ──
+    const studentCounts: Record<string, { name: string; group: string; count: number; positive: number; negative: number; types: Record<string, number> }> = {};
+    observations.forEach(o => {
+      const sId = o.studentEnrollmentId;
+      if (!studentCounts[sId]) {
+        const s = o.studentEnrollment.student;
+        studentCounts[sId] = {
+          name: `${s.lastName} ${s.firstName}`,
+          group: `${o.studentEnrollment.group.grade?.name || ''} ${o.studentEnrollment.group.name}`.trim(),
+          count: 0,
+          positive: 0,
+          negative: 0,
+          types: {},
+        };
+      }
+      studentCounts[sId].count++;
+      if (o.type === 'POSITIVE') studentCounts[sId].positive++;
+      if (NEGATIVE_TYPES.includes(o.type)) studentCounts[sId].negative++;
+      studentCounts[sId].types[o.type] = (studentCounts[sId].types[o.type] || 0) + 1;
+    });
+    const topStudents = Object.entries(studentCounts)
+      .map(([id, data]) => ({ enrollmentId: id, ...data }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 15);
+
+    // ── Indicadores de proceso (compromisos, citaciones, remisiones, medidas) ──
+    const processIndicators = {
+      commitments: {
+        total: commitments.length,
+        open: commitments.filter(c => c.status === 'OPEN').length,
+        inProgress: commitments.filter(c => c.status === 'IN_PROGRESS').length,
+        closed: commitments.filter(c => c.status === 'CLOSED').length,
+        resolutionRate: commitments.length > 0 ? Math.round((commitments.filter(c => c.status === 'CLOSED').length / commitments.length) * 100) : 0,
+      },
+      citations: {
+        total: citations.length,
+        attended: citations.filter(c => c.attended === true).length,
+        notAttended: citations.filter(c => c.attended === false).length,
+        pending: citations.filter(c => c.attended === null).length,
+        attendanceRate: citations.length > 0 ? Math.round((citations.filter(c => c.attended === true).length / citations.length) * 100) : 0,
+      },
+      referrals: {
+        total: referrals.length,
+        open: referrals.filter(r => r.status === 'OPEN').length,
+        closed: referrals.filter(r => r.status === 'CLOSED').length,
+        byRole: {} as Record<string, number>,
+      },
+      measures: {
+        total: measures.length,
+        open: measures.filter(m => m.status === 'OPEN').length,
+        inProgress: measures.filter(m => m.status === 'IN_PROGRESS').length,
+        completed: measures.filter(m => m.status === 'CLOSED').length,
+        byType: {} as Record<string, number>,
+      },
+    };
+    referrals.forEach(r => {
+      processIndicators.referrals.byRole[r.referredToRole] = (processIndicators.referrals.byRole[r.referredToRole] || 0) + 1;
+    });
+    measures.forEach(m => {
+      processIndicators.measures.byType[m.measureType] = (processIndicators.measures.byType[m.measureType] || 0) + 1;
+    });
+
+    // ── Tasas y porcentajes clave ──
+    const rates = {
+      observationsPerStudent: totalEnrollments > 0 ? Math.round((observations.length / totalEnrollments) * 100) / 100 : 0,
+      studentsWithObservations: totalEnrollments > 0 ? Math.round((uniqueStudents.size / totalEnrollments) * 100) : 0,
+      positiveRate: observations.length > 0 ? Math.round((positiveCount / observations.length) * 100) : 0,
+      negativeRate: observations.length > 0 ? Math.round((negativeCount / observations.length) * 100) : 0,
+      resolutionRate: observations.length > 0 ? Math.round(((byStatus['CLOSED'] || 0) / observations.length) * 100) : 0,
+      parentNotificationRate: observations.length > 0 ? Math.round((parentNotifiedCount / observations.length) * 100) : 0,
+      followUpRate: observations.length > 0 ? Math.round((requiresFollowUpCount / observations.length) * 100) : 0,
+    };
+
+    // ── Actas por tipo (Ley 1620) ──
+    const actasSummary = {
+      typeI: byType['ACTA_TYPE_I'] || 0,
+      typeII: byType['ACTA_TYPE_II'] || 0,
+      typeIII: byType['ACTA_TYPE_III'] || 0,
+      total: (byType['ACTA_TYPE_I'] || 0) + (byType['ACTA_TYPE_II'] || 0) + (byType['ACTA_TYPE_III'] || 0),
+    };
+
+    return {
+      total: observations.length,
+      totalEnrollments,
+      uniqueStudents: uniqueStudents.size,
+      positiveCount,
+      negativeCount,
+      byType,
+      byCategory,
+      bySubcategory,
+      byStatus,
+      byGroup: Object.entries(byGroup).map(([id, d]) => ({
+        groupId: id, name: d.name, count: d.count, positive: d.positive, negative: d.negative, uniqueStudents: d.students.size,
+      })).sort((a, b) => b.count - a.count),
+      byGrade: Object.entries(byGrade).map(([id, d]) => ({
+        gradeId: id, name: d.name, count: d.count, positive: d.positive, negative: d.negative,
+      })).sort((a, b) => b.count - a.count),
+      topStudents,
+      monthlyTrend: Object.entries(monthlyTrend).map(([month, d]) => ({
+        month, total: d.total, positive: d.positive, negative: d.negative,
+      })).sort((a, b) => a.month.localeCompare(b.month)),
+      rates,
+      actasSummary,
+      processIndicators,
+    };
   }
 }

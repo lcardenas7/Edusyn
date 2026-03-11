@@ -111,6 +111,80 @@ export class ManagementTasksService {
     return !!leader;
   }
 
+  async getUserLeaderAreas(userId: string, institutionId: string): Promise<string[]> {
+    const leaders = await this.prisma.managementLeader.findMany({
+      where: { userId, institutionId, isActive: true },
+      select: { area: true },
+    });
+    return leaders.map(l => l.area);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MIEMBROS DE ÁREA DE GESTIÓN
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async addAreaMember(dto: { institutionId: string; userId: string; area: string }, assignedById: string) {
+    return this.prisma.managementAreaMember.upsert({
+      where: {
+        institutionId_userId_area: {
+          institutionId: dto.institutionId,
+          userId: dto.userId,
+          area: dto.area as any,
+        },
+      },
+      create: {
+        institutionId: dto.institutionId,
+        userId: dto.userId,
+        area: dto.area as any,
+        assignedById,
+      },
+      update: { isActive: true },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+      },
+    });
+  }
+
+  async removeAreaMember(id: string) {
+    await this.prisma.managementAreaMember.update({
+      where: { id },
+      data: { isActive: false },
+    });
+    return { success: true };
+  }
+
+  async getAreaMembers(institutionId: string, area?: string) {
+    return this.prisma.managementAreaMember.findMany({
+      where: {
+        institutionId,
+        isActive: true,
+        ...(area && { area: area as any }),
+      },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+        assignedBy: { select: { id: true, firstName: true, lastName: true } },
+      },
+      orderBy: [{ area: 'asc' }, { user: { lastName: 'asc' } }],
+    });
+  }
+
+  async getMembersOfLeaderAreas(userId: string, institutionId: string): Promise<string[]> {
+    // Get areas where user is leader
+    const leaderAreas = await this.getUserLeaderAreas(userId, institutionId);
+    if (leaderAreas.length === 0) return [];
+
+    // Get members of those areas
+    const members = await this.prisma.managementAreaMember.findMany({
+      where: {
+        institutionId,
+        isActive: true,
+        area: { in: leaderAreas as any },
+      },
+      select: { userId: true },
+    });
+    return [...new Set(members.map(m => m.userId))];
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // TAREAS
   // ═══════════════════════════════════════════════════════════════════════════

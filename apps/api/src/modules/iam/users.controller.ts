@@ -14,6 +14,7 @@ const VALID_ROLES = [
   'ORIENTADOR',
   'BIBLIOTECARIO',
   'AUXILIAR',
+  'AUXILIAR_CONTABLE',
   'ESTUDIANTE',
   'ACUDIENTE',
 ];
@@ -310,7 +311,7 @@ export class UsersController {
     if (body.role) {
       const currentRoles = updatedUser.roles.map(r => r.role.name);
       if (!currentRoles.includes(body.role)) {
-        const staffRoles = ['COORDINADOR', 'SECRETARIA', 'ORIENTADOR', 'BIBLIOTECARIO', 'AUXILIAR', 'ADMIN_INSTITUTIONAL'];
+        const staffRoles = ['COORDINADOR', 'SECRETARIA', 'ORIENTADOR', 'BIBLIOTECARIO', 'AUXILIAR', 'AUXILIAR_CONTABLE', 'ADMIN_INSTITUTIONAL'];
 
         await this.prisma.$transaction(async (tx) => {
           // Eliminar roles actuales de staff (no tocar DOCENTE ni ESTUDIANTE si existen)
@@ -687,5 +688,57 @@ export class UsersController {
       hasAssignments: u.teacherAssignments.length > 0,
       assignmentInstitution: u.teacherAssignments[0]?.group?.campus?.institution?.name || null
     }));
+  }
+
+  /**
+   * Toggle: permitir/bloquear cambio de contraseña para estudiantes
+   */
+  @Put('institution/allow-student-password-change')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async toggleStudentPasswordChange(
+    @Request() req: any,
+    @Body() body: { allow: boolean },
+  ) {
+    const institutionUser = await this.prisma.institutionUser.findFirst({
+      where: { userId: req.user.id },
+    });
+    if (!institutionUser) {
+      throw new BadRequestException('Usuario no asociado a ninguna institución');
+    }
+
+    await this.prisma.institution.update({
+      where: { id: institutionUser.institutionId },
+      data: { allowStudentPasswordChange: body.allow },
+    });
+
+    return {
+      allowStudentPasswordChange: body.allow,
+      message: body.allow
+        ? 'Los estudiantes ahora pueden cambiar su contraseña'
+        : 'Se ha bloqueado el cambio de contraseña para estudiantes',
+    };
+  }
+
+  /**
+   * Obtener configuración de contraseñas de la institución
+   */
+  @Get('institution/password-settings')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async getPasswordSettings(@Request() req: any) {
+    const institutionUser = await this.prisma.institutionUser.findFirst({
+      where: { userId: req.user.id },
+      include: {
+        institution: {
+          select: { allowStudentPasswordChange: true },
+        },
+      },
+    });
+    if (!institutionUser) {
+      throw new BadRequestException('Usuario no asociado a ninguna institución');
+    }
+
+    return {
+      allowStudentPasswordChange: institutionUser.institution.allowStudentPasswordChange,
+    };
   }
 }

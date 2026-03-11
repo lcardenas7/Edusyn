@@ -723,7 +723,7 @@ export default function Recoveries() {
             <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <h2 className="text-base sm:text-lg font-semibold text-slate-900">Estudiantes con Bajo Rendimiento</h2>
               <span className="text-xs sm:text-sm text-slate-500">
-                {failingStudents.length} estudiante(s) con nota inferior a 3.0
+                {failingStudents.length} estudiante(s) con nota inferior a {config.minPassingScore}
               </span>
             </div>
             {loadingStudents ? (
@@ -885,7 +885,7 @@ export default function Recoveries() {
                         <td className="px-6 py-4 text-center">
                           {recovery.finalScore ? (
                             <span className={`px-2 py-1 rounded font-medium ${
-                              Number(recovery.finalScore) >= 3.0 
+                              Number(recovery.finalScore) >= config.minPassingScore 
                                 ? 'bg-green-100 text-green-700' 
                                 : 'bg-red-100 text-red-700'
                             }`}>
@@ -1020,7 +1020,7 @@ export default function Recoveries() {
                         <td className="px-6 py-4 text-center">
                           {plan.finalAreaScore ? (
                             <span className={`px-2 py-1 rounded font-medium ${
-                              Number(plan.finalAreaScore) >= 3.0 
+                              Number(plan.finalAreaScore) >= config.minPassingScore 
                                 ? 'bg-green-100 text-green-700' 
                                 : 'bg-red-100 text-red-700'
                             }`}>

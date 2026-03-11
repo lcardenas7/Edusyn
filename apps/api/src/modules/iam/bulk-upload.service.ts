@@ -732,7 +732,7 @@ export class BulkUploadService {
     const rows: StaffRow[] = [];
 
     // Roles válidos para staff
-    const validRoles = ['COORDINADOR', 'SECRETARIA', 'ORIENTADOR', 'BIBLIOTECARIO', 'AUXILIAR'];
+    const validRoles = ['COORDINADOR', 'SECRETARIA', 'ORIENTADOR', 'BIBLIOTECARIO', 'AUXILIAR', 'AUXILIAR_CONTABLE'];
 
     // Leer filas
     sheet.eachRow((row, rowNumber) => {

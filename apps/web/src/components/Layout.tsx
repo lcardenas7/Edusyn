@@ -52,7 +52,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 
-type Role = 'SUPER_ADMIN' | 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE' | 'SECRETARIA' | 'RECTOR' | 'PSICOLOGA'
+type Role = 'SUPER_ADMIN' | 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE' | 'SECRETARIA' | 'RECTOR' | 'PSICOLOGA' | 'AUXILIAR_CONTABLE' | 'ORIENTADOR' | 'BIBLIOTECARIO' | 'AUXILIAR'
 
 interface NavItem {
   name: string
@@ -178,13 +178,17 @@ const institutionalNavigation: NavItem[] = [
   { 
     name: 'Seguimiento', 
     icon: UserCheck, 
-    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'],
+    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR'],
     children: [
-      { name: 'Asistencia', href: '/attendance', icon: Calendar, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'ATTENDANCE' },
-      { name: 'Observador', href: '/observer', icon: ClipboardList, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'OBSERVER' },
-      { name: 'Alertas', href: '/alerts', icon: AlertTriangle, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'] },
+      { name: 'Asistencia', href: '/attendance', icon: Calendar, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR'], module: 'ATTENDANCE' },
+      { name: 'Observador', href: '/observer', icon: ClipboardList, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR'], module: 'OBSERVER' },
+      { name: 'Informe Convivencial', href: '/observer-stats', icon: BarChart3, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'] },
+      { name: 'Alertas', href: '/alerts', icon: AlertTriangle, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR'] },
     ]
   },
+
+  // Permisos de Personal
+  { name: 'Permisos', href: '/staff-leave', icon: Shield, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE', 'SECRETARIA', 'ORIENTADOR', 'BIBLIOTECARIO', 'AUXILIAR', 'AUXILIAR_CONTABLE'] },
   
   // Elecciones Escolares
   { name: 'Elecciones', href: '/elections', icon: Vote, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'] },
@@ -218,15 +222,15 @@ const institutionalNavigation: NavItem[] = [
   { 
     name: 'Gestión Financiera', 
     icon: DollarSign, 
-    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA'],
+    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA', 'AUXILIAR_CONTABLE'],
     module: 'FINANCE',
     children: [
-      { name: 'Panel Financiero', href: '/finance', icon: LayoutDashboard, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA'], module: 'FINANCE' },
-      { name: 'Terceros', href: '/finance/third-parties', icon: Users, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA'], module: 'FINANCE' },
-      { name: 'Obligaciones', href: '/finance/obligations', icon: FileText, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA'], module: 'FINANCE' },
-      { name: 'Caja / Recaudos', href: '/finance/payments', icon: Briefcase, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA'], module: 'FINANCE' },
-      { name: 'Egresos', href: '/finance/expenses', icon: TrendingUp, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'FINANCE' },
-      { name: 'Reportes', href: '/finance/reports', icon: BarChart3, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'FINANCE' },
+      { name: 'Panel Financiero', href: '/finance', icon: LayoutDashboard, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA', 'AUXILIAR_CONTABLE'], module: 'FINANCE' },
+      { name: 'Terceros', href: '/finance/third-parties', icon: Users, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA', 'AUXILIAR_CONTABLE'], module: 'FINANCE' },
+      { name: 'Obligaciones', href: '/finance/obligations', icon: FileText, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA', 'AUXILIAR_CONTABLE'], module: 'FINANCE' },
+      { name: 'Caja / Recaudos', href: '/finance/payments', icon: Briefcase, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA', 'AUXILIAR_CONTABLE'], module: 'FINANCE' },
+      { name: 'Egresos', href: '/finance/expenses', icon: TrendingUp, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'AUXILIAR_CONTABLE'], module: 'FINANCE' },
+      { name: 'Reportes', href: '/finance/reports', icon: BarChart3, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'AUXILIAR_CONTABLE'], module: 'FINANCE' },
     ]
   },
 
@@ -246,7 +250,7 @@ const institutionalNavigation: NavItem[] = [
 ]
 
 export default function Layout({ children }: { children: ReactNode }) {
-  const { user, logout, hasModule } = useAuth()
+  const { user, institution, logout, hasModule } = useAuth()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [expandedMenus, setExpandedMenus] = useState<string[]>([])
@@ -567,13 +571,16 @@ export default function Layout({ children }: { children: ReactNode }) {
               <p className="text-xs text-slate-500 truncate">{user?.email}</p>
             </div>
           </div>
-          <button
-            onClick={openPasswordModal}
-            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <Key className="w-4 h-4" />
-            Cambiar contraseña
-          </button>
+          {/* Hide password change for students if institution disabled it */}
+          {!(userRoles.includes('ESTUDIANTE') && (institution as any)?.allowStudentPasswordChange === false) && (
+            <button
+              onClick={openPasswordModal}
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <Key className="w-4 h-4" />
+              Cambiar contraseña
+            </button>
+          )}
           <button
             onClick={logout}
             className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"

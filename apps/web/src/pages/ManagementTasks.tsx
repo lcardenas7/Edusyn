@@ -88,17 +88,19 @@ export default function ManagementTasks() {
   const institutionId = institution?.id
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [activeTab, setActiveTab] = useState<'my-tasks' | 'all-tasks' | 'verifications' | 'leaders'>('my-tasks')
+  const [activeTab, setActiveTab] = useState<'my-tasks' | 'all-tasks' | 'verifications' | 'leaders' | 'members'>('my-tasks')
   const [myTasks, setMyTasks] = useState<TaskAssignment[]>([])
   const [allTasks, setAllTasks] = useState<Task[]>([])
   const [pendingVerifications, setPendingVerifications] = useState<TaskAssignment[]>([])
   const [leaders, setLeaders] = useState<Leader[]>([])
+  const [areaMembers, setAreaMembers] = useState<any[]>([])
   const [teachers, setTeachers] = useState<any[]>([])
   const [enums, setEnums] = useState<{ areas: EnumOption[]; priorities: EnumOption[]; categories: EnumOption[]; statuses: EnumOption[] } | null>(null)
   
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showLeaderModal, setShowLeaderModal] = useState(false)
+  const [showMemberModal, setShowMemberModal] = useState(false)
   const [showEvidenceModal, setShowEvidenceModal] = useState(false)
   const [showVerifyModal, setShowVerifyModal] = useState(false)
   const [selectedAssignment, setSelectedAssignment] = useState<TaskAssignment | null>(null)
@@ -121,6 +123,11 @@ export default function ManagementTasks() {
     area: 'ACADEMICA',
   })
 
+  const [memberForm, setMemberForm] = useState({
+    userId: '',
+    area: 'ACADEMICA',
+  })
+
   const userRoles = user?.roles?.map((r: any) => r.role?.name || r.name) || []
   const isAdmin = userRoles.some((r: string) => 
     ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(r)
@@ -136,6 +143,7 @@ export default function ManagementTasks() {
         loadAllTasks()
         loadPendingVerifications()
         loadTeachers()
+        loadAreaMembers()
       }
     }
   }, [institutionId])
@@ -210,6 +218,15 @@ export default function ManagementTasks() {
     }
   }
 
+  const loadAreaMembers = async () => {
+    try {
+      const response = await managementTasksApi.getAreaMembers(institutionId!)
+      setAreaMembers(response.data || [])
+    } catch (error) {
+      console.error('Error loading area members:', error)
+    }
+  }
+
   const handleCreateTask = async () => {
     if (!taskForm.title || taskForm.assigneeIds.length === 0) {
       alert('Complete el título y seleccione al menos un usuario')
@@ -261,6 +278,35 @@ export default function ManagementTasks() {
       loadLeaders()
     } catch (error: any) {
       alert(error.response?.data?.message || 'Error al remover líder')
+    }
+  }
+
+  const handleAddMember = async () => {
+    if (!memberForm.userId) return
+
+    try {
+      await managementTasksApi.addAreaMember({
+        institutionId: institutionId!,
+        userId: memberForm.userId,
+        area: memberForm.area,
+      })
+      
+      setShowMemberModal(false)
+      setMemberForm({ userId: '', area: 'ACADEMICA' })
+      loadAreaMembers()
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Error al agregar miembro')
+    }
+  }
+
+  const handleRemoveMember = async (id: string) => {
+    if (!confirm('¿Está seguro de remover este miembro?')) return
+
+    try {
+      await managementTasksApi.removeAreaMember(id)
+      loadAreaMembers()
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Error al remover miembro')
     }
   }
 
@@ -389,16 +435,28 @@ export default function ManagementTasks() {
             </>
           )}
           {isAdmin && (
-            <button
-              onClick={() => setActiveTab('leaders')}
-              className={`px-4 py-2 border-b-2 font-medium transition-colors ${
-                activeTab === 'leaders'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              Líderes de Gestión
-            </button>
+            <>
+              <button
+                onClick={() => setActiveTab('leaders')}
+                className={`px-4 py-2 border-b-2 font-medium transition-colors ${
+                  activeTab === 'leaders'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Líderes de Gestión
+              </button>
+              <button
+                onClick={() => setActiveTab('members')}
+                className={`px-4 py-2 border-b-2 font-medium transition-colors ${
+                  activeTab === 'members'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Miembros de Área
+              </button>
+            </>
           )}
         </nav>
       </div>
@@ -649,6 +707,70 @@ export default function ManagementTasks() {
         </div>
       )}
 
+      {/* Members Tab */}
+      {activeTab === 'members' && isAdmin && (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <button
+              onClick={() => setShowMemberModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+            >
+              <UserPlus className="w-4 h-4" />
+              Agregar Miembro
+            </button>
+          </div>
+          
+          {areaMembers.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
+              <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <p className="text-slate-500">No hay miembros asignados a áreas de gestión</p>
+              <p className="text-sm text-slate-400 mt-1">Asigna docentes a las áreas para que los líderes puedan asignarles tareas</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">Docente</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">Área de Gestión</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">Asignado por</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-slate-700">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {areaMembers.map((member: any) => (
+                    <tr key={member.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3">
+                        <div>
+                          <p className="font-medium text-slate-900">{member.user.firstName} {member.user.lastName}</p>
+                          <p className="text-sm text-slate-500">{member.user.email}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-1 bg-teal-100 text-teal-700 text-sm rounded-full">
+                          {enums?.areas.find(a => a.value === member.area)?.label || member.area}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {member.assignedBy.firstName} {member.assignedBy.lastName}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => handleRemoveMember(member.id)}
+                          className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Create Task Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -817,6 +939,59 @@ export default function ManagementTasks() {
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
               >
                 Asignar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Member Modal */}
+      {showMemberModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+              <h2 className="text-lg font-semibold text-slate-900">Agregar Miembro a Área</h2>
+              <button onClick={() => setShowMemberModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Docente</label>
+                <select
+                  value={memberForm.userId}
+                  onChange={(e) => setMemberForm({ ...memberForm, userId: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                >
+                  <option value="">Seleccionar docente</option>
+                  {teachers.map((t) => (
+                    <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Área de Gestión</label>
+                <select
+                  value={memberForm.area}
+                  onChange={(e) => setMemberForm({ ...memberForm, area: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                >
+                  {enums?.areas.map(a => (
+                    <option key={a.value} value={a.value}>{a.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-200">
+              <button onClick={() => setShowMemberModal(false)} className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">
+                Cancelar
+              </button>
+              <button
+                onClick={handleAddMember}
+                disabled={!memberForm.userId}
+                className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50"
+              >
+                Agregar
               </button>
             </div>
           </div>

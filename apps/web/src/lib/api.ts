@@ -375,6 +375,9 @@ export const observerApi = {
   // Medidas pedagógicas
   createMeasure: (data: any) => api.post('/observer/measures', data),
   updateMeasure: (id: string, data: any) => api.put(`/observer/measures/${id}`, data),
+  // Estadísticas convivenciales
+  getConvivencialStats: (academicYearId: string, filters?: { groupId?: string; gradeId?: string; startDate?: string; endDate?: string }) =>
+    api.get('/observer/stats/convivencial', { params: { academicYearId, ...filters } }),
 }
 
 // Preventive Alerts
@@ -714,6 +717,21 @@ export const academicActsApi = {
   generateAcademicCouncilAct: (data: any) => api.post('/academic-acts/academic-council', data),
 }
 
+// ==================== STAFF LEAVE (PERMISOS) ====================
+
+export const staffLeaveApi = {
+  create: (data: any) => api.post('/staff-leave', data),
+  getMyRequests: () => api.get('/staff-leave/my-requests'),
+  getAll: (params?: { status?: string; requesterId?: string; type?: string; startDate?: string; endDate?: string }) =>
+    api.get('/staff-leave', { params }),
+  getById: (id: string) => api.get(`/staff-leave/${id}`),
+  review: (id: string, data: { status: 'APPROVED' | 'REJECTED'; reviewerNote?: string }) =>
+    api.patch(`/staff-leave/${id}/review`, data),
+  cancel: (id: string) => api.patch(`/staff-leave/${id}/cancel`),
+  getStats: (params?: { startDate?: string; endDate?: string }) =>
+    api.get('/staff-leave/stats/summary', { params }),
+}
+
 // ==================== PERFORMANCE (DESEMPEÑOS) ====================
 
 export const performanceConfigApi = {
@@ -1044,6 +1062,8 @@ export const staffApi = {
   resetPassword: (userId: string, opts?: { newPassword?: string; mustChangePassword?: boolean }) => api.post(`/iam/users/${userId}/reset-password`, opts || {}),
   bulkResetPassword: (userIds?: string[]) => api.post('/iam/users/bulk-reset-password', { userIds }),
   updateUsername: (userId: string, username: string) => api.post(`/iam/users/${userId}/update-username`, { username }),
+  getPasswordSettings: () => api.get('/iam/institution/password-settings'),
+  toggleStudentPasswordChange: (allow: boolean) => api.put('/iam/institution/allow-student-password-change', { allow }),
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1111,6 +1131,11 @@ export const managementTasksApi = {
   getLeaders: (institutionId: string) => api.get('/management-tasks/leaders', { params: { institutionId } }),
   createLeader: (data: { institutionId: string; userId: string; area: string }) => api.post('/management-tasks/leaders', data),
   removeLeader: (id: string) => api.delete(`/management-tasks/leaders/${id}`),
+  
+  // Miembros de área
+  getAreaMembers: (institutionId: string, area?: string) => api.get('/management-tasks/area-members', { params: { institutionId, area } }),
+  addAreaMember: (data: { institutionId: string; userId: string; area: string }) => api.post('/management-tasks/area-members', data),
+  removeAreaMember: (id: string) => api.delete(`/management-tasks/area-members/${id}`),
   
   // Tareas
   getTasks: (institutionId: string, filters?: { status?: string; priority?: string; category?: string }) => 

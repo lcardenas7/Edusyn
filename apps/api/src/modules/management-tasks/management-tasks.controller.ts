@@ -64,6 +64,47 @@ export class ManagementTasksController {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // MIEMBROS DE ÁREA DE GESTIÓN
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('area-members')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
+  async addAreaMember(
+    @Body() dto: { institutionId: string; userId: string; area: string },
+    @Request() req: any,
+  ) {
+    // Solo admin/coord/rector o líderes del área pueden agregar miembros
+    const userRoles: string[] = (req.user.roles || []).map((r: any) => typeof r === 'string' ? r : (r.role?.name || r.name || ''));
+    const isAdmin = userRoles.some((r: string) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(r));
+    
+    if (!isAdmin) {
+      const leaderAreas = await this.tasksService.getUserLeaderAreas(req.user.id, dto.institutionId);
+      if (!leaderAreas.includes(dto.area)) {
+        throw new ForbiddenException('Solo puedes agregar miembros a las áreas que lideras');
+      }
+    }
+    
+    return this.tasksService.addAreaMember(dto, req.user.id);
+  }
+
+  @Get('area-members')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
+  async getAreaMembers(
+    @Request() req: any,
+    @Query('institutionId') institutionId?: string,
+    @Query('area') area?: string,
+  ) {
+    const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+    return this.tasksService.getAreaMembers(instId, area);
+  }
+
+  @Delete('area-members/:id')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
+  async removeAreaMember(@Param('id') id: string) {
+    return this.tasksService.removeAreaMember(id);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // TAREAS
   // ═══════════════════════════════════════════════════════════════════════════
 

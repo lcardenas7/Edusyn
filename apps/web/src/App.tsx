@@ -19,6 +19,8 @@ import Communications from './pages/Communications'
 import ContentManager from './pages/ContentManager'
 import PeriodFinalGrades from './pages/PeriodFinalGrades'
 import Recoveries from './pages/Recoveries'
+import StaffLeave from './pages/StaffLeave'
+import ObserverStats from './pages/ObserverStats'
 import Performances from './pages/Performances'
 import Achievements from './pages/Achievements'
 import InstitutionLogin from './pages/InstitutionLogin'
@@ -89,7 +91,7 @@ import {
 } from './pages/finance'
 
 function ProtectedRoute({ children, allowChangePassword = false }: { children: React.ReactNode; allowChangePassword?: boolean }) {
-  const { isAuthenticated, isLoading, mustChangePassword } = useAuth()
+  const { isAuthenticated, isLoading, mustChangePassword, user, institution } = useAuth()
   
   if (isLoading) {
     return (
@@ -103,7 +105,11 @@ function ProtectedRoute({ children, allowChangePassword = false }: { children: R
     return <Navigate to="/login" replace />
   }
 
-  if (mustChangePassword && !allowChangePassword) {
+  // Skip forced password change for students if institution disabled it
+  const isStudent = user?.roles?.some((r: any) => (r.role?.name || r) === 'ESTUDIANTE')
+  const institutionBlocksStudentPwdChange = (institution as any)?.allowStudentPasswordChange === false
+
+  if (mustChangePassword && !allowChangePassword && !(isStudent && institutionBlocksStudentPwdChange)) {
     return <Navigate to="/change-password" replace />
   }
   
@@ -241,6 +247,8 @@ function App() {
                   <Route path="/content-manager" element={<ContentManager />} />
                   <Route path="/period-final-grades" element={<PeriodFinalGrades />} />
                   <Route path="/recoveries" element={<Recoveries />} />
+                  <Route path="/staff-leave" element={<StaffLeave />} />
+                  <Route path="/observer-stats" element={<ObserverStats />} />
                   <Route path="/performances" element={<Performances />} />
                   <Route path="/achievements" element={<Achievements />} />
                   <Route path="/admin/permissions" element={<PermissionsAdmin />} />

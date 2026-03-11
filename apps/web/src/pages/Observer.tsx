@@ -110,6 +110,7 @@ export default function Observer() {
     date: new Date().toISOString().split('T')[0],
     type: 'POSITIVE',
     category: 'ACADEMIC',
+    subcategory: '',
     description: '',
     actionTaken: '',
     requiresFollowUp: false,
@@ -267,6 +268,7 @@ export default function Observer() {
             date: formData.date,
             type: formData.type,
             category: formData.category,
+            subcategory: formData.subcategory || undefined,
             description: formData.description,
             actionTaken: formData.actionTaken || undefined,
             requiresFollowUp: formData.requiresFollowUp,
@@ -290,6 +292,7 @@ export default function Observer() {
         date: new Date().toISOString().split('T')[0],
         type: 'POSITIVE',
         category: 'ACADEMIC',
+        subcategory: '',
         description: '',
         actionTaken: '',
         requiresFollowUp: false,
@@ -890,6 +893,49 @@ export default function Observer() {
                     {Object.entries(categoryConfig).map(([k, v]) => (
                       <option key={k} value={k}>{v.label}</option>
                     ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Subcategoría</label>
+                  <select
+                    value={formData.subcategory}
+                    onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  >
+                    <option value="">— Sin subcategoría —</option>
+                    {formData.category === 'BEHAVIORAL' && <>
+                      <option value="PELEA">Pelea / Agresión física</option>
+                      <option value="BULLYING">Bullying / Acoso</option>
+                      <option value="CYBERBULLYING">Cyberbullying</option>
+                      <option value="SUSTANCIAS">Sustancias psicoactivas</option>
+                      <option value="CELULAR">Uso indebido de celular</option>
+                      <option value="EVASION">Evasión de clase</option>
+                      <option value="IRRESPETO">Irrespeto a docente/compañero</option>
+                      <option value="VANDALISMO">Daño a bienes</option>
+                      <option value="SEXTING">Sexting / contenido inapropiado</option>
+                      <option value="CUTTING">Autolesión</option>
+                    </>}
+                    {formData.category === 'ATTENDANCE' && <>
+                      <option value="TARDANZA">Tardanza reiterada</option>
+                      <option value="INASISTENCIA">Inasistencia injustificada</option>
+                      <option value="AUSENTISMO">Ausentismo prolongado</option>
+                    </>}
+                    {formData.category === 'UNIFORM' && <>
+                      <option value="UNIFORME_INCOMPLETO">Uniforme incompleto</option>
+                      <option value="UNIFORME_INADECUADO">Uniforme inadecuado</option>
+                      <option value="PRESENTACION_PERSONAL">Presentación personal</option>
+                    </>}
+                    {formData.category === 'ACADEMIC' && <>
+                      <option value="BAJO_RENDIMIENTO">Bajo rendimiento</option>
+                      <option value="FRAUDE_ACADEMICO">Fraude académico</option>
+                      <option value="INCUMPLIMIENTO_TAREAS">Incumplimiento de tareas</option>
+                      <option value="DESTACADO_ACADEMICO">Destacado académico</option>
+                    </>}
+                    {formData.category === 'OTHER' && <>
+                      <option value="SITUACION_FAMILIAR">Situación familiar</option>
+                      <option value="SALUD">Problema de salud</option>
+                      <option value="OTRO">Otro</option>
+                    </>}
                   </select>
                 </div>
               </div>

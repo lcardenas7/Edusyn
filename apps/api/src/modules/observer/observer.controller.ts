@@ -51,6 +51,23 @@ export class ObserverController {
     return this.observerService.getDashboard(req.user.institutionId, academicYearId);
   }
 
+  @Get('stats/convivencial')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  getConvivencialStats(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId?: string,
+    @Query('gradeId') gradeId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.observerService.getConvivencialStats(
+      req.user.institutionId,
+      academicYearId,
+      { groupId, gradeId, startDate, endDate },
+    );
+  }
+
   @Get('pending-followups')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   getPendingFollowUps(@Request() req, @Query('all') all?: string) {

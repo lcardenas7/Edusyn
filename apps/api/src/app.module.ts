@@ -36,6 +36,7 @@ import { ApdModule } from './modules/apd/apd.module';
 import { TeacherWorkspaceModule } from './modules/teacher-workspace/teacher-workspace.module';
 import { ClassroomModule } from './modules/classroom/classroom.module';
 import { LiveSessionModule } from './modules/live-session/live-session.module';
+import { StaffLeaveModule } from './modules/staff-leave/staff-leave.module';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 import { TenantGuard } from './modules/auth/guards/tenant.guard';
 
@@ -80,6 +81,7 @@ import { TenantGuard } from './modules/auth/guards/tenant.guard';
     TeacherWorkspaceModule,
     ClassroomModule,
     LiveSessionModule,
+    StaffLeaveModule,
   ],
   controllers: [AppController],
   providers: [

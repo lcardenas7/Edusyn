@@ -298,12 +298,14 @@ model User {
   achievementBankEntries AchievementBank[]    @relation("AchievementBankAuthor")
 
   // Documentos institucionales y Gestión de tareas
-  documentsUploaded         InstitutionalDocument[] @relation("DocumentUploader")
-  managementLeaderRoles     ManagementLeader[]      @relation("ManagementLeaderUser")
-  managementLeadersAssigned ManagementLeader[]      @relation("ManagementLeaderAssigner")
-  tasksCreated              ManagementTask[]        @relation("TaskCreatedBy")
-  taskAssignments           TaskAssignment[]        @relation("TaskAssignee")
-  taskVerifications         TaskAssignment[]        @relation("TaskVerifier")
+  documentsUploaded            InstitutionalDocument[]    @relation("DocumentUploader")
+  managementLeaderRoles        ManagementLeader[]         @relation("ManagementLeaderUser")
+  managementLeadersAssigned    ManagementLeader[]         @relation("ManagementLeaderAssigner")
+  managementAreaMemberships    ManagementAreaMember[]     @relation("ManagementAreaMemberUser")
+  managementAreaMembersAssigned ManagementAreaMember[]    @relation("ManagementAreaMemberAssigner")
+  tasksCreated                 ManagementTask[]           @relation("TaskCreatedBy")
+  taskAssignments              TaskAssignment[]           @relation("TaskAssignee")
+  taskVerifications            TaskAssignment[]           @relation("TaskVerifier")
 
   // Snapshot de docentes en matrículas (histórico)
   enrollmentSubjectsAsTeacher EnrollmentSubject[] @relation("EnrollmentSubjectTeacher")
@@ -365,6 +367,10 @@ model User {
 
   // Evaluación Actitudinal
   createdRubrics AttitudinalRubric[] @relation("AttitudinalRubricCreator")
+
+  // Permisos de personal
+  leaveRequests         StaffLeaveRequest[] @relation("LeaveRequester")
+  leaveRequestsReviewed StaffLeaveRequest[] @relation("LeaveReviewer")
 }
 
 model Role {
@@ -429,6 +435,9 @@ model Institution {
   enableDifferentialSupport Boolean @default(false) // Activa/desactiva módulo APD
   allowTeacherAccess        Boolean @default(true) // Permite a docentes acceder al módulo APD
 
+  // Control de contraseñas
+  allowStudentPasswordChange Boolean @default(true) // Si es false, los estudiantes no pueden cambiar su contraseña
+
   // Control de entorno
   isDemo Boolean @default(false) // Institución de demostración (permite seed demo, limpieza total)
 
@@ -464,9 +473,10 @@ model Institution {
   paymentEvents   PaymentEvent[]
 
   // Documentos y Gestión
-  institutionalDocuments InstitutionalDocument[]
-  managementLeaders      ManagementLeader[]
-  managementTasks        ManagementTask[]
+  institutionalDocuments  InstitutionalDocument[]
+  managementLeaders       ManagementLeader[]
+  managementAreaMembers   ManagementAreaMember[]
+  managementTasks         ManagementTask[]
   storageUsage           InstitutionStorageUsage?
 
   // Módulo Financiero
@@ -541,6 +551,9 @@ model Institution {
 
   // Evaluación Actitudinal
   attitudinalRubrics AttitudinalRubric[] @relation("InstitutionAttitudinalRubrics")
+
+  // Permisos de personal
+  rlsStaffLeaveRequests StaffLeaveRequest[] @relation("RlsInstitutionSLR")
 }
 
 // Módulos habilitados por institución
@@ -1972,6 +1985,7 @@ model StudentObservation {
   date                DateTime            @db.Date
   type                ObservationType
   category            ObservationCategory
+  subcategory         String?             // Subcategoría granular: UNIFORME, CUTTING, SEXTING, EVASION, PELEA, SUSTANCIAS, CELULAR, TARDANZA, etc.
   status              ObserverEntryStatus @default(OPEN)
   description         String
   actionTaken         String?
@@ -3499,6 +3513,27 @@ enum TaskAssignmentStatus {
   APPROVED // Aprobada
   REJECTED // Rechazada
   CANCELLED // Cancelada
+}
+
+// Miembro de un área de gestión (docente asignado a un área por el líder o admin)
+model ManagementAreaMember {
+  id            String         @id @default(cuid())
+  institutionId String
+  userId        String // El docente miembro
+  area          ManagementArea
+  assignedById  String // Quién lo asignó (líder o admin)
+  isActive      Boolean        @default(true)
+
+  createdAt DateTime @default(now())
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  user        User        @relation("ManagementAreaMemberUser", fields: [userId], references: [id])
+  assignedBy  User        @relation("ManagementAreaMemberAssigner", fields: [assignedById], references: [id])
+
+  @@unique([institutionId, userId, area])
+  @@index([institutionId])
+  @@index([userId])
+  @@index([area])
 }
 
 // Líder de gestión (docente con rol de liderazgo en un área)
@@ -5407,4 +5442,47 @@ model PeerAssessmentPair {
   @@unique([activityId, evaluatorEnrollmentId, targetEnrollmentId])
   @@index([activityId])
   @@index([evaluatorEnrollmentId])
+}
+
+// ==================== STAFF LEAVE REQUESTS (PERMISOS) ====================
+
+enum StaffLeaveType {
+  AUSENCIA          // Día completo
+  SALIDA_TEMPRANA   // Sale antes de hora
+  LLEGADA_TARDE     // Llega después de hora
+  PERMISO_ESPECIAL  // Cita médica, calamidad, etc.
+}
+
+enum StaffLeaveStatus {
+  PENDING   // Pendiente de revisión
+  APPROVED  // Aprobado
+  REJECTED  // Rechazado
+  CANCELLED // Cancelado por el solicitante
+}
+
+model StaffLeaveRequest {
+  id              String           @id @default(cuid())
+  institutionId   String
+  requesterId     String
+  type            StaffLeaveType
+  startDate       DateTime         @db.Date
+  endDate         DateTime?        @db.Date
+  startTime       String?          // HH:mm para SALIDA_TEMPRANA/LLEGADA_TARDE
+  endTime         String?          // HH:mm para SALIDA_TEMPRANA/LLEGADA_TARDE
+  reason          String
+  attachmentUrl   String?          // Soporte adjunto (key de R2)
+  status          StaffLeaveStatus @default(PENDING)
+  reviewedById    String?
+  reviewedAt      DateTime?
+  reviewerNote    String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  institution Institution @relation("RlsInstitutionSLR", fields: [institutionId], references: [id])
+  requester   User        @relation("LeaveRequester", fields: [requesterId], references: [id], onDelete: Restrict)
+  reviewedBy  User?       @relation("LeaveReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([institutionId, status])
+  @@index([requesterId])
+  @@index([startDate])
 }

@@ -35,6 +35,7 @@ const STAFF_ROLES = [
   { value: 'ORIENTADOR', label: 'Orientador(a)', color: 'bg-teal-100 text-teal-700' },
   { value: 'BIBLIOTECARIO', label: 'Bibliotecario(a)', color: 'bg-purple-100 text-purple-700' },
   { value: 'AUXILIAR', label: 'Auxiliar', color: 'bg-slate-100 text-slate-700' },
+  { value: 'AUXILIAR_CONTABLE', label: 'Auxiliar Contable', color: 'bg-emerald-100 text-emerald-700' },
 ]
 
 const emptyForm = {
@@ -93,9 +94,14 @@ export default function StaffManagement() {
   const [editingUsernameValue, setEditingUsernameValue] = useState('')
   const [savingUsername, setSavingUsername] = useState(false)
 
+  // Password settings
+  const [allowStudentPwdChange, setAllowStudentPwdChange] = useState(true)
+  const [togglingPwdSetting, setTogglingPwdSetting] = useState(false)
+
   // Load users
   useEffect(() => {
     loadUsers()
+    if (isAdmin) loadPasswordSettings()
   }, [])
 
   const loadUsers = async () => {
@@ -111,6 +117,26 @@ export default function StaffManagement() {
       console.error('Error loading users:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadPasswordSettings = async () => {
+    try {
+      const { data } = await staffApi.getPasswordSettings()
+      setAllowStudentPwdChange(data.allowStudentPasswordChange)
+    } catch {}
+  }
+
+  const handleToggleStudentPwd = async () => {
+    setTogglingPwdSetting(true)
+    try {
+      const newValue = !allowStudentPwdChange
+      await staffApi.toggleStudentPasswordChange(newValue)
+      setAllowStudentPwdChange(newValue)
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al cambiar configuración')
+    } finally {
+      setTogglingPwdSetting(false)
     }
   }
 
@@ -816,6 +842,32 @@ export default function StaffManagement() {
                 </div>
               </div>
               
+              {/* Student password change toggle */}
+              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 mb-4">
+                <div className="flex items-center gap-3">
+                  <Lock className="w-4 h-4 text-slate-500" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">Cambio de contraseña por estudiantes</p>
+                    <p className="text-xs text-slate-500">
+                      {allowStudentPwdChange
+                        ? 'Los estudiantes pueden cambiar su contraseña libremente'
+                        : 'Los estudiantes NO pueden cambiar su contraseña'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleToggleStudentPwd}
+                  disabled={togglingPwdSetting}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${
+                    allowStudentPwdChange ? 'bg-emerald-500' : 'bg-slate-300'
+                  } ${togglingPwdSetting ? 'opacity-50' : ''}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    allowStudentPwdChange ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+
               {/* Filters */}
               <div className="flex items-center gap-4">
                 <div className="relative flex-1">

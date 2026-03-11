@@ -1,6 +1,6 @@
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
 import { PrismaService } from '../../prisma/prisma.service';
@@ -161,6 +161,22 @@ export class AuthService {
     const user = await this.usersService.findById(userId);
     if (!user) {
       throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    // Check if student is blocked from changing password
+    const userRoles = await this.prisma.userRole.findMany({
+      where: { userId },
+      include: { role: true },
+    });
+    const isStudent = userRoles.some(r => r.role.name === 'ESTUDIANTE');
+    if (isStudent) {
+      const institutionUser = await this.prisma.institutionUser.findFirst({
+        where: { userId },
+        include: { institution: { select: { allowStudentPasswordChange: true } } },
+      });
+      if (institutionUser?.institution?.allowStudentPasswordChange === false) {
+        throw new ForbiddenException('El cambio de contraseña está deshabilitado para estudiantes. Contacta a tu coordinador o administrador.');
+      }
     }
 
     // Verificar contraseña actual

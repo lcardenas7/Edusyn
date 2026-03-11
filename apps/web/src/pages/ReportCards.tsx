@@ -340,7 +340,27 @@ export default function ReportCards() {
   // PDF GENERATION — renders same HTML as preview via html2pdf.js
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const buildReportCardHtml = (data: any, student: StudentRow) => {
+  // Convierte una URL de imagen a base64 data URI para que funcione en ventanas de impresión
+  const imageUrlToBase64 = async (url: string): Promise<string> => {
+    if (!url) return ''
+    try {
+      const resolved = url.includes('/storage/public?path=') || url.startsWith('http') ? url : toPublicFileUrl(url)
+      if (!resolved) return ''
+      const response = await fetch(resolved)
+      if (!response.ok) return ''
+      const blob = await response.blob()
+      return new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string || '')
+        reader.onerror = () => resolve('')
+        reader.readAsDataURL(blob)
+      })
+    } catch {
+      return ''
+    }
+  }
+
+  const buildReportCardHtml = async (data: any, student: StudentRow) => {
     const dc = data.displayConfig || {}
     const isQualitative = dc.mode === 'QUALITATIVE'
     const isFlat = dc.mode === 'QUANTITATIVE_FLAT'
@@ -352,6 +372,9 @@ export default function ReportCards() {
     const showRank = (dc.showRanking !== false) && config.showRanking
     const showAttend = config.showAttendance
     const showAreaRows = dc.showAreaAverages !== false
+
+    // Pre-load images as base64 data URIs so they work in print windows
+    const logoBase64 = config.showLogo && config.logoUrl ? await imageUrlToBase64(toPublicFileUrl(config.logoUrl)) : ''
     const pc = config.primaryColor || '#1E3A8A'
 
     const perfBadge = (level: string | null) => {
@@ -471,14 +494,19 @@ export default function ReportCards() {
       }
       return sig
     })
-    const sigWidth = enabledSigs.length > 0 ? Math.floor(100 / enabledSigs.length) : 33
+    // Pre-load signature images as base64
+    const sigsWithBase64 = await Promise.all(enabledSigs.map(async (sig) => ({
+      ...sig,
+      sigBase64: sig.signatureImageUrl ? await imageUrlToBase64(toPublicFileUrl(sig.signatureImageUrl)) : '',
+    })))
+    const sigWidth = sigsWithBase64.length > 0 ? Math.floor(100 / sigsWithBase64.length) : 33
 
     return `
     <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:720px;margin:0 auto;padding:20px;color:#0f172a;">
       <!-- Header -->
       <table style="width:100%;border-bottom:2px solid #cbd5e1;padding-bottom:10px;margin-bottom:10px;border-collapse:collapse;">
         <tr>
-          ${config.showLogo && config.logoUrl ? `<td style="width:80px;padding-right:12px;vertical-align:middle;"><img src="${toPublicFileUrl(config.logoUrl)}" style="width:80px;height:80px;object-fit:contain;" /></td>` : ''}
+          ${logoBase64 ? `<td style="width:80px;padding-right:12px;vertical-align:middle;"><img src="${logoBase64}" style="width:80px;height:80px;object-fit:contain;" /></td>` : ''}
           <td style="text-align:center;line-height:1.3;vertical-align:middle;">
             <h2 style="font-size:15px;font-weight:700;text-transform:uppercase;margin:0;color:#0f172a;">${data.institution?.name || institution?.name || ''}</h2>
             ${config.headerResolution ? `<p style="font-size:10px;color:#475569;margin:1px 0;">${config.headerResolution}</p>` : ''}
@@ -531,10 +559,10 @@ export default function ReportCards() {
 
       <!-- Signatures -->
       <table style="width:100%;margin-top:30px;border-collapse:collapse;">
-        <tr>${enabledSigs.map(sig => `
+        <tr>${sigsWithBase64.map(sig => `
           <td style="width:${sigWidth}%;text-align:center;padding:0 8px;vertical-align:bottom;">
             <div style="height:50px;border-bottom:2px solid #94a3b8;margin-bottom:4px;text-align:center;">
-              ${sig.signatureImageUrl ? `<img src="${toPublicFileUrl(sig.signatureImageUrl)}" style="height:45px;object-fit:contain;" />` : '<span style="color:#cbd5e1;font-size:9px;">Firma</span>'}
+              ${sig.sigBase64 ? `<img src="${sig.sigBase64}" style="height:45px;object-fit:contain;" />` : '<span style="color:#cbd5e1;font-size:9px;">Firma</span>'}
             </div>
             <p style="font-weight:700;font-size:10px;margin:2px 0;">${sig.name || '_______________'}</p>
             <p style="color:#64748b;font-size:9px;margin:0;">${sig.label}</p>
@@ -596,7 +624,7 @@ export default function ReportCards() {
     try {
       const res = await reportsApi.getReportCard(student.enrollmentId, selectedTermId)
       const data = res.data
-      const html = buildReportCardHtml({ ...data, rank: student.rank, totalStudents: student.totalStudents }, student)
+      const html = await buildReportCardHtml({ ...data, rank: student.rank, totalStudents: student.totalStudents }, student)
       await generatePdfFromHtml(html, `boletin-${student.studentName.replace(/\s+/g, '-')}.pdf`)
     } catch (err: any) {
       alert(err?.response?.data?.message || 'Error al descargar el boletin PDF')
@@ -622,7 +650,7 @@ export default function ReportCards() {
           if (!student) continue
           const res = await reportsApi.getReportCard(enrollmentId, selectedTermId)
           const data = res.data
-          const html = buildReportCardHtml({ ...data, rank: student.rank, totalStudents: student.totalStudents }, student)
+          const html = await buildReportCardHtml({ ...data, rank: student.rank, totalStudents: student.totalStudents }, student)
           await generatePdfFromHtml(html, `boletin-${student.studentName.replace(/\s+/g, '-')}.pdf`)
           downloadCount++
           await new Promise(r => setTimeout(r, 500))

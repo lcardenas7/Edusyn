@@ -85,6 +85,18 @@ SELECT r.name, COUNT(*) as cnt FROM "InstitutionUserRole" iur JOIN "Role" r ON r
 | COORDINADOR | 1 | 1 | 0 ✅ |
 | SUPERADMIN | 1 | 0 | N/A (sin institución) ✅ |
 
+### Auditoría Día 7 (2026-03-10)
+| Rol | UserRole | IUR | Desincronizados | Δ desde Día 3 |
+|-----|----------|-----|------------------|---------------|
+| ESTUDIANTE | 312 | 61 | 251 (fallback activo) | +114 nuevos |
+| DOCENTE | 40 | 40 | 0 ✅ | sin cambios |
+| ADMIN_INSTITUTIONAL | 3 | 3 | 0 ✅ | +1 nuevo ✅ |
+| COORDINADOR | 1 | 1 | 0 ✅ | sin cambios |
+| SUPERADMIN | 1 | 0 | N/A (sin institución) ✅ | sin cambios |
+
+> **Observación Día 7:** Dual-write funcionando correctamente. El nuevo ADMIN_INSTITUTIONAL
+> se creó en ambas tablas. Staff sigue en 0 desincronizados.
+
 > Actualmente algunos estudiantes dependen del fallback a `UserRole`.
 > Antes de eliminar este fallback en FASE 4 será necesario ejecutar un backfill
 > para sincronizar los roles ESTUDIANTE en `InstitutionUserRole`.

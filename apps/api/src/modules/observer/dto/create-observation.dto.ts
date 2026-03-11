@@ -36,6 +36,10 @@ export class CreateObservationDto {
   @IsEnum(ObservationCategoryDto)
   category: ObservationCategoryDto;
 
+  @IsOptional()
+  @IsString()
+  subcategory?: string;
+
   @IsString()
   description: string;
 
@@ -60,6 +64,10 @@ export class UpdateObservationDto {
   @IsOptional()
   @IsEnum(ObservationCategoryDto)
   category?: ObservationCategoryDto;
+
+  @IsOptional()
+  @IsString()
+  subcategory?: string;
 
   @IsOptional()
   @IsString()

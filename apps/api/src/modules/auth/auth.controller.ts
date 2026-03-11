@@ -26,6 +26,7 @@ export class AuthController {
     ORIENTADOR: 60,
     BIBLIOTECARIO: 60,
     AUXILIAR: 60,
+    AUXILIAR_CONTABLE: 60,
     DOCENTE: 50,
     ESTUDIANTE: 10,
     ACUDIENTE: 10,
