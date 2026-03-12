@@ -908,16 +908,17 @@ export default function StaffManagement() {
                   <p>No hay usuarios registrados</p>
                 </div>
               ) : (
-                <table className="w-full">
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-[900px]">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Personal</th>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Documento</th>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Email</th>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Usuario</th>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Contraseña Inicial</th>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">Rol</th>
-                      <th className="text-center px-4 py-3 text-sm font-medium text-slate-600">Acciones</th>
+                      <th className="text-left px-3 py-3 text-sm font-medium text-slate-600 whitespace-nowrap">Personal</th>
+                      <th className="text-left px-3 py-3 text-sm font-medium text-slate-600 whitespace-nowrap">Documento</th>
+                      <th className="text-left px-3 py-3 text-sm font-medium text-slate-600 whitespace-nowrap">Email</th>
+                      <th className="text-left px-3 py-3 text-sm font-medium text-slate-600 whitespace-nowrap">Usuario</th>
+                      <th className="text-left px-3 py-3 text-sm font-medium text-slate-600 whitespace-nowrap">Contraseña</th>
+                      <th className="text-left px-3 py-3 text-sm font-medium text-slate-600 whitespace-nowrap">Rol</th>
+                      <th className="text-center px-3 py-3 text-sm font-medium text-slate-600 whitespace-nowrap sticky right-0 bg-slate-50">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1044,7 +1045,7 @@ export default function StaffManagement() {
                             })}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-3 py-3 text-center sticky right-0 bg-white">
                           <button
                             onClick={() => {
                               setResetPasswordUser(user)
@@ -1052,10 +1053,10 @@ export default function StaffManagement() {
                               setMustChangeOnLogin(true)
                               setResetResult(null)
                             }}
-                            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors whitespace-nowrap"
                             title="Resetear contraseña"
                           >
-                            <RefreshCw className="w-3 h-3" />
+                            <RefreshCw className="w-3.5 h-3.5" />
                             Resetear
                           </button>
                         </td>
@@ -1063,6 +1064,7 @@ export default function StaffManagement() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
               
               <div className="px-4 py-3 border-t border-slate-200 bg-slate-50">
