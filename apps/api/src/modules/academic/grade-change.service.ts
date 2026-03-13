@@ -158,7 +158,7 @@ export class GradeChangeService {
     // Crear evento de auditoría
     await this.createGradeChangeEvent({
       enrollmentId: dto.enrollmentId,
-      type: 'GRADE_CHANGED',
+      type: 'GROUP_CHANGED',
       previousValue: {
         groupId: previousGroupId,
         gradeId: previousGradeId,
