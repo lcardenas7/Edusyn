@@ -9,7 +9,7 @@ import api from '../lib/api'
 import { exportToExcel } from '../utils/excelImport'
 import { useAuth } from '../contexts/AuthContext'
 
-type TabType = 'staff' | 'bulk-upload' | 'credentials'
+type TabType = 'staff' | 'bulk-upload' | 'credentials' | 'delegated-permissions'
 
 interface StaffUser {
   id: string
@@ -97,6 +97,12 @@ export default function StaffManagement() {
   // Password settings
   const [allowStudentPwdChange, setAllowStudentPwdChange] = useState(true)
   const [togglingPwdSetting, setTogglingPwdSetting] = useState(false)
+
+  // Delegated permissions states
+  const [delegatedUsers, setDelegatedUsers] = useState<any[]>([])
+  const [availableTeachers, setAvailableTeachers] = useState<any[]>([])
+  const [loadingDelegated, setLoadingDelegated] = useState(false)
+  const [togglingPermission, setTogglingPermission] = useState<string | null>(null)
 
   // Load users
   useEffect(() => {
@@ -201,6 +207,41 @@ export default function StaffManagement() {
       loadAllUsersForCredentials()
     }
   }, [activeTab, isAdmin])
+
+  // Load delegated permissions when tab changes
+  useEffect(() => {
+    if (activeTab === 'delegated-permissions' && isAdmin) {
+      loadDelegatedPermissions()
+    }
+  }, [activeTab, isAdmin])
+
+  const loadDelegatedPermissions = async () => {
+    setLoadingDelegated(true)
+    try {
+      const [delegatedRes, availableRes] = await Promise.all([
+        staffApi.getDelegatedCredentialsPermissions(),
+        staffApi.getAvailableTeachersForPermission(),
+      ])
+      setDelegatedUsers(delegatedRes.data || [])
+      setAvailableTeachers(availableRes.data || [])
+    } catch (error) {
+      console.error('Error loading delegated permissions:', error)
+    } finally {
+      setLoadingDelegated(false)
+    }
+  }
+
+  const handleToggleCredentialsPermission = async (userId: string, allow: boolean) => {
+    setTogglingPermission(userId)
+    try {
+      await staffApi.toggleCredentialsPermission(userId, allow)
+      await loadDelegatedPermissions()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al cambiar permiso')
+    } finally {
+      setTogglingPermission(null)
+    }
+  }
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
@@ -513,6 +554,20 @@ export default function StaffManagement() {
             >
               <Key className="w-4 h-4" />
               Credenciales
+            </button>
+          )}
+          {/* Solo ADMIN_INSTITUTIONAL puede delegar permisos */}
+          {isAdmin && (
+            <button
+              onClick={() => setActiveTab('delegated-permissions')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'delegated-permissions'
+                  ? 'bg-violet-100 text-violet-700'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Shield className="w-4 h-4" />
+              Permisos
             </button>
           )}
         </div>
@@ -1294,6 +1349,120 @@ export default function StaffManagement() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Delegated Permissions Tab */}
+        {activeTab === 'delegated-permissions' && isAdmin && (
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-violet-600" />
+                Permisos Delegados de Credenciales
+              </h2>
+              <p className="text-sm text-slate-500 mt-1">
+                Asigna a docentes la capacidad de gestionar credenciales de estudiantes
+              </p>
+            </div>
+
+            {loadingDelegated ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Docentes con permiso */}
+                <div>
+                  <h3 className="text-sm font-medium text-slate-700 mb-3 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                    Docentes con permiso ({delegatedUsers.length})
+                  </h3>
+                  {delegatedUsers.length === 0 ? (
+                    <div className="p-4 bg-slate-50 rounded-lg text-center text-sm text-slate-500">
+                      Ningún docente tiene este permiso aún
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {delegatedUsers.map((u) => (
+                        <div key={u.userId} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div>
+                            <p className="font-medium text-slate-900">{u.firstName} {u.lastName}</p>
+                            <p className="text-xs text-slate-500">{u.email}</p>
+                            {u.assignedAt && (
+                              <p className="text-xs text-green-600 mt-1">
+                                Asignado: {new Date(u.assignedAt).toLocaleDateString('es-CO')}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleToggleCredentialsPermission(u.userId, false)}
+                            disabled={togglingPermission === u.userId}
+                            className="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {togglingPermission === u.userId ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <XCircle className="w-3 h-3" />
+                            )}
+                            Revocar
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Docentes disponibles */}
+                <div>
+                  <h3 className="text-sm font-medium text-slate-700 mb-3 flex items-center gap-2">
+                    <User className="w-4 h-4 text-slate-500" />
+                    Docentes disponibles ({availableTeachers.length})
+                  </h3>
+                  {availableTeachers.length === 0 ? (
+                    <div className="p-4 bg-slate-50 rounded-lg text-center text-sm text-slate-500">
+                      {delegatedUsers.length > 0 
+                        ? 'Todos los docentes ya tienen el permiso'
+                        : 'No hay docentes registrados'}
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {availableTeachers.map((u) => (
+                        <div key={u.userId} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                          <div>
+                            <p className="font-medium text-slate-900">{u.firstName} {u.lastName}</p>
+                            <p className="text-xs text-slate-500">{u.email}</p>
+                          </div>
+                          <button
+                            onClick={() => handleToggleCredentialsPermission(u.userId, true)}
+                            disabled={togglingPermission === u.userId}
+                            className="px-3 py-1.5 text-sm bg-violet-100 text-violet-700 rounded-lg hover:bg-violet-200 disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {togglingPermission === u.userId ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="w-3 h-3" />
+                            )}
+                            Asignar
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>¿Qué puede hacer un docente con este permiso?</strong>
+              </p>
+              <ul className="text-sm text-blue-700 mt-2 space-y-1 list-disc list-inside">
+                <li>Ver credenciales de estudiantes de la institución</li>
+                <li>Activar acceso al sistema para estudiantes</li>
+                <li>Resetear contraseñas de estudiantes</li>
+                <li>Imprimir y exportar listados de credenciales</li>
+              </ul>
             </div>
           </div>
         )}

@@ -177,6 +177,7 @@ export default function Students() {
   const [credentialsGroupFilter, setCredentialsGroupFilter] = useState('ALL')
   const [credentialsAccessFilter, setCredentialsAccessFilter] = useState<'ALL' | 'WITH_ACCESS' | 'WITHOUT_ACCESS'>('ALL')
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
+  const [canManageCredentials, setCanManageCredentials] = useState(false)
   const [processingCredentials, setProcessingCredentials] = useState(false)
   const [editingUsernameId, setEditingUsernameId] = useState<string | null>(null)
   const [editingUsernameValue, setEditingUsernameValue] = useState('')
@@ -249,6 +250,19 @@ export default function Students() {
     }
     loadInitialData()
   }, [institution?.id])
+
+  // Verificar permiso de gestión de credenciales
+  useEffect(() => {
+    const checkCredentialsPermission = async () => {
+      try {
+        const res = await staffApi.checkCredentialsPermission()
+        setCanManageCredentials(res.data?.canManageCredentials || false)
+      } catch {
+        setCanManageCredentials(false)
+      }
+    }
+    checkCredentialsPermission()
+  }, [])
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -1728,14 +1742,16 @@ export default function Students() {
               <p className="text-slate-500 mt-1">Gestion de estudiantes matriculados</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={handleOpenCredentials}
-                className="flex items-center gap-2 px-3 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 text-sm"
-                title="Gestionar credenciales de acceso de estudiantes"
-              >
-                <Key className="w-4 h-4" />
-                Credenciales
-              </button>
+              {canManageCredentials && (
+                <button
+                  onClick={handleOpenCredentials}
+                  className="flex items-center gap-2 px-3 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 text-sm"
+                  title="Gestionar credenciales de acceso de estudiantes"
+                >
+                  <Key className="w-4 h-4" />
+                  Credenciales
+                </button>
+              )}
               {/* Botón temporal para borrar estudiantes sin registros - DESHABILITADO hasta nueva orden */}
               {/* <button 
                 onClick={handleBulkDeleteWithoutRecords}

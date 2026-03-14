@@ -1064,6 +1064,11 @@ export const staffApi = {
   updateUsername: (userId: string, username: string) => api.post(`/iam/users/${userId}/update-username`, { username }),
   getPasswordSettings: () => api.get('/iam/institution/password-settings'),
   toggleStudentPasswordChange: (allow: boolean) => api.put('/iam/institution/allow-student-password-change', { allow }),
+  // Permisos delegados de credenciales
+  checkCredentialsPermission: () => api.get('/iam/delegated-permissions/credentials/check'),
+  getDelegatedCredentialsPermissions: () => api.get('/iam/delegated-permissions/credentials'),
+  getAvailableTeachersForPermission: () => api.get('/iam/delegated-permissions/available-teachers'),
+  toggleCredentialsPermission: (userId: string, allow: boolean) => api.post('/iam/delegated-permissions/credentials', { userId, allow }),
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -580,12 +580,18 @@ model InstitutionUser {
   isActive      Boolean  @default(true)
   joinedAt      DateTime @default(now())
 
+  // Permisos delegados (asignados por Admin/Coordinador)
+  canManageCredentials      Boolean   @default(false) // Puede gestionar credenciales de estudiantes
+  credentialsPermissionById String?   // Quién asignó el permiso (auditoría)
+  credentialsPermissionAt   DateTime? // Cuándo se asignó
+
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
 
   institutionUserRoles InstitutionUserRole[] // Roles del usuario EN esta institución
 
   @@unique([userId, institutionId])
+  @@index([canManageCredentials])
 }
 
 // Roles del usuario POR institución (reemplaza UserRole global gradualmente)

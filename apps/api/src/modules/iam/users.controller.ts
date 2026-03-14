@@ -741,4 +741,192 @@ export class UsersController {
       allowStudentPasswordChange: institutionUser.institution.allowStudentPasswordChange,
     };
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PERMISOS DELEGADOS — Gestión de credenciales
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Verifica si el usuario actual tiene permiso para gestionar credenciales.
+   * Retorna true si es Admin, Coordinador, o tiene canManageCredentials.
+   */
+  @Get('delegated-permissions/credentials/check')
+  async checkCredentialsPermission(@Request() req: any) {
+    const userId = req.user.sub || req.user.id;
+    const institutionId = req.user.institutionId;
+
+    // Verificar roles tradicionales
+    const roles: string[] = req.user.roles || [];
+    const roleNames = roles.map((r: any) => 
+      typeof r === 'string' ? r : r?.role?.name || r?.name || ''
+    );
+
+    const hasAdminRole = roleNames.some(name => 
+      ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'].includes(name)
+    );
+
+    if (hasAdminRole) {
+      return { canManageCredentials: true, source: 'role' };
+    }
+
+    // Verificar permiso delegado
+    if (!institutionId) {
+      return { canManageCredentials: false, source: 'no_institution' };
+    }
+
+    const institutionUser = await this.prisma.institutionUser.findUnique({
+      where: {
+        userId_institutionId: { userId, institutionId },
+      },
+      select: { canManageCredentials: true, isActive: true },
+    });
+
+    const hasPermission = institutionUser?.isActive === true && institutionUser?.canManageCredentials === true;
+    return { canManageCredentials: hasPermission, source: hasPermission ? 'delegated' : 'none' };
+  }
+
+  /**
+   * Asigna o revoca el permiso de gestión de credenciales a un usuario.
+   * Solo Admin o Coordinador pueden asignar este permiso.
+   */
+  @Post('delegated-permissions/credentials')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async toggleCredentialsPermission(
+    @Request() req: any,
+    @Body() body: { userId: string; allow: boolean },
+  ) {
+    const adminUserId = req.user.sub || req.user.id;
+    const institutionId = req.user.institutionId;
+
+    if (!institutionId) {
+      throw new BadRequestException('No se pudo determinar la institución');
+    }
+
+    // Verificar que el usuario destino pertenezca a la misma institución
+    const targetInstitutionUser = await this.prisma.institutionUser.findUnique({
+      where: {
+        userId_institutionId: {
+          userId: body.userId,
+          institutionId,
+        },
+      },
+      include: {
+        user: { select: { firstName: true, lastName: true } },
+      },
+    });
+
+    if (!targetInstitutionUser) {
+      throw new BadRequestException('El usuario no pertenece a esta institución');
+    }
+
+    // Actualizar permiso
+    await this.prisma.institutionUser.update({
+      where: { id: targetInstitutionUser.id },
+      data: {
+        canManageCredentials: body.allow,
+        credentialsPermissionById: body.allow ? adminUserId : null,
+        credentialsPermissionAt: body.allow ? new Date() : null,
+      },
+    });
+
+    const userName = `${targetInstitutionUser.user.firstName} ${targetInstitutionUser.user.lastName}`;
+    return {
+      success: true,
+      userId: body.userId,
+      canManageCredentials: body.allow,
+      message: body.allow
+        ? `${userName} ahora puede gestionar credenciales de estudiantes`
+        : `Se ha revocado el permiso de gestión de credenciales a ${userName}`,
+    };
+  }
+
+  /**
+   * Lista usuarios con permiso de gestión de credenciales en la institución.
+   */
+  @Get('delegated-permissions/credentials')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async listCredentialsPermissions(@Request() req: any) {
+    const institutionId = req.user.institutionId;
+
+    if (!institutionId) {
+      throw new BadRequestException('No se pudo determinar la institución');
+    }
+
+    const usersWithPermission = await this.prisma.institutionUser.findMany({
+      where: {
+        institutionId,
+        canManageCredentials: true,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    return usersWithPermission.map(iu => ({
+      userId: iu.userId,
+      firstName: iu.user.firstName,
+      lastName: iu.user.lastName,
+      email: iu.user.email,
+      assignedAt: iu.credentialsPermissionAt,
+    }));
+  }
+
+  /**
+   * Lista docentes de la institución para asignarles permisos.
+   * Retorna docentes que NO tienen el permiso actualmente.
+   */
+  @Get('delegated-permissions/available-teachers')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async listAvailableTeachersForPermission(@Request() req: any) {
+    const institutionId = req.user.institutionId;
+
+    if (!institutionId) {
+      throw new BadRequestException('No se pudo determinar la institución');
+    }
+
+    // Buscar rol DOCENTE
+    const docenteRole = await this.prisma.role.findFirst({
+      where: { name: 'DOCENTE' },
+    });
+
+    if (!docenteRole) {
+      return [];
+    }
+
+    // Buscar docentes de la institución que NO tienen el permiso
+    const teachers = await this.prisma.institutionUser.findMany({
+      where: {
+        institutionId,
+        isActive: true,
+        canManageCredentials: false,
+        institutionUserRoles: {
+          some: { roleId: docenteRole.id },
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    return teachers.map(iu => ({
+      userId: iu.userId,
+      firstName: iu.user.firstName,
+      lastName: iu.user.lastName,
+      email: iu.user.email,
+    }));
+  }
 }

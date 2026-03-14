@@ -3,6 +3,7 @@ import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards, Requ
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { CredentialsGuard } from '../auth/guards/credentials.guard';
 import { StudentsService } from './students.service';
 import { CreateStudentDto, UpdateStudentDto, EnrollStudentDto, UpdateEnrollmentStatusDto } from './dto/create-student.dto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -37,9 +38,10 @@ export class StudentsController {
   /**
    * Obtiene las credenciales de estudiantes con acceso al sistema
    * MUST be before :id routes to avoid 'credentials' being treated as an id
+   * Acceso: Admin, Coordinador, o docentes con permiso delegado (canManageCredentials)
    */
   @Get('credentials/list')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @UseGuards(CredentialsGuard)
   async getCredentials(@Request() req: any, @Query('institutionId') institutionId?: string) {
     const instId = await resolveInstitutionId(this.prisma as any, req, institutionId);
     if (!instId) throw new Error('No se pudo determinar la institución');
@@ -63,13 +65,13 @@ export class StudentsController {
   }
 
   @Post('bulk-activate-access')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @UseGuards(CredentialsGuard)
   async bulkActivateAccess(@Body() data: { studentIds: string[] }) {
     return this.studentsService.bulkActivateAccess(data.studentIds);
   }
 
   @Post('bulk-reset-password')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @UseGuards(CredentialsGuard)
   async bulkResetPassword(@Body() data: { studentIds: string[] }) {
     return this.studentsService.bulkResetPassword(data.studentIds);
   }
@@ -78,9 +80,10 @@ export class StudentsController {
    * Regenera credenciales (username + password) de estudiantes sin acceso activo.
    * Útil cuando se actualizaron documentos pero los usernames quedaron con datos viejos.
    * Solo afecta estudiantes que nunca han iniciado sesión (mustChangePassword=true).
+   * Acceso: Admin, Coordinador, o docentes con permiso delegado (canManageCredentials)
    */
   @Post('bulk-regenerate-credentials')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @UseGuards(CredentialsGuard)
   async bulkRegenerateCredentials(@Body() data: { studentIds: string[] }) {
     return this.studentsService.bulkRegenerateCredentials(data.studentIds);
   }
