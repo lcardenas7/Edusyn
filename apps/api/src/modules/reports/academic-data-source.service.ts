@@ -24,12 +24,20 @@ import { PrismaService } from '../../prisma/prisma.service';
 // TIPOS PÚBLICOS
 // ═══════════════════════════════════════════════════════════════════════════
 
+/**
+ * Modo de reporte: controla qué snapshot se usa para reportes analíticos.
+ *   FINAL (default) → última versión del snapshot (incluye recuperaciones)
+ *   INITIAL → snapshot INITIAL_CLOSE (datos originales del período, sin recuperaciones)
+ */
+export type ReportMode = 'INITIAL' | 'FINAL';
+
 export interface AcademicDataMeta {
   source: 'live' | 'snapshot';
   termStatus: 'OPEN' | 'CLOSED' | 'FINALIZED';
   snapshotVersion: number | null;
   generatedAt: string; // ISO timestamp
   wasReopened: boolean; // true si el término fue reabierto alguna vez
+  reportMode?: ReportMode; // Modo de reporte usado
 }
 
 /** Resultado de getGroupReportCardData — boletines completos de un grupo */
@@ -238,6 +246,7 @@ export class AcademicDataSourceService {
     termId?: string;
     subjectId?: string;
     stage?: string;
+    reportMode?: ReportMode;
   }): Promise<TermGradeDataResult> {
     // Si hay termId específico, resolver directamente
     if (params.termId) {
@@ -369,11 +378,36 @@ export class AcademicDataSourceService {
   }
 
   /**
-   * Carga todos los snapshots más recientes de un período.
+   * Carga snapshots de un período.
+   * - Sin snapshotType → última versión (comportamiento por defecto, incluye recuperaciones)
+   * - Con snapshotType → filtra por tipo (ej: INITIAL_CLOSE para datos originales)
    */
   private async loadSnapshotsForTerm(
     academicTermId: string,
+    snapshotType?: 'INITIAL_CLOSE' | 'POST_RECOVERY' | 'FINAL_CLOSE' | 'REOPENED',
   ): Promise<{ snapshots: Map<string, any>; version: number | null }> {
+    if (snapshotType) {
+      // Buscar snapshots por tipo específico
+      const records = await this.prisma.termReportCardSnapshot.findMany({
+        where: { academicTermId, snapshotType },
+        select: { studentEnrollmentId: true, data: true, version: true },
+        orderBy: { version: 'desc' },
+        distinct: ['studentEnrollmentId'],
+      });
+
+      if (records.length === 0) {
+        return { snapshots: new Map(), version: null };
+      }
+
+      const map = new Map<string, any>();
+      for (const r of records) {
+        map.set(r.studentEnrollmentId, r.data);
+      }
+
+      return { snapshots: map, version: records[0].version };
+    }
+
+    // Sin tipo → última versión (comportamiento original)
     const lastVersion = await this.prisma.termReportCardSnapshot.aggregate({
       where: { academicTermId },
       _max: { version: true },
@@ -408,15 +442,38 @@ export class AcademicDataSourceService {
       groupId?: string;
       subjectId?: string;
       stage?: string;
+      reportMode?: ReportMode;
     },
     termId: string,
   ): Promise<TermGradeDataResult> {
     const termInfo = await this.resolveTermInfo(termId);
+    const reportMode = params.reportMode ?? 'FINAL';
 
     if (termInfo.status === 'FINALIZED') {
-      const { snapshots, version } = await this.loadSnapshotsForTerm(termId);
+      // Determinar qué tipo de snapshot cargar según reportMode
+      const snapshotTypeFilter = reportMode === 'INITIAL' ? 'INITIAL_CLOSE' as const : undefined;
+      const { snapshots, version } = await this.loadSnapshotsForTerm(termId, snapshotTypeFilter);
 
       if (snapshots.size === 0) {
+        if (reportMode === 'INITIAL') {
+          // Si piden INITIAL pero no hay INITIAL_CLOSE, fallback a última versión
+          this.logger.warn(
+            `No INITIAL_CLOSE snapshots found for term ${termId}. ` +
+            'Falling back to latest version. This term may have been finalized before snapshot types were introduced.',
+          );
+          const fallback = await this.loadSnapshotsForTerm(termId);
+          if (fallback.snapshots.size === 0) {
+            throw new ConflictException(
+              `Período ${termId} está finalizado pero no tiene snapshots. ` +
+              'Reabra el período y vuelva a finalizar.',
+            );
+          }
+          const grades = this.extractGradeRowsFromSnapshots(fallback.snapshots, termId, params);
+          const meta = this.buildMeta('snapshot', termInfo, fallback.version);
+          meta.reportMode = reportMode;
+          return { meta, grades };
+        }
+
         this.logger.error(
           `[INTEGRITY] FINALIZED term ${termId} has ZERO snapshots. ` +
           'This is a critical integrity violation — the term was finalized without generating snapshots.',
@@ -428,25 +485,22 @@ export class AcademicDataSourceService {
       }
 
       this.logger.log(
-        `Snapshot v${version} used for analytical grades, term ${termId} (${snapshots.size} students)`,
+        `Snapshot v${version} (mode=${reportMode}) used for analytical grades, term ${termId} (${snapshots.size} students)`,
       );
 
-      // Extraer notas planas del snapshot
       const grades = this.extractGradeRowsFromSnapshots(snapshots, termId, params);
+      const meta = this.buildMeta('snapshot', termInfo, version);
+      meta.reportMode = reportMode;
 
-      return {
-        meta: this.buildMeta('snapshot', termInfo, version),
-        grades,
-      };
+      return { meta, grades };
     }
 
-    // OPEN o CLOSED → live
+    // OPEN o CLOSED → live (reportMode no aplica, siempre son datos actuales)
     const liveGrades = await this.loadLiveGradeData({ ...params, termId });
+    const meta = this.buildMeta('live', termInfo, null);
+    meta.reportMode = reportMode;
 
-    return {
-      meta: this.buildMeta('live', termInfo, null),
-      grades: liveGrades,
-    };
+    return { meta, grades: liveGrades };
   }
 
   /**

@@ -7,6 +7,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { ReportsService } from './reports.service';
 import { ReportsExportService } from './reports-export.service';
 import { AcademicPdfService } from './academic-pdf.service';
+import type { ReportMode } from './academic-data-source.service';
 import { GenerateReportCardDto, GenerateBulkReportCardsDto } from './dto/generate-report-card.dto';
 import { CapabilitiesService } from '../capabilities/capabilities.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -152,9 +153,10 @@ export class ReportsController {
     @Query('groupId') groupId?: string,
     @Query('termId') termId?: string,
     @Query('stage') stage?: string,
+    @Query('reportMode') reportMode?: ReportMode,
   ) {
     const institutionId = req.user.institutionId;
-    return this.reportsService.getSubjectAverages(institutionId, academicYearId, groupId, termId, stage);
+    return this.reportsService.getSubjectAverages(institutionId, academicYearId, groupId, termId, stage, reportMode);
   }
 
   @Get('academic/area-averages')
@@ -165,9 +167,10 @@ export class ReportsController {
     @Query('groupId') groupId?: string,
     @Query('termId') termId?: string,
     @Query('stage') stage?: string,
+    @Query('reportMode') reportMode?: ReportMode,
   ) {
     const institutionId = req.user.institutionId;
-    return this.reportsService.getAreaAverages(institutionId, academicYearId, groupId, termId, stage);
+    return this.reportsService.getAreaAverages(institutionId, academicYearId, groupId, termId, stage, reportMode);
   }
 
   @Get('academic/area-consolidated')
@@ -177,9 +180,10 @@ export class ReportsController {
     @Query('academicYearId') academicYearId: string,
     @Query('groupId') groupId: string,
     @Query('termId') termId?: string,
+    @Query('reportMode') reportMode?: ReportMode,
   ) {
     const institutionId = req.user.institutionId;
-    return this.reportsService.getAreaConsolidated(institutionId, academicYearId, groupId, termId);
+    return this.reportsService.getAreaConsolidated(institutionId, academicYearId, groupId, termId, reportMode);
   }
 
   @Get('academic/student-ranking')
@@ -189,9 +193,10 @@ export class ReportsController {
     @Query('academicYearId') academicYearId: string,
     @Query('groupId') groupId: string,
     @Query('termId') termId?: string,
+    @Query('reportMode') reportMode?: ReportMode,
   ) {
     const institutionId = req.user.institutionId;
-    return this.reportsService.getStudentRanking(institutionId, academicYearId, groupId, termId);
+    return this.reportsService.getStudentRanking(institutionId, academicYearId, groupId, termId, reportMode);
   }
 
   @Get('academic/institutional-ranking')
@@ -216,9 +221,10 @@ export class ReportsController {
     @Query('groupId') groupId: string,
     @Query('subjectId') subjectId?: string,
     @Query('termId') termId?: string,
+    @Query('reportMode') reportMode?: ReportMode,
   ) {
     const institutionId = req.user.institutionId;
-    return this.reportsService.getGradeDistribution(institutionId, academicYearId, groupId, subjectId, termId);
+    return this.reportsService.getGradeDistribution(institutionId, academicYearId, groupId, subjectId, termId, reportMode);
   }
 
   @Get('academic/failed-subjects')
@@ -228,9 +234,10 @@ export class ReportsController {
     @Query('academicYearId') academicYearId: string,
     @Query('groupId') groupId: string,
     @Query('termId') termId?: string,
+    @Query('reportMode') reportMode?: ReportMode,
   ) {
     const institutionId = req.user.institutionId;
-    return this.reportsService.getFailedSubjects(institutionId, academicYearId, groupId, termId);
+    return this.reportsService.getFailedSubjects(institutionId, academicYearId, groupId, termId, reportMode);
   }
 
   @Get('academic/recovery-list')
@@ -242,12 +249,14 @@ export class ReportsController {
     @Query('termId') termId?: string,
     @Query('minScore') minScore?: string,
     @Query('maxScore') maxScore?: string,
+    @Query('reportMode') reportMode?: ReportMode,
   ) {
     const institutionId = req.user.institutionId;
     return this.reportsService.getRecoveryList(
       institutionId, academicYearId, groupId, termId,
       minScore ? parseFloat(minScore) : undefined,
       maxScore ? parseFloat(maxScore) : undefined,
+      reportMode,
     );
   }
 
@@ -257,9 +266,10 @@ export class ReportsController {
     @Request() req,
     @Query('academicYearId') academicYearId: string,
     @Query('groupId') groupId: string,
+    @Query('reportMode') reportMode?: ReportMode,
   ) {
     const institutionId = req.user.institutionId;
-    return this.reportsService.getPromotionProjection(institutionId, academicYearId, groupId);
+    return this.reportsService.getPromotionProjection(institutionId, academicYearId, groupId, reportMode);
   }
 
   @Get('academic/period-comparison')
@@ -269,9 +279,10 @@ export class ReportsController {
     @Query('academicYearId') academicYearId: string,
     @Query('groupId') groupId?: string,
     @Query('studentEnrollmentId') studentEnrollmentId?: string,
+    @Query('reportMode') reportMode?: ReportMode,
   ) {
     const institutionId = req.user.institutionId;
-    return this.reportsService.getPeriodComparison(institutionId, academicYearId, groupId, studentEnrollmentId);
+    return this.reportsService.getPeriodComparison(institutionId, academicYearId, groupId, studentEnrollmentId, reportMode);
   }
 
   @Get('academic/student-history')
@@ -289,9 +300,10 @@ export class ReportsController {
     @Query('academicYearId') academicYearId: string,
     @Query('subjectId') subjectId: string,
     @Query('groupId') groupId?: string,
+    @Query('reportMode') reportMode?: ReportMode,
   ) {
     const institutionId = req.user.institutionId;
-    return this.reportsService.getSubjectAnalysis(institutionId, academicYearId, subjectId, groupId);
+    return this.reportsService.getSubjectAnalysis(institutionId, academicYearId, subjectId, groupId, reportMode);
   }
 
   @Get('academic/teacher-performance')
@@ -300,9 +312,10 @@ export class ReportsController {
     @Request() req,
     @Query('academicYearId') academicYearId: string,
     @Query('teacherId') teacherId?: string,
+    @Query('reportMode') reportMode?: ReportMode,
   ) {
     const institutionId = req.user.institutionId;
-    return this.reportsService.getTeacherPerformance(institutionId, academicYearId, teacherId);
+    return this.reportsService.getTeacherPerformance(institutionId, academicYearId, teacherId, reportMode);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -321,6 +334,21 @@ export class ReportsController {
   async updateReportCardConfig(@Request() req, @Body() data: any) {
     const institutionId = req.user.institutionId;
     return this.reportsService.updateReportCardConfig(institutionId, data);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // IMPACTO DE RECUPERACIONES
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Get('recovery-impact')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async getRecoveryImpact(
+    @Request() req,
+    @Query('academicTermId') academicTermId: string,
+    @Query('groupId') groupId?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getRecoveryImpact(institutionId, academicTermId, groupId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -430,10 +458,11 @@ export class ReportsController {
     @Query('academicYearId') academicYearId: string,
     @Query('groupId') groupId: string,
     @Query('termId') termId?: string,
+    @Query('reportMode') reportMode?: ReportMode,
   ) {
     const institutionId = req.user.institutionId;
     const workbook = await this.reportsExportService.exportConsolidatedGradeSheet(
-      institutionId, academicYearId, groupId, termId,
+      institutionId, academicYearId, groupId, termId, reportMode,
     );
     this.sendExcel(res, workbook, 'sabana-academica');
   }
@@ -604,9 +633,10 @@ export class ReportsController {
     @Request() req,
     @Query('academicYearId') academicYearId: string,
     @Query('termId') termId?: string,
+    @Query('reportMode') reportMode?: ReportMode,
   ) {
     const institutionId = req.user.institutionId;
-    return this.reportsService.getInstitutionalStatistics(institutionId, academicYearId, termId);
+    return this.reportsService.getInstitutionalStatistics(institutionId, academicYearId, termId, reportMode);
   }
 
   @Get('annual-comparison')

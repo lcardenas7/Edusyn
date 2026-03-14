@@ -19,7 +19,7 @@ import { Injectable } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 
 import { ReportsService } from './reports.service';
-import { AcademicDataSourceService, type GradeRow } from './academic-data-source.service';
+import { AcademicDataSourceService, type GradeRow, type ReportMode } from './academic-data-source.service';
 
 @Injectable()
 export class ReportsExportService {
@@ -38,12 +38,14 @@ export class ReportsExportService {
     academicYearId: string,
     groupId: string,
     termId?: string,
+    reportMode?: ReportMode,
   ): Promise<ExcelJS.Workbook> {
     const { grades } = await this.academicDataSource.getTermGradeData({
       institutionId,
       academicYearId,
       groupId,
       termId,
+      reportMode,
     });
 
     // Extraer asignaturas únicas (columnas) y estudiantes únicos (filas)

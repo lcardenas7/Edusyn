@@ -447,6 +447,9 @@ export const reportsApi = {
     api.post(`/reports/terms/${termId}/reopen`, { reason }),
   reSnapshotTerm: (termId: string) =>
     api.post(`/reports/terms/${termId}/re-snapshot`),
+  // Impacto de recuperaciones
+  getRecoveryImpact: (academicTermId: string, groupId?: string) =>
+    api.get('/reports/recovery-impact', { params: { academicTermId, groupId } }),
   getCompletenessStatus: (academicYearId: string, termId?: string) =>
     api.get('/reports/academic/completeness-status', { params: { academicYearId, termId } }),
   // Exportaciones Excel

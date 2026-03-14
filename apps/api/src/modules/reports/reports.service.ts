@@ -12,7 +12,7 @@ import { getPerformanceLevel, isFailing, getGradeDistributionRanges } from '../.
 import { getReportCardMode, getDisplayConfig } from '../../engines/report-card.engine';
 import type { AcademicStructureType } from '../../engines/AcademicStructure';
 import { SupabaseStorageService } from '../storage/supabase-storage.service';
-import { AcademicDataSourceService } from './academic-data-source.service';
+import { AcademicDataSourceService, ReportMode } from './academic-data-source.service';
 
 @Injectable()
 export class ReportsService {
@@ -932,9 +932,9 @@ export class ReportsService {
    * Reporte 2: Promedio por asignatura
    * ¿Qué asignatura tiene mejor o peor rendimiento?
    */
-  async getSubjectAverages(institutionId: string, academicYearId: string, groupId?: string, termId?: string, stage?: string) {
+  async getSubjectAverages(institutionId: string, academicYearId: string, groupId?: string, termId?: string, stage?: string, reportMode?: ReportMode) {
     const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
-    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId, stage });
+    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId, stage, reportMode });
 
     // Agrupar por asignatura
     const subjectMap = new Map<string, { name: string; areaName: string; scores: number[] }>();
@@ -974,9 +974,9 @@ export class ReportsService {
    * Reporte 2b: Promedio por áreas
    * Agrupa asignaturas por área y calcula promedios, aprobación y detalle por asignatura.
    */
-  async getAreaAverages(institutionId: string, academicYearId: string, groupId?: string, termId?: string, stage?: string) {
+  async getAreaAverages(institutionId: string, academicYearId: string, groupId?: string, termId?: string, stage?: string, reportMode?: ReportMode) {
     const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
-    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId, stage });
+    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId, stage, reportMode });
 
     // Agrupar por área → asignatura → notas
     const areaMap = new Map<string, {
@@ -1039,9 +1039,9 @@ export class ReportsService {
    * 1 fila por estudiante, columnas = áreas con promedio de sus asignaturas.
    * Requiere grupo obligatorio.
    */
-  async getAreaConsolidated(institutionId: string, academicYearId: string, groupId: string, termId?: string) {
+  async getAreaConsolidated(institutionId: string, academicYearId: string, groupId: string, termId?: string, reportMode?: ReportMode) {
     const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
-    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId });
+    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId, reportMode });
 
     // Recopilar todas las áreas únicas (columnas)
     const areaSet = new Map<string, string>(); // areaId → areaName
@@ -1121,9 +1121,9 @@ export class ReportsService {
    * Reporte 3: Ranking de estudiantes
    * ¿Quiénes son los mejores / peores del grupo?
    */
-  async getStudentRanking(institutionId: string, academicYearId: string, groupId: string, termId?: string) {
+  async getStudentRanking(institutionId: string, academicYearId: string, groupId: string, termId?: string, reportMode?: ReportMode) {
     const rulesCtx = await this.institutionContext.getContext(institutionId);
-    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId });
+    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId, reportMode });
 
     // Agrupar por estudiante → promedio de todas sus asignaturas
     const studentMap = new Map<string, { name: string; group: string; scores: number[] }>();
@@ -1272,9 +1272,9 @@ export class ReportsService {
    * Reporte 4: Distribución de notas
    * ¿Cómo se distribuyen las notas?
    */
-  async getGradeDistribution(institutionId: string, academicYearId: string, groupId: string, subjectId?: string, termId?: string) {
+  async getGradeDistribution(institutionId: string, academicYearId: string, groupId: string, subjectId?: string, termId?: string, reportMode?: ReportMode) {
     const rulesCtx = await this.institutionContext.getContext(institutionId);
-    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId, subjectId });
+    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId, subjectId, reportMode });
     const scores = grades.map(g => g.finalScore);
 
     // Rangos dinámicos basados en escala institucional + niveles de desempeño
@@ -1315,9 +1315,9 @@ export class ReportsService {
    * Reporte 6: Asignaturas reprobadas
    * ¿Qué materias perdió cada estudiante?
    */
-  async getFailedSubjects(institutionId: string, academicYearId: string, groupId: string, termId?: string) {
+  async getFailedSubjects(institutionId: string, academicYearId: string, groupId: string, termId?: string, reportMode?: ReportMode) {
     const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
-    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId });
+    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId, reportMode });
 
     const failed = grades
       .filter(g => g.finalScore < passingGrade)
@@ -1344,11 +1344,11 @@ export class ReportsService {
    * Reporte 7: Listado de recuperación
    * ¿Quién puede recuperar? Filtra por rango configurable.
    */
-  async getRecoveryList(institutionId: string, academicYearId: string, groupId: string, termId?: string, minScore?: number, maxScore?: number) {
+  async getRecoveryList(institutionId: string, academicYearId: string, groupId: string, termId?: string, minScore?: number, maxScore?: number, reportMode?: ReportMode) {
     const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
     const effectiveMin = minScore ?? (passingGrade - 1.0);
     const effectiveMax = maxScore ?? (passingGrade - 0.1);
-    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId });
+    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId, reportMode });
 
     const recoverable = grades
       .filter(g => {
@@ -1372,11 +1372,11 @@ export class ReportsService {
    * Si mantiene tendencia, ¿aprueba el año?
    * Reutiliza calculateMinimumGradeForGroup para datos, agrega proyección.
    */
-  async getPromotionProjection(institutionId: string, academicYearId: string, groupId: string) {
+  async getPromotionProjection(institutionId: string, academicYearId: string, groupId: string, reportMode?: ReportMode) {
     const rulesCtx = await this.institutionContext.getContext(institutionId);
     const passingGrade = rulesCtx.minPassingGrade;
     const terms = await this.academicYearService.getTermsByAcademicYear(academicYearId);
-    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId });
+    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, reportMode });
 
     // Agrupar por estudiante → por asignatura → por período
     const studentMap = new Map<string, {
@@ -1508,8 +1508,8 @@ export class ReportsService {
    * Reporte 9: Comparativo de períodos
    * Evolución del rendimiento entre períodos.
    */
-  async getPeriodComparison(institutionId: string, academicYearId: string, groupId?: string, studentEnrollmentId?: string) {
-    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId });
+  async getPeriodComparison(institutionId: string, academicYearId: string, groupId?: string, studentEnrollmentId?: string, reportMode?: ReportMode) {
+    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, reportMode });
     const terms = await this.academicYearService.getTermsByAcademicYear(academicYearId);
     const termOrder = terms.sort((a, b) => a.order - b.order);
 
@@ -1661,10 +1661,10 @@ export class ReportsService {
    * Reporte 11: Análisis por asignatura
    * ¿Cómo se comporta una asignatura a lo largo del tiempo?
    */
-  async getSubjectAnalysis(institutionId: string, academicYearId: string, subjectId: string, groupId?: string) {
+  async getSubjectAnalysis(institutionId: string, academicYearId: string, subjectId: string, groupId?: string, reportMode?: ReportMode) {
     const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
     const terms = await this.academicYearService.getTermsByAcademicYear(academicYearId);
-    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, subjectId, groupId });
+    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, subjectId, groupId, reportMode });
 
     // Agrupar por grupo
     const groupMap = new Map<string, { name: string; termData: Map<string, number[]> }>();
@@ -1710,7 +1710,7 @@ export class ReportsService {
    * Reporte 12: Rendimiento por docente
    * ¿Cómo rinden los grupos con cada docente?
    */
-  async getTeacherPerformance(institutionId: string, academicYearId: string, teacherId?: string) {
+  async getTeacherPerformance(institutionId: string, academicYearId: string, teacherId?: string, reportMode?: ReportMode) {
     const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
 
     // Obtener asignaciones de docentes
@@ -1738,7 +1738,7 @@ export class ReportsService {
     }> = [];
 
     // Obtener todas las notas del año de una vez (via motor centralizado)
-    const { meta, grades: allGrades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId });
+    const { meta, grades: allGrades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, reportMode });
 
     // Indexar notas por grupo+asignatura
     const gradeIndex = new Map<string, number[]>();
@@ -1772,6 +1772,111 @@ export class ReportsService {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
+  // BLOQUE 4b — IMPACTO DE RECUPERACIONES
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Reporte de impacto de recuperación.
+   * Compara datos INITIAL vs FINAL para cuantificar el efecto real de las recuperaciones.
+   * Usa datos de PeriodRecovery (ya tiene originalScore, recoveryScore, finalScore).
+   */
+  async getRecoveryImpact(institutionId: string, academicTermId: string, groupId?: string) {
+    const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
+
+    // Obtener todas las recuperaciones del período
+    const where: any = {
+      institutionId,
+      academicTermId,
+      status: { in: ['APPROVED', 'NOT_APPROVED', 'COMPLETED'] },
+    };
+
+    const recoveries = await this.prisma.periodRecovery.findMany({
+      where,
+      include: {
+        studentEnrollment: {
+          select: {
+            id: true,
+            groupId: true,
+            student: { select: { firstName: true, lastName: true, secondLastName: true } },
+            group: { include: { grade: { select: { name: true } } } },
+          },
+        },
+        subject: { select: { id: true, name: true } },
+      },
+    });
+
+    // Filtrar por grupo si se especifica
+    const filtered = groupId
+      ? recoveries.filter(r => r.studentEnrollment.groupId === groupId)
+      : recoveries;
+
+    // Calcular estadísticas
+    const initialFailures = filtered.length; // Todos entraron por tener nota < aprobatoria
+    const recovered = filtered.filter(r => r.status === 'APPROVED' && r.finalScore !== null && Number(r.finalScore) >= passingGrade);
+    const notRecovered = filtered.filter(r => r.status !== 'APPROVED' || (r.finalScore !== null && Number(r.finalScore) < passingGrade));
+    const recoveryRate = initialFailures > 0 ? Math.round((recovered.length / initialFailures) * 1000) / 10 : 0;
+
+    // Detalle por asignatura
+    const subjectMap = new Map<string, { name: string; initial: number; recovered: number; remaining: number }>();
+    for (const r of filtered) {
+      const key = r.subjectId;
+      if (!subjectMap.has(key)) {
+        subjectMap.set(key, { name: r.subject.name, initial: 0, recovered: 0, remaining: 0 });
+      }
+      const entry = subjectMap.get(key)!;
+      entry.initial++;
+      if (r.status === 'APPROVED' && r.finalScore !== null && Number(r.finalScore) >= passingGrade) {
+        entry.recovered++;
+      } else {
+        entry.remaining++;
+      }
+    }
+
+    // Detalle por estudiante
+    const studentMap = new Map<string, {
+      name: string; group: string;
+      subjects: Array<{ name: string; originalScore: number; recoveryScore: number | null; finalScore: number | null; status: string }>;
+    }>();
+    for (const r of filtered) {
+      const key = r.studentEnrollmentId;
+      if (!studentMap.has(key)) {
+        const s = r.studentEnrollment.student;
+        studentMap.set(key, {
+          name: [s.lastName, s.secondLastName, s.firstName].filter(Boolean).join(' '),
+          group: `${r.studentEnrollment.group.grade.name} ${r.studentEnrollment.group.name}`,
+          subjects: [],
+        });
+      }
+      studentMap.get(key)!.subjects.push({
+        name: r.subject.name,
+        originalScore: Number(r.originalScore),
+        recoveryScore: r.recoveryScore !== null ? Number(r.recoveryScore) : null,
+        finalScore: r.finalScore !== null ? Number(r.finalScore) : null,
+        status: r.status,
+      });
+    }
+
+    return {
+      academicTermId,
+      passingGrade,
+      summary: {
+        initialFailures,
+        recoveredStudents: recovered.length,
+        remainingFailures: notRecovered.length,
+        recoveryRate,
+      },
+      bySubject: Array.from(subjectMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
+      byStudent: Array.from(studentMap.values())
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(s => ({
+          ...s,
+          totalRecoveries: s.subjects.length,
+          recoveredCount: s.subjects.filter(sub => sub.finalScore !== null && sub.finalScore >= passingGrade).length,
+        })),
+    };
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
   // BLOQUE 5 — REPORTES INSTITUCIONALES
   // ───────────────────────────────────────────────────────────────────────────
 
@@ -1780,9 +1885,9 @@ export class ReportsService {
    * Agrega estadísticas de TODOS los grupos por nivel educativo (stage).
    * Retorna: promedio por nivel, tasa aprobación, distribución, ranking de grupos.
    */
-  async getInstitutionalStatistics(institutionId: string, academicYearId: string, termId?: string) {
+  async getInstitutionalStatistics(institutionId: string, academicYearId: string, termId?: string, reportMode?: ReportMode) {
     const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
-    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, termId });
+    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, termId, reportMode });
 
     // Obtener todos los grupos del año con su stage (via enrollments activos)
     const groups = await this.prisma.group.findMany({
@@ -2916,6 +3021,7 @@ export class ReportsService {
             academicTermId: termId,
             studentEnrollmentId: card.enrollmentId,
             version,
+            snapshotType: 'INITIAL_CLOSE' as const,
             generatedById: userId,
             data: {
               institution: groupData.institution,
@@ -3123,6 +3229,7 @@ export class ReportsService {
               academicTermId: termId,
               studentEnrollmentId: card.enrollmentId,
               version,
+              snapshotType: 'INITIAL_CLOSE' as const,
               generatedById: userId,
               data: {
                 institution: groupData.institution,
