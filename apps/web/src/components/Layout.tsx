@@ -255,6 +255,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [expandedMenus, setExpandedMenus] = useState<string[]>([])
   const [hasDimensionsGroups, setHasDimensionsGroups] = useState(false)
+  const [delegatedPermissions, setDelegatedPermissions] = useState<{ canManageStudents: boolean; canManageCredentials: boolean }>({ canManageStudents: false, canManageCredentials: false })
   
   // Estado para modal de cambio de contraseña
   const [showPasswordModal, setShowPasswordModal] = useState(false)
@@ -302,6 +303,26 @@ export default function Layout({ children }: { children: ReactNode }) {
     checkDimensionsGroups()
   }, [])
 
+  // Verificar permisos delegados para docentes
+  useEffect(() => {
+    const checkDelegatedPermissions = async () => {
+      try {
+        const { staffApi } = await import('../lib/api')
+        const [studRes, credRes] = await Promise.all([
+          staffApi.checkStudentsPermission(),
+          staffApi.checkCredentialsPermission(),
+        ])
+        setDelegatedPermissions({
+          canManageStudents: studRes.data?.canManageStudents || false,
+          canManageCredentials: credRes.data?.canManageCredentials || false,
+        })
+      } catch {
+        setDelegatedPermissions({ canManageStudents: false, canManageCredentials: false })
+      }
+    }
+    checkDelegatedPermissions()
+  }, [])
+
   const userRoles = useMemo(() => {
     if (!user?.roles) return []
     return user.roles.map((r: any) => typeof r === 'string' ? r : r.role?.name || r.name).filter(Boolean)
@@ -317,10 +338,20 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   // Filtrar navegación según roles del usuario Y módulos habilitados
   const filteredNavigation = useMemo(() => {
+    const isDocente = userRoles.includes('DOCENTE') && !userRoles.includes('ADMIN_INSTITUTIONAL') && !userRoles.includes('COORDINADOR')
+    
     const filterByRoleAndModule = (item: NavItem): boolean => {
       // Verificar rol
       const hasRole = item.roles.some((role: Role) => userRoles.includes(role))
       if (!hasRole) return false
+      
+      // Para docentes: verificar permisos delegados para menú Estudiantes
+      if (isDocente && item.href === '/students') {
+        // Solo mostrar si tiene permiso de estudiantes O credenciales
+        if (!delegatedPermissions.canManageStudents && !delegatedPermissions.canManageCredentials) {
+          return false
+        }
+      }
       
       // Verificar si requiere grupos con estructura DIMENSIONS (preescolar)
       // Admin y Coordinador siempre ven el menú, solo docentes se filtran
@@ -344,7 +375,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       }))
       // Filtrar items padre que quedaron sin hijos
       .filter((item: NavItem) => !item.children || item.children.length > 0)
-  }, [userRoles, navigation, isSuperAdmin, hasModule, hasDimensionsGroups])
+  }, [userRoles, navigation, isSuperAdmin, hasModule, hasDimensionsGroups, delegatedPermissions])
 
   // Auto-expandir menú si la ruta actual está en un submenú
   useMemo(() => {
