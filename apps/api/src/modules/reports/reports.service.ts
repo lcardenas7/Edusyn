@@ -2182,6 +2182,10 @@ export class ReportsService {
         subjectCode: string | null;
         teacher: string | null;
         grade: number | null;
+        originalGrade: number | null;
+        recoveryGrade: number | null;
+        hasRecovery: boolean;
+        recoveryStatus: string | null;
         weightPercentage: number;
         performanceLevel: string | null;
         components: { componentId: string; name: string; average: number | null; percentage: number }[];
@@ -2327,6 +2331,36 @@ export class ReportsService {
     for (const fg of allFinalGrades) {
       const key = `${fg.studentEnrollmentId}_${fg.subjectId}`;
       finalGradesMap.set(key, Number(fg.finalScore));
+    }
+
+    // ─── QUERY 6.6: PeriodRecovery — Para mostrar notas de recuperación ────────
+    const allRecoveries = await this.prisma.periodRecovery.findMany({
+      where: {
+        studentEnrollmentId: { in: enrollmentIds },
+        academicTermId,
+        status: { in: ['APPROVED', 'COMPLETED'] },
+        finalScore: { not: null },
+      },
+      select: {
+        studentEnrollmentId: true,
+        subjectId: true,
+        originalScore: true,
+        recoveryScore: true,
+        finalScore: true,
+        status: true,
+      },
+    });
+
+    // Map<enrollmentId_subjectId, recovery data> — Para mostrar historial de recuperación
+    const recoveryMap = new Map<string, { originalScore: number; recoveryScore: number | null; finalScore: number; status: string }>();
+    for (const rec of allRecoveries) {
+      const key = `${rec.studentEnrollmentId}_${rec.subjectId}`;
+      recoveryMap.set(key, {
+        originalScore: Number(rec.originalScore),
+        recoveryScore: rec.recoveryScore ? Number(rec.recoveryScore) : null,
+        finalScore: Number(rec.finalScore),
+        status: rec.status,
+      });
     }
 
     // ─── QUERY 7: PerformanceScale (1 sola vez por institución) ──────────
@@ -2547,12 +2581,30 @@ export class ReportsService {
           const absencesKey = subject.teacherAssignmentId ? `${enrollmentId}_${subject.teacherAssignmentId}` : null;
           const absences = absencesKey ? (subjectAbsencesMap.get(absencesKey) || 0) : 0;
 
+          // ─── Obtener información de recuperación si existe ──────────────────
+          const recoveryKey = subject.id ? `${enrollmentId}_${subject.id}` : null;
+          const recovery = recoveryKey ? recoveryMap.get(recoveryKey) : null;
+          const hasRecovery = !!recovery;
+          
+          // Calcular nota original (sin recuperación)
+          let originalGrade: number | null = null;
+          if (hasRecovery && recovery) {
+            originalGrade = recovery.originalScore;
+          } else if (termGrade.grade !== null) {
+            // Si no hay recuperación, la nota original es la calculada
+            originalGrade = termGrade.grade;
+          }
+
           return {
             subjectId: subject.id,
             subject: subject.name,
             subjectCode: subject.code,
             teacher: subject.teacher,
             grade: termGrade.grade,
+            originalGrade: originalGrade,
+            recoveryGrade: recovery?.recoveryScore ?? null,
+            hasRecovery,
+            recoveryStatus: recovery?.status ?? null,
             weightPercentage: subject.weightPercentage,
             performanceLevel: performanceResult?.level || null,
             components: termGrade.components,
