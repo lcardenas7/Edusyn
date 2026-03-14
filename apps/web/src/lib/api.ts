@@ -1069,6 +1069,11 @@ export const staffApi = {
   getDelegatedCredentialsPermissions: () => api.get('/iam/delegated-permissions/credentials'),
   getAvailableTeachersForPermission: () => api.get('/iam/delegated-permissions/available-teachers'),
   toggleCredentialsPermission: (userId: string, allow: boolean) => api.post('/iam/delegated-permissions/credentials', { userId, allow }),
+  // Permisos delegados de estudiantes (temporal para pruebas)
+  checkStudentsPermission: () => api.get('/iam/delegated-permissions/students/check'),
+  getDelegatedStudentsPermissions: () => api.get('/iam/delegated-permissions/students'),
+  getAvailableTeachersForStudentsPermission: () => api.get('/iam/delegated-permissions/students/available-teachers'),
+  toggleStudentsPermission: (userId: string, allow: boolean) => api.post('/iam/delegated-permissions/students', { userId, allow }),
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

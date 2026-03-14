@@ -4,6 +4,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { CredentialsGuard } from '../auth/guards/credentials.guard';
+import { StudentsGuard } from '../auth/guards/students.guard';
 import { StudentsService } from './students.service';
 import { CreateStudentDto, UpdateStudentDto, EnrollStudentDto, UpdateEnrollmentStatusDto } from './dto/create-student.dto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -18,7 +19,7 @@ export class StudentsController {
   ) {}
 
   @Post()
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @UseGuards(StudentsGuard)
   async create(@Body() dto: CreateStudentDto) {
     return this.studentsService.create(dto);
   }
@@ -49,7 +50,7 @@ export class StudentsController {
   }
 
   @Post('enroll')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @UseGuards(StudentsGuard)
   async enroll(@Body() dto: EnrollStudentDto) {
     return this.studentsService.enroll(dto);
   }

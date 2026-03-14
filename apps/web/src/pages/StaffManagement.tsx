@@ -98,11 +98,15 @@ export default function StaffManagement() {
   const [allowStudentPwdChange, setAllowStudentPwdChange] = useState(true)
   const [togglingPwdSetting, setTogglingPwdSetting] = useState(false)
 
-  // Delegated permissions states
+  // Delegated permissions states - Credentials
   const [delegatedUsers, setDelegatedUsers] = useState<any[]>([])
   const [availableTeachers, setAvailableTeachers] = useState<any[]>([])
   const [loadingDelegated, setLoadingDelegated] = useState(false)
   const [togglingPermission, setTogglingPermission] = useState<string | null>(null)
+  // Delegated permissions states - Students
+  const [delegatedStudentsUsers, setDelegatedStudentsUsers] = useState<any[]>([])
+  const [availableStudentsTeachers, setAvailableStudentsTeachers] = useState<any[]>([])
+  const [togglingStudentsPermission, setTogglingStudentsPermission] = useState<string | null>(null)
 
   // Load users
   useEffect(() => {
@@ -218,12 +222,16 @@ export default function StaffManagement() {
   const loadDelegatedPermissions = async () => {
     setLoadingDelegated(true)
     try {
-      const [delegatedRes, availableRes] = await Promise.all([
+      const [delegatedRes, availableRes, delegatedStudRes, availableStudRes] = await Promise.all([
         staffApi.getDelegatedCredentialsPermissions(),
         staffApi.getAvailableTeachersForPermission(),
+        staffApi.getDelegatedStudentsPermissions(),
+        staffApi.getAvailableTeachersForStudentsPermission(),
       ])
       setDelegatedUsers(delegatedRes.data || [])
       setAvailableTeachers(availableRes.data || [])
+      setDelegatedStudentsUsers(delegatedStudRes.data || [])
+      setAvailableStudentsTeachers(availableStudRes.data || [])
     } catch (error) {
       console.error('Error loading delegated permissions:', error)
     } finally {
@@ -240,6 +248,18 @@ export default function StaffManagement() {
       alert(err.response?.data?.message || 'Error al cambiar permiso')
     } finally {
       setTogglingPermission(null)
+    }
+  }
+
+  const handleToggleStudentsPermission = async (userId: string, allow: boolean) => {
+    setTogglingStudentsPermission(userId)
+    try {
+      await staffApi.toggleStudentsPermission(userId, allow)
+      await loadDelegatedPermissions()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al cambiar permiso')
+    } finally {
+      setTogglingStudentsPermission(null)
     }
   }
 
@@ -1455,7 +1475,7 @@ export default function StaffManagement() {
 
             <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800">
-                <strong>¿Qué puede hacer un docente con este permiso?</strong>
+                <strong>¿Qué puede hacer un docente con permiso de Credenciales?</strong>
               </p>
               <ul className="text-sm text-blue-700 mt-2 space-y-1 list-disc list-inside">
                 <li>Ver credenciales de estudiantes de la institución</li>
@@ -1463,6 +1483,116 @@ export default function StaffManagement() {
                 <li>Resetear contraseñas de estudiantes</li>
                 <li>Imprimir y exportar listados de credenciales</li>
               </ul>
+            </div>
+
+            {/* Separador */}
+            <hr className="my-8 border-slate-200" />
+
+            {/* Permisos de Estudiantes */}
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                <Users className="w-5 h-5 text-blue-600" />
+                Permisos de Gestión de Estudiantes
+                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Temporal</span>
+              </h2>
+              <p className="text-sm text-slate-500 mt-1">
+                Permite a docentes crear y editar estudiantes (para fase de pruebas)
+              </p>
+            </div>
+
+            {loadingDelegated ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Docentes con permiso de estudiantes */}
+                <div>
+                  <h3 className="text-sm font-medium text-slate-700 mb-3 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                    Con permiso ({delegatedStudentsUsers.length})
+                  </h3>
+                  {delegatedStudentsUsers.length === 0 ? (
+                    <div className="p-4 bg-slate-50 rounded-lg text-center text-sm text-slate-500">
+                      Ningún docente tiene este permiso
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {delegatedStudentsUsers.map((u) => (
+                        <div key={u.userId} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div>
+                            <p className="font-medium text-slate-900">{u.firstName} {u.lastName}</p>
+                            <p className="text-xs text-slate-500">{u.email}</p>
+                          </div>
+                          <button
+                            onClick={() => handleToggleStudentsPermission(u.userId, false)}
+                            disabled={togglingStudentsPermission === u.userId}
+                            className="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {togglingStudentsPermission === u.userId ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <XCircle className="w-3 h-3" />
+                            )}
+                            Revocar
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Docentes disponibles para estudiantes */}
+                <div>
+                  <h3 className="text-sm font-medium text-slate-700 mb-3 flex items-center gap-2">
+                    <User className="w-4 h-4 text-slate-500" />
+                    Disponibles ({availableStudentsTeachers.length})
+                  </h3>
+                  {availableStudentsTeachers.length === 0 ? (
+                    <div className="p-4 bg-slate-50 rounded-lg text-center text-sm text-slate-500">
+                      No hay docentes disponibles
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {availableStudentsTeachers.map((u) => (
+                        <div key={u.userId} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                          <div>
+                            <p className="font-medium text-slate-900">{u.firstName} {u.lastName}</p>
+                            <p className="text-xs text-slate-500">{u.email}</p>
+                          </div>
+                          <button
+                            onClick={() => handleToggleStudentsPermission(u.userId, true)}
+                            disabled={togglingStudentsPermission === u.userId}
+                            className="px-3 py-1.5 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {togglingStudentsPermission === u.userId ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="w-3 h-3" />
+                            )}
+                            Asignar
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800">
+                <strong>¿Qué puede hacer un docente con permiso de Estudiantes?</strong>
+              </p>
+              <ul className="text-sm text-amber-700 mt-2 space-y-1 list-disc list-inside">
+                <li>Crear nuevos estudiantes</li>
+                <li>Matricular estudiantes en grupos</li>
+                <li>Importar estudiantes desde Excel</li>
+                <li>Actualizar datos de estudiantes existentes</li>
+              </ul>
+              <p className="text-xs text-amber-600 mt-2 italic">
+                Este permiso es temporal para la fase de pruebas.
+              </p>
             </div>
           </div>
         )}

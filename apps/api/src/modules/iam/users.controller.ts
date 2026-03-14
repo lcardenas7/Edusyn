@@ -929,4 +929,150 @@ export class UsersController {
       email: iu.user.email,
     }));
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PERMISOS DELEGADOS — Gestión de estudiantes (temporal para pruebas)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Verifica si el usuario actual tiene permiso para gestionar estudiantes.
+   */
+  @Get('delegated-permissions/students/check')
+  async checkStudentsPermission(@Request() req: any) {
+    const userId = req.user.sub || req.user.id;
+    const institutionId = req.user.institutionId;
+
+    const roles: string[] = req.user.roles || [];
+    const roleNames = roles.map((r: any) => 
+      typeof r === 'string' ? r : r?.role?.name || r?.name || ''
+    );
+
+    const hasAdminRole = roleNames.some(name => 
+      ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'].includes(name)
+    );
+
+    if (hasAdminRole) {
+      return { canManageStudents: true, source: 'role' };
+    }
+
+    if (!institutionId) {
+      return { canManageStudents: false, source: 'no_institution' };
+    }
+
+    const institutionUser = await this.prisma.institutionUser.findUnique({
+      where: { userId_institutionId: { userId, institutionId } },
+      select: { canManageStudents: true, isActive: true },
+    });
+
+    const hasPermission = institutionUser?.isActive === true && institutionUser?.canManageStudents === true;
+    return { canManageStudents: hasPermission, source: hasPermission ? 'delegated' : 'none' };
+  }
+
+  /**
+   * Asigna o revoca el permiso de gestión de estudiantes a un usuario.
+   */
+  @Post('delegated-permissions/students')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async toggleStudentsPermission(
+    @Request() req: any,
+    @Body() body: { userId: string; allow: boolean },
+  ) {
+    const adminUserId = req.user.sub || req.user.id;
+    const institutionId = req.user.institutionId;
+
+    if (!institutionId) {
+      throw new BadRequestException('No se pudo determinar la institución');
+    }
+
+    const targetInstitutionUser = await this.prisma.institutionUser.findUnique({
+      where: { userId_institutionId: { userId: body.userId, institutionId } },
+      include: { user: { select: { firstName: true, lastName: true } } },
+    });
+
+    if (!targetInstitutionUser) {
+      throw new BadRequestException('El usuario no pertenece a esta institución');
+    }
+
+    await this.prisma.institutionUser.update({
+      where: { id: targetInstitutionUser.id },
+      data: {
+        canManageStudents: body.allow,
+        studentsPermissionById: body.allow ? adminUserId : null,
+        studentsPermissionAt: body.allow ? new Date() : null,
+      },
+    });
+
+    const userName = `${targetInstitutionUser.user.firstName} ${targetInstitutionUser.user.lastName}`;
+    return {
+      success: true,
+      userId: body.userId,
+      canManageStudents: body.allow,
+      message: body.allow
+        ? `${userName} ahora puede gestionar estudiantes`
+        : `Se ha revocado el permiso de gestión de estudiantes a ${userName}`,
+    };
+  }
+
+  /**
+   * Lista usuarios con permiso de gestión de estudiantes.
+   */
+  @Get('delegated-permissions/students')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async listStudentsPermissions(@Request() req: any) {
+    const institutionId = req.user.institutionId;
+
+    if (!institutionId) {
+      throw new BadRequestException('No se pudo determinar la institución');
+    }
+
+    const usersWithPermission = await this.prisma.institutionUser.findMany({
+      where: { institutionId, canManageStudents: true },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+      },
+    });
+
+    return usersWithPermission.map(iu => ({
+      userId: iu.userId,
+      firstName: iu.user.firstName,
+      lastName: iu.user.lastName,
+      email: iu.user.email,
+      assignedAt: iu.studentsPermissionAt,
+    }));
+  }
+
+  /**
+   * Lista docentes disponibles para asignar permiso de estudiantes.
+   */
+  @Get('delegated-permissions/students/available-teachers')
+  @Roles('ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async listAvailableTeachersForStudentsPermission(@Request() req: any) {
+    const institutionId = req.user.institutionId;
+
+    if (!institutionId) {
+      throw new BadRequestException('No se pudo determinar la institución');
+    }
+
+    const docenteRole = await this.prisma.role.findFirst({ where: { name: 'DOCENTE' } });
+    if (!docenteRole) return [];
+
+    const teachers = await this.prisma.institutionUser.findMany({
+      where: {
+        institutionId,
+        isActive: true,
+        canManageStudents: false,
+        institutionUserRoles: { some: { roleId: docenteRole.id } },
+      },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+      },
+    });
+
+    return teachers.map(iu => ({
+      userId: iu.userId,
+      firstName: iu.user.firstName,
+      lastName: iu.user.lastName,
+      email: iu.user.email,
+    }));
+  }
 }

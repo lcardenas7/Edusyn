@@ -584,6 +584,9 @@ model InstitutionUser {
   canManageCredentials      Boolean   @default(false) // Puede gestionar credenciales de estudiantes
   credentialsPermissionById String?   // Quién asignó el permiso (auditoría)
   credentialsPermissionAt   DateTime? // Cuándo se asignó
+  canManageStudents         Boolean   @default(false) // Puede crear/editar estudiantes (temporal para pruebas)
+  studentsPermissionById    String?   // Quién asignó el permiso
+  studentsPermissionAt      DateTime? // Cuándo se asignó
 
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)

@@ -178,6 +178,7 @@ export default function Students() {
   const [credentialsAccessFilter, setCredentialsAccessFilter] = useState<'ALL' | 'WITH_ACCESS' | 'WITHOUT_ACCESS'>('ALL')
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
   const [canManageCredentials, setCanManageCredentials] = useState(false)
+  const [canManageStudents, setCanManageStudents] = useState(false)
   const [processingCredentials, setProcessingCredentials] = useState(false)
   const [editingUsernameId, setEditingUsernameId] = useState<string | null>(null)
   const [editingUsernameValue, setEditingUsernameValue] = useState('')
@@ -251,17 +252,22 @@ export default function Students() {
     loadInitialData()
   }, [institution?.id])
 
-  // Verificar permiso de gestión de credenciales
+  // Verificar permisos delegados
   useEffect(() => {
-    const checkCredentialsPermission = async () => {
+    const checkPermissions = async () => {
       try {
-        const res = await staffApi.checkCredentialsPermission()
-        setCanManageCredentials(res.data?.canManageCredentials || false)
+        const [credRes, studRes] = await Promise.all([
+          staffApi.checkCredentialsPermission(),
+          staffApi.checkStudentsPermission(),
+        ])
+        setCanManageCredentials(credRes.data?.canManageCredentials || false)
+        setCanManageStudents(studRes.data?.canManageStudents || false)
       } catch {
         setCanManageCredentials(false)
+        setCanManageStudents(false)
       }
     }
-    checkCredentialsPermission()
+    checkPermissions()
   }, [])
 
   useEffect(() => {
@@ -1765,22 +1771,28 @@ export default function Students() {
                 <Printer className="w-4 h-4" />
                 Listados
               </button>
-              <button onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm">
-                <Upload className="w-4 h-4" />
-                Importar
-              </button>
-              <button onClick={() => setShowBulkUpdateModal(true)} className="flex items-center gap-2 px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm" title="Actualizar datos de estudiantes existentes">
-                <RefreshCw className="w-4 h-4" />
-                Actualizar Masivo
-              </button>
+              {canManageStudents && (
+                <button onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm">
+                  <Upload className="w-4 h-4" />
+                  Importar
+                </button>
+              )}
+              {canManageStudents && (
+                <button onClick={() => setShowBulkUpdateModal(true)} className="flex items-center gap-2 px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm" title="Actualizar datos de estudiantes existentes">
+                  <RefreshCw className="w-4 h-4" />
+                  Actualizar Masivo
+                </button>
+              )}
               <button onClick={handleExport} className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm">
                 <Download className="w-4 h-4" />
                 Exportar
               </button>
-              <button onClick={handleOpenNew} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                <Plus className="w-4 h-4" />
-                Nuevo Estudiante
-              </button>
+              {canManageStudents && (
+                <button onClick={handleOpenNew} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  <Plus className="w-4 h-4" />
+                  Nuevo Estudiante
+                </button>
+              )}
             </div>
           </div>
 
