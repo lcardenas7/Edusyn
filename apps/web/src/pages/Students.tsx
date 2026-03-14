@@ -782,6 +782,7 @@ export default function Students() {
       { header: 'Grupo', key: 'group' },
       { header: 'Usuario', key: 'username' },
       { header: 'Contraseña Inicial', key: 'initialPassword' },
+      { header: 'Estado', key: 'passwordStatus' },
     ]
     const data = studentsWithAccess.map(u => ({
       fullName: `${u.lastName} ${u.firstName}`,
@@ -789,6 +790,7 @@ export default function Students() {
       group: u.group,
       username: u.username,
       initialPassword: u.initialPassword,
+      passwordStatus: u.mustChangePassword === false ? '⚠️ Contraseña cambiada' : 'Contraseña inicial',
     }))
     exportToExcel(data, columns, `Credenciales_Estudiantes_${credentialsGroupFilter !== 'ALL' ? credentialsGroupFilter.replace(/\s+/g, '_') : 'Todos'}.xlsx`)
   }
@@ -812,7 +814,10 @@ export default function Students() {
             th { background-color: #f1f5f9; font-weight: bold; }
             tr:nth-child(even) { background-color: #f8fafc; }
             .password { font-family: monospace; background: #fef3c7; padding: 2px 6px; border-radius: 4px; }
+            .password-changed { font-family: monospace; background: #fee2e2; padding: 2px 6px; border-radius: 4px; text-decoration: line-through; }
             .username { font-family: monospace; background: #dbeafe; padding: 2px 6px; border-radius: 4px; }
+            .warning { color: #dc2626; font-weight: bold; }
+            .ok { color: #16a34a; }
             .footer { margin-top: 20px; font-size: 10px; color: #94a3b8; text-align: center; }
             @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
           </style>
@@ -829,6 +834,7 @@ export default function Students() {
                 <th>Grupo</th>
                 <th>Usuario</th>
                 <th>Contraseña</th>
+                <th>Estado</th>
               </tr>
             </thead>
             <tbody>
@@ -839,12 +845,13 @@ export default function Students() {
                   <td>${u.documentNumber}</td>
                   <td>${u.group}</td>
                   <td><span class="username">${u.username}</span></td>
-                  <td><span class="password">${u.initialPassword}</span></td>
+                  <td><span class="${u.mustChangePassword === false ? 'password-changed' : 'password'}">${u.initialPassword}</span></td>
+                  <td class="${u.mustChangePassword === false ? 'warning' : 'ok'}">${u.mustChangePassword === false ? '⚠️ Cambiada' : '✓ Inicial'}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
-          <p class="footer">Generado por EduSyn - ${new Date().toLocaleDateString('es-CO')} | La contraseña inicial es el número de documento</p>
+          <p class="footer">Generado por EduSyn - ${new Date().toLocaleDateString('es-CO')} | La contraseña inicial es el número de documento<br/>⚠️ = El estudiante ya cambió su contraseña, el documento ya no es válido como clave</p>
         </body>
       </html>
     `
