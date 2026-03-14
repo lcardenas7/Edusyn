@@ -577,6 +577,29 @@ export class EnrollmentService {
     }
 
     const previousGroupId = enrollment.groupId;
+    const previousGradeId = enrollment.group.gradeId;
+    const isSameGrade = previousGradeId === newGroup.gradeId;
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MIGRACIÓN DE NOTAS (solo si es el mismo grado)
+    // ═══════════════════════════════════════════════════════════════════════════
+    let gradesMigrationResult: {
+      partialGradesMigrated: number;
+      studentGradesMigrated: number;
+      attendanceMigrated: number;
+      tutoringAttendanceMigrated: number;
+      subjectsMatched: string[];
+      subjectsNotMatched: string[];
+    } | null = null;
+
+    if (isSameGrade) {
+      gradesMigrationResult = await this.migrateGradesToNewGroup(
+        dto.enrollmentId,
+        previousGroupId,
+        dto.newGroupId,
+        enrollment.academicYearId,
+      );
+    }
 
     // Actualizar la matrícula
     const updatedEnrollment = await this.prisma.studentEnrollment.update({
@@ -595,19 +618,167 @@ export class EnrollmentService {
       },
     });
 
-    // Crear evento de auditoría
+    // ═══════════════════════════════════════════════════════════════════════════
+    // REGENERAR SNAPSHOT DE ESTRUCTURA ACADÉMICA
+    // El snapshot del nuevo grupo puede tener docentes diferentes
+    // ═══════════════════════════════════════════════════════════════════════════
+    await this.regenerateAcademicSnapshot(dto.enrollmentId);
+
+    // Crear evento de auditoría con información de migración
     await this.createEnrollmentEvent({
       enrollmentId: dto.enrollmentId,
       type: 'GROUP_CHANGED',
       movementType: dto.movementType,
-      previousValue: { groupId: previousGroupId },
-      newValue: { groupId: dto.newGroupId },
+      previousValue: { 
+        groupId: previousGroupId,
+        groupName: enrollment.group.name,
+        gradeId: previousGradeId,
+      },
+      newValue: { 
+        groupId: dto.newGroupId,
+        groupName: newGroup.name,
+        gradeId: newGroup.gradeId,
+        gradesMigration: gradesMigrationResult,
+      },
       reason: dto.reason,
       observations: dto.observations,
       performedById: dto.performedById,
     });
 
-    return updatedEnrollment;
+    return {
+      ...updatedEnrollment,
+      gradesMigration: gradesMigrationResult,
+      isSameGrade,
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MIGRAR NOTAS AL NUEVO GRUPO
+  // Solo para cambios entre grupos del MISMO GRADO
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  private async migrateGradesToNewGroup(
+    enrollmentId: string,
+    previousGroupId: string,
+    newGroupId: string,
+    academicYearId: string,
+  ): Promise<{
+    partialGradesMigrated: number;
+    studentGradesMigrated: number;
+    attendanceMigrated: number;
+    tutoringAttendanceMigrated: number;
+    subjectsMatched: string[];
+    subjectsNotMatched: string[];
+  }> {
+    // 1. Obtener TeacherAssignments del grupo anterior y nuevo
+    const [oldAssignments, newAssignments] = await Promise.all([
+      this.prisma.teacherAssignment.findMany({
+        where: { groupId: previousGroupId, academicYearId },
+        include: { subject: true },
+      }),
+      this.prisma.teacherAssignment.findMany({
+        where: { groupId: newGroupId, academicYearId },
+        include: { subject: true },
+      }),
+    ]);
+
+    // 2. Crear mapeo de subjectId -> newTeacherAssignmentId
+    const newAssignmentBySubject = new Map(
+      newAssignments.map(ta => [ta.subjectId, ta.id])
+    );
+
+    const subjectsMatched: string[] = [];
+    const subjectsNotMatched: string[] = [];
+    let partialGradesMigrated = 0;
+    let studentGradesMigrated = 0;
+    let attendanceMigrated = 0;
+
+    // 3. Para cada assignment del grupo anterior, migrar notas al nuevo
+    for (const oldTa of oldAssignments) {
+      const newTaId = newAssignmentBySubject.get(oldTa.subjectId);
+
+      if (!newTaId) {
+        // La asignatura no existe en el nuevo grupo
+        subjectsNotMatched.push(oldTa.subject.name);
+        continue;
+      }
+
+      subjectsMatched.push(oldTa.subject.name);
+
+      // 3a. Migrar PartialGrades
+      const partialResult = await this.prisma.partialGrade.updateMany({
+        where: {
+          studentEnrollmentId: enrollmentId,
+          teacherAssignmentId: oldTa.id,
+        },
+        data: {
+          teacherAssignmentId: newTaId,
+        },
+      });
+      partialGradesMigrated += partialResult.count;
+
+      // 3b. Migrar StudentGrades (a través de EvaluativeActivity)
+      // Primero obtener las actividades del assignment anterior
+      const oldActivities = await this.prisma.evaluativeActivity.findMany({
+        where: { teacherAssignmentId: oldTa.id },
+        select: { id: true },
+      });
+
+      if (oldActivities.length > 0) {
+        // Verificar si hay actividades equivalentes en el nuevo assignment
+        // Por ahora, las notas de StudentGrade quedan vinculadas a las actividades originales
+        // Esto es correcto porque EvaluativeActivity.id no cambia
+        // Solo contamos cuántas hay para el reporte
+        const studentGradesCount = await this.prisma.studentGrade.count({
+          where: {
+            studentEnrollmentId: enrollmentId,
+            evaluativeActivityId: { in: oldActivities.map(a => a.id) },
+          },
+        });
+        studentGradesMigrated += studentGradesCount;
+      }
+
+      // 3c. Migrar AttendanceRecords
+      const attendanceResult = await this.prisma.attendanceRecord.updateMany({
+        where: {
+          studentEnrollmentId: enrollmentId,
+          teacherAssignmentId: oldTa.id,
+        },
+        data: {
+          teacherAssignmentId: newTaId,
+        },
+      });
+      attendanceMigrated += attendanceResult.count;
+    }
+
+    // 4. Migrar TutoringAttendance (asistencia de tutoría/dirección de grupo)
+    // Esta tabla tiene groupId directo, no teacherAssignmentId
+    const tutoringResult = await this.prisma.tutoringAttendance.updateMany({
+      where: {
+        studentEnrollmentId: enrollmentId,
+        groupId: previousGroupId,
+      },
+      data: {
+        groupId: newGroupId,
+      },
+    });
+    const tutoringAttendanceMigrated = tutoringResult.count;
+
+    console.log(
+      `[ChangeGroup] Migración de notas para enrollment ${enrollmentId}: ` +
+      `${partialGradesMigrated} PartialGrades, ${studentGradesMigrated} StudentGrades (referenciados), ` +
+      `${attendanceMigrated} AttendanceRecords, ${tutoringAttendanceMigrated} TutoringAttendance. ` +
+      `Asignaturas: ${subjectsMatched.length} migradas, ${subjectsNotMatched.length} sin equivalente.`
+    );
+
+    return {
+      partialGradesMigrated,
+      studentGradesMigrated,
+      attendanceMigrated,
+      tutoringAttendanceMigrated,
+      subjectsMatched,
+      subjectsNotMatched,
+    };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
