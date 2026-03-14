@@ -502,7 +502,8 @@ export class PeriodRecoveryService {
       finalScore = recovery.originalScore;
     }
 
-    return this.prisma.periodRecovery.update({
+    // Actualizar PeriodRecovery
+    const updatedRecovery = await this.prisma.periodRecovery.update({
       where: { id },
       data: {
         status: finalStatus,
@@ -517,6 +518,28 @@ export class PeriodRecoveryService {
         reviewedBy: { select: { firstName: true, lastName: true } },
       },
     });
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PROPAGACIÓN A PeriodFinalGrade
+    // Si la recuperación fue aprobada, actualizar la nota final del período
+    // para que los boletines reflejen la nota recuperada
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (finalStatus === 'APPROVED' && recovery.finalScore !== null) {
+      await this.prisma.periodFinalGrade.updateMany({
+        where: {
+          studentEnrollmentId: recovery.studentEnrollmentId,
+          subjectId: recovery.subjectId,
+          academicTermId: recovery.academicTermId,
+        },
+        data: {
+          finalScore: recovery.finalScore,
+          // Marcar que fue modificada por recuperación
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    return updatedRecovery;
   }
 
   async getRecoveryStats(academicTermId: string, institutionId: string) {
