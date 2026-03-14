@@ -1348,21 +1348,55 @@ export class ReportsService {
     const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
     const effectiveMin = minScore ?? (passingGrade - 1.0);
     const effectiveMax = maxScore ?? (passingGrade - 0.1);
-    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId, reportMode });
 
-    const recoverable = grades
-      .filter(g => {
-        return g.finalScore >= effectiveMin && g.finalScore < passingGrade && g.finalScore <= effectiveMax;
+    // Obtener recuperaciones directamente de PeriodRecovery (datos en vivo)
+    const where: any = {
+      institutionId,
+      academicYearId,
+      groupId,
+      status: { in: ['PENDING', 'IN_PROGRESS', 'APPROVED', 'NOT_APPROVED', 'COMPLETED'] },
+    };
+    if (termId) where.academicTermId = termId;
+
+    const recoveries = await this.prisma.periodRecovery.findMany({
+      where,
+      include: {
+        studentEnrollment: {
+          select: {
+            student: { select: { firstName: true, lastName: true, secondLastName: true } },
+            group: { select: { name: true } },
+          },
+        },
+        subject: { select: { name: true } },
+        academicTerm: { select: { name: true } },
+      },
+    });
+
+    // Filtrar por rango de notas (usar originalScore para determinar quiénes necesitan recuperación)
+    const recoverable = recoveries
+      .filter(r => {
+        const originalScore = Number(r.originalScore);
+        return originalScore >= effectiveMin && originalScore < passingGrade && originalScore <= effectiveMax;
       })
-      .map(g => ({
-        studentName: g.studentFullName || `${g.studentLastName} ${g.studentFirstName}`,
-        group: g.groupName,
-        subjectName: g.subjectName,
-        grade: g.finalScore,
-        termName: g.termName,
-        deficit: Math.round((passingGrade - g.finalScore) * 10) / 10,
+      .map(r => ({
+        studentName: [r.studentEnrollment.student.lastName, r.studentEnrollment.student.secondLastName, r.studentEnrollment.student.firstName].filter(Boolean).join(' '),
+        group: r.studentEnrollment.group.name,
+        subjectName: r.subject.name,
+        grade: r.finalScore !== null ? Number(r.finalScore) : Number(r.originalScore), // Mostrar final si existe, sino original
+        termName: r.academicTerm.name,
+        deficit: Math.round((passingGrade - Number(r.originalScore)) * 10) / 10,
+        status: r.status,
+        recoveryScore: r.recoveryScore !== null ? Number(r.recoveryScore) : null,
       }))
       .sort((a, b) => a.studentName.localeCompare(b.studentName));
+
+    // Meta para compatibilidad con otros reportes
+    const meta = { 
+      source: 'live', 
+      reportMode: reportMode ?? 'FINAL',
+      totalStudents: new Set(recoverable.map(r => r.studentName)).size,
+      scope: 'group',
+    };
 
     return { meta, passingGrade, rangeMin: effectiveMin, rangeMax: effectiveMax, totalRecoverable: recoverable.length, results: recoverable };
   }
