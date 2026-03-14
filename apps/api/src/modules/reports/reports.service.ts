@@ -2308,6 +2308,27 @@ export class ReportsService {
       partialsMap.set(pg.studentEnrollmentId, list);
     }
 
+    // ─── QUERY 6.5: PeriodFinalGrade — Override para recuperaciones ────────
+    // Si existe una nota final (especialmente de recuperación), usarla en lugar de recalcular
+    const allFinalGrades = await this.prisma.periodFinalGrade.findMany({
+      where: {
+        studentEnrollmentId: { in: enrollmentIds },
+        academicTermId,
+      },
+      select: {
+        studentEnrollmentId: true,
+        subjectId: true,
+        finalScore: true,
+      },
+    });
+
+    // Map<enrollmentId_subjectId, finalScore> — Para override de notas de recuperación
+    const finalGradesMap = new Map<string, number>();
+    for (const fg of allFinalGrades) {
+      const key = `${fg.studentEnrollmentId}_${fg.subjectId}`;
+      finalGradesMap.set(key, Number(fg.finalScore));
+    }
+
     // ─── QUERY 7: PerformanceScale (1 sola vez por institución) ──────────
     const performanceScales = await this.prisma.performanceScale.findMany({
       where: { institutionId },
@@ -2506,6 +2527,16 @@ export class ReportsService {
               plansMap,
               partialsMap,
             );
+          }
+
+          // ─── Override con PeriodFinalGrade si existe (para recuperaciones) ───
+          // Si hay una nota final guardada (ej: de recuperación), usarla en lugar de la calculada
+          if (subject.id) {
+            const finalGradeKey = `${enrollmentId}_${subject.id}`;
+            const finalGradeOverride = finalGradesMap.get(finalGradeKey);
+            if (finalGradeOverride !== undefined) {
+              termGrade = { ...termGrade, grade: finalGradeOverride };
+            }
           }
 
           const performanceResult = termGrade.grade

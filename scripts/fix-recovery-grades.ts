@@ -11,15 +11,44 @@
 
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: 'postgresql://postgres:HAvTNeXPTjDApwRxwPYyqGrLuDMTLNsM@centerbeam.proxy.rlwy.net:53943/railway'
+    }
+  }
+});
 
 async function fixRecoveryGrades() {
   console.log('🔧 Iniciando corrección de notas de recuperación...\n');
+  
+  // Verificar conexión y mostrar todas las recuperaciones
+  console.log('🔍 Buscando TODAS las recuperaciones...');
+  const allRecoveries = await prisma.periodRecovery.findMany({
+    where: {
+      finalScore: { not: null },
+    },
+    include: {
+      studentEnrollment: {
+        include: {
+          student: { select: { firstName: true, lastName: true } },
+        },
+      },
+      subject: { select: { name: true } },
+      academicTerm: { select: { name: true } },
+    },
+    take: 10, // Limitar a 10 para no saturar
+  });
+  
+  console.log(`📋 Encontradas ${allRecoveries.length} recuperaciones (primeras 10):`);
+  allRecoveries.forEach(r => {
+    console.log(`   - ${r.studentEnrollment.student.lastName} ${r.studentEnrollment.student.firstName} | ${r.subject.name}: ${r.originalScore} → ${r.recoveryScore} → ${r.finalScore} [${r.status}]`);
+  });
 
-  // Buscar todas las recuperaciones APPROVED que tienen finalScore
+  // Buscar todas las recuperaciones APPROVED o COMPLETED que tienen finalScore
   const approvedRecoveries = await prisma.periodRecovery.findMany({
     where: {
-      status: 'APPROVED',
+      status: { in: ['APPROVED', 'COMPLETED'] },
       finalScore: { not: null },
     },
     include: {
