@@ -1,10 +1,187 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { liveSessionApi } from '../lib/api'
+import { motion, AnimatePresence } from 'framer-motion'
+import confetti from 'canvas-confetti'
 import {
   Zap, Play, SkipForward, Trophy, X, CheckCircle2, XCircle,
   Clock, Users, Loader2, BarChart3, Image as ImageIcon, Volume2, VolumeX,
-  ChevronRight, Award, Timer, Radio
+  ChevronRight, Award, Timer, Radio, Sparkles
 } from 'lucide-react'
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ANIMATION VARIANTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -20 }
+}
+
+const scaleIn = {
+  initial: { opacity: 0, scale: 0.8 },
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0.8 }
+}
+
+const staggerContainer = {
+  animate: { transition: { staggerChildren: 0.1 } }
+}
+
+const optionVariants = {
+  initial: { opacity: 0, x: -20 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: 20 },
+  tap: { scale: 0.98 }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SOUND EFFECTS (Web Audio API)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const playSound = (type: 'correct' | 'incorrect' | 'tick' | 'winner' | 'countdown') => {
+  try {
+    const ctx = new AudioContext()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+
+    const now = ctx.currentTime
+
+    switch (type) {
+      case 'correct':
+        // Happy ascending arpeggio
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(523, now)
+        osc.frequency.setValueAtTime(659, now + 0.1)
+        osc.frequency.setValueAtTime(784, now + 0.2)
+        gain.gain.setValueAtTime(0.3, now)
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4)
+        osc.start(now)
+        osc.stop(now + 0.4)
+        break
+      case 'incorrect':
+        // Sad descending tone
+        osc.type = 'sawtooth'
+        osc.frequency.setValueAtTime(300, now)
+        osc.frequency.setValueAtTime(200, now + 0.2)
+        gain.gain.setValueAtTime(0.2, now)
+        gain.gain.setValueAtTime(0.01, now + 0.3)
+        osc.start(now)
+        osc.stop(now + 0.3)
+        break
+      case 'tick':
+        // Quick tick
+        osc.type = 'square'
+        osc.frequency.setValueAtTime(800, now)
+        gain.gain.setValueAtTime(0.1, now)
+        gain.gain.setValueAtTime(0, now + 0.05)
+        osc.start(now)
+        osc.stop(now + 0.05)
+        break
+      case 'winner':
+        // Victory fanfare
+        osc.type = 'sine'
+        const notes = [523, 659, 784, 1047]
+        notes.forEach((freq, i) => {
+          osc.frequency.setValueAtTime(freq, now + i * 0.15)
+        })
+        gain.gain.setValueAtTime(0.3, now)
+        gain.gain.setValueAtTime(0.01, now + 0.6)
+        osc.start(now)
+        osc.stop(now + 0.7)
+        break
+      case 'countdown':
+        // Urgent beep
+        osc.type = 'square'
+        osc.frequency.setValueAtTime(440, now)
+        gain.gain.setValueAtTime(0.15, now)
+        gain.gain.setValueAtTime(0, now + 0.1)
+        osc.start(now)
+        osc.stop(now + 0.1)
+        break
+    }
+  } catch (e) {
+    // Audio not supported
+  }
+}
+
+// Confetti effects
+const fireConfetti = (type: 'correct' | 'winner' | 'celebration') => {
+  switch (type) {
+    case 'correct':
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { y: 0.7 },
+        colors: ['#22c55e', '#4ade80', '#86efac']
+      })
+      break
+    case 'winner':
+      // Big celebration
+      const duration = 3000
+      const end = Date.now() + duration
+      const frame = () => {
+        confetti({
+          particleCount: 5,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: ['#fbbf24', '#f59e0b', '#d97706']
+        })
+        confetti({
+          particleCount: 5,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: ['#fbbf24', '#f59e0b', '#d97706']
+        })
+        if (Date.now() < end) requestAnimationFrame(frame)
+      }
+      frame()
+      break
+    case 'celebration':
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      })
+      break
+  }
+}
+
+// Animated counter hook
+const useAnimatedCounter = (value: number, duration = 500) => {
+  const [displayValue, setDisplayValue] = useState(value)
+  const prevValue = useRef(value)
+
+  useEffect(() => {
+    if (value === prevValue.current) return
+    
+    const startValue = prevValue.current
+    const diff = value - startValue
+    const startTime = Date.now()
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime
+      const progress = Math.min(elapsed / duration, 1)
+      // Ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3)
+      setDisplayValue(Math.round(startValue + diff * eased))
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate)
+      } else {
+        prevValue.current = value
+      }
+    }
+    
+    requestAnimationFrame(animate)
+  }, [value, duration])
+
+  return displayValue
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -117,6 +294,17 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   // Music (teacher only)
   const [musicOn, setMusicOn] = useState(false)
   const audioCtxRef = useRef<AudioContext | null>(null)
+
+  // Sound effects toggle
+  const [soundsOn, setSoundsOn] = useState(true)
+  
+  // Streak tracking (consecutive correct answers)
+  const [streak, setStreak] = useState(0)
+  
+  // Points animation
+  const [lastPointsGained, setLastPointsGained] = useState(0)
+  const [showPointsAnimation, setShowPointsAnimation] = useState(false)
+  const animatedPoints = useAnimatedCounter(answerResult?.points || 0)
 
   // SSE
   const eventSourceRef = useRef<EventSource | null>(null)
@@ -278,6 +466,9 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       setRanking(data)
       setPhase('finished')
       stopTimer()
+      // Celebration effects!
+      fireConfetti('winner')
+      if (soundsOn) playSound('winner')
     })
 
     es.addEventListener('TEAMS_UPDATED', (e: any) => {
@@ -308,6 +499,10 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             handleCloseQuestion()
           }
           return 0
+        }
+        // Play countdown sound in last 5 seconds
+        if (prev <= 6 && prev > 1 && soundsOn && !answered) {
+          playSound('countdown')
         }
         return prev - 1
       })
@@ -472,8 +667,20 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         responseTimeMs,
       })
       setAnswerResult(data)
+      
+      // Sound effects and confetti based on result
+      if (data.isCorrect) {
+        if (soundsOn) playSound('correct')
+        fireConfetti('correct')
+        setStreak(prev => prev + 1)
+      } else {
+        if (soundsOn) playSound('incorrect')
+        setStreak(0)
+      }
     } catch (err: any) {
       setAnswerResult({ isCorrect: false, points: 0 })
+      if (soundsOn) playSound('incorrect')
+      setStreak(0)
     }
   }
 
@@ -1080,21 +1287,58 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       )}
 
       {/* QUESTION */}
+      <AnimatePresence mode="wait">
       {phase === 'question' && currentQuestion && (
-        <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        <motion.div 
+          key={`question-${questionIndex}`}
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -30 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="max-w-3xl mx-auto px-4 py-6 space-y-6"
+        >
           {/* Timer bar */}
-          <div className="relative h-3 bg-white/10 rounded-full overflow-hidden">
-            <div className={`absolute inset-y-0 left-0 ${timerColor} rounded-full transition-all duration-1000`} style={{ width: `${timerPercent}%` }} />
-          </div>
+          <motion.div 
+            className="relative h-3 bg-white/10 rounded-full overflow-hidden"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <motion.div 
+              className={`absolute inset-y-0 left-0 ${timerColor} rounded-full`} 
+              initial={{ width: '100%' }}
+              animate={{ width: `${timerPercent}%` }}
+              transition={{ duration: 0.5, ease: "linear" }}
+            />
+          </motion.div>
 
           {/* Question header */}
-          <div className="flex items-center justify-between">
+          <motion.div 
+            className="flex items-center justify-between"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
             <span className="text-indigo-300 font-semibold">Pregunta {questionIndex + 1} / {totalQuestions}</span>
             <div className="flex items-center gap-2">
-              {isBonus && <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-bold">BONUS x{multiplier}</span>}
-              <span className="text-3xl font-black text-white">{timeLeft}s</span>
+              {isBonus && (
+                <motion.span 
+                  className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-bold"
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                >
+                  <Sparkles className="w-3 h-3 inline mr-1" />BONUS x{multiplier}
+                </motion.span>
+              )}
+              <motion.span 
+                className={`text-3xl font-black ${timeLeft <= 5 ? 'text-red-400' : 'text-white'}`}
+                animate={timeLeft <= 5 ? { scale: [1, 1.2, 1] } : {}}
+                transition={{ duration: 0.5 }}
+              >
+                {timeLeft}s
+              </motion.span>
             </div>
-          </div>
+          </motion.div>
 
           {/* Context (reading passage / shared context) */}
           {currentQuestion.context && (
@@ -1137,56 +1381,139 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
           {/* Answer area */}
           {isTeacher ? (
-            <div className="text-center space-y-4">
+            <motion.div 
+              className="text-center space-y-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
               <div className="flex items-center justify-center gap-6">
-                <div className="text-center">
+                <motion.div 
+                  className="text-center"
+                  animate={{ scale: totalAnswered > 0 ? [1, 1.1, 1] : 1 }}
+                  transition={{ duration: 0.3 }}
+                >
                   <p className="text-4xl font-black text-white">{totalAnswered}</p>
                   <p className="text-white/50 text-sm">respuestas</p>
-                </div>
+                </motion.div>
               </div>
               <div className="flex justify-center gap-3 flex-wrap">
-                <button onClick={handleCloseQuestion} className="px-5 py-3 bg-amber-500/20 text-amber-400 rounded-xl font-semibold hover:bg-amber-500/30 flex items-center gap-2">
+                <motion.button 
+                  onClick={handleCloseQuestion} 
+                  className="px-5 py-3 bg-amber-500/20 text-amber-400 rounded-xl font-semibold hover:bg-amber-500/30 flex items-center gap-2"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
                   <Clock className="w-4 h-4" /> Cerrar pregunta
-                </button>
-                <button onClick={handleShowRanking} className="px-5 py-3 bg-purple-500/20 text-purple-400 rounded-xl font-semibold hover:bg-purple-500/30 flex items-center gap-2">
+                </motion.button>
+                <motion.button 
+                  onClick={handleShowRanking} 
+                  className="px-5 py-3 bg-purple-500/20 text-purple-400 rounded-xl font-semibold hover:bg-purple-500/30 flex items-center gap-2"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
                   <Trophy className="w-4 h-4" /> Ver ranking
-                </button>
-                <button onClick={handleNextQuestion} className="px-5 py-3 bg-indigo-500/20 text-indigo-400 rounded-xl font-semibold hover:bg-indigo-500/30 flex items-center gap-2">
+                </motion.button>
+                <motion.button 
+                  onClick={handleNextQuestion} 
+                  className="px-5 py-3 bg-indigo-500/20 text-indigo-400 rounded-xl font-semibold hover:bg-indigo-500/30 flex items-center gap-2"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
                   <SkipForward className="w-4 h-4" /> Siguiente
-                </button>
+                </motion.button>
               </div>
-            </div>
+            </motion.div>
           ) : (
             /* Student answer UI */
             <div className="space-y-3">
+              <AnimatePresence mode="wait">
               {answered && answerResult ? (
-                <div className={`text-center p-6 rounded-2xl ${answerResult.isCorrect ? 'bg-green-500/20 border-2 border-green-500/40' : 'bg-red-500/20 border-2 border-red-500/40'}`}>
+                <motion.div 
+                  key="result"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ type: "spring", duration: 0.5 }}
+                  className={`text-center p-6 rounded-2xl ${answerResult.isCorrect ? 'bg-green-500/20 border-2 border-green-500/40' : 'bg-red-500/20 border-2 border-red-500/40'}`}
+                >
                   {answerResult.isCorrect ? (
                     <>
-                      <CheckCircle2 className="w-14 h-14 text-green-400 mx-auto mb-3" />
-                      <p className="text-green-400 text-2xl font-bold">¡Correcto!</p>
-                      <p className="text-green-300 text-lg mt-1">+{Math.round(answerResult.points)} pts</p>
+                      <motion.div
+                        initial={{ scale: 0, rotate: -180 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ type: "spring", duration: 0.6 }}
+                      >
+                        <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-3" />
+                      </motion.div>
+                      <motion.p 
+                        className="text-green-400 text-2xl font-bold"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                      >
+                        ¡Correcto!
+                      </motion.p>
+                      <motion.p 
+                        className="text-green-300 text-xl font-bold mt-2"
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.3, type: "spring" }}
+                      >
+                        +{animatedPoints} pts
+                      </motion.p>
+                      {streak > 1 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-2 inline-flex items-center gap-1 px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-sm font-bold"
+                        >
+                          🔥 Racha x{streak}
+                        </motion.div>
+                      )}
                     </>
                   ) : (
                     <>
-                      <XCircle className="w-14 h-14 text-red-400 mx-auto mb-3" />
-                      <p className="text-red-400 text-2xl font-bold">Incorrecto</p>
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1, x: [0, -10, 10, -10, 10, 0] }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        <XCircle className="w-16 h-16 text-red-400 mx-auto mb-3" />
+                      </motion.div>
+                      <motion.p 
+                        className="text-red-400 text-2xl font-bold"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                      >
+                        Incorrecto
+                      </motion.p>
                       <p className="text-red-300 text-sm mt-1">0 pts</p>
                     </>
                   )}
-                </div>
+                </motion.div>
               ) : timeLeft <= 0 && !answered ? (
-                <div className="text-center p-6 rounded-2xl bg-white/5">
+                <motion.div 
+                  key="timeout"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center p-6 rounded-2xl bg-white/5"
+                >
                   <Clock className="w-14 h-14 text-white/30 mx-auto mb-3" />
                   <p className="text-white/50 text-xl font-bold">Tiempo agotado</p>
-                </div>
+                </motion.div>
               ) : (
-                renderAnswerOptions()
+                <motion.div key="options" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  {renderAnswerOptions()}
+                </motion.div>
               )}
+              </AnimatePresence>
             </div>
           )}
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* ANSWER REVEAL */}
       {phase === 'answer_reveal' && (
@@ -1211,24 +1538,62 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
       {/* RANKING */}
       {(phase === 'ranking' || phase === 'finished') && (
-        <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-          <div className="text-center space-y-2">
-            <Trophy className="w-16 h-16 text-yellow-400 mx-auto" />
+        <motion.div 
+          className="max-w-2xl mx-auto px-4 py-6 space-y-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <motion.div 
+            className="text-center space-y-2"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", duration: 0.6 }}
+          >
+            <motion.div
+              animate={phase === 'finished' ? { 
+                rotate: [0, -10, 10, -10, 10, 0],
+                scale: [1, 1.2, 1]
+              } : {}}
+              transition={{ duration: 0.8 }}
+            >
+              <Trophy className="w-16 h-16 text-yellow-400 mx-auto" />
+            </motion.div>
             <h2 className="text-3xl font-black text-white">
-              {phase === 'finished' ? 'Resultados finales' : 'Ranking'}
+              {phase === 'finished' ? '🎉 Resultados finales 🎉' : 'Ranking'}
             </h2>
-          </div>
+          </motion.div>
 
-          <div className="space-y-3">
+          <motion.div 
+            className="space-y-3"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              visible: { transition: { staggerChildren: 0.1 } },
+              hidden: {}
+            }}
+          >
             {ranking.map((entry, i) => {
               const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null
               const bgColor = i === 0 ? 'bg-yellow-500/20 border-yellow-500/40' : i === 1 ? 'bg-slate-400/20 border-slate-400/40' : i === 2 ? 'bg-amber-700/20 border-amber-700/40' : 'bg-white/5 border-white/10'
               const color = entry.color || getAvatarColor(entry.name)
               return (
-                <div key={i} className={`flex items-center gap-4 p-4 rounded-2xl border-2 ${bgColor} transition-all`}>
-                  <div className="text-2xl font-black text-white w-8 text-center">
+                <motion.div 
+                  key={i} 
+                  className={`flex items-center gap-4 p-4 rounded-2xl border-2 ${bgColor} transition-all`}
+                  variants={{
+                    hidden: { opacity: 0, x: -50 },
+                    visible: { opacity: 1, x: 0 }
+                  }}
+                  transition={{ type: "spring", duration: 0.5 }}
+                  whileHover={{ scale: 1.02, x: 5 }}
+                >
+                  <motion.div 
+                    className="text-2xl font-black text-white w-8 text-center"
+                    animate={i === 0 && phase === 'finished' ? { scale: [1, 1.3, 1] } : {}}
+                    transition={{ repeat: phase === 'finished' ? 3 : 0, duration: 0.5 }}
+                  >
                     {medal || entry.rank}
-                  </div>
+                  </motion.div>
                   <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0" style={{ backgroundColor: color }}>
                     {entry.name.charAt(0).toUpperCase()}
                   </div>
@@ -1239,16 +1604,23 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                     )}
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-black text-white">{entry.totalPoints.toLocaleString()}</p>
+                    <motion.p 
+                      className="text-2xl font-black text-white"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.3 + i * 0.1 }}
+                    >
+                      {entry.totalPoints.toLocaleString()}
+                    </motion.p>
                     <p className="text-white/40 text-xs">pts</p>
                   </div>
-                </div>
+                </motion.div>
               )
             })}
             {ranking.length === 0 && (
               <p className="text-white/40 text-center py-8">Sin respuestas aún</p>
             )}
-          </div>
+          </motion.div>
 
           {isTeacher && phase === 'ranking' && (
             <div className="flex justify-center gap-3">
@@ -1262,13 +1634,23 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
           )}
 
           {phase === 'finished' && (
-            <div className="text-center">
-              <button onClick={onClose} className="px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl text-lg font-bold hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg">
+            <motion.div 
+              className="text-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              <motion.button 
+                onClick={onClose} 
+                className="px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl text-lg font-bold hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
                 Volver al aula
-              </button>
-            </div>
+              </motion.button>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
       )}
     </div>
   )

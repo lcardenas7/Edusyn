@@ -15,6 +15,7 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@types/canvas-confetti": "^1.9.0",
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.2",
@@ -28,6 +29,8 @@
   "dependencies": {
     "@tanstack/react-query": "^5.90.18",
     "axios": "^1.13.2",
+    "canvas-confetti": "^1.9.4",
+    "framer-motion": "^12.38.0",
     "html2pdf.js": "^0.14.0",
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",
