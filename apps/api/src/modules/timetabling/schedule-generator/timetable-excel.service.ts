@@ -820,15 +820,30 @@ export class TimetableExcelService {
         if (user) matchMethod = 'email';
       }
 
-      // 2) Buscar por número de documento si lo tiene
+      // 2) Buscar por número de documento si lo tiene (priorizar docentes de la institución)
       if (!user && row.teacherDocument) {
-        const byDoc = await this.prisma.user.findFirst({
-          where: { documentNumber: row.teacherDocument, isActive: true },
-          select: { id: true },
+        // Primero buscar en la institución actual
+        const byDocInInstitution = await this.prisma.institutionUser.findFirst({
+          where: {
+            institutionId,
+            isActive: true,
+            user: { documentNumber: row.teacherDocument, isActive: true },
+          },
+          select: { user: { select: { id: true } } },
         });
-        if (byDoc) {
-          user = byDoc;
-          matchMethod = 'documento';
+        if (byDocInInstitution) {
+          user = byDocInInstitution.user;
+          matchMethod = 'documento (institución)';
+        } else {
+          // Si no está en la institución, buscar globalmente
+          const byDoc = await this.prisma.user.findFirst({
+            where: { documentNumber: row.teacherDocument, isActive: true },
+            select: { id: true },
+          });
+          if (byDoc) {
+            user = byDoc;
+            matchMethod = 'documento (global)';
+          }
         }
       }
 
@@ -838,7 +853,8 @@ export class TimetableExcelService {
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
 
-        const institutionUsers = await this.prisma.institutionUser.findMany({
+        // 3a) Búsqueda exacta por firstName + lastName
+        let institutionUsers = await this.prisma.institutionUser.findMany({
           where: {
             institutionId,
             isActive: true,
@@ -847,12 +863,46 @@ export class TimetableExcelService {
               lastName: { equals: lastName, mode: 'insensitive' },
             },
           },
-          select: { user: { select: { id: true } } },
+          select: { user: { select: { id: true, firstName: true, lastName: true } } },
           take: 1,
         });
+        
+        // 3b) Si no encuentra exacto, buscar con contains (más flexible)
+        if (institutionUsers.length === 0 && firstName) {
+          institutionUsers = await this.prisma.institutionUser.findMany({
+            where: {
+              institutionId,
+              isActive: true,
+              user: {
+                OR: [
+                  // Buscar firstName que contenga el primer nombre del Excel
+                  { firstName: { contains: firstName, mode: 'insensitive' } },
+                  // O buscar por nombre completo en firstName (ej: "Juan Carlos" en firstName)
+                  { firstName: { equals: row.teacherName, mode: 'insensitive' } },
+                ],
+              },
+            },
+            select: { user: { select: { id: true, firstName: true, lastName: true } } },
+          });
+          
+          // Filtrar para encontrar coincidencia más precisa
+          if (institutionUsers.length > 1 && lastName) {
+            const filtered = institutionUsers.filter(iu => 
+              iu.user.lastName?.toLowerCase().includes(lastName.toLowerCase()) ||
+              lastName.toLowerCase().includes(iu.user.lastName?.toLowerCase() || '')
+            );
+            if (filtered.length > 0) {
+              institutionUsers = filtered;
+            }
+          }
+        }
+        
         if (institutionUsers.length > 0) {
           user = institutionUsers[0].user;
           matchMethod = 'nombre';
+          if (institutionUsers.length > 1) {
+            warnings.push(`⚠️ Docente "${row.teacherName}" tiene ${institutionUsers.length} coincidencias, se usó el primero encontrado`);
+          }
         }
       }
 
