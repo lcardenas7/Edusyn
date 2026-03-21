@@ -148,23 +148,24 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   const createSession = async () => {
     setPhase('loading')
     try {
-      const { data } = await liveSessionApi.create({ classroomId, activityId: activityId!, mode, config: { timeLimitOverride: globalTimeLimit, autoClose: autoCloseOnTimeout, teamAssignment: teamAssignmentMode } })
+      // En modo TEAM, los estudiantes crean sus propios equipos dinámicamente (estilo Kahoot)
+      const { data } = await liveSessionApi.create({ 
+        classroomId, 
+        activityId: activityId!, 
+        mode, 
+        config: { 
+          timeLimitOverride: globalTimeLimit, 
+          autoClose: autoCloseOnTimeout, 
+          teamAssignment: 'STUDENT_CHOICE' // Siempre estudiantes eligen/crean equipos
+        } 
+      })
       autoCloseRef.current = autoCloseOnTimeout
       setSessionId(data.id)
       setSession(data)
       setMode(data.mode || 'INDIVIDUAL')
       setTotalQuestions(data.activity?.questions?.length || 0)
       connectSSE(data.id)
-      // If team mode, create teams
-      if (mode === 'TEAM') {
-        try {
-          const validTeams = teamSetupNames.filter(n => n.trim()).map(n => ({ name: n }))
-          if (validTeams.length >= 2) {
-            const { data: createdTeams } = await liveSessionApi.createTeams(data.id, validTeams)
-            setTeams(createdTeams)
-          }
-        } catch {}
-      }
+      // No pre-creamos equipos - los estudiantes los crearán en el lobby
       setPhase('lobby')
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al crear sesión')
@@ -627,52 +628,38 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               </div>
             </div>
 
-            {/* Team names editor (only in TEAM mode) */}
+            {/* Team mode info */}
             {mode === 'TEAM' && (
-              <div className="bg-white/5 rounded-2xl p-4 space-y-3">
-                <p className="text-white/80 font-semibold text-sm">Nombres de equipos</p>
-                {teamSetupNames.map((name, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: ['#6366f1', '#f43f5e', '#22c55e', '#f97316', '#06b6d4', '#8b5cf6', '#eab308', '#ec4899'][i % 8] }} />
-                    <input
-                      value={name}
-                      onChange={e => { const arr = [...teamSetupNames]; arr[i] = e.target.value; setTeamSetupNames(arr) }}
-                      className="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
-                      placeholder={`Equipo ${i + 1}`}
-                    />
-                    {teamSetupNames.length > 2 && (
-                      <button onClick={() => setTeamSetupNames(teamSetupNames.filter((_, j) => j !== i))} className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400">
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-purple-400" />
                   </div>
-                ))}
-                {teamSetupNames.length < 8 && (
-                  <button onClick={() => setTeamSetupNames([...teamSetupNames, `Equipo ${teamSetupNames.length + 1}`])} className="text-sm text-indigo-400 hover:text-indigo-300 font-medium">
-                    + Agregar equipo
-                  </button>
-                )}
-
-                {/* Team assignment mode */}
-                <div className="pt-3 border-t border-white/10 space-y-2">
-                  <p className="text-white/60 text-xs font-medium">¿Quién asigna los equipos?</p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setTeamAssignmentMode('STUDENT_CHOICE')}
-                      className={`flex-1 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${teamAssignmentMode === 'STUDENT_CHOICE' ? 'bg-purple-500 text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
-                    >
-                      Estudiantes eligen
-                    </button>
-                    <button
-                      onClick={() => setTeamAssignmentMode('TEACHER_ASSIGNED')}
-                      className={`flex-1 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${teamAssignmentMode === 'TEACHER_ASSIGNED' ? 'bg-purple-500 text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
-                    >
-                      Docente asigna
-                    </button>
+                  <div>
+                    <p className="text-white font-semibold">Modo Equipos</p>
+                    <p className="text-purple-300 text-xs">Los estudiantes crearán sus propios equipos</p>
                   </div>
-                  {teamAssignmentMode === 'TEACHER_ASSIGNED' && (
-                    <p className="text-white/40 text-[10px]">Podrás asignar estudiantes a equipos en el lobby antes de iniciar</p>
-                  )}
+                </div>
+                <div className="bg-white/5 rounded-xl p-3 space-y-2">
+                  <p className="text-white/80 text-sm font-medium">¿Cómo funciona?</p>
+                  <ul className="text-white/60 text-xs space-y-1">
+                    <li className="flex items-start gap-2">
+                      <span className="text-purple-400">1.</span>
+                      <span>Cada estudiante puede crear un equipo con un nombre creativo</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-purple-400">2.</span>
+                      <span>Pueden agregar compañeros que no tengan celular a su equipo</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-purple-400">3.</span>
+                      <span>O unirse a un equipo existente creado por otro compañero</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="flex items-center gap-2 text-amber-400 text-xs">
+                  <Timer className="w-4 h-4" />
+                  <span>Máximo 12 equipos • Sin límite de integrantes</span>
                 </div>
               </div>
             )}
@@ -849,134 +836,234 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                     </p>
                   </div>
                 ) : (
-                  // Students choose or create teams (Kahoot-style)
-                  <div className="space-y-4">
-                    <p className="text-white/80 font-semibold">
-                      {teams.length > 0 ? 'Únete a un equipo o crea uno nuevo' : 'Crea tu equipo'}
-                    </p>
+                  // Students choose or create teams (Kahoot-style) - IMPROVED UI
+                  <div className="space-y-5 w-full">
+                    
+                    {/* Header con estado */}
+                    <div className="text-center">
+                      {myTeamId ? (
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/20 border border-green-500/40 rounded-full">
+                          <CheckCircle2 className="w-5 h-5 text-green-400" />
+                          <span className="text-green-400 font-semibold">¡Estás en un equipo!</span>
+                        </div>
+                      ) : (
+                        <p className="text-white/80 font-semibold text-lg">
+                          {teams.length > 0 ? '¡Únete a un equipo!' : '¡Crea tu equipo!'}
+                        </p>
+                      )}
+                    </div>
 
-                    {/* Existing teams grid */}
-                    {teams.length > 0 && (
-                      <div className="grid grid-cols-2 gap-3">
-                        {teams.map((t: any) => {
-                          const isSelected = myTeamId === t.id
-                          const memberCount = t.members?.length || 0
-                          return (
-                            <button
-                              key={t.id}
-                              onClick={async () => {
-                                if (isSelected || joiningTeam) return
-                                setJoiningTeam(true)
-                                try {
-                                  await liveSessionApi.joinTeam(sessionId, t.id)
-                                  setMyTeamId(t.id)
-                                } catch {}
-                                setJoiningTeam(false)
-                              }}
-                              disabled={joiningTeam}
-                              className={`p-4 rounded-2xl border-2 transition-all text-center ${isSelected ? 'border-white/60 bg-white/15 scale-105' : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/30'}`}
+                    {/* Mi equipo actual (si ya tengo uno) */}
+                    {myTeamId && (() => {
+                      const myTeam = teams.find((t: any) => t.id === myTeamId)
+                      if (!myTeam) return null
+                      const members = myTeam.members || []
+                      return (
+                        <div className="bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border-2 border-purple-400/50 rounded-2xl p-5 space-y-4">
+                          <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg" style={{ backgroundColor: myTeam.color }}>
+                              {myTeam.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-white font-bold text-xl">{myTeam.name}</p>
+                              <p className="text-purple-300 text-sm">{members.length} integrante{members.length !== 1 ? 's' : ''}</p>
+                            </div>
+                          </div>
+                          
+                          {/* Lista de miembros */}
+                          {members.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {members.map((m: any, i: number) => (
+                                <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-full">
+                                  <div className="w-6 h-6 rounded-full bg-purple-500/50 flex items-center justify-center text-white text-xs font-bold">
+                                    {m.studentEnrollment?.student?.firstName?.charAt(0) || '?'}
+                                  </div>
+                                  <span className="text-white text-sm">
+                                    {m.studentEnrollment?.student?.firstName} {m.studentEnrollment?.student?.lastName?.split(' ')[0]}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Botón agregar compañero */}
+                          {!showAddPartner ? (
+                            <button 
+                              onClick={() => { setShowAddPartner(true); handleSearchPartner('') }}
+                              className="w-full px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition-all flex items-center justify-center gap-2"
                             >
-                              <div className="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-bold text-lg" style={{ backgroundColor: t.color }}>
-                                {t.name.charAt(0)}
-                              </div>
-                              <p className="text-white font-semibold text-sm">{t.name}</p>
-                              <p className="text-white/40 text-xs">{memberCount} miembros</p>
-                              {isSelected && <p className="text-green-400 text-xs font-bold mt-1">✓ Tu equipo</p>}
+                              <Users className="w-4 h-4" />
+                              Agregar compañero al equipo
                             </button>
-                          )
-                        })}
-                      </div>
-                    )}
+                          ) : (
+                            <div className="bg-black/20 rounded-xl p-4 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <p className="text-white font-semibold text-sm">Selecciona compañeros</p>
+                                <button onClick={() => setShowAddPartner(false)} className="text-white/40 hover:text-white text-xs">✕ Cerrar</button>
+                              </div>
+                              <input
+                                value={partnerSearch}
+                                onChange={e => handleSearchPartner(e.target.value)}
+                                placeholder="Buscar por nombre..."
+                                autoFocus
+                                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-purple-400"
+                              />
+                              <div className="max-h-48 overflow-y-auto space-y-1.5">
+                                {searchingPartner ? (
+                                  <div className="flex items-center justify-center py-4">
+                                    <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+                                  </div>
+                                ) : partnerResults.length === 0 ? (
+                                  <p className="text-white/40 text-sm text-center py-4">No se encontraron estudiantes</p>
+                                ) : (
+                                  partnerResults.map((s: any) => {
+                                    const inMyTeam = s.teamId === myTeamId
+                                    const inOtherTeam = s.teamId && s.teamId !== myTeamId
+                                    return (
+                                      <div key={s.enrollmentId} className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition-all ${inMyTeam ? 'bg-green-500/20' : 'bg-white/5 hover:bg-white/10'}`}>
+                                        <div className="flex items-center gap-3">
+                                          <div className="w-8 h-8 rounded-full bg-indigo-500/30 flex items-center justify-center text-white text-sm font-bold">
+                                            {s.name.charAt(0)}
+                                          </div>
+                                          <span className="text-white text-sm font-medium">{s.name}</span>
+                                        </div>
+                                        {inMyTeam ? (
+                                          <span className="flex items-center gap-1 text-green-400 text-xs font-bold">
+                                            <CheckCircle2 className="w-4 h-4" /> En tu equipo
+                                          </span>
+                                        ) : inOtherTeam ? (
+                                          <span className="text-white/30 text-xs">En otro equipo</span>
+                                        ) : (
+                                          <button
+                                            onClick={() => handleAddPartner(s.enrollmentId)}
+                                            disabled={!!addingPartner}
+                                            className="px-4 py-1.5 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                                          >
+                                            {addingPartner === s.enrollmentId ? '...' : '+ Agregar'}
+                                          </button>
+                                        )}
+                                      </div>
+                                    )
+                                  })
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
 
-                    {/* Create team form */}
-                    {!myTeamId && !showCreateTeam && (
-                      <button
-                        onClick={() => setShowCreateTeam(true)}
-                        className="w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-indigo-700 transition-all"
-                      >
-                        + Crear nuevo equipo
-                      </button>
-                    )}
-
-                    {showCreateTeam && (
-                      <div className="bg-white/5 rounded-2xl p-4 space-y-3">
-                        <p className="text-white/80 font-semibold text-sm">Nombre de tu equipo</p>
-                        <input
-                          value={newTeamName}
-                          onChange={e => setNewTeamName(e.target.value)}
-                          placeholder="Ej: Los Campeones, Equipo Rocket..."
-                          maxLength={30}
-                          className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-purple-500"
-                          onKeyDown={e => e.key === 'Enter' && handleCreateTeam()}
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => { setShowCreateTeam(false); setNewTeamName('') }}
-                            className="flex-1 px-4 py-2 bg-white/10 text-white/60 rounded-xl text-sm hover:bg-white/20"
-                          >
-                            Cancelar
-                          </button>
-                          <button
-                            onClick={handleCreateTeam}
-                            disabled={!newTeamName.trim() || creatingTeam}
-                            className="flex-1 px-4 py-2 bg-purple-500 text-white rounded-xl text-sm font-semibold hover:bg-purple-600 disabled:opacity-50"
-                          >
-                            {creatingTeam ? 'Creando...' : 'Crear equipo'}
-                          </button>
+                    {/* Equipos disponibles para unirse (si no tengo equipo) */}
+                    {!myTeamId && teams.length > 0 && (
+                      <div className="space-y-3">
+                        <p className="text-white/60 text-sm font-medium text-center">Equipos disponibles</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {teams.map((t: any) => {
+                            const memberCount = t.members?.length || 0
+                            const memberNames = t.members?.slice(0, 3).map((m: any) => 
+                              m.studentEnrollment?.student?.firstName || '?'
+                            ).join(', ') || ''
+                            return (
+                              <button
+                                key={t.id}
+                                onClick={async () => {
+                                  if (joiningTeam) return
+                                  setJoiningTeam(true)
+                                  try {
+                                    await liveSessionApi.joinTeam(sessionId, t.id)
+                                    setMyTeamId(t.id)
+                                  } catch {}
+                                  setJoiningTeam(false)
+                                }}
+                                disabled={joiningTeam}
+                                className="p-4 rounded-2xl border-2 border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/30 transition-all text-left group"
+                              >
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-lg group-hover:scale-110 transition-transform" style={{ backgroundColor: t.color }}>
+                                    {t.name.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <p className="text-white font-semibold text-sm">{t.name}</p>
+                                    <p className="text-white/40 text-xs">{memberCount} miembro{memberCount !== 1 ? 's' : ''}</p>
+                                  </div>
+                                </div>
+                                {memberNames && (
+                                  <p className="text-white/30 text-xs truncate">{memberNames}{memberCount > 3 ? '...' : ''}</p>
+                                )}
+                              </button>
+                            )
+                          })}
                         </div>
                       </div>
                     )}
 
-                    {myTeamId && !showAddPartner && (
+                    {/* Crear equipo (si no tengo uno) */}
+                    {!myTeamId && (
                       <div className="space-y-3">
-                        <p className="text-indigo-300 text-sm animate-pulse">Esperando a que el profesor inicie...</p>
-                        <button onClick={() => { setShowAddPartner(true); handleSearchPartner('') }} className="text-sm text-white/50 hover:text-white/80 underline">
-                          + Agregar compañero sin celular a mi equipo
-                        </button>
+                        {teams.length > 0 && (
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 h-px bg-white/10" />
+                            <span className="text-white/40 text-xs">o crea uno nuevo</span>
+                            <div className="flex-1 h-px bg-white/10" />
+                          </div>
+                        )}
+                        
+                        {!showCreateTeam ? (
+                          <button
+                            onClick={() => setShowCreateTeam(true)}
+                            className="w-full px-5 py-4 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white rounded-2xl font-bold text-lg transition-all shadow-lg shadow-purple-500/25 flex items-center justify-center gap-3"
+                          >
+                            <Award className="w-6 h-6" />
+                            {teams.length > 0 ? 'Crear mi propio equipo' : '¡Crear mi equipo!'}
+                          </button>
+                        ) : (
+                          <div className="bg-gradient-to-br from-purple-500/10 to-indigo-500/10 border border-purple-500/30 rounded-2xl p-5 space-y-4">
+                            <div className="flex items-center gap-3">
+                              <Award className="w-8 h-8 text-purple-400" />
+                              <div>
+                                <p className="text-white font-bold">Nombre de tu equipo</p>
+                                <p className="text-purple-300 text-xs">Elige un nombre creativo</p>
+                              </div>
+                            </div>
+                            <input
+                              value={newTeamName}
+                              onChange={e => setNewTeamName(e.target.value)}
+                              placeholder="Ej: Los Invencibles, Team Rocket, Los Genios..."
+                              maxLength={25}
+                              autoFocus
+                              className="w-full bg-white/10 border-2 border-white/20 rounded-xl px-4 py-3 text-white text-lg placeholder:text-white/30 focus:outline-none focus:border-purple-400 transition-all"
+                              onKeyDown={e => e.key === 'Enter' && newTeamName.trim() && handleCreateTeam()}
+                            />
+                            <div className="flex gap-3">
+                              <button
+                                onClick={() => { setShowCreateTeam(false); setNewTeamName('') }}
+                                className="flex-1 px-4 py-3 bg-white/10 text-white/60 rounded-xl font-medium hover:bg-white/20 transition-all"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                onClick={handleCreateTeam}
+                                disabled={!newTeamName.trim() || creatingTeam}
+                                className="flex-1 px-4 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                              >
+                                {creatingTeam ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+                                {creatingTeam ? 'Creando...' : 'Crear'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
-                  {/* Add partner search panel */}
-                  {myTeamId && showAddPartner && (
-                    <div className="bg-white/5 rounded-2xl p-4 space-y-3 text-left">
-                      <div className="flex items-center justify-between">
-                        <p className="text-white/80 font-semibold text-sm">Agregar compañero a mi equipo</p>
-                        <button onClick={() => setShowAddPartner(false)} className="text-white/40 hover:text-white/80 text-xs">Cerrar</button>
+                    {/* Mensaje de espera */}
+                    {myTeamId && !showAddPartner && (
+                      <div className="text-center pt-4">
+                        <div className="inline-flex items-center gap-2 text-indigo-300 animate-pulse">
+                          <Radio className="w-4 h-4" />
+                          <span className="text-sm">Esperando a que el profesor inicie el quiz...</span>
+                        </div>
                       </div>
-                      <input
-                        value={partnerSearch}
-                        onChange={e => handleSearchPartner(e.target.value)}
-                        placeholder="Buscar estudiante..."
-                        className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
-                      />
-                      <div className="max-h-40 overflow-y-auto space-y-1">
-                        {searchingPartner ? (
-                          <p className="text-white/30 text-xs text-center py-2">Buscando...</p>
-                        ) : partnerResults.length === 0 ? (
-                          <p className="text-white/30 text-xs text-center py-2">Sin resultados</p>
-                        ) : (
-                          partnerResults.map((s: any) => (
-                            <div key={s.enrollmentId} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10">
-                              <span className="text-white text-sm">{s.name}</span>
-                              {s.teamId === myTeamId ? (
-                                <span className="text-green-400 text-xs font-bold">✓ En tu equipo</span>
-                              ) : s.teamId ? (
-                                <span className="text-white/30 text-xs">En otro equipo</span>
-                              ) : (
-                                <button
-                                  onClick={() => handleAddPartner(s.enrollmentId)}
-                                  disabled={!!addingPartner}
-                                  className="px-3 py-1 bg-indigo-500/30 text-indigo-300 rounded-lg text-xs font-semibold hover:bg-indigo-500/50 disabled:opacity-50"
-                                >
-                                  {addingPartner === s.enrollmentId ? '...' : 'Agregar'}
-                                </button>
-                              )}
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  )}
+                    )}
                   </div>
                 )
               ) : (
