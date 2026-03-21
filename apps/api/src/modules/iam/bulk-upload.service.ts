@@ -320,10 +320,10 @@ export class BulkUploadService {
     sheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return; // Skip header
 
-      const firstName = row.getCell(columnMap.firstName || 1).value?.toString()?.trim();
-      const secondName = columnMap.secondName ? row.getCell(columnMap.secondName).value?.toString()?.trim() : '';
-      const lastName = row.getCell(columnMap.lastName || 2).value?.toString()?.trim();
-      const email = row.getCell(columnMap.email || 3).value?.toString()?.trim()?.toLowerCase();
+      const firstName = this.extractCellValue(row.getCell(columnMap.firstName || 1));
+      const secondName = columnMap.secondName ? this.extractCellValue(row.getCell(columnMap.secondName)) : '';
+      const lastName = this.extractCellValue(row.getCell(columnMap.lastName || 2));
+      const rawEmail = this.extractCellValue(row.getCell(columnMap.email || 3)).toLowerCase();
 
       // Ignorar filas vacías o de notas
       if (!firstName || firstName.startsWith('*') || firstName.startsWith('Tipos')) return;
@@ -331,13 +331,20 @@ export class BulkUploadService {
       // Combinar nombre si hay segundo nombre
       const fullFirstName = secondName ? `${firstName} ${secondName}` : firstName;
 
+      // Extraer y normalizar tipo de documento
+      const rawDocType = columnMap.documentType ? this.extractCellValue(row.getCell(columnMap.documentType)) : undefined;
+      const normalizedDocType = this.normalizeDocumentType(rawDocType);
+
+      // Extraer número de documento (preservar como string para no perder ceros)
+      const docNumber = columnMap.documentNumber ? this.extractCellValue(row.getCell(columnMap.documentNumber)) : undefined;
+
       rows.push({
         firstName: fullFirstName || '',
         lastName: lastName || '',
-        email: email || '',
-        documentType: columnMap.documentType ? row.getCell(columnMap.documentType).value?.toString()?.trim() : undefined,
-        documentNumber: columnMap.documentNumber ? row.getCell(columnMap.documentNumber).value?.toString()?.trim() : undefined,
-        phone: columnMap.phone ? row.getCell(columnMap.phone).value?.toString()?.trim() : undefined,
+        email: rawEmail || '',
+        documentType: normalizedDocType,
+        documentNumber: docNumber,
+        phone: columnMap.phone ? this.extractCellValue(row.getCell(columnMap.phone)) : undefined,
       });
     });
 
@@ -351,6 +358,8 @@ export class BulkUploadService {
       });
     }
 
+    console.log(`[BulkUpload] Procesando ${rows.length} filas de docentes`);
+
     // Procesar cada fila
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -359,19 +368,30 @@ export class BulkUploadService {
       try {
         // Validaciones
         if (!row.firstName) {
-          result.errors.push({ row: rowNum, message: 'Nombre es obligatorio' });
+          result.errors.push({ row: rowNum, message: 'Nombre es obligatorio', data: row });
           continue;
         }
         if (!row.lastName) {
-          result.errors.push({ row: rowNum, message: 'Apellido es obligatorio' });
+          result.errors.push({ row: rowNum, message: 'Apellido es obligatorio', data: row });
           continue;
         }
         if (!row.email) {
-          result.errors.push({ row: rowNum, message: 'Correo es obligatorio' });
+          result.errors.push({ row: rowNum, message: 'Correo es obligatorio', data: row });
           continue;
         }
         if (!this.isValidEmail(row.email)) {
-          result.errors.push({ row: rowNum, message: `Correo inválido: ${row.email}` });
+          result.errors.push({ row: rowNum, message: `Correo inválido: "${row.email}" - Debe tener formato usuario@dominio.com`, data: row });
+          continue;
+        }
+
+        // Validar tipo de documento si se proporciona
+        const validDocTypes = ['CC', 'TI', 'CE', 'PASAPORTE', 'RC', 'NIP', 'NUIP'];
+        if (row.documentType && !validDocTypes.includes(row.documentType)) {
+          result.errors.push({ 
+            row: rowNum, 
+            message: `Tipo de documento inválido: "${row.documentType}". Valores válidos: ${validDocTypes.join(', ')}`,
+            data: row 
+          });
           continue;
         }
 
@@ -874,6 +894,75 @@ export class BulkUploadService {
   // Helpers
   private isValidEmail(email: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  /**
+   * Extrae el valor de una celda Excel, manejando casos especiales como hipervínculos
+   */
+  private extractCellValue(cell: any): string {
+    if (!cell || cell.value === null || cell.value === undefined) return '';
+    
+    const value = cell.value;
+    
+    // Si es un objeto con hipervínculo (común en emails)
+    if (typeof value === 'object') {
+      if (value.text) return String(value.text).trim();
+      if (value.hyperlink) {
+        // Extraer email de mailto:
+        const mailto = String(value.hyperlink);
+        if (mailto.startsWith('mailto:')) {
+          return mailto.replace('mailto:', '').trim();
+        }
+        return mailto.trim();
+      }
+      if (value.result !== undefined) return String(value.result).trim();
+      if (value.richText) {
+        return value.richText.map((rt: any) => rt.text || '').join('').trim();
+      }
+    }
+    
+    // Si es número, convertir a string preservando formato
+    if (typeof value === 'number') {
+      return String(value);
+    }
+    
+    // Si es fecha
+    if (value instanceof Date) {
+      return value.toISOString().split('T')[0];
+    }
+    
+    return String(value).trim();
+  }
+
+  /**
+   * Normaliza el tipo de documento a valores válidos del enum
+   */
+  private normalizeDocumentType(docType: string | undefined): string | undefined {
+    if (!docType) return undefined;
+    
+    const normalized = docType.toUpperCase()
+      .replace(/\./g, '')      // Quitar puntos (C.C. -> CC)
+      .replace(/\s+/g, '')     // Quitar espacios
+      .replace(/É/g, 'E')      // Normalizar acentos
+      .trim();
+    
+    // Mapear variantes comunes
+    const mapping: Record<string, string> = {
+      'CC': 'CC',
+      'CEDULA': 'CC',
+      'CEDULADECIUDADANIA': 'CC',
+      'TI': 'TI',
+      'TARJETADEIDENTIDAD': 'TI',
+      'CE': 'CE',
+      'CEDULADEEXTRANJERIA': 'CE',
+      'PASAPORTE': 'PASAPORTE',
+      'RC': 'RC',
+      'REGISTROCIVIL': 'RC',
+      'NIP': 'NIP',
+      'NUIP': 'NUIP',
+    };
+    
+    return mapping[normalized] || normalized;
   }
 
   private generateTempPassword(): string {
