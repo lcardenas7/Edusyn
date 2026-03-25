@@ -291,7 +291,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   // Context expand/collapse
   const [contextExpanded, setContextExpanded] = useState(false)
 
-  // Music (teacher only)
+  // Music (all users during questions)
   const [musicOn, setMusicOn] = useState(false)
   const audioCtxRef = useRef<AudioContext | null>(null)
 
@@ -305,6 +305,10 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   const [lastPointsGained, setLastPointsGained] = useState(0)
   const [showPointsAnimation, setShowPointsAnimation] = useState(false)
   const animatedPoints = useAnimatedCounter(answerResult?.points || 0)
+
+  // Buffered answer result — revealed only when question is closed
+  const pendingResultRef = useRef<{ isCorrect: boolean; points: number } | null>(null)
+  const answeredRef = useRef(false)
 
   // SSE
   const eventSourceRef = useRef<EventSource | null>(null)
@@ -432,6 +436,8 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       setBlankAnswers([])
       setOrderAnswers(data.options && data.type === 'ORDERING' ? [...(data.options as string[])] : [])
       setAnswered(false)
+      answeredRef.current = false
+      pendingResultRef.current = null
       setAnswerResult(null)
       setCorrectAnswer(null)
       setExplanation(null)
@@ -440,6 +446,8 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       setAnswerStartTime(Date.now())
       setPhase('question')
       startTimer(data.timeLimit || 15)
+      // Auto-start suspense music for everyone
+      startMusic()
     })
 
     es.addEventListener('ANSWER_PROGRESS', (e: any) => {
@@ -451,8 +459,11 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       const data = JSON.parse(e.data)
       setCorrectAnswer(data.correctAnswer)
       setExplanation(data.explanation)
-      setPhase('answer_reveal')
       stopTimer()
+      stopMusic()
+      // Reveal buffered result for students (with sounds + confetti)
+      revealPendingResult()
+      setPhase('answer_reveal')
     })
 
     es.addEventListener('RANKING', (e: any) => {
@@ -466,6 +477,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       setRanking(data)
       setPhase('finished')
       stopTimer()
+      stopMusic()
       // Celebration effects!
       fireConfetti('winner')
       if (soundsOn) playSound('winner')
@@ -500,8 +512,8 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
           }
           return 0
         }
-        // Play countdown sound in last 5 seconds
-        if (prev <= 6 && prev > 1 && soundsOn && !answered) {
+        // Play countdown sound in last 5 seconds (use ref to avoid stale closure)
+        if (prev <= 6 && prev > 1 && !answeredRef.current) {
           playSound('countdown')
         }
         return prev - 1
@@ -522,7 +534,8 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   const musicIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const startMusic = () => {
-    if (audioCtxRef.current) return
+    // Stop any existing music first so we restart cleanly per question
+    if (audioCtxRef.current || musicIntervalRef.current) stopMusic()
     const ctx = new AudioContext()
     audioCtxRef.current = ctx
 
@@ -659,6 +672,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   const submitAnswer = async (answerValue: string) => {
     if (answered || !currentQuestion) return
     setAnswered(true)
+    answeredRef.current = true
     const responseTimeMs = Date.now() - answerStartTime
     try {
       const { data } = await liveSessionApi.answer(sessionId, {
@@ -666,22 +680,27 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         answer: answerValue,
         responseTimeMs,
       })
-      setAnswerResult(data)
-      
-      // Sound effects and confetti based on result
-      if (data.isCorrect) {
-        if (soundsOn) playSound('correct')
-        fireConfetti('correct')
-        setStreak(prev => prev + 1)
-      } else {
-        if (soundsOn) playSound('incorrect')
-        setStreak(0)
-      }
+      // Buffer the result — don't reveal yet, wait for QUESTION_CLOSED
+      pendingResultRef.current = data
     } catch (err: any) {
-      setAnswerResult({ isCorrect: false, points: 0 })
+      pendingResultRef.current = { isCorrect: false, points: 0 }
+    }
+  }
+
+  // Reveal buffered result — called when QUESTION_CLOSED event arrives
+  const revealPendingResult = () => {
+    const result = pendingResultRef.current
+    if (!result) return
+    setAnswerResult(result)
+    if (result.isCorrect) {
+      if (soundsOn) playSound('correct')
+      fireConfetti('correct')
+      setStreak(prev => prev + 1)
+    } else {
       if (soundsOn) playSound('incorrect')
       setStreak(0)
     }
+    pendingResultRef.current = null
   }
 
   const handleSelectOption = (opt: string) => {
@@ -791,11 +810,9 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
           )}
         </div>
         <div className="flex items-center gap-2">
-          {isTeacher && (
-            <button onClick={toggleMusic} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
-              {musicOn ? <Volume2 className="w-5 h-5 text-yellow-400" /> : <VolumeX className="w-5 h-5 text-white/40" />}
-            </button>
-          )}
+          <button onClick={toggleMusic} className="p-2 rounded-lg hover:bg-white/10 transition-colors" title={musicOn ? 'Silenciar música' : 'Activar música'}>
+            {musicOn ? <Volume2 className="w-5 h-5 text-yellow-400" /> : <VolumeX className="w-5 h-5 text-white/40" />}
+          </button>
           <button onClick={() => { stopMusic(); onClose() }} className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors">
             <X className="w-5 h-5" />
           </button>
@@ -1429,6 +1446,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             <div className="space-y-3">
               <AnimatePresence mode="wait">
               {answered && answerResult ? (
+                /* ── RESULT REVEALED (after QUESTION_CLOSED) ── */
                 <motion.div 
                   key="result"
                   initial={{ opacity: 0, scale: 0.8 }}
@@ -1492,6 +1510,31 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                       <p className="text-red-300 text-sm mt-1">0 pts</p>
                     </>
                   )}
+                </motion.div>
+              ) : answered && !answerResult ? (
+                /* ── WAITING STATE: answered but result not yet revealed ── */
+                <motion.div
+                  key="waiting"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="text-center p-8 rounded-2xl bg-indigo-500/10 border-2 border-indigo-500/30"
+                >
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                    className="inline-block"
+                  >
+                    <Loader2 className="w-14 h-14 text-indigo-400 mx-auto mb-4" />
+                  </motion.div>
+                  <motion.p 
+                    className="text-indigo-300 text-xl font-bold"
+                    animate={{ opacity: [1, 0.5, 1] }}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                  >
+                    ¡Respuesta enviada!
+                  </motion.p>
+                  <p className="text-indigo-400/60 text-sm mt-2">Esperando a que se cierre la pregunta...</p>
                 </motion.div>
               ) : timeLeft <= 0 && !answered ? (
                 <motion.div 

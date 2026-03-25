@@ -379,38 +379,29 @@ export class LiveSessionService implements OnModuleDestroy {
       throw e;
     }
 
-    // Broadcast progress (1 query)
+    // Broadcast progress
     const totalAnswered = await this.prisma.liveSessionAnswer.count({
       where: { sessionId, questionId },
     });
 
-    // Count total connected students (those who have answered at least one question in this session)
-    const totalConnected = await this.prisma.liveSessionAnswer.groupBy({
-      by: ['studentEnrollmentId'],
-      where: { sessionId },
-    }).then(r => r.length);
-    
-    // Use max of: students who answered this question OR students who have participated in session
-    const expectedStudents = Math.max(totalAnswered, totalConnected);
+    // Count enrolled students for accurate progress display
+    const totalEnrolled = await this.prisma.studentEnrollment.count({
+      where: {
+        groupId: classroom.teacherAssignment.groupId,
+        academicYearId: classroom.teacherAssignment.academicYearId,
+        status: 'ACTIVE',
+      },
+    });
 
     this.broadcast(sessionId, {
       type: 'ANSWER_PROGRESS',
-      data: { questionId, totalAnswered, totalExpected: expectedStudents },
+      data: { questionId, totalAnswered, totalExpected: totalEnrolled },
     });
 
-    // Auto-close question if all connected students have answered
-    if (totalAnswered >= expectedStudents && expectedStudents > 0) {
-      // Get the correct answer for current question
-      const currentQuestion = questions[session.currentQuestionIdx];
-      this.broadcast(sessionId, {
-        type: 'QUESTION_CLOSED',
-        data: {
-          questionId: currentQuestion.id,
-          correctAnswer: currentQuestion.correctAnswer,
-          autoClose: true,
-        },
-      });
-    }
+    // NOTE: We do NOT auto-close the question from the backend.
+    // The teacher's timer handles closing via closeQuestion().
+    // Previous auto-close was unreliable (closed prematurely on Q1
+    // because totalConnected == 1 after first answer).
 
     return { isCorrect, points: saved.points };
   }
@@ -515,20 +506,21 @@ export class LiveSessionService implements OnModuleDestroy {
         select: { studentEnrollmentId: true, questionId: true, isCorrect: true, points: true, answer: true, teamId: true },
       });
 
-      // Build per-student score map
-      const studentScores = new Map<string, { totalPoints: number; answeredQuestions: Set<string>; answers: typeof liveAnswers }>();
+      // Build per-student score map (tracking correctness for grading)
+      const studentScores = new Map<string, { totalPoints: number; correctCount: number; answeredQuestions: Set<string>; answers: typeof liveAnswers }>();
       for (const la of liveAnswers) {
         if (!studentScores.has(la.studentEnrollmentId)) {
-          studentScores.set(la.studentEnrollmentId, { totalPoints: 0, answeredQuestions: new Set(), answers: [] });
+          studentScores.set(la.studentEnrollmentId, { totalPoints: 0, correctCount: 0, answeredQuestions: new Set(), answers: [] });
         }
         const entry = studentScores.get(la.studentEnrollmentId)!;
         entry.totalPoints += la.points;
+        if (la.isCorrect) entry.correctCount++;
         entry.answeredQuestions.add(la.questionId);
         entry.answers.push(la);
       }
 
-      // For TEAM mode: compute team average scores for members without answers
-      let teamAvgScores = new Map<string, number>();
+      // For TEAM mode: compute team average correctness for members without answers
+      let teamAvgCorrectness = new Map<string, number>();
       if (session.mode === 'TEAM') {
         // Get team membership
         const teamMembers = await this.prisma.liveSessionTeamMember.findMany({
@@ -536,32 +528,26 @@ export class LiveSessionService implements OnModuleDestroy {
           select: { studentEnrollmentId: true, teamId: true },
         });
 
-        // Compute team totals from live answers
-        const teamTotals = new Map<string, { sum: number; count: number }>();
-        for (const la of liveAnswers) {
-          if (la.teamId) {
-            if (!teamTotals.has(la.teamId)) teamTotals.set(la.teamId, { sum: 0, count: 0 });
-            // Only count unique students per team
-          }
-        }
-        // Group answers by team
-        const teamStudentPoints = new Map<string, number[]>();
+        // Group correctness by team
+        const teamStudentCorrectness = new Map<string, number[]>();
         for (const tm of teamMembers) {
-          const score = studentScores.get(tm.studentEnrollmentId)?.totalPoints || 0;
-          if (!teamStudentPoints.has(tm.teamId)) teamStudentPoints.set(tm.teamId, []);
-          teamStudentPoints.get(tm.teamId)!.push(score);
+          const data = studentScores.get(tm.studentEnrollmentId);
+          const correctRatio = data ? data.correctCount / questions.length : 0;
+          if (!teamStudentCorrectness.has(tm.teamId)) teamStudentCorrectness.set(tm.teamId, []);
+          teamStudentCorrectness.get(tm.teamId)!.push(correctRatio);
         }
-        for (const [teamId, points] of teamStudentPoints) {
-          const activePoints = points.filter(p => p > 0);
-          const avg = activePoints.length > 0 ? activePoints.reduce((s, p) => s + p, 0) / activePoints.length : 0;
-          teamAvgScores.set(teamId, avg);
+        for (const [teamId, ratios] of teamStudentCorrectness) {
+          const activeRatios = ratios.filter(r => r > 0);
+          const avg = activeRatios.length > 0 ? activeRatios.reduce((s, r) => s + r, 0) / activeRatios.length : 0;
+          teamAvgCorrectness.set(teamId, avg);
         }
 
-        // Assign team average to members without answers
+        // Assign team average correctness to members without answers
         for (const tm of teamMembers) {
           if (!studentScores.has(tm.studentEnrollmentId)) {
-            const avgPts = teamAvgScores.get(tm.teamId) || 0;
-            studentScores.set(tm.studentEnrollmentId, { totalPoints: avgPts, answeredQuestions: new Set(), answers: [] });
+            const avgCorrect = teamAvgCorrectness.get(tm.teamId) || 0;
+            const avgCorrectCount = Math.round(avgCorrect * questions.length);
+            studentScores.set(tm.studentEnrollmentId, { totalPoints: 0, correctCount: avgCorrectCount, answeredQuestions: new Set(), answers: [] });
           }
         }
       }
@@ -577,10 +563,14 @@ export class LiveSessionService implements OnModuleDestroy {
 
         const scoreData = studentScores.get(enrollment.id);
         const rawPoints = scoreData?.totalPoints || 0;
-        // Normalize live quiz points to maxScore scale
-        // Live points are based on speed (up to points*1000), so normalize
-        const maxLivePoints = totalPossiblePoints * 1000;
-        const normalizedScore = maxLivePoints > 0 ? (rawPoints / maxLivePoints) * maxScore : 0;
+        const correctCount = scoreData?.correctCount || 0;
+        const totalQ = questions.length;
+
+        // Grade based on CORRECTNESS RATIO (not speed-weighted points)
+        // This ensures a student with more correct answers always gets a higher grade
+        // Speed only affects ranking position, not academic grade
+        const correctnessRatio = totalQ > 0 ? correctCount / totalQ : 0;
+        const normalizedScore = correctnessRatio * maxScore;
         const clampedScore = Math.min(Math.max(Math.round(normalizedScore * 10) / 10, 0), maxScore);
 
         await this.prisma.activitySubmission.create({
@@ -591,7 +581,7 @@ export class LiveSessionService implements OnModuleDestroy {
             score: clampedScore,
             submittedAt: now,
             gradedAt: now,
-            content: `Live Quiz — ${rawPoints > 0 ? Math.round(rawPoints).toLocaleString() + ' pts' : 'Sin participación'}`,
+            content: `Live Quiz — ${correctCount}/${totalQ} correctas${rawPoints > 0 ? ` (${Math.round(rawPoints).toLocaleString()} pts)` : ''}${correctCount === 0 && rawPoints === 0 ? ' — Sin participación' : ''}`,
           },
         });
       }
