@@ -1560,21 +1560,129 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
       {/* ANSWER REVEAL */}
       {phase === 'answer_reveal' && (
-        <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-          <div className="bg-white/10 rounded-2xl p-6 text-center space-y-4 backdrop-blur-sm">
-            <h2 className="text-2xl font-bold text-white">Respuesta correcta</h2>
-            {correctAnswer && <p className="text-green-400 text-xl font-semibold">{correctAnswer}</p>}
-            {explanation && <p className="text-white/60">{explanation}</p>}
-          </div>
+        <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
+          {/* ── Student result banner ── */}
+          {!isTeacher && answerResult && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.7, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ type: "spring", duration: 0.6, bounce: 0.4 }}
+              className={`rounded-3xl p-8 text-center border-2 backdrop-blur-sm ${
+                answerResult.isCorrect 
+                  ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/10 border-green-500/40' 
+                  : 'bg-gradient-to-br from-red-500/20 to-rose-500/10 border-red-500/40'
+              }`}
+            >
+              <motion.div
+                initial={{ scale: 0, rotate: answerResult.isCorrect ? -180 : 0 }}
+                animate={{ 
+                  scale: 1, 
+                  rotate: 0,
+                  ...(answerResult.isCorrect ? {} : { x: [0, -8, 8, -8, 8, 0] })
+                }}
+                transition={{ type: "spring", duration: 0.7, delay: 0.1 }}
+              >
+                {answerResult.isCorrect 
+                  ? <CheckCircle2 className="w-20 h-20 text-green-400 mx-auto mb-4 drop-shadow-lg" />
+                  : <XCircle className="w-20 h-20 text-red-400 mx-auto mb-4 drop-shadow-lg" />
+                }
+              </motion.div>
+              <motion.h2 
+                className={`text-3xl font-black mb-2 ${answerResult.isCorrect ? 'text-green-400' : 'text-red-400'}`}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+              >
+                {answerResult.isCorrect ? '¡Correcto!' : '¡Incorrecto!'}
+              </motion.h2>
+              <motion.p
+                className={`text-2xl font-bold ${answerResult.isCorrect ? 'text-green-300' : 'text-red-300/60'}`}
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.35, type: "spring" }}
+              >
+                {answerResult.isCorrect ? `+${animatedPoints} pts` : '0 pts'}
+              </motion.p>
+              {answerResult.isCorrect && streak > 1 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.45 }}
+                  className="mt-3 inline-flex items-center gap-1.5 px-4 py-1.5 bg-yellow-500/20 text-yellow-400 rounded-full text-sm font-bold border border-yellow-500/30"
+                >
+                  🔥 ¡Racha de {streak}!
+                </motion.div>
+              )}
+              {!answerResult.isCorrect && selectedAnswer && (
+                <motion.p
+                  className="text-red-300/50 text-sm mt-3"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  Tu respuesta: <span className="font-semibold text-red-300/70">{selectedAnswer}</span>
+                </motion.p>
+              )}
+            </motion.div>
+          )}
+
+          {/* ── Student: no answer submitted ── */}
+          {!isTeacher && !answerResult && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="rounded-3xl p-6 text-center bg-white/5 border-2 border-white/10"
+            >
+              <Clock className="w-14 h-14 text-white/30 mx-auto mb-3" />
+              <p className="text-white/50 text-xl font-bold">No respondiste a tiempo</p>
+            </motion.div>
+          )}
+
+          {/* ── Correct answer card (visible to all) ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: isTeacher ? 0 : 0.5 }}
+            className="bg-white/10 rounded-2xl p-6 text-center space-y-3 backdrop-blur-sm border border-white/10"
+          >
+            <p className="text-white/50 text-sm font-semibold uppercase tracking-wider">La respuesta correcta es</p>
+            {correctAnswer && (
+              <motion.p
+                className="text-green-400 text-2xl font-black"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: isTeacher ? 0.1 : 0.6, type: "spring" }}
+              >
+                {correctAnswer}
+              </motion.p>
+            )}
+            {explanation && (
+              <motion.p 
+                className="text-white/50 text-sm mt-2 italic"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: isTeacher ? 0.2 : 0.7 }}
+              >
+                {explanation}
+              </motion.p>
+            )}
+          </motion.div>
+
+          {/* ── Teacher controls ── */}
           {isTeacher && (
-            <div className="flex justify-center gap-3">
+            <motion.div
+              className="flex justify-center gap-3"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
               <button onClick={handleShowRanking} className="px-5 py-3 bg-purple-500/20 text-purple-400 rounded-xl font-semibold hover:bg-purple-500/30 flex items-center gap-2">
                 <Trophy className="w-4 h-4" /> Ver ranking
               </button>
               <button onClick={handleNextQuestion} className="px-5 py-3 bg-green-500/20 text-green-400 rounded-xl font-semibold hover:bg-green-500/30 flex items-center gap-2">
                 <SkipForward className="w-4 h-4" /> Siguiente pregunta
               </button>
-            </div>
+            </motion.div>
           )}
         </div>
       )}

@@ -3829,7 +3829,18 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 <p className="text-sm text-slate-400">Tiempo: {Math.floor(quizResult.timeSpentSeconds / 60)}m {quizResult.timeSpentSeconds % 60}s</p>
               )}
               <p className="text-sm text-slate-500">
-                {quizResult.answers?.filter((a: any) => a.isCorrect).length || 0} de {quizResult.answers?.length || 0} correctas
+                {(() => {
+                  // Live Quiz submissions have no QuestionAnswer records — parse from content
+                  const isLiveQuiz = quizResult.content?.startsWith('Live Quiz')
+                  if (isLiveQuiz) {
+                    const match = quizResult.content?.match(/(\d+)\/(\d+) correctas/)
+                    if (match) return `${match[1]} de ${match[2]} correctas`
+                    return quizResult.content?.replace('Live Quiz — ', '') || ''
+                  }
+                  const correct = quizResult.answers?.filter((a: any) => a.isCorrect).length || 0
+                  const total = quizResult.answers?.length || 0
+                  return `${correct} de ${total} correctas`
+                })()}
               </p>
             </div>
 
