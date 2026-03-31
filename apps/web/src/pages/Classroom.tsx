@@ -3327,11 +3327,14 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                           const file = e.target.files?.[0]
                           if (!file) return
                           try {
-                            const { data } = await classroomApi.uploadMaterial(file)
-                            const url = data.url
-                            setQForm({ ...qForm, imageUrl: url })
-                          } catch (err) {
-                            console.error('Error uploading image:', err)
+                            const response = await classroomApi.uploadMaterial(file)
+                            const url = response.data?.data?.url || response.data?.url
+                            if (url) {
+                              setQForm({ ...qForm, imageUrl: url })
+                            }
+                          } catch (err: any) {
+                            console.error('Error uploading image:', err?.response?.data || err)
+                            alert('Error al subir imagen: ' + (err?.response?.data?.message || 'Intenta de nuevo'))
                           }
                         }}
                       />

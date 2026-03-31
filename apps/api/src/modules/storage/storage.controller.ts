@@ -136,7 +136,7 @@ export class StorageController {
   }
 
   @Post('upload/classroom-material')
-  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  @Roles('ADMIN_INSTITUTIONAL', 'DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
   @UseInterceptors(FileInterceptor('file'))
   async uploadClassroomMaterial(
     @UploadedFile() file: Express.Multer.File,
