@@ -473,13 +473,17 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
     es.addEventListener('QUESTION_CLOSED', (e: any) => {
       const data = JSON.parse(e.data)
-      setCorrectAnswer(data.correctAnswer)
-      setExplanation(data.explanation)
-      stopTimer()
-      stopMusic()
-      // Reveal buffered result for students (with sounds + confetti)
-      revealPendingResult()
-      setPhase('answer_reveal')
+      // Only process if we're still in the question phase (ignore late close from previous question)
+      setPhase(currentPhase => {
+        if (currentPhase !== 'question') return currentPhase
+        setCorrectAnswer(data.correctAnswer)
+        setExplanation(data.explanation)
+        stopTimer()
+        stopMusic()
+        // Reveal buffered result for students (with sounds + confetti)
+        revealPendingResult()
+        return 'answer_reveal'
+      })
     })
 
     es.addEventListener('RANKING', (e: any) => {
@@ -529,10 +533,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       setTimeLeft(prev => {
         if (prev <= 1) {
           stopTimer()
-          // Auto-close question when timer expires (teacher only)
-          if (isTeacher && autoCloseRef.current && sessionIdRef.current) {
-            liveSessionApi.closeQuestion(sessionIdRef.current).catch(() => {})
-          }
+          // Backend handles auto-close via server-side timer — no frontend call needed
           return 0
         }
         // Play countdown sound in last 5 seconds (use ref to avoid stale closure)
@@ -1777,17 +1778,27 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
           {/* ── Teacher controls ── */}
           {isTeacher && (
             <motion.div
-              className="flex justify-center gap-3"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              className="flex justify-center gap-4 flex-wrap"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <button onClick={handleShowRanking} className="px-6 py-3 bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600 flex items-center gap-2 shadow-lg shadow-purple-500/30">
-                <Trophy className="w-4 h-4" /> Ver ranking
-              </button>
-              <button onClick={handleNextQuestion} className="px-6 py-3 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 flex items-center gap-2 shadow-lg shadow-green-500/30">
-                <SkipForward className="w-4 h-4" /> Siguiente pregunta
-              </button>
+              <motion.button 
+                onClick={handleShowRanking} 
+                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl text-lg font-black hover:from-purple-700 hover:to-indigo-700 flex items-center gap-3 shadow-2xl shadow-purple-600/40"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Trophy className="w-6 h-6" /> Ver ranking
+              </motion.button>
+              <motion.button 
+                onClick={handleNextQuestion} 
+                className="px-8 py-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-2xl text-lg font-black hover:from-emerald-600 hover:to-green-700 flex items-center gap-3 shadow-2xl shadow-emerald-500/40"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <SkipForward className="w-6 h-6" /> Siguiente pregunta
+              </motion.button>
             </motion.div>
           )}
         </div>

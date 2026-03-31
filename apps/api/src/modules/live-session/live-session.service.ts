@@ -38,6 +38,10 @@ export class LiveSessionService implements OnModuleDestroy {
   private streamCreatedAt = new Map<string, number>();
   // Map of sessionId → Set of connected studentEnrollmentIds (for auto-close)
   private connectedStudents = new Map<string, Set<string>>();
+  // Map of sessionId → timer for auto-closing current question
+  private questionTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  // Map of sessionId → Set of questionIdx already closed (prevent double broadcast)
+  private closedQuestions = new Map<string, Set<number>>();
 
   constructor(private prisma: PrismaService) {}
 
@@ -90,6 +94,8 @@ export class LiveSessionService implements OnModuleDestroy {
     this.heartbeats.delete(sessionId);
     this.streamCreatedAt.delete(sessionId);
     this.connectedStudents.delete(sessionId);
+    this.clearQuestionTimer(sessionId);
+    this.closedQuestions.delete(sessionId);
     const stream = this.streams.get(sessionId);
     if (stream) {
       stream.complete();
@@ -271,6 +277,9 @@ export class LiveSessionService implements OnModuleDestroy {
     const multiplier = config.multipliers?.[String(nextIdx)] || 1;
     const timeLimit = config.timeLimitOverride || 15;
 
+    // Cancel any pending timer from previous question & reset closed tracking for new question
+    this.clearQuestionTimer(sessionId);
+
     // Broadcast question to all connected clients (no correctAnswer!)
     this.broadcast(sessionId, {
       type: 'QUESTION',
@@ -289,6 +298,9 @@ export class LiveSessionService implements OnModuleDestroy {
         context: q.context || null,
       },
     });
+
+    // Start server-side auto-close timer (reliable fallback)
+    this.startQuestionTimer(sessionId, session.activityId, nextIdx, timeLimit);
 
     return { index: nextIdx, total: questions.length, question: q };
   }
@@ -423,32 +435,14 @@ export class LiveSessionService implements OnModuleDestroy {
     });
 
     // Auto-close question when ALL CONNECTED students have answered
-    // This closes immediately when everyone in the quiz responds
-    if (connectedCount > 0 && totalAnswered >= connectedCount) {
+    // Use connectedCount if available, otherwise use totalAnswered vs totalEnrolled
+    const effectiveExpected = connectedCount > 0 ? connectedCount : totalEnrolled;
+    if (effectiveExpected > 0 && totalAnswered >= effectiveExpected) {
       // Small delay to let the last answer's UI update before closing
-      setTimeout(async () => {
-        try {
-          // Get correct answer for current question
-          const questions = await this.prisma.activityQuestion.findMany({
-            where: { activityId: session.activityId },
-            orderBy: { sortOrder: 'asc' },
-            select: { id: true, correctAnswer: true, explanation: true },
-          });
-          const currentQ = questions[session.currentQuestionIdx];
-          
-          this.broadcast(sessionId, {
-            type: 'QUESTION_CLOSED',
-            data: {
-              questionId,
-              correctAnswer: currentQ?.correctAnswer,
-              explanation: currentQ?.explanation,
-              autoClosedReason: 'all_answered',
-            },
-          });
-        } catch (err) {
-          // Ignore errors in auto-close
-        }
-      }, 500);
+      setTimeout(() => {
+        this.logger.log(`Auto-closing question for session ${sessionId} (all ${totalAnswered}/${effectiveExpected} answered)`);
+        this.doCloseQuestion(sessionId, session.activityId, session.currentQuestionIdx).catch(() => {});
+      }, 800);
     }
 
     return { isCorrect, points: saved.points };
@@ -463,25 +457,59 @@ export class LiveSessionService implements OnModuleDestroy {
 
   async closeQuestion(sessionId: string, teacherId: string) {
     const session = await this.validateTeacherSession(sessionId, teacherId);
-    
-    // Get the correct answer for current question
+    this.doCloseQuestion(sessionId, session.activityId, session.currentQuestionIdx);
+    return { success: true };
+  }
+
+  // Internal close question logic — used by teacher action, timer, and auto-close
+  private async doCloseQuestion(sessionId: string, activityId: string, questionIdx: number) {
+    // Cancel any pending timer for this question
+    this.clearQuestionTimer(sessionId);
+
+    // Prevent double broadcast for same question
+    if (!this.closedQuestions.has(sessionId)) {
+      this.closedQuestions.set(sessionId, new Set());
+    }
+    if (this.closedQuestions.get(sessionId)!.has(questionIdx)) {
+      this.logger.log(`Question ${questionIdx} already closed for session ${sessionId}, skipping`);
+      return;
+    }
+    this.closedQuestions.get(sessionId)!.add(questionIdx);
+
     const questions = await this.prisma.activityQuestion.findMany({
-      where: { activityId: session.activityId },
+      where: { activityId },
       orderBy: { sortOrder: 'asc' },
       select: { id: true, correctAnswer: true, explanation: true },
     });
-    const currentQ = questions[session.currentQuestionIdx];
+    const currentQ = questions[questionIdx];
+    if (!currentQ) return;
 
     this.broadcast(sessionId, {
       type: 'QUESTION_CLOSED',
       data: {
-        questionId: currentQ?.id,
-        correctAnswer: currentQ?.correctAnswer,
-        explanation: currentQ?.explanation,
+        questionId: currentQ.id,
+        correctAnswer: currentQ.correctAnswer,
+        explanation: currentQ.explanation,
       },
     });
+  }
 
-    return { success: true };
+  // Server-side timer: auto-close question when time runs out
+  private startQuestionTimer(sessionId: string, activityId: string, questionIdx: number, timeLimitSeconds: number) {
+    this.clearQuestionTimer(sessionId);
+    const timer = setTimeout(() => {
+      this.logger.log(`Auto-closing question ${questionIdx} for session ${sessionId} (timer expired)`);
+      this.doCloseQuestion(sessionId, activityId, questionIdx).catch(() => {});
+    }, (timeLimitSeconds + 1) * 1000); // +1s buffer for network latency
+    this.questionTimers.set(sessionId, timer);
+  }
+
+  private clearQuestionTimer(sessionId: string) {
+    const existing = this.questionTimers.get(sessionId);
+    if (existing) {
+      clearTimeout(existing);
+      this.questionTimers.delete(sessionId);
+    }
   }
 
   async finishSession(sessionId: string, teacherId: string) {
