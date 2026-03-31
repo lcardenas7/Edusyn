@@ -404,17 +404,8 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       } else if (data.status === 'WAITING') {
         setPhase('lobby')
       } else {
-        // ACTIVE — populate currentQuestion so student doesn't see blank screen
-        const idx = data.currentQuestionIdx ?? 0
-        const q = questions[idx]
-        if (q) {
-          const timeLimit = cfg.timeLimitOverride || 15
-          setCurrentQuestion(q)
-          setQuestionIndex(idx)
-          setTimeLimit(timeLimit)
-          setTimeLeft(timeLimit)
-          setOrderAnswers(q.options && q.type === 'ORDERING' ? [...(q.options as string[])] : [])
-        }
+        // ACTIVE — don't populate currentQuestion from REST (it contains correctAnswer
+        // and timer won't run). Wait for SSE QUESTION event or backend replay.
         setPhase('question')
       }
       connectSSE(sid)

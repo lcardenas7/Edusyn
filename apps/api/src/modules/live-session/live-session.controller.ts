@@ -16,7 +16,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ConfigService } from '@nestjs/config';
 import { LiveSessionService, LiveEvent } from './live-session.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Observable, map } from 'rxjs';
+import { Observable, map, concat, of, from, EMPTY, switchMap } from 'rxjs';
 import * as jwt from 'jsonwebtoken';
 import { SkipTenantCheck } from '../auth/decorators/skip-tenant-check.decorator';
 
@@ -95,12 +95,26 @@ export class LiveSessionController {
     }
 
     const subject = this.liveSessionService.getOrCreateStream(sessionId);
-    return subject.asObservable().pipe(
+
+    // Live stream of future events
+    const live$ = subject.asObservable().pipe(
       map((event: LiveEvent) => ({
         type: event.type,
         data: event.data,
       } as MessageEvent)),
     );
+
+    // Replay current question for clients joining mid-question (async → Observable)
+    const replay$ = from(this.liveSessionService.getReplayEvent(sessionId)).pipe(
+      switchMap((event) =>
+        event
+          ? of({ type: event.type, data: event.data } as MessageEvent)
+          : EMPTY,
+      ),
+    );
+
+    // Replay first, then live stream
+    return concat(replay$, live$);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

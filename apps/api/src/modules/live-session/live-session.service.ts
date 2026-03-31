@@ -88,6 +88,52 @@ export class LiveSessionService implements OnModuleDestroy {
     if (stream) stream.next(event);
   }
 
+  /**
+   * Build a replay QUESTION event for a new SSE client joining mid-question.
+   * Returns null if session is not ACTIVE or no current question.
+   */
+  async getReplayEvent(sessionId: string): Promise<LiveEvent | null> {
+    const session = await this.prisma.liveSession.findUnique({
+      where: { id: sessionId },
+      select: { status: true, currentQuestionIdx: true, activityId: true, config: true },
+    });
+    if (!session || session.status !== 'ACTIVE' || session.currentQuestionIdx < 0) return null;
+
+    // Check if question is already closed (answer_reveal phase) — don't replay
+    if (this.closedQuestions.get(sessionId)?.has(session.currentQuestionIdx)) return null;
+
+    const questions = await this.prisma.activityQuestion.findMany({
+      where: { activityId: session.activityId },
+      orderBy: { sortOrder: 'asc' },
+      select: { id: true, type: true, text: true, imageUrl: true, options: true, points: true, context: true },
+    });
+    const q = questions[session.currentQuestionIdx];
+    if (!q) return null;
+
+    const config = (session.config as any) || {};
+    const isBonus = config.bonusQuestions?.includes(session.currentQuestionIdx) || false;
+    const multiplier = config.multipliers?.[String(session.currentQuestionIdx)] || 1;
+    const timeLimit = config.timeLimitOverride || 15;
+
+    return {
+      type: 'QUESTION',
+      data: {
+        index: session.currentQuestionIdx,
+        total: questions.length,
+        questionId: q.id,
+        type: q.type,
+        text: q.text,
+        imageUrl: q.imageUrl,
+        options: q.options,
+        points: Number(q.points),
+        isBonus,
+        multiplier,
+        timeLimit,
+        context: q.context || null,
+      },
+    };
+  }
+
   private cleanupStream(sessionId: string) {
     const hb = this.heartbeats.get(sessionId);
     if (hb) clearInterval(hb);
