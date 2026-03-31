@@ -3312,43 +3312,59 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   <div className="flex items-center gap-3">
                     <input 
                       value={qForm.imageUrl} 
-                      onChange={e => setQForm({ ...qForm, imageUrl: e.target.value })} 
+                      onChange={e => setQForm(prev => ({ ...prev, imageUrl: e.target.value }))} 
                       placeholder="URL de imagen o sube una..." 
                       className="flex-1 border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
                     />
-                    <label className="px-4 py-2.5 bg-purple-100 text-purple-700 rounded-xl text-sm font-medium cursor-pointer hover:bg-purple-200 transition-colors flex items-center gap-2">
-                      <ImageIcon className="w-4 h-4" />
-                      Subir
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0]
+                    <button
+                      type="button"
+                      className="px-4 py-2.5 bg-purple-100 text-purple-700 rounded-xl text-sm font-medium cursor-pointer hover:bg-purple-200 transition-colors flex items-center gap-2"
+                      onClick={() => {
+                        const input = document.createElement('input')
+                        input.type = 'file'
+                        input.accept = 'image/*'
+                        input.onchange = async () => {
+                          const file = input.files?.[0]
                           if (!file) return
+                          setQForm(prev => ({ ...prev, imageUrl: '⏳ Subiendo imagen...' }))
                           try {
                             const response = await classroomApi.uploadMaterial(file)
-                            const url = response.data?.data?.url || response.data?.url
-                            if (url) {
-                              setQForm({ ...qForm, imageUrl: url })
+                            const uploadedUrl = response.data?.data?.url || response.data?.data?.path || response.data?.url || response.data?.path
+                            if (uploadedUrl) {
+                              setQForm(prev => ({ ...prev, imageUrl: uploadedUrl }))
+                            } else {
+                              console.error('Upload response structure:', JSON.stringify(response.data))
+                              setQForm(prev => ({ ...prev, imageUrl: '' }))
+                              alert('No se pudo obtener la URL de la imagen subida')
                             }
                           } catch (err: any) {
                             console.error('Error uploading image:', err?.response?.data || err)
-                            alert('Error al subir imagen: ' + (err?.response?.data?.message || 'Intenta de nuevo'))
+                            setQForm(prev => ({ ...prev, imageUrl: '' }))
+                            alert('Error al subir imagen: ' + (err?.response?.data?.message || err?.message || 'Intenta de nuevo'))
                           }
-                        }}
-                      />
-                    </label>
+                        }
+                        input.click()
+                      }}
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                      Subir
+                    </button>
                   </div>
-                  {qForm.imageUrl && (
+                  {qForm.imageUrl && qForm.imageUrl !== '⏳ Subiendo imagen...' && (
                     <div className="mt-2 relative inline-block">
                       <img src={qForm.imageUrl} alt="Preview" className="max-h-32 rounded-lg border border-slate-200" />
                       <button 
-                        onClick={() => setQForm({ ...qForm, imageUrl: '' })}
+                        onClick={() => setQForm(prev => ({ ...prev, imageUrl: '' }))}
                         className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
                       >
                         <X className="w-4 h-4" />
                       </button>
+                    </div>
+                  )}
+                  {qForm.imageUrl === '⏳ Subiendo imagen...' && (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-purple-600">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Subiendo imagen...
                     </div>
                   )}
                 </div>
