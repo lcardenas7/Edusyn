@@ -230,7 +230,15 @@ function getAvatarColor(name: string) {
 export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, activityTitle, sessionId: initialSessionId, studentEnrollmentId }: LiveQuizProps) {
   const [sessionId, setSessionId] = useState(initialSessionId || '')
   const [session, setSession] = useState<any>(null)
-  const [phase, setPhase] = useState<'setup' | 'loading' | 'lobby' | 'question' | 'answer_reveal' | 'ranking' | 'finished'>('setup')
+  const [phase, _setPhase] = useState<'setup' | 'loading' | 'lobby' | 'question' | 'answer_reveal' | 'ranking' | 'finished'>('setup')
+  const phaseRef = useRef(phase)
+  const setPhase = (p: typeof phase | ((prev: typeof phase) => typeof phase)) => {
+    _setPhase(prev => {
+      const next = typeof p === 'function' ? p(prev) : p
+      phaseRef.current = next
+      return next
+    })
+  }
   const [error, setError] = useState('')
 
   // Current question state
@@ -474,16 +482,14 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     es.addEventListener('QUESTION_CLOSED', (e: any) => {
       const data = JSON.parse(e.data)
       // Only process if we're still in the question phase (ignore late close from previous question)
-      setPhase(currentPhase => {
-        if (currentPhase !== 'question') return currentPhase
-        setCorrectAnswer(data.correctAnswer)
-        setExplanation(data.explanation)
-        stopTimer()
-        stopMusic()
-        // Reveal buffered result for students (with sounds + confetti)
-        revealPendingResult()
-        return 'answer_reveal'
-      })
+      if (phaseRef.current !== 'question') return
+      setCorrectAnswer(data.correctAnswer)
+      setExplanation(data.explanation)
+      stopTimer()
+      stopMusic()
+      // Reveal buffered result for students (with sounds + confetti)
+      revealPendingResult()
+      setPhase('answer_reveal')
     })
 
     es.addEventListener('RANKING', (e: any) => {
@@ -823,25 +829,26 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   const timerColor = timeLeft > timeLimit * 0.5 ? 'bg-green-500' : timeLeft > timeLimit * 0.25 ? 'bg-yellow-500' : 'bg-red-500'
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-cyan-400 via-cyan-500 to-teal-600 overflow-auto">
+    <div className="fixed inset-0 z-50 overflow-auto" style={{ background: 'linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 50%, #FFE66D 100%)', backgroundSize: '400% 400%', animation: 'quizGradientShift 15s ease infinite' }}>
+      <style>{`@keyframes quizGradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }`}</style>
       {/* Decorative background shapes */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl" />
-        <div className="absolute top-40 right-20 w-48 h-48 bg-cyan-300/20 rounded-full blur-2xl" />
-        <div className="absolute bottom-20 left-1/4 w-40 h-40 bg-teal-300/15 rounded-full blur-xl" />
-        <div className="absolute bottom-40 right-1/3 w-24 h-24 bg-white/10 rounded-full blur-lg" />
+        <div className="absolute top-20 left-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+        <div className="absolute top-40 right-20 w-56 h-56 bg-yellow-300/15 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 left-1/4 w-48 h-48 bg-teal-300/10 rounded-full blur-2xl" />
+        <div className="absolute bottom-40 right-1/3 w-32 h-32 bg-white/10 rounded-full blur-xl" />
       </div>
 
       {/* Top bar */}
-      <div className="relative flex items-center justify-between px-4 py-3 bg-purple-600/90 shadow-lg">
+      <div className="relative flex items-center justify-between px-4 py-3 bg-white/90 backdrop-blur-md shadow-lg shadow-black/5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center shadow-md">
-            <Zap className="w-6 h-6 text-purple-700" />
+          <div className="w-10 h-10 bg-gradient-to-br from-[#FF6B6B] to-[#FF8E72] rounded-2xl flex items-center justify-center shadow-md shadow-red-300/30" style={{ transform: 'rotate(-5deg)' }}>
+            <Zap className="w-6 h-6 text-white" />
           </div>
           <div>
-            <span className="text-white font-black text-lg tracking-tight">Live Quiz</span>
+            <span className="font-black text-lg tracking-tight bg-gradient-to-r from-[#FF6B6B] to-[#4ECDC4] bg-clip-text text-transparent">Live Quiz</span>
             {session?.activity?.title && (
-              <p className="text-purple-200 text-xs truncate max-w-[150px] sm:max-w-none">{session.activity.title}</p>
+              <p className="text-slate-400 text-xs truncate max-w-[150px] sm:max-w-none">{session.activity.title}</p>
             )}
           </div>
         </div>
@@ -849,16 +856,16 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
           {!isTeacher && (
             <button 
               onClick={() => setShowAvatarPicker(!showAvatarPicker)} 
-              className="p-1.5 rounded-xl bg-white/20 hover:bg-white/30 transition-colors"
+              className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors"
               title="Cambiar avatar"
             >
               <AnimalAvatar avatarId={myAvatarId} size="sm" />
             </button>
           )}
-          <button onClick={toggleMusic} className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition-colors" title={musicOn ? 'Silenciar música' : 'Activar música'}>
-            {musicOn ? <Volume2 className="w-5 h-5 text-yellow-300" /> : <VolumeX className="w-5 h-5 text-white/60" />}
+          <button onClick={toggleMusic} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors" title={musicOn ? 'Silenciar música' : 'Activar música'}>
+            {musicOn ? <Volume2 className="w-5 h-5 text-[#4ECDC4]" /> : <VolumeX className="w-5 h-5 text-slate-400" />}
           </button>
-          <button onClick={() => { stopMusic(); onClose() }} className="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white/80 hover:text-white transition-colors">
+          <button onClick={() => { stopMusic(); onClose() }} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -891,110 +898,165 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
       {/* SETUP (teacher picks mode + team names) */}
       {phase === 'setup' && isTeacher && (
-        <div className="flex flex-col items-center justify-center min-h-[80vh] px-4 space-y-8">
-          <div className="text-center space-y-3">
-            <Zap className="w-16 h-16 text-yellow-400 mx-auto" />
-            <h1 className="text-3xl sm:text-4xl font-black text-white">
-              {activityTitle || 'Live Quiz'}
-            </h1>
-            <p className="text-white/70">Configura la sesión antes de iniciar</p>
-          </div>
-
-          <div className="w-full max-w-md space-y-6">
-            {/* Mode selector */}
-            <div className="space-y-2">
-              <p className="text-white/80 font-semibold text-sm text-center">Modalidad</p>
-              <div className="flex gap-3">
-                <button onClick={() => setMode('INDIVIDUAL')} className={`flex-1 p-4 rounded-2xl border-2 transition-all text-center ${mode === 'INDIVIDUAL' ? 'border-indigo-400 bg-indigo-500/20' : 'border-white/10 bg-white/5 hover:border-white/30'}`}>
-                  <Users className="w-8 h-8 mx-auto mb-2 text-indigo-400" />
-                  <p className="text-white font-semibold">Individual</p>
-                  <p className="text-white/40 text-xs mt-1">Cada estudiante compite solo</p>
-                </button>
-                <button onClick={() => setMode('TEAM')} className={`flex-1 p-4 rounded-2xl border-2 transition-all text-center ${mode === 'TEAM' ? 'border-purple-400 bg-purple-500/20' : 'border-white/10 bg-white/5 hover:border-white/30'}`}>
-                  <Award className="w-8 h-8 mx-auto mb-2 text-purple-400" />
-                  <p className="text-white font-semibold">Equipos</p>
-                  <p className="text-white/40 text-xs mt-1">Los estudiantes eligen un equipo</p>
-                </button>
+        <div className="flex flex-col items-center justify-center min-h-[80vh] px-4 py-8">
+          <motion.div 
+            className="w-full max-w-lg bg-white rounded-[30px] p-8 sm:p-10 shadow-2xl shadow-black/20 relative overflow-hidden"
+            initial={{ opacity: 0, scale: 0.8, y: 30 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.6, type: "spring" }}
+          >
+            {/* Decorative blobs inside card */}
+            <div className="absolute -top-20 -right-20 w-60 h-60 bg-[#FF6B6B]/5 rounded-full pointer-events-none" />
+            <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-[#4ECDC4]/5 rounded-full pointer-events-none" />
+            
+            <div className="relative z-10 space-y-8">
+              {/* Title */}
+              <div className="text-center space-y-3">
+                <motion.div 
+                  className="text-5xl inline-block"
+                  animate={{ y: [0, -12, 0] }}
+                  transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                >🚀</motion.div>
+                <h1 className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-[#FF6B6B] via-[#FFE66D] to-[#4ECDC4] bg-clip-text text-transparent">
+                  {activityTitle || '¡Live Quiz!'}
+                </h1>
+                <p className="text-slate-400 font-semibold">Configura y comienza la diversión</p>
               </div>
-            </div>
 
-            {/* Team mode info */}
-            {mode === 'TEAM' && (
-              <div className="bg-purple-500/10 border border-purple-500/30 rounded-2xl p-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-white font-semibold">Modo Equipos</p>
-                    <p className="text-purple-300 text-xs">Los estudiantes crearán sus propios equipos</p>
-                  </div>
+              {/* Mode selector */}
+              <div className="space-y-3">
+                <p className="text-sm font-extrabold text-[#FF6B6B] uppercase tracking-widest text-center flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 bg-[#FF6B6B] rounded-full" /> Modalidad
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <motion.button 
+                    onClick={() => setMode('INDIVIDUAL')} 
+                    whileHover={{ y: -6, scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`relative p-5 rounded-2xl border-3 transition-all text-center ${
+                      mode === 'INDIVIDUAL' 
+                        ? 'bg-gradient-to-br from-[#FFE66D] to-[#FFD93D] border-[#FFC93D] shadow-lg shadow-yellow-300/30' 
+                        : 'bg-gradient-to-br from-slate-50 to-purple-50 border-slate-200 hover:border-[#FF6B6B]'
+                    }`}
+                  >
+                    {mode === 'INDIVIDUAL' && <span className="absolute top-2 right-3 text-[#FF6B6B] font-black text-lg">✓</span>}
+                    <div className="text-3xl mb-2">👤</div>
+                    <p className="text-slate-800 font-extrabold text-base">Individual</p>
+                    <p className="text-slate-500 text-xs mt-1">Cada estudiante compite solo</p>
+                  </motion.button>
+                  <motion.button 
+                    onClick={() => setMode('TEAM')} 
+                    whileHover={{ y: -6, scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`relative p-5 rounded-2xl border-3 transition-all text-center ${
+                      mode === 'TEAM' 
+                        ? 'bg-gradient-to-br from-[#FFE66D] to-[#FFD93D] border-[#FFC93D] shadow-lg shadow-yellow-300/30' 
+                        : 'bg-gradient-to-br from-slate-50 to-purple-50 border-slate-200 hover:border-[#FF6B6B]'
+                    }`}
+                  >
+                    {mode === 'TEAM' && <span className="absolute top-2 right-3 text-[#FF6B6B] font-black text-lg">✓</span>}
+                    <div className="text-3xl mb-2">🏆</div>
+                    <p className="text-slate-800 font-extrabold text-base">Equipos</p>
+                    <p className="text-slate-500 text-xs mt-1">Los estudiantes eligen un equipo</p>
+                  </motion.button>
                 </div>
-                <div className="bg-white/5 rounded-xl p-3 space-y-2">
-                  <p className="text-white/80 text-sm font-medium">¿Cómo funciona?</p>
-                  <ul className="text-white/60 text-xs space-y-1">
-                    <li className="flex items-start gap-2">
-                      <span className="text-purple-400">1.</span>
-                      <span>Cada estudiante puede crear un equipo con un nombre creativo</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-purple-400">2.</span>
-                      <span>Pueden agregar compañeros que no tengan celular a su equipo</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-purple-400">3.</span>
-                      <span>O unirse a un equipo existente creado por otro compañero</span>
-                    </li>
+              </div>
+
+              {/* Team mode info */}
+              {mode === 'TEAM' && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-4 space-y-2"
+                >
+                  <p className="text-purple-700 font-bold text-sm">¿Cómo funciona?</p>
+                  <ul className="text-purple-600 text-xs space-y-1">
+                    <li>1. Cada estudiante puede crear un equipo con un nombre creativo</li>
+                    <li>2. Pueden agregar compañeros a su equipo</li>
+                    <li>3. O unirse a un equipo existente</li>
                   </ul>
-                </div>
-                <div className="flex items-center gap-2 text-amber-400 text-xs">
-                  <Timer className="w-4 h-4" />
-                  <span>Máximo 12 equipos • Sin límite de integrantes</span>
-                </div>
-              </div>
-            )}
+                  <p className="text-amber-600 text-xs font-semibold flex items-center gap-1">
+                    <Timer className="w-3.5 h-3.5" /> Máximo 12 equipos • Sin límite de integrantes
+                  </p>
+                </motion.div>
+              )}
 
-            {/* Time config */}
-            <div className="bg-white/5 rounded-2xl p-4 space-y-3">
-              <p className="text-white/80 font-semibold text-sm">Tiempo por pregunta</p>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min={5}
-                  max={120}
-                  step={5}
-                  value={globalTimeLimit}
-                  onChange={e => setGlobalTimeLimit(Number(e.target.value))}
-                  className="flex-1 accent-indigo-500"
-                />
-                <span className="text-white font-bold text-lg w-16 text-center">{globalTimeLimit}s</span>
+              {/* Time config */}
+              <div className="space-y-3">
+                <p className="text-sm font-extrabold text-[#FF6B6B] uppercase tracking-widest text-center flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 bg-[#FF6B6B] rounded-full" /> Tiempo por pregunta
+                </p>
+                <div className="bg-gradient-to-br from-sky-50 to-blue-50 rounded-2xl p-5 border-2 border-blue-100 space-y-4">
+                  <motion.div 
+                    className="text-5xl sm:text-6xl font-black text-[#4ECDC4] text-center"
+                    key={globalTimeLimit}
+                    initial={{ scale: 0.9 }}
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 0.3 }}
+                    style={{ textShadow: '0 4px 10px rgba(78,205,196,0.2)' }}
+                  >
+                    {globalTimeLimit}s
+                  </motion.div>
+                  <input
+                    type="range"
+                    min={5}
+                    max={120}
+                    step={5}
+                    value={globalTimeLimit}
+                    onChange={e => setGlobalTimeLimit(Number(e.target.value))}
+                    className="w-full h-3 rounded-full appearance-none cursor-pointer"
+                    style={{ background: 'linear-gradient(90deg, #FF6B6B 0%, #FFE66D 50%, #4ECDC4 100%)' }}
+                  />
+                  <div className="flex items-center justify-center gap-3 pt-2 border-t-2 border-blue-100">
+                    <label className="flex items-center gap-2.5 cursor-pointer">
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          checked={autoCloseOnTimeout}
+                          onChange={e => setAutoCloseOnTimeout(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-6 h-6 border-3 border-[#4ECDC4] rounded-lg bg-white peer-checked:bg-gradient-to-br peer-checked:from-[#4ECDC4] peer-checked:to-[#3BA89F] peer-checked:border-[#4ECDC4] transition-all flex items-center justify-center">
+                          {autoCloseOnTimeout && <span className="text-white text-sm font-black">✓</span>}
+                        </div>
+                      </div>
+                      <span className="text-slate-500 text-sm font-semibold">Cerrar pregunta automáticamente</span>
+                    </label>
+                  </div>
+                </div>
               </div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={autoCloseOnTimeout}
-                  onChange={e => setAutoCloseOnTimeout(e.target.checked)}
-                  className="w-4 h-4 rounded accent-indigo-500"
-                />
-                <span className="text-white/60 text-sm">Cerrar pregunta automáticamente al agotar el tiempo</span>
-              </label>
+
+              {/* Create session button */}
+              <motion.button
+                onClick={createSession}
+                whileHover={{ y: -4, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full py-5 bg-gradient-to-r from-[#FF6B6B] to-[#FF8E72] text-white rounded-2xl text-lg font-black uppercase tracking-wide shadow-xl shadow-red-300/30 flex items-center justify-center gap-3 relative overflow-hidden group"
+              >
+                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                <span className="relative flex items-center gap-3">
+                  <motion.span animate={{ x: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 0.8 }}>▶</motion.span>
+                  ¡Vamos!
+                </span>
+              </motion.button>
             </div>
-
-            {/* Create session button */}
-            <button
-              onClick={createSession}
-              className="w-full px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl text-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg shadow-green-500/30 flex items-center justify-center gap-3"
-            >
-              <Play className="w-6 h-6" /> Crear sesión
-            </button>
-          </div>
+          </motion.div>
         </div>
       )}
 
       {/* LOADING */}
       {phase === 'loading' && (
         <div className="flex items-center justify-center h-[80vh]">
-          <Loader2 className="w-12 h-12 text-indigo-400 animate-spin" />
+          <div className="text-center space-y-4">
+            <motion.div 
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+              className="inline-block"
+            >
+              <Loader2 className="w-14 h-14 text-white" />
+            </motion.div>
+            <p className="text-white font-bold text-lg">Preparando todo...</p>
+          </div>
         </div>
       )}
 
@@ -1002,13 +1064,13 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       {phase === 'lobby' && (
         <div className="flex flex-col items-center justify-center min-h-[80vh] px-4 space-y-8">
           <div className="text-center space-y-3">
-            <Radio className="w-16 h-16 text-indigo-400 mx-auto animate-pulse" />
-            <h1 className="text-3xl sm:text-5xl font-black text-white">
+            <motion.div className="text-5xl inline-block" animate={{ scale: [1, 1.15, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}>📡</motion.div>
+            <h1 className="text-3xl sm:text-5xl font-black text-white drop-shadow-lg">
               {activityTitle || session?.activity?.title || 'Live Quiz'}
             </h1>
-            <p className="text-indigo-300 text-lg">
+            <p className="text-white/80 text-lg font-semibold">
               {totalQuestions} preguntas
-              {mode === 'TEAM' && <span className="ml-2 px-2 py-0.5 bg-purple-500/30 text-purple-300 rounded-full text-xs font-bold">EQUIPOS</span>}
+              {mode === 'TEAM' && <span className="ml-2 px-2 py-0.5 bg-white/20 text-white rounded-full text-xs font-bold">EQUIPOS</span>}
             </p>
           </div>
 
@@ -1434,25 +1496,25 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         >
           {/* Question header with circular timer */}
           <motion.div 
-            className="flex items-center justify-between bg-white/10 backdrop-blur-sm rounded-2xl p-3"
+            className="flex items-center justify-between bg-white/95 backdrop-blur-md rounded-2xl p-3 shadow-lg shadow-black/5"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg">
+              <div className="w-10 h-10 bg-gradient-to-br from-[#FF6B6B] to-[#FF8E72] rounded-xl flex items-center justify-center text-white font-black text-lg shadow-md">
                 {questionIndex + 1}
               </div>
               <div>
-                <p className="text-white font-bold">Pregunta {questionIndex + 1}</p>
-                <p className="text-white/60 text-xs">de {totalQuestions}</p>
+                <p className="text-slate-800 font-bold">Pregunta {questionIndex + 1}</p>
+                <p className="text-slate-400 text-xs">de {totalQuestions}</p>
               </div>
             </div>
             
             <div className="flex items-center gap-3">
               {isBonus && (
                 <motion.div 
-                  className="px-3 py-1.5 bg-yellow-400 text-yellow-900 rounded-xl text-xs font-black flex items-center gap-1 shadow-lg"
+                  className="px-3 py-1.5 bg-[#FFE66D] text-amber-800 rounded-xl text-xs font-black flex items-center gap-1 shadow-lg"
                   animate={{ scale: [1, 1.1, 1], rotate: [0, -3, 3, 0] }}
                   transition={{ repeat: Infinity, duration: 1.5 }}
                 >
@@ -1465,20 +1527,20 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
           {/* Context (reading passage / shared context) */}
           {currentQuestion.context && (
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl backdrop-blur-sm overflow-hidden">
+            <div className="bg-white/95 backdrop-blur-md border-2 border-amber-200 rounded-2xl overflow-hidden shadow-md">
               <button
                 onClick={() => setContextExpanded(prev => !prev)}
-                className="w-full flex items-center justify-between px-5 py-3 hover:bg-amber-500/10 transition-colors"
+                className="w-full flex items-center justify-between px-5 py-3 hover:bg-amber-50 transition-colors"
               >
-                <span className="text-amber-300 font-semibold text-sm uppercase tracking-wide flex items-center gap-2">
+                <span className="text-amber-700 font-bold text-sm uppercase tracking-wide flex items-center gap-2">
                   📖 {currentQuestion.context.title || 'Contexto / Lectura'}
                 </span>
-                <ChevronRight className={`w-4 h-4 text-amber-300 transition-transform duration-200 ${contextExpanded ? 'rotate-90' : ''}`} />
+                <ChevronRight className={`w-4 h-4 text-amber-600 transition-transform duration-200 ${contextExpanded ? 'rotate-90' : ''}`} />
               </button>
               {contextExpanded && (
                 <div className="px-5 pb-4 space-y-3">
                   {currentQuestion.context.text && (
-                    <p className="text-white/90 text-sm leading-relaxed whitespace-pre-line">{currentQuestion.context.text}</p>
+                    <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-line">{currentQuestion.context.text}</p>
                   )}
                   {currentQuestion.context.imageUrl && (
                     <img src={currentQuestion.context.imageUrl} alt="" className="max-h-48 rounded-xl mx-auto object-contain" />
@@ -1486,17 +1548,17 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                 </div>
               )}
               {!contextExpanded && currentQuestion.context.text && (
-                <p className="px-5 pb-3 text-white/50 text-xs truncate">
+                <p className="px-5 pb-3 text-slate-400 text-xs truncate">
                   {currentQuestion.context.text.substring(0, 120)}...
-                  <span className="text-amber-400 ml-1 font-medium">Toca para leer</span>
+                  <span className="text-amber-600 ml-1 font-medium">Toca para leer</span>
                 </p>
               )}
             </div>
           )}
 
           {/* Question text + image */}
-          <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm">
-            <p className="text-xl sm:text-2xl font-bold text-white leading-relaxed">{currentQuestion.text}</p>
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 shadow-lg shadow-black/5">
+            <p className="text-xl sm:text-2xl font-bold text-slate-800 leading-relaxed">{currentQuestion.text}</p>
             {currentQuestion.imageUrl && (
               <img src={currentQuestion.imageUrl} alt="" className="mt-4 max-h-64 rounded-xl mx-auto object-contain" />
             )}
@@ -1510,41 +1572,43 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              <div className="flex items-center justify-center gap-6">
-                <motion.div 
-                  className="text-center"
-                  animate={{ scale: totalAnswered > 0 ? [1, 1.1, 1] : 1 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <p className="text-4xl font-black text-white">{totalAnswered}</p>
-                  <p className="text-white/50 text-sm">respuestas</p>
-                </motion.div>
-              </div>
-              <div className="flex justify-center gap-3 flex-wrap">
-                <motion.button 
-                  onClick={handleCloseQuestion} 
-                  className="px-6 py-3 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 flex items-center gap-2 shadow-lg shadow-amber-500/30"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Clock className="w-4 h-4" /> Cerrar pregunta
-                </motion.button>
-                <motion.button 
-                  onClick={handleShowRanking} 
-                  className="px-6 py-3 bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600 flex items-center gap-2 shadow-lg shadow-purple-500/30"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Trophy className="w-4 h-4" /> Ver ranking
-                </motion.button>
-                <motion.button 
-                  onClick={handleNextQuestion} 
-                  className="px-6 py-3 bg-indigo-500 text-white rounded-xl font-bold hover:bg-indigo-600 flex items-center gap-2 shadow-lg shadow-indigo-500/30"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <SkipForward className="w-4 h-4" /> Siguiente
-                </motion.button>
+              <div className="bg-white/95 backdrop-blur-md rounded-2xl p-5 shadow-lg shadow-black/5">
+                <div className="flex items-center justify-center gap-6 mb-4">
+                  <motion.div 
+                    className="text-center"
+                    animate={{ scale: totalAnswered > 0 ? [1, 1.1, 1] : 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <p className="text-4xl font-black bg-gradient-to-r from-[#FF6B6B] to-[#4ECDC4] bg-clip-text text-transparent">{totalAnswered}</p>
+                    <p className="text-slate-400 text-sm font-semibold">respuestas</p>
+                  </motion.div>
+                </div>
+                <div className="flex justify-center gap-3 flex-wrap">
+                  <motion.button 
+                    onClick={handleCloseQuestion} 
+                    className="px-6 py-3 bg-gradient-to-r from-[#FF6B6B] to-[#FF8E72] text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-red-300/30"
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Clock className="w-4 h-4" /> Cerrar pregunta
+                  </motion.button>
+                  <motion.button 
+                    onClick={handleShowRanking} 
+                    className="px-6 py-3 bg-gradient-to-r from-[#FFE66D] to-[#FFD93D] text-amber-800 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-yellow-300/30"
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Trophy className="w-4 h-4" /> Ver ranking
+                  </motion.button>
+                  <motion.button 
+                    onClick={handleNextQuestion} 
+                    className="px-6 py-3 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-teal-300/30"
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <SkipForward className="w-4 h-4" /> Siguiente
+                  </motion.button>
+                </div>
               </div>
             </motion.div>
           ) : (
@@ -1559,7 +1623,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
                   transition={{ type: "spring", duration: 0.5 }}
-                  className={`text-center p-6 rounded-2xl ${answerResult.isCorrect ? 'bg-green-500/20 border-2 border-green-500/40' : 'bg-red-500/20 border-2 border-red-500/40'}`}
+                  className={`text-center p-6 rounded-2xl shadow-lg ${answerResult.isCorrect ? 'bg-white/95 border-2 border-green-300' : 'bg-white/95 border-2 border-red-300'}`}
                 >
                   {answerResult.isCorrect ? (
                     <>
@@ -1568,10 +1632,10 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                         animate={{ scale: 1, rotate: 0 }}
                         transition={{ type: "spring", duration: 0.6 }}
                       >
-                        <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-3" />
+                        <CheckCircle2 className="w-16 h-16 text-[#4ECDC4] mx-auto mb-3" />
                       </motion.div>
                       <motion.p 
-                        className="text-green-400 text-2xl font-bold"
+                        className="text-[#4ECDC4] text-2xl font-black"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
@@ -1579,7 +1643,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                         ¡Correcto!
                       </motion.p>
                       <motion.p 
-                        className="text-green-300 text-xl font-bold mt-2"
+                        className="text-[#4ECDC4] text-xl font-black mt-2"
                         initial={{ opacity: 0, scale: 0.5 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.3, type: "spring" }}
@@ -1590,7 +1654,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                         <motion.div
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="mt-2 inline-flex items-center gap-1 px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-sm font-bold"
+                          className="mt-2 inline-flex items-center gap-1 px-3 py-1 bg-[#FFE66D]/30 text-amber-700 rounded-full text-sm font-bold"
                         >
                           🔥 Racha x{streak}
                         </motion.div>
@@ -1603,17 +1667,17 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                         animate={{ scale: 1, x: [0, -10, 10, -10, 10, 0] }}
                         transition={{ duration: 0.5 }}
                       >
-                        <XCircle className="w-16 h-16 text-red-400 mx-auto mb-3" />
+                        <XCircle className="w-16 h-16 text-[#FF6B6B] mx-auto mb-3" />
                       </motion.div>
                       <motion.p 
-                        className="text-red-400 text-2xl font-bold"
+                        className="text-[#FF6B6B] text-2xl font-black"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.2 }}
                       >
                         Incorrecto
                       </motion.p>
-                      <p className="text-red-300 text-sm mt-1">0 pts</p>
+                      <p className="text-[#FF6B6B]/70 text-sm mt-1 font-semibold">0 pts</p>
                     </>
                   )}
                 </motion.div>
@@ -1624,33 +1688,33 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  className="text-center p-8 rounded-2xl bg-indigo-500/10 border-2 border-indigo-500/30"
+                  className="text-center p-8 rounded-2xl bg-white/95 border-2 border-[#4ECDC4]/30 shadow-lg"
                 >
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
                     className="inline-block"
                   >
-                    <Loader2 className="w-14 h-14 text-indigo-400 mx-auto mb-4" />
+                    <Loader2 className="w-14 h-14 text-[#4ECDC4] mx-auto mb-4" />
                   </motion.div>
                   <motion.p 
-                    className="text-indigo-300 text-xl font-bold"
+                    className="text-[#4ECDC4] text-xl font-bold"
                     animate={{ opacity: [1, 0.5, 1] }}
                     transition={{ repeat: Infinity, duration: 1.5 }}
                   >
                     ¡Respuesta enviada!
                   </motion.p>
-                  <p className="text-indigo-400/60 text-sm mt-2">Esperando a que se cierre la pregunta...</p>
+                  <p className="text-slate-400 text-sm mt-2">Esperando a que se cierre la pregunta...</p>
                 </motion.div>
               ) : timeLeft <= 0 && !answered ? (
                 <motion.div 
                   key="timeout"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-center p-6 rounded-2xl bg-white/5"
+                  className="text-center p-6 rounded-2xl bg-white/95 shadow-lg"
                 >
-                  <Clock className="w-14 h-14 text-white/30 mx-auto mb-3" />
-                  <p className="text-white/50 text-xl font-bold">Tiempo agotado</p>
+                  <Clock className="w-14 h-14 text-slate-300 mx-auto mb-3" />
+                  <p className="text-slate-400 text-xl font-bold">Tiempo agotado</p>
                 </motion.div>
               ) : (
                 <motion.div key="options" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -1675,8 +1739,8 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               transition={{ type: "spring", duration: 0.6, bounce: 0.4 }}
               className={`rounded-3xl p-8 text-center shadow-2xl ${
                 answerResult.isCorrect 
-                  ? 'bg-gradient-to-br from-emerald-500 to-green-600' 
-                  : 'bg-gradient-to-br from-rose-500 to-red-600'
+                  ? 'bg-gradient-to-br from-[#4ECDC4] to-[#3BA89F]' 
+                  : 'bg-gradient-to-br from-[#FF6B6B] to-[#E85555]'
               }`}
             >
               <motion.div
@@ -1738,10 +1802,10 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="rounded-3xl p-6 text-center bg-white/5 border-2 border-white/10"
+              className="rounded-3xl p-6 text-center bg-white/95 border-2 border-slate-200 shadow-lg"
             >
-              <Clock className="w-14 h-14 text-white/30 mx-auto mb-3" />
-              <p className="text-white/50 text-xl font-bold">No respondiste a tiempo</p>
+              <Clock className="w-14 h-14 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-400 text-xl font-bold">No respondiste a tiempo</p>
             </motion.div>
           )}
 
@@ -1750,12 +1814,12 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: isTeacher ? 0 : 0.5 }}
-            className="bg-white rounded-2xl p-6 text-center space-y-3 shadow-xl"
+            className="bg-white/95 backdrop-blur-md rounded-2xl p-6 text-center space-y-3 shadow-xl"
           >
             <p className="text-slate-500 text-sm font-semibold uppercase tracking-wider">La respuesta correcta es</p>
             {correctAnswer && (
               <motion.p
-                className="text-emerald-600 text-2xl font-black"
+                className="text-[#4ECDC4] text-2xl font-black"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: isTeacher ? 0.1 : 0.6, type: "spring" }}
@@ -1785,16 +1849,16 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             >
               <motion.button 
                 onClick={handleShowRanking} 
-                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl text-lg font-black hover:from-purple-700 hover:to-indigo-700 flex items-center gap-3 shadow-2xl shadow-purple-600/40"
-                whileHover={{ scale: 1.05 }}
+                className="px-8 py-4 bg-gradient-to-r from-[#FFE66D] to-[#FFD93D] text-amber-800 rounded-2xl text-lg font-black flex items-center gap-3 shadow-2xl shadow-yellow-300/40"
+                whileHover={{ scale: 1.05, y: -3 }}
                 whileTap={{ scale: 0.95 }}
               >
                 <Trophy className="w-6 h-6" /> Ver ranking
               </motion.button>
               <motion.button 
                 onClick={handleNextQuestion} 
-                className="px-8 py-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-2xl text-lg font-black hover:from-emerald-600 hover:to-green-700 flex items-center gap-3 shadow-2xl shadow-emerald-500/40"
-                whileHover={{ scale: 1.05 }}
+                className="px-8 py-4 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-2xl text-lg font-black flex items-center gap-3 shadow-2xl shadow-teal-400/40"
+                whileHover={{ scale: 1.05, y: -3 }}
                 whileTap={{ scale: 0.95 }}
               >
                 <SkipForward className="w-6 h-6" /> Siguiente pregunta
@@ -1819,7 +1883,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             transition={{ type: "spring", duration: 0.6 }}
           >
             <h2 className="text-3xl sm:text-4xl font-black text-white drop-shadow-lg">
-              {phase === 'finished' ? 'Final Standings' : 'Ranking'}
+              {phase === 'finished' ? '🏆 Resultados Finales' : '📊 Ranking'}
             </h2>
           </motion.div>
 
@@ -1837,7 +1901,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
           {/* Ranking list (top 5 for ranking phase, all for finished) */}
           <motion.div 
-            className="space-y-2 bg-white/10 backdrop-blur-sm rounded-2xl p-3"
+            className="space-y-2 bg-white/95 backdrop-blur-md rounded-2xl p-3 shadow-lg"
             initial="hidden"
             animate="visible"
             variants={{
@@ -1851,8 +1915,8 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               const avatarId = isMe ? myAvatarId : getAvatarFromName(entry.name).id
               const avatar = { ...getAvatarFromName(entry.name), id: avatarId }
               const isTop3 = i < 3
-              const rankColors = ['text-yellow-400', 'text-slate-300', 'text-amber-600']
-              const bgColors = ['bg-yellow-500/20', 'bg-slate-400/10', 'bg-amber-700/10', 'bg-white/5']
+              const rankColors = ['text-[#FFE66D]', 'text-slate-400', 'text-amber-600']
+              const bgColors = ['bg-gradient-to-r from-[#FFE66D]/20 to-[#FFD93D]/10', 'bg-slate-100', 'bg-amber-50', 'bg-slate-50']
               
               return (
                 <motion.div 
@@ -1866,7 +1930,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                   whileHover={{ scale: 1.02, x: 5 }}
                 >
                   {/* Rank */}
-                  <div className={`w-8 text-center font-black text-xl ${isTop3 ? rankColors[i] : 'text-white/60'}`}>
+                  <div className={`w-8 text-center font-black text-xl ${isTop3 ? rankColors[i] : 'text-slate-400'}`}>
                     {i + 1}<sup className="text-xs">{i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th'}</sup>
                   </div>
                   
@@ -1880,9 +1944,9 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                   
                   {/* Name */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-white font-bold truncate">{entry.name}</p>
+                    <p className="text-slate-800 font-bold truncate">{entry.name}</p>
                     {entry.correctAnswers !== undefined && (
-                      <p className="text-white/50 text-xs">{entry.correctAnswers} correctas</p>
+                      <p className="text-slate-400 text-xs">{entry.correctAnswers} correctas</p>
                     )}
                   </div>
                   
@@ -1893,13 +1957,13 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.2 + i * 0.05 }}
                   >
-                    <p className="text-xl font-black text-white">{entry.totalPoints.toLocaleString()}</p>
+                    <p className="text-xl font-black bg-gradient-to-r from-[#FF6B6B] to-[#4ECDC4] bg-clip-text text-transparent">{entry.totalPoints.toLocaleString()}</p>
                   </motion.div>
                 </motion.div>
               )
             })}
             {ranking.length === 0 && (
-              <p className="text-white/50 text-center py-6">Sin respuestas aún</p>
+              <p className="text-slate-400 text-center py-6">Sin respuestas aún</p>
             )}
           </motion.div>
 
@@ -1908,16 +1972,16 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             <div className="flex justify-center gap-3 pt-2">
               <motion.button 
                 onClick={handleNextQuestion} 
-                className="px-6 py-3 bg-emerald-500 text-white rounded-xl font-bold shadow-lg hover:bg-emerald-600 flex items-center gap-2"
-                whileHover={{ scale: 1.05 }}
+                className="px-6 py-3 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-xl font-bold shadow-lg shadow-teal-300/30 flex items-center gap-2"
+                whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
               >
                 <SkipForward className="w-5 h-5" /> Siguiente
               </motion.button>
               <motion.button 
                 onClick={handleFinish} 
-                className="px-6 py-3 bg-rose-500 text-white rounded-xl font-bold shadow-lg hover:bg-rose-600 flex items-center gap-2"
-                whileHover={{ scale: 1.05 }}
+                className="px-6 py-3 bg-gradient-to-r from-[#FF6B6B] to-[#FF8E72] text-white rounded-xl font-bold shadow-lg shadow-red-300/30 flex items-center gap-2"
+                whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
               >
                 <Trophy className="w-5 h-5" /> Finalizar
@@ -1934,16 +1998,16 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               transition={{ delay: 0.8 }}
             >
               {ranking.length === 0 && (
-                <div className="bg-white/10 rounded-2xl p-6 text-center space-y-3">
-                  <XCircle className="w-14 h-14 text-white/50 mx-auto" />
-                  <p className="text-white text-xl font-bold">La sesión ha terminado</p>
-                  <p className="text-white/60 text-sm">El profesor ha finalizado el quiz</p>
+                <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 text-center space-y-3 shadow-lg">
+                  <XCircle className="w-14 h-14 text-slate-300 mx-auto" />
+                  <p className="text-slate-700 text-xl font-bold">La sesión ha terminado</p>
+                  <p className="text-slate-400 text-sm">El profesor ha finalizado el quiz</p>
                 </div>
               )}
               <motion.button 
                 onClick={onClose} 
-                className="px-8 py-4 bg-emerald-500 text-white rounded-2xl text-lg font-bold shadow-xl hover:bg-emerald-600 transition-all"
-                whileHover={{ scale: 1.05 }}
+                className="px-8 py-4 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-2xl text-lg font-black shadow-xl shadow-teal-400/30 transition-all"
+                whileHover={{ scale: 1.05, y: -3 }}
                 whileTap={{ scale: 0.95 }}
               >
                 Volver al aula
@@ -1970,12 +2034,12 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       const opts = Array.isArray(options) ? options as string[] : []
       // Blooket/Kahoot style colors with shapes
       const optStyles = [
-        { bg: 'bg-red-500 hover:bg-red-600', shape: '▲' },
-        { bg: 'bg-blue-500 hover:bg-blue-600', shape: '◆' },
-        { bg: 'bg-yellow-500 hover:bg-yellow-600', shape: '●' },
-        { bg: 'bg-green-500 hover:bg-green-600', shape: '■' },
-        { bg: 'bg-purple-500 hover:bg-purple-600', shape: '★' },
-        { bg: 'bg-pink-500 hover:bg-pink-600', shape: '♥' },
+        { bg: 'bg-[#FF6B6B] hover:bg-[#E85555]', shape: '▲' },
+        { bg: 'bg-[#4ECDC4] hover:bg-[#3BA89F]', shape: '◆' },
+        { bg: 'bg-[#FFE66D] hover:bg-[#FFD93D] !text-amber-800', shape: '●' },
+        { bg: 'bg-[#95E1D3] hover:bg-[#7DCFC0]', shape: '■' },
+        { bg: 'bg-[#FF8E72] hover:bg-[#E87A60]', shape: '★' },
+        { bg: 'bg-[#A8E6CF] hover:bg-[#8DD4B8] !text-emerald-800', shape: '♥' },
       ]
       return (
         <motion.div 
@@ -2017,13 +2081,13 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               <button
                 key={i}
                 onClick={() => handleMultiSelect(opt)}
-                className={`w-full p-4 rounded-2xl text-left font-semibold transition-all ${sel ? 'bg-indigo-500/40 border-2 border-indigo-400 text-white' : 'bg-white/10 border-2 border-white/10 text-white/80 hover:border-white/30'}`}
+                className={`w-full p-4 rounded-2xl text-left font-semibold transition-all ${sel ? 'bg-[#4ECDC4]/20 border-2 border-[#4ECDC4] text-white' : 'bg-white/15 border-2 border-white/15 text-white/80 hover:border-white/40'}`}
               >
                 <span className="mr-2 opacity-60">{String.fromCharCode(65 + i)}.</span>{opt}
               </button>
             )
           })}
-          <button onClick={submitMultiAnswer} disabled={multiAnswers.length === 0} className="w-full py-3 bg-green-500/30 text-green-400 rounded-xl font-bold hover:bg-green-500/40 disabled:opacity-30">
+          <button onClick={submitMultiAnswer} disabled={multiAnswers.length === 0} className="w-full py-3 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-xl font-bold shadow-md disabled:opacity-40">
             Confirmar selección
           </button>
         </div>
@@ -2038,9 +2102,9 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             value={selectedAnswer}
             onChange={e => setSelectedAnswer(e.target.value)}
             placeholder="Escribe tu respuesta..."
-            className="flex-1 bg-white/10 border-2 border-white/20 rounded-xl px-4 py-3 text-white text-lg placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
+            className="flex-1 bg-white/95 border-2 border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-lg placeholder:text-slate-300 focus:outline-none focus:border-[#4ECDC4] shadow-md"
           />
-          <button onClick={() => submitAnswer(selectedAnswer)} disabled={!selectedAnswer.trim()} className="px-6 py-3 bg-green-500/30 text-green-400 rounded-xl font-bold hover:bg-green-500/40 disabled:opacity-30">
+          <button onClick={() => submitAnswer(selectedAnswer)} disabled={!selectedAnswer.trim()} className="px-6 py-3 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-xl font-bold shadow-md disabled:opacity-40">
             Enviar
           </button>
         </div>
@@ -2061,14 +2125,14 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                   <input
                     value={blankAnswers[i] || ''}
                     onChange={e => { const arr = [...blankAnswers]; arr[i] = e.target.value; setBlankAnswers(arr) }}
-                    className="inline-block w-32 mx-1 px-3 py-1 border-b-2 border-indigo-400 bg-indigo-900/50 text-indigo-200 font-medium text-center focus:outline-none"
+                    className="inline-block w-32 mx-1 px-3 py-1 border-b-2 border-[#4ECDC4] bg-white/20 text-white font-medium text-center focus:outline-none"
                     placeholder={`(${i + 1})`}
                   />
                 )}
               </span>
             ))}
           </div>
-          <button onClick={submitBlankAnswer} disabled={blankAnswers.filter(b => b?.trim()).length === 0} className="w-full py-3 bg-green-500/30 text-green-400 rounded-xl font-bold hover:bg-green-500/40 disabled:opacity-30">
+          <button onClick={submitBlankAnswer} disabled={blankAnswers.filter(b => b?.trim()).length === 0} className="w-full py-3 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-xl font-bold shadow-md disabled:opacity-40">
             Confirmar respuesta
           </button>
         </div>
@@ -2080,16 +2144,16 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       return (
         <div className="space-y-3">
           {orderAnswers.map((item: string, i: number) => (
-            <div key={i} className="flex items-center gap-2 p-3 bg-white/10 rounded-xl border border-white/10">
-              <span className="w-7 h-7 rounded-lg bg-amber-500/30 text-amber-400 flex items-center justify-center text-sm font-bold shrink-0">{i + 1}</span>
-              <span className="flex-1 text-white">{item}</span>
+            <div key={i} className="flex items-center gap-2 p-3 bg-white/95 rounded-xl border-2 border-slate-100 shadow-sm">
+              <span className="w-7 h-7 rounded-lg bg-[#FFE66D] text-amber-800 flex items-center justify-center text-sm font-bold shrink-0">{i + 1}</span>
+              <span className="flex-1 text-slate-800 font-medium">{item}</span>
               <div className="flex flex-col gap-0.5">
-                <button onClick={() => i > 0 && handleOrderMove(i, i - 1)} disabled={i === 0} className="p-1 rounded hover:bg-white/10 disabled:opacity-20 text-white/60">▲</button>
-                <button onClick={() => i < orderAnswers.length - 1 && handleOrderMove(i, i + 1)} disabled={i === orderAnswers.length - 1} className="p-1 rounded hover:bg-white/10 disabled:opacity-20 text-white/60">▼</button>
+                <button onClick={() => i > 0 && handleOrderMove(i, i - 1)} disabled={i === 0} className="p-1 rounded hover:bg-slate-100 disabled:opacity-20 text-slate-400">▲</button>
+                <button onClick={() => i < orderAnswers.length - 1 && handleOrderMove(i, i + 1)} disabled={i === orderAnswers.length - 1} className="p-1 rounded hover:bg-slate-100 disabled:opacity-20 text-slate-400">▼</button>
               </div>
             </div>
           ))}
-          <button onClick={submitOrderAnswer} className="w-full py-3 bg-green-500/30 text-green-400 rounded-xl font-bold hover:bg-green-500/40">
+          <button onClick={submitOrderAnswer} className="w-full py-3 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-xl font-bold shadow-md">
             Confirmar orden
           </button>
         </div>

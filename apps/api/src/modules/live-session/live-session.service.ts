@@ -300,6 +300,7 @@ export class LiveSessionService implements OnModuleDestroy {
     });
 
     // Start server-side auto-close timer (reliable fallback)
+    this.logger.log(`Starting question ${nextIdx} for session ${sessionId} with timeLimit=${timeLimit}s, connectedStudents=${this.getConnectedStudentCount(sessionId)}`);
     this.startQuestionTimer(sessionId, session.activityId, nextIdx, timeLimit);
 
     return { index: nextIdx, total: questions.length, question: q };
@@ -437,11 +438,14 @@ export class LiveSessionService implements OnModuleDestroy {
     // Auto-close question when ALL CONNECTED students have answered
     // Use connectedCount if available, otherwise use totalAnswered vs totalEnrolled
     const effectiveExpected = connectedCount > 0 ? connectedCount : totalEnrolled;
+    this.logger.log(`Answer progress: ${totalAnswered}/${effectiveExpected} (connected=${connectedCount}, enrolled=${totalEnrolled}) for session ${sessionId}`);
     if (effectiveExpected > 0 && totalAnswered >= effectiveExpected) {
       // Small delay to let the last answer's UI update before closing
       setTimeout(() => {
         this.logger.log(`Auto-closing question for session ${sessionId} (all ${totalAnswered}/${effectiveExpected} answered)`);
-        this.doCloseQuestion(sessionId, session.activityId, session.currentQuestionIdx).catch(() => {});
+        this.doCloseQuestion(sessionId, session.activityId, session.currentQuestionIdx).catch((err) => {
+          this.logger.error(`Failed to auto-close question: ${err.message}`);
+        });
       }, 800);
     }
 
@@ -457,7 +461,7 @@ export class LiveSessionService implements OnModuleDestroy {
 
   async closeQuestion(sessionId: string, teacherId: string) {
     const session = await this.validateTeacherSession(sessionId, teacherId);
-    this.doCloseQuestion(sessionId, session.activityId, session.currentQuestionIdx);
+    await this.doCloseQuestion(sessionId, session.activityId, session.currentQuestionIdx);
     return { success: true };
   }
 
@@ -497,10 +501,14 @@ export class LiveSessionService implements OnModuleDestroy {
   // Server-side timer: auto-close question when time runs out
   private startQuestionTimer(sessionId: string, activityId: string, questionIdx: number, timeLimitSeconds: number) {
     this.clearQuestionTimer(sessionId);
+    const delayMs = (timeLimitSeconds + 2) * 1000; // +2s buffer for network latency
+    this.logger.log(`Server timer set: question ${questionIdx}, session ${sessionId}, will fire in ${delayMs}ms`);
     const timer = setTimeout(() => {
-      this.logger.log(`Auto-closing question ${questionIdx} for session ${sessionId} (timer expired)`);
-      this.doCloseQuestion(sessionId, activityId, questionIdx).catch(() => {});
-    }, (timeLimitSeconds + 1) * 1000); // +1s buffer for network latency
+      this.logger.log(`Server timer FIRED: auto-closing question ${questionIdx} for session ${sessionId}`);
+      this.doCloseQuestion(sessionId, activityId, questionIdx).catch((err) => {
+        this.logger.error(`Server timer auto-close failed: ${err.message}`);
+      });
+    }, delayMs);
     this.questionTimers.set(sessionId, timer);
   }
 
