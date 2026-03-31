@@ -392,7 +392,8 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       setSession(data)
       sessionIdRef.current = sid
       setMode(data.mode || 'INDIVIDUAL')
-      setTotalQuestions(data.activity?.questions?.length || 0)
+      const questions = data.activity?.questions || []
+      setTotalQuestions(questions.length)
       if (data.teams?.length) setTeams(data.teams)
       // Sync autoClose from session config
       const cfg = (data.config as any) || {}
@@ -403,6 +404,17 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       } else if (data.status === 'WAITING') {
         setPhase('lobby')
       } else {
+        // ACTIVE — populate currentQuestion so student doesn't see blank screen
+        const idx = data.currentQuestionIdx ?? 0
+        const q = questions[idx]
+        if (q) {
+          const timeLimit = cfg.timeLimitOverride || 15
+          setCurrentQuestion(q)
+          setQuestionIndex(idx)
+          setTimeLimit(timeLimit)
+          setTimeLeft(timeLimit)
+          setOrderAnswers(q.options && q.type === 'ORDERING' ? [...(q.options as string[])] : [])
+        }
         setPhase('question')
       }
       connectSSE(sid)
@@ -1480,6 +1492,27 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* QUESTION - waiting state when student joins mid-session before SSE QUESTION event */}
+      {phase === 'question' && !currentQuestion && !isTeacher && (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white/95 backdrop-blur-md rounded-3xl p-10 text-center shadow-2xl max-w-sm mx-4"
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+              className="inline-block mb-4"
+            >
+              <Loader2 className="w-12 h-12 text-[#4ECDC4]" />
+            </motion.div>
+            <p className="text-slate-800 text-xl font-black mb-1">¡Pregunta en curso!</p>
+            <p className="text-slate-400 text-sm">Espera a la siguiente pregunta...</p>
+          </motion.div>
         </div>
       )}
 

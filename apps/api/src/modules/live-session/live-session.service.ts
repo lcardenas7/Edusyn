@@ -279,6 +279,7 @@ export class LiveSessionService implements OnModuleDestroy {
 
     // Cancel any pending timer from previous question & reset closed tracking for new question
     this.clearQuestionTimer(sessionId);
+    this.closedQuestions.delete(sessionId); // allow new question to be closed by timer/auto-close
 
     // Broadcast question to all connected clients (no correctAnswer!)
     this.broadcast(sessionId, {
