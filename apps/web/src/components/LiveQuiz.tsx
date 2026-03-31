@@ -197,6 +197,8 @@ interface LiveQuizProps {
   activityTitle?: string
   // Student: pass existing sessionId
   sessionId?: string
+  // Student: pass enrollmentId for connection tracking (auto-close feature)
+  studentEnrollmentId?: string
 }
 
 interface RankEntry {
@@ -225,7 +227,7 @@ function getAvatarColor(name: string) {
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
 
-export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, activityTitle, sessionId: initialSessionId }: LiveQuizProps) {
+export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, activityTitle, sessionId: initialSessionId, studentEnrollmentId }: LiveQuizProps) {
   const [sessionId, setSessionId] = useState(initialSessionId || '')
   const [session, setSession] = useState<any>(null)
   const [phase, setPhase] = useState<'setup' | 'loading' | 'lobby' | 'question' | 'answer_reveal' | 'ranking' | 'finished'>('setup')
@@ -421,7 +423,9 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
     const token = localStorage.getItem('token')
     const baseUrl = liveSessionApi.streamUrl(sid)
-    const url = `${baseUrl}?token=${token}`
+    // Include enrollmentId for student connection tracking (auto-close feature)
+    const enrollmentParam = studentEnrollmentId ? `&enrollmentId=${studentEnrollmentId}` : ''
+    const url = `${baseUrl}?token=${token}${enrollmentParam}`
 
     const es = new EventSource(url)
     eventSourceRef.current = es
@@ -1342,11 +1346,63 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                   </div>
                 )
               ) : (
-                <div className="space-y-3">
-                  <div className="w-20 h-20 rounded-full bg-indigo-500/30 flex items-center justify-center mx-auto">
-                    <Users className="w-10 h-10 text-indigo-400" />
+                /* INDIVIDUAL MODE - Avatar selection screen */
+                <div className="space-y-6 w-full max-w-md">
+                  {/* Title */}
+                  <div className="text-center">
+                    <h2 className="text-2xl font-black text-white mb-2">¡Elige tu avatar!</h2>
+                    <p className="text-white/60">Selecciona el animal que te representará</p>
                   </div>
-                  <p className="text-white/60 text-lg">Esperando a que el profesor inicie...</p>
+
+                  {/* Current avatar display */}
+                  <motion.div 
+                    className="flex flex-col items-center"
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", bounce: 0.5 }}
+                  >
+                    <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-6xl shadow-2xl mb-3">
+                      {ANIMAL_AVATARS.find(a => a.id === myAvatarId)?.emoji || '🐱'}
+                    </div>
+                    <p className="text-white font-bold text-lg">
+                      {ANIMAL_AVATARS.find(a => a.id === myAvatarId)?.name || 'Gato'}
+                    </p>
+                  </motion.div>
+
+                  {/* Avatar grid */}
+                  <div className="grid grid-cols-5 gap-2">
+                    {ANIMAL_AVATARS.map((avatar) => (
+                      <motion.button
+                        key={avatar.id}
+                        onClick={() => {
+                          setMyAvatarId(avatar.id)
+                          localStorage.setItem(`liveQuizAvatar_${sessionId}`, avatar.id)
+                        }}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        className={`aspect-square rounded-xl flex items-center justify-center text-2xl transition-all ${
+                          myAvatarId === avatar.id 
+                            ? 'bg-purple-500 ring-2 ring-white shadow-lg' 
+                            : 'bg-white/10 hover:bg-white/20'
+                        }`}
+                      >
+                        {avatar.emoji}
+                      </motion.button>
+                    ))}
+                  </div>
+
+                  {/* Waiting message */}
+                  <div className="text-center pt-2">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-500/20 rounded-full">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                      >
+                        <Loader2 className="w-4 h-4 text-indigo-400" />
+                      </motion.div>
+                      <span className="text-indigo-300 text-sm font-medium">Esperando a que el profesor inicie...</span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -1606,10 +1662,10 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               initial={{ opacity: 0, scale: 0.7, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ type: "spring", duration: 0.6, bounce: 0.4 }}
-              className={`rounded-3xl p-8 text-center border-2 backdrop-blur-sm ${
+              className={`rounded-3xl p-8 text-center shadow-2xl ${
                 answerResult.isCorrect 
-                  ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/10 border-green-500/40' 
-                  : 'bg-gradient-to-br from-red-500/20 to-rose-500/10 border-red-500/40'
+                  ? 'bg-gradient-to-br from-emerald-500 to-green-600' 
+                  : 'bg-gradient-to-br from-rose-500 to-red-600'
               }`}
             >
               <motion.div
@@ -1620,14 +1676,15 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                   ...(answerResult.isCorrect ? {} : { x: [0, -8, 8, -8, 8, 0] })
                 }}
                 transition={{ type: "spring", duration: 0.7, delay: 0.1 }}
+                className="w-24 h-24 mx-auto mb-4 rounded-full bg-white/20 flex items-center justify-center"
               >
                 {answerResult.isCorrect 
-                  ? <CheckCircle2 className="w-20 h-20 text-green-400 mx-auto mb-4 drop-shadow-lg" />
-                  : <XCircle className="w-20 h-20 text-red-400 mx-auto mb-4 drop-shadow-lg" />
+                  ? <CheckCircle2 className="w-16 h-16 text-white drop-shadow-lg" />
+                  : <XCircle className="w-16 h-16 text-white drop-shadow-lg" />
                 }
               </motion.div>
               <motion.h2 
-                className={`text-3xl font-black mb-2 ${answerResult.isCorrect ? 'text-green-400' : 'text-red-400'}`}
+                className="text-4xl font-black mb-2 text-white drop-shadow-md"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.25 }}
@@ -1635,7 +1692,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                 {answerResult.isCorrect ? '¡Correcto!' : '¡Incorrecto!'}
               </motion.h2>
               <motion.p
-                className={`text-2xl font-bold ${answerResult.isCorrect ? 'text-green-300' : 'text-red-300/60'}`}
+                className="text-3xl font-bold text-white/90"
                 initial={{ opacity: 0, scale: 0.5 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.35, type: "spring" }}
@@ -1647,19 +1704,19 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.45 }}
-                  className="mt-3 inline-flex items-center gap-1.5 px-4 py-1.5 bg-yellow-500/20 text-yellow-400 rounded-full text-sm font-bold border border-yellow-500/30"
+                  className="mt-4 inline-flex items-center gap-2 px-5 py-2 bg-yellow-400 text-yellow-900 rounded-full text-base font-black shadow-lg"
                 >
                   🔥 ¡Racha de {streak}!
                 </motion.div>
               )}
               {!answerResult.isCorrect && selectedAnswer && (
                 <motion.p
-                  className="text-red-300/50 text-sm mt-3"
+                  className="text-white/70 text-sm mt-4"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.4 }}
                 >
-                  Tu respuesta: <span className="font-semibold text-red-300/70">{selectedAnswer}</span>
+                  Tu respuesta: <span className="font-semibold text-white/90">{selectedAnswer}</span>
                 </motion.p>
               )}
             </motion.div>
@@ -1682,12 +1739,12 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: isTeacher ? 0 : 0.5 }}
-            className="bg-white/10 rounded-2xl p-6 text-center space-y-3 backdrop-blur-sm border border-white/10"
+            className="bg-white rounded-2xl p-6 text-center space-y-3 shadow-xl"
           >
-            <p className="text-white/50 text-sm font-semibold uppercase tracking-wider">La respuesta correcta es</p>
+            <p className="text-slate-500 text-sm font-semibold uppercase tracking-wider">La respuesta correcta es</p>
             {correctAnswer && (
               <motion.p
-                className="text-green-400 text-2xl font-black"
+                className="text-emerald-600 text-2xl font-black"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: isTeacher ? 0.1 : 0.6, type: "spring" }}
@@ -1697,7 +1754,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             )}
             {explanation && (
               <motion.p 
-                className="text-white/50 text-sm mt-2 italic"
+                className="text-slate-500 text-sm mt-2 italic"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: isTeacher ? 0.2 : 0.7 }}

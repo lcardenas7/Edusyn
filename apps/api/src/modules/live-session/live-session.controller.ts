@@ -70,7 +70,11 @@ export class LiveSessionController {
   // La auth se hace manualmente via query param token (línea siguiente).
   @SkipTenantCheck()
   @Sse(':id/stream')
-  stream(@Param('id') sessionId: string, @Query('token') token?: string): Observable<MessageEvent> {
+  stream(
+    @Param('id') sessionId: string, 
+    @Query('token') token?: string,
+    @Query('enrollmentId') enrollmentId?: string,
+  ): Observable<MessageEvent> {
     // EventSource can't send headers — validate JWT from query param
     if (!token) throw new UnauthorizedException('Token requerido');
     let payload: any;
@@ -83,6 +87,11 @@ export class LiveSessionController {
     // Tenant validation for SSE: verify token has institutionId
     if (!payload.institutionId && !payload.isSuperAdmin) {
       throw new ForbiddenException('Token sin institución activa');
+    }
+
+    // Track student connection for auto-close feature
+    if (enrollmentId) {
+      this.liveSessionService.trackStudentConnection(sessionId, enrollmentId);
     }
 
     const subject = this.liveSessionService.getOrCreateStream(sessionId);

@@ -35,8 +35,24 @@ export class LiveSessionService implements OnModuleDestroy {
   private heartbeats = new Map<string, ReturnType<typeof setInterval>>();
   // Map of sessionId → creation timestamp (for orphan detection)
   private streamCreatedAt = new Map<string, number>();
+  // Map of sessionId → Set of connected studentEnrollmentIds (for auto-close)
+  private connectedStudents = new Map<string, Set<string>>();
 
   constructor(private prisma: PrismaService) {}
+
+  // Track student connection
+  trackStudentConnection(sessionId: string, studentEnrollmentId: string) {
+    if (!this.connectedStudents.has(sessionId)) {
+      this.connectedStudents.set(sessionId, new Set());
+    }
+    this.connectedStudents.get(sessionId)!.add(studentEnrollmentId);
+    this.logger.log(`Student ${studentEnrollmentId} connected to session ${sessionId}. Total: ${this.connectedStudents.get(sessionId)!.size}`);
+  }
+
+  // Get connected student count
+  getConnectedStudentCount(sessionId: string): number {
+    return this.connectedStudents.get(sessionId)?.size || 0;
+  }
 
   onModuleDestroy() {
     for (const sessionId of [...this.streams.keys()]) {
@@ -72,6 +88,7 @@ export class LiveSessionService implements OnModuleDestroy {
     if (hb) clearInterval(hb);
     this.heartbeats.delete(sessionId);
     this.streamCreatedAt.delete(sessionId);
+    this.connectedStudents.delete(sessionId);
     const stream = this.streams.get(sessionId);
     if (stream) {
       stream.complete();
@@ -384,7 +401,10 @@ export class LiveSessionService implements OnModuleDestroy {
       where: { sessionId, questionId },
     });
 
-    // Count enrolled students for accurate progress display
+    // Use connected students count for auto-close (more accurate than enrolled)
+    const connectedCount = this.getConnectedStudentCount(sessionId);
+    
+    // Fallback to enrolled count for display if no one connected yet
     const totalEnrolled = await this.prisma.studentEnrollment.count({
       where: {
         groupId: classroom.teacherAssignment.groupId,
@@ -393,14 +413,17 @@ export class LiveSessionService implements OnModuleDestroy {
       },
     });
 
+    // Show connected count if available, otherwise enrolled
+    const totalExpected = connectedCount > 0 ? connectedCount : totalEnrolled;
+
     this.broadcast(sessionId, {
       type: 'ANSWER_PROGRESS',
-      data: { questionId, totalAnswered, totalExpected: totalEnrolled },
+      data: { questionId, totalAnswered, totalExpected, connectedCount },
     });
 
-    // Auto-close question when ALL enrolled students have answered
-    // This uses the actual enrolled count, not connected count, so it's reliable
-    if (totalAnswered >= totalEnrolled && totalEnrolled > 0) {
+    // Auto-close question when ALL CONNECTED students have answered
+    // This closes immediately when everyone in the quiz responds
+    if (connectedCount > 0 && totalAnswered >= connectedCount) {
       // Small delay to let the last answer's UI update before closing
       setTimeout(async () => {
         try {

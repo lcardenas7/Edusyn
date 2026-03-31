@@ -1908,7 +1908,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [questions, setQuestions] = useState<any[]>([])
   const [questionsLoading, setQuestionsLoading] = useState(false)
   const [showAddQuestion, setShowAddQuestion] = useState(false)
-  const [qForm, setQForm] = useState({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [] as string[], blanks: [] as string[], matchPairs: [{ left: '', right: '' }] as { left: string; right: string }[], points: '1', explanation: '', subjectArea: '', contextId: '' })
+  const [qForm, setQForm] = useState({ type: 'MULTIPLE_CHOICE', text: '', imageUrl: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [] as string[], blanks: [] as string[], matchPairs: [{ left: '', right: '' }] as { left: string; right: string }[], points: '1', explanation: '', subjectArea: '', contextId: '' })
   const [editingQuestion, setEditingQuestion] = useState<string | null>(null)
   const [savingQuestion, setSavingQuestion] = useState(false)
   const questionFormRef = useRef<HTMLDivElement>(null)
@@ -2445,7 +2445,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }, [reviewingSubmission, submissions])
 
   // Quiz question handlers (teacher)
-  const resetQForm = () => setQForm({ type: 'MULTIPLE_CHOICE', text: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }], points: '1', explanation: '', subjectArea: '', contextId: '' })
+  const resetQForm = () => setQForm({ type: 'MULTIPLE_CHOICE', text: '', imageUrl: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }], points: '1', explanation: '', subjectArea: '', contextId: '' })
 
   // Context handlers (teacher)
   const resetCtxForm = () => { setCtxForm({ title: '', text: '', imageUrl: '', viewPolicy: 'ALWAYS' }); setEditingContextId(null); setShowContextForm(false) }
@@ -2484,7 +2484,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     if (!selectedActivity || !qForm.text.trim()) return
     try {
       setSavingQuestion(true)
-      const payload: any = { type: qForm.type, text: qForm.text, points: parseFloat(qForm.points) || 1, explanation: qForm.explanation || undefined, subjectArea: qForm.subjectArea || undefined, contextId: qForm.contextId || undefined }
+      const payload: any = { type: qForm.type, text: qForm.text, imageUrl: qForm.imageUrl || undefined, points: parseFloat(qForm.points) || 1, explanation: qForm.explanation || undefined, subjectArea: qForm.subjectArea || undefined, contextId: qForm.contextId || undefined }
       if (qForm.type === 'MULTIPLE_CHOICE' || qForm.type === 'TRUE_FALSE') {
         payload.options = qForm.type === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : qForm.options.filter(o => o.trim())
         payload.correctAnswer = qForm.correctAnswer
@@ -2549,6 +2549,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     setQForm({
       type: q.type,
       text: q.text,
+      imageUrl: q.imageUrl || '',
       options: q.type === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : (q.options || ['', '', '', '']),
       correctAnswer: q.correctAnswer || '',
       correctAnswers,
@@ -3303,6 +3304,50 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Pregunta</label>
                   <textarea value={qForm.text} onChange={e => setQForm({ ...qForm, text: e.target.value })} rows={2} placeholder="Escribe la pregunta..." className="w-full border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base resize-none focus:ring-2 focus:ring-purple-500 outline-none" />
+                </div>
+
+                {/* Image upload for question */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Imagen (opcional)</label>
+                  <div className="flex items-center gap-3">
+                    <input 
+                      value={qForm.imageUrl} 
+                      onChange={e => setQForm({ ...qForm, imageUrl: e.target.value })} 
+                      placeholder="URL de imagen o sube una..." 
+                      className="flex-1 border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
+                    />
+                    <label className="px-4 py-2.5 bg-purple-100 text-purple-700 rounded-xl text-sm font-medium cursor-pointer hover:bg-purple-200 transition-colors flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4" />
+                      Subir
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          try {
+                            const { data } = await classroomApi.uploadMaterial(file)
+                            const url = data.url
+                            setQForm({ ...qForm, imageUrl: url })
+                          } catch (err) {
+                            console.error('Error uploading image:', err)
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {qForm.imageUrl && (
+                    <div className="mt-2 relative inline-block">
+                      <img src={qForm.imageUrl} alt="Preview" className="max-h-32 rounded-lg border border-slate-200" />
+                      <button 
+                        onClick={() => setQForm({ ...qForm, imageUrl: '' })}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Options for MULTIPLE_CHOICE */}
@@ -4371,6 +4416,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             activityId={isTeacher ? liveQuizActivityId : undefined}
             activityTitle={isTeacher ? liveQuizActivityTitle : undefined}
             sessionId={isStudent && activeLiveSession ? activeLiveSession.id : undefined}
+            studentEnrollmentId={isStudent ? classroom.studentEnrollmentId : undefined}
           />
         )}
 
@@ -4611,6 +4657,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           activityId={isTeacher ? liveQuizActivityId : undefined}
           activityTitle={isTeacher ? liveQuizActivityTitle : undefined}
           sessionId={isStudent && activeLiveSession ? activeLiveSession.id : undefined}
+          studentEnrollmentId={isStudent ? classroom.studentEnrollmentId : undefined}
         />
       )}
 

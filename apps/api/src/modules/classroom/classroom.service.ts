@@ -53,10 +53,16 @@ export class ClassroomService {
     // Find active enrollments
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: { student: { userId: studentId }, institutionId, status: 'ACTIVE' },
-      select: { groupId: true, academicYearId: true },
+      select: { id: true, groupId: true, academicYearId: true },
     });
 
     if (enrollments.length === 0) return [];
+
+    // Create a map of groupId+academicYearId -> enrollmentId for quick lookup
+    const enrollmentMap = new Map<string, string>();
+    for (const e of enrollments) {
+      enrollmentMap.set(`${e.groupId}-${e.academicYearId}`, e.id);
+    }
 
     // Find classrooms for the student's groups
     const classrooms = await this.prisma.classroom.findMany({
@@ -85,7 +91,11 @@ export class ClassroomService {
       orderBy: { teacherAssignment: { subject: { name: 'asc' } } },
     });
 
-    return classrooms;
+    // Add studentEnrollmentId to each classroom for Live Quiz tracking
+    return classrooms.map(c => ({
+      ...c,
+      studentEnrollmentId: enrollmentMap.get(`${c.teacherAssignment.groupId}-${c.teacherAssignment.academicYearId}`),
+    }));
   }
 
   async getAvailableAssignments(teacherId: string, institutionId: string) {
