@@ -19,7 +19,8 @@ export type LiveEventType =
   | 'ANSWER_PROGRESS'
   | 'RANKING'
   | 'QUESTION_CLOSED'
-  | 'SESSION_FINISHED';
+  | 'SESSION_FINISHED'
+  | 'SESSION_ENDED';
 
 export interface LiveEvent {
   type: LiveEventType;
@@ -496,6 +497,11 @@ export class LiveSessionService implements OnModuleDestroy {
 
     const ranking = await this.getRanking(sessionId, 10);
     this.broadcast(sessionId, { type: 'SESSION_FINISHED', data: ranking });
+    // Also broadcast SESSION_ENDED so students who are in question/answer phase know it's over
+    this.broadcast(sessionId, { type: 'SESSION_ENDED', data: {} });
+
+    // Cleanup connected students tracking
+    this.connectedStudents.delete(sessionId);
 
     // Cleanup stream after short delay
     setTimeout(() => this.cleanupStream(sessionId), 5000);

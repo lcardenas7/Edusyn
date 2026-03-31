@@ -130,6 +130,13 @@ export class SupabaseStorageService {
     'image/jpeg',
     'image/png',
     'image/webp',
+    'image/gif',
+    'image/bmp',
+    'image/svg+xml',
+    'image/tiff',
+    'image/avif',
+    'image/heic',
+    'image/heif',
   ];
   static readonly CLASSROOM_MAX_SIZE_MB = 10;
 
@@ -562,10 +569,22 @@ export class SupabaseStorageService {
       throw new BadRequestException('No se proporcionó archivo');
     }
 
+    const ext = file.originalname?.split('.').pop()?.toLowerCase() || '';
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg', 'tiff', 'avif', 'heic', 'heif'];
+    const isImageByExtension = imageExtensions.includes(ext);
+    const allowsImages = allowedMimeTypes.some(t => t.startsWith('image/'));
+
     if (!allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException(
-        `Tipo de archivo no permitido. Permitidos: ${allowedMimeTypes.join(', ')}`,
-      );
+      // If the file has an image extension and images are allowed, accept it
+      if (isImageByExtension && allowsImages) {
+        // Override mimetype for downstream usage
+        const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', bmp: 'image/bmp', svg: 'image/svg+xml', tiff: 'image/tiff', avif: 'image/avif', heic: 'image/heic', heif: 'image/heif' };
+        if (mimeMap[ext]) file.mimetype = mimeMap[ext];
+      } else {
+        throw new BadRequestException(
+          `Tipo de archivo no permitido (${file.mimetype}). Permitidos: ${allowedMimeTypes.join(', ')}`,
+        );
+      }
     }
 
     const maxBytes = maxSizeMB * 1024 * 1024;

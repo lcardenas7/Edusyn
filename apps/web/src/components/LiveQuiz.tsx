@@ -324,6 +324,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   // SSE
   const eventSourceRef = useRef<EventSource | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const sessionIdRef = useRef(initialSessionId || '')
 
   // ═══════════════════════════════════════════════════════════════════════════
   // INIT
@@ -364,6 +365,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       })
       autoCloseRef.current = autoCloseOnTimeout
       setSessionId(data.id)
+      sessionIdRef.current = data.id
       setSession(data)
       setMode(data.mode || 'INDIVIDUAL')
       setTotalQuestions(data.activity?.questions?.length || 0)
@@ -380,6 +382,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     try {
       const { data } = await liveSessionApi.get(sid)
       setSession(data)
+      sessionIdRef.current = sid
       setMode(data.mode || 'INDIVIDUAL')
       setTotalQuestions(data.activity?.questions?.length || 0)
       if (data.teams?.length) setTeams(data.teams)
@@ -501,6 +504,13 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       setTeams(data)
     })
 
+    es.addEventListener('SESSION_ENDED', () => {
+      setPhase('finished')
+      stopTimer()
+      stopMusic()
+      setRanking([])
+    })
+
     es.addEventListener('PING', () => { /* keep alive */ })
 
     es.onerror = () => {
@@ -520,8 +530,8 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         if (prev <= 1) {
           stopTimer()
           // Auto-close question when timer expires (teacher only)
-          if (isTeacher && autoCloseRef.current) {
-            handleCloseQuestion()
+          if (isTeacher && autoCloseRef.current && sessionIdRef.current) {
+            liveSessionApi.closeQuestion(sessionIdRef.current).catch(() => {})
           }
           return 0
         }
@@ -886,7 +896,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             <h1 className="text-3xl sm:text-4xl font-black text-white">
               {activityTitle || 'Live Quiz'}
             </h1>
-            <p className="text-indigo-300">Configura la sesión antes de iniciar</p>
+            <p className="text-white/70">Configura la sesión antes de iniciar</p>
           </div>
 
           <div className="w-full max-w-md space-y-6">
@@ -1512,7 +1522,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               <div className="flex justify-center gap-3 flex-wrap">
                 <motion.button 
                   onClick={handleCloseQuestion} 
-                  className="px-5 py-3 bg-amber-500/20 text-amber-400 rounded-xl font-semibold hover:bg-amber-500/30 flex items-center gap-2"
+                  className="px-6 py-3 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 flex items-center gap-2 shadow-lg shadow-amber-500/30"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -1520,7 +1530,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                 </motion.button>
                 <motion.button 
                   onClick={handleShowRanking} 
-                  className="px-5 py-3 bg-purple-500/20 text-purple-400 rounded-xl font-semibold hover:bg-purple-500/30 flex items-center gap-2"
+                  className="px-6 py-3 bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600 flex items-center gap-2 shadow-lg shadow-purple-500/30"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -1528,7 +1538,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                 </motion.button>
                 <motion.button 
                   onClick={handleNextQuestion} 
-                  className="px-5 py-3 bg-indigo-500/20 text-indigo-400 rounded-xl font-semibold hover:bg-indigo-500/30 flex items-center gap-2"
+                  className="px-6 py-3 bg-indigo-500 text-white rounded-xl font-bold hover:bg-indigo-600 flex items-center gap-2 shadow-lg shadow-indigo-500/30"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -1772,10 +1782,10 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              <button onClick={handleShowRanking} className="px-5 py-3 bg-purple-500/20 text-purple-400 rounded-xl font-semibold hover:bg-purple-500/30 flex items-center gap-2">
+              <button onClick={handleShowRanking} className="px-6 py-3 bg-purple-500 text-white rounded-xl font-bold hover:bg-purple-600 flex items-center gap-2 shadow-lg shadow-purple-500/30">
                 <Trophy className="w-4 h-4" /> Ver ranking
               </button>
-              <button onClick={handleNextQuestion} className="px-5 py-3 bg-green-500/20 text-green-400 rounded-xl font-semibold hover:bg-green-500/30 flex items-center gap-2">
+              <button onClick={handleNextQuestion} className="px-6 py-3 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 flex items-center gap-2 shadow-lg shadow-green-500/30">
                 <SkipForward className="w-4 h-4" /> Siguiente pregunta
               </button>
             </motion.div>
@@ -1807,7 +1817,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             <Podium 
               entries={ranking.slice(0, 3).map((r, i) => ({
                 name: r.name,
-                avatarId: getAvatarFromName(r.name).id,
+                avatarId: myAvatarId && !isTeacher && ranking.indexOf(r) !== -1 && r.studentEnrollmentId === studentEnrollmentId ? myAvatarId : (localStorage.getItem(`liveQuizAvatar_${r.name}`) || getAvatarFromName(r.name).id),
                 score: r.totalPoints,
                 rank: i + 1
               }))}
@@ -1825,7 +1835,10 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             }}
           >
             {(phase === 'finished' ? ranking : ranking.slice(0, 5)).map((entry, i) => {
-              const avatar = getAvatarFromName(entry.name)
+              // Use selected avatar for current user, hash-based for others
+              const isMe = !isTeacher && entry.studentEnrollmentId === studentEnrollmentId
+              const avatarId = isMe ? myAvatarId : getAvatarFromName(entry.name).id
+              const avatar = { ...getAvatarFromName(entry.name), id: avatarId }
               const isTop3 = i < 3
               const rankColors = ['text-yellow-400', 'text-slate-300', 'text-amber-600']
               const bgColors = ['bg-yellow-500/20', 'bg-slate-400/10', 'bg-amber-700/10', 'bg-white/5']
@@ -1904,11 +1917,18 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
           {/* Finished state - back button */}
           {phase === 'finished' && (
             <motion.div 
-              className="text-center pt-4"
+              className="text-center pt-4 space-y-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8 }}
             >
+              {ranking.length === 0 && (
+                <div className="bg-white/10 rounded-2xl p-6 text-center space-y-3">
+                  <XCircle className="w-14 h-14 text-white/50 mx-auto" />
+                  <p className="text-white text-xl font-bold">La sesión ha terminado</p>
+                  <p className="text-white/60 text-sm">El profesor ha finalizado el quiz</p>
+                </div>
+              )}
               <motion.button 
                 onClick={onClose} 
                 className="px-8 py-4 bg-emerald-500 text-white rounded-2xl text-lg font-bold shadow-xl hover:bg-emerald-600 transition-all"
