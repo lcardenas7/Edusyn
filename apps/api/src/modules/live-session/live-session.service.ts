@@ -398,10 +398,34 @@ export class LiveSessionService implements OnModuleDestroy {
       data: { questionId, totalAnswered, totalExpected: totalEnrolled },
     });
 
-    // NOTE: We do NOT auto-close the question from the backend.
-    // The teacher's timer handles closing via closeQuestion().
-    // Previous auto-close was unreliable (closed prematurely on Q1
-    // because totalConnected == 1 after first answer).
+    // Auto-close question when ALL enrolled students have answered
+    // This uses the actual enrolled count, not connected count, so it's reliable
+    if (totalAnswered >= totalEnrolled && totalEnrolled > 0) {
+      // Small delay to let the last answer's UI update before closing
+      setTimeout(async () => {
+        try {
+          // Get correct answer for current question
+          const questions = await this.prisma.activityQuestion.findMany({
+            where: { activityId: session.activityId },
+            orderBy: { sortOrder: 'asc' },
+            select: { id: true, correctAnswer: true, explanation: true },
+          });
+          const currentQ = questions[session.currentQuestionIdx];
+          
+          this.broadcast(sessionId, {
+            type: 'QUESTION_CLOSED',
+            data: {
+              questionId,
+              correctAnswer: currentQ?.correctAnswer,
+              explanation: currentQ?.explanation,
+              autoClosedReason: 'all_answered',
+            },
+          });
+        } catch (err) {
+          // Ignore errors in auto-close
+        }
+      }, 500);
+    }
 
     return { isCorrect, points: saved.points };
   }

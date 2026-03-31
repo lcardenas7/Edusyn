@@ -5,8 +5,9 @@ import confetti from 'canvas-confetti'
 import {
   Zap, Play, SkipForward, Trophy, X, CheckCircle2, XCircle,
   Clock, Users, Loader2, BarChart3, Image as ImageIcon, Volume2, VolumeX,
-  ChevronRight, Award, Timer, Radio, Sparkles
+  ChevronRight, Award, Timer, Radio, Sparkles, Crown
 } from 'lucide-react'
+import { AnimalAvatar, AvatarSelector, Podium, CircularTimer, getAvatarFromName, ANIMAL_AVATARS } from './AnimalAvatars'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ANIMATION VARIANTS
@@ -309,6 +310,14 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   // Buffered answer result — revealed only when question is closed
   const pendingResultRef = useRef<{ isCorrect: boolean; points: number } | null>(null)
   const answeredRef = useRef(false)
+
+  // Avatar selection (student picks before joining)
+  const [myAvatarId, setMyAvatarId] = useState(() => {
+    // Try to load from localStorage or generate from random
+    const saved = localStorage.getItem('liveQuizAvatar')
+    return saved || ANIMAL_AVATARS[Math.floor(Math.random() * ANIMAL_AVATARS.length)].id
+  })
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false)
 
   // SSE
   const eventSourceRef = useRef<EventSource | null>(null)
@@ -799,25 +808,67 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   const timerColor = timeLeft > timeLimit * 0.5 ? 'bg-green-500' : timeLeft > timeLimit * 0.25 ? 'bg-yellow-500' : 'bg-red-500'
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 overflow-auto">
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-cyan-400 via-cyan-500 to-teal-600 overflow-auto">
+      {/* Decorative background shapes */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl" />
+        <div className="absolute top-40 right-20 w-48 h-48 bg-cyan-300/20 rounded-full blur-2xl" />
+        <div className="absolute bottom-20 left-1/4 w-40 h-40 bg-teal-300/15 rounded-full blur-xl" />
+        <div className="absolute bottom-40 right-1/3 w-24 h-24 bg-white/10 rounded-full blur-lg" />
+      </div>
+
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-black/20">
+      <div className="relative flex items-center justify-between px-4 py-3 bg-purple-600/90 shadow-lg">
         <div className="flex items-center gap-3">
-          <Zap className="w-6 h-6 text-yellow-400" />
-          <span className="text-white font-bold text-lg">Live Quiz</span>
-          {session?.activity?.title && (
-            <span className="text-white/60 text-sm hidden sm:block">— {session.activity.title}</span>
-          )}
+          <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center shadow-md">
+            <Zap className="w-6 h-6 text-purple-700" />
+          </div>
+          <div>
+            <span className="text-white font-black text-lg tracking-tight">Live Quiz</span>
+            {session?.activity?.title && (
+              <p className="text-purple-200 text-xs truncate max-w-[150px] sm:max-w-none">{session.activity.title}</p>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={toggleMusic} className="p-2 rounded-lg hover:bg-white/10 transition-colors" title={musicOn ? 'Silenciar música' : 'Activar música'}>
-            {musicOn ? <Volume2 className="w-5 h-5 text-yellow-400" /> : <VolumeX className="w-5 h-5 text-white/40" />}
+          {!isTeacher && (
+            <button 
+              onClick={() => setShowAvatarPicker(!showAvatarPicker)} 
+              className="p-1.5 rounded-xl bg-white/20 hover:bg-white/30 transition-colors"
+              title="Cambiar avatar"
+            >
+              <AnimalAvatar avatarId={myAvatarId} size="sm" />
+            </button>
+          )}
+          <button onClick={toggleMusic} className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition-colors" title={musicOn ? 'Silenciar música' : 'Activar música'}>
+            {musicOn ? <Volume2 className="w-5 h-5 text-yellow-300" /> : <VolumeX className="w-5 h-5 text-white/60" />}
           </button>
-          <button onClick={() => { stopMusic(); onClose() }} className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors">
+          <button onClick={() => { stopMusic(); onClose() }} className="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white/80 hover:text-white transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
       </div>
+
+      {/* Avatar picker dropdown */}
+      <AnimatePresence>
+        {showAvatarPicker && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute top-16 right-4 z-50 bg-slate-800 rounded-2xl shadow-2xl border border-white/20 p-2"
+          >
+            <AvatarSelector 
+              selected={myAvatarId} 
+              onSelect={(id) => {
+                setMyAvatarId(id)
+                localStorage.setItem('liveQuizAvatar', id)
+                setShowAvatarPicker(false)
+              }} 
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {error && (
         <div className="mx-4 mt-2 p-3 bg-red-500/20 border border-red-500/40 rounded-xl text-red-300 text-sm text-center">{error}</div>
@@ -1314,46 +1365,34 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
           transition={{ duration: 0.4, ease: "easeOut" }}
           className="max-w-3xl mx-auto px-4 py-6 space-y-6"
         >
-          {/* Timer bar */}
+          {/* Question header with circular timer */}
           <motion.div 
-            className="relative h-3 bg-white/10 rounded-full overflow-hidden"
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ duration: 0.3 }}
+            className="flex items-center justify-between bg-white/10 backdrop-blur-sm rounded-2xl p-3"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
           >
-            <motion.div 
-              className={`absolute inset-y-0 left-0 ${timerColor} rounded-full`} 
-              initial={{ width: '100%' }}
-              animate={{ width: `${timerPercent}%` }}
-              transition={{ duration: 0.5, ease: "linear" }}
-            />
-          </motion.div>
-
-          {/* Question header */}
-          <motion.div 
-            className="flex items-center justify-between"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <span className="text-indigo-300 font-semibold">Pregunta {questionIndex + 1} / {totalQuestions}</span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg">
+                {questionIndex + 1}
+              </div>
+              <div>
+                <p className="text-white font-bold">Pregunta {questionIndex + 1}</p>
+                <p className="text-white/60 text-xs">de {totalQuestions}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
               {isBonus && (
-                <motion.span 
-                  className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-bold"
-                  animate={{ scale: [1, 1.1, 1] }}
+                <motion.div 
+                  className="px-3 py-1.5 bg-yellow-400 text-yellow-900 rounded-xl text-xs font-black flex items-center gap-1 shadow-lg"
+                  animate={{ scale: [1, 1.1, 1], rotate: [0, -3, 3, 0] }}
                   transition={{ repeat: Infinity, duration: 1.5 }}
                 >
-                  <Sparkles className="w-3 h-3 inline mr-1" />BONUS x{multiplier}
-                </motion.span>
+                  <Sparkles className="w-3 h-3" />BONUS x{multiplier}
+                </motion.div>
               )}
-              <motion.span 
-                className={`text-3xl font-black ${timeLeft <= 5 ? 'text-red-400' : 'text-white'}`}
-                animate={timeLeft <= 5 ? { scale: [1, 1.2, 1] } : {}}
-                transition={{ duration: 0.5 }}
-              >
-                {timeLeft}s
-              </motion.span>
+              <CircularTimer timeLeft={timeLeft} totalTime={timeLimit} size={56} />
             </div>
           </motion.div>
 
@@ -1690,110 +1729,132 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       {/* RANKING */}
       {(phase === 'ranking' || phase === 'finished') && (
         <motion.div 
-          className="max-w-2xl mx-auto px-4 py-6 space-y-6"
+          className="relative max-w-2xl mx-auto px-4 py-6 space-y-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
+          {/* Title */}
           <motion.div 
-            className="text-center space-y-2"
+            className="text-center"
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", duration: 0.6 }}
           >
-            <motion.div
-              animate={phase === 'finished' ? { 
-                rotate: [0, -10, 10, -10, 10, 0],
-                scale: [1, 1.2, 1]
-              } : {}}
-              transition={{ duration: 0.8 }}
-            >
-              <Trophy className="w-16 h-16 text-yellow-400 mx-auto" />
-            </motion.div>
-            <h2 className="text-3xl font-black text-white">
-              {phase === 'finished' ? '🎉 Resultados finales 🎉' : 'Ranking'}
+            <h2 className="text-3xl sm:text-4xl font-black text-white drop-shadow-lg">
+              {phase === 'finished' ? 'Final Standings' : 'Ranking'}
             </h2>
           </motion.div>
 
+          {/* Podium for finished state with top 3 */}
+          {phase === 'finished' && ranking.length >= 3 && (
+            <Podium 
+              entries={ranking.slice(0, 3).map((r, i) => ({
+                name: r.name,
+                avatarId: getAvatarFromName(r.name).id,
+                score: r.totalPoints,
+                rank: i + 1
+              }))}
+            />
+          )}
+
+          {/* Ranking list (top 5 for ranking phase, all for finished) */}
           <motion.div 
-            className="space-y-3"
+            className="space-y-2 bg-white/10 backdrop-blur-sm rounded-2xl p-3"
             initial="hidden"
             animate="visible"
             variants={{
-              visible: { transition: { staggerChildren: 0.1 } },
+              visible: { transition: { staggerChildren: 0.08 } },
               hidden: {}
             }}
           >
-            {ranking.map((entry, i) => {
-              const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null
-              const bgColor = i === 0 ? 'bg-yellow-500/20 border-yellow-500/40' : i === 1 ? 'bg-slate-400/20 border-slate-400/40' : i === 2 ? 'bg-amber-700/20 border-amber-700/40' : 'bg-white/5 border-white/10'
-              const color = entry.color || getAvatarColor(entry.name)
+            {(phase === 'finished' ? ranking : ranking.slice(0, 5)).map((entry, i) => {
+              const avatar = getAvatarFromName(entry.name)
+              const isTop3 = i < 3
+              const rankColors = ['text-yellow-400', 'text-slate-300', 'text-amber-600']
+              const bgColors = ['bg-yellow-500/20', 'bg-slate-400/10', 'bg-amber-700/10', 'bg-white/5']
+              
               return (
                 <motion.div 
-                  key={i} 
-                  className={`flex items-center gap-4 p-4 rounded-2xl border-2 ${bgColor} transition-all`}
+                  key={entry.name + i} 
+                  className={`flex items-center gap-3 p-3 rounded-xl ${bgColors[Math.min(i, 3)]} transition-all`}
                   variants={{
-                    hidden: { opacity: 0, x: -50 },
+                    hidden: { opacity: 0, x: -30 },
                     visible: { opacity: 1, x: 0 }
                   }}
-                  transition={{ type: "spring", duration: 0.5 }}
+                  transition={{ type: "spring", duration: 0.4 }}
                   whileHover={{ scale: 1.02, x: 5 }}
                 >
-                  <motion.div 
-                    className="text-2xl font-black text-white w-8 text-center"
-                    animate={i === 0 && phase === 'finished' ? { scale: [1, 1.3, 1] } : {}}
-                    transition={{ repeat: phase === 'finished' ? 3 : 0, duration: 0.5 }}
-                  >
-                    {medal || entry.rank}
-                  </motion.div>
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0" style={{ backgroundColor: color }}>
-                    {entry.name.charAt(0).toUpperCase()}
+                  {/* Rank */}
+                  <div className={`w-8 text-center font-black text-xl ${isTop3 ? rankColors[i] : 'text-white/60'}`}>
+                    {i + 1}<sup className="text-xs">{i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th'}</sup>
                   </div>
+                  
+                  {/* Avatar */}
+                  <motion.div
+                    animate={i === 0 && phase === 'finished' ? { y: [0, -3, 0] } : {}}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                  >
+                    <AnimalAvatar avatarId={avatar.id} size="sm" animate={i === 0} />
+                  </motion.div>
+                  
+                  {/* Name */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-white font-semibold truncate">{entry.name}</p>
+                    <p className="text-white font-bold truncate">{entry.name}</p>
                     {entry.correctAnswers !== undefined && (
-                      <p className="text-white/40 text-xs">{entry.correctAnswers} correctas</p>
+                      <p className="text-white/50 text-xs">{entry.correctAnswers} correctas</p>
                     )}
                   </div>
-                  <div className="text-right">
-                    <motion.p 
-                      className="text-2xl font-black text-white"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.3 + i * 0.1 }}
-                    >
-                      {entry.totalPoints.toLocaleString()}
-                    </motion.p>
-                    <p className="text-white/40 text-xs">pts</p>
-                  </div>
+                  
+                  {/* Score */}
+                  <motion.div 
+                    className="text-right"
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.2 + i * 0.05 }}
+                  >
+                    <p className="text-xl font-black text-white">{entry.totalPoints.toLocaleString()}</p>
+                  </motion.div>
                 </motion.div>
               )
             })}
             {ranking.length === 0 && (
-              <p className="text-white/40 text-center py-8">Sin respuestas aún</p>
+              <p className="text-white/50 text-center py-6">Sin respuestas aún</p>
             )}
           </motion.div>
 
+          {/* Teacher controls */}
           {isTeacher && phase === 'ranking' && (
-            <div className="flex justify-center gap-3">
-              <button onClick={handleNextQuestion} className="px-5 py-3 bg-green-500/20 text-green-400 rounded-xl font-semibold hover:bg-green-500/30 flex items-center gap-2">
-                <SkipForward className="w-4 h-4" /> Siguiente pregunta
-              </button>
-              <button onClick={handleFinish} className="px-5 py-3 bg-red-500/20 text-red-400 rounded-xl font-semibold hover:bg-red-500/30 flex items-center gap-2">
-                <X className="w-4 h-4" /> Finalizar
-              </button>
+            <div className="flex justify-center gap-3 pt-2">
+              <motion.button 
+                onClick={handleNextQuestion} 
+                className="px-6 py-3 bg-emerald-500 text-white rounded-xl font-bold shadow-lg hover:bg-emerald-600 flex items-center gap-2"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <SkipForward className="w-5 h-5" /> Siguiente
+              </motion.button>
+              <motion.button 
+                onClick={handleFinish} 
+                className="px-6 py-3 bg-rose-500 text-white rounded-xl font-bold shadow-lg hover:bg-rose-600 flex items-center gap-2"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Trophy className="w-5 h-5" /> Finalizar
+              </motion.button>
             </div>
           )}
 
+          {/* Finished state - back button */}
           {phase === 'finished' && (
             <motion.div 
-              className="text-center"
+              className="text-center pt-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
+              transition={{ delay: 0.8 }}
             >
               <motion.button 
                 onClick={onClose} 
-                className="px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl text-lg font-bold hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg"
+                className="px-8 py-4 bg-emerald-500 text-white rounded-2xl text-lg font-bold shadow-xl hover:bg-emerald-600 transition-all"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -1819,20 +1880,41 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     // MULTIPLE_CHOICE / TRUE_FALSE
     if (type === 'MULTIPLE_CHOICE' || type === 'TRUE_FALSE') {
       const opts = Array.isArray(options) ? options as string[] : []
-      const optColors = ['from-blue-500 to-blue-600', 'from-red-500 to-red-600', 'from-green-500 to-green-600', 'from-yellow-500 to-yellow-600', 'from-purple-500 to-purple-600', 'from-pink-500 to-pink-600']
+      // Blooket/Kahoot style colors with shapes
+      const optStyles = [
+        { bg: 'bg-red-500 hover:bg-red-600', shape: '▲' },
+        { bg: 'bg-blue-500 hover:bg-blue-600', shape: '◆' },
+        { bg: 'bg-yellow-500 hover:bg-yellow-600', shape: '●' },
+        { bg: 'bg-green-500 hover:bg-green-600', shape: '■' },
+        { bg: 'bg-purple-500 hover:bg-purple-600', shape: '★' },
+        { bg: 'bg-pink-500 hover:bg-pink-600', shape: '♥' },
+      ]
       return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <motion.div 
+          className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
+        >
           {opts.map((opt: string, i: number) => (
-            <button
+            <motion.button
               key={i}
               onClick={() => handleSelectOption(opt)}
               disabled={answered}
-              className={`p-4 sm:p-5 rounded-2xl text-white font-bold text-base sm:text-lg text-center transition-all bg-gradient-to-br ${optColors[i % optColors.length]} hover:scale-[1.02] active:scale-95 disabled:opacity-50 shadow-lg`}
+              variants={optionVariants}
+              whileHover={{ scale: 1.03, y: -2 }}
+              whileTap={{ scale: 0.97 }}
+              className={`relative p-5 sm:p-6 rounded-2xl text-white font-bold text-base sm:text-lg text-left transition-all ${optStyles[i % optStyles.length].bg} disabled:opacity-50 shadow-xl overflow-hidden`}
             >
-              <span className="mr-2 opacity-60">{String.fromCharCode(65 + i)}.</span>{opt}
-            </button>
+              {/* Shape icon */}
+              <span className="absolute top-3 left-3 text-white/30 text-2xl">{optStyles[i % optStyles.length].shape}</span>
+              {/* Answer text */}
+              <span className="relative z-10 block pl-8">{opt}</span>
+              {/* Decorative gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
       )
     }
 
