@@ -46,16 +46,32 @@ export class LiveSessionService implements OnModuleDestroy {
   private questionConnectedSnapshot = new Map<string, number>();
   // Map of sessionId → current question data (for timer auto-close without Prisma query)
   private currentQuestionData = new Map<string, { questionIdx: number; questionId: string; correctAnswer: any; explanation: string | null }>();
+  // Map of sessionId → Map of enrollmentId → avatarId (for ranking display)
+  private studentAvatars = new Map<string, Map<string, string>>();
 
   constructor(private prisma: PrismaService) {}
 
-  // Track student connection
-  trackStudentConnection(sessionId: string, studentEnrollmentId: string) {
+  // Track student connection and store avatar
+  trackStudentConnection(sessionId: string, studentEnrollmentId: string, avatarId?: string) {
     if (!this.connectedStudents.has(sessionId)) {
       this.connectedStudents.set(sessionId, new Set());
     }
     this.connectedStudents.get(sessionId)!.add(studentEnrollmentId);
-    this.logger.log(`Student ${studentEnrollmentId} connected to session ${sessionId}. Total: ${this.connectedStudents.get(sessionId)!.size}`);
+    
+    // Store avatar for ranking display
+    if (avatarId) {
+      if (!this.studentAvatars.has(sessionId)) {
+        this.studentAvatars.set(sessionId, new Map());
+      }
+      this.studentAvatars.get(sessionId)!.set(studentEnrollmentId, avatarId);
+    }
+    
+    this.logger.log(`Student ${studentEnrollmentId} connected to session ${sessionId} with avatar ${avatarId || 'none'}. Total: ${this.connectedStudents.get(sessionId)!.size}`);
+  }
+
+  // Get student avatar
+  getStudentAvatar(sessionId: string, studentEnrollmentId: string): string | undefined {
+    return this.studentAvatars.get(sessionId)?.get(studentEnrollmentId);
   }
 
   // Get connected student count
@@ -152,6 +168,7 @@ export class LiveSessionService implements OnModuleDestroy {
     this.closedQuestions.delete(sessionId);
     this.questionConnectedSnapshot.delete(sessionId);
     this.currentQuestionData.delete(sessionId);
+    this.studentAvatars.delete(sessionId);
     const stream = this.streams.get(sessionId);
     if (stream) {
       stream.complete();
@@ -880,6 +897,7 @@ export class LiveSessionService implements OnModuleDestroy {
       name: nameMap.get(r.studentEnrollmentId) || 'Desconocido',
       totalPoints: Math.round(r._sum.points || 0),
       correctAnswers: correctMap.get(r.studentEnrollmentId) || 0,
+      avatarId: this.getStudentAvatar(sessionId, r.studentEnrollmentId),
     }));
   }
 

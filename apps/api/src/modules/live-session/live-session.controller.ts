@@ -74,6 +74,7 @@ export class LiveSessionController {
     @Param('id') sessionId: string, 
     @Query('token') token?: string,
     @Query('enrollmentId') enrollmentId?: string,
+    @Query('avatarId') avatarId?: string,
   ): Observable<MessageEvent> {
     // EventSource can't send headers — validate JWT from query param
     if (!token) throw new UnauthorizedException('Token requerido');
@@ -89,9 +90,9 @@ export class LiveSessionController {
       throw new ForbiddenException('Token sin institución activa');
     }
 
-    // Track student connection for auto-close feature
+    // Track student connection for auto-close feature + store avatar for ranking
     if (enrollmentId) {
-      this.liveSessionService.trackStudentConnection(sessionId, enrollmentId);
+      this.liveSessionService.trackStudentConnection(sessionId, enrollmentId, avatarId);
     }
 
     const subject = this.liveSessionService.getOrCreateStream(sessionId);

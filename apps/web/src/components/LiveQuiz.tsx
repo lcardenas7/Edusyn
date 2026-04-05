@@ -209,6 +209,7 @@ interface RankEntry {
   studentEnrollmentId?: string
   teamId?: string
   color?: string
+  avatarId?: string
 }
 
 // Color palette for avatar backgrounds
@@ -438,8 +439,10 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     const token = localStorage.getItem('token')
     const baseUrl = liveSessionApi.streamUrl(sid)
     // Include enrollmentId for student connection tracking (auto-close feature)
+    // Include avatarId so backend can store it for ranking display
     const enrollmentParam = studentEnrollmentId ? `&enrollmentId=${studentEnrollmentId}` : ''
-    const url = `${baseUrl}?token=${token}${enrollmentParam}`
+    const avatarParam = myAvatarId ? `&avatarId=${myAvatarId}` : ''
+    const url = `${baseUrl}?token=${token}${enrollmentParam}${avatarParam}`
 
     const es = new EventSource(url)
     eventSourceRef.current = es
@@ -558,7 +561,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     es.onerror = () => {
       // Auto-reconnect is built into EventSource
     }
-  }, [])
+  }, [myAvatarId, studentEnrollmentId])
 
   // ═══════════════════════════════════════════════════════════════════════════
   // TIMER
@@ -881,14 +884,14 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   const timerColor = timeLeft > timeLimit * 0.5 ? 'bg-green-500' : timeLeft > timeLimit * 0.25 ? 'bg-yellow-500' : 'bg-red-500'
 
   return (
-    <div className="fixed inset-0 z-50 overflow-auto" style={{ background: 'linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 50%, #FFE66D 100%)', backgroundSize: '400% 400%', animation: 'quizGradientShift 15s ease infinite' }}>
-      <style>{`@keyframes quizGradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }`}</style>
-      {/* Decorative background shapes */}
+    <div className="fixed inset-0 z-50 overflow-auto" style={{ background: 'linear-gradient(180deg, #7C3AED 0%, #06B6D4 100%)' }}>
+      {/* Decorative background shapes - subtle geometric pattern */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
-        <div className="absolute top-40 right-20 w-56 h-56 bg-yellow-300/15 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 left-1/4 w-48 h-48 bg-teal-300/10 rounded-full blur-2xl" />
-        <div className="absolute bottom-40 right-1/3 w-32 h-32 bg-white/10 rounded-full blur-xl" />
+        <div className="absolute top-10 left-10 w-32 h-32 bg-white/5 rounded-3xl rotate-12" />
+        <div className="absolute top-40 right-16 w-24 h-24 bg-white/5 rounded-2xl -rotate-6" />
+        <div className="absolute bottom-32 left-1/4 w-40 h-40 bg-white/5 rounded-3xl rotate-45" />
+        <div className="absolute bottom-20 right-1/4 w-28 h-28 bg-white/5 rounded-2xl -rotate-12" />
+        <div className="absolute top-1/3 left-1/2 w-20 h-20 bg-white/5 rounded-xl rotate-6" />
       </div>
 
       {/* Top bar */}
@@ -1965,27 +1968,27 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             <Podium 
               entries={ranking.slice(0, 3).map((r, i) => ({
                 name: r.name,
-                avatarId: myAvatarId && !isTeacher && ranking.indexOf(r) !== -1 && r.studentEnrollmentId === studentEnrollmentId ? myAvatarId : (localStorage.getItem(`liveQuizAvatar_${r.name}`) || getAvatarFromName(r.name).id),
+                avatarId: r.avatarId || getAvatarFromName(r.name).id,
                 score: r.totalPoints,
                 rank: i + 1
               }))}
             />
           )}
 
-          {/* Ranking list (top 5 for ranking phase, all for finished) */}
+          {/* Ranking list (top 5 for ranking phase, all for finished with scroll) */}
           <motion.div 
-            className="space-y-2 bg-white/95 backdrop-blur-md rounded-2xl p-3 shadow-lg"
+            className={`space-y-2 bg-white/95 backdrop-blur-md rounded-2xl p-3 shadow-lg ${phase === 'finished' ? 'max-h-[50vh] overflow-y-auto' : ''}`}
             initial="hidden"
             animate="visible"
             variants={{
-              visible: { transition: { staggerChildren: 0.08 } },
+              visible: { transition: { staggerChildren: phase === 'finished' ? 0.15 : 0.08 } },
               hidden: {}
             }}
           >
             {(phase === 'finished' ? ranking : ranking.slice(0, 5)).map((entry, i) => {
-              // Use selected avatar for current user, hash-based for others
+              // Use avatarId from backend if available, fallback to hash-based
               const isMe = !isTeacher && entry.studentEnrollmentId === studentEnrollmentId
-              const avatarId = isMe ? myAvatarId : getAvatarFromName(entry.name).id
+              const avatarId = entry.avatarId || getAvatarFromName(entry.name).id
               const avatar = { ...getAvatarFromName(entry.name), id: avatarId }
               const isTop3 = i < 3
               const rankColors = ['text-[#FFE66D]', 'text-slate-400', 'text-amber-600']
@@ -1994,7 +1997,11 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               return (
                 <motion.div 
                   key={entry.name + i} 
-                  className={`flex items-center gap-3 p-3 rounded-xl ${bgColors[Math.min(i, 3)]} transition-all`}
+                  className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+                    isMe 
+                      ? 'bg-gradient-to-r from-purple-500/20 to-cyan-500/20 ring-2 ring-purple-400 shadow-lg' 
+                      : bgColors[Math.min(i, 3)]
+                  }`}
                   variants={{
                     hidden: { opacity: 0, x: -30 },
                     visible: { opacity: 1, x: 0 }
@@ -2015,9 +2022,12 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                     <AnimalAvatar avatarId={avatar.id} size="sm" animate={i === 0} />
                   </motion.div>
                   
-                  {/* Name */}
+                  {/* Name + "Tú" badge */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-slate-800 font-bold truncate">{entry.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className={`font-bold truncate ${isMe ? 'text-purple-700' : 'text-slate-800'}`}>{entry.name}</p>
+                      {isMe && <span className="px-2 py-0.5 bg-purple-500 text-white text-xs font-bold rounded-full">Tú</span>}
+                    </div>
                     {entry.correctAnswers !== undefined && (
                       <p className="text-slate-400 text-xs">{entry.correctAnswers} correctas</p>
                     )}
@@ -2030,7 +2040,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.2 + i * 0.05 }}
                   >
-                    <p className="text-xl font-black bg-gradient-to-r from-[#FF6B6B] to-[#4ECDC4] bg-clip-text text-transparent">{entry.totalPoints.toLocaleString()}</p>
+                    <p className={`text-xl font-black ${isMe ? 'text-purple-600' : 'bg-gradient-to-r from-[#FF6B6B] to-[#4ECDC4] bg-clip-text text-transparent'}`}>{entry.totalPoints.toLocaleString()}</p>
                   </motion.div>
                 </motion.div>
               )
