@@ -700,12 +700,13 @@ export class LiveSessionService implements OnModuleDestroy {
       where: { sessionId },
     });
 
-    // Reset session status to ACTIVE and clear currentQuestionIdx
+    // Reset session status to WAITING so it can be started again
     await this.prisma.liveSession.update({
       where: { id: sessionId },
       data: { 
-        status: 'ACTIVE', 
-        currentQuestionIdx: 0,
+        status: 'WAITING', 
+        currentQuestionIdx: -1,
+        startedAt: null,
         finishedAt: null,
       },
     });
