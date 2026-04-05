@@ -752,7 +752,27 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   // Reveal buffered result — called when QUESTION_CLOSED event arrives
   const revealPendingResult = () => {
     const result = pendingResultRef.current
-    if (!result) return
+    if (!result) {
+      // If student answered but result hasn't arrived yet, wait and retry
+      if (answeredRef.current) {
+        setTimeout(() => {
+          const delayedResult = pendingResultRef.current
+          if (delayedResult) {
+            setAnswerResult(delayedResult)
+            if (delayedResult.isCorrect) {
+              if (soundsOn) playSound('correct')
+              fireConfetti('correct')
+              setStreak(prev => prev + 1)
+            } else {
+              if (soundsOn) playSound('incorrect')
+              setStreak(0)
+            }
+            pendingResultRef.current = null
+          }
+        }, 500)
+      }
+      return
+    }
     setAnswerResult(result)
     if (result.isCorrect) {
       if (soundsOn) playSound('correct')

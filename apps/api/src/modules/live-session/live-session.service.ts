@@ -44,6 +44,8 @@ export class LiveSessionService implements OnModuleDestroy {
   private closedQuestions = new Map<string, Set<number>>();
   // Map of sessionId → snapshot of connected students count at question start (for reliable auto-close)
   private questionConnectedSnapshot = new Map<string, number>();
+  // Map of sessionId → current question data (for timer auto-close without Prisma query)
+  private currentQuestionData = new Map<string, { questionIdx: number; questionId: string; correctAnswer: any; explanation: string | null }>();
 
   constructor(private prisma: PrismaService) {}
 
@@ -149,6 +151,7 @@ export class LiveSessionService implements OnModuleDestroy {
     this.clearQuestionTimer(sessionId);
     this.closedQuestions.delete(sessionId);
     this.questionConnectedSnapshot.delete(sessionId);
+    this.currentQuestionData.delete(sessionId);
     const stream = this.streams.get(sessionId);
     if (stream) {
       stream.complete();
@@ -369,9 +372,22 @@ export class LiveSessionService implements OnModuleDestroy {
       },
     });
 
+    // Store current question data for timer auto-close (avoids Prisma query in setTimeout)
+    // Need to fetch correctAnswer and explanation since 'q' doesn't have them
+    const fullQuestion = await this.prisma.activityQuestion.findUnique({
+      where: { id: q.id },
+      select: { correctAnswer: true, explanation: true },
+    });
+    this.currentQuestionData.set(sessionId, {
+      questionIdx: nextIdx,
+      questionId: q.id,
+      correctAnswer: fullQuestion?.correctAnswer,
+      explanation: fullQuestion?.explanation || null,
+    });
+
     // Start server-side auto-close timer (reliable fallback)
     this.logger.log(`Starting question ${nextIdx} for session ${sessionId} with timeLimit=${timeLimit}s, connectedStudents=${this.getConnectedStudentCount(sessionId)}`);
-    this.startQuestionTimer(sessionId, session.activityId, nextIdx, timeLimit);
+    this.startQuestionTimer(sessionId, nextIdx, timeLimit);
 
     return { index: nextIdx, total: questions.length, question: q };
   }
@@ -628,15 +644,23 @@ export class LiveSessionService implements OnModuleDestroy {
   }
 
   // Server-side timer: auto-close question when time runs out
-  private startQuestionTimer(sessionId: string, activityId: string, questionIdx: number, timeLimitSeconds: number) {
+  private startQuestionTimer(sessionId: string, questionIdx: number, timeLimitSeconds: number) {
     this.clearQuestionTimer(sessionId);
     const delayMs = (timeLimitSeconds + 2) * 1000; // +2s buffer for network latency
     this.logger.log(`Server timer set: question ${questionIdx}, session ${sessionId}, will fire in ${delayMs}ms`);
     const timer = setTimeout(() => {
       this.logger.log(`Server timer FIRED: auto-closing question ${questionIdx} for session ${sessionId}`);
-      this.doCloseQuestion(sessionId, activityId, questionIdx).catch((err) => {
-        this.logger.error(`Server timer auto-close failed: ${err.message}`);
-      });
+      // Use pre-loaded question data to avoid Prisma transaction issues
+      const questionData = this.currentQuestionData.get(sessionId);
+      if (questionData && questionData.questionIdx === questionIdx) {
+        this.doCloseQuestionWithData(sessionId, questionIdx, {
+          id: questionData.questionId,
+          correctAnswer: questionData.correctAnswer,
+          explanation: questionData.explanation,
+        });
+      } else {
+        this.logger.warn(`Timer fired but no question data found for session ${sessionId}, question ${questionIdx}`);
+      }
     }, delayMs);
     this.questionTimers.set(sessionId, timer);
   }
