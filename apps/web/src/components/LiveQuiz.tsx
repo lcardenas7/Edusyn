@@ -552,8 +552,12 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
           }
         } catch { /* no new session */ }
       }
-      setPhase('finished')
-      setRanking([])
+      // Only set phase to finished if not already finished (SESSION_FINISHED already handled it)
+      // Don't clear ranking - SESSION_FINISHED already set it with actual data
+      if (phaseRef.current !== 'finished') {
+        setPhase('finished')
+        setRanking([])
+      }
     })
 
     es.addEventListener('PING', () => { /* keep alive */ })
@@ -1676,14 +1680,25 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                   >
                     <Trophy className="w-4 h-4" /> Ver ranking
                   </motion.button>
-                  <motion.button 
-                    onClick={handleNextQuestion} 
-                    className="px-6 py-3 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-teal-300/30"
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <SkipForward className="w-4 h-4" /> Siguiente
-                  </motion.button>
+                  {questionIndex < totalQuestions - 1 ? (
+                    <motion.button 
+                      onClick={handleNextQuestion} 
+                      className="px-6 py-3 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-teal-300/30"
+                      whileHover={{ scale: 1.05, y: -2 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <SkipForward className="w-4 h-4" /> Siguiente
+                    </motion.button>
+                  ) : (
+                    <motion.button 
+                      onClick={handleFinish} 
+                      className="px-6 py-3 bg-gradient-to-r from-[#FF6B6B] to-[#FF8E72] text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-red-300/30"
+                      whileHover={{ scale: 1.05, y: -2 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Trophy className="w-4 h-4" /> Finalizar
+                    </motion.button>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -1931,14 +1946,25 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               >
                 <Trophy className="w-6 h-6" /> Ver ranking
               </motion.button>
-              <motion.button 
-                onClick={handleNextQuestion} 
-                className="px-8 py-4 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-2xl text-lg font-black flex items-center gap-3 shadow-2xl shadow-teal-400/40"
-                whileHover={{ scale: 1.05, y: -3 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <SkipForward className="w-6 h-6" /> Siguiente pregunta
-              </motion.button>
+              {questionIndex < totalQuestions - 1 ? (
+                <motion.button 
+                  onClick={handleNextQuestion} 
+                  className="px-8 py-4 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-2xl text-lg font-black flex items-center gap-3 shadow-2xl shadow-teal-400/40"
+                  whileHover={{ scale: 1.05, y: -3 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <SkipForward className="w-6 h-6" /> Siguiente pregunta
+                </motion.button>
+              ) : (
+                <motion.button 
+                  onClick={handleFinish} 
+                  className="px-8 py-4 bg-gradient-to-r from-[#FF6B6B] to-[#FF8E72] text-white rounded-2xl text-lg font-black flex items-center gap-3 shadow-2xl shadow-red-400/40"
+                  whileHover={{ scale: 1.05, y: -3 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Trophy className="w-6 h-6" /> Finalizar Quiz
+                </motion.button>
+              )}
             </motion.div>
           )}
         </div>
@@ -2051,14 +2077,16 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
           {/* Teacher controls */}
           {isTeacher && phase === 'ranking' && (
             <div className="flex justify-center gap-3 pt-2">
-              <motion.button 
-                onClick={handleNextQuestion} 
-                className="px-6 py-3 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-xl font-bold shadow-lg shadow-teal-300/30 flex items-center gap-2"
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <SkipForward className="w-5 h-5" /> Siguiente
-              </motion.button>
+              {questionIndex < totalQuestions - 1 ? (
+                <motion.button 
+                  onClick={handleNextQuestion} 
+                  className="px-6 py-3 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-xl font-bold shadow-lg shadow-teal-300/30 flex items-center gap-2"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <SkipForward className="w-5 h-5" /> Siguiente
+                </motion.button>
+              ) : null}
               <motion.button 
                 onClick={handleFinish} 
                 className="px-6 py-3 bg-gradient-to-r from-[#FF6B6B] to-[#FF8E72] text-white rounded-xl font-bold shadow-lg shadow-red-300/30 flex items-center gap-2"
