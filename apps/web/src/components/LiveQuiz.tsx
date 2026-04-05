@@ -264,7 +264,12 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   // Progress + ranking
   const [totalStudents, setTotalStudents] = useState(0)
   const [totalAnswered, setTotalAnswered] = useState(0)
-  const [ranking, setRanking] = useState<RankEntry[]>([])
+  const [ranking, _setRanking] = useState<RankEntry[]>([])
+  const rankingRef = useRef<RankEntry[]>([])
+  const setRanking = (r: RankEntry[]) => {
+    rankingRef.current = r
+    _setRanking(r)
+  }
 
   // Team mode
   const [mode, setMode] = useState<'INDIVIDUAL' | 'TEAM'>('INDIVIDUAL')
@@ -553,10 +558,13 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         } catch { /* no new session */ }
       }
       // Only set phase to finished if not already finished (SESSION_FINISHED already handled it)
-      // Don't clear ranking - SESSION_FINISHED already set it with actual data
+      // Don't clear ranking - keep whatever we have from SESSION_FINISHED
       if (phaseRef.current !== 'finished') {
         setPhase('finished')
-        setRanking([])
+        // Only clear ranking if we don't have any saved
+        if (rankingRef.current.length === 0) {
+          setRanking([])
+        }
       }
     })
 
@@ -2069,7 +2077,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                 </motion.div>
               )
             })}
-            {ranking.length === 0 && (
+            {ranking.length === 0 && phase === 'ranking' && (
               <p className="text-slate-400 text-center py-6">Sin respuestas aún</p>
             )}
           </motion.div>
@@ -2098,14 +2106,35 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             </div>
           )}
 
-          {/* Finished state - back button */}
+          {/* Finished state - show student position or session ended message */}
           {phase === 'finished' && (
             <motion.div 
               className="text-center pt-4 space-y-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8 }}
+              transition={{ delay: ranking.length > 0 ? 6 : 0.5 }}
             >
+              {/* Show student's position if they participated */}
+              {!isTeacher && ranking.length > 0 && (() => {
+                const myPosition = ranking.findIndex(r => r.studentEnrollmentId === studentEnrollmentId)
+                if (myPosition >= 0) {
+                  const myEntry = ranking[myPosition]
+                  return (
+                    <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 text-center space-y-3 shadow-lg">
+                      <p className="text-slate-700 text-xl font-bold">🎉 ¡Quiz finalizado!</p>
+                      <p className="text-3xl font-black bg-gradient-to-r from-purple-600 to-cyan-500 bg-clip-text text-transparent">
+                        Quedaste en el puesto #{myPosition + 1}
+                      </p>
+                      <p className="text-slate-500">
+                        con <span className="font-bold text-slate-700">{myEntry.totalPoints.toLocaleString()}</span> puntos
+                      </p>
+                    </div>
+                  )
+                }
+                return null
+              })()}
+              
+              {/* Show session ended message only if no ranking data */}
               {ranking.length === 0 && (
                 <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 text-center space-y-3 shadow-lg">
                   <XCircle className="w-14 h-14 text-slate-300 mx-auto" />
@@ -2113,6 +2142,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                   <p className="text-slate-400 text-sm">El profesor ha finalizado el quiz</p>
                 </div>
               )}
+              
               <motion.button 
                 onClick={onClose} 
                 className="px-8 py-4 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-2xl text-lg font-black shadow-xl shadow-teal-400/30 transition-all"
