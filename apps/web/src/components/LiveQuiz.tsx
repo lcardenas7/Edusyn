@@ -1963,8 +1963,8 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             </h2>
           </motion.div>
 
-          {/* Podium for finished state with top 3 */}
-          {phase === 'finished' && ranking.length >= 3 && (
+          {/* Podium for finished state - show even with 1-2 participants */}
+          {phase === 'finished' && ranking.length >= 1 && (
             <Podium 
               entries={ranking.slice(0, 3).map((r, i) => ({
                 name: r.name,
@@ -1976,14 +1976,12 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
           )}
 
           {/* Ranking list (top 5 for ranking phase, all for finished with scroll) */}
+          {/* In finished phase, delay appearance to let podium animation complete (~5s) */}
           <motion.div 
             className={`space-y-2 bg-white/95 backdrop-blur-md rounded-2xl p-3 shadow-lg ${phase === 'finished' ? 'max-h-[50vh] overflow-y-auto' : ''}`}
-            initial="hidden"
-            animate="visible"
-            variants={{
-              visible: { transition: { staggerChildren: phase === 'finished' ? 0.15 : 0.08 } },
-              hidden: {}
-            }}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: phase === 'finished' ? 5 : 0, duration: 0.5 }}
           >
             {(phase === 'finished' ? ranking : ranking.slice(0, 5)).map((entry, i) => {
               // Use avatarId from backend if available, fallback to hash-based

@@ -169,8 +169,20 @@ export function Podium({ entries }: PodiumProps) {
     entries[2], // 3rd place (right)
   ].filter(Boolean)
 
-  // Reveal delays: 3rd appears first (0s), then 2nd (1.5s), then 1st (3s)
-  const revealDelays = [1.5, 3, 0] // [2nd, 1st, 3rd]
+  // Reveal delays based on how many participants we have
+  // With 3: 3rd (0s) → 2nd (1.5s) → 1st (3s)
+  // With 2: 2nd (0s) → 1st (1.5s)
+  // With 1: 1st (0s)
+  const getRevealDelay = (displayIdx: number): number => {
+    const count = entries.length
+    if (count === 1) return 0 // Only 1st place, show immediately
+    if (count === 2) {
+      // 2nd appears first, then 1st
+      return displayIdx === 0 ? 0 : 1.5 // [2nd=0s, 1st=1.5s]
+    }
+    // Full 3 participants: 3rd → 2nd → 1st
+    return [1.5, 3, 0][displayIdx] // [2nd=1.5s, 1st=3s, 3rd=0s]
+  }
   
   // Podium colors matching Blooket style
   const podiumColors = ['#9333ea', '#f97316', '#22c55e'] // Purple, Orange, Green
@@ -183,7 +195,7 @@ export function Podium({ entries }: PodiumProps) {
         if (!entry) return null
         const actualRank = displayIdx === 0 ? 2 : displayIdx === 1 ? 1 : 3
         const avatar = entry.avatarId ? getAvatar(entry.avatarId) : getAvatarFromName(entry.name)
-        const delay = revealDelays[displayIdx]
+        const delay = getRevealDelay(displayIdx)
         
         return (
           <motion.div
