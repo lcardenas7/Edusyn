@@ -20,7 +20,8 @@ export type LiveEventType =
   | 'RANKING'
   | 'QUESTION_CLOSED'
   | 'SESSION_FINISHED'
-  | 'SESSION_ENDED';
+  | 'SESSION_ENDED'
+  | 'SESSION_RESET';
 
 export interface LiveEvent {
   type: LiveEventType;
@@ -689,6 +690,35 @@ export class LiveSessionService implements OnModuleDestroy {
       clearTimeout(existing);
       this.questionTimers.delete(sessionId);
     }
+  }
+
+  async resetSession(sessionId: string, teacherId: string) {
+    const session = await this.validateTeacherSession(sessionId, teacherId);
+
+    // Delete all answers for this session
+    const deleted = await this.prisma.liveSessionAnswer.deleteMany({
+      where: { sessionId },
+    });
+
+    // Reset session status to ACTIVE and clear currentQuestionIdx
+    await this.prisma.liveSession.update({
+      where: { id: sessionId },
+      data: { 
+        status: 'ACTIVE', 
+        currentQuestionIdx: 0,
+        finishedAt: null,
+      },
+    });
+
+    // Clear any stored avatars for this session
+    this.studentAvatars.delete(sessionId);
+    
+    // Broadcast reset event to all connected clients
+    this.broadcast(sessionId, { type: 'SESSION_RESET', data: { deletedAnswers: deleted.count } });
+
+    this.logger.log(`Session ${sessionId} reset by teacher ${teacherId}. Deleted ${deleted.count} answers.`);
+
+    return { success: true, deletedAnswers: deleted.count };
   }
 
   async finishSession(sessionId: string, teacherId: string) {

@@ -253,6 +253,13 @@ export class LiveSessionController {
     return this.liveSessionService.createTeamByStudent(sessionId, body.name, req.user.id);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/reset')
+  async resetSession(@Param('id') sessionId: string, @Request() req: any) {
+    await this.verifySessionTenant(sessionId, req.user.institutionId);
+    return this.liveSessionService.resetSession(sessionId, req.user.id);
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // Student Endpoint
   // ═══════════════════════════════════════════════════════════════════════════

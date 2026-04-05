@@ -2139,4 +2139,6 @@ export const liveSessionApi = {
     api.get(`/live-session/${sessionId}/search-students`, { params: { q: query } }),
   createTeamByStudent: (sessionId: string, name: string) =>
     api.post(`/live-session/${sessionId}/create-team`, { name }),
+  reset: (sessionId: string) =>
+    api.post(`/live-session/${sessionId}/reset`),
 }

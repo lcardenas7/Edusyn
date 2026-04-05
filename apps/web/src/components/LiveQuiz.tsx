@@ -5,7 +5,7 @@ import confetti from 'canvas-confetti'
 import {
   Zap, Play, SkipForward, Trophy, X, CheckCircle2, XCircle,
   Clock, Users, Loader2, BarChart3, Image as ImageIcon, Volume2, VolumeX,
-  ChevronRight, Award, Timer, Radio, Sparkles, Crown
+  ChevronRight, Award, Timer, Radio, Sparkles, Crown, RotateCcw
 } from 'lucide-react'
 import { AnimalAvatar, AvatarSelector, Podium, CircularTimer, getAvatarFromName, ANIMAL_AVATARS } from './AnimalAvatars'
 
@@ -1216,12 +1216,28 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                   ? 'Asigna los estudiantes a equipos antes de iniciar'
                   : 'Los estudiantes pueden unirse desde su aula virtual'}
               </p>
-              <button
-                onClick={handleStart}
-                className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl text-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg shadow-green-500/30 flex items-center gap-3 mx-auto"
-              >
-                <Play className="w-6 h-6" /> Iniciar primera pregunta
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <button
+                  onClick={handleStart}
+                  className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl text-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg shadow-green-500/30 flex items-center gap-3 justify-center"
+                >
+                  <Play className="w-6 h-6" /> Iniciar primera pregunta
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!confirm('¿Reiniciar sesión? Se borrarán todas las respuestas anteriores.')) return
+                    try {
+                      const { data } = await liveSessionApi.reset(sessionId)
+                      alert(`Sesión reiniciada. Se eliminaron ${data.deletedAnswers} respuestas.`)
+                    } catch (err: any) {
+                      alert('Error al reiniciar: ' + (err.response?.data?.message || err.message))
+                    }
+                  }}
+                  className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white/80 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 justify-center border border-white/20"
+                >
+                  <RotateCcw className="w-4 h-4" /> Reiniciar sesión
+                </button>
+              </div>
             </div>
           ) : (
             <div className="text-center space-y-4 w-full max-w-md">
