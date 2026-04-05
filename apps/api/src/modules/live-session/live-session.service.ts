@@ -553,10 +553,11 @@ export class LiveSessionService implements OnModuleDestroy {
       const currentQ = questions[session.currentQuestionIdx];
       
       if (currentQ) {
-        // Now we can safely use setImmediate since we have all the data
-        setImmediate(() => {
+        // Use setTimeout with 300ms delay to ensure the HTTP response reaches the client
+        // before we broadcast QUESTION_CLOSED (otherwise client shows "no respondiste")
+        setTimeout(() => {
           this.doCloseQuestionWithData(sessionId, session.currentQuestionIdx, currentQ);
-        });
+        }, 300);
       }
     }
 
