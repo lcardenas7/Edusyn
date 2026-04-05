@@ -190,6 +190,22 @@ export class ClassroomService {
     });
 
     if (!classroom) throw new NotFoundException('Aula no encontrada');
+
+    // Add studentEnrollmentId for students (needed for Live Quiz tracking)
+    const student = await this.prisma.student.findUnique({ where: { userId } });
+    if (student) {
+      const enrollment = await this.prisma.studentEnrollment.findFirst({
+        where: {
+          studentId: student.id,
+          groupId: classroom.teacherAssignment.groupId,
+          academicYearId: classroom.teacherAssignment.academicYearId,
+          status: 'ACTIVE',
+        },
+        select: { id: true },
+      });
+      return { ...classroom, studentEnrollmentId: enrollment?.id };
+    }
+
     return classroom;
   }
 

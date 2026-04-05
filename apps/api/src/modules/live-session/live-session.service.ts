@@ -524,13 +524,24 @@ export class LiveSessionService implements OnModuleDestroy {
     }
     this.logger.log(`Answer progress: ${totalAnswered}/${effectiveExpected} (connected=${connectedCount}, enrolled=${totalEnrolled}) for session ${sessionId}, question ${session.currentQuestionIdx}`);
     if (effectiveExpected > 0 && totalAnswered >= effectiveExpected) {
-      // Small delay to let the last answer's UI update before closing
-      setTimeout(() => {
-        this.logger.log(`Auto-closing question for session ${sessionId} (all ${totalAnswered}/${effectiveExpected} answered)`);
-        this.doCloseQuestion(sessionId, session.activityId, session.currentQuestionIdx).catch((err) => {
-          this.logger.error(`Failed to auto-close question: ${err.message}`);
+      // Auto-close: pre-fetch question data NOW (while transaction is open)
+      // then broadcast after a small delay
+      this.logger.log(`Auto-closing question for session ${sessionId} (all ${totalAnswered}/${effectiveExpected} answered)`);
+      
+      // Pre-fetch the question data while we're still in the transaction
+      const questions = await this.prisma.activityQuestion.findMany({
+        where: { activityId: session.activityId },
+        orderBy: { sortOrder: 'asc' },
+        select: { id: true, correctAnswer: true, explanation: true },
+      });
+      const currentQ = questions[session.currentQuestionIdx];
+      
+      if (currentQ) {
+        // Now we can safely use setImmediate since we have all the data
+        setImmediate(() => {
+          this.doCloseQuestionWithData(sessionId, session.currentQuestionIdx, currentQ);
         });
-      }, 800);
+      }
     }
 
     return { isCorrect, points: saved.points };
@@ -573,13 +584,44 @@ export class LiveSessionService implements OnModuleDestroy {
     const currentQ = questions[questionIdx];
     if (!currentQ) return;
 
-    this.logger.log(`Broadcasting QUESTION_CLOSED for session ${sessionId}, question ${questionIdx}, questionId=${currentQ.id}`);
+    this.broadcastQuestionClosed(sessionId, questionIdx, currentQ);
+  }
+
+  // Close question with pre-fetched data (avoids transaction issues)
+  private doCloseQuestionWithData(
+    sessionId: string,
+    questionIdx: number,
+    questionData: { id: string; correctAnswer: any; explanation: string | null },
+  ) {
+    this.logger.log(`doCloseQuestionWithData called: session=${sessionId}, question=${questionIdx}`);
+    this.clearQuestionTimer(sessionId);
+
+    // Prevent double broadcast
+    if (!this.closedQuestions.has(sessionId)) {
+      this.closedQuestions.set(sessionId, new Set());
+    }
+    if (this.closedQuestions.get(sessionId)!.has(questionIdx)) {
+      this.logger.log(`Question ${questionIdx} already closed for session ${sessionId}, skipping`);
+      return;
+    }
+    this.closedQuestions.get(sessionId)!.add(questionIdx);
+
+    this.broadcastQuestionClosed(sessionId, questionIdx, questionData);
+  }
+
+  // Shared broadcast logic
+  private broadcastQuestionClosed(
+    sessionId: string,
+    questionIdx: number,
+    questionData: { id: string; correctAnswer: any; explanation: string | null },
+  ) {
+    this.logger.log(`Broadcasting QUESTION_CLOSED for session ${sessionId}, question ${questionIdx}, questionId=${questionData.id}`);
     this.broadcast(sessionId, {
       type: 'QUESTION_CLOSED',
       data: {
-        questionId: currentQ.id,
-        correctAnswer: currentQ.correctAnswer,
-        explanation: currentQ.explanation,
+        questionId: questionData.id,
+        correctAnswer: questionData.correctAnswer,
+        explanation: questionData.explanation,
       },
     });
     this.logger.log(`QUESTION_CLOSED broadcast completed for session ${sessionId}`);
