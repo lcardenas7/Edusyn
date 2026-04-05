@@ -146,7 +146,7 @@ export function AvatarSelector({ selected, onSelect }: AvatarSelectorProps) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PODIUM COMPONENT (for final results)
+// PODIUM COMPONENT (for final results) - Blooket style with dramatic reveal
 // ═══════════════════════════════════════════════════════════════════════════
 
 interface PodiumEntry {
@@ -161,85 +161,143 @@ interface PodiumProps {
 }
 
 export function Podium({ entries }: PodiumProps) {
-  // Reorder for podium display: 2nd, 1st, 3rd
+  // Dramatic reveal order: 3rd → 2nd → 1st
+  // Display order: 2nd (left), 1st (center), 3rd (right)
   const podiumOrder = [
     entries[1], // 2nd place (left)
     entries[0], // 1st place (center, tallest)
     entries[2], // 3rd place (right)
   ].filter(Boolean)
 
-  const podiumHeights = ['h-28', 'h-40', 'h-20']
-  const podiumColors = [
-    'from-slate-400 to-slate-500', // Silver
-    'from-yellow-400 to-amber-500', // Gold
-    'from-amber-600 to-amber-700', // Bronze
-  ]
-  const ribbonColors = ['bg-rose-500', 'bg-cyan-500', 'bg-emerald-500']
-  const delays = [0.3, 0, 0.5]
+  // Reveal delays: 3rd appears first (0s), then 2nd (1.5s), then 1st (3s)
+  const revealDelays = [1.5, 3, 0] // [2nd, 1st, 3rd]
+  
+  // Podium colors matching Blooket style
+  const podiumColors = ['#9333ea', '#f97316', '#22c55e'] // Purple, Orange, Green
+  const ribbonColors = ['#ec4899', '#3b82f6', '#22c55e'] // Pink, Blue, Green
+  const podiumHeights = [112, 160, 80] // 2nd, 1st, 3rd in pixels
 
   return (
-    <div className="flex items-end justify-center gap-2 sm:gap-4 py-8">
+    <div className="flex items-end justify-center gap-3 sm:gap-6 py-6 min-h-[280px]">
       {podiumOrder.map((entry, displayIdx) => {
         if (!entry) return null
         const actualRank = displayIdx === 0 ? 2 : displayIdx === 1 ? 1 : 3
         const avatar = entry.avatarId ? getAvatar(entry.avatarId) : getAvatarFromName(entry.name)
+        const delay = revealDelays[displayIdx]
         
         return (
           <motion.div
             key={entry.name}
             className="flex flex-col items-center"
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: delays[displayIdx], type: 'spring', bounce: 0.4 }}
+            initial={{ opacity: 0, scale: 0.5, y: 100 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ 
+              delay, 
+              duration: 0.8, 
+              type: 'spring', 
+              bounce: 0.5 
+            }}
           >
-            {/* Avatar */}
+            {/* Avatar on pedestal */}
             <motion.div
-              className="relative mb-2"
-              animate={actualRank === 1 ? { y: [0, -8, 0] } : {}}
-              transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+              className="relative"
+              initial={{ y: -50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: delay + 0.3, duration: 0.5, type: 'spring' }}
             >
-              <div 
-                className={`${actualRank === 1 ? 'w-20 h-20 text-4xl' : 'w-14 h-14 text-2xl'} rounded-2xl flex items-center justify-center shadow-xl`}
-                style={{ 
-                  backgroundColor: avatar.color,
-                  boxShadow: `0 8px 24px ${avatar.color}50`
-                }}
-              >
-                {avatar.emoji}
-              </div>
+              {/* Crown for 1st place */}
               {actualRank === 1 && (
                 <motion.div 
-                  className="absolute -top-4 left-1/2 -translate-x-1/2 text-2xl"
-                  animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
-                  transition={{ repeat: Infinity, duration: 2 }}
+                  className="absolute -top-8 left-1/2 -translate-x-1/2 text-4xl z-10"
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ delay: delay + 0.6, duration: 0.5, type: 'spring', bounce: 0.6 }}
                 >
                   👑
                 </motion.div>
               )}
+              
+              {/* Avatar */}
+              <motion.div 
+                className={`${actualRank === 1 ? 'w-24 h-24 text-5xl' : 'w-16 h-16 text-3xl'} rounded-2xl flex items-center justify-center shadow-2xl border-4 border-white/30`}
+                style={{ 
+                  backgroundColor: avatar.color,
+                  boxShadow: `0 8px 32px ${avatar.color}60`
+                }}
+                animate={actualRank === 1 ? { y: [0, -6, 0] } : {}}
+                transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut', delay: delay + 1 }}
+              >
+                {avatar.emoji}
+              </motion.div>
             </motion.div>
 
-            {/* Name ribbon */}
-            <div className={`${ribbonColors[displayIdx]} px-4 py-1.5 rounded-lg shadow-lg relative`}>
-              <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[8px] border-t-transparent border-r-[8px] border-r-current border-b-[8px] border-b-transparent" style={{ color: ribbonColors[displayIdx].replace('bg-', '').includes('rose') ? '#f43f5e' : ribbonColors[displayIdx].includes('cyan') ? '#06b6d4' : '#10b981' }} />
-              <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[8px] border-t-transparent border-l-[8px] border-l-current border-b-[8px] border-b-transparent" style={{ color: ribbonColors[displayIdx].replace('bg-', '').includes('rose') ? '#f43f5e' : ribbonColors[displayIdx].includes('cyan') ? '#06b6d4' : '#10b981' }} />
-              <p className="text-white font-bold text-sm truncate max-w-[80px] sm:max-w-[100px]">{entry.name}</p>
-            </div>
+            {/* Name ribbon - Blooket style */}
+            <motion.div 
+              className="relative mt-2 z-10"
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ delay: delay + 0.4, duration: 0.3 }}
+            >
+              <div 
+                className="px-5 py-2 rounded-lg shadow-lg relative"
+                style={{ backgroundColor: ribbonColors[displayIdx] }}
+              >
+                {/* Ribbon tails */}
+                <div 
+                  className="absolute -left-3 top-1/2 -translate-y-1/2 w-0 h-0"
+                  style={{
+                    borderTop: '10px solid transparent',
+                    borderRight: `12px solid ${ribbonColors[displayIdx]}`,
+                    borderBottom: '10px solid transparent',
+                  }}
+                />
+                <div 
+                  className="absolute -right-3 top-1/2 -translate-y-1/2 w-0 h-0"
+                  style={{
+                    borderTop: '10px solid transparent',
+                    borderLeft: `12px solid ${ribbonColors[displayIdx]}`,
+                    borderBottom: '10px solid transparent',
+                  }}
+                />
+                <p className="text-white font-black text-base sm:text-lg truncate max-w-[90px] sm:max-w-[120px] text-center">
+                  {entry.name.split(' ')[0]}
+                </p>
+              </div>
+            </motion.div>
 
             {/* Score */}
-            <p className="text-white/80 text-sm font-semibold mt-1">
-              {entry.score.toLocaleString()} pts
-            </p>
-
-            {/* Podium block */}
-            <motion.div
-              className={`${podiumHeights[displayIdx]} w-20 sm:w-24 mt-2 rounded-t-xl bg-gradient-to-b ${podiumColors[displayIdx]} flex items-center justify-center shadow-xl`}
-              initial={{ height: 0 }}
-              animate={{ height: 'auto' }}
-              transition={{ delay: delays[displayIdx] + 0.2, duration: 0.5, type: 'spring' }}
+            <motion.p 
+              className="text-white/90 text-sm font-bold mt-1"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: delay + 0.5 }}
             >
-              <span className="text-white font-black text-3xl sm:text-4xl drop-shadow-lg">
-                {actualRank}<sup className="text-lg">{actualRank === 1 ? 'st' : actualRank === 2 ? 'nd' : 'rd'}</sup>
-              </span>
+              Score: {entry.score.toLocaleString()}
+            </motion.p>
+
+            {/* Podium block - Blooket style */}
+            <motion.div
+              className="w-24 sm:w-28 mt-2 rounded-t-2xl flex items-end justify-center shadow-2xl relative overflow-hidden"
+              style={{ 
+                backgroundColor: podiumColors[displayIdx],
+                height: podiumHeights[displayIdx]
+              }}
+              initial={{ height: 0 }}
+              animate={{ height: podiumHeights[displayIdx] }}
+              transition={{ delay: delay + 0.1, duration: 0.6, type: 'spring', bounce: 0.3 }}
+            >
+              {/* Shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0" />
+              
+              {/* Rank number */}
+              <motion.span 
+                className="text-white font-black text-4xl sm:text-5xl drop-shadow-lg pb-3"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: delay + 0.5, type: 'spring', bounce: 0.5 }}
+              >
+                {actualRank}<sup className="text-xl">{actualRank === 1 ? 'st' : actualRank === 2 ? 'nd' : 'rd'}</sup>
+              </motion.span>
             </motion.div>
           </motion.div>
         )
