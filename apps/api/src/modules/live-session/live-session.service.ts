@@ -42,6 +42,8 @@ export class LiveSessionService implements OnModuleDestroy {
   private questionTimers = new Map<string, ReturnType<typeof setTimeout>>();
   // Map of sessionId → Set of questionIdx already closed (prevent double broadcast)
   private closedQuestions = new Map<string, Set<number>>();
+  // Map of sessionId → snapshot of connected students count at question start (for reliable auto-close)
+  private questionConnectedSnapshot = new Map<string, number>();
 
   constructor(private prisma: PrismaService) {}
 
@@ -85,7 +87,11 @@ export class LiveSessionService implements OnModuleDestroy {
 
   private broadcast(sessionId: string, event: LiveEvent) {
     const stream = this.streams.get(sessionId);
-    if (stream) stream.next(event);
+    if (stream) {
+      stream.next(event);
+    } else {
+      this.logger.warn(`broadcast(${event.type}) failed: no stream for session ${sessionId}`);
+    }
   }
 
   /**
@@ -142,6 +148,7 @@ export class LiveSessionService implements OnModuleDestroy {
     this.connectedStudents.delete(sessionId);
     this.clearQuestionTimer(sessionId);
     this.closedQuestions.delete(sessionId);
+    this.questionConnectedSnapshot.delete(sessionId);
     const stream = this.streams.get(sessionId);
     if (stream) {
       stream.complete();
@@ -217,10 +224,22 @@ export class LiveSessionService implements OnModuleDestroy {
     }
 
     // Close any existing WAITING/ACTIVE session for this classroom
-    await this.prisma.liveSession.updateMany({
+    const oldSessions = await this.prisma.liveSession.findMany({
       where: { classroomId, status: { in: ['WAITING', 'ACTIVE'] } },
-      data: { status: 'FINISHED', finishedAt: new Date() },
+      select: { id: true },
     });
+    if (oldSessions.length > 0) {
+      // Notify connected students that old session is over
+      for (const old of oldSessions) {
+        this.broadcast(old.id, { type: 'SESSION_ENDED', data: {} });
+        // Cleanup stream & timers after a short delay so the event is delivered
+        setTimeout(() => this.cleanupStream(old.id), 2000);
+      }
+      await this.prisma.liveSession.updateMany({
+        where: { classroomId, status: { in: ['WAITING', 'ACTIVE'] } },
+        data: { status: 'FINISHED', finishedAt: new Date() },
+      });
+    }
 
     return this.prisma.liveSession.create({
       data: {
@@ -326,6 +345,10 @@ export class LiveSessionService implements OnModuleDestroy {
     // Cancel any pending timer from previous question & reset closed tracking for new question
     this.clearQuestionTimer(sessionId);
     this.closedQuestions.delete(sessionId); // allow new question to be closed by timer/auto-close
+    // Snapshot connected students count for reliable auto-close
+    const connectedNow = this.getConnectedStudentCount(sessionId);
+    this.questionConnectedSnapshot.set(sessionId, connectedNow);
+    this.logger.log(`Snapshot connectedStudents=${connectedNow} for session ${sessionId} question ${nextIdx}`);
 
     // Broadcast question to all connected clients (no correctAnswer!)
     this.broadcast(sessionId, {
@@ -462,8 +485,8 @@ export class LiveSessionService implements OnModuleDestroy {
       where: { sessionId, questionId },
     });
 
-    // Use connected students count for auto-close (more accurate than enrolled)
-    const connectedCount = this.getConnectedStudentCount(sessionId);
+    // Use snapshot of connected students from question start (more reliable than current count)
+    const connectedCount = this.questionConnectedSnapshot.get(sessionId) || this.getConnectedStudentCount(sessionId);
     
     // Fallback to enrolled count for display if no one connected yet
     const totalEnrolled = await this.prisma.studentEnrollment.count({
@@ -483,9 +506,9 @@ export class LiveSessionService implements OnModuleDestroy {
     });
 
     // Auto-close question when ALL CONNECTED students have answered
-    // Use connectedCount if available, otherwise use totalAnswered vs totalEnrolled
+    // Use connectedCount snapshot if available, otherwise fall back to enrolled
     const effectiveExpected = connectedCount > 0 ? connectedCount : totalEnrolled;
-    this.logger.log(`Answer progress: ${totalAnswered}/${effectiveExpected} (connected=${connectedCount}, enrolled=${totalEnrolled}) for session ${sessionId}`);
+    this.logger.log(`Answer progress: ${totalAnswered}/${effectiveExpected} (snapshotConnected=${connectedCount}, enrolled=${totalEnrolled}) for session ${sessionId}, question ${session.currentQuestionIdx}`);
     if (effectiveExpected > 0 && totalAnswered >= effectiveExpected) {
       // Small delay to let the last answer's UI update before closing
       setTimeout(() => {
@@ -514,6 +537,7 @@ export class LiveSessionService implements OnModuleDestroy {
 
   // Internal close question logic — used by teacher action, timer, and auto-close
   private async doCloseQuestion(sessionId: string, activityId: string, questionIdx: number) {
+    this.logger.log(`doCloseQuestion called: session=${sessionId}, question=${questionIdx}, hasStream=${this.streams.has(sessionId)}`);
     // Cancel any pending timer for this question
     this.clearQuestionTimer(sessionId);
 

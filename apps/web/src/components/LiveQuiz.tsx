@@ -517,10 +517,39 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       setTeams(data)
     })
 
-    es.addEventListener('SESSION_ENDED', () => {
-      setPhase('finished')
+    es.addEventListener('SESSION_ENDED', async () => {
       stopTimer()
       stopMusic()
+      // Close current SSE connection
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close()
+        eventSourceRef.current = null
+      }
+      // For students: check if there's a new active session to join
+      // Wait a bit for the new session to be created by the teacher
+      if (!isTeacher) {
+        await new Promise(resolve => setTimeout(resolve, 800))
+        try {
+          const { data } = await liveSessionApi.getActive(classroomId)
+          if (data && data.id && data.id !== sessionIdRef.current) {
+            // New session found — rejoin it
+            setSessionId(data.id)
+            sessionIdRef.current = data.id
+            setCurrentQuestion(null)
+            setQuestionIndex(-1)
+            setAnswered(false)
+            answeredRef.current = false
+            setAnswerResult(null)
+            setCorrectAnswer(null)
+            setExplanation(null)
+            setTotalAnswered(0)
+            setPhase('loading')
+            loadSession(data.id)
+            return
+          }
+        } catch { /* no new session */ }
+      }
+      setPhase('finished')
       setRanking([])
     })
 
