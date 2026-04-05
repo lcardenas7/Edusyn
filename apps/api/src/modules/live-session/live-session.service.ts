@@ -485,8 +485,12 @@ export class LiveSessionService implements OnModuleDestroy {
       where: { sessionId, questionId },
     });
 
-    // Use snapshot of connected students from question start (more reliable than current count)
-    const connectedCount = this.questionConnectedSnapshot.get(sessionId) || this.getConnectedStudentCount(sessionId);
+    // Use current connected count (more accurate as students may join/leave during question)
+    const connectedCountNow = this.getConnectedStudentCount(sessionId);
+    const snapshotCount = this.questionConnectedSnapshot.get(sessionId) || 0;
+    // Use the larger of snapshot or current count to be safe
+    const connectedCount = Math.max(connectedCountNow, snapshotCount);
+    this.logger.log(`submitAnswer: connectedNow=${connectedCountNow}, snapshot=${snapshotCount}, using=${connectedCount}`);
     
     // Fallback to enrolled count for display if no one connected yet
     const totalEnrolled = await this.prisma.studentEnrollment.count({
@@ -506,9 +510,19 @@ export class LiveSessionService implements OnModuleDestroy {
     });
 
     // Auto-close question when ALL CONNECTED students have answered
-    // Use connectedCount snapshot if available, otherwise fall back to enrolled
-    const effectiveExpected = connectedCount > 0 ? connectedCount : totalEnrolled;
-    this.logger.log(`Answer progress: ${totalAnswered}/${effectiveExpected} (snapshotConnected=${connectedCount}, enrolled=${totalEnrolled}) for session ${sessionId}, question ${session.currentQuestionIdx}`);
+    // Use connectedCount if > 0, otherwise fall back to enrolled count
+    // IMPORTANT: If connectedCount is 0 but we have answers, use totalAnswered as minimum expected
+    let effectiveExpected = connectedCount > 0 ? connectedCount : totalEnrolled;
+    // Safety: if we have more answers than expected, adjust expected to match
+    if (totalAnswered > effectiveExpected && effectiveExpected > 0) {
+      effectiveExpected = totalAnswered;
+    }
+    // If no one is tracked as connected but someone answered, assume at least 1 connected
+    if (connectedCount === 0 && totalAnswered > 0) {
+      effectiveExpected = totalAnswered;
+      this.logger.warn(`No connected students tracked but ${totalAnswered} answered - using totalAnswered as expected`);
+    }
+    this.logger.log(`Answer progress: ${totalAnswered}/${effectiveExpected} (connected=${connectedCount}, enrolled=${totalEnrolled}) for session ${sessionId}, question ${session.currentQuestionIdx}`);
     if (effectiveExpected > 0 && totalAnswered >= effectiveExpected) {
       // Small delay to let the last answer's UI update before closing
       setTimeout(() => {
@@ -559,6 +573,7 @@ export class LiveSessionService implements OnModuleDestroy {
     const currentQ = questions[questionIdx];
     if (!currentQ) return;
 
+    this.logger.log(`Broadcasting QUESTION_CLOSED for session ${sessionId}, question ${questionIdx}, questionId=${currentQ.id}`);
     this.broadcast(sessionId, {
       type: 'QUESTION_CLOSED',
       data: {
@@ -567,6 +582,7 @@ export class LiveSessionService implements OnModuleDestroy {
         explanation: currentQ.explanation,
       },
     });
+    this.logger.log(`QUESTION_CLOSED broadcast completed for session ${sessionId}`);
   }
 
   // Server-side timer: auto-close question when time runs out
