@@ -210,7 +210,16 @@ export class ReportsService {
     term: { name: string };
     student: { firstName: string; lastName: string; documentType: string; documentNumber: string };
     group: { name: string; gradeLevel: string };
-    subjectGrades: Array<{ subject: string; grade: number | null; performanceLevel: string | null; teacher: string | null }>;
+    subjectGrades: Array<{
+      subject: string;
+      grade: number | null;
+      originalGrade: number | null;
+      recoveryGrade: number | null;
+      hasRecovery: boolean;
+      recoveryStatus: string | null;
+      performanceLevel: string | null;
+      teacher: string | null;
+    }>;
     attendance: { total: number; present: number; absent: number; late: number; excused: number; attendanceRate: number };
     achievements: Array<{ subject: string; orderNumber: number; description: string; observation: string | null; judgment: string | null }>;
     observations: Array<{ date: Date; type: string; description: string }>;
@@ -267,11 +276,23 @@ export class ReportsService {
           y = 50;
         }
 
-        doc.text(subject.subject, col1, y, { width: 190 });
+        const recovered = subject.hasRecovery
+          && subject.originalGrade !== null
+          && subject.grade !== null
+          && subject.grade > subject.originalGrade;
+        const originalRecoveredGrade = recovered ? subject.originalGrade : null;
+        const finalRecoveredGrade = recovered ? subject.grade : null;
+        const recoveryLine = recovered
+          ? `Recuperada: perdió con ${originalRecoveredGrade!.toFixed(1)}${subject.recoveryGrade !== null ? `, recuperación ${subject.recoveryGrade.toFixed(1)}` : ''}, definitiva ${finalRecoveredGrade!.toFixed(1)}`
+          : '';
+        const rowHeight = recovered ? 30 : 20;
+        const subjectLabel = recovered ? `${subject.subject}\n${recoveryLine}` : subject.subject;
+
+        doc.text(subjectLabel, col1, y, { width: 190 });
         doc.text(subject.grade?.toFixed(1) || 'N/A', col2, y);
         doc.text(this.getPerformanceLevelText(subject.performanceLevel), col3, y);
         doc.text(subject.teacher || '', col4, y, { width: 100 });
-        y += 20;
+        y += rowHeight;
       }
 
       doc.moveDown(2);

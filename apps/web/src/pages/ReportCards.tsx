@@ -370,6 +370,7 @@ export default function ReportCards() {
     const showAreaAvg = (dc.showAreaAverages !== false) && config.showAreaAverages
     const showGenAvg = (dc.showAverages !== false) && config.showGeneralAverage
     const showRank = (dc.showRanking !== false) && config.showRanking
+    const showRecoveryGrades = config.showRecoveryGrades
     const showAttend = config.showAttendance
     const showAreaRows = dc.showAreaAverages !== false
 
@@ -400,6 +401,17 @@ export default function ReportCards() {
       for (let idx = 0; idx < (area.subjects || []).length; idx++) {
         const sg = area.subjects[idx]
         const bg = idx % 2 === 0 ? '#fff' : '#f8fafc'
+        const recovered = !!showRecoveryGrades
+          && !!sg.hasRecovery
+          && sg.originalGrade !== null
+          && sg.grade !== null
+          && sg.grade > sg.originalGrade
+        const recoveryHtml = recovered
+          ? `<div style="margin-top:3px;font-size:9px;line-height:1.3;color:#92400e;">
+              <span style="display:inline-block;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:999px;padding:1px 6px;font-size:8px;font-weight:700;margin-right:4px;">RECUPERADA</span>
+              Perdió con <strong>${sg.originalGrade.toFixed(1)}</strong>${sg.recoveryGrade !== null ? `, obtuvo <strong>${sg.recoveryGrade.toFixed(1)}</strong> en recuperación` : ''} y quedó en <strong>${sg.grade.toFixed(1)}</strong>.
+            </div>`
+          : ''
         let achievCell = ''
         if (showAchiev) {
           let content = '-'
@@ -425,7 +437,7 @@ export default function ReportCards() {
         if (showAttend) attendCell = `<td style="padding:4px 2px;text-align:center;font-size:10px;">${sg.absences !== undefined ? sg.absences : '-'}</td>`
 
         gradesRows += `<tr style="background:${bg};">
-          <td style="padding:4px 6px;padding-left:12px;font-weight:500;color:#0f172a;font-size:10px;border-left:2px solid #93c5fd;">${sg.subject}</td>
+          <td style="padding:4px 6px;padding-left:12px;font-weight:500;color:#0f172a;font-size:10px;border-left:2px solid #93c5fd;">${sg.subject}${recoveryHtml}</td>
           ${achievCell}${numCell}${perfCell}${attendCell}
         </tr>`
       }
