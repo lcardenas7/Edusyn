@@ -2896,6 +2896,15 @@ export class ReportsService {
         ? Math.round((allGrades.reduce((sum: number, s: any) => sum + s.grade!, 0) / allGrades.length) * 10) / 10
         : null;
 
+      // rankingAvg: usa originalGrade si hubo recuperación (penaliza al que perdió y recuperó)
+      // Esto evita que alguien que recuperó supere a quien siempre aprobó con la misma nota final
+      const rankingAvg = allGrades.length > 0
+        ? Math.round((allGrades.reduce((sum: number, s: any) => {
+            const scoreForRanking = s.hasRecovery && s.originalGrade !== null ? s.originalGrade : s.grade!;
+            return sum + scoreForRanking;
+          }, 0) / allGrades.length) * 10) / 10
+        : null;
+
       const approved = allGrades.filter((s: any) => !isFailing(s.grade ?? 0, rulesCtx)).length;
       const failed = allGrades.filter((s: any) => isFailing(s.grade ?? 0, rulesCtx)).length;
 
@@ -2906,6 +2915,7 @@ export class ReportsService {
         documentNumber: card.student.documentNumber || '',
         groupName: `${card.group.gradeLevel} ${card.group.name}`,
         average: generalAvg,
+        rankingAvg,
         approvedSubjects: approved,
         failedSubjects: failed,
         totalSubjects: allGrades.length,
@@ -2915,9 +2925,10 @@ export class ReportsService {
 
     // Calcular ranking en memoria (solo si no vino del snapshot)
     if (meta.source !== 'snapshot' || !results[0]?.rank) {
+      // Ordenar por rankingAvg (penaliza recuperaciones) para asignar posición justa
       const sorted = [...results]
         .filter((r: any) => r.average !== null)
-        .sort((a: any, b: any) => (b.average ?? 0) - (a.average ?? 0));
+        .sort((a: any, b: any) => (b.rankingAvg ?? b.average ?? 0) - (a.rankingAvg ?? a.average ?? 0));
 
       const rankedResults = results.map((r: any) => ({
         ...r,

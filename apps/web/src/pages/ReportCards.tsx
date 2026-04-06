@@ -386,6 +386,17 @@ export default function ReportCards() {
     }
 
     // Grades table rows
+    // Map subjectGrades by subject name to enrich areaGrades subjects with recovery metadata
+    const subjectRecoveryMap = new Map<string, { hasRecovery: boolean; originalGrade: number | null; recoveryGrade: number | null; grade: number | null }>()
+    for (const sg of (data.subjectGrades || [])) {
+      subjectRecoveryMap.set(sg.subject, {
+        hasRecovery: !!sg.hasRecovery,
+        originalGrade: sg.originalGrade ?? null,
+        recoveryGrade: sg.recoveryGrade ?? null,
+        grade: sg.grade ?? null,
+      })
+    }
+
     let gradesRows = ''
     for (const area of (data.areaGrades || [])) {
       if (showAreaRows) {
@@ -401,17 +412,18 @@ export default function ReportCards() {
       for (let idx = 0; idx < (area.subjects || []).length; idx++) {
         const sg = area.subjects[idx]
         const bg = idx % 2 === 0 ? '#fff' : '#f8fafc'
+        // Enrich with recovery metadata from subjectGrades map (areaGrades may lack these fields)
+        const recMeta = subjectRecoveryMap.get(sg.subject)
+        const recHasRecovery = recMeta?.hasRecovery ?? sg.hasRecovery ?? false
+        const recOriginalGrade = recMeta?.originalGrade ?? sg.originalGrade ?? null
+        const recRecoveryGrade = recMeta?.recoveryGrade ?? sg.recoveryGrade ?? null
+        const recFinalGrade = recMeta?.grade ?? sg.grade ?? null
         const recovered = !!showRecoveryGrades
-          && !!sg.hasRecovery
-          && sg.originalGrade !== null
-          && sg.grade !== null
-          && sg.grade > sg.originalGrade
-        const recoveryHtml = recovered
-          ? `<div style="margin-top:3px;font-size:9px;line-height:1.3;color:#92400e;">
-              <span style="display:inline-block;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:999px;padding:1px 6px;font-size:8px;font-weight:700;margin-right:4px;">RECUPERADA</span>
-              Perdió con <strong>${sg.originalGrade.toFixed(1)}</strong>${sg.recoveryGrade !== null ? `, obtuvo <strong>${sg.recoveryGrade.toFixed(1)}</strong> en recuperación` : ''} y quedó en <strong>${sg.grade.toFixed(1)}</strong>.
-            </div>`
-          : ''
+          && !!recHasRecovery
+          && recOriginalGrade !== null
+          && recFinalGrade !== null
+          && recFinalGrade > recOriginalGrade
+        const recoveryHtml = '' // indicator moved to numCell below
         let achievCell = ''
         if (showAchiev) {
           let content = '-'
@@ -429,7 +441,10 @@ export default function ReportCards() {
         let numCell = ''
         if (showNumeric) {
           const color = sg.grade !== null && sg.grade < rulesCtx.minPassingGrade ? '#dc2626' : '#15803d'
-          numCell = `<td style="padding:4px 2px;text-align:center;font-weight:700;font-size:11px;color:${color}">${sg.grade !== null ? sg.grade.toFixed(1) : '-'}</td>`
+          const recBadge = recovered
+            ? `<div style="font-size:8px;font-style:italic;color:#dc2626;line-height:1.4;margin-top:1px;">rec.&#160;${recRecoveryGrade !== null ? recRecoveryGrade.toFixed(1) : recFinalGrade!.toFixed(1)}</div>`
+            : ''
+          numCell = `<td style="padding:4px 2px;text-align:center;font-weight:700;font-size:11px;color:${color};vertical-align:top;">${sg.grade !== null ? sg.grade.toFixed(1) : '-'}${recBadge}</td>`
         }
         let perfCell = ''
         if (showPerf) perfCell = `<td style="padding:4px 2px;text-align:center;font-size:10px;">${perfBadge(sg.performanceLevel)}</td>`
@@ -437,7 +452,7 @@ export default function ReportCards() {
         if (showAttend) attendCell = `<td style="padding:4px 2px;text-align:center;font-size:10px;">${sg.absences !== undefined ? sg.absences : '-'}</td>`
 
         gradesRows += `<tr style="background:${bg};">
-          <td style="padding:4px 6px;padding-left:12px;font-weight:500;color:#0f172a;font-size:10px;border-left:2px solid #93c5fd;">${sg.subject}${recoveryHtml}</td>
+          <td style="padding:4px 6px;padding-left:12px;font-weight:500;color:#0f172a;font-size:10px;border-left:2px solid #93c5fd;">${sg.subject}</td>
           ${achievCell}${numCell}${perfCell}${attendCell}
         </tr>`
       }
