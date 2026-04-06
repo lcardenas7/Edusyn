@@ -375,7 +375,11 @@ export default function ReportCards() {
     const showAreaRows = dc.showAreaAverages !== false
 
     // Pre-load images as base64 data URIs so they work in print windows
-    const logoBase64 = config.showLogo && config.logoUrl ? await imageUrlToBase64(toPublicFileUrl(config.logoUrl)) : ''
+    // Try logoPreviewUrl first (freshest signed URL), then fall back to stored path via proxy
+    const logoSrc = config.showLogo
+      ? (logoPreviewUrl || (config.logoUrl ? toPublicFileUrl(config.logoUrl) : ''))
+      : ''
+    const logoBase64 = logoSrc ? await imageUrlToBase64(logoSrc) : ''
     const pc = config.primaryColor || '#1E3A8A'
 
     const perfBadge = (level: string | null) => {
@@ -440,11 +444,14 @@ export default function ReportCards() {
         }
         let numCell = ''
         if (showNumeric) {
-          const color = sg.grade !== null && sg.grade < rulesCtx.minPassingGrade ? '#dc2626' : '#15803d'
+          // When recovered: show original grade (the one that was failed) with its real color
+          // and below a subtle amber badge showing the recovery final grade
+          const displayGrade = recovered ? recOriginalGrade : sg.grade
+          const color = displayGrade !== null && displayGrade < rulesCtx.minPassingGrade ? '#dc2626' : '#15803d'
           const recBadge = recovered
-            ? `<div style="font-size:8px;font-style:italic;color:#dc2626;line-height:1.4;margin-top:1px;">rec.&#160;${recRecoveryGrade !== null ? recRecoveryGrade.toFixed(1) : recFinalGrade!.toFixed(1)}</div>`
+            ? `<div style="font-size:8px;font-style:italic;color:#b45309;line-height:1.4;margin-top:1px;">rec.&#160;${recFinalGrade!.toFixed(1)}</div>`
             : ''
-          numCell = `<td style="padding:4px 2px;text-align:center;font-weight:700;font-size:11px;color:${color};vertical-align:top;">${sg.grade !== null ? sg.grade.toFixed(1) : '-'}${recBadge}</td>`
+          numCell = `<td style="padding:4px 2px;text-align:center;font-weight:700;font-size:11px;color:${color};vertical-align:top;">${displayGrade !== null ? displayGrade.toFixed(1) : (sg.grade !== null ? sg.grade.toFixed(1) : '-')}${recBadge}</td>`
         }
         let perfCell = ''
         if (showPerf) perfCell = `<td style="padding:4px 2px;text-align:center;font-size:10px;">${perfBadge(sg.performanceLevel)}</td>`
@@ -1159,7 +1166,19 @@ export default function ReportCards() {
                               </td>
                             </tr>
                             )}
-                            {(area.subjects || []).map((sg: any, idx: number) => (
+                            {(area.subjects || []).map((sg: any, idx: number) => {
+                              // Enrich with recovery metadata from subjectGrades (areaGrades subjects lack these fields)
+                              const previewRecMeta = (previewData.subjectGrades || []).find((s: any) => s.subject === sg.subject)
+                              const previewHasRecovery = previewRecMeta?.hasRecovery ?? sg.hasRecovery ?? false
+                              const previewOriginalGrade = previewRecMeta?.originalGrade ?? sg.originalGrade ?? null
+                              const previewRecoveryFinalGrade = previewRecMeta?.grade ?? sg.grade ?? null
+                              const previewShowRecovery = !!config.showRecoveryGrades
+                                && !!previewHasRecovery
+                                && previewOriginalGrade !== null
+                                && previewRecoveryFinalGrade !== null
+                                && previewRecoveryFinalGrade > previewOriginalGrade
+                              const previewDisplayGrade = previewShowRecovery ? previewOriginalGrade : sg.grade
+                              return (
                               <tr key={`${area.area}-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
                                 <td className="px-2 py-1.5 pl-4 font-medium text-slate-900 border-l-2 border-blue-300">{sg.subject}</td>
                                 {showAchiev && (
@@ -1195,8 +1214,11 @@ export default function ReportCards() {
                                   </td>
                                 )}
                                 {showNumeric && (
-                                  <td className={`px-1 py-1.5 text-center font-bold text-sm ${sg.grade !== null && sg.grade < rulesCtx.minPassingGrade ? 'text-red-600' : 'text-green-700'}`}>
-                                    {sg.grade !== null ? sg.grade.toFixed(1) : '-'}
+                                  <td className={`px-1 py-1.5 text-center font-bold text-sm align-top ${previewDisplayGrade !== null && previewDisplayGrade < rulesCtx.minPassingGrade ? 'text-red-600' : 'text-green-700'}`}>
+                                    {previewDisplayGrade !== null ? previewDisplayGrade.toFixed(1) : '-'}
+                                    {previewShowRecovery && (
+                                      <div className="text-[9px] font-normal italic text-amber-700 leading-tight mt-0.5">rec.&#160;{previewRecoveryFinalGrade!.toFixed(1)}</div>
+                                    )}
                                   </td>
                                 )}
                                 {showPerf && (
@@ -1210,7 +1232,8 @@ export default function ReportCards() {
                                 )}
                                 {showAttend && <td className="px-1 py-1.5 text-center">{sg.absences !== undefined ? sg.absences : '-'}</td>}
                               </tr>
-                            ))}
+                              )
+                            })}
                           </React.Fragment>
                         ))}
                       </tbody>
