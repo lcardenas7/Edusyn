@@ -685,6 +685,8 @@ export const periodRecoveryApi = {
     api.patch(`/period-recovery/${id}/activity`, data),
   registerResult: (id: string, data: any, institutionId: string) => 
     api.patch(`/period-recovery/${id}/result`, data, { params: { institutionId } }),
+  review: (id: string, data: { approved: boolean; observations?: string }) => 
+    api.patch(`/period-recovery/${id}/review`, data),
   getStats: (academicTermId: string) => 
     api.get('/period-recovery/stats', { params: { academicTermId } }),
 }

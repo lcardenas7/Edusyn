@@ -221,7 +221,7 @@ export default function GradingWindows() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <Link 
-            to="/academic/config/scale" 
+            to="/academic" 
             className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-slate-600" />

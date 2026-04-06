@@ -397,6 +397,25 @@ export class PeriodRecoveryService {
       observations?: string;
     },
   ) {
+    const recovery = await this.prisma.periodRecovery.findUnique({
+      where: { id },
+      include: {
+        studentEnrollment: {
+          select: { institutionId: true, academicYearId: true },
+        },
+      },
+    });
+
+    if (!recovery) throw new BadRequestException('Recuperación no encontrada');
+
+    const validation = await this.engine.validateRecoveryCreation({
+      institutionId: recovery.studentEnrollment.institutionId,
+      academicYearId: recovery.studentEnrollment.academicYearId,
+      academicTermId: recovery.academicTermId,
+      type: 'PERIOD',
+    });
+    if (!validation.allowed) throw new BadRequestException(validation.reason);
+
     return this.prisma.periodRecovery.update({
       where: { id },
       data: {
@@ -425,6 +444,14 @@ export class PeriodRecoveryService {
 
     if (!recovery) throw new BadRequestException('Recuperación no encontrada');
 
+    const validation = await this.engine.validateRecoveryCreation({
+      institutionId,
+      academicYearId: recovery.academicTerm.academicYearId,
+      academicTermId: recovery.academicTermId,
+      type: 'PERIOD',
+    });
+    if (!validation.allowed) throw new BadRequestException(validation.reason);
+
     // Obtener regla aplicable (granular o general)
     const rule = await this.engine.getApplicableRule({
       institutionId,
@@ -447,7 +474,9 @@ export class PeriodRecoveryService {
       impactType: rule.impactType,
     });
 
-    return this.prisma.periodRecovery.update({
+    const nextStatus = config.periodRequiresReviewApproval ? 'REVIEW_PENDING' : status;
+
+    const updatedRecovery = await this.prisma.periodRecovery.update({
       where: { id },
       data: {
         recoveryScore: data.recoveryScore,
@@ -457,7 +486,7 @@ export class PeriodRecoveryService {
         observations: data.observations,
         evaluatedById: data.evaluatedById,
         completedDate: new Date(),
-        status: 'REVIEW_PENDING',
+        status: nextStatus,
       },
       include: {
         studentEnrollment: {
@@ -466,6 +495,22 @@ export class PeriodRecoveryService {
         subject: true,
       },
     });
+
+    if (nextStatus === 'APPROVED') {
+      await this.prisma.periodFinalGrade.updateMany({
+        where: {
+          studentEnrollmentId: recovery.studentEnrollmentId,
+          subjectId: recovery.subjectId,
+          academicTermId: recovery.academicTermId,
+        },
+        data: {
+          finalScore,
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    return updatedRecovery;
   }
 
   /**

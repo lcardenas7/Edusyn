@@ -35,6 +35,7 @@ interface RecoveryConfig {
   periodRecoveryEnabled: boolean
   periodMaxScore: number
   periodImpactType: string
+  periodRequiresReviewApproval: boolean
   finalRecoveryEnabled: boolean
   finalMaxScore: number
   finalImpactType: string
@@ -53,6 +54,7 @@ const IMPACT_TYPES = [
 const STATUS_COLORS: Record<string, { bg: string; text: string; icon: any }> = {
   PENDING: { bg: 'bg-amber-100', text: 'text-amber-700', icon: Clock },
   IN_PROGRESS: { bg: 'bg-blue-100', text: 'text-blue-700', icon: RefreshCw },
+  REVIEW_PENDING: { bg: 'bg-orange-100', text: 'text-orange-700', icon: Clock },
   COMPLETED: { bg: 'bg-slate-100', text: 'text-slate-700', icon: CheckCircle },
   APPROVED: { bg: 'bg-green-100', text: 'text-green-700', icon: CheckCircle },
   NOT_APPROVED: { bg: 'bg-red-100', text: 'text-red-700', icon: XCircle },
@@ -62,6 +64,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; icon: any }> = {
 const STATUS_LABELS: Record<string, string> = {
   PENDING: 'Pendiente',
   IN_PROGRESS: 'En Proceso',
+  REVIEW_PENDING: 'Pendiente Revisión',
   COMPLETED: 'Completada',
   APPROVED: 'Aprobada',
   NOT_APPROVED: 'No Aprobada',
@@ -95,6 +98,7 @@ export default function Recoveries() {
     periodRecoveryEnabled: true,
     periodMaxScore: 3.0,
     periodImpactType: 'ADJUST_TO_MINIMUM',
+    periodRequiresReviewApproval: true,
     finalRecoveryEnabled: true,
     finalMaxScore: 3.0,
     finalImpactType: 'ADJUST_TO_MINIMUM',
@@ -130,6 +134,10 @@ export default function Recoveries() {
     observations: '',
   })
   const [savingGrade, setSavingGrade] = useState(false)
+  const [showReviewRecoveryModal, setShowReviewRecoveryModal] = useState(false)
+  const [selectedRecoveryForReview, setSelectedRecoveryForReview] = useState<any>(null)
+  const [reviewObservations, setReviewObservations] = useState('')
+  const [reviewingRecovery, setReviewingRecovery] = useState(false)
 
   const isAdmin = user?.roles?.some((r: any) => 
     ['SUPERADMIN', 'ADMIN_INSTITUTIONAL'].includes(r.role?.name || r.name)
@@ -431,6 +439,7 @@ export default function Recoveries() {
           minPassingScore: Number(response.data.minPassingScore),
           periodMaxScore: Number(response.data.periodMaxScore),
           finalMaxScore: Number(response.data.finalMaxScore),
+          periodRequiresReviewApproval: response.data.periodRequiresReviewApproval ?? true,
         })
       }
     } catch (err) {
@@ -508,14 +517,25 @@ export default function Recoveries() {
 
   const handleRegisterGrade = async () => {
     if (!selectedRecoveryForGrade || !registerGradeForm.recoveryScore || !institutionId) return
+    if (!recoveryPeriodOpen) {
+      setMessage({ type: 'error', text: recoveryPeriodMessage || 'La ventana de recuperación está cerrada' })
+      setTimeout(() => setMessage(null), 3000)
+      return
+    }
     setSavingGrade(true)
     try {
-      await periodRecoveryApi.registerResult(selectedRecoveryForGrade.id, {
+      const response = await periodRecoveryApi.registerResult(selectedRecoveryForGrade.id, {
         recoveryScore: parseFloat(registerGradeForm.recoveryScore),
         evidences: registerGradeForm.evidences || undefined,
         observations: registerGradeForm.observations || undefined,
       }, institutionId)
-      setMessage({ type: 'success', text: 'Nota de recuperación registrada correctamente' })
+      const resultingStatus = response.data?.status
+      setMessage({
+        type: 'success',
+        text: resultingStatus === 'REVIEW_PENDING'
+          ? 'Nota de recuperación registrada y enviada a revisión'
+          : 'Nota de recuperación registrada y aplicada correctamente'
+      })
       setShowRegisterGradeModal(false)
       setSelectedRecoveryForGrade(null)
       setRegisterGradeForm({ recoveryScore: '', evidences: '', observations: '' })
@@ -525,6 +545,31 @@ export default function Recoveries() {
       setMessage({ type: 'error', text: err.response?.data?.message || 'Error al registrar la nota' })
     } finally {
       setSavingGrade(false)
+      setTimeout(() => setMessage(null), 3000)
+    }
+  }
+
+  const handleReviewRecovery = async (approved: boolean) => {
+    if (!selectedRecoveryForReview) return
+    setReviewingRecovery(true)
+    try {
+      await periodRecoveryApi.review(selectedRecoveryForReview.id, {
+        approved,
+        observations: reviewObservations || undefined,
+      })
+      setMessage({
+        type: 'success',
+        text: approved ? 'Recuperación revisada y aprobada correctamente' : 'Recuperación rechazada correctamente'
+      })
+      setShowReviewRecoveryModal(false)
+      setSelectedRecoveryForReview(null)
+      setReviewObservations('')
+      loadPeriodRecoveries()
+    } catch (err: any) {
+      console.error('Error reviewing recovery:', err)
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Error al revisar la recuperación' })
+    } finally {
+      setReviewingRecovery(false)
       setTimeout(() => setMessage(null), 3000)
     }
   }
@@ -542,7 +587,7 @@ export default function Recoveries() {
     { id: 'period' as TabType, label: 'Recuperación por Período', icon: Calendar },
     { id: 'final' as TabType, label: 'Recuperación Final', icon: BookOpen },
     { id: 'acts' as TabType, label: 'Actas', icon: FileText },
-    ...(isAdmin ? [{ id: 'config' as TabType, label: 'Configuración', icon: Settings }] : []),
+    ...(isAdminOrCoordinator ? [{ id: 'config' as TabType, label: 'Configuración', icon: Settings }] : []),
   ]
 
   // Si no hay grupos (todos son DIMENSIONS), mostrar mensaje — solo después de que grupos hayan cargado
@@ -795,6 +840,7 @@ export default function Recoveries() {
                         <td className="px-6 py-4 text-center">
                           <button 
                             onClick={() => {
+                              if (!recoveryPeriodOpen) return
                               setSelectedStudentForRecovery(student)
                               setRecoveryPlanForm({
                                 activityDescription: '',
@@ -804,13 +850,13 @@ export default function Recoveries() {
                               })
                               setShowRecoveryPlanModal(true)
                             }}
-                            disabled={!recoveryPeriodOpen && isTeacher}
+                            disabled={!recoveryPeriodOpen}
                             className={`px-3 py-1.5 text-sm rounded-lg ${
-                              !recoveryPeriodOpen && isTeacher
+                              !recoveryPeriodOpen
                                 ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                                 : 'bg-blue-600 text-white hover:bg-blue-700'
                             }`}
-                            title={!recoveryPeriodOpen && isTeacher ? recoveryPeriodMessage : ''}
+                            title={!recoveryPeriodOpen ? recoveryPeriodMessage : ''}
                           >
                             Crear Plan
                           </button>
@@ -824,7 +870,7 @@ export default function Recoveries() {
           </div>
 
           {/* Mensaje de período cerrado para docentes */}
-          {isTeacher && !recoveryPeriodOpen && recoveryPeriodMessage && (
+          {!recoveryPeriodOpen && recoveryPeriodMessage && (
             <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2 text-amber-700">
               <AlertTriangle className="w-5 h-5" />
               {recoveryPeriodMessage}
@@ -902,6 +948,7 @@ export default function Recoveries() {
                           {['ASSIGNED', 'IN_PROGRESS'].includes(recovery.status) && (
                             <button
                               onClick={() => {
+                                if (!recoveryPeriodOpen) return
                                 setSelectedRecoveryForGrade(recovery)
                                 setRegisterGradeForm({
                                   recoveryScore: '',
@@ -910,16 +957,31 @@ export default function Recoveries() {
                                 })
                                 setShowRegisterGradeModal(true)
                               }}
-                              disabled={!recoveryPeriodOpen && isTeacher}
+                              disabled={!recoveryPeriodOpen}
                               className={`px-3 py-1.5 text-sm rounded-lg ${
-                                !recoveryPeriodOpen && isTeacher
+                                !recoveryPeriodOpen
                                   ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                                   : 'bg-green-600 text-white hover:bg-green-700'
                               }`}
-                              title={!recoveryPeriodOpen && isTeacher ? recoveryPeriodMessage : 'Registrar nota de recuperación'}
+                              title={!recoveryPeriodOpen ? recoveryPeriodMessage : 'Registrar nota de recuperación'}
                             >
                               Registrar Nota
                             </button>
+                          )}
+                          {recovery.status === 'REVIEW_PENDING' && isAdminOrCoordinator && (
+                            <button
+                              onClick={() => {
+                                setSelectedRecoveryForReview(recovery)
+                                setReviewObservations('')
+                                setShowReviewRecoveryModal(true)
+                              }}
+                              className="px-3 py-1.5 text-sm rounded-lg bg-orange-600 text-white hover:bg-orange-700"
+                            >
+                              Revisar
+                            </button>
+                          )}
+                          {recovery.status === 'REVIEW_PENDING' && !isAdminOrCoordinator && (
+                            <span className="text-xs text-slate-400">Pendiente revisión</span>
                           )}
                           {['APPROVED', 'NOT_APPROVED', 'COMPLETED'].includes(recovery.status) && (
                             <span className="text-xs text-slate-400">Completado</span>
@@ -1099,7 +1161,7 @@ export default function Recoveries() {
         </div>
       )}
 
-      {activeTab === 'config' && isAdmin && (
+      {activeTab === 'config' && isAdminOrCoordinator && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-6">Configuración de Recuperaciones</h2>
           
@@ -1144,34 +1206,54 @@ export default function Recoveries() {
                 </label>
 
                 {config.periodRecoveryEnabled && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-7">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Nota Máxima Alcanzable
-                      </label>
+                  <div className="space-y-4 pl-7">
+                    <label className="flex items-start gap-3">
                       <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="5"
-                        value={config.periodMaxScore}
-                        onChange={(e) => setConfig({ ...config, periodMaxScore: parseFloat(e.target.value) })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        type="checkbox"
+                        checked={config.periodRequiresReviewApproval}
+                        onChange={(e) => setConfig({ ...config, periodRequiresReviewApproval: e.target.checked })}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-0.5"
                       />
+                      <span className="text-sm text-slate-700">
+                        Requiere aprobación previa de coordinador o administrador antes de aplicar la nota
+                      </span>
+                    </label>
+
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                      {config.periodRequiresReviewApproval
+                        ? 'Modo manual: el docente registra la nota y la recuperación queda en revisión pendiente.'
+                        : 'Modo automático: el docente registra la nota y el sistema la aplica de inmediato.'}
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Tipo de Impacto en la Nota
-                      </label>
-                      <select
-                        value={config.periodImpactType}
-                        onChange={(e) => setConfig({ ...config, periodImpactType: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      >
-                        {IMPACT_TYPES.map(type => (
-                          <option key={type.value} value={type.value}>{type.label}</option>
-                        ))}
-                      </select>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          Nota Máxima Alcanzable
+                        </label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="5"
+                          value={config.periodMaxScore}
+                          onChange={(e) => setConfig({ ...config, periodMaxScore: parseFloat(e.target.value) })}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          Tipo de Impacto en la Nota
+                        </label>
+                        <select
+                          value={config.periodImpactType}
+                          onChange={(e) => setConfig({ ...config, periodImpactType: e.target.value })}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                          {IMPACT_TYPES.map(type => (
+                            <option key={type.value} value={type.value}>{type.label}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1391,6 +1473,11 @@ export default function Recoveries() {
                     setTimeout(() => setMessage(null), 3000)
                     return
                   }
+                  if (!recoveryPeriodOpen) {
+                    setMessage({ type: 'error', text: recoveryPeriodMessage || 'La ventana de recuperación está cerrada' })
+                    setTimeout(() => setMessage(null), 3000)
+                    return
+                  }
                   
                   setSaving(true)
                   try {
@@ -1515,6 +1602,71 @@ export default function Recoveries() {
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
               >
                 {savingGrade ? 'Guardando...' : 'Registrar Nota'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReviewRecoveryModal && selectedRecoveryForReview && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="px-6 py-4 border-b border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-900">Revisar Recuperación</h3>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-slate-50 rounded-lg p-4">
+                <p className="font-medium text-slate-900">
+                  {selectedRecoveryForReview.studentEnrollment?.student?.lastName} {selectedRecoveryForReview.studentEnrollment?.student?.firstName}
+                </p>
+                <p className="text-sm text-slate-600">{selectedRecoveryForReview.subject?.name}</p>
+                <div className="mt-2 space-y-1 text-sm text-slate-500">
+                  <p>Nota original: <span className="font-medium text-red-600">{Number(selectedRecoveryForReview.originalScore).toFixed(1)}</span></p>
+                  <p>Nota recuperación: <span className="font-medium text-blue-600">{Number(selectedRecoveryForReview.recoveryScore).toFixed(1)}</span></p>
+                  <p>Nota final: <span className="font-medium text-green-600">{Number(selectedRecoveryForReview.finalScore).toFixed(1)}</span></p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Observaciones de revisión (opcional)
+                </label>
+                <textarea
+                  value={reviewObservations}
+                  onChange={(e) => setReviewObservations(e.target.value)}
+                  placeholder="Ingrese una observación para aprobar o rechazar la recuperación"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowReviewRecoveryModal(false)
+                  setSelectedRecoveryForReview(null)
+                  setReviewObservations('')
+                }}
+                disabled={reviewingRecovery}
+                className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleReviewRecovery(false)}
+                disabled={reviewingRecovery}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                Rechazar
+              </button>
+              <button
+                onClick={() => handleReviewRecovery(true)}
+                disabled={reviewingRecovery}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              >
+                {reviewingRecovery ? 'Guardando...' : 'Aprobar'}
               </button>
             </div>
           </div>

@@ -333,27 +333,29 @@ export class RecoveryEngineService {
           include: { academicTerm: { select: { name: true } } },
         });
 
-        if (periodConfig) {
-          if (!periodConfig.isOpen) {
-            return { allowed: false, reason: `La ventana de recuperación del ${periodConfig.academicTerm.name} está cerrada` };
+        if (!periodConfig) {
+          return { allowed: false, reason: 'Período de recuperación no configurado' };
+        }
+
+        if (!periodConfig.isOpen) {
+          return { allowed: false, reason: `La ventana de recuperación del ${periodConfig.academicTerm.name} está cerrada` };
+        }
+        if (periodConfig.openDate && now < periodConfig.openDate) {
+          return { allowed: false, reason: `La ventana de recuperación de período abre el ${periodConfig.openDate.toLocaleDateString('es-CO')}` };
+        }
+        if (periodConfig.closeDate) {
+          const effectiveCloseDate = new Date(periodConfig.closeDate);
+          if (periodConfig.allowLateEntry && periodConfig.lateEntryDays > 0) {
+            effectiveCloseDate.setDate(effectiveCloseDate.getDate() + periodConfig.lateEntryDays);
           }
-          if (periodConfig.openDate && now < periodConfig.openDate) {
-            return { allowed: false, reason: `La ventana de recuperación de período abre el ${periodConfig.openDate.toLocaleDateString('es-CO')}` };
-          }
-          if (periodConfig.closeDate && now > periodConfig.closeDate) {
+          if (now > effectiveCloseDate) {
             return { allowed: false, reason: `La ventana de recuperación de período cerró el ${periodConfig.closeDate.toLocaleDateString('es-CO')}` };
           }
-          return { allowed: true };
         }
+        return { allowed: true };
       }
 
-      // Fallback a configuración general si no hay RecoveryPeriodConfig
-      if (config.periodRecoveryStartDate && now < config.periodRecoveryStartDate) {
-        return { allowed: false, reason: `La ventana de recuperación de período abre el ${config.periodRecoveryStartDate.toLocaleDateString('es-CO')}` };
-      }
-      if (config.periodRecoveryEndDate && now > config.periodRecoveryEndDate) {
-        return { allowed: false, reason: `La ventana de recuperación de período cerró el ${config.periodRecoveryEndDate.toLocaleDateString('es-CO')}` };
-      }
+      return { allowed: false, reason: 'Período de recuperación no configurado' };
     } else {
       // Recuperación final usa configuración general
       if (config.finalRecoveryStartDate && now < config.finalRecoveryStartDate) {

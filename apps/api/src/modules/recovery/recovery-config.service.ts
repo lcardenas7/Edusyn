@@ -30,6 +30,7 @@ export class RecoveryConfigService {
     periodMaxScore?: number;
     periodImpactType?: RecoveryImpactType;
     periodRecoveryMaxAttempts?: number;
+    periodRequiresReviewApproval?: boolean;
     finalRecoveryEnabled?: boolean;
     finalMaxScore?: number;
     finalImpactType?: RecoveryImpactType;
@@ -81,6 +82,7 @@ export class RecoveryConfigService {
         periodMaxScore: 3.0,
         periodImpactType: 'ADJUST_TO_MINIMUM',
         periodRecoveryMaxAttempts: 1,
+        periodRequiresReviewApproval: true,
         finalRecoveryEnabled: true,
         finalMaxScore: 3.0,
         finalImpactType: 'ADJUST_TO_MINIMUM',

@@ -30,7 +30,7 @@ export class RecoveryConfigController {
   }
 
   @Post()
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async upsertConfig(@Body() data: any) {
     return this.configService.upsertConfig(data);
   }

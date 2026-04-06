@@ -2402,6 +2402,7 @@ model RecoveryConfig {
   periodMaxScore           Decimal            @default(3.0) @db.Decimal(5, 2)
   periodImpactType         RecoveryImpactType @default(ADJUST_TO_MINIMUM)
   periodRecoveryMaxAttempts Int               @default(1)
+  periodRequiresReviewApproval Boolean        @default(true)
 
   // Recuperación final
   finalRecoveryEnabled    Boolean            @default(true)
