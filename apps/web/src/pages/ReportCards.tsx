@@ -227,6 +227,12 @@ export default function ReportCards() {
         }
         setConfig(parsed)
         setConfigDraft(parsed)
+        // Pre-cache the logo as base64 so it's available in print windows
+        if (parsed.showLogo && parsed.logoUrl) {
+          imageUrlToBase64(toPublicFileUrl(parsed.logoUrl)).then(b64 => {
+            if (b64) setLogoCachedBase64(b64)
+          }).catch(() => {})
+        }
       }
     }).catch(console.error).finally(() => setLoading(false))
   }, [institution?.id])
@@ -375,11 +381,17 @@ export default function ReportCards() {
     const showAreaRows = dc.showAreaAverages !== false
 
     // Pre-load images as base64 data URIs so they work in print windows
-    // Try logoPreviewUrl first (freshest signed URL), then fall back to stored path via proxy
-    const logoSrc = config.showLogo
-      ? (logoPreviewUrl || (config.logoUrl ? toPublicFileUrl(config.logoUrl) : ''))
-      : ''
-    const logoBase64 = logoSrc ? await imageUrlToBase64(logoSrc) : ''
+    // Priority: already-cached base64 > fresh logoPreviewUrl > proxy URL fetch
+    let logoBase64 = ''
+    if (config.showLogo) {
+      if (logoCachedBase64) {
+        logoBase64 = logoCachedBase64
+      } else {
+        const logoSrc = logoPreviewUrl || (config.logoUrl ? toPublicFileUrl(config.logoUrl) : '')
+        logoBase64 = logoSrc ? await imageUrlToBase64(logoSrc) : ''
+        if (logoBase64) setLogoCachedBase64(logoBase64)
+      }
+    }
     const pc = config.primaryColor || '#1E3A8A'
 
     const perfBadge = (level: string | null) => {
@@ -445,11 +457,11 @@ export default function ReportCards() {
         let numCell = ''
         if (showNumeric) {
           // When recovered: show original grade (the one that was failed) with its real color
-          // and below a subtle amber badge showing the recovery final grade
+          // and below a subtle violet badge showing the recovery final grade
           const displayGrade = recovered ? recOriginalGrade : sg.grade
           const color = displayGrade !== null && displayGrade < rulesCtx.minPassingGrade ? '#dc2626' : '#15803d'
           const recBadge = recovered
-            ? `<div style="font-size:8px;font-style:italic;color:#b45309;line-height:1.4;margin-top:1px;">rec.&#160;${recFinalGrade!.toFixed(1)}</div>`
+            ? `<div style="font-size:8px;font-style:italic;color:#7c3aed;line-height:1.4;margin-top:1px;">rec.&#160;${recFinalGrade!.toFixed(1)}</div>`
             : ''
           numCell = `<td style="padding:4px 2px;text-align:center;font-weight:700;font-size:11px;color:${color};vertical-align:top;">${displayGrade !== null ? displayGrade.toFixed(1) : (sg.grade !== null ? sg.grade.toFixed(1) : '-')}${recBadge}</td>`
         }
@@ -500,9 +512,19 @@ export default function ReportCards() {
       const items = Object.entries(performanceConfig).map(([, cfg]) =>
         `<span style="margin-right:10px;"><strong>${cfg.label}</strong> ${cfg.min.toFixed(1)} - ${cfg.max.toFixed(1)}</span>`
       ).join('')
+      // Recovery clarification note (only if there are recovered subjects)
+      const hasAnyRecovered = showRecoveryGrades && (data.subjectGrades || []).some((s: any) =>
+        s.hasRecovery && s.originalGrade !== null && s.grade !== null && s.grade > s.originalGrade
+      )
+      const recNoteHtml = hasAnyRecovered
+        ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid #e2e8f0;font-size:9px;color:#78716c;font-style:italic;">
+            <strong style="font-style:normal;color:#7c3aed;">rec. X.X</strong> indica que la asignatura fue recuperada: se muestra la nota original obtenida durante el periodo y, debajo, la nota final definitiva lograda en el proceso de recuperacion.
+          </div>`
+        : ''
       scaleHtml = `<div style="border:1px solid #cbd5e1;border-radius:6px;padding:8px 10px;margin-bottom:12px;font-size:10px;">
         <h4 style="font-weight:700;color:#0f172a;margin:0 0 6px;border-bottom:1px solid #e2e8f0;padding-bottom:4px;">ESCALA DE VALORACION</h4>
         <div>${items}</div>
+        ${recNoteHtml}
       </div>`
     }
 
@@ -706,6 +728,8 @@ export default function ReportCards() {
 
   // Estado para URL firmada temporal (para mostrar inmediatamente después de subir)
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string>('')
+  // Cache de logo en base64 para que funcione en ventanas de impresión sin depender de URLs firmadas
+  const [logoCachedBase64, setLogoCachedBase64] = useState<string>('')
 
   const handleLogoUpload = async (file: File) => {
     if (!institution?.id) return
@@ -1217,7 +1241,7 @@ export default function ReportCards() {
                                   <td className={`px-1 py-1.5 text-center font-bold text-sm align-top ${previewDisplayGrade !== null && previewDisplayGrade < rulesCtx.minPassingGrade ? 'text-red-600' : 'text-green-700'}`}>
                                     {previewDisplayGrade !== null ? previewDisplayGrade.toFixed(1) : '-'}
                                     {previewShowRecovery && (
-                                      <div className="text-[9px] font-normal italic text-amber-700 leading-tight mt-0.5">rec.&#160;{previewRecoveryFinalGrade!.toFixed(1)}</div>
+                                      <div className="text-[9px] font-normal italic text-violet-700 leading-tight mt-0.5">rec.&#160;{previewRecoveryFinalGrade!.toFixed(1)}</div>
                                     )}
                                   </td>
                                 )}
