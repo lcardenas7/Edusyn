@@ -2020,7 +2020,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                 name: r.name,
                 avatarId: r.avatarId || getAvatarFromName(r.name).id,
                 score: r.totalPoints,
-                rank: i + 1
+                rank: r.rank
               }))}
             />
           )}
@@ -2038,9 +2038,14 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               const isMe = !isTeacher && entry.studentEnrollmentId === studentEnrollmentId
               const avatarId = entry.avatarId || getAvatarFromName(entry.name).id
               const avatar = { ...getAvatarFromName(entry.name), id: avatarId }
-              const isTop3 = i < 3
-              const rankColors = ['text-[#FFE66D]', 'text-slate-400', 'text-amber-600']
+              const isTop3 = entry.rank <= 3
+              const rankColors = {
+                1: 'text-amber-500 drop-shadow-[0_1px_1px_rgba(120,53,15,0.35)]',
+                2: 'text-slate-500',
+                3: 'text-amber-700'
+              }
               const bgColors = ['bg-gradient-to-r from-[#FFE66D]/20 to-[#FFD93D]/10', 'bg-slate-100', 'bg-amber-50', 'bg-slate-50']
+              const rankSuffix = entry.rank === 1 ? 'st' : entry.rank === 2 ? 'nd' : entry.rank === 3 ? 'rd' : 'th'
               
               return (
                 <motion.div 
@@ -2058,16 +2063,16 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                   whileHover={{ scale: 1.02, x: 5 }}
                 >
                   {/* Rank */}
-                  <div className={`w-8 text-center font-black text-xl ${isTop3 ? rankColors[i] : 'text-slate-400'}`}>
-                    {i + 1}<sup className="text-xs">{i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th'}</sup>
+                  <div className={`w-10 text-center font-black text-xl ${isTop3 ? rankColors[entry.rank as 1 | 2 | 3] : 'text-slate-500'}`}>
+                    {entry.rank}<sup className="text-xs">{rankSuffix}</sup>
                   </div>
                   
                   {/* Avatar */}
                   <motion.div
-                    animate={i === 0 && phase === 'finished' ? { y: [0, -3, 0] } : {}}
+                    animate={entry.rank === 1 && phase === 'finished' ? { y: [0, -3, 0] } : {}}
                     transition={{ repeat: Infinity, duration: 1.5 }}
                   >
-                    <AnimalAvatar avatarId={avatar.id} size="sm" animate={i === 0} />
+                    <AnimalAvatar avatarId={avatar.id} size="sm" animate={entry.rank === 1} />
                   </motion.div>
                   
                   {/* Name + "Tú" badge */}
