@@ -46,7 +46,23 @@ export class RecoveryConfigService {
     requiresAcademicCouncilAct?: boolean;
     requiresPromotionAct?: boolean;
   }) {
-    const { institutionId, academicYearId, ...configData } = data;
+    const { institutionId, academicYearId, ...rest } = data;
+
+    // Only pick allowed scalar fields — ignore id, timestamps, relations, etc.
+    const configData: Record<string, any> = {};
+    const allowedKeys = [
+      'minPassingScore', 'periodRecoveryEnabled', 'periodMaxScore',
+      'periodImpactType', 'periodRecoveryMaxAttempts', 'periodRequiresReviewApproval',
+      'finalRecoveryEnabled', 'finalMaxScore', 'finalImpactType',
+      'finalRecoveryMaxAttempts', 'maxAreasRecoverable', 'maxSubjectsRecoverable',
+      'autoRetainAreas', 'autoRetainSubjects',
+      'periodRecoveryStartDate', 'periodRecoveryEndDate',
+      'finalRecoveryStartDate', 'finalRecoveryEndDate',
+      'requiresAcademicCouncilAct', 'requiresPromotionAct',
+    ];
+    for (const key of allowedKeys) {
+      if (key in rest) configData[key] = (rest as any)[key];
+    }
 
     return this.prisma.recoveryConfig.upsert({
       where: {
