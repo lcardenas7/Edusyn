@@ -1,5 +1,8 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ReportsService } from '../reports/reports.service';
+import { InstitutionContextService } from '../institution-context/institution-context.service';
+import { isFailing } from '../../engines/academic-rules.engine';
 
 // Tipos definidos en schema pero aún no generados en Prisma client
 // Se usarán strings hasta que se ejecute prisma generate
@@ -17,7 +20,11 @@ type RecoveryPhaseStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'PENDING_SNAPSHOT' | 
  */
 @Injectable()
 export class RecoverySnapshotService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly reportsService: ReportsService,
+    private readonly institutionContext: InstitutionContextService,
+  ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // ESTADO DEL PROCESO DE RECUPERACIÓN
@@ -187,6 +194,7 @@ export class RecoverySnapshotService {
           select: { 
             id: true, 
             name: true, 
+            status: true,
             academicYearId: true,
             academicYear: { select: { institutionId: true } }
           } 
@@ -207,6 +215,7 @@ export class RecoverySnapshotService {
     }
 
     const institutionId = config.academicTerm.academicYear.institutionId;
+    const originalTermStatus = config.academicTerm.status;
 
     // Obtener todas las recuperaciones completadas del período
     const completedRecoveries = await this.prisma.periodRecovery.findMany({
@@ -236,68 +245,124 @@ export class RecoverySnapshotService {
         status: rec.status,
         impactType: rec.impactType
       });
-    });
+      });
 
-    // Obtener todos los estudiantes del año académico
-    const enrollments = await this.prisma.studentEnrollment.findMany({
+    const groups = await this.prisma.group.findMany({
       where: {
-        academicYearId: config.academicTerm.academicYearId,
-        status: 'ACTIVE'
+        studentEnrollments: {
+          some: {
+            academicYearId: config.academicTerm.academicYearId,
+            status: 'ACTIVE'
+          }
+        }
       },
-      select: { id: true }
+      select: { id: true, name: true, grade: { select: { name: true } } }
     });
 
-    // Obtener la versión máxima actual para cada estudiante
-    const existingSnapshots = await this.prisma.termReportCardSnapshot.groupBy({
-      by: ['studentEnrollmentId'],
+    if (groups.length === 0) {
+      throw new BadRequestException('No hay grupos con estudiantes activos para generar snapshots');
+    }
+
+    const lastVersion = await this.prisma.termReportCardSnapshot.aggregate({
       where: { academicTermId },
       _max: { version: true }
     });
 
-    const versionMap: Record<string, number> = {};
-    existingSnapshots.forEach(s => {
-      versionMap[s.studentEnrollmentId] = s._max.version || 0;
-    });
+    const version = (lastVersion._max.version ?? 0) + 1;
+    const rulesCtx = await this.institutionContext.getContext(institutionId);
+    let totalSnapshots = 0;
 
-    // Crear snapshots POST_RECOVERY para cada estudiante
-    const snapshotsToCreate = enrollments.map(enr => {
-      const currentVersion = versionMap[enr.id] || 0;
-      const recoveryChanges = changesByStudent[enr.id] || null;
-
-      return {
-        academicTermId,
-        studentEnrollmentId: enr.id,
-        version: currentVersion + 1,
-        snapshotType: 'POST_RECOVERY' as ReportCardSnapshotType,
-        generatedById: userId,
-        recoveryChanges,
-        data: {} // Se llenará con el boletín actualizado
-      };
-    });
-
-    // Crear todos los snapshots en una transacción
-    const result = await this.prisma.$transaction(async (tx) => {
-      // Crear snapshots
-      const created = await tx.termReportCardSnapshot.createMany({
-        data: snapshotsToCreate
+    if (originalTermStatus === 'FINALIZED') {
+      await this.prisma.academicTerm.update({
+        where: { id: academicTermId },
+        data: { status: 'OPEN' }
       });
+    }
 
-      // Actualizar estado del proceso
-      await tx.recoveryPeriodConfig.update({
+    try {
+      for (const group of groups) {
+        const groupData = await this.reportsService.buildGroupReportCards(group.id, academicTermId);
+
+        const cardStats = groupData.cards.map((card) => {
+          const allGrades = card.subjectGrades.filter((s: any) => s.grade !== null);
+          const generalAverage = allGrades.length > 0
+            ? Math.round((allGrades.reduce((sum: number, s: any) => sum + s.grade!, 0) / allGrades.length) * 10) / 10
+            : null;
+          const failedCount = allGrades.filter((s: any) => isFailing(s.grade ?? 0, rulesCtx)).length;
+          const approvedCount = allGrades.length - failedCount;
+          const promotionStatus = allGrades.length === 0
+            ? 'PENDIENTE'
+            : failedCount === 0 ? 'APRUEBA' : 'NO_APRUEBA';
+          return { enrollmentId: card.enrollmentId, generalAverage, failedCount, approvedCount, promotionStatus };
+        });
+
+        const ranked = [...cardStats]
+          .filter(s => s.generalAverage !== null)
+          .sort((a, b) => (b.generalAverage ?? 0) - (a.generalAverage ?? 0));
+        const totalStudentsRanked = ranked.length;
+        const rankMap = new Map<string, number>();
+        for (let i = 0; i < ranked.length; i++) {
+          rankMap.set(ranked[i].enrollmentId, i + 1);
+        }
+
+        for (const card of groupData.cards) {
+          const stats = cardStats.find(s => s.enrollmentId === card.enrollmentId)!;
+          await this.prisma.termReportCardSnapshot.create({
+            data: {
+              academicTermId,
+              studentEnrollmentId: card.enrollmentId,
+              version,
+              snapshotType: 'POST_RECOVERY' as ReportCardSnapshotType,
+              generatedById: userId,
+              recoveryChanges: changesByStudent[card.enrollmentId] || null,
+              data: {
+                institution: groupData.institution,
+                academicYear: groupData.academicYear,
+                term: groupData.term,
+                academicStructure: groupData.academicStructure,
+                displayConfig: groupData.displayConfig,
+                student: card.student,
+                group: card.group,
+                areaGrades: card.areaGrades,
+                subjectGrades: card.subjectGrades,
+                structureSource: card.structureSource,
+                attendance: card.attendance,
+                achievements: card.achievements,
+                observations: card.observations,
+                generatedAt: groupData.generatedAt,
+                rank: rankMap.get(card.enrollmentId) ?? null,
+                totalStudentsRanked,
+                generalAverage: stats.generalAverage,
+                approvedSubjectsCount: stats.approvedCount,
+                failedSubjectsCount: stats.failedCount,
+                promotionStatus: stats.promotionStatus,
+              } as any
+            }
+          });
+          totalSnapshots++;
+        }
+      }
+
+      await this.prisma.recoveryPeriodConfig.update({
         where: { academicTermId },
         data: {
           recoveryPhaseStatus: 'SNAPSHOT_CREATED',
           snapshotCreatedAt: new Date()
         }
       });
-
-      return created;
-    });
+    } finally {
+      if (originalTermStatus === 'FINALIZED') {
+        await this.prisma.academicTerm.update({
+          where: { id: academicTermId },
+          data: { status: 'FINALIZED' }
+        });
+      }
+    }
 
     return {
       success: true,
-      message: `Snapshots POST_RECOVERY creados para ${result.count} estudiantes`,
-      snapshotsCreated: result.count,
+      message: `Snapshots POST_RECOVERY creados para ${totalSnapshots} estudiantes`,
+      snapshotsCreated: totalSnapshots,
       studentsWithRecoveryChanges: Object.keys(changesByStudent).length,
       nextStep: 'Los boletines ahora reflejan las notas de recuperación'
     };
