@@ -163,11 +163,13 @@ interface PodiumProps {
 export function Podium({ entries }: PodiumProps) {
   // Dramatic reveal order: 3rd → 2nd → 1st
   // Display order: 2nd (left), 1st (center), 3rd (right)
-  const podiumOrder = [
-    entries[1], // 2nd place (left)
-    entries[0], // 1st place (center, tallest)
-    entries[2], // 3rd place (right)
-  ].filter(Boolean)
+  const podiumOrder = entries.length === 1
+    ? [entries[0]].filter(Boolean)
+    : [
+        entries[1], // 2nd place (left)
+        entries[0], // 1st place (center, tallest)
+        entries[2], // 3rd place (right)
+      ].filter(Boolean)
 
   // Reveal delays based on how many participants we have
   // With 3: 3rd (0s) → 2nd (1.5s) → 1st (3s)
@@ -185,15 +187,15 @@ export function Podium({ entries }: PodiumProps) {
   }
   
   // Podium colors matching Blooket style
-  const podiumColors = ['#9333ea', '#f97316', '#22c55e'] // Purple, Orange, Green
-  const ribbonColors = ['#ec4899', '#3b82f6', '#22c55e'] // Pink, Blue, Green
-  const podiumHeights = [112, 160, 80] // 2nd, 1st, 3rd in pixels
+  const podiumColors = { 1: '#f97316', 2: '#9333ea', 3: '#22c55e' } // 1st, 2nd, 3rd
+  const ribbonColors = { 1: '#3b82f6', 2: '#ec4899', 3: '#22c55e' } // 1st, 2nd, 3rd
+  const podiumHeights = { 1: 160, 2: 112, 3: 80 } // 1st, 2nd, 3rd in pixels
 
   return (
     <div className="flex items-end justify-center gap-3 sm:gap-6 py-6 min-h-[280px]">
       {podiumOrder.map((entry, displayIdx) => {
         if (!entry) return null
-        const actualRank = displayIdx === 0 ? 2 : displayIdx === 1 ? 1 : 3
+        const actualRank = entry.rank
         const avatar = entry.avatarId ? getAvatar(entry.avatarId) : getAvatarFromName(entry.name)
         const delay = getRevealDelay(displayIdx)
         
@@ -252,14 +254,14 @@ export function Podium({ entries }: PodiumProps) {
             >
               <div 
                 className="px-5 py-2 rounded-lg shadow-lg relative"
-                style={{ backgroundColor: ribbonColors[displayIdx] }}
+                style={{ backgroundColor: ribbonColors[actualRank as 1 | 2 | 3] }}
               >
                 {/* Ribbon tails */}
                 <div 
                   className="absolute -left-3 top-1/2 -translate-y-1/2 w-0 h-0"
                   style={{
                     borderTop: '10px solid transparent',
-                    borderRight: `12px solid ${ribbonColors[displayIdx]}`,
+                    borderRight: `12px solid ${ribbonColors[actualRank as 1 | 2 | 3]}`,
                     borderBottom: '10px solid transparent',
                   }}
                 />
@@ -267,7 +269,7 @@ export function Podium({ entries }: PodiumProps) {
                   className="absolute -right-3 top-1/2 -translate-y-1/2 w-0 h-0"
                   style={{
                     borderTop: '10px solid transparent',
-                    borderLeft: `12px solid ${ribbonColors[displayIdx]}`,
+                    borderLeft: `12px solid ${ribbonColors[actualRank as 1 | 2 | 3]}`,
                     borderBottom: '10px solid transparent',
                   }}
                 />
@@ -291,11 +293,11 @@ export function Podium({ entries }: PodiumProps) {
             <motion.div
               className="w-24 sm:w-28 mt-2 rounded-t-2xl flex items-end justify-center shadow-2xl relative overflow-hidden"
               style={{ 
-                backgroundColor: podiumColors[displayIdx],
-                height: podiumHeights[displayIdx]
+                backgroundColor: podiumColors[actualRank as 1 | 2 | 3],
+                height: podiumHeights[actualRank as 1 | 2 | 3]
               }}
               initial={{ height: 0 }}
-              animate={{ height: podiumHeights[displayIdx] }}
+              animate={{ height: podiumHeights[actualRank as 1 | 2 | 3] }}
               transition={{ delay: delay + 0.1, duration: 0.6, type: 'spring', bounce: 0.3 }}
             >
               {/* Shine effect */}
