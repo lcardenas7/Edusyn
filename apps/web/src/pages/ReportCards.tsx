@@ -392,6 +392,7 @@ export default function ReportCards() {
         if (logoBase64) setLogoCachedBase64(logoBase64)
       }
     }
+    const logoImageSrc = logoBase64 || logoPreviewUrl || (config.logoUrl ? toPublicFileUrl(config.logoUrl) : '')
     const pc = config.primaryColor || '#1E3A8A'
 
     const perfBadge = (level: string | null) => {
@@ -518,7 +519,7 @@ export default function ReportCards() {
       )
       const recNoteHtml = hasAnyRecovered
         ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid #e2e8f0;font-size:9px;color:#78716c;font-style:italic;">
-            <strong style="font-style:normal;color:#7c3aed;">rec. X.X</strong> indica que la asignatura fue recuperada: se muestra la nota original obtenida durante el periodo y, debajo, la nota final definitiva lograda en el proceso de recuperacion.
+            <strong style="font-style:normal;color:#7c3aed;">rec. X.X</strong> = nota final tras recuperacion.
           </div>`
         : ''
       scaleHtml = `<div style="border:1px solid #cbd5e1;border-radius:6px;padding:8px 10px;margin-bottom:12px;font-size:10px;">
@@ -562,7 +563,7 @@ export default function ReportCards() {
       <!-- Header -->
       <table style="width:100%;border-bottom:2px solid #cbd5e1;padding-bottom:10px;margin-bottom:10px;border-collapse:collapse;">
         <tr>
-          ${logoBase64 ? `<td style="width:80px;padding-right:12px;vertical-align:middle;"><img src="${logoBase64}" style="width:80px;height:80px;object-fit:contain;" /></td>` : ''}
+          ${logoImageSrc ? `<td style="width:80px;padding-right:12px;vertical-align:middle;"><img src="${logoImageSrc}" style="width:80px;height:80px;object-fit:contain;" /></td>` : ''}
           <td style="text-align:center;line-height:1.3;vertical-align:middle;">
             <h2 style="font-size:15px;font-weight:700;text-transform:uppercase;margin:0;color:#0f172a;">${data.institution?.name || institution?.name || ''}</h2>
             ${config.headerResolution ? `<p style="font-size:10px;color:#475569;margin:1px 0;">${config.headerResolution}</p>` : ''}
@@ -649,6 +650,8 @@ export default function ReportCards() {
     @page { size: letter; margin: 8mm; }
     * { box-sizing: border-box; }
     body { margin: 0; padding: 0; background: #fff; }
+    .report-card-page { page-break-after: always; }
+    .report-card-page:last-child { page-break-after: auto; }
     @media print {
       body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     }
@@ -699,7 +702,7 @@ export default function ReportCards() {
     }
     setIsGeneratingBulk(true)
     try {
-      let downloadCount = 0
+      const htmlBlocks: string[] = []
       for (const enrollmentId of ids) {
         try {
           const student = students.find(s => s.enrollmentId === enrollmentId)
@@ -707,15 +710,14 @@ export default function ReportCards() {
           const res = await reportsApi.getReportCard(enrollmentId, selectedTermId)
           const data = res.data
           const html = await buildReportCardHtml({ ...data, rank: student.rank, totalStudents: student.totalStudents }, student)
-          await generatePdfFromHtml(html, `boletin-${student.studentName.replace(/\s+/g, '-')}.pdf`)
-          downloadCount++
-          await new Promise(r => setTimeout(r, 500))
+          htmlBlocks.push(`<section class="report-card-page">${html}</section>`)
         } catch (err) {
           console.error(`Error descargando boletin de ${enrollmentId}:`, err)
         }
       }
-      if (downloadCount > 0) {
-        alert(`Se descargaron ${downloadCount} de ${ids.length} boletines`)
+      if (htmlBlocks.length > 0) {
+        const bulkHtml = htmlBlocks.join('')
+        await generatePdfFromHtml(bulkHtml, `boletines-${selectedGroupId}-${selectedTermId}.pdf`)
       } else {
         alert('No se pudo descargar ningun boletin. Verifique que existan notas registradas.')
       }
