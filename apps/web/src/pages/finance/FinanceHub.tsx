@@ -32,7 +32,7 @@ const financeCards: FinanceCard[] = [
     title: 'Dashboard',
     description: 'Resumen financiero, KPIs y gráficos',
     icon: <BarChart3 className="w-6 h-6" />,
-    path: '/finance/dashboard',
+    path: '/finance',
     color: 'bg-blue-500',
   },
   {

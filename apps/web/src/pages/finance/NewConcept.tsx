@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, FileText, Save, Loader2 } from 'lucide-react'
 import { financeConceptsApi, financeCategoriesApi } from '../../lib/api'
 
@@ -9,8 +9,22 @@ interface Category {
   type: string
 }
 
+interface ConceptResponse {
+  id: string
+  name: string
+  description?: string | null
+  categoryId: string
+  defaultAmount: number | string
+  isRecurring: boolean
+  isMassive: boolean
+  allowPartial: boolean
+  allowDiscount: boolean
+}
+
 export default function NewConcept() {
   const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
+  const isEditMode = Boolean(id)
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -26,17 +40,44 @@ export default function NewConcept() {
   })
 
   useEffect(() => {
-    financeCategoriesApi.getAll()
-      .then(res => {
-        const incomeCategories = res.data.filter((c: Category) => c.type === 'INCOME')
+    const loadData = async () => {
+      try {
+        const categoriesRes = await financeCategoriesApi.getAll()
+        const incomeCategories = categoriesRes.data.filter((c: Category) => c.type === 'INCOME')
         setCategories(incomeCategories)
-        if (incomeCategories.length > 0) {
-          setForm(f => ({ ...f, categoryId: incomeCategories[0].id }))
+
+        if (isEditMode && id) {
+          const conceptRes = await financeConceptsApi.getById(id)
+          const concept = conceptRes.data as ConceptResponse
+          setForm({
+            name: concept.name || '',
+            description: concept.description || '',
+            categoryId: concept.categoryId || incomeCategories[0]?.id || '',
+            defaultAmount: String(concept.defaultAmount ?? ''),
+            isRecurring: Boolean(concept.isRecurring),
+            isMassive: Boolean(concept.isMassive),
+            allowPartial: Boolean(concept.allowPartial),
+            allowDiscount: Boolean(concept.allowDiscount),
+          })
+          return
         }
-      })
-      .catch(err => console.error('Error loading categories:', err))
-      .finally(() => setLoading(false))
-  }, [])
+
+        if (incomeCategories.length > 0) {
+          setForm(f => ({ ...f, categoryId: f.categoryId || incomeCategories[0].id }))
+        }
+      } catch (err) {
+        console.error('Error loading concept form:', err)
+        alert(isEditMode ? 'Error al cargar el concepto' : 'Error al cargar categorías')
+        if (isEditMode) {
+          navigate('/finance/concepts')
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [id, isEditMode, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,7 +87,7 @@ export default function NewConcept() {
     }
     setSaving(true)
     try {
-      await financeConceptsApi.create({
+      const payload = {
         name: form.name.trim(),
         description: form.description.trim() || undefined,
         categoryId: form.categoryId,
@@ -55,10 +96,17 @@ export default function NewConcept() {
         isMassive: form.isMassive,
         allowPartial: form.allowPartial,
         allowDiscount: form.allowDiscount,
-      })
+      }
+
+      if (isEditMode && id) {
+        await financeConceptsApi.update(id, payload)
+      } else {
+        await financeConceptsApi.create(payload)
+      }
+
       navigate('/finance/concepts')
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al crear concepto')
+      alert(err.response?.data?.message || (isEditMode ? 'Error al actualizar concepto' : 'Error al crear concepto'))
     } finally {
       setSaving(false)
     }
@@ -84,8 +132,8 @@ export default function NewConcept() {
               <FileText className="w-6 h-6 text-indigo-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Nuevo Concepto de Cobro</h1>
-              <p className="text-gray-500">Crear un nuevo concepto para facturación</p>
+              <h1 className="text-2xl font-bold text-gray-900">{isEditMode ? 'Editar Concepto de Cobro' : 'Nuevo Concepto de Cobro'}</h1>
+              <p className="text-gray-500">{isEditMode ? 'Actualiza la configuración del concepto' : 'Crear un nuevo concepto para facturación'}</p>
             </div>
           </div>
         </div>
@@ -198,7 +246,7 @@ export default function NewConcept() {
               className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 flex items-center gap-2 disabled:opacity-50"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {saving ? 'Guardando...' : 'Crear Concepto'}
+              {saving ? 'Guardando...' : isEditMode ? 'Guardar Cambios' : 'Crear Concepto'}
             </button>
           </div>
         </form>

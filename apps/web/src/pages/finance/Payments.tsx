@@ -346,8 +346,8 @@ export default function Payments() {
     const s = historySearch.toLowerCase()
     return (
       p.thirdParty.name.toLowerCase().includes(s) ||
-      p.receiptNumber?.toLowerCase().includes(s) ||
-      p.obligation?.concept.name.toLowerCase().includes(s)
+      (p.receiptNumber || '').toLowerCase().includes(s) ||
+      (p.obligation?.concept?.name || '').toLowerCase().includes(s)
     )
   })
 

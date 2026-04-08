@@ -20,7 +20,6 @@ export class ExpensesService {
 
     const where: Prisma.FinancialExpenseWhereInput = {
       institutionId,
-      voidedAt: null,
       ...(filters?.categoryId && { categoryId: filters.categoryId }),
       ...(filters?.providerId && { providerId: filters.providerId }),
       ...(filters?.dateFrom || filters?.dateTo ? {

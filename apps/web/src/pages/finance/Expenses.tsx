@@ -6,7 +6,6 @@ import {
   Search,
   Plus,
   RefreshCw,
-  Filter,
   CheckCircle,
   XCircle,
   X,
@@ -88,8 +87,8 @@ export default function Expenses() {
     return (
       e.description.toLowerCase().includes(searchLower) ||
       e.category.name.toLowerCase().includes(searchLower) ||
-      e.provider?.name.toLowerCase().includes(searchLower) ||
-      e.invoiceNumber?.toLowerCase().includes(searchLower)
+      (e.provider?.name || '').toLowerCase().includes(searchLower) ||
+      (e.invoiceNumber || '').toLowerCase().includes(searchLower)
     )
   })
 
@@ -97,7 +96,7 @@ export default function Expenses() {
     .filter(e => {
       const expDate = new Date(e.expenseDate)
       const now = new Date()
-      return expDate.getMonth() === now.getMonth() && expDate.getFullYear() === now.getFullYear()
+      return !e.voidedAt && expDate.getMonth() === now.getMonth() && expDate.getFullYear() === now.getFullYear()
     })
     .reduce((sum, e) => sum + Number(e.amount), 0)
 
@@ -174,9 +173,30 @@ export default function Expenses() {
   const filteredProviders = providerSearch.trim()
     ? providers.filter((p: any) => {
         const s = providerSearch.toLowerCase()
-        return p.name?.toLowerCase().includes(s) || p.document?.toLowerCase().includes(s)
+        return (p.name || '').toLowerCase().includes(s) || (p.document || '').toLowerCase().includes(s)
       })
     : providers
+
+  const handleApproveExpense = async (id: string) => {
+    if (!confirm('¿Aprobar este egreso?')) return
+    try {
+      await financeExpensesApi.approve(id)
+      await fetchExpenses()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al aprobar egreso')
+    }
+  }
+
+  const handleVoidExpense = async (id: string) => {
+    const reason = prompt('Motivo de anulación:')
+    if (!reason) return
+    try {
+      await financeExpensesApi.void(id, reason)
+      await fetchExpenses()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al anular egreso')
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -260,6 +280,7 @@ export default function Expenses() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Factura</th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -304,6 +325,28 @@ export default function Expenses() {
                             Pendiente
                           </span>
                         )}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          {!expense.approvedAt && !expense.voidedAt && (
+                            <button
+                              onClick={() => handleApproveExpense(expense.id)}
+                              className="p-1.5 text-green-600 hover:bg-green-50 rounded"
+                              title="Aprobar"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </button>
+                          )}
+                          {!expense.voidedAt && (
+                            <button
+                              onClick={() => handleVoidExpense(expense.id)}
+                              className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+                              title="Anular"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

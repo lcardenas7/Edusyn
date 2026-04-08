@@ -227,10 +227,14 @@ const institutionalNavigation: NavItem[] = [
     children: [
       { name: 'Panel Financiero', href: '/finance', icon: LayoutDashboard, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA', 'AUXILIAR_CONTABLE'], module: 'FINANCE' },
       { name: 'Terceros', href: '/finance/third-parties', icon: Users, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA', 'AUXILIAR_CONTABLE'], module: 'FINANCE' },
+      { name: 'Conceptos de Cobro', href: '/finance/concepts', icon: FileText, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA', 'AUXILIAR_CONTABLE'], module: 'FINANCE' },
       { name: 'Obligaciones', href: '/finance/obligations', icon: FileText, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA', 'AUXILIAR_CONTABLE'], module: 'FINANCE' },
       { name: 'Caja / Recaudos', href: '/finance/payments', icon: Briefcase, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA', 'AUXILIAR_CONTABLE'], module: 'FINANCE' },
       { name: 'Egresos', href: '/finance/expenses', icon: TrendingUp, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'AUXILIAR_CONTABLE'], module: 'FINANCE' },
+      { name: 'Facturas', href: '/finance/invoices', icon: FileText, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA', 'AUXILIAR_CONTABLE'], module: 'FINANCE' },
+      { name: 'Categorías', href: '/finance/categories', icon: PieChart, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'SECRETARIA', 'AUXILIAR_CONTABLE'], module: 'FINANCE' },
       { name: 'Reportes', href: '/finance/reports', icon: BarChart3, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'AUXILIAR_CONTABLE'], module: 'FINANCE' },
+      { name: 'Configuración', href: '/finance/settings', icon: Settings, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'AUXILIAR_CONTABLE'], module: 'FINANCE' },
     ]
   },
 

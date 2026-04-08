@@ -15,7 +15,7 @@ import { financeConceptsApi } from '../../lib/api'
 
 interface Concept {
   id: string
-  code: string
+  code?: string | null
   name: string
   description?: string
   defaultAmount: number
@@ -56,12 +56,26 @@ export default function Concepts() {
     fetchConcepts()
   }, [])
 
+  const handleDelete = async (concept: Concept) => {
+    const message = concept._count.obligations > 0
+      ? `El concepto "${concept.name}" tiene obligaciones asociadas y se desactivará. ¿Deseas continuar?`
+      : `¿Eliminar el concepto "${concept.name}"?`
+    if (!confirm(message)) return
+
+    try {
+      await financeConceptsApi.delete(concept.id)
+      await fetchConcepts()
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Error al eliminar el concepto')
+    }
+  }
+
   const filteredConcepts = concepts.filter(c => {
     if (!search) return true
     const searchLower = search.toLowerCase()
     return (
       c.name.toLowerCase().includes(searchLower) ||
-      c.code.toLowerCase().includes(searchLower) ||
+      (c.code || '').toLowerCase().includes(searchLower) ||
       c.category.name.toLowerCase().includes(searchLower)
     )
   })
@@ -153,7 +167,7 @@ export default function Concepts() {
                   <tr key={concept.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                        {concept.code}
+                        {concept.code || '—'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -201,7 +215,7 @@ export default function Concepts() {
                         >
                           <Edit className="w-4 h-4" />
                         </Link>
-                        <button className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded">
+                        <button onClick={() => handleDelete(concept)} className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
