@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { liveSessionApi } from '../lib/api'
+import { liveSessionApi, toPublicFileUrl } from '../lib/api'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import {
@@ -204,6 +204,7 @@ interface LiveQuizProps {
 interface RankEntry {
   rank: number
   name: string
+  academicPoints?: number
   totalPoints: number
   correctAnswers?: number
   studentEnrollmentId?: string
@@ -222,6 +223,30 @@ function getAvatarColor(name: string) {
   let hash = 0
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+}
+
+function shuffleArray<T>(items: T[]): T[] {
+  const arr = [...items]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
+function normalizeQuestionMedia(question: any) {
+  if (!question) return question
+
+  return {
+    ...question,
+    imageUrl: toPublicFileUrl(question.imageUrl),
+    context: question.context
+      ? {
+          ...question.context,
+          imageUrl: toPublicFileUrl(question.context.imageUrl),
+        }
+      : question.context,
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -458,7 +483,8 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
     es.addEventListener('QUESTION', (e: any) => {
       const data = JSON.parse(e.data)
-      setCurrentQuestion(data)
+      const normalizedQuestion = normalizeQuestionMedia(data)
+      setCurrentQuestion(normalizedQuestion)
       setQuestionIndex(data.index)
       setTotalQuestions(data.total)
       setTimeLimit(data.timeLimit || 15)
@@ -469,7 +495,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       setMultiAnswers([])
       setMatchAnswers({})
       setBlankAnswers([])
-      setOrderAnswers(data.options && data.type === 'ORDERING' ? [...(data.options as string[])] : [])
+      setOrderAnswers(data.options && data.type === 'ORDERING' ? shuffleArray([...(data.options as string[])]) : [])
       setAnswered(false)
       answeredRef.current = false
       pendingResultRef.current = null
@@ -1043,7 +1069,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                     <li>3. O unirse a un equipo existente</li>
                   </ul>
                   <p className="text-amber-600 text-xs font-semibold flex items-center gap-1">
-                    <Timer className="w-3.5 h-3.5" /> Máximo 12 equipos • Sin límite de integrantes
+                    <Timer className="w-3.5 h-3.5" /> Máximo 20 equipos • Sin límite de integrantes
                   </p>
                 </motion.div>
               )}
@@ -2019,7 +2045,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               entries={ranking.slice(0, 3).map((r, i) => ({
                 name: r.name,
                 avatarId: r.avatarId || getAvatarFromName(r.name).id,
-                score: r.totalPoints,
+                score: r.academicPoints ?? r.totalPoints,
                 rank: r.rank
               }))}
             />
@@ -2046,6 +2072,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               }
               const bgColors = ['bg-gradient-to-r from-[#FFE66D]/20 to-[#FFD93D]/10', 'bg-slate-100', 'bg-amber-50', 'bg-slate-50']
               const rankSuffix = entry.rank === 1 ? 'st' : entry.rank === 2 ? 'nd' : entry.rank === 3 ? 'rd' : 'th'
+              const displayScore = entry.academicPoints ?? entry.totalPoints
               
               return (
                 <motion.div 
@@ -2093,7 +2120,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.2 + i * 0.05 }}
                   >
-                    <p className={`text-xl font-black ${isMe ? 'text-purple-600' : 'bg-gradient-to-r from-[#FF6B6B] to-[#4ECDC4] bg-clip-text text-transparent'}`}>{entry.totalPoints.toLocaleString()}</p>
+                    <p className={`text-xl font-black ${isMe ? 'text-purple-600' : 'bg-gradient-to-r from-[#FF6B6B] to-[#4ECDC4] bg-clip-text text-transparent'}`}>{displayScore.toLocaleString()}</p>
                   </motion.div>
                 </motion.div>
               )
@@ -2147,7 +2174,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                         Quedaste en el puesto #{myPosition + 1}
                       </p>
                       <p className="text-slate-500">
-                        con <span className="font-bold text-slate-700">{myEntry.totalPoints.toLocaleString()}</span> puntos
+                        con <span className="font-bold text-slate-700">{(myEntry.academicPoints ?? myEntry.totalPoints).toLocaleString()}</span> puntos
                       </p>
                     </div>
                   )

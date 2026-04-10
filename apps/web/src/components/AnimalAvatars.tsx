@@ -253,7 +253,8 @@ export function Podium({ entries }: PodiumProps) {
               transition={{ delay: delay + 0.4, duration: 0.3 }}
             >
               <div 
-                className="px-5 py-2 rounded-lg shadow-lg relative"
+                className="w-[110px] sm:w-[150px] px-3 py-2 rounded-lg shadow-lg relative"
+                title={entry.name}
                 style={{ backgroundColor: ribbonColors[actualRank as 1 | 2 | 3] }}
               >
                 {/* Ribbon tails */}
@@ -273,8 +274,8 @@ export function Podium({ entries }: PodiumProps) {
                     borderBottom: '10px solid transparent',
                   }}
                 />
-                <p className="text-white font-black text-base sm:text-lg truncate max-w-[90px] sm:max-w-[120px] text-center">
-                  {entry.name.split(' ')[0]}
+                <p className="text-white font-black text-sm sm:text-base leading-tight text-center whitespace-normal break-all">
+                  {entry.name}
                 </p>
               </div>
             </motion.div>

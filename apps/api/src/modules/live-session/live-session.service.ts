@@ -132,7 +132,8 @@ export class LiveSessionService implements OnModuleDestroy {
       orderBy: { sortOrder: 'asc' },
       select: { id: true, type: true, text: true, imageUrl: true, options: true, points: true, context: true },
     });
-    const q = questions[session.currentQuestionIdx];
+    const orderedQuestions = this.orderQuestionsForSession(questions, session.config);
+    const q = orderedQuestions[session.currentQuestionIdx];
     if (!q) return null;
 
     const config = (session.config as any) || {};
@@ -144,7 +145,7 @@ export class LiveSessionService implements OnModuleDestroy {
       type: 'QUESTION',
       data: {
         index: session.currentQuestionIdx,
-        total: questions.length,
+        total: orderedQuestions.length,
         questionId: q.id,
         type: q.type,
         text: q.text,
@@ -237,12 +238,25 @@ export class LiveSessionService implements OnModuleDestroy {
     // Validate activity belongs to classroom and has questions
     const activity = await this.prisma.classroomActivity.findFirst({
       where: { id: activityId, classroomId },
-      include: { questions: { orderBy: { sortOrder: 'asc' }, select: { id: true } } },
+      select: {
+        id: true,
+        shuffleQuestions: true,
+        questions: { orderBy: { sortOrder: 'asc' }, select: { id: true } },
+      },
     });
     if (!activity) throw new NotFoundException('Actividad no encontrada');
     if (activity.questions.length === 0) {
       throw new BadRequestException('La actividad no tiene preguntas');
     }
+
+    const questionOrder = activity.shuffleQuestions
+      ? this.shuffleArray(activity.questions.map((q) => q.id))
+      : activity.questions.map((q) => q.id);
+
+    const finalConfig = {
+      ...(config || {}),
+      questionOrder,
+    };
 
     // Close any existing WAITING/ACTIVE session for this classroom
     const oldSessions = await this.prisma.liveSession.findMany({
@@ -268,7 +282,7 @@ export class LiveSessionService implements OnModuleDestroy {
         activityId,
         teacherId,
         mode: mode as any,
-        config,
+        config: finalConfig,
         status: 'WAITING',
       },
       include: {
@@ -345,9 +359,10 @@ export class LiveSessionService implements OnModuleDestroy {
       orderBy: { sortOrder: 'asc' },
       select: { id: true, type: true, text: true, imageUrl: true, options: true, points: true, sortOrder: true, context: { select: { id: true, title: true, text: true, imageUrl: true } } },
     });
+    const orderedQuestions = this.orderQuestionsForSession(questions, session.config);
 
     const nextIdx = session.currentQuestionIdx + 1;
-    if (nextIdx >= questions.length) {
+    if (nextIdx >= orderedQuestions.length) {
       // No more questions - finish
       return this.finishSession(sessionId, teacherId);
     }
@@ -357,7 +372,7 @@ export class LiveSessionService implements OnModuleDestroy {
       data: { currentQuestionIdx: nextIdx },
     });
 
-    const q = questions[nextIdx];
+    const q = orderedQuestions[nextIdx];
     const config = (session.config as any) || {};
     const isBonus = config.bonusQuestions?.includes(nextIdx) || false;
     const multiplier = config.multipliers?.[String(nextIdx)] || 1;
@@ -367,16 +382,13 @@ export class LiveSessionService implements OnModuleDestroy {
     this.clearQuestionTimer(sessionId);
     this.closedQuestions.delete(sessionId); // allow new question to be closed by timer/auto-close
     // Snapshot connected students count for reliable auto-close
-    const connectedNow = this.getConnectedStudentCount(sessionId);
-    this.questionConnectedSnapshot.set(sessionId, connectedNow);
-    this.logger.log(`Snapshot connectedStudents=${connectedNow} for session ${sessionId} question ${nextIdx}`);
+    this.questionConnectedSnapshot.set(sessionId, this.getConnectedStudentCount(sessionId));
 
-    // Broadcast question to all connected clients (no correctAnswer!)
     this.broadcast(sessionId, {
       type: 'QUESTION',
       data: {
         index: nextIdx,
-        total: questions.length,
+        total: orderedQuestions.length,
         questionId: q.id,
         type: q.type,
         text: q.text,
@@ -407,7 +419,7 @@ export class LiveSessionService implements OnModuleDestroy {
     this.logger.log(`Starting question ${nextIdx} for session ${sessionId} with timeLimit=${timeLimit}s, connectedStudents=${this.getConnectedStudentCount(sessionId)}`);
     this.startQuestionTimer(sessionId, nextIdx, timeLimit);
 
-    return { index: nextIdx, total: questions.length, question: q };
+    return { index: nextIdx, total: orderedQuestions.length, question: q };
   }
 
   async submitAnswer(
@@ -460,7 +472,8 @@ export class LiveSessionService implements OnModuleDestroy {
       orderBy: { sortOrder: 'asc' },
       select: { id: true, correctAnswer: true, points: true, type: true, options: true },
     });
-    const currentQ = questions[session.currentQuestionIdx];
+    const orderedQuestions = this.orderQuestionsForSession(questions, session.config);
+    const currentQ = orderedQuestions[session.currentQuestionIdx];
     if (!currentQ || currentQ.id !== questionId) {
       throw new BadRequestException('La pregunta no es la actual');
     }
@@ -568,7 +581,8 @@ export class LiveSessionService implements OnModuleDestroy {
         orderBy: { sortOrder: 'asc' },
         select: { id: true, correctAnswer: true, explanation: true },
       });
-      const currentQ = questions[session.currentQuestionIdx];
+      const orderedQuestions = this.orderQuestionsForSession(questions, session.config);
+      const currentQ = orderedQuestions[session.currentQuestionIdx];
       
       if (currentQ) {
         // Use setTimeout with 300ms delay to ensure the HTTP response reaches the client
@@ -611,12 +625,18 @@ export class LiveSessionService implements OnModuleDestroy {
     }
     this.closedQuestions.get(sessionId)!.add(questionIdx);
 
+    const session = await this.prisma.liveSession.findUnique({
+      where: { id: sessionId },
+      select: { config: true },
+    });
+
     const questions = await this.prisma.activityQuestion.findMany({
       where: { activityId },
       orderBy: { sortOrder: 'asc' },
       select: { id: true, correctAnswer: true, explanation: true },
     });
-    const currentQ = questions[questionIdx];
+    const orderedQuestions = this.orderQuestionsForSession(questions, session?.config);
+    const currentQ = orderedQuestions[questionIdx];
     if (!currentQ) return;
 
     this.broadcastQuestionClosed(sessionId, questionIdx, currentQ);
@@ -779,6 +799,7 @@ export class LiveSessionService implements OnModuleDestroy {
         select: { id: true, points: true },
       });
       const totalPossiblePoints = questions.reduce((s, q) => s + Number(q.points), 0);
+      const questionPointsMap = new Map(questions.map((q) => [q.id, Number(q.points)]));
       const maxScore = activity.maxScore ? Number(activity.maxScore) : totalPossiblePoints;
 
       // Get all enrolled students
@@ -798,20 +819,24 @@ export class LiveSessionService implements OnModuleDestroy {
       });
 
       // Build per-student score map (tracking correctness for grading)
-      const studentScores = new Map<string, { totalPoints: number; correctCount: number; answeredQuestions: Set<string>; answers: typeof liveAnswers }>();
+      const studentScores = new Map<string, { totalPoints: number; academicPoints: number; correctCount: number; answeredQuestions: Set<string>; answers: typeof liveAnswers }>();
       for (const la of liveAnswers) {
         if (!studentScores.has(la.studentEnrollmentId)) {
-          studentScores.set(la.studentEnrollmentId, { totalPoints: 0, correctCount: 0, answeredQuestions: new Set(), answers: [] });
+          studentScores.set(la.studentEnrollmentId, { totalPoints: 0, academicPoints: 0, correctCount: 0, answeredQuestions: new Set(), answers: [] });
         }
         const entry = studentScores.get(la.studentEnrollmentId)!;
         entry.totalPoints += la.points;
-        if (la.isCorrect) entry.correctCount++;
+        if (la.isCorrect) {
+          entry.correctCount++;
+          entry.academicPoints += questionPointsMap.get(la.questionId) || 0;
+        }
         entry.answeredQuestions.add(la.questionId);
         entry.answers.push(la);
       }
 
       // For TEAM mode: compute team average correctness for members without answers
       let teamAvgCorrectness = new Map<string, number>();
+      let teamAvgAcademicRatio = new Map<string, number>();
       if (session.mode === 'TEAM') {
         // Get team membership
         const teamMembers = await this.prisma.liveSessionTeamMember.findMany({
@@ -821,24 +846,35 @@ export class LiveSessionService implements OnModuleDestroy {
 
         // Group correctness by team
         const teamStudentCorrectness = new Map<string, number[]>();
+        const teamStudentAcademicRatios = new Map<string, number[]>();
         for (const tm of teamMembers) {
           const data = studentScores.get(tm.studentEnrollmentId);
           const correctRatio = data ? data.correctCount / questions.length : 0;
+          const academicRatio = data && totalPossiblePoints > 0 ? data.academicPoints / totalPossiblePoints : 0;
           if (!teamStudentCorrectness.has(tm.teamId)) teamStudentCorrectness.set(tm.teamId, []);
+          if (!teamStudentAcademicRatios.has(tm.teamId)) teamStudentAcademicRatios.set(tm.teamId, []);
           teamStudentCorrectness.get(tm.teamId)!.push(correctRatio);
+          teamStudentAcademicRatios.get(tm.teamId)!.push(academicRatio);
         }
         for (const [teamId, ratios] of teamStudentCorrectness) {
           const activeRatios = ratios.filter(r => r > 0);
           const avg = activeRatios.length > 0 ? activeRatios.reduce((s, r) => s + r, 0) / activeRatios.length : 0;
           teamAvgCorrectness.set(teamId, avg);
         }
+        for (const [teamId, ratios] of teamStudentAcademicRatios) {
+          const activeRatios = ratios.filter(r => r > 0);
+          const avg = activeRatios.length > 0 ? activeRatios.reduce((s, r) => s + r, 0) / activeRatios.length : 0;
+          teamAvgAcademicRatio.set(teamId, avg);
+        }
 
         // Assign team average correctness to members without answers
         for (const tm of teamMembers) {
           if (!studentScores.has(tm.studentEnrollmentId)) {
             const avgCorrect = teamAvgCorrectness.get(tm.teamId) || 0;
+            const avgAcademicRatio = teamAvgAcademicRatio.get(tm.teamId) || 0;
             const avgCorrectCount = Math.round(avgCorrect * questions.length);
-            studentScores.set(tm.studentEnrollmentId, { totalPoints: 0, correctCount: avgCorrectCount, answeredQuestions: new Set(), answers: [] });
+            const avgAcademicPoints = avgAcademicRatio * totalPossiblePoints;
+            studentScores.set(tm.studentEnrollmentId, { totalPoints: 0, academicPoints: avgAcademicPoints, correctCount: avgCorrectCount, answeredQuestions: new Set(), answers: [] });
           }
         }
       }
@@ -854,14 +890,12 @@ export class LiveSessionService implements OnModuleDestroy {
 
         const scoreData = studentScores.get(enrollment.id);
         const rawPoints = scoreData?.totalPoints || 0;
+        const academicPoints = scoreData?.academicPoints || 0;
         const correctCount = scoreData?.correctCount || 0;
         const totalQ = questions.length;
 
-        // Grade based on CORRECTNESS RATIO (not speed-weighted points)
-        // This ensures a student with more correct answers always gets a higher grade
-        // Speed only affects ranking position, not academic grade
-        const correctnessRatio = totalQ > 0 ? correctCount / totalQ : 0;
-        const normalizedScore = correctnessRatio * maxScore;
+        const academicRatio = totalPossiblePoints > 0 ? academicPoints / totalPossiblePoints : 0;
+        const normalizedScore = academicRatio * maxScore;
         const clampedScore = Math.min(Math.max(Math.round(normalizedScore * 10) / 10, 0), maxScore);
 
         await this.prisma.activitySubmission.create({
@@ -889,71 +923,142 @@ export class LiveSessionService implements OnModuleDestroy {
   private async getRanking(sessionId: string, limit = 5) {
     const session = await this.prisma.liveSession.findUnique({
       where: { id: sessionId },
-      select: { mode: true },
+      select: { mode: true, activityId: true },
     });
 
-    if (session?.mode === 'TEAM') {
-      return this.getTeamRanking(sessionId, limit);
+    if (!session?.activityId) {
+      return [];
     }
 
-    // Individual ranking: SUM(points) GROUP BY studentEnrollmentId, TOP N
-    const results = await this.prisma.liveSessionAnswer.groupBy({
-      by: ['studentEnrollmentId'],
-      where: { sessionId },
-      _sum: { points: true },
-      _count: { isCorrect: true },
-      orderBy: { _sum: { points: 'desc' } },
-      take: limit,
+    if (session?.mode === 'TEAM') {
+      return this.getTeamRanking(sessionId, session.activityId, limit);
+    }
+
+    const [answers, questions] = await Promise.all([
+      this.prisma.liveSessionAnswer.findMany({
+        where: { sessionId },
+        select: { studentEnrollmentId: true, isCorrect: true, points: true, responseTimeMs: true, questionId: true },
+      }),
+      this.prisma.activityQuestion.findMany({
+        where: { activityId: session.activityId },
+        select: { id: true, points: true },
+      }),
+    ]);
+
+    const questionPointsMap = new Map(questions.map((question) => [question.id, Number(question.points)]));
+    const aggregates = new Map<string, { studentEnrollmentId: string; totalPoints: number; academicPoints: number; correctAnswers: number; totalResponseTimeMs: number }>();
+
+    for (const answer of answers) {
+      if (!aggregates.has(answer.studentEnrollmentId)) {
+        aggregates.set(answer.studentEnrollmentId, {
+          studentEnrollmentId: answer.studentEnrollmentId,
+          totalPoints: 0,
+          academicPoints: 0,
+          correctAnswers: 0,
+          totalResponseTimeMs: 0,
+        });
+      }
+
+      const entry = aggregates.get(answer.studentEnrollmentId)!;
+      entry.totalPoints += Number(answer.points || 0);
+      entry.totalResponseTimeMs += Number(answer.responseTimeMs || 0);
+
+      if (answer.isCorrect) {
+        entry.correctAnswers += 1;
+        entry.academicPoints += questionPointsMap.get(answer.questionId) || 0;
+      }
+    }
+
+    const sortedResults = [...aggregates.values()].sort((a, b) => {
+      if (b.academicPoints !== a.academicPoints) return b.academicPoints - a.academicPoints;
+      if (b.correctAnswers !== a.correctAnswers) return b.correctAnswers - a.correctAnswers;
+      if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+      if (a.totalResponseTimeMs !== b.totalResponseTimeMs) return a.totalResponseTimeMs - b.totalResponseTimeMs;
+      return a.studentEnrollmentId.localeCompare(b.studentEnrollmentId);
     });
 
-    // Fetch student names for top N only
-    const enrollmentIds = results.map((r) => r.studentEnrollmentId);
+    const topResults = sortedResults.slice(0, limit);
+    const enrollmentIds = topResults.map((result) => result.studentEnrollmentId);
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: { id: { in: enrollmentIds } },
       select: { id: true, student: { select: { firstName: true, lastName: true } } },
     });
     const nameMap = new Map(enrollments.map((e) => [e.id, `${e.student.firstName} ${e.student.lastName}`]));
 
-    // Count correct answers
-    const correctCounts = await this.prisma.liveSessionAnswer.groupBy({
-      by: ['studentEnrollmentId'],
-      where: { sessionId, isCorrect: true, studentEnrollmentId: { in: enrollmentIds } },
-      _count: true,
-    });
-    const correctMap = new Map(correctCounts.map((c) => [c.studentEnrollmentId, c._count]));
-
-    return results.map((r, i) => ({
+    return topResults.map((result, i) => ({
       rank: i + 1,
-      studentEnrollmentId: r.studentEnrollmentId,
-      name: nameMap.get(r.studentEnrollmentId) || 'Desconocido',
-      totalPoints: Math.round(r._sum.points || 0),
-      correctAnswers: correctMap.get(r.studentEnrollmentId) || 0,
-      avatarId: this.getStudentAvatar(sessionId, r.studentEnrollmentId),
+      studentEnrollmentId: result.studentEnrollmentId,
+      name: nameMap.get(result.studentEnrollmentId) || 'Desconocido',
+      totalPoints: Math.round(result.totalPoints),
+      academicPoints: Math.round(result.academicPoints * 100) / 100,
+      correctAnswers: result.correctAnswers,
+      avatarId: this.getStudentAvatar(sessionId, result.studentEnrollmentId),
     }));
   }
 
-  private async getTeamRanking(sessionId: string, limit = 5) {
-    const results = await this.prisma.liveSessionAnswer.groupBy({
-      by: ['teamId'],
-      where: { sessionId, teamId: { not: null } },
-      _sum: { points: true },
-      orderBy: { _sum: { points: 'desc' } },
-      take: limit,
-    });
+  private async getTeamRanking(sessionId: string, activityId: string, limit = 5) {
+    const [answers, questions] = await Promise.all([
+      this.prisma.liveSessionAnswer.findMany({
+        where: { sessionId, teamId: { not: null } },
+        select: { teamId: true, isCorrect: true, points: true, responseTimeMs: true, questionId: true },
+      }),
+      this.prisma.activityQuestion.findMany({
+        where: { activityId },
+        select: { id: true, points: true },
+      }),
+    ]);
 
-    const teamIds = results.map((r) => r.teamId!).filter(Boolean);
+    const questionPointsMap = new Map(questions.map((question) => [question.id, Number(question.points)]));
+    const teamAggregates = new Map<string, { teamId: string; totalPoints: number; academicPoints: number; correctAnswers: number; totalResponseTimeMs: number }>();
+
+    for (const answer of answers) {
+      if (!answer.teamId) continue;
+
+      if (!teamAggregates.has(answer.teamId)) {
+        teamAggregates.set(answer.teamId, {
+          teamId: answer.teamId,
+          totalPoints: 0,
+          academicPoints: 0,
+          correctAnswers: 0,
+          totalResponseTimeMs: 0,
+        });
+      }
+
+      const entry = teamAggregates.get(answer.teamId)!;
+      entry.totalPoints += Number(answer.points || 0);
+      entry.totalResponseTimeMs += Number(answer.responseTimeMs || 0);
+
+      if (answer.isCorrect) {
+        entry.correctAnswers += 1;
+        entry.academicPoints += questionPointsMap.get(answer.questionId) || 0;
+      }
+    }
+
+    const topResults = [...teamAggregates.values()]
+      .sort((a, b) => {
+        if (b.academicPoints !== a.academicPoints) return b.academicPoints - a.academicPoints;
+        if (b.correctAnswers !== a.correctAnswers) return b.correctAnswers - a.correctAnswers;
+        if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+        if (a.totalResponseTimeMs !== b.totalResponseTimeMs) return a.totalResponseTimeMs - b.totalResponseTimeMs;
+        return a.teamId.localeCompare(b.teamId);
+      })
+      .slice(0, limit);
+
+    const teamIds = topResults.map((result) => result.teamId).filter(Boolean);
     const teams = await this.prisma.liveSessionTeam.findMany({
       where: { id: { in: teamIds } },
       select: { id: true, name: true, color: true },
     });
     const teamMap = new Map(teams.map((t) => [t.id, t]));
 
-    return results.map((r, i) => ({
+    return topResults.map((result, i) => ({
       rank: i + 1,
-      teamId: r.teamId,
-      name: teamMap.get(r.teamId!)?.name || 'Equipo',
-      color: teamMap.get(r.teamId!)?.color || '#6366f1',
-      totalPoints: Math.round(r._sum.points || 0),
+      teamId: result.teamId,
+      name: teamMap.get(result.teamId)?.name || 'Equipo',
+      color: teamMap.get(result.teamId)?.color || '#6366f1',
+      totalPoints: Math.round(result.totalPoints),
+      academicPoints: Math.round(result.academicPoints * 100) / 100,
+      correctAnswers: result.correctAnswers,
     }));
   }
 
@@ -1035,7 +1140,7 @@ export class LiveSessionService implements OnModuleDestroy {
 
     // Limit max teams
     const teamCount = await this.prisma.liveSessionTeam.count({ where: { sessionId } });
-    if (teamCount >= 12) throw new BadRequestException('Máximo 12 equipos permitidos');
+    if (teamCount >= 20) throw new BadRequestException('Máximo 20 equipos permitidos');
 
     // Remove student from any existing team
     await this.prisma.liveSessionTeamMember.deleteMany({
@@ -1295,6 +1400,31 @@ export class LiveSessionService implements OnModuleDestroy {
       default:
         return given === correct;
     }
+  }
+
+  private shuffleArray<T>(items: T[]): T[] {
+    const arr = [...items];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  private orderQuestionsForSession<T extends { id: string }>(questions: T[], config: any): T[] {
+    const questionOrder = Array.isArray(config?.questionOrder) ? (config.questionOrder as string[]) : [];
+    if (questionOrder.length === 0) return questions;
+
+    const byId = new Map(questions.map((question) => [question.id, question]));
+    const ordered = questionOrder
+      .map((id) => byId.get(id))
+      .filter((question): question is T => Boolean(question));
+
+    if (ordered.length === questions.length) return ordered;
+
+    const orderedIds = new Set(ordered.map((question) => question.id));
+    const missing = questions.filter((question) => !orderedIds.has(question.id));
+    return [...ordered, ...missing];
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
