@@ -448,6 +448,27 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         } else if (joinedSession.status === 'WAITING') {
           setPhase('lobby')
         } else {
+          // ACTIVE - load current question directly from session data (don't wait for SSE)
+          const questionIdx = joinedSession.currentQuestionIdx ?? 0
+          if (questionIdx >= 0 && joinedQuestions[questionIdx]) {
+            const q = joinedQuestions[questionIdx]
+            const timeLimit = joinedCfg.timeLimitOverride || 15
+            setCurrentQuestion({
+              questionId: q.id,
+              type: q.type,
+              text: q.text,
+              imageUrl: q.imageUrl,
+              options: q.options,
+              points: q.points,
+              isBonus: false,
+              multiplier: 1,
+              timeLimit,
+              context: null,
+            })
+            setQuestionIndex(questionIdx)
+            setAnswerStartTime(Date.now())
+            startTimer(timeLimit)
+          }
           setPhase('question')
         }
         connectSSE(joinedSession.id)

@@ -122,10 +122,17 @@ export class LiveSessionService implements OnModuleDestroy {
       where: { id: sessionId },
       select: { status: true, currentQuestionIdx: true, activityId: true, config: true },
     });
-    if (!session || session.status !== 'ACTIVE' || session.currentQuestionIdx < 0) return null;
+    this.logger.log(`getReplayEvent: session=${sessionId}, status=${session?.status}, questionIdx=${session?.currentQuestionIdx}`);
+    if (!session || session.status !== 'ACTIVE' || session.currentQuestionIdx < 0) {
+      this.logger.log(`getReplayEvent: returning null (session not active or no question)`);
+      return null;
+    }
 
     // Check if question is already closed (answer_reveal phase) — don't replay
-    if (this.closedQuestions.get(sessionId)?.has(session.currentQuestionIdx)) return null;
+    if (this.closedQuestions.get(sessionId)?.has(session.currentQuestionIdx)) {
+      this.logger.log(`getReplayEvent: returning null (question already closed)`);
+      return null;
+    }
 
     const questions = await this.prisma.activityQuestion.findMany({
       where: { activityId: session.activityId },
@@ -134,13 +141,17 @@ export class LiveSessionService implements OnModuleDestroy {
     });
     const orderedQuestions = this.orderQuestionsForSession(questions, session.config);
     const q = orderedQuestions[session.currentQuestionIdx];
-    if (!q) return null;
+    if (!q) {
+      this.logger.log(`getReplayEvent: returning null (question not found at index ${session.currentQuestionIdx})`);
+      return null;
+    }
 
     const config = (session.config as any) || {};
     const isBonus = config.bonusQuestions?.includes(session.currentQuestionIdx) || false;
     const multiplier = config.multipliers?.[String(session.currentQuestionIdx)] || 1;
     const timeLimit = config.timeLimitOverride || 15;
 
+    this.logger.log(`getReplayEvent: sending QUESTION event for questionId=${q.id}, index=${session.currentQuestionIdx}`);
     return {
       type: 'QUESTION',
       data: {
