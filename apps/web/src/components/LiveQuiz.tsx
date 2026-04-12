@@ -374,6 +374,17 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   const questionIndexRef = useRef(-1)
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // ASYNC HOME SYNC HELPERS (must be declared before useEffect that uses them)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const clearAsyncHomeSyncTimeout = useCallback(() => {
+    if (asyncHomeSyncTimeoutRef.current) {
+      clearTimeout(asyncHomeSyncTimeoutRef.current)
+      asyncHomeSyncTimeoutRef.current = null
+    }
+  }, [])
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // INIT
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -693,13 +704,6 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       timerRef.current = null
     }
   }
-
-  const clearAsyncHomeSyncTimeout = useCallback(() => {
-    if (asyncHomeSyncTimeoutRef.current) {
-      clearTimeout(asyncHomeSyncTimeoutRef.current)
-      asyncHomeSyncTimeoutRef.current = null
-    }
-  }, [])
 
   const syncQuestionFromSessionData = useCallback((sessionData: any, minimumQuestionIdx = -1) => {
     const questions = sessionData?.activity?.questions || []
