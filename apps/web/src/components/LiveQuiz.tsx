@@ -309,6 +309,8 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   // Delivery mode: live online or at home
   const [deliveryMode, setDeliveryMode] = useState<'SYNC' | 'ASYNC_HOME'>(initialDeliveryMode)
   const isAsyncHomeStudent = !isTeacher && (deliveryMode === 'ASYNC_HOME' || (session?.config as any)?.deliveryMode === 'ASYNC_HOME')
+  const isAsyncHomeStudentRef = useRef(isAsyncHomeStudent)
+  isAsyncHomeStudentRef.current = isAsyncHomeStudent
 
   // Add partner (search students to add to my team)
   const [showAddPartner, setShowAddPartner] = useState(false)
@@ -596,7 +598,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         setRanking(Array.isArray(data) ? data : [])
         setRankingMeta(null)
       }
-      if (!isAsyncHomeStudent) {
+      if (!isAsyncHomeStudentRef.current) {
         setPhase('ranking')
       }
     })

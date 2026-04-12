@@ -343,7 +343,7 @@ export class LiveSessionService implements OnModuleDestroy {
             timeLimitMinutes: true,
             questions: {
               orderBy: { sortOrder: 'asc' },
-              select: { id: true, type: true, text: true, imageUrl: true, options: true, points: true, correctAnswer: true, sortOrder: true },
+              select: { id: true, type: true, text: true, imageUrl: true, options: true, points: true, correctAnswer: true, sortOrder: true, context: { select: { id: true, title: true, text: true, imageUrl: true } } },
             },
           },
         },

@@ -4490,7 +4490,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             activityTitle={isTeacher ? liveQuizActivityTitle : undefined}
             sessionId={isStudent && activeLiveSession ? activeLiveSession.id : undefined}
             studentEnrollmentId={isStudent ? classroom.studentEnrollmentId : undefined}
-            initialDeliveryMode={isTeacher ? liveQuizInitialDeliveryMode : 'SYNC'}
+            initialDeliveryMode={isTeacher ? liveQuizInitialDeliveryMode : (activeLiveSession?.deliveryMode || 'SYNC')}
           />
         )}
 
@@ -4770,7 +4770,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           activityTitle={isTeacher ? liveQuizActivityTitle : undefined}
           sessionId={activeLiveSession?.id}
           studentEnrollmentId={isStudent ? classroom.studentEnrollmentId : undefined}
-          initialDeliveryMode={isTeacher ? liveQuizInitialDeliveryMode : 'SYNC'}
+          initialDeliveryMode={isTeacher ? liveQuizInitialDeliveryMode : (activeLiveSession?.deliveryMode || 'SYNC')}
         />
       )}
 
