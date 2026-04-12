@@ -1595,6 +1595,7 @@ model StudentEnrollment {
 
   // Aula Virtual
   classroomSubmissions ActivitySubmission[] @relation("ClassroomSubmissions")
+  liveSessions          LiveSession[]
   activityAssignments  ActivityAssignment[]
 
   // Live Quiz
@@ -5260,6 +5261,11 @@ enum LiveSessionMode {
   TEAM
 }
 
+enum LiveSessionDeliveryMode {
+  SYNC
+  ASYNC_HOME
+}
+
 model LiveSession {
   id                 String            @id @default(cuid())
   classroomId        String
@@ -5267,6 +5273,9 @@ model LiveSession {
   activityId         String
   status             LiveSessionStatus @default(WAITING)
   mode               LiveSessionMode   @default(INDIVIDUAL)
+  deliveryMode       LiveSessionDeliveryMode @default(SYNC)
+  parentSessionId    String?
+  studentEnrollmentId String?
   currentQuestionIdx Int               @default(-1)
   config             Json? // { bonusQuestions: [idx], multipliers: {idx: 2}, timeLimitOverride: 15 }
   createdAt          DateTime          @default(now())
@@ -5276,11 +5285,17 @@ model LiveSession {
   classroom Classroom           @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   teacher   User                @relation("LiveSessionTeacher", fields: [teacherId], references: [id])
   activity  ClassroomActivity   @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  parentSession LiveSession?    @relation("LiveSessionParent", fields: [parentSessionId], references: [id], onDelete: SetNull)
+  childSessions  LiveSession[]   @relation("LiveSessionParent")
+  studentEnrollment StudentEnrollment? @relation(fields: [studentEnrollmentId], references: [id], onDelete: SetNull)
   answers   LiveSessionAnswer[]
   teams     LiveSessionTeam[]
 
   @@index([classroomId, status])
   @@index([teacherId])
+  @@index([parentSessionId])
+  @@index([studentEnrollmentId])
+  @@index([deliveryMode, status])
 }
 
 model LiveSessionAnswer {
