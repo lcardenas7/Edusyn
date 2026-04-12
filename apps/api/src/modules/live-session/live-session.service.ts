@@ -482,6 +482,27 @@ export class LiveSessionService implements OnModuleDestroy {
       throw new BadRequestException('La sesión no está activa');
     }
 
+    return this.advanceQuestion(sessionId, session);
+  }
+
+  private async advanceQuestion(sessionId: string, sessionOverride?: {
+    activityId: string;
+    currentQuestionIdx: number;
+    config: any;
+    teacherId: string;
+    status: string;
+  }) {
+    const session = sessionOverride || await this.prisma.liveSession.findUnique({
+      where: { id: sessionId },
+      select: { activityId: true, currentQuestionIdx: true, config: true, teacherId: true, status: true },
+    });
+    if (!session) {
+      throw new NotFoundException('Sesión no encontrada');
+    }
+    if (session.status !== 'ACTIVE') {
+      throw new BadRequestException('La sesión no está activa');
+    }
+
     const questions = await this.prisma.activityQuestion.findMany({
       where: { activityId: session.activityId },
       orderBy: { sortOrder: 'asc' },
@@ -491,8 +512,10 @@ export class LiveSessionService implements OnModuleDestroy {
 
     const nextIdx = session.currentQuestionIdx + 1;
     if (nextIdx >= orderedQuestions.length) {
-      // No more questions - finish
-      return this.finishSession(sessionId, teacherId);
+      if (sessionOverride) {
+        return this.finishSession(sessionId, session.teacherId);
+      }
+      return this.finishSession(sessionId, session.teacherId);
     }
 
     await this.prisma.liveSession.update({
@@ -837,7 +860,7 @@ export class LiveSessionService implements OnModuleDestroy {
       .then((session) => {
         if (!session || session.deliveryMode !== 'ASYNC_HOME' || session.status !== 'ACTIVE') return;
         setTimeout(() => {
-          this.nextQuestion(sessionId, session.teacherId).catch((err) => {
+          this.advanceQuestion(sessionId).catch((err) => {
             this.logger.warn(`Auto-advance failed for async session ${sessionId}: ${err instanceof Error ? err.message : err}`);
           });
         }, 700);

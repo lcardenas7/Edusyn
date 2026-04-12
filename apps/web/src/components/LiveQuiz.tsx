@@ -369,7 +369,9 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   // SSE
   const eventSourceRef = useRef<EventSource | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const asyncHomeSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sessionIdRef = useRef(initialSessionId || '')
+  const questionIndexRef = useRef(-1)
 
   // ═══════════════════════════════════════════════════════════════════════════
   // INIT
@@ -391,9 +393,10 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     return () => {
       if (eventSourceRef.current) eventSourceRef.current.close()
       if (timerRef.current) clearInterval(timerRef.current)
+      clearAsyncHomeSyncTimeout()
       stopMusic()
     }
-  }, [])
+  }, [clearAsyncHomeSyncTimeout])
 
   const createSession = async () => {
     setPhase('loading')
@@ -437,8 +440,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         setSession(joinedSession)
         setMode(joinedSession.mode || 'INDIVIDUAL')
         setDeliveryMode('ASYNC_HOME')
-        const joinedQuestions = joinedSession.activity?.questions || []
-        setTotalQuestions(joinedQuestions.length)
+        syncQuestionFromSessionData(joinedSession)
         if (joinedSession.teams?.length) setTeams(joinedSession.teams)
         const joinedCfg = (joinedSession.config as any) || {}
         autoCloseRef.current = joinedCfg.autoClose ?? false
@@ -449,26 +451,6 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
           setPhase('lobby')
         } else {
           // ACTIVE - load current question directly from session data (don't wait for SSE)
-          const questionIdx = joinedSession.currentQuestionIdx ?? 0
-          if (questionIdx >= 0 && joinedQuestions[questionIdx]) {
-            const q = joinedQuestions[questionIdx]
-            const timeLimit = joinedCfg.timeLimitOverride || 15
-            setCurrentQuestion({
-              questionId: q.id,
-              type: q.type,
-              text: q.text,
-              imageUrl: q.imageUrl,
-              options: q.options,
-              points: q.points,
-              isBonus: false,
-              multiplier: 1,
-              timeLimit,
-              context: null,
-            })
-            setQuestionIndex(questionIdx)
-            setAnswerStartTime(Date.now())
-            startTimer(timeLimit)
-          }
           setPhase('question')
         }
         connectSSE(joinedSession.id)
@@ -479,8 +461,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       sessionIdRef.current = sid
       setMode(data.mode || 'INDIVIDUAL')
       setDeliveryMode((data.deliveryMode || (data.config as any)?.deliveryMode || 'SYNC') as 'SYNC' | 'ASYNC_HOME')
-      const questions = data.activity?.questions || []
-      setTotalQuestions(questions.length)
+      setTotalQuestions(data.activity?.questions?.length || 0)
       if (data.teams?.length) setTeams(data.teams)
       // Sync autoClose from session config
       const cfg = (data.config as any) || {}
@@ -491,8 +472,11 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       } else if (data.status === 'WAITING') {
         setPhase('lobby')
       } else {
-        // ACTIVE — don't populate currentQuestion from REST (it contains correctAnswer
-        // and timer won't run). Wait for SSE QUESTION event or backend replay.
+        // ACTIVE — for async home sessions, use REST as a fallback so the student
+        // can keep progressing even if the SSE question event is delayed.
+        if (data.deliveryMode === 'ASYNC_HOME' || (data.config as any)?.deliveryMode === 'ASYNC_HOME') {
+          syncQuestionFromSessionData(data)
+        }
         setPhase('question')
       }
       connectSSE(sid)
@@ -539,9 +523,11 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
     es.addEventListener('QUESTION', (e: any) => {
       const data = JSON.parse(e.data)
+      clearAsyncHomeSyncTimeout()
       const normalizedQuestion = normalizeQuestionMedia(data)
       setCurrentQuestion(normalizedQuestion)
       setQuestionIndex(data.index)
+      questionIndexRef.current = data.index
       setTotalQuestions(data.total)
       setTimeLimit(data.timeLimit || 15)
       setTimeLeft(data.timeLimit || 15)
@@ -583,6 +569,9 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       // Reveal buffered result for students (with sounds + confetti)
       revealPendingResult()
       setPhase('answer_reveal')
+      if (!isTeacher && (deliveryMode === 'ASYNC_HOME' || (session?.config as any)?.deliveryMode === 'ASYNC_HOME')) {
+        scheduleAsyncHomeSessionSync(sessionIdRef.current, questionIndexRef.current)
+      }
     })
 
     es.addEventListener('RANKING', (e: any) => {
@@ -600,6 +589,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
     es.addEventListener('SESSION_FINISHED', (e: any) => {
       const data = JSON.parse(e.data)
+      clearAsyncHomeSyncTimeout()
       // Handle async home ranking with metadata
       if (data.ranking && data.meta) {
         setRanking(data.ranking)
@@ -622,6 +612,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     })
 
     es.addEventListener('SESSION_ENDED', async () => {
+      clearAsyncHomeSyncTimeout()
       stopTimer()
       stopMusic()
       // Close current SSE connection
@@ -639,8 +630,10 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             // New session found — rejoin it
             setSessionId(data.id)
             sessionIdRef.current = data.id
+            clearAsyncHomeSyncTimeout()
             setCurrentQuestion(null)
             setQuestionIndex(-1)
+            questionIndexRef.current = -1
             setAnswered(false)
             answeredRef.current = false
             setAnswerResult(null)
@@ -700,6 +693,75 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       timerRef.current = null
     }
   }
+
+  const clearAsyncHomeSyncTimeout = useCallback(() => {
+    if (asyncHomeSyncTimeoutRef.current) {
+      clearTimeout(asyncHomeSyncTimeoutRef.current)
+      asyncHomeSyncTimeoutRef.current = null
+    }
+  }, [])
+
+  const syncQuestionFromSessionData = useCallback((sessionData: any, minimumQuestionIdx = -1) => {
+    const questions = sessionData?.activity?.questions || []
+    const currentQuestionIdx = sessionData?.currentQuestionIdx ?? -1
+    if (currentQuestionIdx < 0 || !questions[currentQuestionIdx] || currentQuestionIdx <= minimumQuestionIdx) return false
+
+    const cfg = (sessionData?.config as any) || {}
+    const q = questions[currentQuestionIdx]
+    const timeLimit = cfg.timeLimitOverride || 15
+
+    setCurrentQuestion({
+      questionId: q.id,
+      type: q.type,
+      text: q.text,
+      imageUrl: q.imageUrl,
+      options: q.options,
+      points: q.points,
+      isBonus: Boolean(cfg.bonusQuestions?.includes(currentQuestionIdx)),
+      multiplier: cfg.multipliers?.[String(currentQuestionIdx)] || 1,
+      timeLimit,
+      context: q.context || null,
+    })
+    setQuestionIndex(currentQuestionIdx)
+    questionIndexRef.current = currentQuestionIdx
+    setTotalQuestions(questions.length)
+    setTimeLimit(timeLimit)
+    setTimeLeft(timeLimit)
+    setSelectedAnswer('')
+    setMultiAnswers([])
+    setMatchAnswers({})
+    setBlankAnswers([])
+    setOrderAnswers(q.type === 'ORDERING' && Array.isArray(q.options) ? shuffleArray([...(q.options as string[])]) : [])
+    setAnswered(false)
+    answeredRef.current = false
+    pendingResultRef.current = null
+    setAnswerResult(null)
+    setCorrectAnswer(null)
+    setExplanation(null)
+    setContextExpanded(false)
+    setTotalAnswered(0)
+    setAnswerStartTime(Date.now())
+    setPhase('question')
+    startTimer(timeLimit)
+    if (!isTeacher && (sessionData?.deliveryMode === 'ASYNC_HOME' || (sessionData?.config as any)?.deliveryMode === 'ASYNC_HOME')) {
+      startMusic()
+    }
+    return true
+  }, [isTeacher])
+
+  const scheduleAsyncHomeSessionSync = useCallback((sid: string, minimumQuestionIdx = -1) => {
+    clearAsyncHomeSyncTimeout()
+    asyncHomeSyncTimeoutRef.current = setTimeout(async () => {
+      try {
+        const { data } = await liveSessionApi.get(sid)
+        if (data?.status !== 'ACTIVE') return
+        const advanced = syncQuestionFromSessionData(data, minimumQuestionIdx)
+        if (!advanced) {
+          scheduleAsyncHomeSessionSync(sid, minimumQuestionIdx)
+        }
+      } catch {}
+    }, 900)
+  }, [clearAsyncHomeSyncTimeout, syncQuestionFromSessionData])
 
   // ═══════════════════════════════════════════════════════════════════════════
   // MUSIC (Web Audio API - dynamic quiz music)
