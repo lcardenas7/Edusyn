@@ -4968,6 +4968,8 @@ enum ClassroomActivityType {
   FORUM
   GAME
   EXAM
+  LIVE_QUIZ
+  HOME_QUIZ
   ICFES_SIMULATOR
   SELF_ASSESSMENT // Autoevaluación actitudinal
   PEER_ASSESSMENT // Coevaluación actitudinal

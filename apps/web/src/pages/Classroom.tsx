@@ -610,7 +610,7 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
     const firstName = user?.firstName || 'Estudiante'
     const allActivities = sections.flatMap(s => (s as any).activities || [])
     const formatShortDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) : null
-    const TYPE_LABELS: Record<string, string> = { TASK: 'Tarea', QUIZ: 'Quiz', EXAM: 'Examen', ICFES_SIMULATOR: 'ICFES', FORUM: 'Foro', GAME: 'Juego' }
+    const TYPE_LABELS: Record<string, string> = { TASK: 'Tarea', QUIZ: 'Quiz', EXAM: 'Examen', LIVE_QUIZ: 'Live Quiz', HOME_QUIZ: 'Quiz en Casa', ICFES_SIMULATOR: 'ICFES', FORUM: 'Foro', GAME: 'Juego' }
     return (
       <div className="space-y-6">
         {/* Welcome */}
@@ -2242,9 +2242,20 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     )
   }
 
-  const isQuizType = (type: string) => ['QUIZ', 'EXAM', 'ICFES_SIMULATOR'].includes(type)
+  const isStandardQuizType = (type: string) => ['QUIZ', 'EXAM', 'ICFES_SIMULATOR'].includes(type)
+  const isLiveQuizType = (type: string) => ['LIVE_QUIZ', 'HOME_QUIZ'].includes(type)
+  const isQuizType = (type: string) => isStandardQuizType(type) || isLiveQuizType(type)
+  const isQuizEditorType = (type: string) => isQuizType(type)
   const isIcfes = (type: string) => type === 'ICFES_SIMULATOR'
   const isSelfAssessment = (type: string) => type === 'SELF_ASSESSMENT'
+
+  const getQuizTypeLabel = (type: string) => {
+    if (type === 'LIVE_QUIZ') return 'Live Quiz'
+    if (type === 'HOME_QUIZ') return 'Quiz en Casa'
+    if (type === 'ICFES_SIMULATOR') return 'Simulacro ICFES'
+    if (type === 'EXAM') return 'Examen'
+    return 'Quiz'
+  }
 
   const ICFES_AREAS = ['Lectura Crítica', 'Matemáticas', 'Ciencias Naturales', 'Sociales y Ciudadanas', 'Inglés']
   const AREA_COLORS: Record<string, string> = {
@@ -2297,7 +2308,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         const { data } = await classroomApi.listSubmissions(activity.id)
         setSubmissions(data)
       } catch {} finally { setSubmissionsLoading(false) }
-      if (isQuizType(activity.type)) {
+      if (isQuizEditorType(activity.type)) {
         loadQuestions(activity.id)
         if (isIcfes(activity.type)) loadIcfesClassResults(activity.id)
       }
@@ -2772,7 +2783,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                         <h2 className="text-lg sm:text-xl font-bold text-slate-800 break-words">{act.title}</h2>
                         {isSelfAssessment(act.type) && <span className="text-xs px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full font-medium whitespace-nowrap">Autoevaluación</span>}
                         {isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium whitespace-nowrap">Simulacro ICFES</span>}
-                        {isQuizType(act.type) && !isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">{act.type === 'QUIZ' ? 'Quiz' : 'Examen'}</span>}
+                        {isQuizType(act.type) && !isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">{getQuizTypeLabel(act.type)}</span>}
                       </div>
                       <p className="text-sm text-slate-400">{act.section?.title || 'Sin sección'}</p>
                     </div>
@@ -3163,7 +3174,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         })()}
 
         {/* TEACHER: Question Editor for QUIZ/EXAM */}
-        {isTeacher && isQuizType(act.type) && (
+        {isTeacher && isQuizEditorType(act.type) && (
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
             <div className="px-4 sm:px-6 py-4 border-b border-slate-100">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -3571,7 +3582,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             ) : questions.length === 0 ? (
               <div className="text-center py-12 text-slate-400">
                 <HelpCircle className="w-10 h-10 mx-auto mb-2 opacity-40" />
-                <p className="text-base">Agrega preguntas para este {act.type === 'QUIZ' ? 'quiz' : 'examen'}</p>
+                <p className="text-base">Agrega preguntas para este {getQuizTypeLabel(act.type).toLowerCase()}</p>
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
@@ -3692,8 +3703,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           </div>
         )}
 
-        {/* STUDENT: Quiz-taking UI for QUIZ/EXAM */}
-        {isStudent && isQuizType(act.type) && quizMode === 'taking' && (
+        {/* STUDENT: Quiz-taking UI for quiz family */}
+        {isStudent && isStandardQuizType(act.type) && quizMode === 'taking' && (
           <div className="bg-white rounded-2xl border-2 border-purple-200 p-4 sm:p-6 space-y-4 sm:space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <h3 className="text-base sm:text-lg font-bold text-slate-800">Pregunta {quizCurrentIdx + 1} de {quizQuestions.length}</h3>
@@ -3888,7 +3899,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         )}
 
         {/* STUDENT: Quiz result view (non-ICFES) */}
-        {isStudent && isQuizType(act.type) && !isIcfes(act.type) && quizMode === 'result' && quizResult && (
+        {isStudent && isStandardQuizType(act.type) && !isIcfes(act.type) && quizMode === 'result' && quizResult && (
           <div className="space-y-4">
             <div className="bg-white rounded-2xl border-2 border-green-200 p-6 text-center space-y-3">
               <Award className="w-14 h-14 mx-auto text-green-500" />
@@ -3983,9 +3994,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         )}
 
         {/* STUDENT: Quiz idle state (start or view result) */}
-        {isStudent && isQuizType(act.type) && quizMode === 'idle' && (
+        {isStudent && isStandardQuizType(act.type) && quizMode === 'idle' && (
           <div className={`bg-white rounded-2xl border p-6 space-y-4 ${isIcfes(act.type) ? 'border-emerald-200' : 'border-slate-200'}`}>
-            <h3 className="text-lg font-bold text-slate-800">{isIcfes(act.type) ? 'Simulacro ICFES' : act.type === 'QUIZ' ? 'Quiz' : 'Examen'}</h3>
+            <h3 className="text-lg font-bold text-slate-800">{isIcfes(act.type) ? 'Simulacro ICFES' : getQuizTypeLabel(act.type)}</h3>
             {mySubmission && (mySubmission.status === 'AUTO_GRADED' || mySubmission.status === 'GRADED') ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
@@ -4018,6 +4029,44 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* STUDENT: Live Quiz / Quiz en Casa info panel */}
+        {isStudent && isLiveQuizType(act.type) && (
+          <div className="bg-white rounded-2xl border border-rose-200 p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center shrink-0">
+                <Zap className="w-5 h-5 text-rose-600" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-lg font-bold text-slate-800">{getQuizTypeLabel(act.type)}</h3>
+                <p className="text-sm text-slate-500">
+                  {act.type === 'HOME_QUIZ'
+                    ? 'Este quiz se resuelve a tu ritmo cuando el docente lo publique.'
+                    : 'Este quiz se juega en una sesión compartida en vivo.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-rose-100 bg-rose-50/50 p-4 space-y-2">
+              {activeLiveSession?.activityId === act.id ? (
+                <>
+                  <p className="text-sm text-rose-700 font-medium">Hay una sesión activa disponible.</p>
+                  <button
+                    onClick={() => setShowLiveQuiz(true)}
+                    className="px-5 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-semibold hover:bg-rose-700 flex items-center gap-2"
+                    style={{ minHeight: '44px' }}
+                  >
+                    <CircleDot className="w-5 h-5" /> Entrar al quiz
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm text-rose-700">
+                  Espera a que el docente inicie una sesión para entrar desde aquí o desde el banner del aula.
+                </p>
+              )}
+            </div>
           </div>
         )}
 
@@ -4551,12 +4600,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
       {/* Create form */}
       {showCreate && (
-        <div className={`bg-white border-2 rounded-2xl p-6 space-y-4 ${isSelfAssessment(form.type) ? 'border-teal-200' : isQuizType(form.type) ? 'border-purple-200' : 'border-blue-200'}`}>
+        <div className={`bg-white border-2 rounded-2xl p-6 space-y-4 ${isSelfAssessment(form.type) ? 'border-teal-200' : isQuizEditorType(form.type) ? 'border-purple-200' : 'border-blue-200'}`}>
           <h3 className="text-lg font-bold text-slate-800">Nueva Actividad</h3>
 
           {/* Activity type selector */}
           <div className="flex gap-2 flex-wrap">
-            {[{ value: 'TASK', label: 'Tarea', icon: ClipboardList, color: 'blue' }, { value: 'QUIZ', label: 'Quiz', icon: HelpCircle, color: 'purple' }, { value: 'EXAM', label: 'Examen', icon: Award, color: 'red' }, { value: 'ICFES_SIMULATOR', label: 'Simulacro ICFES', icon: BarChart3, color: 'emerald' }, { value: 'SELF_ASSESSMENT', label: 'Autoevaluación', icon: Sparkles, color: 'teal' }].map(t => (
+            {[{ value: 'TASK', label: 'Tarea', icon: ClipboardList, color: 'blue' }, { value: 'QUIZ', label: 'Quiz', icon: HelpCircle, color: 'purple' }, { value: 'EXAM', label: 'Examen', icon: Award, color: 'red' }, { value: 'LIVE_QUIZ', label: 'Live Quiz', icon: Zap, color: 'violet' }, { value: 'HOME_QUIZ', label: 'Quiz en Casa', icon: Home, color: 'pink' }, { value: 'ICFES_SIMULATOR', label: 'Simulacro ICFES', icon: BarChart3, color: 'emerald' }, { value: 'SELF_ASSESSMENT', label: 'Autoevaluación', icon: Sparkles, color: 'teal' }].map(t => (
               <button key={t.value} onClick={() => setForm({ ...form, type: t.value })} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${form.type === t.value ? (t.color === 'blue' ? 'border-blue-500 bg-blue-50 text-blue-700' : t.color === 'purple' ? 'border-purple-500 bg-purple-50 text-purple-700' : t.color === 'emerald' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : t.color === 'teal' ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-red-500 bg-red-50 text-red-700') : 'border-slate-200 text-slate-500 hover:border-slate-300'}`} style={{ minHeight: '44px' }}>
                 <t.icon className="w-5 h-5" /> {t.label}
               </button>
@@ -4573,9 +4622,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             />
           ) : (
           <>
-          <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder={isQuizType(form.type) ? 'Título del quiz/examen' : 'Título de la tarea'} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
+          <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder={isQuizEditorType(form.type) ? 'Título del quiz' : 'Título de la tarea'} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
           <Suspense fallback={<div className="h-32 bg-slate-50 rounded-xl animate-pulse" />}>
-            <RichTextEditor value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder={isQuizType(form.type) ? 'Instrucciones para el estudiante...' : 'Instrucciones y descripción...'} />
+            <RichTextEditor value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder={isQuizEditorType(form.type) ? 'Instrucciones, reglas y modo de juego...' : 'Instrucciones y descripción...'} />
           </Suspense>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
@@ -4596,7 +4645,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           </div>
 
           {/* Quiz/Exam specific fields */}
-          {isQuizType(form.type) && (
+          {isQuizEditorType(form.type) && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-purple-50/50 rounded-xl border border-purple-100">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Intentos máximos</label>
@@ -4619,13 +4668,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             </div>
           )}
 
-          {!isQuizType(form.type) && (
+          {!isQuizEditorType(form.type) && (
             <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
               <input type="checkbox" checked={form.allowLateSubmit} onChange={e => setForm({ ...form, allowLateSubmit: e.target.checked })} className="rounded" />
               Permitir entregas tardías
             </label>
           )}
-          {!isQuizType(form.type) && (
+          {!isQuizEditorType(form.type) && (
             <>
               <input ref={fileRef} type="file" className="hidden" onChange={e => setAttachFile(e.target.files?.[0] || null)} />
               {attachFile && (
@@ -4638,18 +4687,18 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             </>
           )}
           <div className="flex items-center justify-between pt-2">
-            {!isQuizType(form.type) ? (
+            {!isQuizEditorType(form.type) ? (
               <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
                 <Paperclip className="w-5 h-5" /> Adjuntar archivo
               </button>
             ) : (
-              <p className="text-sm text-purple-500">Las preguntas se agregan después de crear</p>
+              <p className="text-sm text-purple-500">Las preguntas se agregan después de crear el quiz</p>
             )}
             <div className="flex gap-3">
               <button onClick={() => { setShowCreate(false); setAttachFile(null) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
-              <button onClick={handleCreate} disabled={!form.title.trim() || !form.sectionId || creating} className={`px-5 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2 ${isQuizType(form.type) ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`} style={{ minHeight: '44px' }}>
+              <button onClick={handleCreate} disabled={!form.title.trim() || !form.sectionId || creating} className={`px-5 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2 ${isQuizEditorType(form.type) ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`} style={{ minHeight: '44px' }}>
                 {creating && <Loader2 className="w-4 h-4 animate-spin" />}
-                {creating ? 'Creando...' : `Crear ${form.type === 'TASK' ? 'Tarea' : form.type === 'QUIZ' ? 'Quiz' : form.type === 'ICFES_SIMULATOR' ? 'Simulacro' : 'Examen'}`}
+                {creating ? 'Creando...' : `Crear ${form.type === 'TASK' ? 'Tarea' : form.type === 'QUIZ' ? 'Quiz' : form.type === 'EXAM' ? 'Examen' : form.type === 'LIVE_QUIZ' ? 'Live Quiz' : form.type === 'HOME_QUIZ' ? 'Quiz en Casa' : form.type === 'ICFES_SIMULATOR' ? 'Simulacro' : 'Actividad'}`}
               </button>
             </div>
           </div>
@@ -5270,7 +5319,7 @@ function GradesTab({ classroomId }: { classroomId: string }) {
     finally { setLoading(false) }
   }
 
-  const TYPE_LABELS: Record<string, string> = { TASK: 'Tarea', QUIZ: 'Quiz', EXAM: 'Examen', ICFES_SIMULATOR: 'ICFES', FORUM: 'Foro', GAME: 'Juego' }
+  const TYPE_LABELS: Record<string, string> = { TASK: 'Tarea', QUIZ: 'Quiz', EXAM: 'Examen', LIVE_QUIZ: 'Live Quiz', HOME_QUIZ: 'Quiz en Casa', ICFES_SIMULATOR: 'ICFES', FORUM: 'Foro', GAME: 'Juego' }
   const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     DRAFT: { label: 'Borrador', color: 'bg-slate-100 text-slate-600' },
     SUBMITTED: { label: 'Entregado', color: 'bg-blue-100 text-blue-700' },
