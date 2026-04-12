@@ -459,12 +459,24 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         setSession(joinedSession)
         setMode(joinedSession.mode || 'INDIVIDUAL')
         setDeliveryMode('ASYNC_HOME')
+        setTotalQuestions(joinedSession.activity?.questions?.length || 0)
         syncQuestionFromSessionData(joinedSession)
         if (joinedSession.teams?.length) setTeams(joinedSession.teams)
         const joinedCfg = (joinedSession.config as any) || {}
         autoCloseRef.current = joinedCfg.autoClose ?? false
         setAutoCloseOnTimeout(joinedCfg.autoClose ?? false)
         if (joinedSession.status === 'FINISHED') {
+          // Student already finished — fetch ranking so they can see their position
+          try {
+            const parentId = joinedSession.parentSessionId
+            if (parentId) {
+              const { data: asyncRanking } = await liveSessionApi.getAsyncRanking(parentId)
+              if (asyncRanking?.ranking) {
+                setRanking(asyncRanking.ranking)
+                setRankingMeta(asyncRanking.meta || null)
+              }
+            }
+          } catch {}
           setPhase('finished')
         } else if (joinedSession.status === 'WAITING') {
           setPhase('lobby')
@@ -617,9 +629,9 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         setRanking(Array.isArray(data) ? data : [])
         setRankingMeta(null)
       }
-      if (!isTeacher && deliveryModeRef.current === 'ASYNC_HOME') {
-        // Async-home students: just store ranking data, don't change phase
-        // They advance manually via button
+      if (deliveryModeRef.current === 'ASYNC_HOME') {
+        // ASYNC_HOME: just store ranking data silently, don't change phase
+        // Teacher stays in lobby, students advance manually via button
       } else {
         setPhase('ranking')
       }
@@ -628,6 +640,17 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     es.addEventListener('SESSION_FINISHED', (e: any) => {
       const data = JSON.parse(e.data)
       clearAsyncHomeSyncTimeout()
+
+      // ASYNC_HOME teacher: ignore SESSION_FINISHED from child sessions — stay in lobby
+      if (isTeacher && deliveryModeRef.current === 'ASYNC_HOME') {
+        // Just update ranking data if available, but don't change phase
+        if (data.ranking && data.meta) {
+          setRanking(data.ranking)
+          setRankingMeta(data.meta)
+        }
+        return
+      }
+
       // Handle async home ranking with metadata
       if (data.ranking && data.meta) {
         setRanking(data.ranking)
@@ -651,6 +674,12 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
     es.addEventListener('SESSION_ENDED', async () => {
       clearAsyncHomeSyncTimeout()
+
+      // ASYNC_HOME teacher: ignore SESSION_ENDED from child sessions — stay in lobby
+      if (isTeacher && deliveryModeRef.current === 'ASYNC_HOME') {
+        return
+      }
+
       stopTimer()
       stopMusic()
       // Close current SSE connection
@@ -941,9 +970,9 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     if (!deliveryModeRef.current || deliveryModeRef.current !== 'ASYNC_HOME' || isTeacher) return
     setQuestionRankingLoading(true)
     try {
-      const parentId = (session as any)?.parentSessionId
-      if (!parentId) { setQuestionRanking([]); return }
-      const { data } = await liveSessionApi.getQuestionRanking(parentId, questionId)
+      // Backend resolves parent from child session automatically
+      const sid = sessionIdRef.current || sessionId
+      const { data } = await liveSessionApi.getQuestionRanking(sid, questionId)
       setQuestionRanking(Array.isArray(data) ? data : [])
     } catch (err) {
       setQuestionRanking([])
@@ -973,6 +1002,17 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       }
 
       if (sessionData?.status === 'FINISHED') {
+        // Fetch full async-home ranking so student sees their final position
+        try {
+          const parentId = (session as any)?.parentSessionId
+          if (parentId) {
+            const { data: asyncRanking } = await liveSessionApi.getAsyncRanking(parentId)
+            if (asyncRanking?.ranking) {
+              setRanking(asyncRanking.ranking)
+              setRankingMeta(asyncRanking.meta || null)
+            }
+          }
+        } catch {}
         setPhase('finished')
         stopTimer()
         stopMusic()
@@ -2526,11 +2566,13 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             transition={{ type: "spring", duration: 0.6 }}
           >
             <h2 className="text-3xl sm:text-4xl font-black text-white drop-shadow-lg">
-              {phase === 'finished' 
-                ? '🏆 Resultados Finales' 
-                : rankingMeta?.isPartial 
-                  ? '📊 Resultados Parciales'
-                  : '📊 Ranking'}
+              {phase === 'finished' && rankingMeta?.isPartial
+                ? '📊 Mis Resultados'
+                : phase === 'finished'
+                  ? '🏆 Resultados Finales'
+                  : rankingMeta?.isPartial 
+                    ? '📊 Resultados Parciales'
+                    : '📊 Ranking'}
             </h2>
             {/* Async home: show completion counter */}
             {rankingMeta && (

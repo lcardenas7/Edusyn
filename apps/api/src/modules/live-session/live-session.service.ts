@@ -1480,7 +1480,14 @@ export class LiveSessionService implements OnModuleDestroy {
   }
 
   // Per-question ranking for ASYNC_HOME: ranks students who answered a specific question
-  async getPerQuestionRanking(parentSessionId: string, questionId: string, limit = 10) {
+  async getPerQuestionRanking(sessionId: string, questionId: string, limit = 10) {
+    // Resolve to parent session if a child session ID was passed
+    const session = await this.prisma.liveSession.findUnique({
+      where: { id: sessionId },
+      select: { parentSessionId: true },
+    });
+    const parentSessionId = session?.parentSessionId || sessionId;
+
     const childSessions = await this.prisma.liveSession.findMany({
       where: { parentSessionId },
       select: { id: true },
