@@ -5,7 +5,7 @@ import confetti from 'canvas-confetti'
 import {
   Zap, Play, SkipForward, Trophy, X, CheckCircle2, XCircle,
   Clock, Users, Loader2, BarChart3, Image as ImageIcon, Volume2, VolumeX,
-  ChevronRight, Award, Timer, Radio, Sparkles, Crown, RotateCcw
+  ChevronRight, Award, Timer, Radio, Sparkles, Crown, RotateCcw, ArrowLeft, RefreshCw
 } from 'lucide-react'
 import { AnimalAvatar, AvatarSelector, Podium, CircularTimer, getAvatarFromName, ANIMAL_AVATARS } from './AnimalAvatars'
 
@@ -298,6 +298,9 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   }
   // Async home ranking metadata
   const [rankingMeta, setRankingMeta] = useState<{ completedCount: number; totalExpected: number; isSessionFinished: boolean; isPartial: boolean } | null>(null)
+  // Per-question ranking for ASYNC_HOME students
+  const [questionRanking, setQuestionRanking] = useState<any[]>([])
+  const [questionRankingLoading, setQuestionRankingLoading] = useState(false)
 
   // Team mode
   const [mode, setMode] = useState<'INDIVIDUAL' | 'TEAM'>('INDIVIDUAL')
@@ -597,7 +600,11 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       // Reveal buffered result for students (with sounds + confetti)
       revealPendingResult()
       setPhase('answer_reveal')
-      // ASYNC_HOME students advance manually — no auto-sync needed here
+      // ASYNC_HOME: fetch per-question ranking so student sees position vs peers
+      if (!isTeacher && deliveryModeRef.current === 'ASYNC_HOME' && data.questionId) {
+        // Small delay to let backend process all answers first
+        setTimeout(() => fetchQuestionRanking(data.questionId), 800)
+      }
     })
 
     es.addEventListener('RANKING', (e: any) => {
@@ -929,6 +936,22 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     }
   }
 
+  // Fetch per-question ranking for ASYNC_HOME students after answering
+  const fetchQuestionRanking = async (questionId: string) => {
+    if (!deliveryModeRef.current || deliveryModeRef.current !== 'ASYNC_HOME' || isTeacher) return
+    setQuestionRankingLoading(true)
+    try {
+      const parentId = (session as any)?.parentSessionId
+      if (!parentId) { setQuestionRanking([]); return }
+      const { data } = await liveSessionApi.getQuestionRanking(parentId, questionId)
+      setQuestionRanking(Array.isArray(data) ? data : [])
+    } catch (err) {
+      setQuestionRanking([])
+    } finally {
+      setQuestionRankingLoading(false)
+    }
+  }
+
   const handleStudentNextQuestion = async () => {
     try {
       clearAsyncHomeSyncTimeout()
@@ -1030,6 +1053,8 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             stopTimer()
             stopMusic()
             setPhase('answer_reveal')
+            // Fetch per-question ranking after revealing result
+            if (currentQuestion?.questionId) fetchQuestionRanking(currentQuestion.questionId)
           }
         }, 3000)
       }
@@ -1555,7 +1580,20 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <button
-                      onClick={() => setPhase('finished')}
+                      onClick={async () => {
+                        try {
+                          const { data } = await liveSessionApi.getAsyncRanking(sessionId)
+                          if (data?.ranking) {
+                            setRanking(data.ranking)
+                            setRankingMeta(data.meta || null)
+                          } else if (Array.isArray(data)) {
+                            setRanking(data)
+                          }
+                          setPhase('ranking')
+                        } catch (err: any) {
+                          setError(err.response?.data?.message || 'Error al cargar ranking')
+                        }
+                      }}
                       className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg flex items-center gap-2 justify-center"
                     >
                       <Trophy className="w-5 h-5" /> Ver resultados parciales
@@ -2361,31 +2399,113 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             </motion.div>
           )}
 
-          {/* ── Async-home student controls ── */}
+          {/* ── Async-home: per-question ranking ── */}
           {isAsyncHomeStudent && phase === 'answer_reveal' && (
             <motion.div
-              className="flex justify-center gap-3 flex-wrap pt-2"
-              initial={{ opacity: 0, y: 10 }}
+              className="space-y-4"
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35 }}
+              transition={{ delay: 0.8 }}
             >
-              <motion.button
-                onClick={handleStudentNextQuestion}
-                className="px-8 py-4 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-2xl text-lg font-black flex items-center gap-3 shadow-2xl shadow-teal-400/40"
-                whileHover={{ scale: 1.05, y: -3 }}
-                whileTap={{ scale: 0.95 }}
+              {questionRankingLoading && (
+                <div className="flex items-center justify-center gap-2 text-slate-400 py-3">
+                  <Loader2 className="w-5 h-5 animate-spin" /> Cargando ranking de esta pregunta...
+                </div>
+              )}
+              {!questionRankingLoading && questionRanking.length > 0 && (
+                <div className="bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-lg space-y-2">
+                  <p className="text-slate-600 text-sm font-bold text-center uppercase tracking-wider">
+                    Ranking de esta pregunta ({questionRanking.length} {questionRanking.length === 1 ? 'estudiante' : 'estudiantes'})
+                  </p>
+                  {questionRanking.slice(0, 5).map((entry: any, i: number) => {
+                    const isMe = entry.studentEnrollmentId === studentEnrollmentId
+                    const avatarId = entry.avatarId || getAvatarFromName(entry.name).id
+                    return (
+                      <div
+                        key={entry.studentEnrollmentId}
+                        className={`flex items-center gap-3 p-2.5 rounded-xl ${
+                          isMe
+                            ? 'bg-gradient-to-r from-purple-500/20 to-cyan-500/20 ring-2 ring-purple-400'
+                            : i === 0 ? 'bg-amber-50' : 'bg-slate-50'
+                        }`}
+                      >
+                        <div className={`w-8 text-center font-black text-lg ${i === 0 ? 'text-amber-500' : i === 1 ? 'text-slate-400' : i === 2 ? 'text-amber-700' : 'text-slate-400'}`}>
+                          {entry.rank}
+                        </div>
+                        <AnimalAvatar avatarId={avatarId} size="sm" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className={`font-bold truncate text-sm ${isMe ? 'text-purple-700' : 'text-slate-800'}`}>{entry.name}</p>
+                            {isMe && <span className="px-1.5 py-0.5 bg-purple-500 text-white text-[10px] font-bold rounded-full">Tú</span>}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-base font-black ${entry.isCorrect ? 'text-emerald-500' : 'text-red-400'}`}>
+                            {entry.isCorrect ? `+${entry.points}` : '0'} pts
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {/* Show student's position if not in top 5 */}
+                  {(() => {
+                    const myIdx = questionRanking.findIndex((e: any) => e.studentEnrollmentId === studentEnrollmentId)
+                    if (myIdx >= 5) {
+                      const me = questionRanking[myIdx]
+                      const avatarId = me.avatarId || getAvatarFromName(me.name).id
+                      return (
+                        <>
+                          <div className="text-center text-slate-300 text-xs">···</div>
+                          <div className="flex items-center gap-3 p-2.5 rounded-xl bg-gradient-to-r from-purple-500/20 to-cyan-500/20 ring-2 ring-purple-400">
+                            <div className="w-8 text-center font-black text-lg text-slate-400">{me.rank}</div>
+                            <AnimalAvatar avatarId={avatarId} size="sm" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold truncate text-sm text-purple-700">{me.name}</p>
+                                <span className="px-1.5 py-0.5 bg-purple-500 text-white text-[10px] font-bold rounded-full">Tú</span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className={`text-base font-black ${me.isCorrect ? 'text-emerald-500' : 'text-red-400'}`}>
+                                {me.isCorrect ? `+${me.points}` : '0'} pts
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      )
+                    }
+                    return null
+                  })()}
+                </div>
+              )}
+
+              {/* ── Advance buttons ── */}
+              <motion.div
+                className="flex justify-center gap-3 flex-wrap pt-1"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.2 }}
               >
-                <SkipForward className="w-6 h-6" /> Siguiente pregunta
-              </motion.button>
-              <motion.button
-                onClick={() => setPhase('ranking')}
-                disabled={ranking.length === 0 && !rankingMeta}
-                className="px-8 py-4 bg-gradient-to-r from-[#FFE66D] to-[#FFD93D] text-amber-800 rounded-2xl text-lg font-black flex items-center gap-3 shadow-2xl shadow-yellow-300/40 disabled:opacity-60 disabled:cursor-not-allowed"
-                whileHover={{ scale: ranking.length > 0 || rankingMeta ? 1.05 : 1, y: ranking.length > 0 || rankingMeta ? -3 : 0 }}
-                whileTap={{ scale: ranking.length > 0 || rankingMeta ? 0.95 : 1 }}
-              >
-                <Trophy className="w-6 h-6" /> Ver ranking
-              </motion.button>
+                {questionIndex < totalQuestions - 1 ? (
+                  <motion.button
+                    onClick={handleStudentNextQuestion}
+                    className="px-8 py-4 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-2xl text-lg font-black flex items-center gap-3 shadow-2xl shadow-teal-400/40"
+                    whileHover={{ scale: 1.05, y: -3 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <SkipForward className="w-6 h-6" /> Siguiente pregunta
+                  </motion.button>
+                ) : (
+                  <motion.button
+                    onClick={handleStudentNextQuestion}
+                    className="px-8 py-4 bg-gradient-to-r from-[#FF6B6B] to-[#FF8E72] text-white rounded-2xl text-lg font-black flex items-center gap-3 shadow-2xl shadow-red-400/40"
+                    whileHover={{ scale: 1.05, y: -3 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Trophy className="w-6 h-6" /> Ver resultados finales
+                  </motion.button>
+                )}
+              </motion.div>
             </motion.div>
           )}
         </div>
@@ -2415,7 +2535,10 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             {/* Async home: show completion counter */}
             {rankingMeta && (
               <p className="text-white/80 text-sm font-semibold">
-                {rankingMeta.completedCount} de {rankingMeta.totalExpected} estudiantes completaron
+                {rankingMeta.completedCount} de {rankingMeta.totalExpected} estudiantes han respondido
+                {(rankingMeta as any).finishedCount > 0 && (
+                  <span className="ml-1">({(rankingMeta as any).finishedCount} completaron todo)</span>
+                )}
                 {rankingMeta.isPartial && <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs">En curso</span>}
               </p>
             )}
@@ -2515,24 +2638,53 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
           {/* Teacher controls */}
           {isTeacher && phase === 'ranking' && (
             <div className="flex justify-center gap-3 pt-2">
-              {questionIndex < totalQuestions - 1 ? (
-                <motion.button 
-                  onClick={handleNextQuestion} 
-                  className="px-6 py-3 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-xl font-bold shadow-lg shadow-teal-300/30 flex items-center gap-2"
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <SkipForward className="w-5 h-5" /> Siguiente
-                </motion.button>
-              ) : null}
-              <motion.button 
-                onClick={handleFinish} 
-                className="px-6 py-3 bg-gradient-to-r from-[#FF6B6B] to-[#FF8E72] text-white rounded-xl font-bold shadow-lg shadow-red-300/30 flex items-center gap-2"
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Trophy className="w-5 h-5" /> Finalizar
-              </motion.button>
+              {deliveryMode === 'ASYNC_HOME' ? (
+                <>
+                  <motion.button
+                    onClick={() => setPhase('lobby')}
+                    className="px-6 py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-bold shadow-lg flex items-center gap-2 border border-white/20"
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <ArrowLeft className="w-5 h-5" /> Volver
+                  </motion.button>
+                  <motion.button
+                    onClick={async () => {
+                      try {
+                        const { data } = await liveSessionApi.getAsyncRanking(sessionId)
+                        if (data?.ranking) { setRanking(data.ranking); setRankingMeta(data.meta || null) }
+                        else if (Array.isArray(data)) { setRanking(data) }
+                      } catch {}
+                    }}
+                    className="px-6 py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-bold shadow-lg flex items-center gap-2 border border-white/20"
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <RefreshCw className="w-5 h-5" /> Actualizar
+                  </motion.button>
+                </>
+              ) : (
+                <>
+                  {questionIndex < totalQuestions - 1 ? (
+                    <motion.button 
+                      onClick={handleNextQuestion} 
+                      className="px-6 py-3 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-xl font-bold shadow-lg shadow-teal-300/30 flex items-center gap-2"
+                      whileHover={{ scale: 1.05, y: -2 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <SkipForward className="w-5 h-5" /> Siguiente
+                    </motion.button>
+                  ) : null}
+                  <motion.button 
+                    onClick={handleFinish} 
+                    className="px-6 py-3 bg-gradient-to-r from-[#FF6B6B] to-[#FF8E72] text-white rounded-xl font-bold shadow-lg shadow-red-300/30 flex items-center gap-2"
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Trophy className="w-5 h-5" /> Finalizar
+                  </motion.button>
+                </>
+              )}
             </div>
           )}
 

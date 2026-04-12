@@ -1372,13 +1372,15 @@ export class LiveSessionService implements OnModuleDestroy {
       });
     }
 
-    const completedCount = childSessions.filter((s) => s.status === 'FINISHED').length;
+    const finishedCount = childSessions.filter((s) => s.status === 'FINISHED').length;
+    // Count students who have started (have at least one answer) — more meaningful than only FINISHED
+    const startedCount = childSessions.length;
     const isSessionFinished = parentSession?.status === 'FINISHED';
 
     if (childSessions.length === 0) {
       return {
         ranking: [],
-        meta: { completedCount: 0, totalExpected, isSessionFinished, isPartial: !isSessionFinished },
+        meta: { completedCount: 0, startedCount: 0, finishedCount: 0, totalExpected, isSessionFinished, isPartial: !isSessionFinished },
       };
     }
 
@@ -1444,10 +1446,79 @@ export class LiveSessionService implements OnModuleDestroy {
       avatarId: this.getStudentAvatar(result.sessionId, result.studentEnrollmentId),
     }));
 
+    // completedCount = students with answers (for backward compat), plus new granular fields
+    const answeredStudentCount = aggregates.size;
     return {
       ranking,
-      meta: { completedCount, totalExpected, isSessionFinished, isPartial: !isSessionFinished },
+      meta: { completedCount: answeredStudentCount, startedCount, finishedCount, totalExpected, isSessionFinished, isPartial: !isSessionFinished },
     };
+  }
+
+  // Public async-home ranking (no broadcast) — used by teacher "Ver resultados parciales"
+  async getAsyncRankingPublic(sessionId: string) {
+    const session = await this.prisma.liveSession.findUnique({
+      where: { id: sessionId },
+      select: { activityId: true, deliveryMode: true, parentSessionId: true },
+    });
+    if (!session?.activityId) return { ranking: [], meta: null };
+    // If this is the parent ASYNC_HOME session, use getAsyncHomeRanking
+    if (session.deliveryMode === 'ASYNC_HOME' && !session.parentSessionId) {
+      return this.getAsyncHomeRanking(sessionId, session.activityId, 50);
+    }
+    // If this is a child session, use the parent
+    if (session.parentSessionId) {
+      const parent = await this.prisma.liveSession.findUnique({
+        where: { id: session.parentSessionId },
+        select: { activityId: true },
+      });
+      if (parent?.activityId) {
+        return this.getAsyncHomeRanking(session.parentSessionId, parent.activityId, 50);
+      }
+    }
+    // Fallback to regular ranking
+    return this.getRanking(sessionId, 50);
+  }
+
+  // Per-question ranking for ASYNC_HOME: ranks students who answered a specific question
+  async getPerQuestionRanking(parentSessionId: string, questionId: string, limit = 10) {
+    const childSessions = await this.prisma.liveSession.findMany({
+      where: { parentSessionId },
+      select: { id: true },
+    });
+    if (childSessions.length === 0) return [];
+
+    const childSessionIds = childSessions.map((s) => s.id);
+    const answers = await this.prisma.liveSessionAnswer.findMany({
+      where: { sessionId: { in: childSessionIds }, questionId },
+      select: { studentEnrollmentId: true, sessionId: true, isCorrect: true, points: true, responseTimeMs: true },
+      orderBy: [{ points: 'desc' }, { responseTimeMs: 'asc' }],
+    });
+
+    if (answers.length === 0) return [];
+
+    const enrollmentIds = [...new Set(answers.map((a) => a.studentEnrollmentId))];
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: { id: { in: enrollmentIds } },
+      select: { id: true, student: { select: { firstName: true, lastName: true } } },
+    });
+    const nameMap = new Map(enrollments.map((e) => [e.id, `${e.student.firstName} ${e.student.lastName}`]));
+
+    // Sort: most points first, then fastest response time
+    const sorted = [...answers].sort((a, b) => {
+      const pa = Number(a.points || 0), pb = Number(b.points || 0);
+      if (pb !== pa) return pb - pa;
+      return Number(a.responseTimeMs || 0) - Number(b.responseTimeMs || 0);
+    });
+
+    return sorted.slice(0, limit).map((a, i) => ({
+      rank: i + 1,
+      studentEnrollmentId: a.studentEnrollmentId,
+      name: nameMap.get(a.studentEnrollmentId) || 'Desconocido',
+      points: Number(a.points || 0),
+      isCorrect: a.isCorrect,
+      responseTimeMs: Number(a.responseTimeMs || 0),
+      avatarId: this.getStudentAvatar(a.sessionId, a.studentEnrollmentId),
+    }));
   }
 
   private async getTeamRanking(sessionId: string, activityId: string, limit = 5) {

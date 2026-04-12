@@ -302,4 +302,22 @@ export class LiveSessionController {
       Number.isFinite(body.expectedQuestionIdx) ? body.expectedQuestionIdx : -1,
     );
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/async-ranking')
+  async getAsyncRanking(@Param('id') sessionId: string, @Request() req: any) {
+    await this.verifySessionTenant(sessionId, req.user.institutionId);
+    return this.liveSessionService.getAsyncRankingPublic(sessionId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/question-ranking/:questionId')
+  async getQuestionRanking(
+    @Param('id') sessionId: string,
+    @Param('questionId') questionId: string,
+    @Request() req: any,
+  ) {
+    await this.verifySessionTenant(sessionId, req.user.institutionId);
+    return this.liveSessionService.getPerQuestionRanking(sessionId, questionId);
+  }
 }

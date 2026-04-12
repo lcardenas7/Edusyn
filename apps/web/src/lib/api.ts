@@ -2128,6 +2128,9 @@ export const liveSessionApi = {
     api.post(`/live-session/${sessionId}/advance-home-question`, data),
   closeQuestion: (sessionId: string) => api.post(`/live-session/${sessionId}/close-question`),
   showRanking: (sessionId: string) => api.post(`/live-session/${sessionId}/show-ranking`),
+  getAsyncRanking: (sessionId: string) => api.get(`/live-session/${sessionId}/async-ranking`),
+  getQuestionRanking: (sessionId: string, questionId: string) =>
+    api.get(`/live-session/${sessionId}/question-ranking/${questionId}`),
   finish: (sessionId: string) => api.post(`/live-session/${sessionId}/finish`),
   answer: (sessionId: string, data: { questionId: string; answer: string; responseTimeMs: number }) =>
     api.post(`/live-session/${sessionId}/answer`, data),
