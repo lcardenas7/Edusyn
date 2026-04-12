@@ -287,4 +287,19 @@ export class LiveSessionController {
       body.responseTimeMs,
     );
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/advance-home-question')
+  async advanceHomeQuestion(
+    @Param('id') sessionId: string,
+    @Request() req: any,
+    @Body() body: { expectedQuestionIdx: number },
+  ) {
+    await this.verifySessionTenant(sessionId, req.user.institutionId);
+    return this.liveSessionService.advanceAsyncHomeQuestion(
+      sessionId,
+      req.user.id,
+      Number.isFinite(body.expectedQuestionIdx) ? body.expectedQuestionIdx : -1,
+    );
+  }
 }

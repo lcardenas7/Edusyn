@@ -2124,6 +2124,8 @@ export const liveSessionApi = {
   joinHome: (sessionId: string) => api.post(`/live-session/${sessionId}/join-home`),
   start: (sessionId: string) => api.post(`/live-session/${sessionId}/start`),
   nextQuestion: (sessionId: string) => api.post(`/live-session/${sessionId}/next-question`),
+  advanceHomeQuestion: (sessionId: string, data: { expectedQuestionIdx: number }) =>
+    api.post(`/live-session/${sessionId}/advance-home-question`, data),
   closeQuestion: (sessionId: string) => api.post(`/live-session/${sessionId}/close-question`),
   showRanking: (sessionId: string) => api.post(`/live-session/${sessionId}/show-ranking`),
   finish: (sessionId: string) => api.post(`/live-session/${sessionId}/finish`),

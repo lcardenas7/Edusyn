@@ -308,6 +308,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
   // Delivery mode: live online or at home
   const [deliveryMode, setDeliveryMode] = useState<'SYNC' | 'ASYNC_HOME'>(initialDeliveryMode)
+  const isAsyncHomeStudent = !isTeacher && (deliveryMode === 'ASYNC_HOME' || (session?.config as any)?.deliveryMode === 'ASYNC_HOME')
 
   // Add partner (search students to add to my team)
   const [showAddPartner, setShowAddPartner] = useState(false)
@@ -595,7 +596,9 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         setRanking(Array.isArray(data) ? data : [])
         setRankingMeta(null)
       }
-      setPhase('ranking')
+      if (!isAsyncHomeStudent) {
+        setPhase('ranking')
+      }
     })
 
     es.addEventListener('SESSION_FINISHED', (e: any) => {
@@ -710,34 +713,6 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     const currentQuestionIdx = sessionData?.currentQuestionIdx ?? -1
     if (currentQuestionIdx < 0 || !questions[currentQuestionIdx] || currentQuestionIdx <= minimumQuestionIdx) return false
 
-    // If there's a pending result from the previous question, show it briefly before advancing
-    const pendingResult = pendingResultRef.current
-    if (pendingResult && answeredRef.current) {
-      // Show the result feedback
-      setAnswerResult(pendingResult)
-      if (pendingResult.isCorrect) {
-        if (soundsOn) playSound('correct')
-        fireConfetti('correct')
-        setStreak(prev => prev + 1)
-      } else {
-        if (soundsOn) playSound('incorrect')
-        setStreak(0)
-      }
-      pendingResultRef.current = null
-      
-      // Show answer_reveal phase briefly, then advance to next question
-      setPhase('answer_reveal')
-      stopTimer()
-      stopMusic()
-      
-      // After a brief delay, load the next question
-      setTimeout(() => {
-        loadNextQuestionFromData(sessionData, currentQuestionIdx)
-      }, 2000)
-      return true
-    }
-
-    // No pending result - just load the question directly
     loadNextQuestionFromData(sessionData, currentQuestionIdx)
     return true
   }, [isTeacher])
@@ -794,13 +769,35 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       try {
         const { data } = await liveSessionApi.get(sid)
         if (data?.status !== 'ACTIVE') return
-        const advanced = syncQuestionFromSessionData(data, minimumQuestionIdx)
+        const currentQuestionIdx = data?.currentQuestionIdx ?? -1
+        const advanced = currentQuestionIdx > minimumQuestionIdx
         if (!advanced) {
           scheduleAsyncHomeSessionSync(sid, minimumQuestionIdx)
+          return
         }
+
+        if (!isTeacher && pendingResultRef.current && answeredRef.current) {
+          const pendingResult = pendingResultRef.current
+          setAnswerResult(pendingResult)
+          if (pendingResult.isCorrect) {
+            if (soundsOn) playSound('correct')
+            fireConfetti('correct')
+            setStreak(prev => prev + 1)
+          } else {
+            if (soundsOn) playSound('incorrect')
+            setStreak(0)
+          }
+          pendingResultRef.current = null
+          setPhase('answer_reveal')
+          stopTimer()
+          stopMusic()
+          return
+        }
+
+        syncQuestionFromSessionData(data, minimumQuestionIdx)
       } catch {}
     }, 900)
-  }, [clearAsyncHomeSyncTimeout, syncQuestionFromSessionData])
+  }, [clearAsyncHomeSyncTimeout, syncQuestionFromSessionData, isTeacher, soundsOn])
 
   // ═══════════════════════════════════════════════════════════════════════════
   // MUSIC (Web Audio API - dynamic quiz music)
@@ -910,6 +907,39 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   const handleNextQuestion = async () => {
     try {
       await liveSessionApi.nextQuestion(sessionId)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error')
+    }
+  }
+
+  const handleStudentNextQuestion = async () => {
+    try {
+      clearAsyncHomeSyncTimeout()
+      const { data } = await liveSessionApi.advanceHomeQuestion(sessionIdRef.current || sessionId, {
+        expectedQuestionIdx: questionIndexRef.current,
+      })
+
+      const sessionData = data?.session || data
+      if (data?.ranking) {
+        if (data.ranking.ranking) {
+          setRanking(data.ranking.ranking)
+          setRankingMeta(data.ranking.meta || null)
+        } else if (Array.isArray(data.ranking)) {
+          setRanking(data.ranking)
+          setRankingMeta(null)
+        }
+      }
+
+      if (sessionData?.status === 'FINISHED') {
+        setPhase('finished')
+        stopTimer()
+        stopMusic()
+        return
+      }
+
+      if (sessionData) {
+        syncQuestionFromSessionData(sessionData, questionIndexRef.current)
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error')
     }
@@ -2292,6 +2322,34 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               )}
             </motion.div>
           )}
+
+          {/* ── Async-home student controls ── */}
+          {isAsyncHomeStudent && phase === 'answer_reveal' && (
+            <motion.div
+              className="flex justify-center gap-3 flex-wrap pt-2"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+            >
+              <motion.button
+                onClick={handleStudentNextQuestion}
+                className="px-8 py-4 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-2xl text-lg font-black flex items-center gap-3 shadow-2xl shadow-teal-400/40"
+                whileHover={{ scale: 1.05, y: -3 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <SkipForward className="w-6 h-6" /> Siguiente pregunta
+              </motion.button>
+              <motion.button
+                onClick={() => setPhase('ranking')}
+                disabled={ranking.length === 0 && !rankingMeta}
+                className="px-8 py-4 bg-gradient-to-r from-[#FFE66D] to-[#FFD93D] text-amber-800 rounded-2xl text-lg font-black flex items-center gap-3 shadow-2xl shadow-yellow-300/40 disabled:opacity-60 disabled:cursor-not-allowed"
+                whileHover={{ scale: ranking.length > 0 || rankingMeta ? 1.05 : 1, y: ranking.length > 0 || rankingMeta ? -3 : 0 }}
+                whileTap={{ scale: ranking.length > 0 || rankingMeta ? 0.95 : 1 }}
+              >
+                <Trophy className="w-6 h-6" /> Ver ranking
+              </motion.button>
+            </motion.div>
+          )}
         </div>
       )}
 
@@ -2437,6 +2495,31 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               >
                 <Trophy className="w-5 h-5" /> Finalizar
               </motion.button>
+            </div>
+          )}
+
+          {/* Async-home student controls while viewing ranking */}
+          {isAsyncHomeStudent && phase === 'ranking' && (
+            <div className="flex justify-center gap-3 pt-2">
+              {questionIndex < totalQuestions - 1 ? (
+                <motion.button
+                  onClick={handleStudentNextQuestion}
+                  className="px-6 py-3 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-xl font-bold shadow-lg shadow-teal-300/30 flex items-center gap-2"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <SkipForward className="w-5 h-5" /> Seguir
+                </motion.button>
+              ) : (
+                <motion.button
+                  onClick={handleStudentNextQuestion}
+                  className="px-6 py-3 bg-gradient-to-r from-[#FF6B6B] to-[#FF8E72] text-white rounded-xl font-bold shadow-lg shadow-red-300/30 flex items-center gap-2"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Trophy className="w-5 h-5" /> Ver resultados finales
+                </motion.button>
+              )}
             </div>
           )}
 

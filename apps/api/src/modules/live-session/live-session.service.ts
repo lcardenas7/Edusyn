@@ -485,6 +485,55 @@ export class LiveSessionService implements OnModuleDestroy {
     return this.advanceQuestion(sessionId, session);
   }
 
+  async advanceAsyncHomeQuestion(sessionId: string, userId: string, expectedQuestionIdx: number) {
+    const session = await this.prisma.liveSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        id: true,
+        status: true,
+        currentQuestionIdx: true,
+        deliveryMode: true,
+        parentSessionId: true,
+        studentEnrollmentId: true,
+      },
+    });
+
+    if (!session) {
+      throw new NotFoundException('Sesión no encontrada');
+    }
+
+    if (session.deliveryMode !== 'ASYNC_HOME' || !session.parentSessionId || !session.studentEnrollmentId) {
+      throw new BadRequestException('La sesión no corresponde a un Live Quiz en casa');
+    }
+
+    const enrollment = await this.prisma.studentEnrollment.findUnique({
+      where: { id: session.studentEnrollmentId },
+      select: { student: { select: { userId: true } } },
+    });
+
+    if (!enrollment || enrollment.student.userId !== userId) {
+      throw new ForbiddenException('No tiene permisos sobre esta sesión');
+    }
+
+    if (session.status !== 'ACTIVE') {
+      throw new BadRequestException('La sesión no está activa');
+    }
+
+    // If the backend is still on the question the student just answered (or behind it),
+    // advance it now. If it already advanced, just return the current session state.
+    if (session.currentQuestionIdx <= expectedQuestionIdx) {
+      await this.advanceQuestion(sessionId);
+    }
+
+    const updatedSession = await this.getSession(sessionId);
+    if (updatedSession.status === 'FINISHED') {
+      const ranking = await this.getRanking(sessionId, 10);
+      return { session: updatedSession, ranking };
+    }
+
+    return updatedSession;
+  }
+
   private async advanceQuestion(sessionId: string, sessionOverride?: {
     activityId: string;
     currentQuestionIdx: number;
@@ -722,6 +771,7 @@ export class LiveSessionService implements OnModuleDestroy {
       try {
         const ranking = await this.getAsyncHomeRanking(session.parentSessionId, session.activityId, 10);
         this.broadcast(session.parentSessionId, { type: 'RANKING', data: ranking });
+        this.broadcast(sessionId, { type: 'RANKING', data: ranking });
       } catch (err) {
         this.logger.warn(`Failed to broadcast async-home ranking for parent ${session.parentSessionId}: ${err instanceof Error ? err.message : err}`);
       }
