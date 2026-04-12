@@ -515,6 +515,13 @@ export class LiveSessionService implements OnModuleDestroy {
       throw new ForbiddenException('No tiene permisos sobre esta sesión');
     }
 
+    // If already finished (e.g. auto-advance finished it), return final ranking
+    if (session.status === 'FINISHED') {
+      const updatedSession = await this.getSession(sessionId);
+      const ranking = await this.getRanking(sessionId, 10);
+      return { session: updatedSession, ranking };
+    }
+
     if (session.status !== 'ACTIVE') {
       throw new BadRequestException('La sesión no está activa');
     }

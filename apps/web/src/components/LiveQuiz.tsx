@@ -307,7 +307,9 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   const [joiningTeam, setJoiningTeam] = useState(false)
 
   // Delivery mode: live online or at home
-  const [deliveryMode, setDeliveryMode] = useState<'SYNC' | 'ASYNC_HOME'>(initialDeliveryMode)
+  const [deliveryMode, _setDeliveryMode] = useState<'SYNC' | 'ASYNC_HOME'>(initialDeliveryMode)
+  const deliveryModeRef = useRef<'SYNC' | 'ASYNC_HOME'>(initialDeliveryMode)
+  const setDeliveryMode = (m: 'SYNC' | 'ASYNC_HOME') => { deliveryModeRef.current = m; _setDeliveryMode(m) }
   const isAsyncHomeStudent = !isTeacher && (deliveryMode === 'ASYNC_HOME' || (session?.config as any)?.deliveryMode === 'ASYNC_HOME')
   const isAsyncHomeStudentRef = useRef(isAsyncHomeStudent)
   isAsyncHomeStudentRef.current = isAsyncHomeStudent
@@ -537,6 +539,18 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
     es.addEventListener('QUESTION', (e: any) => {
       const data = JSON.parse(e.data)
+      // For ASYNC_HOME students: ignore SSE QUESTION events from auto-advance.
+      // They advance manually via handleStudentNextQuestion which loads the
+      // question directly from the REST response.  Without this guard the
+      // auto-advance QUESTION event can arrive *before* the student sees their
+      // answer result, skipping the answer_reveal phase entirely.
+      if (!isTeacher && deliveryModeRef.current === 'ASYNC_HOME') {
+        // Just store the latest index so the manual advance knows where we are
+        if (data.index > questionIndexRef.current) {
+          questionIndexRef.current = data.index
+        }
+        return
+      }
       clearAsyncHomeSyncTimeout()
       const normalizedQuestion = normalizeQuestionMedia(data)
       setCurrentQuestion(normalizedQuestion)
@@ -583,9 +597,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       // Reveal buffered result for students (with sounds + confetti)
       revealPendingResult()
       setPhase('answer_reveal')
-      if (!isTeacher && (deliveryMode === 'ASYNC_HOME' || (session?.config as any)?.deliveryMode === 'ASYNC_HOME')) {
-        scheduleAsyncHomeSessionSync(sessionIdRef.current, questionIndexRef.current)
-      }
+      // ASYNC_HOME students advance manually — no auto-sync needed here
     })
 
     es.addEventListener('RANKING', (e: any) => {
@@ -598,7 +610,10 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         setRanking(Array.isArray(data) ? data : [])
         setRankingMeta(null)
       }
-      if (!isAsyncHomeStudentRef.current) {
+      if (!isTeacher && deliveryModeRef.current === 'ASYNC_HOME') {
+        // Async-home students: just store ranking data, don't change phase
+        // They advance manually via button
+      } else {
         setPhase('ranking')
       }
     })
@@ -917,8 +932,10 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   const handleStudentNextQuestion = async () => {
     try {
       clearAsyncHomeSyncTimeout()
+      // Save the index we're advancing FROM so the backend and sync logic know what to expect
+      const advancingFromIdx = questionIndex
       const { data } = await liveSessionApi.advanceHomeQuestion(sessionIdRef.current || sessionId, {
-        expectedQuestionIdx: questionIndexRef.current,
+        expectedQuestionIdx: advancingFromIdx,
       })
 
       const sessionData = data?.session || data
@@ -939,11 +956,15 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         return
       }
 
-      if (sessionData) {
-        syncQuestionFromSessionData(sessionData, questionIndexRef.current)
+      // Load the next question from the session data returned by the backend
+      if (sessionData?.activity?.questions) {
+        const nextIdx = sessionData.currentQuestionIdx ?? -1
+        if (nextIdx >= 0 && nextIdx > advancingFromIdx) {
+          loadNextQuestionFromData(sessionData, nextIdx)
+        }
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error')
+      setError(err.response?.data?.message || 'Error al avanzar')
     }
   }
 
@@ -989,13 +1010,28 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       // Buffer the result — don't reveal yet, wait for QUESTION_CLOSED
       pendingResultRef.current = data
       
-      // For ASYNC_HOME: schedule fallback sync immediately after answering
-      // This ensures we advance even if QUESTION_CLOSED SSE event is missed
-      if (!isTeacher && (deliveryMode === 'ASYNC_HOME' || (session?.config as any)?.deliveryMode === 'ASYNC_HOME')) {
-        // Wait a bit for backend to process auto-close and advance, then sync
+      // For ASYNC_HOME: if QUESTION_CLOSED SSE doesn't arrive within 3s,
+      // reveal the result directly so the student can use the manual advance button
+      if (!isTeacher && deliveryModeRef.current === 'ASYNC_HOME') {
         setTimeout(() => {
-          scheduleAsyncHomeSessionSync(sessionIdRef.current, questionIndexRef.current)
-        }, 1500)
+          // Only reveal if we're still stuck on 'question' phase (QUESTION_CLOSED didn't arrive)
+          if (phaseRef.current === 'question' && pendingResultRef.current) {
+            const result = pendingResultRef.current
+            setAnswerResult(result)
+            if (result.isCorrect) {
+              if (soundsOn) playSound('correct')
+              fireConfetti('correct')
+              setStreak(prev => prev + 1)
+            } else {
+              if (soundsOn) playSound('incorrect')
+              setStreak(0)
+            }
+            pendingResultRef.current = null
+            stopTimer()
+            stopMusic()
+            setPhase('answer_reveal')
+          }
+        }, 3000)
       }
     } catch (err: any) {
       pendingResultRef.current = { isCorrect: false, points: 0 }
