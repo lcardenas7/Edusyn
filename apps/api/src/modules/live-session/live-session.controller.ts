@@ -265,6 +265,13 @@ export class LiveSessionController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @UseGuards(JwtAuthGuard)
+  @Post(':id/join-home')
+  async joinHome(@Param('id') sessionId: string, @Request() req: any) {
+    await this.verifySessionTenant(sessionId, req.user.institutionId);
+    return this.liveSessionService.joinAsyncHomeSession(sessionId, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post(':id/answer')
   async answer(
     @Param('id') sessionId: string,

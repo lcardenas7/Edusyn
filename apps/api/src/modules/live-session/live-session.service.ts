@@ -253,9 +253,11 @@ export class LiveSessionService implements OnModuleDestroy {
       ? this.shuffleArray(activity.questions.map((q) => q.id))
       : activity.questions.map((q) => q.id);
 
+    const deliveryMode = config?.deliveryMode === 'ASYNC_HOME' ? 'ASYNC_HOME' : 'SYNC';
     const finalConfig = {
       ...(config || {}),
       questionOrder,
+      deliveryMode,
     };
 
     // Close any existing WAITING/ACTIVE session for this classroom
@@ -282,8 +284,11 @@ export class LiveSessionService implements OnModuleDestroy {
         activityId,
         teacherId,
         mode: mode as any,
+        deliveryMode,
         config: finalConfig,
         status: 'WAITING',
+        parentSessionId: null,
+        studentEnrollmentId: null,
       },
       include: {
         activity: {
@@ -303,7 +308,23 @@ export class LiveSessionService implements OnModuleDestroy {
   async getSession(sessionId: string) {
     const session = await this.prisma.liveSession.findUnique({
       where: { id: sessionId },
-      include: {
+      select: {
+        id: true,
+        classroomId: true,
+        teacherId: true,
+        activityId: true,
+        status: true,
+        mode: true,
+        deliveryMode: true,
+        parentSessionId: true,
+        studentEnrollmentId: true,
+        currentQuestionIdx: true,
+        config: true,
+        createdAt: true,
+        startedAt: true,
+        finishedAt: true,
+        parentSession: { select: { id: true, deliveryMode: true } },
+        studentEnrollment: { select: { id: true, student: { select: { id: true, firstName: true, lastName: true } } } },
         activity: {
           select: {
             id: true,
@@ -324,9 +345,105 @@ export class LiveSessionService implements OnModuleDestroy {
 
   async getActiveSession(classroomId: string) {
     return this.prisma.liveSession.findFirst({
-      where: { classroomId, status: { in: ['WAITING', 'ACTIVE'] } },
-      select: { id: true, status: true, mode: true, currentQuestionIdx: true },
+      where: { classroomId, status: { in: ['WAITING', 'ACTIVE'] }, parentSessionId: null },
+      select: {
+        id: true,
+        status: true,
+        mode: true,
+        currentQuestionIdx: true,
+        activityId: true,
+        config: true,
+        teacherId: true,
+        deliveryMode: true,
+        parentSessionId: true,
+      },
     });
+  }
+
+  private isAsyncHomeConfig(config: any): boolean {
+    return (config as any)?.deliveryMode === 'ASYNC_HOME';
+  }
+
+  async joinAsyncHomeSession(parentSessionId: string, userId: string) {
+    const parentSession = await this.prisma.liveSession.findUnique({
+      where: { id: parentSessionId },
+      select: { id: true, classroomId: true, activityId: true, teacherId: true, status: true, config: true, deliveryMode: true },
+    });
+    if (!parentSession) throw new NotFoundException('Sesión no encontrada');
+
+    const parentConfig = (parentSession.config as any) || {};
+    if (parentSession.deliveryMode !== 'ASYNC_HOME' && !this.isAsyncHomeConfig(parentConfig)) {
+      throw new BadRequestException('La sesión no es de tipo Live Quiz en casa');
+    }
+    if (parentSession.status === 'FINISHED') {
+      throw new BadRequestException('La sesión ya finalizó');
+    }
+
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: parentSession.classroomId },
+      include: { teacherAssignment: { select: { groupId: true, academicYearId: true } } },
+    });
+    if (!classroom) throw new NotFoundException('Aula no encontrada');
+
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: {
+        student: { userId },
+        groupId: classroom.teacherAssignment.groupId,
+        academicYearId: classroom.teacherAssignment.academicYearId,
+        status: 'ACTIVE',
+      },
+    });
+    if (!enrollment) throw new ForbiddenException('No está matriculado en este grupo');
+
+    const existingSessions = await this.prisma.liveSession.findMany({
+      where: {
+        parentSessionId,
+        studentEnrollmentId: enrollment.id,
+      },
+      select: { id: true, status: true, config: true, teacherId: true, parentSessionId: true, studentEnrollmentId: true, deliveryMode: true },
+    });
+
+    const existing = existingSessions.find((s) => {
+      const cfg = (s.config as any) || {};
+      return s.parentSessionId === parentSessionId && s.studentEnrollmentId === enrollment.id || cfg.asyncParentSessionId === parentSessionId && cfg.asyncEnrollmentId === enrollment.id;
+    });
+
+    if (existing) {
+      return this.getSession(existing.id);
+    }
+
+    const questionOrder = Array.isArray(parentConfig.questionOrder) && parentConfig.questionOrder.length > 0
+      ? parentConfig.questionOrder
+      : parentConfig.questionOrder || [];
+
+    const childConfig = {
+      ...parentConfig,
+      deliveryMode: 'ASYNC_HOME',
+      asyncParentSessionId: parentSessionId,
+      asyncEnrollmentId: enrollment.id,
+      autoClose: true,
+      questionOrder,
+    };
+
+    const childSession = await this.prisma.liveSession.create({
+      data: {
+        classroomId: parentSession.classroomId,
+        teacherId: parentSession.teacherId,
+        activityId: parentSession.activityId,
+        mode: 'INDIVIDUAL',
+        status: 'WAITING',
+        currentQuestionIdx: -1,
+        deliveryMode: 'ASYNC_HOME',
+        parentSessionId,
+        studentEnrollmentId: enrollment.id,
+        config: childConfig,
+      },
+    });
+
+    await this.startSession(childSession.id, parentSession.teacherId);
+    await this.nextQuestion(childSession.id, parentSession.teacherId);
+
+    return this.getSession(childSession.id);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -431,7 +548,17 @@ export class LiveSessionService implements OnModuleDestroy {
   ) {
     const session = await this.prisma.liveSession.findUnique({
       where: { id: sessionId },
-      select: { id: true, status: true, classroomId: true, activityId: true, currentQuestionIdx: true, config: true, mode: true },
+      select: {
+        id: true,
+        status: true,
+        classroomId: true,
+        activityId: true,
+        currentQuestionIdx: true,
+        config: true,
+        mode: true,
+        deliveryMode: true,
+        parentSessionId: true,
+      },
     });
     if (!session || session.status !== 'ACTIVE') {
       throw new BadRequestException('La sesión no está activa');
@@ -548,18 +675,28 @@ export class LiveSessionService implements OnModuleDestroy {
       },
     });
 
-    // Show connected count if available, otherwise enrolled
-    const totalExpected = connectedCount > 0 ? connectedCount : totalEnrolled;
+    const isAsyncHomeChild = session.deliveryMode === 'ASYNC_HOME' && !!session.parentSessionId;
+    // Show connected count if available, otherwise enrolled; in home mode each session is 1 student
+    const totalExpected = isAsyncHomeChild ? 1 : (connectedCount > 0 ? connectedCount : totalEnrolled);
 
     this.broadcast(sessionId, {
       type: 'ANSWER_PROGRESS',
       data: { questionId, totalAnswered, totalExpected, connectedCount },
     });
 
+    if (session.deliveryMode === 'ASYNC_HOME' && session.parentSessionId) {
+      try {
+        const ranking = await this.getAsyncHomeRanking(session.parentSessionId, session.activityId, 10);
+        this.broadcast(session.parentSessionId, { type: 'RANKING', data: ranking });
+      } catch (err) {
+        this.logger.warn(`Failed to broadcast async-home ranking for parent ${session.parentSessionId}: ${err instanceof Error ? err.message : err}`);
+      }
+    }
+
     // Auto-close question when ALL CONNECTED students have answered
     // Use connectedCount if > 0, otherwise fall back to enrolled count
     // IMPORTANT: If connectedCount is 0 but we have answers, use totalAnswered as minimum expected
-    let effectiveExpected = connectedCount > 0 ? connectedCount : totalEnrolled;
+    let effectiveExpected = isAsyncHomeChild ? 1 : (connectedCount > 0 ? connectedCount : totalEnrolled);
     // Safety: if we have more answers than expected, adjust expected to match
     if (totalAnswered > effectiveExpected && effectiveExpected > 0) {
       effectiveExpected = totalAnswered;
@@ -680,6 +817,23 @@ export class LiveSessionService implements OnModuleDestroy {
       },
     });
     this.logger.log(`QUESTION_CLOSED broadcast completed for session ${sessionId}`);
+
+    this.prisma.liveSession
+      .findUnique({
+        where: { id: sessionId },
+        select: { deliveryMode: true, teacherId: true, status: true },
+      })
+      .then((session) => {
+        if (!session || session.deliveryMode !== 'ASYNC_HOME' || session.status !== 'ACTIVE') return;
+        setTimeout(() => {
+          this.nextQuestion(sessionId, session.teacherId).catch((err) => {
+            this.logger.warn(`Auto-advance failed for async session ${sessionId}: ${err instanceof Error ? err.message : err}`);
+          });
+        }, 700);
+      })
+      .catch((err) => {
+        this.logger.warn(`Could not resolve async-home session after close for ${sessionId}: ${err instanceof Error ? err.message : err}`);
+      });
   }
 
   // Server-side timer: auto-close question when time runs out
@@ -750,8 +904,13 @@ export class LiveSessionService implements OnModuleDestroy {
       data: { status: 'FINISHED', finishedAt: new Date() },
     });
 
-    // Auto-generate grades for ALL students
-    await this.autoGradeFromLiveQuiz(sessionId, session.activityId);
+    // Auto-generate grades depending on delivery mode
+    if (session.deliveryMode === 'ASYNC_HOME' && session.parentSessionId) {
+      await this.autoGradeAsyncHomeChildSession(sessionId, session.activityId, session.studentEnrollmentId || undefined);
+    } else if (session.deliveryMode !== 'ASYNC_HOME') {
+      // Auto-generate grades for ALL students
+      await this.autoGradeFromLiveQuiz(sessionId, session.activityId);
+    }
 
     const ranking = await this.getRanking(sessionId, 10);
     this.broadcast(sessionId, { type: 'SESSION_FINISHED', data: ranking });
@@ -767,6 +926,97 @@ export class LiveSessionService implements OnModuleDestroy {
     return { session: updated, ranking };
   }
 
+  private async autoGradeAsyncHomeChildSession(sessionId: string, activityId: string, studentEnrollmentId?: string) {
+    try {
+      if (!studentEnrollmentId) return;
+
+      const [activity, questions, enrollment] = await Promise.all([
+        this.prisma.classroomActivity.findUnique({
+          where: { id: activityId },
+          select: { id: true, maxScore: true },
+        }),
+        this.prisma.activityQuestion.findMany({
+          where: { activityId },
+          orderBy: { sortOrder: 'asc' },
+          select: { id: true, points: true },
+        }),
+        this.prisma.studentEnrollment.findUnique({
+          where: { id: studentEnrollmentId },
+          select: { id: true },
+        }),
+      ]);
+
+      if (!activity || !enrollment) return;
+
+      const existing = await this.prisma.activitySubmission.findFirst({
+        where: { activityId, studentEnrollmentId },
+      });
+      if (existing) return;
+
+      const totalPossiblePoints = questions.reduce((sum, q) => sum + Number(q.points), 0);
+      const questionPointsMap = new Map(questions.map((q) => [q.id, Number(q.points)]));
+
+      const liveAnswers = await this.prisma.liveSessionAnswer.findMany({
+        where: { sessionId, studentEnrollmentId },
+        select: { questionId: true, isCorrect: true, points: true, answer: true },
+      });
+
+      const now = new Date();
+      const startedAt = await this.prisma.liveSession.findUnique({
+        where: { id: sessionId },
+        select: { startedAt: true },
+      });
+      const timeSpentSeconds = startedAt?.startedAt ? Math.floor((now.getTime() - startedAt.startedAt.getTime()) / 1000) : null;
+
+      let totalPoints = 0;
+      let academicPoints = 0;
+      let correctCount = 0;
+
+      for (const answer of liveAnswers) {
+        totalPoints += Number(answer.points || 0);
+        if (answer.isCorrect) {
+          correctCount += 1;
+          academicPoints += questionPointsMap.get(answer.questionId) || 0;
+        }
+      }
+
+      const maxScore = activity.maxScore ? Number(activity.maxScore) : totalPossiblePoints;
+      const academicRatio = totalPossiblePoints > 0 ? academicPoints / totalPossiblePoints : 0;
+      const normalizedScore = academicRatio * maxScore;
+      const clampedScore = Math.min(Math.max(Math.round(normalizedScore * 10) / 10, 0), maxScore);
+
+      const submission = await this.prisma.activitySubmission.create({
+        data: {
+          activityId,
+          studentEnrollmentId,
+          status: 'AUTO_GRADED',
+          score: clampedScore,
+          submittedAt: now,
+          gradedAt: now,
+          timeSpentSeconds,
+          content: `Live Quiz en casa — ${correctCount}/${questions.length} correctas${totalPoints > 0 ? ` (${Math.round(totalPoints).toLocaleString()} pts)` : ''}${correctCount === 0 && totalPoints === 0 ? ' — Sin participación' : ''}`,
+        },
+        select: { id: true },
+      });
+
+      await Promise.all(
+        liveAnswers.map((answer) =>
+          this.prisma.questionAnswer.create({
+            data: {
+              submissionId: submission.id,
+              questionId: answer.questionId,
+              answer: answer.answer,
+              isCorrect: answer.isCorrect,
+              pointsEarned: answer.points,
+            },
+          }),
+        ),
+      );
+    } catch (err) {
+      console.error('Auto-grade async home failed:', err);
+    }
+  }
+
   /**
    * Auto-grade: creates ActivitySubmission + QuestionAnswer for every student
    * in the group. For TEAM mode, team members who didn't answer get the team's
@@ -776,9 +1026,14 @@ export class LiveSessionService implements OnModuleDestroy {
     try {
       const session = await this.prisma.liveSession.findUnique({
         where: { id: sessionId },
-        select: { id: true, mode: true, classroomId: true },
+        select: { id: true, mode: true, classroomId: true, deliveryMode: true, studentEnrollmentId: true },
       });
       if (!session) return;
+
+      if (session.deliveryMode === 'ASYNC_HOME' && session.studentEnrollmentId) {
+        await this.autoGradeAsyncHomeChildSession(sessionId, activityId, session.studentEnrollmentId);
+        return;
+      }
 
       const classroom = await this.prisma.classroom.findUnique({
         where: { id: session.classroomId },
@@ -923,11 +1178,15 @@ export class LiveSessionService implements OnModuleDestroy {
   private async getRanking(sessionId: string, limit = 5) {
     const session = await this.prisma.liveSession.findUnique({
       where: { id: sessionId },
-      select: { mode: true, activityId: true },
+      select: { mode: true, activityId: true, deliveryMode: true, parentSessionId: true },
     });
 
     if (!session?.activityId) {
       return [];
+    }
+
+    if (session.deliveryMode === 'ASYNC_HOME' && !session.parentSessionId) {
+      return this.getAsyncHomeRanking(sessionId, session.activityId, limit);
     }
 
     if (session?.mode === 'TEAM') {
@@ -994,6 +1253,110 @@ export class LiveSessionService implements OnModuleDestroy {
       correctAnswers: result.correctAnswers,
       avatarId: this.getStudentAvatar(sessionId, result.studentEnrollmentId),
     }));
+  }
+
+  private async getAsyncHomeRanking(parentSessionId: string, activityId: string, limit = 5) {
+    // Get parent session status and total expected students
+    const [parentSession, childSessions, classroom] = await Promise.all([
+      this.prisma.liveSession.findUnique({
+        where: { id: parentSessionId },
+        select: { status: true, classroomId: true },
+      }),
+      this.prisma.liveSession.findMany({
+        where: { parentSessionId },
+        select: { id: true, status: true },
+      }),
+      this.prisma.liveSession.findUnique({
+        where: { id: parentSessionId },
+        select: { classroom: { select: { teacherAssignment: { select: { groupId: true, academicYearId: true } } } } },
+      }),
+    ]);
+
+    // Count total enrolled students for context
+    let totalExpected = 0;
+    if (classroom?.classroom?.teacherAssignment) {
+      const ta = classroom.classroom.teacherAssignment;
+      totalExpected = await this.prisma.studentEnrollment.count({
+        where: { groupId: ta.groupId, academicYearId: ta.academicYearId, status: 'ACTIVE' },
+      });
+    }
+
+    const completedCount = childSessions.filter((s) => s.status === 'FINISHED').length;
+    const isSessionFinished = parentSession?.status === 'FINISHED';
+
+    if (childSessions.length === 0) {
+      return {
+        ranking: [],
+        meta: { completedCount: 0, totalExpected, isSessionFinished, isPartial: !isSessionFinished },
+      };
+    }
+
+    const childSessionIds = childSessions.map((session) => session.id);
+    const [answers, questions] = await Promise.all([
+      this.prisma.liveSessionAnswer.findMany({
+        where: { sessionId: { in: childSessionIds } },
+        select: { sessionId: true, studentEnrollmentId: true, isCorrect: true, points: true, responseTimeMs: true, questionId: true },
+      }),
+      this.prisma.activityQuestion.findMany({
+        where: { activityId },
+        select: { id: true, points: true },
+      }),
+    ]);
+
+    const questionPointsMap = new Map(questions.map((question) => [question.id, Number(question.points)]));
+    const aggregates = new Map<string, { studentEnrollmentId: string; sessionId: string; totalPoints: number; academicPoints: number; correctAnswers: number; totalResponseTimeMs: number }>();
+
+    for (const answer of answers) {
+      if (!aggregates.has(answer.studentEnrollmentId)) {
+        aggregates.set(answer.studentEnrollmentId, {
+          studentEnrollmentId: answer.studentEnrollmentId,
+          sessionId: answer.sessionId,
+          totalPoints: 0,
+          academicPoints: 0,
+          correctAnswers: 0,
+          totalResponseTimeMs: 0,
+        });
+      }
+
+      const entry = aggregates.get(answer.studentEnrollmentId)!;
+      entry.totalPoints += Number(answer.points || 0);
+      entry.totalResponseTimeMs += Number(answer.responseTimeMs || 0);
+      if (answer.isCorrect) {
+        entry.correctAnswers += 1;
+        entry.academicPoints += questionPointsMap.get(answer.questionId) || 0;
+      }
+    }
+
+    const sortedResults = [...aggregates.values()].sort((a, b) => {
+      if (b.academicPoints !== a.academicPoints) return b.academicPoints - a.academicPoints;
+      if (b.correctAnswers !== a.correctAnswers) return b.correctAnswers - a.correctAnswers;
+      if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+      if (a.totalResponseTimeMs !== b.totalResponseTimeMs) return a.totalResponseTimeMs - b.totalResponseTimeMs;
+      return a.studentEnrollmentId.localeCompare(b.studentEnrollmentId);
+    });
+
+    const topResults = sortedResults.slice(0, limit);
+    const enrollmentIds = topResults.map((result) => result.studentEnrollmentId);
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: { id: { in: enrollmentIds } },
+      select: { id: true, student: { select: { firstName: true, lastName: true } } },
+    });
+    const nameMap = new Map(enrollments.map((e) => [e.id, `${e.student.firstName} ${e.student.lastName}`]));
+
+    const ranking = topResults.map((result, i) => ({
+      rank: i + 1,
+      studentEnrollmentId: result.studentEnrollmentId,
+      name: nameMap.get(result.studentEnrollmentId) || 'Desconocido',
+      totalPoints: Math.round(result.totalPoints),
+      academicPoints: Math.round(result.academicPoints * 100) / 100,
+      correctAnswers: result.correctAnswers,
+      avatarId: this.getStudentAvatar(result.sessionId, result.studentEnrollmentId),
+    }));
+
+    return {
+      ranking,
+      meta: { completedCount, totalExpected, isSessionFinished, isPartial: !isSessionFinished },
+    };
   }
 
   private async getTeamRanking(sessionId: string, activityId: string, limit = 5) {
@@ -1434,7 +1797,19 @@ export class LiveSessionService implements OnModuleDestroy {
   private async validateTeacherSession(sessionId: string, teacherId: string) {
     const session = await this.prisma.liveSession.findUnique({
       where: { id: sessionId },
-      select: { id: true, teacherId: true, status: true, activityId: true, currentQuestionIdx: true, config: true, classroomId: true, mode: true },
+      select: {
+        id: true,
+        teacherId: true,
+        status: true,
+        activityId: true,
+        currentQuestionIdx: true,
+        config: true,
+        classroomId: true,
+        mode: true,
+        deliveryMode: true,
+        parentSessionId: true,
+        studentEnrollmentId: true,
+      },
     });
     if (!session) throw new NotFoundException('Sesión no encontrada');
     if (session.teacherId !== teacherId) {

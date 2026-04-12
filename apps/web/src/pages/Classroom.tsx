@@ -1949,6 +1949,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [showLiveQuiz, setShowLiveQuiz] = useState(false)
   const [liveQuizActivityId, setLiveQuizActivityId] = useState('')
   const [liveQuizActivityTitle, setLiveQuizActivityTitle] = useState('')
+  const [liveQuizInitialDeliveryMode, setLiveQuizInitialDeliveryMode] = useState<'SYNC' | 'ASYNC_HOME'>('SYNC')
   const [activeLiveSession, setActiveLiveSession] = useState<any>(null)
 
   // Gradebook sync
@@ -3170,9 +3171,14 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 <h3 className="text-lg font-bold text-slate-800">Preguntas ({questions.length})</h3>
                 <div className="flex flex-wrap gap-2">
                   {questions.length >= 1 && (
-                    <button onClick={() => { setLiveQuizActivityId(act.id); setLiveQuizActivityTitle(act.title); setShowLiveQuiz(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:from-yellow-600 hover:to-orange-600 shadow-sm">
-                      <Zap className="w-4 h-4" /> <span className="hidden sm:inline">Quiz En Vivo</span><span className="sm:hidden">En Vivo</span>
-                    </button>
+                    <>
+                      <button onClick={() => { setLiveQuizActivityId(act.id); setLiveQuizActivityTitle(act.title); setLiveQuizInitialDeliveryMode('SYNC'); setShowLiveQuiz(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:from-yellow-600 hover:to-orange-600 shadow-sm">
+                        <Zap className="w-4 h-4" /> <span className="hidden sm:inline">Quiz En Vivo</span><span className="sm:hidden">En Vivo</span>
+                      </button>
+                      <button onClick={() => { setLiveQuizActivityId(act.id); setLiveQuizActivityTitle(act.title); setLiveQuizInitialDeliveryMode('ASYNC_HOME'); setShowLiveQuiz(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:from-rose-600 hover:to-pink-600 shadow-sm">
+                        <Home className="w-4 h-4" /> <span className="hidden sm:inline">Quiz En Casa</span><span className="sm:hidden">En Casa</span>
+                      </button>
+                    </>
                   )}
                   <button onClick={() => { resetCtxForm(); setShowContextForm(true) }} className="flex items-center gap-1.5 px-3 py-2 bg-teal-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-teal-600">
                     <FileText className="w-4 h-4" /> <span className="hidden sm:inline">+</span> Contexto
@@ -4436,6 +4442,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             activityTitle={isTeacher ? liveQuizActivityTitle : undefined}
             sessionId={isStudent && activeLiveSession ? activeLiveSession.id : undefined}
             studentEnrollmentId={isStudent ? classroom.studentEnrollmentId : undefined}
+            initialDeliveryMode={isTeacher ? liveQuizInitialDeliveryMode : 'SYNC'}
           />
         )}
 
@@ -4660,8 +4667,19 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         >
           <Zap className="w-8 h-8 shrink-0" />
           <div className="flex-1 text-left">
-            <p className="font-bold text-lg">¡Live Quiz en curso!</p>
-            <p className="text-white/80 text-sm">Tu profesor ha iniciado un quiz en vivo. ¡Únete ahora!</p>
+            <p className="font-bold text-lg flex items-center gap-2 flex-wrap">
+              ¡Live Quiz en curso!
+              {((activeLiveSession?.deliveryMode || activeLiveSession?.config?.deliveryMode) === 'ASYNC_HOME') && (
+                <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-xs font-black uppercase tracking-wide">
+                  En casa
+                </span>
+              )}
+            </p>
+            <p className="text-white/80 text-sm">
+              {((activeLiveSession?.deliveryMode || activeLiveSession?.config?.deliveryMode) === 'ASYNC_HOME')
+                ? 'Tu profesor ha iniciado un quiz en casa. Avanza a tu ritmo.'
+                : 'Tu profesor ha iniciado un quiz en vivo. ¡Únete ahora!'}
+            </p>
           </div>
           <ChevronRight className="w-6 h-6 shrink-0" />
         </button>
@@ -4677,6 +4695,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           activityTitle={isTeacher ? liveQuizActivityTitle : undefined}
           sessionId={isStudent && activeLiveSession ? activeLiveSession.id : undefined}
           studentEnrollmentId={isStudent ? classroom.studentEnrollmentId : undefined}
+          initialDeliveryMode={isTeacher ? liveQuizInitialDeliveryMode : 'SYNC'}
         />
       )}
 

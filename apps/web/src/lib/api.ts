@@ -2121,6 +2121,7 @@ export const liveSessionApi = {
     api.post('/live-session/create', data),
   get: (sessionId: string) => api.get(`/live-session/${sessionId}`),
   getActive: (classroomId: string) => api.get(`/live-session/active/${classroomId}`),
+  joinHome: (sessionId: string) => api.post(`/live-session/${sessionId}/join-home`),
   start: (sessionId: string) => api.post(`/live-session/${sessionId}/start`),
   nextQuestion: (sessionId: string) => api.post(`/live-session/${sessionId}/next-question`),
   closeQuestion: (sessionId: string) => api.post(`/live-session/${sessionId}/close-question`),

@@ -199,6 +199,7 @@ interface LiveQuizProps {
   sessionId?: string
   // Student: pass enrollmentId for connection tracking (auto-close feature)
   studentEnrollmentId?: string
+  initialDeliveryMode?: 'SYNC' | 'ASYNC_HOME'
 }
 
 interface RankEntry {
@@ -253,7 +254,7 @@ function normalizeQuestionMedia(question: any) {
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
 
-export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, activityTitle, sessionId: initialSessionId, studentEnrollmentId }: LiveQuizProps) {
+export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, activityTitle, sessionId: initialSessionId, studentEnrollmentId, initialDeliveryMode = 'SYNC' }: LiveQuizProps) {
   const [sessionId, setSessionId] = useState(initialSessionId || '')
   const [session, setSession] = useState<any>(null)
   const [phase, _setPhase] = useState<'setup' | 'loading' | 'lobby' | 'question' | 'answer_reveal' | 'ranking' | 'finished'>('setup')
@@ -295,6 +296,8 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     rankingRef.current = r
     _setRanking(r)
   }
+  // Async home ranking metadata
+  const [rankingMeta, setRankingMeta] = useState<{ completedCount: number; totalExpected: number; isSessionFinished: boolean; isPartial: boolean } | null>(null)
 
   // Team mode
   const [mode, setMode] = useState<'INDIVIDUAL' | 'TEAM'>('INDIVIDUAL')
@@ -302,6 +305,9 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   const [myTeamId, setMyTeamId] = useState<string | null>(null)
   const [teamSetupNames, setTeamSetupNames] = useState(['Equipo 1', 'Equipo 2'])
   const [joiningTeam, setJoiningTeam] = useState(false)
+
+  // Delivery mode: live online or at home
+  const [deliveryMode, setDeliveryMode] = useState<'SYNC' | 'ASYNC_HOME'>(initialDeliveryMode)
 
   // Add partner (search students to add to my team)
   const [showAddPartner, setShowAddPartner] = useState(false)
@@ -392,14 +398,16 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     setPhase('loading')
     try {
       // En modo TEAM, los estudiantes crean sus propios equipos dinámicamente (estilo Kahoot)
+      const effectiveMode = deliveryMode === 'ASYNC_HOME' ? 'INDIVIDUAL' : mode
       const { data } = await liveSessionApi.create({ 
         classroomId, 
         activityId: activityId!, 
-        mode, 
+        mode: effectiveMode, 
         config: { 
           timeLimitOverride: globalTimeLimit, 
           autoClose: autoCloseOnTimeout, 
-          teamAssignment: 'STUDENT_CHOICE' // Siempre estudiantes eligen/crean equipos
+          teamAssignment: 'STUDENT_CHOICE', // Siempre estudiantes eligen/crean equipos
+          deliveryMode,
         } 
       })
       autoCloseRef.current = autoCloseOnTimeout
@@ -417,12 +425,38 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     }
   }
 
-  const loadSession = async (sid: string) => {
+  const loadSession = async (sid: string, allowHomeJoin = true) => {
     try {
       const { data } = await liveSessionApi.get(sid)
+
+      if (!isTeacher && allowHomeJoin && data.deliveryMode === 'ASYNC_HOME' && !data.parentSessionId) {
+        const { data: joinedSession } = await liveSessionApi.joinHome(sid)
+        setSessionId(joinedSession.id)
+        sessionIdRef.current = joinedSession.id
+        setSession(joinedSession)
+        setMode(joinedSession.mode || 'INDIVIDUAL')
+        setDeliveryMode('ASYNC_HOME')
+        const joinedQuestions = joinedSession.activity?.questions || []
+        setTotalQuestions(joinedQuestions.length)
+        if (joinedSession.teams?.length) setTeams(joinedSession.teams)
+        const joinedCfg = (joinedSession.config as any) || {}
+        autoCloseRef.current = joinedCfg.autoClose ?? false
+        setAutoCloseOnTimeout(joinedCfg.autoClose ?? false)
+        if (joinedSession.status === 'FINISHED') {
+          setPhase('finished')
+        } else if (joinedSession.status === 'WAITING') {
+          setPhase('lobby')
+        } else {
+          setPhase('question')
+        }
+        connectSSE(joinedSession.id)
+        return
+      }
+
       setSession(data)
       sessionIdRef.current = sid
       setMode(data.mode || 'INDIVIDUAL')
+      setDeliveryMode((data.deliveryMode || (data.config as any)?.deliveryMode || 'SYNC') as 'SYNC' | 'ASYNC_HOME')
       const questions = data.activity?.questions || []
       setTotalQuestions(questions.length)
       if (data.teams?.length) setTeams(data.teams)
@@ -531,13 +565,27 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
     es.addEventListener('RANKING', (e: any) => {
       const data = JSON.parse(e.data)
-      setRanking(data)
+      // Handle async home ranking with metadata
+      if (data.ranking && data.meta) {
+        setRanking(data.ranking)
+        setRankingMeta(data.meta)
+      } else {
+        setRanking(Array.isArray(data) ? data : [])
+        setRankingMeta(null)
+      }
       setPhase('ranking')
     })
 
     es.addEventListener('SESSION_FINISHED', (e: any) => {
       const data = JSON.parse(e.data)
-      setRanking(data)
+      // Handle async home ranking with metadata
+      if (data.ranking && data.meta) {
+        setRanking(data.ranking)
+        setRankingMeta(data.meta)
+      } else {
+        setRanking(Array.isArray(data) ? data : [])
+        setRankingMeta(null)
+      }
       setPhase('finished')
       stopTimer()
       stopMusic()
@@ -1038,14 +1086,20 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                     <p className="text-slate-500 text-xs mt-1">Cada estudiante compite solo</p>
                   </motion.button>
                   <motion.button 
-                    onClick={() => setMode('TEAM')} 
+                    onClick={() => {
+                      if (deliveryMode === 'ASYNC_HOME') return
+                      setMode('TEAM')
+                    }} 
                     whileHover={{ y: -6, scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     className={`relative p-5 rounded-2xl border-3 transition-all text-center ${
                       mode === 'TEAM' 
                         ? 'bg-gradient-to-br from-[#FFE66D] to-[#FFD93D] border-[#FFC93D] shadow-lg shadow-yellow-300/30' 
-                        : 'bg-gradient-to-br from-slate-50 to-purple-50 border-slate-200 hover:border-[#FF6B6B]'
+                        : deliveryMode === 'ASYNC_HOME'
+                          ? 'bg-gradient-to-br from-slate-100 to-slate-200 border-slate-200 opacity-50 cursor-not-allowed'
+                          : 'bg-gradient-to-br from-slate-50 to-purple-50 border-slate-200 hover:border-[#FF6B6B]'
                     }`}
+                    disabled={deliveryMode === 'ASYNC_HOME'}
                   >
                     {mode === 'TEAM' && <span className="absolute top-2 right-3 text-[#FF6B6B] font-black text-lg">✓</span>}
                     <div className="text-3xl mb-2">🏆</div>
@@ -1055,8 +1109,55 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                 </div>
               </div>
 
+              {/* Delivery mode selector */}
+              <div className="space-y-3">
+                <p className="text-sm font-extrabold text-[#4ECDC4] uppercase tracking-widest text-center flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 bg-[#4ECDC4] rounded-full" /> Entrega
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <motion.button
+                    onClick={() => setDeliveryMode('SYNC')}
+                    whileHover={{ y: -6, scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`relative p-5 rounded-2xl border-3 transition-all text-center ${
+                      deliveryMode === 'SYNC'
+                        ? 'bg-gradient-to-br from-[#4ECDC4] to-[#3BA89F] border-[#2E8F88] shadow-lg shadow-teal-300/30'
+                        : 'bg-gradient-to-br from-slate-50 to-cyan-50 border-slate-200 hover:border-[#4ECDC4]'
+                    }`}
+                  >
+                    {deliveryMode === 'SYNC' && <span className="absolute top-2 right-3 text-white font-black text-lg">✓</span>}
+                    <div className="text-3xl mb-2">🧑‍🏫</div>
+                    <p className="text-slate-800 font-extrabold text-base">En vivo</p>
+                    <p className="text-slate-500 text-xs mt-1">Todos juegan al mismo tiempo</p>
+                  </motion.button>
+                  <motion.button
+                    onClick={() => {
+                      setDeliveryMode('ASYNC_HOME')
+                      setMode('INDIVIDUAL')
+                    }}
+                    whileHover={{ y: -6, scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`relative p-5 rounded-2xl border-3 transition-all text-center ${
+                      deliveryMode === 'ASYNC_HOME'
+                        ? 'bg-gradient-to-br from-[#FF6B6B] to-[#FF8E72] border-[#FF6B6B] shadow-lg shadow-red-300/30'
+                        : 'bg-gradient-to-br from-slate-50 to-rose-50 border-slate-200 hover:border-[#FF6B6B]'
+                    }`}
+                  >
+                    {deliveryMode === 'ASYNC_HOME' && <span className="absolute top-2 right-3 text-white font-black text-lg">✓</span>}
+                    <div className="text-3xl mb-2">🏠</div>
+                    <p className="text-slate-800 font-extrabold text-base">En casa</p>
+                    <p className="text-slate-500 text-xs mt-1">Cada estudiante avanza a su ritmo</p>
+                  </motion.button>
+                </div>
+                {deliveryMode === 'ASYNC_HOME' && (
+                  <p className="text-xs text-slate-500 text-center font-semibold">
+                    El modo en casa usa progreso individual y ranking acumulado por estudiante.
+                  </p>
+                )}
+              </div>
+
               {/* Team mode info */}
-              {mode === 'TEAM' && (
+              {mode === 'TEAM' && deliveryMode !== 'ASYNC_HOME' && (
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -2029,14 +2130,25 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         >
           {/* Title */}
           <motion.div 
-            className="text-center"
+            className="text-center space-y-2"
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", duration: 0.6 }}
           >
             <h2 className="text-3xl sm:text-4xl font-black text-white drop-shadow-lg">
-              {phase === 'finished' ? '🏆 Resultados Finales' : '📊 Ranking'}
+              {phase === 'finished' 
+                ? '🏆 Resultados Finales' 
+                : rankingMeta?.isPartial 
+                  ? '📊 Resultados Parciales'
+                  : '📊 Ranking'}
             </h2>
+            {/* Async home: show completion counter */}
+            {rankingMeta && (
+              <p className="text-white/80 text-sm font-semibold">
+                {rankingMeta.completedCount} de {rankingMeta.totalExpected} estudiantes completaron
+                {rankingMeta.isPartial && <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs">En curso</span>}
+              </p>
+            )}
           </motion.div>
 
           {/* Podium for finished state - show even with 1-2 participants */}
