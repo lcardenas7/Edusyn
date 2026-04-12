@@ -710,8 +710,44 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     const currentQuestionIdx = sessionData?.currentQuestionIdx ?? -1
     if (currentQuestionIdx < 0 || !questions[currentQuestionIdx] || currentQuestionIdx <= minimumQuestionIdx) return false
 
+    // If there's a pending result from the previous question, show it briefly before advancing
+    const pendingResult = pendingResultRef.current
+    if (pendingResult && answeredRef.current) {
+      // Show the result feedback
+      setAnswerResult(pendingResult)
+      if (pendingResult.isCorrect) {
+        if (soundsOn) playSound('correct')
+        fireConfetti('correct')
+        setStreak(prev => prev + 1)
+      } else {
+        if (soundsOn) playSound('incorrect')
+        setStreak(0)
+      }
+      pendingResultRef.current = null
+      
+      // Show answer_reveal phase briefly, then advance to next question
+      setPhase('answer_reveal')
+      stopTimer()
+      stopMusic()
+      
+      // After a brief delay, load the next question
+      setTimeout(() => {
+        loadNextQuestionFromData(sessionData, currentQuestionIdx)
+      }, 2000)
+      return true
+    }
+
+    // No pending result - just load the question directly
+    loadNextQuestionFromData(sessionData, currentQuestionIdx)
+    return true
+  }, [isTeacher])
+
+  const loadNextQuestionFromData = useCallback((sessionData: any, currentQuestionIdx: number) => {
+    const questions = sessionData?.activity?.questions || []
     const cfg = (sessionData?.config as any) || {}
     const q = questions[currentQuestionIdx]
+    if (!q) return
+    
     const timeLimit = cfg.timeLimitOverride || 15
 
     setCurrentQuestion({
@@ -750,7 +786,6 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     if (!isTeacher && (sessionData?.deliveryMode === 'ASYNC_HOME' || (sessionData?.config as any)?.deliveryMode === 'ASYNC_HOME')) {
       startMusic()
     }
-    return true
   }, [isTeacher])
 
   const scheduleAsyncHomeSessionSync = useCallback((sid: string, minimumQuestionIdx = -1) => {
@@ -921,6 +956,15 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       })
       // Buffer the result — don't reveal yet, wait for QUESTION_CLOSED
       pendingResultRef.current = data
+      
+      // For ASYNC_HOME: schedule fallback sync immediately after answering
+      // This ensures we advance even if QUESTION_CLOSED SSE event is missed
+      if (!isTeacher && (deliveryMode === 'ASYNC_HOME' || (session?.config as any)?.deliveryMode === 'ASYNC_HOME')) {
+        // Wait a bit for backend to process auto-close and advance, then sync
+        setTimeout(() => {
+          scheduleAsyncHomeSessionSync(sessionIdRef.current, questionIndexRef.current)
+        }, 1500)
+      }
     } catch (err: any) {
       pendingResultRef.current = { isCorrect: false, points: 0 }
     }
