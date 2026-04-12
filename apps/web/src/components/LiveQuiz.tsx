@@ -1338,33 +1338,75 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                 </div>
               )}
 
-              <p className="text-white/60 text-center text-sm">
-                {(session?.config as any)?.teamAssignment === 'TEACHER_ASSIGNED' 
-                  ? 'Asigna los estudiantes a equipos antes de iniciar'
-                  : 'Los estudiantes pueden unirse desde su aula virtual'}
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <button
-                  onClick={handleStart}
-                  className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl text-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg shadow-green-500/30 flex items-center gap-3 justify-center"
-                >
-                  <Play className="w-6 h-6" /> Iniciar primera pregunta
-                </button>
-                <button
-                  onClick={async () => {
-                    if (!confirm('¿Reiniciar sesión? Se borrarán todas las respuestas anteriores.')) return
-                    try {
-                      const { data } = await liveSessionApi.reset(sessionId)
-                      alert(`Sesión reiniciada. Se eliminaron ${data.deletedAnswers} respuestas.`)
-                    } catch (err: any) {
-                      alert('Error al reiniciar: ' + (err.response?.data?.message || err.message))
-                    }
-                  }}
-                  className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white/80 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 justify-center border border-white/20"
-                >
-                  <RotateCcw className="w-4 h-4" /> Reiniciar sesión
-                </button>
-              </div>
+              {deliveryMode === 'ASYNC_HOME' ? (
+                /* ASYNC HOME: El profesor solo publica, los estudiantes inician solos */
+                <div className="space-y-4 text-center">
+                  <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 border-2 border-green-400/50 rounded-2xl p-6 space-y-3">
+                    <div className="text-4xl">🏠</div>
+                    <h3 className="text-white font-bold text-lg">Quiz En Casa Activo</h3>
+                    <p className="text-white/70 text-sm">
+                      Los estudiantes pueden entrar cuando quieran y resolver el quiz a su propio ritmo.
+                      Cada uno verá su progreso individual.
+                    </p>
+                    <div className="flex items-center justify-center gap-2 text-green-400 text-sm font-semibold">
+                      <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                      Esperando estudiantes...
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button
+                      onClick={() => setPhase('finished')}
+                      className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg flex items-center gap-2 justify-center"
+                    >
+                      <Trophy className="w-5 h-5" /> Ver resultados parciales
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!confirm('¿Finalizar el quiz? Los estudiantes que no hayan terminado no podrán continuar.')) return
+                        try {
+                          await liveSessionApi.finish(sessionId)
+                        } catch (err: any) {
+                          alert('Error: ' + (err.response?.data?.message || err.message))
+                        }
+                      }}
+                      className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white/80 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 justify-center border border-white/20"
+                    >
+                      <XCircle className="w-4 h-4" /> Cerrar quiz
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* SYNC: Flujo normal - profesor controla cada pregunta */
+                <>
+                  <p className="text-white/60 text-center text-sm">
+                    {(session?.config as any)?.teamAssignment === 'TEACHER_ASSIGNED' 
+                      ? 'Asigna los estudiantes a equipos antes de iniciar'
+                      : 'Los estudiantes pueden unirse desde su aula virtual'}
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button
+                      onClick={handleStart}
+                      className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl text-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg shadow-green-500/30 flex items-center gap-3 justify-center"
+                    >
+                      <Play className="w-6 h-6" /> Iniciar primera pregunta
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!confirm('¿Reiniciar sesión? Se borrarán todas las respuestas anteriores.')) return
+                        try {
+                          const { data } = await liveSessionApi.reset(sessionId)
+                          alert(`Sesión reiniciada. Se eliminaron ${data.deletedAnswers} respuestas.`)
+                        } catch (err: any) {
+                          alert('Error al reiniciar: ' + (err.response?.data?.message || err.message))
+                        }
+                      }}
+                      className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white/80 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 justify-center border border-white/20"
+                    >
+                      <RotateCcw className="w-4 h-4" /> Reiniciar sesión
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <div className="text-center space-y-4 w-full max-w-md">
