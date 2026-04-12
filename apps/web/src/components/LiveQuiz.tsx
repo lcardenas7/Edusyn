@@ -376,13 +376,14 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   // ═══════════════════════════════════════════════════════════════════════════
 
   useEffect(() => {
-    if (isTeacher && activityId) {
-      // Show setup phase for teacher to pick mode
-      setPhase('setup')
-    } else if (initialSessionId) {
+    if (initialSessionId) {
+      // Teacher or student resuming an existing session
       setPhase('loading')
       setSessionId(initialSessionId)
       loadSession(initialSessionId)
+    } else if (isTeacher && activityId) {
+      // Show setup phase for teacher to pick mode (new session)
+      setPhase('setup')
     } else {
       setPhase('loading')
       checkActiveSession()

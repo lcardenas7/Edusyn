@@ -1976,13 +1976,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
   useEffect(() => { loadActivities() }, [loadActivities])
 
-  // Check for active live session (student)
+  // Check for active live session (student AND teacher for async home)
   useEffect(() => {
-    if (!isStudent) return
     liveSessionApi.getActive(classroom.id).then(({ data }) => {
       if (data && data.id) setActiveLiveSession(data)
     }).catch(() => {})
-  }, [classroom.id, isStudent])
+  }, [classroom.id])
 
   const handleCreate = async () => {
     if (!form.title.trim() || !form.sectionId) return
@@ -4685,6 +4684,33 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         </button>
       )}
 
+      {/* Live Quiz banner (teacher - async home active) */}
+      {isTeacher && activeLiveSession && ((activeLiveSession?.deliveryMode || activeLiveSession?.config?.deliveryMode) === 'ASYNC_HOME') && (
+        <button
+          onClick={() => {
+            setLiveQuizActivityId(activeLiveSession.activityId)
+            setLiveQuizActivityTitle(activeLiveSession.activity?.title || 'Quiz En Casa')
+            setLiveQuizInitialDeliveryMode('ASYNC_HOME')
+            setShowLiveQuiz(true)
+          }}
+          className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl text-white hover:from-emerald-600 hover:to-teal-600 transition-all shadow-lg shadow-emerald-500/20"
+        >
+          <Home className="w-8 h-8 shrink-0" />
+          <div className="flex-1 text-left">
+            <p className="font-bold text-lg flex items-center gap-2 flex-wrap">
+              🏠 Quiz En Casa Activo
+              <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-xs font-black uppercase tracking-wide">
+                {activeLiveSession.activity?.title || 'En curso'}
+              </span>
+            </p>
+            <p className="text-white/80 text-sm">
+              Los estudiantes están resolviendo a su ritmo. Haz clic para ver el progreso.
+            </p>
+          </div>
+          <ChevronRight className="w-6 h-6 shrink-0" />
+        </button>
+      )}
+
       {/* Live Quiz overlay */}
       {showLiveQuiz && (
         <LiveQuiz
@@ -4693,7 +4719,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           onClose={() => { setShowLiveQuiz(false); setActiveLiveSession(null) }}
           activityId={isTeacher ? liveQuizActivityId : undefined}
           activityTitle={isTeacher ? liveQuizActivityTitle : undefined}
-          sessionId={isStudent && activeLiveSession ? activeLiveSession.id : undefined}
+          sessionId={activeLiveSession?.id}
           studentEnrollmentId={isStudent ? classroom.studentEnrollmentId : undefined}
           initialDeliveryMode={isTeacher ? liveQuizInitialDeliveryMode : 'SYNC'}
         />
