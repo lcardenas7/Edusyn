@@ -2,10 +2,20 @@ import { Injectable, BadRequestException, ForbiddenException, NotFoundException,
 import { PrismaService } from '../../prisma/prisma.service';
 import { GradeStage, EnrollmentMovementType } from '@prisma/client';
 import { ChangeGradeDto, ValidateGradeChangeDto, GradeChangeType } from './dto/grade-change.dto';
+import { AttendanceService } from '../attendance/attendance.service';
+import { StudentGradesService } from '../evaluation/student-grades.service';
+import { InstitutionContextService } from '../institution-context/institution-context.service';
+import { evaluatePromotion, type StudentPromotionData } from '../../engines/promotion.engine';
+import type { InstitutionRulesContext } from '../../engines/InstitutionRulesContext';
 
 @Injectable()
 export class GradeChangeService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly attendanceService: AttendanceService,
+    private readonly studentGradesService: StudentGradesService,
+    private readonly institutionContext: InstitutionContextService,
+  ) {}
 
   /**
    * Valida si un cambio de grado es permitido
@@ -31,6 +41,8 @@ export class GradeChangeService {
     if (enrollment.status !== 'ACTIVE') {
       throw new BadRequestException(`No se puede modificar una matrícula en estado ${enrollment.status}`);
     }
+
+    const rulesCtx = await this.institutionContext.getContext(enrollment.institutionId);
 
     const newGroup = await this.prisma.group.findUnique({
       where: { id: dto.newGroupId },
@@ -69,11 +81,17 @@ export class GradeChangeService {
       newGroup.grade
     );
 
+    const promotionAssessment = gradeChangeType === GradeChangeType.PROMOTION
+      ? await this.buildPromotionAssessment(enrollment, rulesCtx)
+      : null;
+
     // Validaciones según el tipo de cambio
     const validation = await this.validateGradeChangeRules(
       enrollment,
       newGroup,
-      gradeChangeType
+      gradeChangeType,
+      rulesCtx,
+      promotionAssessment,
     );
 
     return {
@@ -223,7 +241,9 @@ export class GradeChangeService {
   private async validateGradeChangeRules(
     enrollment: any,
     newGroup: any,
-    gradeChangeType: GradeChangeType
+    gradeChangeType: GradeChangeType,
+    rulesCtx: InstitutionRulesContext,
+    promotionAssessment: Awaited<ReturnType<GradeChangeService['buildPromotionAssessment']>> | null = null,
   ) {
     const warnings: string[] = [];
     const requirements: string[] = [];
@@ -243,14 +263,15 @@ export class GradeChangeService {
 
     // Regla 2: Promociones anticipadas requieren evaluación especial
     if (gradeChangeType === GradeChangeType.PROMOTION) {
-      // Verificar si ya hay tiempo suficiente en el año académico
-      const academicYear = enrollment.academicYear;
-      const now = new Date();
-      const yearProgress = this.calculateYearProgress(now, academicYear);
-
-      if (yearProgress < 0.5) {
+      if (!promotionAssessment) {
+        restrictions.push('No fue posible calcular la promoción con el contexto académico actual');
+      } else if (!promotionAssessment.hasAcademicData && rulesCtx.academicStructure !== 'DIMENSIONS') {
+        restrictions.push('No hay suficientes notas académicas para evaluar la promoción');
+      } else if (promotionAssessment.result.status === 'NOT_PROMOTED') {
+        restrictions.push(...promotionAssessment.result.reasons);
+      } else if (promotionAssessment.result.status === 'AT_RISK') {
         warnings.push(
-          'Promoción anticipada antes de mitad de año lectivo. Se recomienda esperar.'
+          ...promotionAssessment.result.reasons,
         );
         requirements.push(
           'Requiere evaluación psicoacadémica',
@@ -287,13 +308,11 @@ export class GradeChangeService {
     }
 
     // Regla 4: Validar rendimiento académico si hay datos disponibles
-    const hasGrades = await this.checkStudentGrades(enrollment.id);
-    if (hasGrades && gradeChangeType === GradeChangeType.PROMOTION) {
-      const average = await this.calculateStudentAverage(enrollment.id);
-      if (average < 4.0) {
-        restrictions.push(
-          'Promedio académico insuficiente para promoción anticipada'
-        );
+    if (gradeChangeType === GradeChangeType.PROMOTION && promotionAssessment && promotionAssessment.result.status !== 'PROMOTED') {
+      // La evaluación ya marcó las restricciones/warnings arriba.
+      // Aquí solo evitamos que la validación pase silenciosamente si no hay datos.
+      if (!promotionAssessment.hasAcademicData && rulesCtx.academicStructure !== 'DIMENSIONS') {
+        restrictions.push('Promoción bloqueada por falta de datos académicos');
       }
     }
 
@@ -305,46 +324,62 @@ export class GradeChangeService {
     };
   }
 
-  /**
-   * Calcula el progreso del año lectivo (0 a 1)
-   */
-  private calculateYearProgress(currentDate: Date, academicYear: any): number {
-    if (!academicYear.startDate || !academicYear.endDate) {
-      return 0.5; // Sin fechas, asumir mitad de año
-    }
-
-    const start = new Date(academicYear.startDate);
-    const end = new Date(academicYear.endDate);
-    const total = end.getTime() - start.getTime();
-    const elapsed = currentDate.getTime() - start.getTime();
-
-    return Math.max(0, Math.min(1, elapsed / total));
-  }
-
-  /**
-   * Verifica si el estudiante tiene notas registradas
-   */
-  private async checkStudentGrades(enrollmentId: string): Promise<boolean> {
-    const gradeCount = await this.prisma.studentGrade.count({
-      where: { studentEnrollmentId: enrollmentId },
+  private async buildPromotionAssessment(enrollment: any, rulesCtx: InstitutionRulesContext) {
+    const teacherAssignments = await this.prisma.teacherAssignment.findMany({
+      where: {
+        groupId: enrollment.groupId,
+        academicYearId: enrollment.academicYearId,
+      },
+      include: {
+        subject: true,
+      },
     });
 
-    return gradeCount > 0;
-  }
+    const annualGrades = await Promise.all(
+      teacherAssignments.map(async (assignment) => {
+        const result = await this.studentGradesService.calculateAnnualGrade(
+          enrollment.id,
+          assignment.id,
+          enrollment.academicYearId,
+        );
 
-  /**
-   * Calcula el promedio del estudiante
-   */
-  private async calculateStudentAverage(enrollmentId: string): Promise<number> {
-    const grades = await this.prisma.studentGrade.findMany({
-      where: { studentEnrollmentId: enrollmentId },
-      select: { score: true },
-    });
+        return {
+          teacherAssignmentId: assignment.id,
+          subjectName: assignment.subject?.name || 'Sin asignatura',
+          annualGrade: result.annualGrade,
+        };
+      }),
+    );
 
-    if (grades.length === 0) return 0;
+    const validGrades = annualGrades.filter((entry) => entry.annualGrade !== null);
+    const finalAverage = validGrades.length > 0
+      ? Math.round((validGrades.reduce((sum, entry) => sum + entry.annualGrade!, 0) / validGrades.length) * 10) / 10
+      : 0;
 
-    const sum = grades.reduce((acc, grade) => acc + Number(grade.score), 0);
-    return sum / grades.length;
+    const failedSubjectNames = annualGrades
+      .filter((entry) => entry.annualGrade === null || entry.annualGrade < rulesCtx.minPassingGrade)
+      .map((entry) => entry.subjectName);
+
+    const attendance = await this.attendanceService.getStudentSummary(enrollment.id);
+
+    const promotionData: StudentPromotionData = {
+      studentId: enrollment.studentId,
+      studentName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
+      finalAverage,
+      failedSubjectsCount: failedSubjectNames.length,
+      failedSubjectNames,
+      attendancePercent: attendance.attendanceRate,
+    };
+
+    return {
+      annualGrades,
+      hasAcademicData: annualGrades.length > 0 && validGrades.length > 0,
+      finalAverage,
+      failedSubjectNames,
+      attendance,
+      promotionData,
+      result: evaluatePromotion(promotionData, rulesCtx),
+    };
   }
 
   /**

@@ -1,7 +1,11 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AcademicYearStatus, EnrollmentStatus, EnrollmentEventType } from '@prisma/client';
+import { AcademicYearStatus, EnrollmentStatus, EnrollmentEventType, GradeStage } from '@prisma/client';
 import { InstitutionContextService } from '../institution-context/institution-context.service';
+import { AttendanceService } from '../attendance/attendance.service';
+import { StudentGradesService } from '../evaluation/student-grades.service';
+import { evaluatePromotion, type StudentPromotionData } from '../../engines/promotion.engine';
+import type { InstitutionRulesContext } from '../../engines/InstitutionRulesContext';
 import {
   AcademicTermForReport,
   PerformanceScaleForReport,
@@ -67,6 +71,8 @@ export class AcademicYearLifecycleService {
   constructor(
     private prisma: PrismaService,
     private institutionContext: InstitutionContextService,
+    private attendanceService: AttendanceService,
+    private studentGradesService: StudentGradesService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -357,6 +363,9 @@ export class AcademicYearLifecycleService {
     let repeatedCount = 0;
     let withdrawnCount = 0;
 
+    const year = await this.getYearById(yearId);
+    const rulesCtx = await this.institutionContext.getContext(year.institutionId);
+
     // Obtener todas las matrículas activas del año
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
@@ -373,12 +382,9 @@ export class AcademicYearLifecycleService {
       },
     });
 
-    // Por ahora, marcar todos como PROMOTED (la lógica real debería calcular notas)
-    // TODO: Implementar cálculo real de promoción basado en notas
     for (const enrollment of enrollments) {
-      // Aquí iría la lógica de cálculo de notas finales
-      // Por ahora, asumimos que todos aprueban
-      const shouldPromote = true; // TODO: Calcular basado en notas
+      const assessment = await this.buildPromotionAssessment(enrollment, rulesCtx);
+      const shouldPromote = assessment.result.status !== 'NOT_PROMOTED';
 
       const newStatus: EnrollmentStatus = shouldPromote ? 'PROMOTED' : 'REPEATED';
 
@@ -393,7 +399,9 @@ export class AcademicYearLifecycleService {
           institutionId: enrollment.institutionId,
           enrollmentId: enrollment.id,
           type: shouldPromote ? 'PROMOTED' : 'REPEATED',
-          reason: 'Cierre de año lectivo',
+          reason: shouldPromote
+            ? `Cierre de año lectivo: ${assessment.result.reasons.join('; ') || 'Cumple los requisitos de promoción'}`
+            : assessment.result.reasons.join('; ') || 'No cumple los requisitos de promoción',
           performedById: userId,
         },
       });
@@ -416,6 +424,85 @@ export class AcademicYearLifecycleService {
     return { promotedCount, repeatedCount, withdrawnCount };
   }
 
+  private async buildPromotionAssessment(enrollment: any, rulesCtx: InstitutionRulesContext) {
+    const teacherAssignments = await this.prisma.teacherAssignment.findMany({
+      where: {
+        groupId: enrollment.groupId,
+        academicYearId: enrollment.academicYearId,
+      },
+      include: {
+        subject: true,
+      },
+    });
+
+    const annualGrades = await Promise.all(
+      teacherAssignments.map(async (assignment) => {
+        const result = await this.studentGradesService.calculateAnnualGrade(
+          enrollment.id,
+          assignment.id,
+          enrollment.academicYearId,
+        );
+
+        return {
+          teacherAssignmentId: assignment.id,
+          subjectName: assignment.subject?.name || 'Sin asignatura',
+          annualGrade: result.annualGrade,
+        };
+      }),
+    );
+
+    const validGrades = annualGrades.filter((entry) => entry.annualGrade !== null);
+    const finalAverage = validGrades.length > 0
+      ? Math.round((validGrades.reduce((sum, entry) => sum + entry.annualGrade!, 0) / validGrades.length) * 10) / 10
+      : 0;
+
+    const failedSubjectNames = annualGrades
+      .filter((entry) => entry.annualGrade === null || entry.annualGrade < rulesCtx.minPassingGrade)
+      .map((entry) => entry.subjectName);
+
+    const attendance = await this.attendanceService.getStudentSummary(enrollment.id);
+
+    const promotionData: StudentPromotionData = {
+      studentId: enrollment.studentId,
+      studentName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
+      finalAverage,
+      failedSubjectsCount: failedSubjectNames.length,
+      failedSubjectNames,
+      attendancePercent: attendance.attendanceRate,
+    };
+
+    return {
+      annualGrades,
+      finalAverage,
+      failedSubjectNames,
+      attendance,
+      promotionData,
+      hasAcademicData: teacherAssignments.length > 0 && validGrades.length > 0,
+      result: evaluatePromotion(promotionData, rulesCtx),
+    };
+  }
+
+  private getGradeOrder(grade: { stage: GradeStage; number: number | null }): number {
+    const stageOrder: Record<GradeStage, number> = {
+      PREESCOLAR: 0,
+      BASICA_PRIMARIA: 100,
+      BASICA_SECUNDARIA: 200,
+      MEDIA: 300,
+    };
+
+    return (stageOrder[grade.stage] ?? 0) + (grade.number || 0);
+  }
+
+  private getNextGradeFromSequence(
+    currentGrade: { id: string; stage: GradeStage; number: number | null },
+    sequence: Array<{ id: string; name: string; stage: GradeStage; number: number | null }>,
+  ) {
+    const sorted = [...sequence].sort((a, b) => this.getGradeOrder(a) - this.getGradeOrder(b));
+    const currentIndex = sorted.findIndex((grade) => grade.id === currentGrade.id);
+    if (currentIndex < 0) return null;
+    return sorted[currentIndex + 1] ?? null;
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // PREVISUALIZAR PROMOCIONES
   // ═══════════════════════════════════════════════════════════════════════════
@@ -423,6 +510,14 @@ export class AcademicYearLifecycleService {
   async previewPromotions(yearId: string): Promise<PromotionPreview[]> {
     const yearData = await this.prisma.academicYear.findUnique({ where: { id: yearId }, select: { institutionId: true } });
     const rulesCtx = await this.institutionContext.getContext(yearData?.institutionId || '');
+    const gradeSequence = await this.prisma.grade.findMany({
+      select: {
+        id: true,
+        name: true,
+        stage: true,
+        number: true,
+      },
+    });
 
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
@@ -442,11 +537,11 @@ export class AcademicYearLifecycleService {
     const previews: PromotionPreview[] = [];
 
     for (const enrollment of enrollments) {
-      // TODO: Calcular promedio final real
-      const finalAverage = null; // Placeholder
-
-      // TODO: Determinar siguiente grado basado en orden
-      const nextGrade = null; // Placeholder
+      const assessment = await this.buildPromotionAssessment(enrollment, rulesCtx);
+      const shouldPromote = assessment.result.status !== 'NOT_PROMOTED';
+      const nextGrade = shouldPromote
+        ? this.getNextGradeFromSequence(enrollment.group.grade, gradeSequence)
+        : null;
 
       previews.push({
         studentId: enrollment.studentId,
@@ -454,10 +549,10 @@ export class AcademicYearLifecycleService {
         currentGradeId: enrollment.group.gradeId,
         currentGradeName: enrollment.group.grade.name,
         currentGroupName: enrollment.group.name,
-        finalAverage,
-        suggestedStatus: finalAverage && finalAverage >= rulesCtx.minPassingGrade ? 'PROMOTED' : 'REPEATED',
-        nextGradeId: nextGrade,
-        nextGradeName: nextGrade,
+        finalAverage: assessment.finalAverage,
+        suggestedStatus: shouldPromote ? 'PROMOTED' : 'REPEATED',
+        nextGradeId: nextGrade?.id ?? null,
+        nextGradeName: nextGrade?.name ?? null,
       });
     }
 
@@ -471,6 +566,14 @@ export class AcademicYearLifecycleService {
   async promoteStudents(dto: PromoteStudentsDto): Promise<PromotionResult> {
     const fromYear = await this.getYearById(dto.fromYearId);
     const toYear = await this.getYearById(dto.toYearId);
+    const grades = await this.prisma.grade.findMany({
+      select: {
+        id: true,
+        name: true,
+        stage: true,
+        number: true,
+      },
+    });
 
     // Validar que el año origen esté cerrado
     if (fromYear.status !== 'CLOSED') {
@@ -520,16 +623,7 @@ export class AcademicYearLifecycleService {
         // Determinar el grado destino
         let targetGradeId: string;
         if (oldEnrollment.status === 'PROMOTED') {
-          // Buscar el siguiente grado basado en number y stage
-          const currentGrade = oldEnrollment.group.grade;
-          const nextNumber = (currentGrade.number || 0) + 1;
-          
-          const nextGrade = await this.prisma.grade.findFirst({
-            where: {
-              stage: currentGrade.stage,
-              number: nextNumber,
-            },
-          });
+          const nextGrade = this.getNextGradeFromSequence(oldEnrollment.group.grade, grades);
           targetGradeId = nextGrade?.id || oldEnrollment.group.gradeId;
         } else {
           // Repite el mismo grado
@@ -562,12 +656,6 @@ export class AcademicYearLifecycleService {
             promotedFromId: oldEnrollment.id,
             enrolledById: dto.userId,
           },
-        });
-
-        // Actualizar la matrícula anterior con la referencia
-        await this.prisma.studentEnrollment.update({
-          where: { id: oldEnrollment.id },
-          data: { promotedFromId: newEnrollment.id }, // Nota: esto debería ser promotedToId pero no existe en el schema actual
         });
 
         // Crear evento de auditoría

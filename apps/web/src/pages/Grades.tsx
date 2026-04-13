@@ -6,6 +6,7 @@ import { useAcademic, type AcademicLevel, type QualitativeLevel } from '../conte
 import { teacherAssignmentsApi, academicStudentsApi, gradingPeriodConfigApi, partialGradesApi, achievementsApi, achievementConfigApi, achievementBankApi, finalComponentsApi, finalComponentGradesApi } from '../lib/api'
 import { buildQualitativeMaps, toPerformanceLevel, toQualitativeCode } from '../utils/qualitativePerformanceMapper'
 import { DiagnosisBadge } from '../components/StudentBadges'
+import QualitativeGradesPanel from '../components/grades/QualitativeGradesPanel'
 
 interface TeacherAssignment {
   id: string
@@ -200,10 +201,6 @@ export default function Grades() {
     return getPerformanceLevelDynamic(grade, resolvedLevel)
   }, [resolvedLevel])
 
-  // ── Estado para evaluación cualitativa ─────────────────────────────
-  // Map: studentId → { qualitativeLevelId, observation }
-  const [qualitativeGrades, setQualitativeGrades] = useState<Record<string, { levelCode: string; observation: string }>>({})
-
   const [showAddActivity, setShowAddActivity] = useState(false)
   const [showDownloadMenu, setShowDownloadMenu] = useState(false)
   const [addToProcessCode, setAddToProcessCode] = useState<string | null>(null)
@@ -247,12 +244,16 @@ export default function Grades() {
       suggestedText?: string;
       approvedText?: string;
       isTextApproved: boolean;
+      observation?: string;
     }>;
   }>>([])
   const [achievementConfig, setAchievementConfig] = useState<{
     achievementsPerPeriod: number;
     useValueJudgments: boolean;
   } | null>(null)
+
+  const [qualitativeGradesByAchievement, setQualitativeGradesByAchievement] = useState<Record<string, Record<string, { levelCode: string; observation: string }>>>({})
+  const [selectedQualitativeAchievementId, setSelectedQualitativeAchievementId] = useState<string | null>(null)
 
   // Banco de logros
   const [showBank, setShowBank] = useState(false)
@@ -685,54 +686,52 @@ export default function Grades() {
     return total
   }
 
-  // ── Cargar evaluación cualitativa cuando cambia la asignación/período ──
-  useEffect(() => {
-    const loadQualitativeGrades = async () => {
-      if (!isQualitative || !selectedAssignment?.id || !academicTermId || students.length === 0) return
-      try {
-        const res = await achievementsApi.getByAssignment(selectedAssignment.id, academicTermId)
-        const achievementsList = res.data || []
-        const qGrades: Record<string, { levelCode: string; observation: string }> = {}
-        
-        // For each student, find their StudentAchievement and extract level + observation
-        // Uses dynamic mapper: PerformanceLevel → qualitative code (based on configured levels)
-        students.forEach(student => {
-          for (const ach of achievementsList) {
-            const sa = ach.studentAchievements?.find(
-              (sa: any) => sa.studentEnrollmentId === student.enrollmentId
-            )
-            if (sa) {
-              const levelCode = toQualitativeCode(sa.performanceLevel, toQual)
-              qGrades[student.id] = {
-                levelCode,
-                observation: sa.observation || sa.approvedText || sa.suggestedText || '',
-              }
-              break // Take first achievement per student
-            }
-          }
-        })
-        setQualitativeGrades(qGrades)
-      } catch (err) {
-        console.error('Error loading qualitative grades:', err)
-      }
-    }
-    loadQualitativeGrades()
-  }, [isQualitative, selectedAssignment?.id, academicTermId, students, toQual])
+  const buildQualitativeAchievementText = useCallback((baseDescription: string, levelCode: string) => {
+    const level = qualitativeLevels.find(ql => ql.code === levelCode)
+    if (!level) return baseDescription
+    return `${level.name}: ${baseDescription}`
+  }, [qualitativeLevels])
 
-  // Cargar logros cuando se cambia a la pestaña de logros
+  // Cargar logros y, en modo cualitativo, precargar los niveles por indicador
   useEffect(() => {
     const loadAchievements = async () => {
-      if (viewMode !== 'achievements' || !selectedAssignment?.id || !academicTermId || !institutionId) return
+      if (!selectedAssignment?.id || !academicTermId) return
+
+      const shouldLoadAchievements = isQualitative || viewMode === 'achievements'
+      if (!shouldLoadAchievements) return
+
       try {
-        const [achievementsRes, configRes] = await Promise.all([
-          achievementsApi.getByAssignment(selectedAssignment.id, academicTermId),
-          achievementConfigApi.get(institutionId!)
-        ])
-        setAchievements(achievementsRes.data || [])
-        if (configRes.data) {
+        const requests: Promise<any>[] = [achievementsApi.getByAssignment(selectedAssignment.id, academicTermId)]
+        if (viewMode === 'achievements' && institutionId) {
+          requests.push(achievementConfigApi.get(institutionId))
+        }
+
+        const [achievementsRes, configRes] = await Promise.all(requests)
+        const achievementsList = achievementsRes.data || []
+        setAchievements(achievementsList)
+
+        if (configRes?.data) {
           setAchievementConfig({
             achievementsPerPeriod: configRes.data.achievementsPerPeriod || 1,
             useValueJudgments: configRes.data.useValueJudgments ?? true,
+          })
+        }
+
+        if (isQualitative) {
+          const nextGrades: Record<string, Record<string, { levelCode: string; observation: string }>> = {}
+          achievementsList.forEach((achievement: any) => {
+            nextGrades[achievement.id] = {}
+            ;(achievement.studentAchievements || []).forEach((sa: any) => {
+              nextGrades[achievement.id][sa.studentEnrollmentId] = {
+                levelCode: toQualitativeCode(sa.performanceLevel, toQual),
+                observation: sa.observation || sa.approvedText || sa.suggestedText || '',
+              }
+            })
+          })
+          setQualitativeGradesByAchievement(nextGrades)
+          setSelectedQualitativeAchievementId(prev => {
+            if (prev && achievementsList.some((achievement: any) => achievement.id === prev)) return prev
+            return achievementsList[0]?.id || null
           })
         }
       } catch (err) {
@@ -740,7 +739,7 @@ export default function Grades() {
       }
     }
     loadAchievements()
-  }, [viewMode, selectedAssignment?.id, academicTermId, institutionId])
+  }, [viewMode, selectedAssignment?.id, academicTermId, institutionId, isQualitative, students, toQual])
 
   // Todas las columnas para navegación
   const allActivityColumns = useMemo(() => {
@@ -955,42 +954,40 @@ export default function Grades() {
     setSaveMessage(null)
 
     try {
-      // 1. Get achievements for this assignment+term
-      const res = await achievementsApi.getByAssignment(selectedAssignment.id, academicTermId)
-      const achievementsList = res.data || []
-      
-      if (achievementsList.length === 0) {
+      if (achievements.length === 0) {
         setSaveMessage({ type: 'error', text: 'No hay logros creados para esta dimensión en este período. Cree logros primero desde el módulo de Logros.' })
         setTimeout(() => setSaveMessage(null), 5000)
         return
       }
 
-      // Use the first achievement as the target
-      const achievement = achievementsList[0]
-
       let saved = 0
       let skipped = 0
-      for (const student of students) {
-        const qg = qualitativeGrades[student.id]
-        if (!qg || !qg.levelCode) continue
+      for (const achievement of achievements) {
+        const achievementGrades = qualitativeGradesByAchievement[achievement.id] || {}
 
-        // Mapeo dinámico: código cualitativo → PerformanceLevel (basado en niveles configurados)
-        const performanceLevel = toPerformanceLevel(qg.levelCode, toPerf)
-        if (!performanceLevel) {
-          skipped++
-          continue
+        for (const student of students) {
+          const qg = achievementGrades[student.id]
+          if (!qg || !qg.levelCode) continue
+
+          const performanceLevel = toPerformanceLevel(qg.levelCode, toPerf)
+          if (!performanceLevel) {
+            skipped++
+            continue
+          }
+
+          const achievementText = buildQualitativeAchievementText(achievement.baseDescription, qg.levelCode)
+
+          await achievementsApi.upsertStudentAchievement('upsert', {
+            studentEnrollmentId: student.enrollmentId,
+            achievementId: achievement.id,
+            performanceLevel,
+            suggestedText: achievementText,
+            approvedText: achievementText,
+            isTextApproved: true,
+            observation: qg.observation?.trim() || undefined,
+          })
+          saved++
         }
-
-        await achievementsApi.upsertStudentAchievement('upsert', {
-          studentEnrollmentId: student.enrollmentId,
-          achievementId: achievement.id,
-          performanceLevel,
-          suggestedText: qg.levelCode,
-          approvedText: qg.levelCode,
-          isTextApproved: true,
-          observation: qg.observation || undefined,
-        })
-        saved++
       }
 
       const msg = skipped > 0
@@ -1004,6 +1001,40 @@ export default function Grades() {
       setTimeout(() => setSaveMessage(null), 5000)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleCreateQualitativeAchievement = async (baseDescription: string) => {
+    if (!selectedAssignment?.id || !academicTermId) {
+      setSaveMessage({ type: 'error', text: 'No se puede crear el indicador: falta información del período o dimensión' })
+      setTimeout(() => setSaveMessage(null), 3000)
+      return
+    }
+
+    try {
+      const response = await achievementsApi.create({
+        teacherAssignmentId: selectedAssignment.id,
+        academicTermId,
+        orderNumber: achievements.length + 1,
+        baseDescription,
+        isPromotional: false,
+      })
+
+      const created = response.data
+      if (!created) return
+
+      setAchievements(prev => [...prev, created].sort((a, b) => a.orderNumber - b.orderNumber))
+      setQualitativeGradesByAchievement(prev => ({
+        ...prev,
+        [created.id]: prev[created.id] || {},
+      }))
+      setSelectedQualitativeAchievementId(created.id)
+      setSaveMessage({ type: 'success', text: 'Indicador creado correctamente' })
+      setTimeout(() => setSaveMessage(null), 3000)
+    } catch (err: any) {
+      console.error('Error creating qualitative achievement:', err)
+      setSaveMessage({ type: 'error', text: err.response?.data?.message || 'Error al crear el indicador' })
+      setTimeout(() => setSaveMessage(null), 5000)
     }
   }
 
@@ -1447,91 +1478,29 @@ export default function Grades() {
         )}
 
         {isQualitative ? (
-          /* ═══════════════════════════════════════════════════════
-             PLANILLA CUALITATIVA - Estudiante | Nivel | Observación
-             ═══════════════════════════════════════════════════════ */
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-amber-50">
-                  <th className="text-center px-2 py-3 text-xs font-medium text-slate-500 uppercase w-10">N°</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase min-w-[250px]">Estudiante</th>
-                  <th className="text-center px-4 py-3 text-xs font-semibold text-amber-700 uppercase min-w-[160px]">Nivel</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-amber-700 uppercase min-w-[300px]">Observación</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {loadingStudents ? (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-600"></div>
-                        Cargando estudiantes...
-                      </div>
-                    </td>
-                  </tr>
-                ) : students.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
-                      No hay estudiantes matriculados en este grupo
-                    </td>
-                  </tr>
-                ) : students.map((student, idx) => {
-                  const qg = qualitativeGrades[student.id] || { levelCode: '', observation: '' }
-                  const selectedQl = qualitativeLevels.find(ql => ql.code === qg.levelCode)
-                  return (
-                    <tr key={student.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-2 py-3 text-center text-sm font-medium text-slate-500">{idx + 1}</td>
-                      <td className="px-4 py-3 font-medium text-slate-900">{student.name}<DiagnosisBadge student={student} /></td>
-                      <td className="px-4 py-3 text-center">
-                        <select
-                          value={qg.levelCode}
-                          onChange={(e) => {
-                            setQualitativeGrades(prev => ({
-                              ...prev,
-                              [student.id]: { ...prev[student.id] || { levelCode: '', observation: '' }, levelCode: e.target.value }
-                            }))
-                          }}
-                          disabled={!currentPeriodOpen}
-                          className={`w-full px-2 py-1.5 text-sm border rounded-lg outline-none ${
-                            !currentPeriodOpen ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' : 'border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500'
-                          }`}
-                          style={selectedQl ? { borderLeftColor: selectedQl.color, borderLeftWidth: '4px' } : {}}
-                        >
-                          <option value="">Seleccionar nivel</option>
-                          {qualitativeLevels.map(ql => (
-                            <option key={ql.id} value={ql.code}>
-                              {ql.code} - {ql.name}
-                            </option>
-                          ))}
-                        </select>
-                        {selectedQl && (
-                          <p className="text-[10px] mt-1 text-slate-500 leading-tight">{selectedQl.description}</p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <textarea
-                          value={qg.observation}
-                          onChange={(e) => {
-                            setQualitativeGrades(prev => ({
-                              ...prev,
-                              [student.id]: { ...prev[student.id] || { levelCode: '', observation: '' }, observation: e.target.value }
-                            }))
-                          }}
-                          disabled={!currentPeriodOpen}
-                          placeholder="Observación del docente..."
-                          rows={2}
-                          className={`w-full px-2 py-1.5 text-sm border rounded-lg outline-none resize-none ${
-                            !currentPeriodOpen ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' : 'border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500'
-                          }`}
-                        />
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <QualitativeGradesPanel
+            students={students}
+            loadingStudents={loadingStudents}
+            currentPeriodOpen={currentPeriodOpen}
+            achievements={achievements}
+            selectedAchievementId={selectedQualitativeAchievementId}
+            onSelectAchievement={setSelectedQualitativeAchievementId}
+            qualitativeLevels={qualitativeLevels}
+            gradesByAchievement={qualitativeGradesByAchievement}
+            onUpdateGrade={(achievementId, studentId, patch) => {
+              setQualitativeGradesByAchievement(prev => ({
+                ...prev,
+                [achievementId]: {
+                  ...(prev[achievementId] || {}),
+                  [studentId]: {
+                    ...(prev[achievementId]?.[studentId] || { levelCode: '', observation: '' }),
+                    ...patch,
+                  },
+                },
+              }))
+            }}
+            onCreateAchievement={handleCreateQualitativeAchievement}
+          />
         ) : selectedSourceType === 'final_component' ? (
           /* ═══════════════════════════════════════════════════════
              PLANILLA SIMPLIFICADA - Componente Final (1 nota por estudiante)

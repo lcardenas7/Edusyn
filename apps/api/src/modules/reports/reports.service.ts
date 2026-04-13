@@ -2186,6 +2186,7 @@ export class ReportsService {
         areaAverage: number | null;
         areaPerformanceLevel: string | null;
         subjects: Array<{
+          subjectId: string | null;
           subject: string;
           subjectCode: string | null;
           teacher: string | null;
@@ -2195,10 +2196,12 @@ export class ReportsService {
           components: { componentId: string; name: string; average: number | null; percentage: number }[];
           achievement: string | null;
           achievementObservation: string | null;
+          qualitativeObservation: string | null;
           judgment: string | null;
         }>;
       }>;
       subjectGrades: Array<{
+        subjectId: string | null;
         subject: string;
         subjectCode: string | null;
         teacher: string | null;
@@ -2212,11 +2215,12 @@ export class ReportsService {
         components: { componentId: string; name: string; average: number | null; percentage: number }[];
         achievement: string | null;
         achievementObservation: string | null;
+        qualitativeObservation: string | null;
         judgment: string | null;
       }>;
       structureSource: 'snapshot' | 'calculated';
       attendance: { total: number; present: number; absent: number; late: number; excused: number; attendanceRate: number };
-      achievements: Array<{ subject: string; orderNumber: number; description: string; performanceLevel: string | null; observation: string | null; judgment: string | null }>;
+      achievements: Array<{ subjectId: string | null; subject: string; orderNumber: number; description: string; performanceLevel: string | null; observation: string | null; judgment: string | null }>;
       observations: Array<{ date: Date; type: string; category: string | null; description: string; author: string }>;
     }>;
     generatedAt: Date;
@@ -2632,6 +2636,7 @@ export class ReportsService {
             absences,
             achievement: null as string | null,
             achievementObservation: null as string | null,
+            qualitativeObservation: null as string | null,
             judgment: null as string | null,
           };
         });
@@ -2668,30 +2673,88 @@ export class ReportsService {
 
       // ─── Enriquecer con logros (en memoria) ───────────────────────────
       const studentAchievements = achievementsMap.get(enrollmentId) || [];
+      const normalizePerformanceLevel = (value: string | null | undefined) => {
+        const normalized = (value || '').trim().toUpperCase();
+        return normalized || null;
+      };
+
       const achievements = studentAchievements.map(sa => ({
+        subjectId: sa.achievement.teacherAssignment?.subject?.id || null,
         subject: sa.achievement.teacherAssignment?.subject?.name || '',
         orderNumber: sa.achievement.orderNumber,
         description: sa.approvedText || sa.suggestedText || sa.achievement.baseDescription,
-        performanceLevel: sa.performanceLevel,
+        performanceLevel: normalizePerformanceLevel(sa.performanceLevel),
         observation: sa.observation || null,
         judgment: sa.approvedJudgment || sa.suggestedJudgment || null,
       }));
 
       // Map de logros por asignatura para enriquecer subjectGrades
-      const achievementBySubject = new Map<string, (typeof achievements)[0]>();
+      const achievementBySubjectId = new Map<string, typeof achievements>();
+      const achievementBySubjectName = new Map<string, typeof achievements>();
       for (const ach of achievements) {
-        if (ach.subject && !achievementBySubject.has(ach.subject)) {
-          achievementBySubject.set(ach.subject, ach);
+        if (ach.subjectId) {
+          const list = achievementBySubjectId.get(ach.subjectId) || [];
+          list.push(ach);
+          achievementBySubjectId.set(ach.subjectId, list);
+        }
+        if (ach.subject) {
+          const list = achievementBySubjectName.get(ach.subject) || [];
+          list.push(ach);
+          achievementBySubjectName.set(ach.subject, list);
         }
       }
 
+      const resolveSubjectAchievements = (subjectId: string | null, subjectName: string) => {
+        return (subjectId && achievementBySubjectId.get(subjectId)) || achievementBySubjectName.get(subjectName) || [];
+      };
+
+      const resolveDominantPerformanceLevel = (subjectId: string | null, subjectName: string) => {
+        const subjectAchievements = resolveSubjectAchievements(subjectId, subjectName);
+        if (subjectAchievements.length === 0) return null;
+
+        const counts = new Map<string, { count: number; firstIndex: number }>();
+        subjectAchievements.forEach((ach, idx) => {
+          const level = normalizePerformanceLevel(ach.performanceLevel);
+          if (!level) return;
+          const current = counts.get(level);
+          if (current) {
+            current.count += 1;
+          } else {
+            counts.set(level, { count: 1, firstIndex: idx });
+          }
+        });
+
+        let winner: { level: string; count: number; firstIndex: number } | null = null;
+        for (const [level, meta] of counts.entries()) {
+          if (!winner || meta.count > winner.count || (meta.count === winner.count && meta.firstIndex < winner.firstIndex)) {
+            winner = { level, count: meta.count, firstIndex: meta.firstIndex };
+          }
+        }
+
+        return winner?.level || null;
+      };
+
+      const resolveAchievement = (subjectId: string | null, subjectName: string, performanceLevel: string | null) => {
+        const subjectAchievements = resolveSubjectAchievements(subjectId, subjectName);
+        if (subjectAchievements.length === 0) return null;
+
+        const normalizedLevel = normalizePerformanceLevel(performanceLevel) || resolveDominantPerformanceLevel(subjectId, subjectName);
+        if (normalizedLevel) {
+          const exactMatch = subjectAchievements.find(ach => normalizePerformanceLevel(ach.performanceLevel) === normalizedLevel);
+          if (exactMatch) return exactMatch;
+        }
+
+        return subjectAchievements[0] || null;
+      };
+
       // Aplanar subject grades y enriquecer con logros
       const subjectGrades = areaGrades.flatMap(a => a.subjects).map(sg => {
-        const ach = achievementBySubject.get(sg.subject);
+        const ach = resolveAchievement(sg.subjectId, sg.subject, sg.performanceLevel);
         return {
           ...sg,
           achievement: ach?.description || null,
           achievementObservation: ach?.observation || null,
+          qualitativeObservation: ach?.observation || null,
           judgment: ach?.judgment || null,
         };
       });
@@ -2699,9 +2762,10 @@ export class ReportsService {
       // También enriquecer los subjects dentro de areaGrades
       for (const area of areaGrades) {
         for (const subj of area.subjects) {
-          const ach = achievementBySubject.get(subj.subject);
+          const ach = resolveAchievement(subj.subjectId, subj.subject, subj.performanceLevel);
           subj.achievement = ach?.description || null;
           subj.achievementObservation = ach?.observation || null;
+          subj.qualitativeObservation = ach?.observation || null;
           subj.judgment = ach?.judgment || null;
         }
       }

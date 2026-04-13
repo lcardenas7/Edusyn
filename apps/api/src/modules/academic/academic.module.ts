@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 
+import { AttendanceModule } from '../attendance/attendance.module';
+import { EvaluationModule } from '../evaluation/evaluation.module';
+
 import { CampusesController } from './campuses.controller';
 import { CampusesService } from './campuses.service';
 import { AreasController } from './areas.controller';
@@ -41,6 +44,7 @@ import { TemplatesService } from './templates.service';
 import { AcademicStudentsController } from './academic-students.controller';
 
 @Module({
+  imports: [EvaluationModule, AttendanceModule],
   controllers: [
     InstitutionsController,
     CampusesController,

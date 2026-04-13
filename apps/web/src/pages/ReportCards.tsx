@@ -1211,10 +1211,8 @@ export default function ReportCards() {
                                   <td className="px-2 py-1.5 text-slate-700">
                                     {isQualitative ? (
                                       <>
-                                        {sg.qualitativeObservation ? (
-                                          <p className="leading-tight">{sg.qualitativeObservation}</p>
-                                        ) : sg.achievement ? (
-                                          <p className="leading-tight">{sg.achievement}</p>
+                                        {sg.qualitativeObservation || sg.achievementObservation || sg.achievement ? (
+                                          <p className="leading-tight">{sg.qualitativeObservation || sg.achievementObservation || sg.achievement}</p>
                                         ) : (
                                           <p className="leading-tight text-slate-400">-</p>
                                         )}

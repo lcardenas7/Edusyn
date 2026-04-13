@@ -68,7 +68,7 @@ export class GradeChangeController {
           ],
           restrictions: [
             'No antes de mitad de año lectivo (excepto casos excepcionales)',
-            'Promedio académico mínimo 4.0',
+            'Promedio académico mínimo según configuración institucional',
           ],
         },
         demotion: {
