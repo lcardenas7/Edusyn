@@ -1985,8 +1985,18 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
   const svgToDataUrl = (svg: string) => `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
 
-  const buildValeriaContext = () => {
+  const buildValeriaContext = (): {
+    institutionName?: string
+    gradeName?: string
+    subjectName?: string
+    topic?: string
+    activityType?: 'QUIZ' | 'EXAM' | 'GUIDE' | 'ACHIEVEMENT' | 'GENERAL'
+    details?: string
+  } => {
     const activity = selectedActivity
+    const activityType: 'QUIZ' | 'EXAM' | 'GUIDE' | 'ACHIEVEMENT' | 'GENERAL' = isQuizType(activity?.type || '')
+      ? (isIcfes(activity?.type || '') ? 'EXAM' : 'QUIZ')
+      : 'GENERAL'
     const activityDetails = activity ? {
       activityId: activity.id,
       activityTitle: activity.title,
@@ -2010,9 +2020,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       gradeName: classroom.teacherAssignment?.group?.grade?.name,
       subjectName: classroom.teacherAssignment?.subject?.name,
       topic: activity?.title || 'Classroom',
-      activityType: isQuizType(activity?.type || '')
-        ? (isIcfes(activity?.type || '') ? 'EXAM' : 'QUIZ')
-        : 'GENERAL',
+      activityType,
       details: JSON.stringify({
         classroomTitle: classroom.title,
         sectionCount: sections.length,
