@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { classroomApi, storageApi, liveSessionApi } from '../lib/api'
+import { classroomApi, storageApi, liveSessionApi, apdApi } from '../lib/api'
 import LiveQuiz from '../components/LiveQuiz'
 import { CreateSelfAssessmentForm, StudentSelfAssessment, SelfAssessmentResults } from '../components/SelfAssessmentUI'
 const RichTextEditor = lazy(() => import('../components/RichTextEditor'))
@@ -1952,6 +1952,15 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [liveQuizInitialDeliveryMode, setLiveQuizInitialDeliveryMode] = useState<'SYNC' | 'ASYNC_HOME'>('SYNC')
   const [activeLiveSession, setActiveLiveSession] = useState<any>(null)
 
+  // Valeria AI helper
+  const [showValeriaModal, setShowValeriaModal] = useState(false)
+  const [valeriaQuestion, setValeriaQuestion] = useState('')
+  const [valeriaLoading, setValeriaLoading] = useState(false)
+  const [valeriaError, setValeriaError] = useState('')
+  const [valeriaResponse, setValeriaResponse] = useState<any>(null)
+  const [valeriaIncludeVisuals, setValeriaIncludeVisuals] = useState(true)
+  const [valeriaVisualPlacement, setValeriaVisualPlacement] = useState<'QUESTION_IMAGE' | 'CONTEXT_IMAGE' | 'INLINE'>('QUESTION_IMAGE')
+
   // Gradebook sync
   const [gradebookConfig, setGradebookConfig] = useState<any>(null)
   const [showGradebookLink, setShowGradebookLink] = useState(false)
@@ -1973,6 +1982,94 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       setActivities(data)
     } catch {} finally { setLoading(false) }
   }, [classroom.id, isStudent])
+
+  const svgToDataUrl = (svg: string) => `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
+
+  const buildValeriaContext = () => {
+    const activity = selectedActivity
+    const activityDetails = activity ? {
+      activityId: activity.id,
+      activityTitle: activity.title,
+      activityType: activity.type,
+      sectionTitle: activity.section?.title,
+      isPublished: activity.isPublished,
+      questionCount: questions.length,
+      contextCount: contexts.length,
+      maxScore: activity.maxScore,
+      currentQuestionDraft: showAddQuestion ? {
+        type: qForm.type,
+        text: qForm.text,
+        hasImage: !!qForm.imageUrl,
+        contextId: qForm.contextId || undefined,
+        points: qForm.points,
+      } : undefined,
+    } : null
+
+    return {
+      institutionName: 'Edusyn',
+      gradeName: classroom.teacherAssignment?.group?.grade?.name,
+      subjectName: classroom.teacherAssignment?.subject?.name,
+      topic: activity?.title || 'Classroom',
+      activityType: isQuizType(activity?.type || '')
+        ? (isIcfes(activity?.type || '') ? 'EXAM' : 'QUIZ')
+        : 'GENERAL',
+      details: JSON.stringify({
+        classroomTitle: classroom.title,
+        sectionCount: sections.length,
+        selectedActivity: activityDetails,
+      }, null, 2),
+    }
+  }
+
+  const askValeria = async (question: string) => {
+    const trimmed = question.trim()
+    if (!trimmed) return
+
+    try {
+      setValeriaLoading(true)
+      setValeriaError('')
+      setValeriaResponse(null)
+      const { data } = await apdApi.askValeria({
+        institutionId: classroom.institutionId,
+        question: trimmed,
+        context: buildValeriaContext(),
+        includeVisuals: valeriaIncludeVisuals,
+        visualPlacement: valeriaVisualPlacement,
+      })
+      setValeriaResponse(data)
+    } catch (err: any) {
+      setValeriaError(err.response?.data?.message || 'No fue posible consultar a Valeria')
+    } finally {
+      setValeriaLoading(false)
+    }
+  }
+
+  const applyValeriaSvg = () => {
+    const svg = valeriaResponse?.visualSuggestion?.svg
+    if (!svg) return
+    setQForm(prev => ({ ...prev, imageUrl: svgToDataUrl(svg) }))
+  }
+
+  const copyValeriaAnswer = async () => {
+    const answer = valeriaResponse?.answer
+    if (!answer) return
+    try {
+      await navigator.clipboard.writeText(answer)
+    } catch {}
+  }
+
+  const openValeriaModal = (preset?: string) => {
+    const defaultPrompt = selectedActivity && isQuizEditorType(selectedActivity.type) && showAddQuestion
+      ? `Ayúdame a mejorar la pregunta que estoy creando en Classroom. Dame un borrador pedagógico claro, dime si conviene usar una imagen SVG o un contexto visual, y sugiere cómo ubicarla en el campo de imagen.`
+      : selectedActivity && isQuizEditorType(selectedActivity.type)
+      ? `Explícame cómo debo preparar ${getQuizTypeLabel(selectedActivity.type)} de "${selectedActivity.title}" en Classroom. Dame el flujo recomendado, si conviene borrador, Live Quiz o Quiz en Casa, y un consejo visual si aplica.`
+      : `Explícame flujos, instructivos y recomendaciones útiles de Edusyn para docentes. Incluye quién creó la plataforma, cómo funciona Classroom y sugerencias prácticas.`
+
+    setValeriaQuestion(preset || defaultPrompt)
+    setValeriaError('')
+    setValeriaResponse(null)
+    setShowValeriaModal(true)
+  }
 
   useEffect(() => { loadActivities() }, [loadActivities])
 
@@ -3280,7 +3377,16 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             {/* Add/Edit question form */}
             {showAddQuestion && (
               <div ref={questionFormRef} className="p-4 sm:p-6 border-b border-slate-100 bg-purple-50/30 space-y-4">
-                <h4 className="text-base font-bold text-slate-800">{editingQuestion ? 'Editar pregunta' : 'Nueva pregunta'}</h4>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <h4 className="text-base font-bold text-slate-800">{editingQuestion ? 'Editar pregunta' : 'Nueva pregunta'}</h4>
+                  <button
+                    type="button"
+                    onClick={() => openValeriaModal(qForm.text.trim() ? `Ayúdame a mejorar esta pregunta de Classroom y sugiere si debe llevar imagen SVG o contexto visual: ${qForm.text}` : undefined)}
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-violet-100 text-violet-700 rounded-xl text-xs sm:text-sm font-semibold hover:bg-violet-200 transition-colors self-start sm:self-auto"
+                  >
+                    <Sparkles className="w-4 h-4" /> Valeria para esta pregunta
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
@@ -4592,11 +4698,144 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-slate-800">Actividades</h2>
         {isTeacher && (
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
-            <Plus className="w-5 h-5" /> Nueva Actividad
-          </button>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <button onClick={() => openValeriaModal()} className="flex items-center gap-2 px-4 py-2.5 bg-violet-100 text-violet-700 rounded-xl text-sm font-semibold hover:bg-violet-200 transition-colors" style={{ minHeight: '44px' }}>
+              <Sparkles className="w-5 h-5" /> Valeria
+            </button>
+            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
+              <Plus className="w-5 h-5" /> Nueva Actividad
+            </button>
+          </div>
         )}
       </div>
+
+      {showValeriaModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowValeriaModal(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-violet-600" /> Valeria
+                </h3>
+                <p className="text-sm text-slate-500">Ayuda general de Edusyn, Classroom, quizzes, exámenes, logros e instructivos</p>
+              </div>
+              <button onClick={() => setShowValeriaModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto flex-1 space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => setValeriaQuestion('Explícame el flujo recomendado para crear un quiz o examen en Classroom: borrador, preguntas, revisión, publicación y uso de imágenes.') } className="px-3 py-2 text-xs sm:text-sm rounded-full bg-violet-50 text-violet-700 hover:bg-violet-100">
+                  Flujo de quiz/examen
+                </button>
+                <button onClick={() => setValeriaQuestion('Genera un instructivo corto y claro para un docente que va a usar Edusyn y Classroom por primera vez.') } className="px-3 py-2 text-xs sm:text-sm rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100">
+                  Instructivo
+                </button>
+                <button onClick={() => setValeriaQuestion('Dame sugerencias de logros o indicadores para la asignatura y el grado actual, con lenguaje pedagógico claro.') } className="px-3 py-2 text-xs sm:text-sm rounded-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
+                  Logros
+                </button>
+                <button onClick={() => setValeriaQuestion('¿Quién creó Edusyn y qué hace Valeria dentro de la plataforma?') } className="px-3 py-2 text-xs sm:text-sm rounded-full bg-amber-50 text-amber-700 hover:bg-amber-100">
+                  Sobre Edusyn
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Pregunta para Valeria</label>
+                  <textarea
+                    value={valeriaQuestion}
+                    onChange={e => setValeriaQuestion(e.target.value)}
+                    rows={7}
+                    className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm sm:text-base resize-none focus:ring-2 focus:ring-violet-500 outline-none"
+                    placeholder="Escribe tu duda, por ejemplo: cómo crear un quiz en casa, cómo explicar un flujo o cómo redactar logros..."
+                  />
+                  <div className="flex flex-wrap items-center gap-3 mt-3">
+                    <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                      <input type="checkbox" checked={valeriaIncludeVisuals} onChange={e => setValeriaIncludeVisuals(e.target.checked)} className="rounded accent-violet-600" />
+                      Incluir sugerencia visual
+                    </label>
+                    <select value={valeriaVisualPlacement} onChange={e => setValeriaVisualPlacement(e.target.value as any)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                      <option value="QUESTION_IMAGE">Imagen de pregunta</option>
+                      <option value="CONTEXT_IMAGE">Imagen de contexto</option>
+                      <option value="INLINE">Dentro del contenido</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    <button
+                      onClick={() => askValeria(valeriaQuestion)}
+                      disabled={valeriaLoading || !valeriaQuestion.trim()}
+                      className="px-4 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700 disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {valeriaLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                      Consultar
+                    </button>
+                    <button
+                      onClick={() => setShowValeriaModal(false)}
+                      className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-200"
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                  {valeriaError && <p className="mt-3 text-sm text-red-600">{valeriaError}</p>}
+                </div>
+
+                <div className="space-y-3">
+                  <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 min-h-[220px]">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Respuesta</p>
+                    {valeriaResponse ? (
+                      <div className="space-y-3">
+                        <p className="text-sm text-slate-700 whitespace-pre-line">{valeriaResponse.answer}</p>
+                        {Array.isArray(valeriaResponse.keyPoints) && valeriaResponse.keyPoints.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Puntos clave</p>
+                            <ul className="space-y-1 text-sm text-slate-600 list-disc pl-5">
+                              {valeriaResponse.keyPoints.map((kp: string, i: number) => <li key={i}>{kp}</li>)}
+                            </ul>
+                          </div>
+                        )}
+                        {Array.isArray(valeriaResponse.nextSteps) && valeriaResponse.nextSteps.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Siguientes pasos</p>
+                            <ul className="space-y-1 text-sm text-slate-600 list-disc pl-5">
+                              {valeriaResponse.nextSteps.map((step: string, i: number) => <li key={i}>{step}</li>)}
+                            </ul>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          <button onClick={copyValeriaAnswer} className="px-3 py-2 text-xs rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                            <Copy className="w-3.5 h-3.5" /> Copiar
+                          </button>
+                          {valeriaResponse.visualSuggestion?.kind === 'SVG' && valeriaResponse.visualSuggestion?.svg && (
+                            <button onClick={applyValeriaSvg} className="px-3 py-2 text-xs rounded-lg bg-violet-600 text-white hover:bg-violet-700 flex items-center gap-2">
+                              <ImageIcon className="w-3.5 h-3.5" /> Usar en pregunta
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-500">La respuesta aparecerá aquí cuando consultes a Valeria.</p>
+                    )}
+                  </div>
+
+                  {valeriaResponse?.visualSuggestion?.kind === 'SVG' && valeriaResponse.visualSuggestion.svg && (
+                    <div className="p-4 rounded-2xl border border-violet-200 bg-violet-50/50">
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-violet-500">Sugerencia visual</p>
+                          <p className="text-sm text-violet-900">{valeriaResponse.visualSuggestion.altText || 'SVG sugerido por Valeria'}</p>
+                        </div>
+                        <span className="text-xs px-2 py-1 rounded-full bg-white text-violet-700 border border-violet-200">{valeriaResponse.visualSuggestion.placement || valeriaVisualPlacement}</span>
+                      </div>
+                      <img src={svgToDataUrl(valeriaResponse.visualSuggestion.svg)} alt={valeriaResponse.visualSuggestion.altText || 'Valeria SVG'} className="w-full max-h-56 object-contain rounded-xl border border-violet-100 bg-white" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create form */}
       {showCreate && (

@@ -17,6 +17,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { ApdService } from './apd.service';
 import { ApdAlertsService } from './apd-alerts.service';
 import { ApdAcademicService } from './apd-academic.service';
+import { ApdAiService } from './ai/apd-ai.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { requireInstitutionId } from '../../common/utils/institution-resolver';
 
@@ -35,6 +36,7 @@ export class ApdController {
     private readonly apdService: ApdService,
     private readonly alertsService: ApdAlertsService,
     private readonly academicService: ApdAcademicService,
+    private readonly apdAiService: ApdAiService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -560,5 +562,46 @@ export class ApdController {
   ) {
     const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
     return this.academicService.getAcademicCrossover(instId, academicTermId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // VALERIA AI
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('ai/valeria')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE')
+  async askValeria(
+    @Request() req: any,
+    @Body() body: {
+      institutionId?: string;
+      question: string;
+      context?: {
+        institutionName?: string;
+        gradeName?: string;
+        subjectName?: string;
+        topic?: string;
+        activityType?: 'QUIZ' | 'EXAM' | 'GUIDE' | 'ACHIEVEMENT' | 'GENERAL';
+        details?: string;
+      };
+      includeVisuals?: boolean;
+      visualPlacement?: 'QUESTION_IMAGE' | 'CONTEXT_IMAGE' | 'INLINE';
+    },
+  ) {
+    await requireInstitutionId(this.prisma as any, req, body.institutionId);
+
+    return this.apdAiService.answerTeacherQuestion({
+      type: 'ASK_VALERIA',
+      question: body.question,
+      context: {
+        institutionName: body.context?.institutionName || undefined,
+        gradeName: body.context?.gradeName || undefined,
+        subjectName: body.context?.subjectName || undefined,
+        topic: body.context?.topic || undefined,
+        activityType: body.context?.activityType || 'GENERAL',
+        details: body.context?.details || undefined,
+      },
+      includeVisuals: body.includeVisuals,
+      visualPlacement: body.visualPlacement,
+    });
   }
 }

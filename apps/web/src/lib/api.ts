@@ -1820,9 +1820,25 @@ export const apdApi = {
   getAlerts: () => api.get('/apd/alerts'),
 
   // Cruce rendimiento académico vs APD
-  getAcademicCrossover: (params?: { academicTermId?: string }) =>
-    api.get('/apd/academic-crossover', { params }),
-}
+  getAcademicCrossover: (academicTermId?: string) =>
+    api.get('/apd/academic-crossover', { params: { academicTermId } }),
+
+  // Valeria AI
+  askValeria: (data: {
+    institutionId?: string;
+    question: string;
+    context?: {
+      institutionName?: string;
+      gradeName?: string;
+      subjectName?: string;
+      topic?: string;
+      activityType?: 'QUIZ' | 'EXAM' | 'GUIDE' | 'ACHIEVEMENT' | 'GENERAL';
+      details?: string;
+    };
+    includeVisuals?: boolean;
+    visualPlacement?: 'QUESTION_IMAGE' | 'CONTEXT_IMAGE' | 'INLINE';
+  }) => api.post('/apd/ai/valeria', data),
+};
 
 // Teacher Workspace
 export const teacherWorkspaceApi = {

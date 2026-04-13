@@ -11,6 +11,8 @@ import {
   ApdAiGenerateReportResponse,
   ApdAiRecommendAdjustmentsRequest,
   ApdAiRecommendAdjustmentsResponse,
+  ApdAiTeacherQuestionRequest,
+  ApdAiTeacherQuestionResponse,
   ApdAiServiceConfig,
 } from './apd-ai.interfaces';
 
@@ -31,9 +33,10 @@ export class ApdAiService implements IApdAiService {
   private readonly config: ApdAiServiceConfig;
 
   constructor() {
+    const providerEnv = process.env.APD_AI_PROVIDER?.trim().toUpperCase();
     this.config = {
-      provider: (process.env.APD_AI_PROVIDER as any) || 'DISABLED',
-      model: process.env.APD_AI_MODEL || 'gpt-4o-mini',
+      provider: (providerEnv as any) || (process.env.APD_AI_API_KEY ? 'GEMINI' : 'DISABLED'),
+      model: process.env.APD_AI_MODEL || 'gemini-2.0-flash',
       apiKey: process.env.APD_AI_API_KEY,
       maxTokens: parseInt(process.env.APD_AI_MAX_TOKENS || '2000', 10),
       temperature: parseFloat(process.env.APD_AI_TEMPERATURE || '0.7'),
@@ -50,6 +53,118 @@ export class ApdAiService implements IApdAiService {
 
   isEnabled(): boolean {
     return this.config.provider !== 'DISABLED' && !!this.config.apiKey;
+  }
+
+  private isGeminiEnabled(): boolean {
+    return this.isEnabled() && this.config.provider === 'GEMINI';
+  }
+
+  private sanitizeVisualSvg(svg?: string): string | undefined {
+    if (!svg) return undefined;
+    return svg
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/on[a-z]+\s*=\s*"[^"]*"/gi, '')
+      .replace(/on[a-z]+\s*=\s*'[^']*'/gi, '')
+      .trim();
+  }
+
+  private extractJsonPayload(text: string): any {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      throw new Error('Respuesta vacía del modelo');
+    }
+
+    const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    const candidate = fenced?.[1]?.trim() || trimmed;
+
+    const start = candidate.indexOf('{');
+    const end = candidate.lastIndexOf('}');
+    const jsonText = start >= 0 && end >= start ? candidate.slice(start, end + 1) : candidate;
+
+    return JSON.parse(jsonText);
+  }
+
+  private async callGeminiJson<T>(
+    systemInstruction: string,
+    userPrompt: string,
+  ): Promise<T> {
+    if (!this.isGeminiEnabled()) {
+      throw new Error('Gemini no está habilitado');
+    }
+
+    const model = this.config.model || 'gemini-2.0-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${this.config.apiKey}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: {
+          role: 'system',
+          parts: [{ text: systemInstruction }],
+        },
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: userPrompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: this.config.temperature,
+          maxOutputTokens: this.config.maxTokens,
+          responseMimeType: 'application/json',
+        },
+      }),
+    });
+
+    const raw = await response.text();
+    if (!response.ok) {
+      throw new Error(`Gemini HTTP ${response.status}: ${raw}`);
+    }
+
+    const parsed = JSON.parse(raw);
+    const candidateText = parsed?.candidates?.[0]?.content?.parts
+      ?.map((part: any) => part?.text || '')
+      .join('')
+      .trim();
+
+    if (!candidateText) {
+      throw new Error('El modelo no devolvió contenido utilizable');
+    }
+
+    return this.extractJsonPayload(candidateText) as T;
+  }
+
+  private normalizeConfidence(value: unknown, fallback = 0.75): number {
+    const num = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(num)) return fallback;
+    if (num > 1) return Math.min(1, num / 100);
+    if (num < 0) return fallback;
+    return num;
+  }
+
+  private buildTeacherContextLine(request: ApdAiTeacherQuestionRequest): string {
+    const parts = [
+      request.context?.institutionName && `Institución: ${request.context.institutionName}`,
+      request.context?.gradeName && `Grado: ${request.context.gradeName}`,
+      request.context?.subjectName && `Asignatura: ${request.context.subjectName}`,
+      request.context?.topic && `Tema: ${request.context.topic}`,
+      request.context?.activityType && `Tipo de actividad: ${request.context.activityType}`,
+      request.context?.details && `Detalles: ${request.context.details}`,
+    ].filter(Boolean);
+
+    return parts.length ? parts.join('\n') : 'Sin contexto adicional.';
+  }
+
+  private buildEdusynKnowledgeContext(): string {
+    return [
+      'Edusyn es una plataforma educativa SaaS creada por Edusyn SAS.',
+      'Valeria es la asistente pedagógica de Edusyn para apoyar al docente.',
+      'En Classroom, el flujo normal es: crear actividad en borrador -> agregar preguntas o guía -> revisar -> publicar o programar.',
+      'Los quizzes y exámenes pueden publicarse como borrador, Live Quiz o Quiz en Casa.',
+      'Las imágenes y apoyos visuales se colocan en el campo de imagen de la pregunta o del contexto; si el docente solicita SVG, debe ser simple, seguro y sin scripts.',
+      'Valeria debe dar instrucciones, sugerencias y explicaciones sobre procesos de Edusyn, pero no debe inventar datos no proporcionados ni tocar calificaciones numéricas críticas.',
+    ].join('\n');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -350,6 +465,109 @@ export class ApdAiService implements IApdAiService {
         'Revisar periódicamente la pertinencia de los ajustes',
       ],
       confidence: 0.0,
+    };
+  }
+
+  async answerTeacherQuestion(
+    request: ApdAiTeacherQuestionRequest,
+  ): Promise<ApdAiTeacherQuestionResponse> {
+    if (!this.isGeminiEnabled()) {
+      return this.placeholderTeacherQuestion(request);
+    }
+
+    try {
+      const systemInstruction = [
+        'Eres Valeria, una asistente pedagógica para docentes.',
+        'Responde en español, con tono claro, breve y práctico.',
+        'Ayudas a planear quizzes, exámenes, guías y logros, pero no decides notas finales.',
+        'Si se solicita apoyo visual, propone SVG simple y seguro, sin scripts ni eventos.',
+        'Si la pregunta es sobre Edusyn, usa el contexto interno de la plataforma y prioriza la información dada aquí.',
+        'Devuelve únicamente JSON válido con las claves: answer, keyPoints, nextSteps, visualSuggestion, confidence.',
+        `Contexto interno de Edusyn:\n${this.buildEdusynKnowledgeContext()}`,
+      ].join(' ');
+
+      const userPrompt = [
+        `Pregunta del docente: ${request.question}`,
+        `Contexto:\n${this.buildTeacherContextLine({
+          type: 'ASK_VALERIA',
+          question: request.question,
+          context: request.context,
+          includeVisuals: request.includeVisuals,
+          visualPlacement: request.visualPlacement,
+        })}`,
+        request.includeVisuals
+          ? `Necesito una sugerencia visual en formato ${request.visualPlacement || 'QUESTION_IMAGE'}.`
+          : 'No es necesario incluir sugerencias visuales.',
+      ].join('\n\n');
+
+      const result = await this.callGeminiJson<ApdAiTeacherQuestionResponse>(
+        systemInstruction,
+        userPrompt,
+      );
+
+      return {
+        answer: result.answer?.trim() || 'No pude generar una respuesta útil.',
+        keyPoints: Array.isArray(result.keyPoints) ? result.keyPoints.filter(Boolean) : [],
+        nextSteps: Array.isArray(result.nextSteps) ? result.nextSteps.filter(Boolean) : undefined,
+        visualSuggestion: result.visualSuggestion?.kind === 'SVG'
+          ? {
+              ...result.visualSuggestion,
+              svg: this.sanitizeVisualSvg(result.visualSuggestion.svg),
+            }
+          : result.visualSuggestion,
+        confidence: this.normalizeConfidence(result.confidence, 0.8),
+      };
+    } catch (error: any) {
+      this.logger.warn(`Valeria falló con Gemini, usando fallback: ${error?.message || error}`);
+      return this.placeholderTeacherQuestion(request);
+    }
+  }
+
+  private placeholderTeacherQuestion(
+    request: ApdAiTeacherQuestionRequest,
+  ): ApdAiTeacherQuestionResponse {
+    const topic = request.context?.topic || 'el tema solicitado';
+    const answer = request.includeVisuals
+      ? `Claro. Para ${topic}, Valeria recomienda preparar un borrador breve, revisar el nivel del grupo y luego ubicar el apoyo visual en el bloque de imagen de la pregunta o del contexto.`
+      : `Claro. Para ${topic}, Valeria recomienda empezar con un borrador claro, ajustar el lenguaje al grado y revisar que las opciones sean coherentes con el objetivo de aprendizaje.`;
+
+    return {
+      answer,
+      keyPoints: [
+        'Trabajar primero en borrador',
+        'Mantener revisión docente antes de publicar',
+        'No modificar notas numéricas automáticamente',
+      ],
+      nextSteps: request.includeVisuals
+        ? [
+            'Generar un SVG simple o una imagen explicativa',
+            'Ubicarla en el bloque de imagen de la pregunta',
+            'Validar que no contenga scripts ni elementos peligrosos',
+          ]
+        : [
+            'Definir el objetivo de la actividad',
+            'Crear preguntas o guía',
+            'Publicar solo después de revisar el borrador',
+          ],
+      visualSuggestion: request.includeVisuals
+        ? {
+            kind: 'SVG',
+            placement: request.visualPlacement || 'QUESTION_IMAGE',
+            svg: this.sanitizeVisualSvg(`
+              <svg xmlns="http://www.w3.org/2000/svg" width="640" height="180" viewBox="0 0 640 180" role="img" aria-label="Valeria">
+                <rect width="640" height="180" rx="20" fill="#EEF2FF"/>
+                <rect x="28" y="28" width="584" height="124" rx="16" fill="#FFFFFF" stroke="#C7D2FE"/>
+                <circle cx="88" cy="90" r="34" fill="#6366F1"/>
+                <text x="88" y="98" font-size="28" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif">V</text>
+                <text x="150" y="78" font-size="24" font-family="Arial, sans-serif" fill="#1F2937">Valeria</text>
+                <text x="150" y="112" font-size="16" font-family="Arial, sans-serif" fill="#4B5563">Asistente pedagógica para borradores, quizzes y guías</text>
+              </svg>
+            `),
+            altText: 'Ilustración simple de Valeria',
+            prompt: 'Ilustración SVG simple, limpia y amigable de Valeria para un contexto educativo.',
+          }
+        : undefined,
+      confidence: 0.65,
     };
   }
 }

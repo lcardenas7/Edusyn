@@ -76,6 +76,8 @@ export interface ApdAiSuggestActivitiesRequest {
   adaptationLevel: 'LOW' | 'MEDIUM' | 'HIGH';
   adjustmentType?: 'CURRICULAR' | 'METHODOLOGICAL' | 'EVALUATIVE' | 'COMMUNICATION' | 'ENVIRONMENTAL';
   count?: number; // Número de sugerencias
+  includeVisuals?: boolean;
+  visualPlacement?: 'QUESTION_IMAGE' | 'CONTEXT_IMAGE' | 'INLINE';
 }
 
 export interface ApdAiPredictRiskRequest {
@@ -116,7 +118,8 @@ export type ApdAiRequest =
   | ApdAiSuggestActivitiesRequest
   | ApdAiPredictRiskRequest
   | ApdAiGenerateReportRequest
-  | ApdAiRecommendAdjustmentsRequest;
+  | ApdAiRecommendAdjustmentsRequest
+  | ApdAiTeacherQuestionRequest;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // RESPUESTAS DE IA
@@ -140,7 +143,43 @@ export interface ApdAiSuggestActivitiesResponse {
     adaptationLevel: 'LOW' | 'MEDIUM' | 'HIGH';
     adjustmentType: string;
     rationale: string; // Por qué se sugiere esta adaptación
+    visualSuggestion?: {
+      kind: 'SVG' | 'IMAGE' | 'NONE';
+      placement?: 'QUESTION_IMAGE' | 'CONTEXT_IMAGE' | 'INLINE';
+      svg?: string;
+      altText?: string;
+      prompt?: string;
+    };
   }[];
+  confidence: number;
+}
+
+export interface ApdAiTeacherQuestionRequest {
+  type: 'ASK_VALERIA';
+  question: string;
+  context?: {
+    institutionName?: string;
+    gradeName?: string;
+    subjectName?: string;
+    topic?: string;
+    activityType?: 'QUIZ' | 'EXAM' | 'GUIDE' | 'ACHIEVEMENT' | 'GENERAL';
+    details?: string;
+  };
+  includeVisuals?: boolean;
+  visualPlacement?: 'QUESTION_IMAGE' | 'CONTEXT_IMAGE' | 'INLINE';
+}
+
+export interface ApdAiTeacherQuestionResponse {
+  answer: string;
+  keyPoints: string[];
+  nextSteps?: string[];
+  visualSuggestion?: {
+    kind: 'SVG' | 'IMAGE' | 'NONE';
+    placement?: 'QUESTION_IMAGE' | 'CONTEXT_IMAGE' | 'INLINE';
+    svg?: string;
+    altText?: string;
+    prompt?: string;
+  };
   confidence: number;
 }
 
@@ -181,14 +220,15 @@ export type ApdAiResponse =
   | ApdAiSuggestActivitiesResponse
   | ApdAiPredictRiskResponse
   | ApdAiGenerateReportResponse
-  | ApdAiRecommendAdjustmentsResponse;
+  | ApdAiRecommendAdjustmentsResponse
+  | ApdAiTeacherQuestionResponse;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CONFIGURACIÓN DEL SERVICIO IA
 // ═══════════════════════════════════════════════════════════════════════════
 
 export interface ApdAiServiceConfig {
-  provider: 'OPENAI' | 'ANTHROPIC' | 'LOCAL' | 'DISABLED';
+  provider: 'OPENAI' | 'ANTHROPIC' | 'LOCAL' | 'GEMINI' | 'DISABLED';
   model?: string;
   apiKey?: string;
   maxTokens?: number;
@@ -241,4 +281,11 @@ export interface IApdAiService {
   recommendAdjustments(
     request: ApdAiRecommendAdjustmentsRequest,
   ): Promise<ApdAiRecommendAdjustmentsResponse>;
+
+  /**
+   * Responde preguntas del docente como Valeria y puede sugerir apoyos visuales
+   */
+  answerTeacherQuestion(
+    request: ApdAiTeacherQuestionRequest,
+  ): Promise<ApdAiTeacherQuestionResponse>;
 }
