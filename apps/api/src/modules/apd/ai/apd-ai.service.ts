@@ -34,10 +34,12 @@ export class ApdAiService implements IApdAiService {
 
   constructor() {
     const providerEnv = process.env.APD_AI_PROVIDER?.trim().toUpperCase();
+    const apiKey = process.env.APD_AI_API_KEY;
+    const detectedProvider = apiKey?.startsWith('xai-') ? 'XAI' : apiKey ? 'GEMINI' : 'DISABLED';
     this.config = {
-      provider: (providerEnv as any) || (process.env.APD_AI_API_KEY ? 'GEMINI' : 'DISABLED'),
-      model: process.env.APD_AI_MODEL || 'gemini-2.0-flash',
-      apiKey: process.env.APD_AI_API_KEY,
+      provider: (providerEnv as any) || detectedProvider,
+      model: process.env.APD_AI_MODEL || (detectedProvider === 'XAI' ? 'grok-3-mini' : 'gemini-2.0-flash'),
+      apiKey,
       maxTokens: parseInt(process.env.APD_AI_MAX_TOKENS || '2000', 10),
       temperature: parseFloat(process.env.APD_AI_TEMPERATURE || '0.7'),
       enableCaching: process.env.APD_AI_CACHE !== 'false',
@@ -57,6 +59,66 @@ export class ApdAiService implements IApdAiService {
 
   private isGeminiEnabled(): boolean {
     return this.isEnabled() && this.config.provider === 'GEMINI';
+  }
+
+  private isXaiEnabled(): boolean {
+    return this.isEnabled() && this.config.provider === 'XAI';
+  }
+
+  private async callXaiJson<T>(
+    systemInstruction: string,
+    userPrompt: string,
+  ): Promise<T> {
+    if (!this.isXaiEnabled()) {
+      throw new Error('xAI no está habilitado');
+    }
+
+    const model = this.config.model || 'grok-3-mini';
+    const url = 'https://api.x.ai/v1/chat/completions';
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemInstruction },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: this.config.temperature ?? 0.7,
+        max_tokens: this.config.maxTokens ?? 2000,
+      }),
+    });
+
+    const raw = await response.text();
+    if (!response.ok) {
+      throw new Error(`xAI HTTP ${response.status}: ${raw}`);
+    }
+
+    const parsed = JSON.parse(raw);
+    const content = parsed?.choices?.[0]?.message?.content?.trim();
+
+    if (!content) {
+      throw new Error('xAI no devolvió contenido utilizable');
+    }
+
+    return this.extractJsonPayload(content) as T;
+  }
+
+  private async callLlmJson<T>(
+    systemInstruction: string,
+    userPrompt: string,
+  ): Promise<T> {
+    if (this.isXaiEnabled()) {
+      return this.callXaiJson<T>(systemInstruction, userPrompt);
+    }
+    if (this.isGeminiEnabled()) {
+      return this.callGeminiJson<T>(systemInstruction, userPrompt);
+    }
+    throw new Error('Ningún proveedor de IA está habilitado');
   }
 
   private sanitizeVisualSvg(svg?: string): string | undefined {
@@ -482,7 +544,7 @@ export class ApdAiService implements IApdAiService {
   async answerTeacherQuestion(
     request: ApdAiTeacherQuestionRequest,
   ): Promise<ApdAiTeacherQuestionResponse> {
-    if (!this.isGeminiEnabled()) {
+    if (!this.isEnabled()) {
       return this.placeholderTeacherQuestion(request);
     }
 
@@ -514,7 +576,7 @@ export class ApdAiService implements IApdAiService {
           : 'No es necesario incluir sugerencias visuales.',
       ].join('\n\n');
 
-      const result = await this.callGeminiJson<ApdAiTeacherQuestionResponse>(
+      const result = await this.callLlmJson<ApdAiTeacherQuestionResponse>(
         systemInstruction,
         userPrompt,
       );
@@ -540,48 +602,62 @@ export class ApdAiService implements IApdAiService {
   private placeholderTeacherQuestion(
     request: ApdAiTeacherQuestionRequest,
   ): ApdAiTeacherQuestionResponse {
-    const topic = request.context?.topic || request.question || 'la consulta solicitada';
-    const answer = request.includeVisuals
-      ? `Claro. Sobre ${topic}, Valeria recomienda responder primero con una idea clara, revisar el contexto y luego agregar un apoyo visual simple si realmente aporta valor.`
-      : `Claro. Sobre ${topic}, Valeria recomienda dar una respuesta breve, concreta y útil, con pasos claros si hace falta profundizar.`;
+    const q = (request.question || '').toLowerCase().trim();
 
+    // Respuestas contextuales básicas cuando Gemini no está habilitado
+    if (q.includes('edusyn') || q.includes('qué puedo hacer') || q.includes('funcionalidades')) {
+      return {
+        answer: `Edusyn es una plataforma educativa integral creada por Luis Cárdenas. Puedes gestionar:\n\n• **Classroom**: Crear quizzes, exámenes, guías y actividades interactivas\n• **Notas**: Registrar calificaciones por período y componente\n• **Asistencia**: Control diario con reportes automáticos\n• **Boletines**: Generación de informes académicos\n• **Logros**: Definir indicadores por asignatura\n• **Comunicaciones**: Enviar mensajes a padres y estudiantes\n• **Finanzas**: Facturación, pagos y cartera\n\nNavega por el menú lateral para explorar cada módulo.`,
+        keyPoints: [],
+        confidence: 0.9,
+      };
+    }
+
+    if (q.includes('classroom') || q.includes('quiz') || q.includes('examen') || q.includes('actividad')) {
+      return {
+        answer: `En **Classroom** puedes:\n\n1. **Crear actividades**: Tareas, quizzes, exámenes, guías y autoevaluaciones\n2. **Live Quiz**: Sesiones en tiempo real donde los estudiantes responden simultáneamente\n3. **Quiz en Casa**: Los estudiantes resuelven a su ritmo con fecha límite\n4. **Preguntas variadas**: Opción múltiple, verdadero/falso, completar, emparejar\n5. **Sincronizar notas**: Enviar calificaciones directamente a la planilla\n\nPara crear un quiz: Entra a un aula → Actividades → Nueva Actividad → Selecciona tipo Quiz/Examen → Agrega preguntas → Publica.`,
+        keyPoints: [],
+        confidence: 0.9,
+      };
+    }
+
+    if (q.includes('nota') || q.includes('calificacion') || q.includes('planilla')) {
+      return {
+        answer: `Para gestionar **notas** en Edusyn:\n\n1. Ve a **Notas** en el menú lateral\n2. Selecciona grupo y asignatura\n3. Elige el período activo\n4. Ingresa las calificaciones por componente (Cognitivo, Procedimental, Actitudinal)\n5. El sistema calcula promedios automáticamente\n\nTambién puedes importar notas desde Excel o sincronizar desde Classroom.`,
+        keyPoints: [],
+        confidence: 0.9,
+      };
+    }
+
+    if (q.includes('asistencia')) {
+      return {
+        answer: `El módulo de **Asistencia** permite:\n\n• Registrar asistencia diaria por grupo\n• Marcar: Presente, Ausente, Tardanza, Excusa\n• Ver reportes de inasistencia por estudiante\n• Alertas automáticas cuando un estudiante supera el límite\n\nAccede desde el menú lateral → Asistencia → Selecciona grupo y fecha.`,
+        keyPoints: [],
+        confidence: 0.9,
+      };
+    }
+
+    if (q.includes('boletin') || q.includes('informe') || q.includes('reporte')) {
+      return {
+        answer: `Los **boletines** se generan automáticamente con:\n\n• Notas por asignatura y período\n• Promedio general y puesto\n• Logros e indicadores\n• Observaciones del director de grupo\n• Asistencia del período\n\nVe a **Boletines** → Selecciona grupo y período → Genera PDF individual o masivo.`,
+        keyPoints: [],
+        confidence: 0.9,
+      };
+    }
+
+    if (q.includes('hola') || q.includes('buenos') || q.includes('saludos')) {
+      return {
+        answer: `¡Hola! Soy Valeria, tu asistente en Edusyn. Puedo ayudarte con:\n\n• Cómo usar Classroom y crear quizzes\n• Gestión de notas y asistencia\n• Generación de boletines\n• Flujos de la plataforma\n\n¿En qué te puedo ayudar hoy?`,
+        keyPoints: [],
+        confidence: 0.95,
+      };
+    }
+
+    // Respuesta genérica mejorada
     return {
-      answer,
-      keyPoints: [
-        'Responder con claridad y contexto',
-        'Mantener revisión humana cuando la consulta afecte decisiones críticas',
-        'No modificar notas numéricas automáticamente',
-      ],
-      nextSteps: request.includeVisuals
-        ? [
-            'Generar una imagen o SVG simple si aporta valor real',
-            'Ubicarla en el bloque de imagen correspondiente',
-            'Validar que no contenga scripts ni elementos peligrosos',
-          ]
-        : [
-            'Definir el objetivo de la consulta',
-            'Pedir una segunda versión si deseas más detalle',
-            'Ajustar la respuesta al tono o nivel del usuario',
-          ],
-      visualSuggestion: request.includeVisuals
-        ? {
-            kind: 'SVG',
-            placement: request.visualPlacement || 'QUESTION_IMAGE',
-            svg: this.sanitizeVisualSvg(`
-              <svg xmlns="http://www.w3.org/2000/svg" width="640" height="180" viewBox="0 0 640 180" role="img" aria-label="Valeria">
-                <rect width="640" height="180" rx="20" fill="#EEF2FF"/>
-                <rect x="28" y="28" width="584" height="124" rx="16" fill="#FFFFFF" stroke="#C7D2FE"/>
-                <circle cx="88" cy="90" r="34" fill="#6366F1"/>
-                <text x="88" y="98" font-size="28" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif">V</text>
-                <text x="150" y="78" font-size="24" font-family="Arial, sans-serif" fill="#1F2937">Valeria</text>
-                <text x="150" y="112" font-size="16" font-family="Arial, sans-serif" fill="#4B5563">Asistente IA para consultas generales y Edusyn</text>
-              </svg>
-            `),
-            altText: 'Ilustración simple de Valeria',
-            prompt: 'Ilustración SVG simple, limpia y amigable de Valeria para un contexto educativo.',
-          }
-        : undefined,
-      confidence: 0.65,
+      answer: `Gracias por tu consulta. Actualmente estoy en modo básico (sin conexión a IA avanzada).\n\nPuedo ayudarte con información sobre:\n• **Classroom**: Quizzes, exámenes, actividades\n• **Notas**: Planillas, calificaciones, promedios\n• **Asistencia**: Registro y reportes\n• **Boletines**: Generación de informes\n\nIntenta preguntar algo más específico como "¿Cómo creo un quiz?" o "¿Cómo registro notas?"`,
+      keyPoints: [],
+      confidence: 0.5,
     };
   }
 }
