@@ -38,7 +38,7 @@ export class ApdAiService implements IApdAiService {
     const detectedProvider = apiKey?.startsWith('xai-') ? 'XAI' : apiKey ? 'GEMINI' : 'DISABLED';
     this.config = {
       provider: (providerEnv as any) || detectedProvider,
-      model: process.env.APD_AI_MODEL || (detectedProvider === 'XAI' ? 'grok-3-mini' : 'gemini-2.0-flash'),
+      model: process.env.APD_AI_MODEL || (detectedProvider === 'XAI' ? 'grok-3-mini' : 'gemini-1.5-flash'),
       apiKey,
       maxTokens: parseInt(process.env.APD_AI_MAX_TOKENS || '2000', 10),
       temperature: parseFloat(process.env.APD_AI_TEMPERATURE || '0.7'),
