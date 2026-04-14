@@ -232,6 +232,17 @@ export class LiveSessionController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post(':id/remove-from-team')
+  async removeFromTeam(
+    @Param('id') sessionId: string,
+    @Request() req: any,
+    @Body() body: { studentEnrollmentId: string },
+  ) {
+    await this.verifySessionTenant(sessionId, req.user.institutionId);
+    return this.liveSessionService.removeFromTeam(sessionId, body.studentEnrollmentId, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get(':id/search-students')
   async searchStudents(
     @Param('id') sessionId: string,

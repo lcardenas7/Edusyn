@@ -2159,6 +2159,8 @@ export const liveSessionApi = {
     api.post(`/live-session/${sessionId}/join-team`, { teamId }),
   addPartner: (sessionId: string, teamId: string, studentEnrollmentId: string) =>
     api.post(`/live-session/${sessionId}/add-partner`, { teamId, studentEnrollmentId }),
+  removeFromTeam: (sessionId: string, studentEnrollmentId: string) =>
+    api.post(`/live-session/${sessionId}/remove-from-team`, { studentEnrollmentId }),
   searchStudents: (sessionId: string, query?: string) =>
     api.get(`/live-session/${sessionId}/search-students`, { params: { q: query } }),
   createTeamByStudent: (sessionId: string, name: string) =>

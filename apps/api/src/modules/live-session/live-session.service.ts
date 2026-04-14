@@ -1775,6 +1775,35 @@ export class LiveSessionService implements OnModuleDestroy {
     return { success: true };
   }
 
+  async removeFromTeam(sessionId: string, studentEnrollmentId: string, userId: string) {
+    const session = await this.prisma.liveSession.findUnique({
+      where: { id: sessionId },
+      select: { teacherId: true, mode: true, status: true },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+    if (session.mode !== 'TEAM') throw new BadRequestException('La sesión no está en modo equipos');
+    if (session.status !== 'WAITING') throw new BadRequestException('Solo se puede modificar equipos en el lobby');
+
+    // Only teacher can remove students
+    if (session.teacherId !== userId) {
+      throw new ForbiddenException('Solo el profesor puede quitar estudiantes de equipos');
+    }
+
+    // Remove from team
+    const deleted = await this.prisma.liveSessionTeamMember.deleteMany({
+      where: { studentEnrollmentId, team: { sessionId } },
+    });
+
+    if (deleted.count === 0) {
+      throw new BadRequestException('El estudiante no está en ningún equipo');
+    }
+
+    // Broadcast
+    const teams = await this.getTeams(sessionId);
+    this.broadcast(sessionId, { type: 'TEAMS_UPDATED' as any, data: teams });
+    return { success: true };
+  }
+
   async searchGroupStudents(sessionId: string, query: string) {
     const session = await this.prisma.liveSession.findUnique({
       where: { id: sessionId },

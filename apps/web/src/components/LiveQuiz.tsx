@@ -1582,7 +1582,20 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                               value={teamAssignments[s.enrollmentId] || ''}
                               onChange={async (e) => {
                                 const newTeamId = e.target.value
-                                if (!newTeamId) return
+                                if (newTeamId === '') {
+                                  // Remove from team
+                                  if (teamAssignments[s.enrollmentId]) {
+                                    try {
+                                      await liveSessionApi.removeFromTeam(sessionId, s.enrollmentId)
+                                      setTeamAssignments(prev => {
+                                        const copy = { ...prev }
+                                        delete copy[s.enrollmentId]
+                                        return copy
+                                      })
+                                    } catch {}
+                                  }
+                                  return
+                                }
                                 setTeamAssignments(prev => ({ ...prev, [s.enrollmentId]: newTeamId }))
                                 try {
                                   await liveSessionApi.addPartner(sessionId, newTeamId, s.enrollmentId)
