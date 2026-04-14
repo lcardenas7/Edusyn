@@ -1,7 +1,9 @@
 import { ReactNode, useMemo, useState, useEffect, useCallback } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { ValeriaProvider } from '../contexts/ValeriaContext'
 import { authApi, communicationsApi } from '../lib/api'
+import ValeriaAssistant from './ValeriaAssistant'
 import { 
   LayoutDashboard, 
   Users, 
@@ -446,6 +448,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   }
 
   return (
+    <ValeriaProvider>
     <div className="min-h-screen bg-slate-50">
       {/* Mobile header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
@@ -725,6 +728,8 @@ export default function Layout({ children }: { children: ReactNode }) {
           {children}
         </div>
       </main>
+      <ValeriaAssistant />
     </div>
+    </ValeriaProvider>
   )
 }

@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { valeriaAssistantBridge } from '../contexts/ValeriaContext'
 import { classroomApi, storageApi, liveSessionApi, apdApi } from '../lib/api'
 import LiveQuiz from '../components/LiveQuiz'
 import { CreateSelfAssessmentForm, StudentSelfAssessment, SelfAssessmentResults } from '../components/SelfAssessmentUI'
@@ -127,6 +129,7 @@ const extractYoutubeId = (url: string) => {
 
 export default function Classroom() {
   const { user } = useAuth()
+  const location = useLocation()
   const isTeacher = user?.roles?.some((r: any) => ['DOCENTE', 'COORDINADOR'].includes(r.role?.name || r.roleName || ''))
   const isStudent = user?.roles?.some((r: any) => ['ESTUDIANTE'].includes(r.role?.name || r.roleName || ''))
 
@@ -2066,17 +2069,22 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     } catch {}
   }
 
-  const openValeriaModal = (preset?: string) => {
+  const buildValeriaLaunchOptions = (preset?: string) => {
     const defaultPrompt = selectedActivity && isQuizEditorType(selectedActivity.type) && showAddQuestion
       ? `Ayúdame a mejorar la pregunta que estoy creando en Classroom. Dame un borrador pedagógico claro, dime si conviene usar una imagen SVG o un contexto visual, y sugiere cómo ubicarla en el campo de imagen.`
       : selectedActivity && isQuizEditorType(selectedActivity.type)
       ? `Explícame cómo debo preparar ${getQuizTypeLabel(selectedActivity.type)} de "${selectedActivity.title}" en Classroom. Dame el flujo recomendado, si conviene borrador, Live Quiz o Quiz en Casa, y un consejo visual si aplica.`
       : `Explícame flujos, instructivos y recomendaciones útiles de Edusyn para docentes. Incluye quién creó la plataforma, cómo funciona Classroom y sugerencias prácticas.`
 
-    setValeriaQuestion(preset || defaultPrompt)
-    setValeriaError('')
-    setValeriaResponse(null)
-    setShowValeriaModal(true)
+    return {
+      title: 'Valeria en Classroom',
+      subtitle: 'Asistencia contextual para preguntas, guías, quizzes y exámenes',
+      prompt: preset || defaultPrompt,
+      context: buildValeriaContext(),
+      includeVisuals: valeriaIncludeVisuals,
+      visualPlacement: valeriaVisualPlacement,
+      onApplyVisual: (svg: string) => setQForm(prev => ({ ...prev, imageUrl: svgToDataUrl(svg) })),
+    }
   }
 
   useEffect(() => { loadActivities() }, [loadActivities])
@@ -3389,7 +3397,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   <h4 className="text-base font-bold text-slate-800">{editingQuestion ? 'Editar pregunta' : 'Nueva pregunta'}</h4>
                   <button
                     type="button"
-                    onClick={() => openValeriaModal(qForm.text.trim() ? `Ayúdame a mejorar esta pregunta de Classroom y sugiere si debe llevar imagen SVG o contexto visual: ${qForm.text}` : undefined)}
+                    onClick={() => valeriaAssistantBridge.open(buildValeriaLaunchOptions(qForm.text.trim() ? `Ayúdame a mejorar esta pregunta de Classroom y sugiere si debe llevar imagen SVG o contexto visual: ${qForm.text}` : undefined))}
                     className="inline-flex items-center gap-2 px-3 py-2 bg-violet-100 text-violet-700 rounded-xl text-xs sm:text-sm font-semibold hover:bg-violet-200 transition-colors self-start sm:self-auto"
                   >
                     <Sparkles className="w-4 h-4" /> Valeria para esta pregunta
@@ -4707,7 +4715,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         <h2 className="text-xl font-bold text-slate-800">Actividades</h2>
         {isTeacher && (
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            <button onClick={() => openValeriaModal()} className="flex items-center gap-2 px-4 py-2.5 bg-violet-100 text-violet-700 rounded-xl text-sm font-semibold hover:bg-violet-200 transition-colors" style={{ minHeight: '44px' }}>
+            <button onClick={() => valeriaAssistantBridge.open(buildValeriaLaunchOptions())} className="flex items-center gap-2 px-4 py-2.5 bg-violet-100 text-violet-700 rounded-xl text-sm font-semibold hover:bg-violet-200 transition-colors" style={{ minHeight: '44px' }}>
               <Sparkles className="w-5 h-5" /> Valeria
             </button>
             <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>

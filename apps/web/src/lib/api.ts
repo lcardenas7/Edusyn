@@ -1827,6 +1827,10 @@ export const apdApi = {
   askValeria: (data: {
     institutionId?: string;
     question: string;
+    conversation?: {
+      role: 'user' | 'assistant';
+      content: string;
+    }[];
     context?: {
       institutionName?: string;
       gradeName?: string;

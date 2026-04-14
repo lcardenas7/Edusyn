@@ -157,6 +157,10 @@ export interface ApdAiSuggestActivitiesResponse {
 export interface ApdAiTeacherQuestionRequest {
   type: 'ASK_VALERIA';
   question: string;
+  conversation?: {
+    role: 'user' | 'assistant';
+    content: string;
+  }[];
   context?: {
     institutionName?: string;
     gradeName?: string;

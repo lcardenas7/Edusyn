@@ -156,6 +156,17 @@ export class ApdAiService implements IApdAiService {
     return parts.length ? parts.join('\n') : 'Sin contexto adicional.';
   }
 
+  private buildConversationContext(conversation?: ApdAiTeacherQuestionRequest['conversation']): string {
+    if (!conversation || conversation.length === 0) {
+      return 'Sin historial previo.';
+    }
+
+    return conversation
+      .slice(-8)
+      .map((message) => `${message.role === 'assistant' ? 'Asistente' : 'Docente'}: ${message.content}`)
+      .join('\n');
+  }
+
   private buildEdusynKnowledgeContext(): string {
     return [
       'Edusyn es una plataforma educativa SaaS creada por Edusyn SAS.',
@@ -477,17 +488,20 @@ export class ApdAiService implements IApdAiService {
 
     try {
       const systemInstruction = [
-        'Eres Valeria, una asistente pedagógica para docentes.',
-        'Responde en español, con tono claro, breve y práctico.',
-        'Ayudas a planear quizzes, exámenes, guías y logros, pero no decides notas finales.',
+        'Eres Valeria, la asistente IA de Edusyn.',
+        'Responde en español, con tono claro, cercano, breve y práctico.',
+        'Puedes responder preguntas generales de cualquier tema, y también consultas sobre Edusyn, pedagogía, administración escolar y Classroom.',
+        'Cuando la pregunta sea sobre Edusyn, prioriza el contexto interno de la plataforma.',
+        'Cuando la pregunta no sea sobre Edusyn, responde como una IA general útil y honesta, sin inventar hechos.',
+        'Ayudas a planear quizzes, exámenes, guías y logros, pero no decides notas finales ni alteras flujos numéricos críticos.',
         'Si se solicita apoyo visual, propone SVG simple y seguro, sin scripts ni eventos.',
-        'Si la pregunta es sobre Edusyn, usa el contexto interno de la plataforma y prioriza la información dada aquí.',
         'Devuelve únicamente JSON válido con las claves: answer, keyPoints, nextSteps, visualSuggestion, confidence.',
         `Contexto interno de Edusyn:\n${this.buildEdusynKnowledgeContext()}`,
       ].join(' ');
 
       const userPrompt = [
         `Pregunta del docente: ${request.question}`,
+        `Historial de conversación:\n${this.buildConversationContext(request.conversation)}`,
         `Contexto:\n${this.buildTeacherContextLine({
           type: 'ASK_VALERIA',
           question: request.question,
@@ -526,28 +540,28 @@ export class ApdAiService implements IApdAiService {
   private placeholderTeacherQuestion(
     request: ApdAiTeacherQuestionRequest,
   ): ApdAiTeacherQuestionResponse {
-    const topic = request.context?.topic || 'el tema solicitado';
+    const topic = request.context?.topic || request.question || 'la consulta solicitada';
     const answer = request.includeVisuals
-      ? `Claro. Para ${topic}, Valeria recomienda preparar un borrador breve, revisar el nivel del grupo y luego ubicar el apoyo visual en el bloque de imagen de la pregunta o del contexto.`
-      : `Claro. Para ${topic}, Valeria recomienda empezar con un borrador claro, ajustar el lenguaje al grado y revisar que las opciones sean coherentes con el objetivo de aprendizaje.`;
+      ? `Claro. Sobre ${topic}, Valeria recomienda responder primero con una idea clara, revisar el contexto y luego agregar un apoyo visual simple si realmente aporta valor.`
+      : `Claro. Sobre ${topic}, Valeria recomienda dar una respuesta breve, concreta y útil, con pasos claros si hace falta profundizar.`;
 
     return {
       answer,
       keyPoints: [
-        'Trabajar primero en borrador',
-        'Mantener revisión docente antes de publicar',
+        'Responder con claridad y contexto',
+        'Mantener revisión humana cuando la consulta afecte decisiones críticas',
         'No modificar notas numéricas automáticamente',
       ],
       nextSteps: request.includeVisuals
         ? [
-            'Generar un SVG simple o una imagen explicativa',
-            'Ubicarla en el bloque de imagen de la pregunta',
+            'Generar una imagen o SVG simple si aporta valor real',
+            'Ubicarla en el bloque de imagen correspondiente',
             'Validar que no contenga scripts ni elementos peligrosos',
           ]
         : [
-            'Definir el objetivo de la actividad',
-            'Crear preguntas o guía',
-            'Publicar solo después de revisar el borrador',
+            'Definir el objetivo de la consulta',
+            'Pedir una segunda versión si deseas más detalle',
+            'Ajustar la respuesta al tono o nivel del usuario',
           ],
       visualSuggestion: request.includeVisuals
         ? {
@@ -560,7 +574,7 @@ export class ApdAiService implements IApdAiService {
                 <circle cx="88" cy="90" r="34" fill="#6366F1"/>
                 <text x="88" y="98" font-size="28" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif">V</text>
                 <text x="150" y="78" font-size="24" font-family="Arial, sans-serif" fill="#1F2937">Valeria</text>
-                <text x="150" y="112" font-size="16" font-family="Arial, sans-serif" fill="#4B5563">Asistente pedagógica para borradores, quizzes y guías</text>
+                <text x="150" y="112" font-size="16" font-family="Arial, sans-serif" fill="#4B5563">Asistente IA para consultas generales y Edusyn</text>
               </svg>
             `),
             altText: 'Ilustración simple de Valeria',

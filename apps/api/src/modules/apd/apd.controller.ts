@@ -569,12 +569,32 @@ export class ApdController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Post('ai/valeria')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE')
+  @Roles(
+    'SUPERADMIN',
+    'SUPER_ADMIN',
+    'ADMIN_INSTITUTIONAL',
+    'ADMIN',
+    'COORDINADOR',
+    'RECTOR',
+    'PSICOLOGA',
+    'DOCENTE',
+    'ESTUDIANTE',
+    'ACUDIENTE',
+    'SECRETARIA',
+    'ORIENTADOR',
+    'BIBLIOTECARIO',
+    'AUXILIAR',
+    'AUXILIAR_CONTABLE',
+  )
   async askValeria(
     @Request() req: any,
     @Body() body: {
       institutionId?: string;
       question: string;
+      conversation?: {
+        role: 'user' | 'assistant';
+        content: string;
+      }[];
       context?: {
         institutionName?: string;
         gradeName?: string;
@@ -587,11 +607,15 @@ export class ApdController {
       visualPlacement?: 'QUESTION_IMAGE' | 'CONTEXT_IMAGE' | 'INLINE';
     },
   ) {
-    await requireInstitutionId(this.prisma as any, req, body.institutionId);
+    const institutionId = await requireInstitutionId(this.prisma as any, req, body.institutionId).catch(() => undefined);
+    if (!institutionId && !req.user?.isSuperAdmin) {
+      throw new ForbiddenException('No se pudo determinar la institución para consultar a Valeria.');
+    }
 
     return this.apdAiService.answerTeacherQuestion({
       type: 'ASK_VALERIA',
       question: body.question,
+      conversation: body.conversation,
       context: {
         institutionName: body.context?.institutionName || undefined,
         gradeName: body.context?.gradeName || undefined,
