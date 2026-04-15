@@ -3,10 +3,10 @@ import {
   Calendar, Users, GraduationCap, ClipboardList, UserCheck,
   AlertTriangle, BarChart3, ArrowLeft, Search, BookOpen,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useReportsData } from '../../hooks/useReportsData'
 import { useAuth } from '../../contexts/AuthContext'
-import { attendanceApi, groupsApi, tutoringAttendanceApi } from '../../lib/api'
+import { attendanceApi, groupsApi, teacherAssignmentsApi, tutoringAttendanceApi } from '../../lib/api'
 import AttendanceReportLayout, {
   KPICard, kpiColorFromPct, sortByRisk, getRowBg, getStatusBadge,
   getPctColor, EmptyState, THRESHOLDS, setAttendanceThresholds,
@@ -75,13 +75,17 @@ function downloadCSV(content: string, filename: string) {
 
 // ═══════════════════════════════════════════════════════════════════════
 export default function AttendanceReports() {
+  const navigate = useNavigate()
   const { hasFeature, institution, user } = useAuth()
   const instName = institution?.name || 'Institucion'
   const userRoles = useMemo(() => {
     if (!user?.roles) return []
     return user.roles.map((r: any) => typeof r === 'string' ? r : r.role?.name || r.name).filter(Boolean)
   }, [user?.roles])
-  const isTeacher = userRoles.includes('DOCENTE')
+  const normalizedRoles = useMemo(() => userRoles.map((role) => String(role).toUpperCase()), [userRoles])
+  const isTeacher = normalizedRoles.includes('DOCENTE')
+  const canViewAllAttendanceReports = normalizedRoles.some((role) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(role))
+  const isTeacherOnly = isTeacher && !canViewAllAttendanceReports
   const {
     academicYears, terms, groups, subjects, teachers, students,
     rulesContext,
@@ -102,8 +106,10 @@ export default function AttendanceReports() {
   const [selectedReport, setSelectedReport] = useState<string | null>(null)
   const [showReport, setShowReport] = useState(false)
   const [loadingReport, setLoadingReport] = useState(false)
+  const [reportError, setReportError] = useState<string | null>(null)
   const [searchStudent, setSearchStudent] = useState('')
   const [filterMinPercent, setFilterMinPercent] = useState('80')
+  const [teacherAssignments, setTeacherAssignments] = useState<any[]>([])
 
   const [attendanceData, setAttendanceData] = useState<any[]>([])
   const [attendanceDetailData, setAttendanceDetailData] = useState<any[]>([])
@@ -114,12 +120,74 @@ export default function AttendanceReports() {
   const [tutoringData, setTutoringData] = useState<any[]>([])
 
   const filteredReports = attendanceReports.filter(r => !r.feature || hasFeature(r.feature))
+  const visibleReports = isTeacherOnly
+    ? filteredReports.filter(r => r.id === 'att-teacher')
+    : filteredReports
+
+  useEffect(() => {
+    if (!isTeacherOnly || !filterYear || !user?.id) {
+      setTeacherAssignments([])
+      return
+    }
+
+    let cancelled = false
+
+    const loadTeacherAssignments = async () => {
+      try {
+        const res = await teacherAssignmentsApi.getAll({ academicYearId: filterYear, teacherId: user.id, activeOnly: false })
+        if (!cancelled) setTeacherAssignments(res.data || [])
+      } catch (err) {
+        console.error('Error loading teacher assignments for reports:', err)
+        if (!cancelled) setTeacherAssignments([])
+      }
+    }
+
+    loadTeacherAssignments()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isTeacherOnly, filterYear, user?.id])
+
+  useEffect(() => {
+    if (!isTeacherOnly) return
+
+    const validGroupIds = new Set(teacherAssignments.map((a: any) => a.groupId).filter(Boolean))
+    const validSubjectIds = new Set(teacherAssignments.map((a: any) => a.subjectId).filter(Boolean))
+
+    if (filterGrade !== 'all' && !validGroupIds.has(filterGrade)) {
+      setFilterGrade('all')
+    }
+    if (filterSubject !== 'all' && !validSubjectIds.has(filterSubject)) {
+      setFilterSubject('all')
+    }
+  }, [isTeacherOnly, teacherAssignments, filterGrade, filterSubject, setFilterGrade, setFilterSubject])
 
   // ─── Select options ──────────────────────────────────────────────────
   const yearOpts = useMemo(() => [{ value: '', label: 'Seleccionar...' }, ...academicYears.map(y => ({ value: y.id, label: `${y.year}${y.status === 'ACTIVE' ? ' - Activo' : ''}` }))], [academicYears])
-  const groupOpts = useMemo(() => [{ value: 'all', label: 'Todos los grupos' }, ...groups.map(g => ({ value: g.id, label: `${g.grade?.name || ''} ${g.name}` }))], [groups])
-  const subjOpts = useMemo(() => [{ value: 'all', label: 'Todas' }, ...subjects.map(s => ({ value: s.id, label: s.name }))], [subjects])
+  const baseGroupOpts = useMemo(() => [{ value: 'all', label: 'Todos los grupos' }, ...groups.map(g => ({ value: g.id, label: `${g.grade?.name || ''} ${g.name}` }))], [groups])
+  const baseSubjOpts = useMemo(() => [{ value: 'all', label: 'Todas' }, ...subjects.map(s => ({ value: s.id, label: s.name }))], [subjects])
   const teachOpts = useMemo(() => [{ value: 'all', label: 'Todos' }, ...teachers.map(t => ({ value: t.id, label: t.name }))], [teachers])
+  const teacherGroupOpts = useMemo(() => {
+    const options = new Map<string, { value: string; label: string }>()
+    teacherAssignments.forEach((assignment: any) => {
+      const group = assignment.group
+      if (!group?.id || options.has(group.id)) return
+      options.set(group.id, { value: group.id, label: `${group.grade?.name || ''} ${group.name || ''}`.trim() })
+    })
+    return [{ value: 'all', label: 'Todos mis grupos' }, ...Array.from(options.values())]
+  }, [teacherAssignments])
+  const teacherSubjectOpts = useMemo(() => {
+    const options = new Map<string, { value: string; label: string }>()
+    teacherAssignments.forEach((assignment: any) => {
+      const subject = assignment.subject
+      if (!subject?.id || options.has(subject.id)) return
+      options.set(subject.id, { value: subject.id, label: subject.name || '' })
+    })
+    return [{ value: 'all', label: 'Todas mis asignaturas' }, ...Array.from(options.values())]
+  }, [teacherAssignments])
+  const groupOpts = isTeacherOnly ? teacherGroupOpts : baseGroupOpts
+  const subjOpts = isTeacherOnly ? teacherSubjectOpts : baseSubjOpts
   const statOpts = [{ value: 'all', label: 'Todos' }, { value: 'Normal', label: `Normal (>= ${THRESHOLDS.NORMAL_MIN}%)` }, { value: 'Alerta', label: `Alerta (${THRESHOLDS.ALERT_MIN}-${THRESHOLDS.NORMAL_MIN - 1}%)` }, { value: 'Riesgo', label: `Riesgo (< ${THRESHOLDS.ALERT_MIN}%)` }]
   const attStatOpts = [{ value: 'all', label: 'Todos' }, { value: 'PRESENT', label: 'Presente' }, { value: 'ABSENT', label: 'Ausente' }, { value: 'LATE', label: 'Tarde' }, { value: 'EXCUSED', label: 'Excusa' }]
 
@@ -141,10 +209,16 @@ export default function AttendanceReports() {
   }
 
   // ─── Load report data ────────────────────────────────────────────────
-  const handleSelectReport = async (id: string) => { setSelectedReport(id); setShowReport(true); await loadReportData(id) }
+  const handleSelectReport = async (id: string) => {
+    if (!visibleReports.some(r => r.id === id)) return
+    setSelectedReport(id)
+    setShowReport(true)
+    await loadReportData(id)
+  }
   const loadReportData = async (reportId: string) => {
     if (!filterYear) return
     setLoadingReport(true)
+    setReportError(null)
     try {
       const bp: any = { startDate: filterDateFrom || undefined, endDate: filterDateTo || undefined, subjectId: filterSubject !== 'all' ? filterSubject : undefined }
 
@@ -166,7 +240,7 @@ export default function AttendanceReports() {
       if (reportId === 'att-teacher') {
         const p = {
           academicYearId: filterYear,
-          teacherId: isTeacher ? user?.id : (filterTeacher !== 'all' ? filterTeacher : undefined),
+          teacherId: isTeacherOnly ? user?.id : (filterTeacher !== 'all' ? filterTeacher : undefined),
           groupId: filterGrade !== 'all' ? filterGrade : undefined,
           subjectId: bp.subjectId,
           startDate: bp.startDate,
@@ -204,7 +278,10 @@ export default function AttendanceReports() {
           setTutoringData(sortByRisk(mapped))
         }
       }
-    } catch (err) { console.error('Error loading report data:', err) }
+    } catch (err) {
+      console.error('Error loading report data:', err)
+      setReportError('No se pudo generar el reporte. Revisa los filtros o tus permisos.')
+    }
     finally { setLoadingReport(false) }
   }
 
@@ -222,8 +299,16 @@ export default function AttendanceReports() {
     downloadCSV(csv, fn)
   }
 
-  const handleBack = () => { setShowReport(false); setSelectedReport(null) }
-  const currentReport = filteredReports.find(r => r.id === selectedReport)
+  const handleBack = () => {
+    // Para docentes, el botón atrás lleva a /reports en lugar de mostrar la lista de reportes de asistencia
+    if (isTeacherOnly) {
+      navigate('/reports')
+      return
+    }
+    setShowReport(false)
+    setSelectedReport(null)
+  }
+  const currentReport = visibleReports.find(r => r.id === selectedReport)
 
   // ═══════════════════════════════════════════════════════════════════════
   // KPI CARDS
@@ -332,8 +417,8 @@ export default function AttendanceReports() {
     const W = ({ children }: { children: React.ReactNode }) => <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-4">{children}</div>
     if (selectedReport === 'att-group') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} /><FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={statOpts} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><div><label className="block text-xs font-medium text-slate-600 mb-1">Buscar estudiante</label><input type="text" value={searchStudent} onChange={e => setSearchStudent(e.target.value)} placeholder="Nombre..." className="w-full px-2.5 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-300" /></div><SearchBtn onClick={() => loadReportData('att-group')} loading={loadingReport} /></div></W>
     if (selectedReport === 'att-student') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Grupo" value={filterGrade} onChange={v => { setFilterGrade(v); setFilterStudentId('all') }} options={groupOpts} /><FSelect label="Estudiante" value={filterStudentId} onChange={setFilterStudentId} options={[{ value: 'all', label: 'Todos' }, ...students.map(s => ({ value: s.enrollmentId || s.id, label: [s.lastName, s.secondLastName, s.firstName, s.secondName].filter(Boolean).join(' ') }))]} /><FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={attStatOpts} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} /><SearchBtn onClick={() => loadReportData('att-student')} loading={loadingReport} /></div></W>
-    if (selectedReport === 'att-subject') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={[{ value: 'all', label: 'Seleccionar asignatura...' }, ...subjects.map(s => ({ value: s.id, label: s.name }))]} required /><FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={statOpts} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><div><label className="block text-xs font-medium text-slate-600 mb-1">Buscar estudiante</label><input type="text" value={searchStudent} onChange={e => setSearchStudent(e.target.value)} placeholder="Nombre..." className="w-full px-2.5 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-300" /></div><SearchBtn onClick={() => { if (filterSubject === 'all') { alert('Debe seleccionar una asignatura'); return }; loadReportData('att-subject') }} loading={loadingReport} /></div></W>
-    if (selectedReport === 'att-teacher') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} />{!isTeacher ? <FSelect label="Docente" value={filterTeacher} onChange={setFilterTeacher} options={teachOpts} /> : <div className="flex items-end"><div className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">Se mostrará tu propia carga académica</div></div>}<FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><div /><SearchBtn onClick={() => loadReportData('att-teacher')} loading={loadingReport} /></div></W>
+    if (selectedReport === 'att-subject') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={[{ value: 'all', label: isTeacherOnly ? 'Selecciona una asignatura...' : 'Seleccionar asignatura...' }, ...subjOpts.filter(o => o.value !== 'all')]} required={!isTeacherOnly} /><FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={statOpts} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><div><label className="block text-xs font-medium text-slate-600 mb-1">Buscar estudiante</label><input type="text" value={searchStudent} onChange={e => setSearchStudent(e.target.value)} placeholder="Nombre..." className="w-full px-2.5 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-300" /></div><SearchBtn onClick={() => { if (filterSubject === 'all') { alert('Debe seleccionar una asignatura'); return }; loadReportData('att-subject') }} loading={loadingReport} /></div></W>
+    if (selectedReport === 'att-teacher') return <W>{isTeacherOnly && <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">Solo verás tu propia carga académica.</div>}<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} />{!isTeacherOnly ? <FSelect label="Docente" value={filterTeacher} onChange={setFilterTeacher} options={teachOpts} /> : <div className="flex items-end"><div className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">Se mostrará tu propia carga académica</div></div>}<FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><div /><SearchBtn onClick={() => loadReportData('att-teacher')} loading={loadingReport} /></div></W>
     if (selectedReport === 'att-critical') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><div><label className="block text-xs font-medium text-slate-600 mb-1">% Umbral</label><input type="number" value={filterMinPercent} onChange={e => setFilterMinPercent(e.target.value)} className="w-full px-2.5 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-300" /></div><FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={[{ value: 'all', label: 'Todos' }, { value: 'Alerta', label: 'Alerta' }, { value: 'Riesgo', label: 'Riesgo' }]} /><SearchBtn onClick={() => loadReportData('att-critical')} loading={loadingReport} /></div></W>
     if (selectedReport === 'att-consolidated') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Asignatura" value={filterSubject} onChange={setFilterSubject} options={subjOpts} /><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /><SearchBtn onClick={() => loadReportData('att-consolidated')} loading={loadingReport} /></div></W>
     if (selectedReport === 'att-tutoring') return <W><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Ano" value={filterYear} onChange={setFilterYear} options={yearOpts} /><FSelect label="Grupo" value={filterGrade} onChange={setFilterGrade} options={groupOpts} /><FDate label="Fecha desde" value={filterDateFrom} onChange={setFilterDateFrom} /><FDate label="Fecha hasta" value={filterDateTo} onChange={setFilterDateTo} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><FSelect label="Estado" value={filterStatus} onChange={setFilterStatus} options={statOpts} /><div /><div /><SearchBtn onClick={() => loadReportData('att-tutoring')} loading={loadingReport} /></div></W>
@@ -372,6 +457,7 @@ export default function AttendanceReports() {
 
   const renderTable = () => {
     if (loadingReport) return <div className="flex flex-col items-center justify-center py-16"><div className="w-10 h-10 border-3 border-amber-200 border-t-amber-600 rounded-full animate-spin mb-3" /><p className="text-sm text-slate-500">Generando reporte...</p></div>
+    if (reportError) return <EmptyState icon={<UserCheck className="w-12 h-12" />} message={reportError} />
 
     if (selectedReport === 'att-group') {
       const d = searchStudent ? attendanceData.filter(r => r.name?.toLowerCase().includes(searchStudent.toLowerCase())) : attendanceData
@@ -401,7 +487,7 @@ export default function AttendanceReports() {
     }
 
     if (selectedReport === 'att-teacher') {
-      if (!teacherComplianceData.length) return <EmptyState icon={<UserCheck className="w-12 h-12" />} />
+      if (!teacherComplianceData.length) return <EmptyState icon={<UserCheck className="w-12 h-12" />} message="No se encontraron registros para tu carga académica." />
       return (<div className="overflow-x-auto"><table className="w-full"><thead className="bg-slate-50 border-b border-slate-200"><tr>
         <th className={`${th} text-left w-12`}>#</th><th className={`${th} text-left`}>Docente</th><th className={`${th} text-center`}>Programadas</th><th className={`${th} text-center`}>Registradas</th><th className={`${th} text-center`}>Sin registrar</th><th className={`${th} text-center`}>% Cumplimiento</th>
       </tr></thead><tbody className="divide-y divide-slate-100">
@@ -457,6 +543,43 @@ export default function AttendanceReports() {
   // ═══════════════════════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════════════════════
+  const kpiMap: Record<string, any> = {
+    'att-group': groupKPIs,
+    'att-student': studentKPIs,
+    'att-subject': subjectKPIs,
+    'att-teacher': teacherKPIs,
+    'att-critical': criticalKPIs,
+    'att-consolidated': consolidatedKPIs,
+    'att-tutoring': tutoringKPIs,
+  }
+  const selectedKpis = selectedReport && selectedReport in kpiMap
+    ? kpiMap[selectedReport as keyof typeof kpiMap]
+    : null
+
+  // Para docentes: entrar directamente al reporte de asistencia por docente sin mostrar la lista
+  useEffect(() => {
+    if (isTeacherOnly && !showReport && !selectedReport) {
+      setSelectedReport('att-teacher')
+      setShowReport(true)
+    }
+  }, [isTeacherOnly, showReport, selectedReport])
+
+  // Cargar datos automáticamente cuando el docente entra al reporte
+  useEffect(() => {
+    if (isTeacherOnly && showReport && selectedReport === 'att-teacher' && filterYear && !loadingReport && teacherComplianceData.length === 0) {
+      loadReportData('att-teacher')
+    }
+  }, [isTeacherOnly, showReport, selectedReport, filterYear])
+
+  // Si es docente y aún no se ha cargado el reporte, mostrar loading
+  if (isTeacherOnly && (!showReport || !selectedReport)) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-10 h-10 border-3 border-amber-200 border-t-amber-600 rounded-full animate-spin" />
+      </div>
+    )
+  }
+
   if (!showReport) {
     return (
       <div className="p-6 max-w-[1400px] mx-auto">
@@ -465,33 +588,27 @@ export default function AttendanceReports() {
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center shadow-sm"><Calendar className="w-6 h-6 text-amber-600" /></div>
             <div>
-              <h1 className="text-xl font-semibold text-slate-900">Reportes de Asistencia</h1>
-              <p className="text-sm text-slate-500">Panel de control y seguimiento institucional</p>
+              <h1 className="text-2xl font-bold text-slate-900">Asistencia</h1>
+              <p className="text-sm text-slate-500">Selecciona el reporte que deseas consultar</p>
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredReports.map(report => (
-            <button key={report.id} onClick={() => handleSelectReport(report.id)}
-              className="p-5 bg-white rounded-xl border border-slate-200 hover:border-amber-300 hover:shadow-lg transition-all text-left group">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center group-hover:bg-amber-200 transition-colors">
-                  <report.icon className="w-5 h-5 text-amber-600" />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {visibleReports.map(r => {
+            const Icon = r.icon
+            return (
+              <button key={r.id} onClick={() => handleSelectReport(r.id)} className="group text-left rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-amber-300 transition-all">
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="p-3 rounded-xl bg-amber-50 text-amber-700 group-hover:bg-amber-100 transition-colors"><Icon className="w-6 h-6" /></div>
+                  <h3 className="font-medium text-slate-900">{r.name}</h3>
                 </div>
-                <h3 className="font-medium text-slate-900">{report.name}</h3>
-              </div>
-              <p className="text-sm text-slate-500">{report.description}</p>
-            </button>
-          ))}
+                <p className="text-sm text-slate-500">{r.description}</p>
+              </button>
+            )
+          })}
         </div>
       </div>
     )
-  }
-
-  const kpiMap: Record<string, React.ReactNode> = {
-    'att-group': groupKPIs, 'att-student': studentKPIs, 'att-subject': subjectKPIs,
-    'att-teacher': teacherKPIs, 'att-critical': criticalKPIs, 'att-consolidated': consolidatedKPIs,
-    'att-tutoring': tutoringKPIs,
   }
 
   return (
@@ -502,7 +619,7 @@ export default function AttendanceReports() {
       onBack={handleBack}
       onExport={exportToCSV}
       filters={renderFilters()}
-      kpis={selectedReport ? kpiMap[selectedReport] : null}
+      kpis={selectedKpis}
       hasData={!loadingReport && (attendanceData.length > 0 || attendanceDetailData.length > 0 || attendanceBySubjectData.length > 0 || teacherComplianceData.length > 0 || criticalAbsencesData.length > 0 || consolidatedData.byGrade.length > 0 || tutoringData.length > 0)}
     >
       {renderTable()}
