@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowRightLeft, Lock, Printer, RotateCcw, Search, Save, Users, X } from 'lucide-react'
+import { ArrowRightLeft, Lock, Printer, RotateCcw, Search, Save, Trash2, Users, X } from 'lucide-react'
 import { teacherWorkspaceApi } from '../../../lib/api'
 import { WorkspaceBoard } from '../types'
 import { WBadge, WButton, WSummaryCard, WInput } from '../ui'
@@ -249,6 +249,52 @@ export default function ClassroomSeatingView({ board, boardSummary, onReloadBoar
     await onReloadSummary()
   }
 
+  const handleClearAllStudents = async () => {
+    const nextSeats = seating.seats.map(seat => ({
+      ...seat,
+      studentRecordId: null,
+      studentName: null,
+    }))
+
+    await updateBoardMetadata(nextSeats)
+    setStudentSearch('')
+    setStudentResults([])
+    setSelectedSeatId(null)
+  }
+
+  const handleDeleteSelectedSeat = async () => {
+    if (!selectedSeat) return
+
+    const ok = window.confirm(
+      `¿Eliminar el puesto #${selectedSeat.number}? Se reacomodarán los puestos de esa fila.`
+    )
+    if (!ok) return
+
+    const nextSeats: SeatingSeat[] = []
+    for (let row = 0; row < seating.rows; row++) {
+      const rowSeats = seating.seats
+        .filter(seat => seat.row === row && seat.id !== selectedSeat.id)
+        .sort((a, b) => a.col - b.col)
+
+      rowSeats.forEach((seat, newCol) => {
+        nextSeats.push({
+          ...seat,
+          col: newCol,
+        })
+      })
+    }
+
+    const rowSizes = Array.from({ length: seating.rows }, (_, rowIndex) => nextSeats.filter(seat => seat.row === rowIndex).length)
+    const nextColumns = Math.max(1, ...rowSizes)
+    const renumberedSeats = nextSeats.map((seat) => ({
+      ...seat,
+      number: getSeatNumber(seat.row, seat.col, seating.rows, nextColumns, rowSizes),
+    }))
+
+    await updateBoardMetadata(renumberedSeats, seating.rows, nextColumns)
+    setSelectedSeatId(null)
+  }
+
   const handleExpandRows = async () => {
     setLayoutRows(String(Math.max(1, Number(layoutRows) || seating.rows) + 1))
   }
@@ -292,6 +338,48 @@ export default function ClassroomSeatingView({ board, boardSummary, onReloadBoar
     setLayoutRows(String(nextRows))
     setLayoutColumns(String(nextColumns))
     await updateBoardMetadata(compactSeats, nextRows, nextColumns)
+    setSelectedSeatId(null)
+  }
+
+  const handleTrimLeadingEmptySeats = async () => {
+    const usedSeats = seating.seats.filter(seat => seat.studentRecordId || seat.blocked)
+    if (!usedSeats.length) return
+
+    const nextSeats: SeatingSeat[] = []
+
+    for (let row = 0; row < seating.rows; row++) {
+      const rowSeats = seating.seats
+        .filter(seat => seat.row === row)
+        .sort((a, b) => a.col - b.col)
+
+      const occupiedCols = rowSeats
+        .filter(seat => seat.studentRecordId || seat.blocked)
+        .map(seat => seat.col)
+
+      if (occupiedCols.length === 0) {
+        nextSeats.push(...rowSeats)
+        continue
+      }
+
+      const firstUsedCol = Math.min(...occupiedCols)
+      const trimmedRowSeats = rowSeats.filter(seat => seat.col >= firstUsedCol)
+
+      trimmedRowSeats.forEach((seat, newCol) => {
+        nextSeats.push({
+          ...seat,
+          col: newCol,
+        })
+      })
+    }
+
+    const rowSizes = Array.from({ length: seating.rows }, (_, rowIndex) => nextSeats.filter(seat => seat.row === rowIndex).length)
+    const maxColumns = Math.max(1, ...rowSizes)
+    const renumberedSeats = nextSeats.map((seat) => ({
+      ...seat,
+      number: getSeatNumber(seat.row, seat.col, seating.rows, maxColumns, rowSizes),
+    }))
+
+    await updateBoardMetadata(renumberedSeats, seating.rows, maxColumns)
     setSelectedSeatId(null)
   }
 
@@ -605,9 +693,13 @@ export default function ClassroomSeatingView({ board, boardSummary, onReloadBoar
       <div className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm flex flex-wrap items-end gap-3">
         <WInput label="Filas" type="number" min={1} value={layoutRows} onChange={(e) => setLayoutRows(e.target.value)} />
         <WInput label="Columnas" type="number" min={1} value={layoutColumns} onChange={(e) => setLayoutColumns(e.target.value)} />
+        <WButton variant="secondary" onClick={handleClearAllStudents} disabled={saving} icon={<Trash2 className="w-4 h-4" />}>
+          Limpiar estudiantes
+        </WButton>
         <WButton variant="secondary" onClick={applyLayoutSize} disabled={saving}>Aplicar tamaño</WButton>
         <WButton variant="secondary" onClick={handleExpandRows} disabled={saving}>+ Fila</WButton>
         <WButton variant="secondary" onClick={handleExpandColumns} disabled={saving}>+ Columna</WButton>
+        <WButton variant="secondary" onClick={handleTrimLeadingEmptySeats} disabled={saving}>Recortar izquierda</WButton>
         <WButton variant="secondary" onClick={handleCompactLayout} disabled={saving}>Compactar</WButton>
         <WButton variant="secondary" onClick={handleTrimEmptyEdges} disabled={saving}>Quitar vacíos</WButton>
         <WButton onClick={handleAutoFill} disabled={saving}>{saving ? 'Guardando...' : 'Autoubicar'}</WButton>
@@ -725,6 +817,12 @@ export default function ClassroomSeatingView({ board, boardSummary, onReloadBoar
                     Quitar estudiante
                   </button>
                 )}
+                <button
+                  onClick={handleDeleteSelectedSeat}
+                  className="text-body-sm text-red-600 hover:underline"
+                >
+                  Eliminar puesto
+                </button>
               </div>
             ) : (
               <p className="mt-2 text-body-sm text-slate-400">Selecciona una silla del salón.</p>
