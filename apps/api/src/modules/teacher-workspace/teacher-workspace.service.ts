@@ -7,6 +7,19 @@ import { WorkspaceBoardType, WorkspaceScopeType } from '@prisma/client';
 export class TeacherWorkspaceService {
   constructor(private prisma: PrismaService) {}
 
+  private getSeatingNumber(row: number, col: number, rows: number, columns: number, rowSizes?: number[]) {
+    const sizes = Array.isArray(rowSizes) && rowSizes.length === rows
+      ? rowSizes
+      : Array.from({ length: rows }, () => columns);
+
+    let offset = 0;
+    for (let r = row + 1; r < rows; r++) {
+      offset += Math.max(1, Number(sizes[r]) || columns);
+    }
+
+    return offset + col + 1;
+  }
+
   private isSeatingBoard(board: { type: string; metadata?: any }) {
     return board.type === 'KANBAN' && ((board.metadata || {}) as any)?.template === 'CLASSROOM_SEATING';
   }
@@ -16,6 +29,9 @@ export class TeacherWorkspaceService {
     const seating = boardMeta.seating || {};
     const rows = Math.max(1, Number(seating.rows) || 6);
     const columns = Math.max(1, Number(seating.columns) || 6);
+    const rowSizes = Array.isArray(seating.rowSizes) && seating.rowSizes.length === rows
+      ? seating.rowSizes.map((value: any) => Math.max(1, Number(value) || columns))
+      : Array.from({ length: rows }, () => columns);
     const seatMap = new Map<string, any>();
 
     if (Array.isArray(seating.seats)) {
@@ -28,13 +44,14 @@ export class TeacherWorkspaceService {
 
     const seats: any[] = [];
     for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < columns; col++) {
+      const rowLength = Math.max(1, Number(rowSizes[row]) || columns);
+      for (let col = 0; col < rowLength; col++) {
         const existing = seatMap.get(`${row}:${col}`) || {};
         seats.push({
           id: existing.id || `seat-${row}-${col}`,
           row,
           col,
-          number: col * rows + row + 1,
+          number: typeof existing.number === 'number' ? existing.number : this.getSeatingNumber(row, col, rows, columns, rowSizes),
           studentRecordId: existing.studentRecordId || null,
           studentName: existing.studentName || null,
           workSide: existing.workSide || 'RIGHT',
@@ -46,6 +63,7 @@ export class TeacherWorkspaceService {
     return {
       rows,
       columns,
+      rowSizes,
       boardPosition: seating.boardPosition || 'BOTTOM',
       numberingMode: seating.numberingMode || 'COLUMN_MAJOR_LEFT',
       seats,
@@ -60,6 +78,7 @@ export class TeacherWorkspaceService {
       seating: {
         rows: seatingConfig.rows,
         columns: seatingConfig.columns,
+        rowSizes: seatingConfig.rowSizes,
         boardPosition: seatingConfig.boardPosition,
         numberingMode: seatingConfig.numberingMode,
         seats: seatingConfig.seats.map((seat: any) => ({
@@ -720,13 +739,13 @@ export class TeacherWorkspaceService {
 
       return {
         type: 'CLASSROOM_SEATING',
-        totalSeats: seating.rows * seating.columns,
+        totalSeats: seating.seats.length,
         occupiedSeats,
         vacantSeats: Math.max(0, seating.rows * seating.columns - occupiedSeats - blockedSeats),
         blockedSeats,
         rows: seating.rows,
         columns: seating.columns,
-        occupancyPercentage: seating.rows * seating.columns > 0 ? Math.round((occupiedSeats / (seating.rows * seating.columns)) * 100) : 0,
+        occupancyPercentage: seating.seats.length > 0 ? Math.round((occupiedSeats / seating.seats.length) * 100) : 0,
         leftWorkSideCount,
         rightWorkSideCount,
       };
