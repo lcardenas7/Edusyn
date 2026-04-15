@@ -44,6 +44,7 @@ export default function WorkspaceSidebar({
           boards.map(board => {
             const bt = BOARD_TYPES[board.type] || BOARD_TYPES.KANBAN
             const isActive = activeBoardId === board.id
+            const isSeatingBoard = board.type === 'KANBAN' && ((board.metadata || {}) as any)?.template === 'CLASSROOM_SEATING'
             return (
               <div
                 key={board.id}
@@ -61,11 +62,13 @@ export default function WorkspaceSidebar({
                       {board.title}
                     </p>
                     <p className="text-badge text-slate-400 mt-0.5">
-                      {bt.label}
+                      {isSeatingBoard ? 'Organizador de salón' : bt.label}
                       {board.group && ` · ${board.group.grade?.name || ''} ${board.group.name}`}
                     </p>
                     <p className="text-badge text-slate-300 mt-0.5">
-                      {board._count?.items ?? 0} items
+                      {isSeatingBoard
+                        ? `${Number(((board.metadata || {}) as any)?.seating?.rows || 0) * Number(((board.metadata || {}) as any)?.seating?.columns || 0)} puestos`
+                        : `${board._count?.items ?? 0} items`}
                     </p>
                   </div>
                   {/* Actions */}

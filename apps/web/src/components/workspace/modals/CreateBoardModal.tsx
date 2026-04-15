@@ -5,6 +5,7 @@ import { WModal, WButton, WInput } from '../ui'
 interface CreateFormState {
   type: string; title: string; description: string;
   scopeType: string; groupId: string; gradeId: string; groupIds: string[];
+  template: string; seatingRows: string; seatingColumns: string;
   goalAmount: string; concept: string; allowPartial: boolean; roles: string[];
   autoPopulate: boolean;
 }
@@ -84,8 +85,38 @@ export default function CreateBoardModal({
         />
       </div>
 
+      {/* KANBAN template selector */}
+      {form.type === 'KANBAN' && (
+        <div>
+          <label className="block text-body-sm font-medium text-slate-700 mb-2">Plantilla del tablero</label>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { v: 'DEFAULT', l: 'Kanban normal' },
+              { v: 'CLASSROOM_SEATING', l: 'Organizador de salón' },
+            ].map(o => (
+              <button
+                key={o.v}
+                onClick={() => onFormChange(f => ({ ...f, template: o.v }))}
+                className={`flex items-center justify-center p-3 rounded-lg border text-body-sm font-medium transition-colors min-h-btn ${
+                  form.template === o.v
+                    ? 'border-blue-400 bg-blue-50 text-blue-700'
+                    : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                }`}
+              >
+                {o.l}
+              </button>
+            ))}
+          </div>
+          {form.template === 'CLASSROOM_SEATING' && (
+            <p className="text-badge text-slate-400 mt-2">
+              El pizarrón quedará siempre abajo y las sillas se numerarán desde la izquierda.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Scope selector for structured boards */}
-      {['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(form.type) ? (
+      {['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(form.type) || (form.type === 'KANBAN' && form.template === 'CLASSROOM_SEATING') ? (
         <>
           <div>
             <label className="block text-body-sm font-medium text-slate-700 mb-1">Alcance</label>
@@ -157,6 +188,27 @@ export default function CreateBoardModal({
                   </label>
                 ))}
               </div>
+            </div>
+          )}
+
+          {form.type === 'KANBAN' && form.template === 'CLASSROOM_SEATING' && (
+            <div className="grid grid-cols-2 gap-3">
+              <WInput
+                label="Filas"
+                type="number"
+                min={1}
+                value={form.seatingRows}
+                onChange={(e) => onFormChange(f => ({ ...f, seatingRows: e.target.value }))}
+                placeholder="Ej: 6"
+              />
+              <WInput
+                label="Columnas"
+                type="number"
+                min={1}
+                value={form.seatingColumns}
+                onChange={(e) => onFormChange(f => ({ ...f, seatingColumns: e.target.value }))}
+                placeholder="Ej: 6"
+              />
             </div>
           )}
 

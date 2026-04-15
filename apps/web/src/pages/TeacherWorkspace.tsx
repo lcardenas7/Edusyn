@@ -8,7 +8,7 @@ import {
 import { WorkspaceItem, WorkspaceBoard, BOARD_TYPES } from '../components/workspace/types'
 import { WButton } from '../components/workspace/ui'
 import WorkspaceSidebar from '../components/workspace/WorkspaceSidebar'
-import { CalendarView, MicroCollectView, ClassroomRolesView, StudentNotesView, ProjectBoardView, GenericKanbanView } from '../components/workspace/views'
+import { CalendarView, MicroCollectView, ClassroomRolesView, StudentNotesView, ProjectBoardView, GenericKanbanView, ClassroomSeatingView } from '../components/workspace/views'
 import { CreateBoardModal, PaymentModal, AssignRoleModal, ObservationModal, TaskModal } from '../components/workspace/modals'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -33,9 +33,10 @@ export default function TeacherWorkspace() {
   const [createForm, setCreateForm] = useState<{
     type: string; title: string; description: string;
     scopeType: string; groupId: string; gradeId: string; groupIds: string[];
+    template: string; seatingRows: string; seatingColumns: string;
     goalAmount: string; concept: string; allowPartial: boolean; roles: string[];
     autoPopulate: boolean;
-  }>({ type: 'KANBAN', title: '', description: '', scopeType: 'GROUP', groupId: '', gradeId: '', groupIds: [], goalAmount: '', concept: '', allowPartial: false, roles: ['Monitor', 'Líder', 'Secretario', 'Tesorero', 'Vigía ambiental'], autoPopulate: false })
+  }>({ type: 'KANBAN', title: '', description: '', scopeType: 'GROUP', groupId: '', gradeId: '', groupIds: [], template: 'DEFAULT', seatingRows: '6', seatingColumns: '6', goalAmount: '', concept: '', allowPartial: false, roles: ['Monitor', 'Líder', 'Secretario', 'Tesorero', 'Vigía ambiental'], autoPopulate: false })
   const [creating, setCreating] = useState(false)
 
   // Scope options from teacher assignments
@@ -151,7 +152,7 @@ export default function TeacherWorkspace() {
 
   // Load summary when active board changes
   useEffect(() => {
-    if (activeBoard && ['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(activeBoard.type)) {
+    if (activeBoard && (['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(activeBoard.type) || isSeatingBoard(activeBoard))) {
       loadBoardSummary(activeBoard.id)
     } else {
       setBoardSummary(null)
@@ -343,18 +344,36 @@ export default function TeacherWorkspace() {
     }
   }
 
-  const defaultCreateForm = { type: 'KANBAN', title: '', description: '', scopeType: 'GROUP', groupId: '', gradeId: '', groupIds: [] as string[], goalAmount: '', concept: '', allowPartial: false, roles: ['Monitor', 'Líder', 'Secretario', 'Tesorero', 'Vigía ambiental'], autoPopulate: false }
+  const defaultCreateForm = { type: 'KANBAN', title: '', description: '', scopeType: 'GROUP', groupId: '', gradeId: '', groupIds: [] as string[], template: 'DEFAULT', seatingRows: '6', seatingColumns: '6', goalAmount: '', concept: '', allowPartial: false, roles: ['Monitor', 'Líder', 'Secretario', 'Tesorero', 'Vigía ambiental'], autoPopulate: false }
+
+  const isSeatingBoard = (board: WorkspaceBoard | null) => board?.type === 'KANBAN' && ((board.metadata || {}) as any)?.template === 'CLASSROOM_SEATING'
+  const getBoardLabel = (board: WorkspaceBoard) => {
+    if (board.type === 'KANBAN' && ((board.metadata || {}) as any)?.template === 'CLASSROOM_SEATING') return 'Organizador de salón'
+    return BOARD_TYPES[board.type]?.label || 'Tablero'
+  }
 
   // ─── Create board ───
   const handleCreateBoard = async () => {
     if (!createForm.title.trim()) return
     setCreating(true)
     try {
-      const isStructured = ['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(createForm.type)
+      const isSeatingTemplate = createForm.type === 'KANBAN' && createForm.template === 'CLASSROOM_SEATING'
+      const isStructured = ['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(createForm.type) || isSeatingTemplate
 
       // Build metadata based on board type
       let metadata: any = undefined
-      if (createForm.type === 'MICRO_COLLECT') {
+      if (isSeatingTemplate) {
+        metadata = {
+          template: 'CLASSROOM_SEATING',
+          seating: {
+            rows: Math.max(1, Number(createForm.seatingRows) || 6),
+            columns: Math.max(1, Number(createForm.seatingColumns) || 6),
+            boardPosition: 'BOTTOM',
+            numberingMode: 'COLUMN_MAJOR_LEFT',
+            seats: [],
+          },
+        }
+      } else if (createForm.type === 'MICRO_COLLECT') {
         metadata = {
           goalAmount: Number(createForm.goalAmount) || 0,
           concept: createForm.concept || createForm.title,
@@ -716,10 +735,10 @@ export default function TeacherWorkspace() {
                     {activeBoard.description ? (
                       <p className="text-body-sm text-slate-400 mt-0.5">{activeBoard.description}</p>
                     ) : (
-                      <p className="text-body-sm text-slate-400 mt-0.5">{BOARD_TYPES[activeBoard.type]?.label || 'Tablero'}</p>
+                      <p className="text-body-sm text-slate-400 mt-0.5">{getBoardLabel(activeBoard)}</p>
                     )}
                   </div>
-                  {!['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(activeBoard.type) && (
+                  {!['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(activeBoard.type) && !isSeatingBoard(activeBoard) && (
                     <WButton variant="secondary" size="sm" onClick={handleAddColumn} icon={<Plus className="w-4 h-4" />}>
                       Columna
                     </WButton>
@@ -751,6 +770,14 @@ export default function TeacherWorkspace() {
                     loadBoard(activeBoard.id)
                     loadBoardSummary(activeBoard.id)
                   }}
+                />
+
+              ) : isSeatingBoard(activeBoard) ? (
+                <ClassroomSeatingView
+                  board={activeBoard}
+                  boardSummary={boardSummary}
+                  onReloadBoard={() => loadBoard(activeBoard.id)}
+                  onReloadSummary={() => loadBoardSummary(activeBoard.id)}
                 />
 
               ) : activeBoard.type === 'CLASSROOM_ROLES' ? (

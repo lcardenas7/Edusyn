@@ -7,6 +7,74 @@ import { WorkspaceBoardType, WorkspaceScopeType } from '@prisma/client';
 export class TeacherWorkspaceService {
   constructor(private prisma: PrismaService) {}
 
+  private isSeatingBoard(board: { type: string; metadata?: any }) {
+    return board.type === 'KANBAN' && ((board.metadata || {}) as any)?.template === 'CLASSROOM_SEATING';
+  }
+
+  private getSeatingConfig(board: any) {
+    const boardMeta = (board.metadata || {}) as any;
+    const seating = boardMeta.seating || {};
+    const rows = Math.max(1, Number(seating.rows) || 6);
+    const columns = Math.max(1, Number(seating.columns) || 6);
+    const seatMap = new Map<string, any>();
+
+    if (Array.isArray(seating.seats)) {
+      for (const seat of seating.seats) {
+        if (typeof seat?.row === 'number' && typeof seat?.col === 'number') {
+          seatMap.set(`${seat.row}:${seat.col}`, seat);
+        }
+      }
+    }
+
+    const seats: any[] = [];
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < columns; col++) {
+        const existing = seatMap.get(`${row}:${col}`) || {};
+        seats.push({
+          id: existing.id || `seat-${row}-${col}`,
+          row,
+          col,
+          number: col * rows + row + 1,
+          studentRecordId: existing.studentRecordId || null,
+          studentName: existing.studentName || null,
+          workSide: existing.workSide || 'RIGHT',
+          blocked: !!existing.blocked,
+        });
+      }
+    }
+
+    return {
+      rows,
+      columns,
+      boardPosition: seating.boardPosition || 'BOTTOM',
+      numberingMode: seating.numberingMode || 'COLUMN_MAJOR_LEFT',
+      seats,
+    };
+  }
+
+  private buildSeatingMetadata(board: any, seatingConfig: ReturnType<TeacherWorkspaceService['getSeatingConfig']>) {
+    const boardMeta = (board.metadata || {}) as any;
+    return {
+      ...boardMeta,
+      template: 'CLASSROOM_SEATING',
+      seating: {
+        rows: seatingConfig.rows,
+        columns: seatingConfig.columns,
+        boardPosition: seatingConfig.boardPosition,
+        numberingMode: seatingConfig.numberingMode,
+        seats: seatingConfig.seats.map((seat: any) => ({
+          id: seat.id,
+          row: seat.row,
+          col: seat.col,
+          studentRecordId: seat.studentRecordId || null,
+          studentName: seat.studentName || null,
+          workSide: seat.workSide || 'RIGHT',
+          blocked: !!seat.blocked,
+        })),
+      },
+    };
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // BLINDAJE: Validación de ownership antes de cualquier operación
   // ═══════════════════════════════════════════════════════════════════════════
@@ -118,9 +186,13 @@ export class TeacherWorkspaceService {
       metadata = { ...(metadata || {}), groupIds: dto.groupIds };
     }
 
+    const isSeatingBoard = dto.type === 'KANBAN' && ((metadata || {}) as any)?.template === 'CLASSROOM_SEATING';
+
     // STUDENT_NOTES: auto-create columns per assigned group
     let colDefs: { title: string; color?: string; metadata?: any }[];
-    if (dto.type === 'STUDENT_NOTES') {
+    if (isSeatingBoard) {
+      colDefs = [{ title: 'Salón' }];
+    } else if (dto.type === 'STUDENT_NOTES') {
       const assignments = await this.prisma.teacherAssignment.findMany({
         where: { teacherId, group: { campus: { institutionId } }, endDate: null },
         select: { group: { select: { id: true, name: true, grade: { select: { name: true } } } } },
@@ -356,8 +428,48 @@ export class TeacherWorkspaceService {
   async populateBoard(boardId: string, teacherId: string, institutionId: string) {
     const board = await this.validateBoardOwnership(boardId, teacherId, institutionId);
 
-    if (!['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(board.type)) {
-      throw new BadRequestException('Solo tableros de tipo Micro-recaudo o Roles del Aula se pueden poblar');
+    if (!['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(board.type) && !this.isSeatingBoard(board)) {
+      throw new BadRequestException('Solo tableros de tipo Micro-recaudo, Roles del Aula u Organizador de salón se pueden poblar');
+    }
+
+    if (this.isSeatingBoard(board)) {
+      const studentIds = await this.resolveStudentsByScope(board, institutionId);
+      if (!studentIds.length) {
+        throw new BadRequestException('No se encontraron estudiantes para el alcance seleccionado');
+      }
+
+      const seating = this.getSeatingConfig(board);
+      const students = await this.prisma.student.findMany({
+        where: { id: { in: studentIds }, isActive: true },
+        select: { id: true, firstName: true, secondName: true, lastName: true, secondLastName: true },
+        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+      });
+
+      const assignedIds = new Set(seating.seats.map((seat: any) => seat.studentRecordId).filter(Boolean));
+      const availableStudents = students.filter((s) => !assignedIds.has(s.id));
+      const nextSeats = seating.seats
+        .slice()
+        .sort((a: any, b: any) => a.number - b.number)
+        .map((seat: any) => ({ ...seat }));
+
+      let created = 0;
+      for (const seat of nextSeats) {
+        if (seat.blocked || seat.studentRecordId) continue;
+        const student = availableStudents.shift();
+        if (!student) break;
+        seat.studentRecordId = student.id;
+        seat.studentName = [student.lastName, student.secondLastName, student.firstName, student.secondName].filter(Boolean).join(' ');
+        seat.workSide = seat.workSide || 'RIGHT';
+        created++;
+      }
+
+      const metadata = this.buildSeatingMetadata(board, { ...seating, seats: nextSeats });
+      await this.prisma.workspaceBoard.update({
+        where: { id: boardId },
+        data: { metadata },
+      });
+
+      return { created, total: seating.seats.length, message: 'Puestos actualizados correctamente' };
     }
 
     // Resolve Student IDs based on scope (these are Student.id, NOT User.id)
@@ -463,13 +575,19 @@ export class TeacherWorkspaceService {
     if (!scopeStudentIds.length) return [];
 
     // Get already added student record IDs
-    const existingItems = await this.prisma.workspaceItem.findMany({
-      where: { boardId, isArchived: false },
-      select: { metadata: true },
-    });
-    const existingSet = new Set(
-      existingItems.map(e => ((e.metadata as any)?.studentRecordId || '')).filter(Boolean),
-    );
+    let existingSet = new Set<string>();
+    if (this.isSeatingBoard(board)) {
+      const seating = this.getSeatingConfig(board);
+      existingSet = new Set(seating.seats.map((seat: any) => seat.studentRecordId).filter(Boolean));
+    } else {
+      const existingItems = await this.prisma.workspaceItem.findMany({
+        where: { boardId, isArchived: false },
+        select: { metadata: true },
+      });
+      existingSet = new Set(
+        existingItems.map(e => ((e.metadata as any)?.studentRecordId || '')).filter(Boolean),
+      );
+    }
 
     // Filter to only students not already in board
     const availableIds = scopeStudentIds.filter(id => !existingSet.has(id));
@@ -503,16 +621,24 @@ export class TeacherWorkspaceService {
   async addStudentToBoard(boardId: string, teacherId: string, institutionId: string, studentRecordId: string) {
     const board = await this.validateBoardOwnership(boardId, teacherId, institutionId);
 
-    if (!['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(board.type)) {
+    if (!['MICRO_COLLECT', 'CLASSROOM_ROLES'].includes(board.type) && !this.isSeatingBoard(board)) {
       throw new BadRequestException('Solo tableros estructurados soportan agregar estudiantes');
     }
 
+    let existingItems: { metadata: any; sortOrder: number }[] = [];
+
     // Check not already added
-    const existingItems = await this.prisma.workspaceItem.findMany({
-      where: { boardId, isArchived: false },
-      select: { metadata: true, sortOrder: true },
-    });
-    const alreadyAdded = existingItems.some(e => (e.metadata as any)?.studentRecordId === studentRecordId);
+    let alreadyAdded = false;
+    if (this.isSeatingBoard(board)) {
+      const seating = this.getSeatingConfig(board);
+      alreadyAdded = seating.seats.some((seat: any) => seat.studentRecordId === studentRecordId);
+    } else {
+      existingItems = await this.prisma.workspaceItem.findMany({
+        where: { boardId, isArchived: false },
+        select: { metadata: true, sortOrder: true },
+      });
+      alreadyAdded = existingItems.some(e => (e.metadata as any)?.studentRecordId === studentRecordId);
+    }
     if (alreadyAdded) throw new BadRequestException('El estudiante ya está en el tablero');
 
     // Get student info
@@ -523,6 +649,32 @@ export class TeacherWorkspaceService {
     if (!student) throw new NotFoundException('Estudiante no encontrado');
 
     const fullName = [student.lastName, student.secondLastName, student.firstName, student.secondName].filter(Boolean).join(' ');
+
+    if (this.isSeatingBoard(board)) {
+      const seating = this.getSeatingConfig(board);
+      const nextSeatIndex = seating.seats
+        .slice()
+        .sort((a: any, b: any) => a.number - b.number)
+        .findIndex((seat: any) => !seat.blocked && !seat.studentRecordId);
+
+      if (nextSeatIndex === -1) {
+        throw new BadRequestException('No hay puestos libres en el salón');
+      }
+
+      const nextSeats = seating.seats.map((seat: any) => ({ ...seat }));
+      const targetSeat = nextSeats.sort((a: any, b: any) => a.number - b.number)[nextSeatIndex];
+      targetSeat.studentRecordId = student.id;
+      targetSeat.studentName = fullName;
+      targetSeat.workSide = targetSeat.workSide || 'RIGHT';
+
+      const metadata = this.buildSeatingMetadata(board, { ...seating, seats: nextSeats });
+      await this.prisma.workspaceBoard.update({
+        where: { id: boardId },
+        data: { metadata },
+      });
+
+      return { success: true, seatNumber: targetSeat.number, studentRecordId: student.id, studentName: fullName };
+    }
 
     // Get first column
     const firstCol = await this.prisma.workspaceColumn.findFirst({
@@ -558,6 +710,27 @@ export class TeacherWorkspaceService {
   async getBoardSummary(boardId: string, teacherId: string, institutionId: string) {
     const board = await this.validateBoardOwnership(boardId, teacherId, institutionId);
     const boardMeta = (board.metadata || {}) as any;
+
+    if (this.isSeatingBoard(board)) {
+      const seating = this.getSeatingConfig(board);
+      const occupiedSeats = seating.seats.filter((seat: any) => seat.studentRecordId && !seat.blocked).length;
+      const blockedSeats = seating.seats.filter((seat: any) => seat.blocked).length;
+      const leftWorkSideCount = seating.seats.filter((seat: any) => seat.studentRecordId && seat.workSide === 'LEFT').length;
+      const rightWorkSideCount = seating.seats.filter((seat: any) => seat.studentRecordId && seat.workSide !== 'LEFT').length;
+
+      return {
+        type: 'CLASSROOM_SEATING',
+        totalSeats: seating.rows * seating.columns,
+        occupiedSeats,
+        vacantSeats: Math.max(0, seating.rows * seating.columns - occupiedSeats - blockedSeats),
+        blockedSeats,
+        rows: seating.rows,
+        columns: seating.columns,
+        occupancyPercentage: seating.rows * seating.columns > 0 ? Math.round((occupiedSeats / (seating.rows * seating.columns)) * 100) : 0,
+        leftWorkSideCount,
+        rightWorkSideCount,
+      };
+    }
 
     const items = await this.prisma.workspaceItem.findMany({
       where: { boardId, isArchived: false },
