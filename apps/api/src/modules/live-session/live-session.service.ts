@@ -1543,9 +1543,42 @@ export class LiveSessionService implements OnModuleDestroy {
     const questionPointsMap = new Map(questions.map((question) => [question.id, Number(question.points)]));
     const teamAggregates = new Map<string, { teamId: string; totalPoints: number; academicPoints: number; correctAnswers: number; totalResponseTimeMs: number }>();
 
+    // Deduplicate by team + question so a single question cannot be counted multiple times
+    // when several members of the same team submit answers for that question.
+    const bestTeamQuestionAnswer = new Map<string, { teamId: string; questionId: string; isCorrect: boolean; points: number; responseTimeMs: number }>();
+
     for (const answer of answers) {
       if (!answer.teamId) continue;
 
+      const key = `${answer.teamId}:${answer.questionId}`;
+      const candidate = {
+        teamId: answer.teamId,
+        questionId: answer.questionId,
+        isCorrect: !!answer.isCorrect,
+        points: Number(answer.points || 0),
+        responseTimeMs: Number(answer.responseTimeMs || 0),
+      };
+
+      const current = bestTeamQuestionAnswer.get(key);
+      if (!current) {
+        bestTeamQuestionAnswer.set(key, candidate);
+        continue;
+      }
+
+      // Prefer a correct answer over an incorrect one, then higher points,
+      // then faster response time.
+      const currentRank = [current.isCorrect ? 1 : 0, current.points, -current.responseTimeMs];
+      const candidateRank = [candidate.isCorrect ? 1 : 0, candidate.points, -candidate.responseTimeMs];
+      if (
+        candidateRank[0] > currentRank[0] ||
+        (candidateRank[0] === currentRank[0] && candidateRank[1] > currentRank[1]) ||
+        (candidateRank[0] === currentRank[0] && candidateRank[1] === currentRank[1] && candidateRank[2] > currentRank[2])
+      ) {
+        bestTeamQuestionAnswer.set(key, candidate);
+      }
+    }
+
+    for (const answer of bestTeamQuestionAnswer.values()) {
       if (!teamAggregates.has(answer.teamId)) {
         teamAggregates.set(answer.teamId, {
           teamId: answer.teamId,
@@ -1557,8 +1590,8 @@ export class LiveSessionService implements OnModuleDestroy {
       }
 
       const entry = teamAggregates.get(answer.teamId)!;
-      entry.totalPoints += Number(answer.points || 0);
-      entry.totalResponseTimeMs += Number(answer.responseTimeMs || 0);
+      entry.totalPoints += answer.points;
+      entry.totalResponseTimeMs += answer.responseTimeMs;
 
       if (answer.isCorrect) {
         entry.correctAnswers += 1;

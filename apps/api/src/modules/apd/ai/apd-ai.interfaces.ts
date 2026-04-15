@@ -232,7 +232,7 @@ export type ApdAiResponse =
 // ═══════════════════════════════════════════════════════════════════════════
 
 export interface ApdAiServiceConfig {
-  provider: 'OPENAI' | 'ANTHROPIC' | 'LOCAL' | 'GEMINI' | 'XAI' | 'DISABLED';
+  provider: 'OPENAI' | 'ANTHROPIC' | 'LOCAL' | 'GEMINI' | 'XAI' | 'GROQ' | 'DISABLED';
   model?: string;
   apiKey?: string;
   maxTokens?: number;

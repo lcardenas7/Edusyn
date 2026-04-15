@@ -35,10 +35,10 @@ export class ApdAiService implements IApdAiService {
   constructor() {
     const providerEnv = process.env.APD_AI_PROVIDER?.trim().toUpperCase();
     const apiKey = process.env.APD_AI_API_KEY;
-    const detectedProvider = apiKey?.startsWith('xai-') ? 'XAI' : apiKey ? 'GEMINI' : 'DISABLED';
+    const detectedProvider = this.detectProvider(apiKey);
     this.config = {
       provider: (providerEnv as any) || detectedProvider,
-      model: process.env.APD_AI_MODEL || (detectedProvider === 'XAI' ? 'grok-3-mini' : 'gemini-1.5-flash'),
+      model: process.env.APD_AI_MODEL || this.getDefaultModel(detectedProvider),
       apiKey,
       maxTokens: parseInt(process.env.APD_AI_MAX_TOKENS || '2000', 10),
       temperature: parseFloat(process.env.APD_AI_TEMPERATURE || '0.7'),
@@ -61,8 +61,72 @@ export class ApdAiService implements IApdAiService {
     return this.isEnabled() && this.config.provider === 'GEMINI';
   }
 
+  private detectProvider(apiKey?: string): 'XAI' | 'GROQ' | 'GEMINI' | 'DISABLED' {
+    if (!apiKey) return 'DISABLED';
+    if (apiKey.startsWith('xai-')) return 'XAI';
+    if (apiKey.startsWith('gsk_')) return 'GROQ';
+    if (apiKey.startsWith('AIza')) return 'GEMINI';
+    return 'GEMINI'; // fallback
+  }
+
+  private getDefaultModel(provider: string): string {
+    switch (provider) {
+      case 'XAI': return 'grok-3-mini';
+      case 'GROQ': return 'llama-3.1-8b-instant';
+      case 'GEMINI': return 'gemini-2.0-flash';
+      default: return 'gemini-2.0-flash';
+    }
+  }
+
   private isXaiEnabled(): boolean {
     return this.isEnabled() && this.config.provider === 'XAI';
+  }
+
+  private isGroqEnabled(): boolean {
+    return this.isEnabled() && this.config.provider === 'GROQ';
+  }
+
+  private async callGroqJson<T>(
+    systemInstruction: string,
+    userPrompt: string,
+  ): Promise<T> {
+    if (!this.isGroqEnabled()) {
+      throw new Error('Groq no está habilitado');
+    }
+
+    const model = this.config.model || 'llama-3.1-8b-instant';
+    const url = 'https://api.groq.com/openai/v1/chat/completions';
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemInstruction },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: this.config.temperature ?? 0.7,
+        max_tokens: this.config.maxTokens ?? 2000,
+      }),
+    });
+
+    const raw = await response.text();
+    if (!response.ok) {
+      throw new Error(`Groq HTTP ${response.status}: ${raw}`);
+    }
+
+    const parsed = JSON.parse(raw);
+    const content = parsed?.choices?.[0]?.message?.content?.trim();
+
+    if (!content) {
+      throw new Error('Groq no devolvió contenido utilizable');
+    }
+
+    return this.extractJsonPayload(content) as T;
   }
 
   private async callXaiJson<T>(
@@ -112,6 +176,9 @@ export class ApdAiService implements IApdAiService {
     systemInstruction: string,
     userPrompt: string,
   ): Promise<T> {
+    if (this.isGroqEnabled()) {
+      return this.callGroqJson<T>(systemInstruction, userPrompt);
+    }
     if (this.isXaiEnabled()) {
       return this.callXaiJson<T>(systemInstruction, userPrompt);
     }
