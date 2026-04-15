@@ -1,4 +1,4 @@
-import { Controller, Post, Put, Get, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Post, Put, Get, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -68,8 +68,9 @@ export class AttendanceController {
   }
 
   @Get('report/teacher-compliance')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   getTeacherComplianceReport(
+    @Request() req: any,
     @Query('academicYearId') academicYearId: string,
     @Query('teacherId') teacherId?: string,
     @Query('groupId') groupId?: string,
@@ -77,9 +78,12 @@ export class AttendanceController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
+    const userRoles: string[] = (req.user?.roles || []).map((r: any) => typeof r === 'string' ? r : (r.role?.name || r.name || ''));
+    const isAdminScope = userRoles.some((role) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(role));
+
     return this.attendanceService.getTeacherComplianceReport({
       academicYearId,
-      teacherId,
+      teacherId: isAdminScope ? teacherId : req.user?.id,
       groupId,
       subjectId,
       startDate,

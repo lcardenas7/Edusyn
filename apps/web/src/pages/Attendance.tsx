@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Calendar, Check, X, Clock, FileText, ChevronDown, AlertTriangle, Save, Users } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { DiagnosisBadge } from '../components/StudentBadges'
 import { teacherAssignmentsApi, academicStudentsApi, attendanceApi, tutoringAttendanceApi, academicYearsApi, storageApi } from '../lib/api'
@@ -52,11 +53,9 @@ export default function Attendance() {
   const [selectedGroupId, setSelectedGroupId] = useState<string>('')
   
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
-  const today = new Date().toISOString().split('T')[0]
   
-  // Docente solo puede modificar asistencia del día actual
-  // Coordinador/Admin puede modificar cualquier día
-  const canEdit = isAdmin || date === today
+  // Docente puede modificar asistencia para cualquier fecha seleccionada
+  const canEdit = isAdmin || isTeacher
   
   const [students, setStudents] = useState<Array<{ id: string; name: string; enrollmentId: string; status: string; hasDiagnosis?: boolean; diagnosisType?: string }>>([])
   const [loadingStudents, setLoadingStudents] = useState(false)
@@ -338,14 +337,23 @@ export default function Attendance() {
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Asistencia</h1>
           <p className="text-sm sm:text-base text-slate-500 mt-1">Control de asistencia diaria</p>
         </div>
-        <button 
-          onClick={activeTab === 'tutoring' ? saveTutoringAttendance : saveAttendance}
-          disabled={activeTab === 'tutoring' ? (savingTutoring || !selectedTutoringGroupId || !canEdit) : (saving || !selectedAssignment || !canEdit)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Save className="w-4 h-4" />
-          {(activeTab === 'tutoring' ? savingTutoring : saving) ? 'Guardando...' : 'Guardar Asistencia'}
-        </button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Link
+            to="/reports/attendance"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+          >
+            <FileText className="w-4 h-4" />
+            Ver reportes
+          </Link>
+          <button 
+            onClick={activeTab === 'tutoring' ? saveTutoringAttendance : saveAttendance}
+            disabled={activeTab === 'tutoring' ? (savingTutoring || !selectedTutoringGroupId || !canEdit) : (saving || !selectedAssignment || !canEdit)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Save className="w-4 h-4" />
+            {(activeTab === 'tutoring' ? savingTutoring : saving) ? 'Guardando...' : 'Guardar Asistencia'}
+          </button>
+        </div>
       </div>
 
       {/* Banner para admin: habilitar/deshabilitar tutoría */}
@@ -437,7 +445,7 @@ export default function Attendance() {
       {!canEdit && !isAdmin && (
         <div className="mb-4 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 flex items-center gap-2">
           <AlertTriangle className="w-5 h-5" />
-          <span>Solo puedes modificar la asistencia del día actual. Para modificar días anteriores, contacta al coordinador.</span>
+          <span>No tienes permisos para modificar la asistencia de este grupo.</span>
         </div>
       )}
 
