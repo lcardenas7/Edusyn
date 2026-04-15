@@ -120,8 +120,11 @@ export default function AttendanceReports() {
   const [tutoringData, setTutoringData] = useState<any[]>([])
 
   const filteredReports = attendanceReports.filter(r => !r.feature || hasFeature(r.feature))
+  // Docentes pueden ver: asistencia por grupo, por asignatura, por docente (su cumplimiento), e inasistencias críticas
+  // Pero NO: consolidado institucional, asistencia por estudiante individual, tutoría (esos son admin/coordinador)
+  const teacherAllowedReports = ['att-group', 'att-subject', 'att-teacher', 'att-critical']
   const visibleReports = isTeacherOnly
-    ? filteredReports.filter(r => r.id === 'att-teacher')
+    ? filteredReports.filter(r => teacherAllowedReports.includes(r.id))
     : filteredReports
 
   useEffect(() => {
@@ -195,9 +198,16 @@ export default function AttendanceReports() {
   async function fetchGroupData(params: any): Promise<any[]> {
     let raw: any[] = []
     if (filterGrade && filterGrade !== 'all') {
+      // Grupo específico seleccionado
       const res = await attendanceApi.getReportByGroup(filterGrade, filterYear, params)
       raw = res.data || []
-    } else {
+    } else if (isTeacherOnly && teacherAssignments.length > 0) {
+      // Docente sin grupo seleccionado: solo sus grupos asignados
+      const teacherGroupIds = [...new Set(teacherAssignments.map((a: any) => a.groupId).filter(Boolean))]
+      const results = await Promise.allSettled(teacherGroupIds.map((gId: string) => attendanceApi.getReportByGroup(gId, filterYear, params)))
+      results.forEach(r => { if (r.status === 'fulfilled') raw.push(...(r.value.data || [])) })
+    } else if (!isTeacherOnly) {
+      // Admin/coordinador: todos los grupos
       const gRes = await groupsApi.getAll()
       const results = await Promise.allSettled((gRes.data || []).map((g: any) => attendanceApi.getReportByGroup(g.id, filterYear, params)))
       results.forEach(r => { if (r.status === 'fulfilled') raw.push(...(r.value.data || [])) })
@@ -300,11 +310,7 @@ export default function AttendanceReports() {
   }
 
   const handleBack = () => {
-    // Para docentes, el botón atrás lleva a /reports en lugar de mostrar la lista de reportes de asistencia
-    if (isTeacherOnly) {
-      navigate('/reports')
-      return
-    }
+    // Volver a la lista de reportes de asistencia (que para docentes solo muestra los permitidos)
     setShowReport(false)
     setSelectedReport(null)
   }
@@ -556,29 +562,7 @@ export default function AttendanceReports() {
     ? kpiMap[selectedReport as keyof typeof kpiMap]
     : null
 
-  // Para docentes: entrar directamente al reporte de asistencia por docente sin mostrar la lista
-  useEffect(() => {
-    if (isTeacherOnly && !showReport && !selectedReport) {
-      setSelectedReport('att-teacher')
-      setShowReport(true)
-    }
-  }, [isTeacherOnly, showReport, selectedReport])
-
-  // Cargar datos automáticamente cuando el docente entra al reporte
-  useEffect(() => {
-    if (isTeacherOnly && showReport && selectedReport === 'att-teacher' && filterYear && !loadingReport && teacherComplianceData.length === 0) {
-      loadReportData('att-teacher')
-    }
-  }, [isTeacherOnly, showReport, selectedReport, filterYear])
-
-  // Si es docente y aún no se ha cargado el reporte, mostrar loading
-  if (isTeacherOnly && (!showReport || !selectedReport)) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-10 h-10 border-3 border-amber-200 border-t-amber-600 rounded-full animate-spin" />
-      </div>
-    )
-  }
+  // Docentes ahora ven múltiples reportes (grupo, asignatura, docente, críticas) - no auto-seleccionar
 
   if (!showReport) {
     return (
