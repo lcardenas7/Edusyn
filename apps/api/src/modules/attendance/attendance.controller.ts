@@ -102,7 +102,7 @@ export class AttendanceController {
   }
 
   @Get('report-by-group/:groupId')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   getReportByGroup(
     @Param('groupId') groupId: string,
     @Query('academicYearId') academicYearId: string,
