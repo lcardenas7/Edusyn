@@ -61,8 +61,9 @@ export class ApdAiService implements IApdAiService {
     return this.isEnabled() && this.config.provider === 'GEMINI';
   }
 
-  private detectProvider(apiKey?: string): 'XAI' | 'GROQ' | 'GEMINI' | 'DISABLED' {
+  private detectProvider(apiKey?: string): 'XAI' | 'GROQ' | 'GEMINI' | 'OPENROUTER' | 'DISABLED' {
     if (!apiKey) return 'DISABLED';
+    if (apiKey.startsWith('sk-or-')) return 'OPENROUTER';
     if (apiKey.startsWith('xai-')) return 'XAI';
     if (apiKey.startsWith('gsk_')) return 'GROQ';
     if (apiKey.startsWith('AIza')) return 'GEMINI';
@@ -71,11 +72,61 @@ export class ApdAiService implements IApdAiService {
 
   private getDefaultModel(provider: string): string {
     switch (provider) {
+      case 'OPENROUTER': return 'meta-llama/llama-3.1-8b-instruct:free';
       case 'XAI': return 'grok-3-mini';
       case 'GROQ': return 'llama-3.1-8b-instant';
       case 'GEMINI': return 'gemini-2.0-flash';
       default: return 'gemini-2.0-flash';
     }
+  }
+
+  private isOpenRouterEnabled(): boolean {
+    return this.isEnabled() && this.config.provider === 'OPENROUTER';
+  }
+
+  private async callOpenRouterJson<T>(
+    systemInstruction: string,
+    userPrompt: string,
+  ): Promise<T> {
+    if (!this.isOpenRouterEnabled()) {
+      throw new Error('OpenRouter no está habilitado');
+    }
+
+    const model = this.config.model || 'meta-llama/llama-3.1-8b-instruct:free';
+    const url = 'https://openrouter.ai/api/v1/chat/completions';
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.config.apiKey}`,
+        'HTTP-Referer': 'https://edusyn.co',
+        'X-Title': 'Edusyn - Valeria AI',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemInstruction },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: this.config.temperature ?? 0.7,
+        max_tokens: this.config.maxTokens ?? 2000,
+      }),
+    });
+
+    const raw = await response.text();
+    if (!response.ok) {
+      throw new Error(`OpenRouter HTTP ${response.status}: ${raw}`);
+    }
+
+    const parsed = JSON.parse(raw);
+    const content = parsed?.choices?.[0]?.message?.content?.trim();
+
+    if (!content) {
+      throw new Error('OpenRouter no devolvió contenido utilizable');
+    }
+
+    return this.extractJsonPayload(content) as T;
   }
 
   private isXaiEnabled(): boolean {
@@ -176,6 +227,9 @@ export class ApdAiService implements IApdAiService {
     systemInstruction: string,
     userPrompt: string,
   ): Promise<T> {
+    if (this.isOpenRouterEnabled()) {
+      return this.callOpenRouterJson<T>(systemInstruction, userPrompt);
+    }
     if (this.isGroqEnabled()) {
       return this.callGroqJson<T>(systemInstruction, userPrompt);
     }

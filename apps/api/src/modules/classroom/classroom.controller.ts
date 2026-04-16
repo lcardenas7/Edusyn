@@ -310,6 +310,16 @@ export class ClassroomController {
     return this.service.submitTask(activityId, userId, body);
   }
 
+  @Put('submissions/:submissionId')
+  @Roles('ESTUDIANTE')
+  async updateSubmission(@Param('submissionId') submissionId: string, @Request() req: any, @Body() body: {
+    content?: string;
+    fileUrl?: string;
+  }) {
+    const { userId } = await this.resolveCtx(req);
+    return this.service.updateSubmission(submissionId, userId, body);
+  }
+
   @Get('activities/:activityId/submissions')
   @Roles('DOCENTE', 'COORDINADOR')
   async listSubmissions(@Param('activityId') activityId: string, @Request() req: any) {

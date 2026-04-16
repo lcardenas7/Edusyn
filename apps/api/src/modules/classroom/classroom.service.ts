@@ -947,6 +947,65 @@ export class ClassroomService {
     });
   }
 
+  async updateSubmission(submissionId: string, studentUserId: string, dto: {
+    content?: string;
+    fileUrl?: string;
+  }) {
+    // Buscar la entrega con la actividad
+    const submission = await this.prisma.activitySubmission.findUnique({
+      where: { id: submissionId },
+      include: {
+        activity: {
+          select: {
+            id: true,
+            type: true,
+            dueDate: true,
+            allowLateSubmit: true,
+            classroom: { select: { teacherAssignment: { select: { groupId: true, academicYearId: true } } } },
+          },
+        },
+        studentEnrollment: { select: { id: true, student: { select: { userId: true } } } },
+      },
+    });
+
+    if (!submission) {
+      throw new NotFoundException('Entrega no encontrada');
+    }
+
+    // Verificar que el estudiante sea el dueño de la entrega
+    if (submission.studentEnrollment.student.userId !== studentUserId) {
+      throw new ForbiddenException('No tienes permiso para editar esta entrega');
+    }
+
+    // Solo permitir edición de TASK (tareas), no QUIZ ni EXAM
+    if (submission.activity.type !== 'TASK') {
+      throw new ForbiddenException('Solo se pueden editar entregas de tareas. Los quizzes y exámenes funcionan por intentos.');
+    }
+
+    // Verificar que no esté calificada
+    if (submission.status === 'GRADED') {
+      throw new ForbiddenException('No puedes editar una entrega que ya fue calificada');
+    }
+
+    // Verificar que la fecha límite no haya pasado
+    const now = new Date();
+    if (submission.activity.dueDate && now > submission.activity.dueDate) {
+      throw new ForbiddenException('La fecha límite ha pasado. No puedes editar tu entrega.');
+    }
+
+    return this.prisma.activitySubmission.update({
+      where: { id: submissionId },
+      data: {
+        content: dto.content,
+        fileUrl: dto.fileUrl,
+        submittedAt: now, // Actualizar fecha de envío
+      },
+      include: {
+        activity: { select: { id: true, title: true, maxScore: true, dueDate: true } },
+      },
+    });
+  }
+
   async getMySubmission(activityId: string, studentUserId: string) {
     const enrollment = await this.prisma.studentEnrollment.findFirst({
       where: {

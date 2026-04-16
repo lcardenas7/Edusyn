@@ -1955,6 +1955,8 @@ export const classroomApi = {
   // Submissions
   submitTask: (activityId: string, data: { content?: string; fileUrl?: string }) =>
     api.post(`/classrooms/activities/${activityId}/submit`, data),
+  updateSubmission: (submissionId: string, data: { content?: string; fileUrl?: string }) =>
+    api.put(`/classrooms/submissions/${submissionId}`, data),
   listSubmissions: (activityId: string) =>
     api.get(`/classrooms/activities/${activityId}/submissions`),
   getMySubmission: (activityId: string) =>

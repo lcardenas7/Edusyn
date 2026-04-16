@@ -1896,6 +1896,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [submitLink, setSubmitLink] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [mySubmission, setMySubmission] = useState<any>(null)
+  const [editingSubmission, setEditingSubmission] = useState(false)
   const submitFileRef = useRef<HTMLInputElement>(null)
 
   // Grading & Review Panel
@@ -2447,7 +2448,15 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       const fullContent = submitLink 
         ? (submitContent ? `${submitContent}\n\n📎 Enlace: ${submitLink}` : `📎 Enlace: ${submitLink}`)
         : submitContent || undefined
-      await classroomApi.submitTask(selectedActivity.id, { content: fullContent, fileUrl })
+
+      if (editingSubmission && mySubmission) {
+        // Modo edición: actualizar entrega existente
+        await classroomApi.updateSubmission(mySubmission.id, { content: fullContent, fileUrl: fileUrl || mySubmission.fileUrl })
+        setEditingSubmission(false)
+      } else {
+        // Nueva entrega
+        await classroomApi.submitTask(selectedActivity.id, { content: fullContent, fileUrl })
+      }
       setSubmitContent('')
       setSubmitFile(null)
       setSubmitLink('')
@@ -4206,9 +4215,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         {isStudent && !isQuizType(act.type) && !isSelfAssessment(act.type) && (
           <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
             <h3 className="text-lg font-bold text-slate-800">Tu entrega</h3>
-            {mySubmission ? (
+            {mySubmission && !editingSubmission ? (
               <div className="space-y-3">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <span className={`text-sm px-3 py-1 rounded-full font-medium ${(STATUS_COLORS[mySubmission.status] || STATUS_COLORS.DRAFT).bg} ${(STATUS_COLORS[mySubmission.status] || STATUS_COLORS.DRAFT).text}`}>
                     {(STATUS_COLORS[mySubmission.status] || STATUS_COLORS.DRAFT).label}
                   </span>
@@ -4216,6 +4225,20 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     <span className="text-lg font-bold text-green-700">{Number(mySubmission.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
                   )}
                   <span className="text-sm text-slate-400">Entregado: {formatDate(mySubmission.submittedAt)}</span>
+                  {/* Botón editar: solo si no está calificada y la fecha límite no ha pasado */}
+                  {mySubmission.status !== 'GRADED' && act.dueDate && new Date(act.dueDate) > new Date() && (
+                    <button
+                      onClick={() => {
+                        setEditingSubmission(true)
+                        setSubmitContent(mySubmission.content || '')
+                        setSubmitLink(mySubmission.fileUrl?.startsWith('http') && !mySubmission.fileUrl.includes('/uploads/') ? mySubmission.fileUrl : '')
+                        setSubmitFile(null)
+                      }}
+                      className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm text-amber-600 hover:bg-amber-50 rounded-lg border border-amber-200"
+                    >
+                      <Pencil className="w-4 h-4" /> Editar entrega
+                    </button>
+                  )}
                 </div>
                 {mySubmission.content && <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 whitespace-pre-wrap">{mySubmission.content}</div>}
                 {mySubmission.fileUrl && (
@@ -4263,14 +4286,25 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     <button onClick={() => setSubmitFile(null)} className="p-1 rounded-lg hover:bg-slate-200"><X className="w-4 h-4" /></button>
                   </div>
                 ) : null}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <button onClick={() => submitFileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors" style={{ minHeight: '44px' }}>
                     <Upload className="w-5 h-5" /> Subir archivo
                   </button>
-                  <button onClick={handleStudentSubmit} disabled={(!submitContent.trim() && !submitFile && !submitLink.trim()) || submitting} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
-                    {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {submitting ? 'Entregando...' : 'Entregar actividad'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {editingSubmission && (
+                      <button 
+                        onClick={() => { setEditingSubmission(false); setSubmitContent(''); setSubmitFile(null); setSubmitLink('') }} 
+                        className="px-4 py-2.5 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-100 border border-slate-200" 
+                        style={{ minHeight: '44px' }}
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                    <button onClick={handleStudentSubmit} disabled={(!submitContent.trim() && !submitFile && !submitLink.trim()) || submitting} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2" style={{ minHeight: '44px' }}>
+                      {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                      {submitting ? (editingSubmission ? 'Guardando...' : 'Entregando...') : (editingSubmission ? 'Guardar cambios' : 'Entregar actividad')}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
