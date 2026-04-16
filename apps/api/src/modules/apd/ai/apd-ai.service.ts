@@ -72,7 +72,7 @@ export class ApdAiService implements IApdAiService {
 
   private getDefaultModel(provider: string): string {
     switch (provider) {
-      case 'OPENROUTER': return 'google/gemma-2-9b-it:free';
+      case 'OPENROUTER': return 'nvidia/nemotron-nano-9b-v2:free';
       case 'XAI': return 'grok-3-mini';
       case 'GROQ': return 'llama-3.1-8b-instant';
       case 'GEMINI': return 'gemini-2.0-flash';
@@ -715,7 +715,9 @@ export class ApdAiService implements IApdAiService {
         confidence: this.normalizeConfidence(result.confidence, 0.8),
       };
     } catch (error: any) {
-      this.logger.warn(`Valeria falló con Gemini, usando fallback: ${error?.message || error}`);
+      this.logger.warn(
+        `Valeria falló con ${this.config.provider}, usando fallback: ${error?.message || error}`,
+      );
       return this.placeholderTeacherQuestion(request);
     }
   }
