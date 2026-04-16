@@ -1,4 +1,4 @@
-import { BookOpen, Plus, Users } from 'lucide-react'
+import { BookOpen, Pencil } from 'lucide-react'
 import { WorkspaceBoard, WorkspaceItem } from '../types'
 import { WBadge } from '../ui'
 import KanbanColumn from '../KanbanColumn'
@@ -23,10 +23,11 @@ const CAT_LABELS: Record<string, string> = {
 interface StudentNotesViewProps {
   board: WorkspaceBoard
   onAddObservation: (columnId: string, columnTitle: string) => void
+  onEditObservation: (item: WorkspaceItem) => void
   onReloadBoard: () => void
 }
 
-export default function StudentNotesView({ board, onAddObservation, onReloadBoard }: StudentNotesViewProps) {
+export default function StudentNotesView({ board, onAddObservation, onEditObservation, onReloadBoard }: StudentNotesViewProps) {
   return (
     <div className="flex-1 flex gap-5 p-5 overflow-x-auto">
       {board.columns?.map(column => (
@@ -53,15 +54,25 @@ export default function StudentNotesView({ board, onAddObservation, onReloadBoar
                 {item.content && <p className="text-body-sm text-slate-600 leading-relaxed">{item.content}</p>}
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-badge text-slate-400">{meta.observationDate || item.createdAt?.slice(0, 10)}</span>
-                  <button
-                    onClick={async () => {
-                      await teacherWorkspaceApi.deleteItem(item.id)
-                      onReloadBoard()
-                    }}
-                    className="text-badge text-slate-300 hover:text-red-500 p-1"
-                  >
-                    ✕
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => onEditObservation(item)}
+                      className="text-badge text-slate-300 hover:text-blue-500 p-1"
+                      title="Editar observación"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={async () => {
+                        await teacherWorkspaceApi.deleteItem(item.id)
+                        onReloadBoard()
+                      }}
+                      className="text-badge text-slate-300 hover:text-red-500 p-1"
+                      title="Eliminar observación"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               </div>
             )

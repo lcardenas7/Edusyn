@@ -100,21 +100,22 @@ export default function MicroCollectView({
                     </WBadge>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {payStatus !== 'PAID' ? (
+                    <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => onPayClick(item, meta, amountPaid)}
                         className="inline-flex items-center gap-1 px-3 py-1.5 text-badge bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 font-medium min-h-[36px]"
                       >
-                        <DollarSign className="w-3.5 h-3.5" /> Registrar pago
+                        <DollarSign className="w-3.5 h-3.5" /> {payStatus === 'PAID' ? 'Editar' : 'Registrar pago'}
                       </button>
-                    ) : (
-                      <button
-                        onClick={() => onUndoPay(item, meta)}
-                        className="px-3 py-1.5 text-badge text-slate-400 hover:text-red-500 rounded hover:bg-red-50 min-h-[36px]"
-                      >
-                        ↩ Deshacer
-                      </button>
-                    )}
+                      {payStatus === 'PAID' && (
+                        <button
+                          onClick={() => onUndoPay(item, meta)}
+                          className="px-3 py-1.5 text-badge text-slate-400 hover:text-red-500 rounded hover:bg-red-50 min-h-[36px]"
+                        >
+                          ↩ Deshacer
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               )

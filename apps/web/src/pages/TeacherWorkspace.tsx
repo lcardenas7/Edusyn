@@ -59,7 +59,7 @@ export default function TeacherWorkspace() {
   const [addingStudent, setAddingStudent] = useState<string | null>(null)
 
   // Payment modal (MICRO_COLLECT)
-  const [payModal, setPayModal] = useState<{ itemId: string; title: string; currentAmount: number; meta: any } | null>(null)
+  const [payModal, setPayModal] = useState<{ itemId: string; title: string; currentAmount: number; meta: any; item?: WorkspaceItem } | null>(null)
   const [payAmount, setPayAmount] = useState('')
 
   // Role assignment modal (CLASSROOM_ROLES)
@@ -71,7 +71,7 @@ export default function TeacherWorkspace() {
   const [editingRoles, setEditingRoles] = useState(false)
 
   // Observation modal (STUDENT_NOTES)
-  const [obsModal, setObsModal] = useState<{ columnId: string; columnTitle: string } | null>(null)
+  const [obsModal, setObsModal] = useState<{ columnId: string; columnTitle: string; item?: WorkspaceItem } | null>(null)
   const [obsStudentSearch, setObsStudentSearch] = useState('')
   const [obsStudentResults, setObsStudentResults] = useState<any[]>([])
   const [obsSelectedStudent, setObsSelectedStudent] = useState<{ studentRecordId: string; fullName: string } | null>(null)
@@ -112,6 +112,34 @@ export default function TeacherWorkspace() {
       setLoading(false)
     }
   }, [])
+
+  const openNewObservationModal = (columnId: string, columnTitle: string) => {
+    setObsModal({ columnId, columnTitle })
+    setObsStudentSearch('')
+    setObsStudentResults([])
+    setObsSelectedStudent(null)
+    setObsText('')
+    setObsCategory('GENERAL')
+    setObsDate(new Date().toISOString().slice(0, 10))
+  }
+
+  const openEditObservationModal = (item: WorkspaceItem) => {
+    const meta = (item.metadata || {}) as any
+    setObsModal({
+      columnId: item.columnId || '',
+      columnTitle: 'Editar observación',
+      item,
+    })
+    setObsStudentSearch(item.title)
+    setObsStudentResults([])
+    setObsSelectedStudent({
+      studentRecordId: meta.studentRecordId || '',
+      fullName: item.title,
+    })
+    setObsText(item.content || '')
+    setObsCategory(meta.category || 'GENERAL')
+    setObsDate((meta.observationDate || item.eventDate || item.createdAt || new Date().toISOString()).slice(0, 10))
+  }
 
   // ─── Load full board ───
   const loadBoard = useCallback(async (boardId: string) => {
@@ -225,6 +253,17 @@ export default function TeacherWorkspace() {
     loadBoardSummary(activeBoard.id)
   }
 
+  const openEditPaymentModal = (item: WorkspaceItem, meta: any, amountPaid: number) => {
+    setPayModal({
+      itemId: item.id,
+      title: item.title,
+      currentAmount: amountPaid,
+      meta,
+      item,
+    })
+    setPayAmount(amountPaid > 0 ? String(amountPaid) : String(Number((activeBoard?.metadata as any)?.goalAmount) || ''))
+  }
+
   // ─── Role student search (CLASSROOM_ROLES) ───
   // Searches within EXISTING board items (students already populated on the board)
   const handleRoleStudentSearchChange = (q: string) => {
@@ -285,18 +324,28 @@ export default function TeacherWorkspace() {
     if (!obsModal || !obsSelectedStudent || !obsText.trim() || !activeBoard) return
     setSavingObs(true)
     try {
-      await teacherWorkspaceApi.createItem({
-        boardId: activeBoard.id,
-        columnId: obsModal.columnId,
-        title: obsSelectedStudent.fullName,
-        content: obsText.trim(),
-        metadata: {
-          studentRecordId: obsSelectedStudent.studentRecordId,
-          category: obsCategory,
-          observationDate: obsDate,
-        },
-        eventDate: obsDate,
-      })
+      const metadata = {
+        studentRecordId: obsSelectedStudent.studentRecordId,
+        category: obsCategory,
+        observationDate: obsDate,
+      }
+      if (obsModal.item) {
+        await teacherWorkspaceApi.updateItem(obsModal.item.id, {
+          title: obsSelectedStudent.fullName,
+          content: obsText.trim(),
+          metadata: { ...((obsModal.item.metadata || {}) as any), ...metadata },
+          eventDate: obsDate,
+        })
+      } else {
+        await teacherWorkspaceApi.createItem({
+          boardId: activeBoard.id,
+          columnId: obsModal.columnId,
+          title: obsSelectedStudent.fullName,
+          content: obsText.trim(),
+          metadata,
+          eventDate: obsDate,
+        })
+      }
       // Reset and close
       setObsModal(null)
       setObsStudentSearch(''); setObsStudentResults([]); setObsSelectedStudent(null)
@@ -762,8 +811,7 @@ export default function TeacherWorkspace() {
                   onStudentSearchChange={handleStudentSearchChange}
                   onAddStudent={handleAddStudent}
                   onPayClick={(item, meta, amountPaid) => {
-                    setPayModal({ itemId: item.id, title: item.title, currentAmount: amountPaid, meta })
-                    setPayAmount(String(Number((activeBoard.metadata as any)?.goalAmount) || ''))
+                    openEditPaymentModal(item, meta, amountPaid)
                   }}
                   onUndoPay={async (item, meta) => {
                     await teacherWorkspaceApi.updateItem(item.id, { metadata: { ...meta, amountPaid: 0, status: 'PENDING' } })
@@ -793,11 +841,8 @@ export default function TeacherWorkspace() {
               ) : activeBoard.type === 'STUDENT_NOTES' ? (
                 <StudentNotesView
                   board={activeBoard}
-                  onAddObservation={(columnId, columnTitle) => {
-                    setObsModal({ columnId, columnTitle })
-                    setObsStudentSearch(''); setObsStudentResults([]); setObsSelectedStudent(null)
-                    setObsText(''); setObsCategory('GENERAL'); setObsDate(new Date().toISOString().slice(0, 10))
-                  }}
+                  onAddObservation={openNewObservationModal}
+                  onEditObservation={openEditObservationModal}
                   onReloadBoard={() => loadBoard(activeBoard.id)}
                 />
 
