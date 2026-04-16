@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { 
   FileText,
   Users,
@@ -19,6 +19,7 @@ import {
   TrendingDown
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 interface SubReport {
   id: string
@@ -107,17 +108,33 @@ const COLOR_MAP: Record<string, { bg: string; bgLight: string; border: string; t
 }
 
 export default function ReportsHub() {
+  const { user } = useAuth()
   const [search, setSearch] = useState('')
+
+  // Detectar si es docente sin roles administrativos
+  const userRoles = useMemo(() => {
+    if (!user?.roles) return []
+    return user.roles.map((r: any) => typeof r === 'string' ? r : r.role?.name || r.name).filter(Boolean)
+  }, [user?.roles])
+  const normalizedRoles = useMemo(() => userRoles.map((role) => String(role).toUpperCase()), [userRoles])
+  const isTeacher = normalizedRoles.includes('DOCENTE')
+  const canViewAllReports = normalizedRoles.some((role) => ['SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(role))
+  const isTeacherOnly = isTeacher && !canViewAllReports
+
+  // Docentes solo ven la categoría de Asistencia
+  const visibleCategories = isTeacherOnly
+    ? CATEGORIES.filter(cat => cat.id === 'attendance')
+    : CATEGORIES
 
   const q = search.toLowerCase().trim()
   const filtered = q
-    ? CATEGORIES.map(cat => ({
+    ? visibleCategories.map(cat => ({
         ...cat,
         reports: cat.reports.filter(r => r.name.toLowerCase().includes(q)),
       })).filter(cat => cat.reports.length > 0 || cat.name.toLowerCase().includes(q))
-    : CATEGORIES
+    : visibleCategories
 
-  const totalReports = CATEGORIES.reduce((s, c) => s + c.reportCount, 0)
+  const totalReports = visibleCategories.reduce((s, c) => s + c.reportCount, 0)
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">

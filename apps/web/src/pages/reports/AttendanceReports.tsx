@@ -110,6 +110,7 @@ export default function AttendanceReports() {
   const [searchStudent, setSearchStudent] = useState('')
   const [filterMinPercent, setFilterMinPercent] = useState('80')
   const [teacherAssignments, setTeacherAssignments] = useState<any[]>([])
+  const [loadingAssignments, setLoadingAssignments] = useState(false)
 
   const [attendanceData, setAttendanceData] = useState<any[]>([])
   const [attendanceDetailData, setAttendanceDetailData] = useState<any[]>([])
@@ -134,14 +135,20 @@ export default function AttendanceReports() {
     }
 
     let cancelled = false
+    setLoadingAssignments(true)
 
     const loadTeacherAssignments = async () => {
       try {
         const res = await teacherAssignmentsApi.getAll({ academicYearId: filterYear, teacherId: user.id, activeOnly: false })
-        if (!cancelled) setTeacherAssignments(res.data || [])
+        if (!cancelled) {
+          setTeacherAssignments(res.data || [])
+          console.log('Teacher assignments loaded:', res.data?.length || 0, 'assignments')
+        }
       } catch (err) {
         console.error('Error loading teacher assignments for reports:', err)
         if (!cancelled) setTeacherAssignments([])
+      } finally {
+        if (!cancelled) setLoadingAssignments(false)
       }
     }
 
@@ -201,11 +208,23 @@ export default function AttendanceReports() {
       // Grupo específico seleccionado
       const res = await attendanceApi.getReportByGroup(filterGrade, filterYear, params)
       raw = res.data || []
-    } else if (isTeacherOnly && teacherAssignments.length > 0) {
+    } else if (isTeacherOnly) {
       // Docente sin grupo seleccionado: solo sus grupos asignados
+      if (teacherAssignments.length === 0) {
+        console.log('No teacher assignments loaded yet, waiting...')
+        return raw // Retornar vacío si aún no hay asignaciones
+      }
       const teacherGroupIds = [...new Set(teacherAssignments.map((a: any) => a.groupId).filter(Boolean))]
+      console.log('Fetching attendance for teacher groups:', teacherGroupIds)
       const results = await Promise.allSettled(teacherGroupIds.map((gId: string) => attendanceApi.getReportByGroup(gId, filterYear, params)))
-      results.forEach(r => { if (r.status === 'fulfilled') raw.push(...(r.value.data || [])) })
+      results.forEach(r => {
+        if (r.status === 'fulfilled') {
+          raw.push(...(r.value.data || []))
+        } else {
+          console.error('Error fetching group data:', r.reason)
+        }
+      })
+      console.log('Total records fetched:', raw.length)
     } else if (!isTeacherOnly) {
       // Admin/coordinador: todos los grupos
       const gRes = await groupsApi.getAll()
@@ -227,6 +246,15 @@ export default function AttendanceReports() {
   }
   const loadReportData = async (reportId: string) => {
     if (!filterYear) return
+    // Para docentes, verificar que las asignaciones estén cargadas antes de generar reportes que las necesitan
+    if (isTeacherOnly && loadingAssignments && ['att-group', 'att-subject', 'att-critical'].includes(reportId)) {
+      setReportError('Cargando tu carga académica, por favor espera...')
+      return
+    }
+    if (isTeacherOnly && teacherAssignments.length === 0 && ['att-group', 'att-subject', 'att-critical'].includes(reportId)) {
+      setReportError('No se encontraron asignaciones para tu usuario. Verifica que tengas carga académica asignada.')
+      return
+    }
     setLoadingReport(true)
     setReportError(null)
     try {
