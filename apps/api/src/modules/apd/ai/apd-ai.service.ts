@@ -329,6 +329,9 @@ export class ApdAiService implements IApdAiService {
   private buildTeacherContextLine(request: ApdAiTeacherQuestionRequest): string {
     const parts = [
       request.context?.institutionName && `Institución: ${request.context.institutionName}`,
+      request.context?.pageName && `Pantalla actual: ${request.context.pageName}`,
+      request.context?.pageSummary && `Qué hace la pantalla: ${request.context.pageSummary}`,
+      request.context?.currentPath && `Ruta actual: ${request.context.currentPath}`,
       request.context?.gradeName && `Grado: ${request.context.gradeName}`,
       request.context?.subjectName && `Asignatura: ${request.context.subjectName}`,
       request.context?.topic && `Tema: ${request.context.topic}`,
@@ -345,8 +348,13 @@ export class ApdAiService implements IApdAiService {
     }
 
     return conversation
-      .slice(-8)
-      .map((message) => `${message.role === 'assistant' ? 'Asistente' : 'Docente'}: ${message.content}`)
+      .slice(-4)
+      .map((message) => {
+        const content = message.content.length > 280
+          ? `${message.content.slice(0, 280).trim()}…`
+          : message.content;
+        return `${message.role === 'assistant' ? 'Asistente' : 'Docente'}: ${content}`;
+      })
       .join('\n');
   }
 
@@ -354,6 +362,8 @@ export class ApdAiService implements IApdAiService {
     return [
       'Edusyn es una plataforma educativa SaaS creada por Edusyn SAS.',
       'Valeria es la asistente pedagógica de Edusyn para apoyar al docente.',
+      'Si el usuario pregunta por la pantalla actual, responde primero con base en el contexto de esa pantalla.',
+      'Si el contexto incluye pageName o pageSummary, úsalo como referencia principal para ubicar al usuario en la interfaz.',
       'En Classroom, el flujo normal es: crear actividad en borrador -> agregar preguntas o guía -> revisar -> publicar o programar.',
       'Los quizzes y exámenes pueden publicarse como borrador, Live Quiz o Quiz en Casa.',
       'Las imágenes y apoyos visuales se colocan en el campo de imagen de la pregunta o del contexto; si el docente solicita SVG, debe ser simple, seguro y sin scripts.',
@@ -674,7 +684,8 @@ export class ApdAiService implements IApdAiService {
         'Eres Valeria, la asistente IA de Edusyn.',
         'Responde en español, con tono claro, cercano, breve y práctico.',
         'Puedes responder preguntas generales de cualquier tema, y también consultas sobre Edusyn, pedagogía, administración escolar y Classroom.',
-        'Cuando la pregunta sea sobre Edusyn, prioriza el contexto interno de la plataforma.',
+        'Cuando la pregunta sea sobre Edusyn o sobre la pantalla actual, prioriza el contexto interno de la plataforma y de la pantalla.',
+        'Si el contexto aporta pageName, pageSummary o currentPath, úsalos para ubicarte y evita responder de forma genérica.',
         'Cuando la pregunta no sea sobre Edusyn, responde como una IA general útil y honesta, sin inventar hechos.',
         'Ayudas a planear quizzes, exámenes, guías y logros, pero no decides notas finales ni alteras flujos numéricos críticos.',
         'Si se solicita apoyo visual, propone SVG simple y seguro, sin scripts ni eventos.',

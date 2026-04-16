@@ -1991,6 +1991,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
   const buildValeriaContext = (): {
     institutionName?: string
+    pageName?: string
+    pageSummary?: string
+    currentPath?: string
     gradeName?: string
     subjectName?: string
     topic?: string
@@ -2021,6 +2024,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
     return {
       institutionName: 'Edusyn',
+      pageName: 'Classroom',
+      pageSummary: 'Gestiona actividades, preguntas, guías, quizzes, foros y seguimiento dentro del aula.',
+      currentPath: location.pathname,
       gradeName: classroom.teacherAssignment?.group?.grade?.name,
       subjectName: classroom.teacherAssignment?.subject?.name,
       topic: activity?.title || 'Classroom',

@@ -597,6 +597,9 @@ export class ApdController {
       }[];
       context?: {
         institutionName?: string;
+        pageName?: string;
+        pageSummary?: string;
+        currentPath?: string;
         gradeName?: string;
         subjectName?: string;
         topic?: string;
@@ -618,6 +621,9 @@ export class ApdController {
       conversation: body.conversation,
       context: {
         institutionName: body.context?.institutionName || undefined,
+        pageName: body.context?.pageName || undefined,
+        pageSummary: body.context?.pageSummary || undefined,
+        currentPath: body.context?.currentPath || undefined,
         gradeName: body.context?.gradeName || undefined,
         subjectName: body.context?.subjectName || undefined,
         topic: body.context?.topic || undefined,

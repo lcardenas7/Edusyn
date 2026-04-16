@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Copy, Loader2, Send, Sparkles, Trash2, X } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import { apdApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import { useValeriaAssistant } from '../contexts/ValeriaContext'
@@ -16,8 +17,74 @@ const quickPrompts = [
   'Sugerencia pedagógica',
 ]
 
+function getPageContext(pathname: string) {
+  if (pathname.startsWith('/classroom')) {
+    return {
+      pageName: 'Classroom',
+      pageSummary: 'Gestiona actividades, preguntas, guías, quizzes, foros y seguimiento dentro del aula.',
+      currentPath: pathname,
+    }
+  }
+
+  if (pathname.startsWith('/grades')) {
+    return {
+      pageName: 'Calificaciones',
+      pageSummary: 'Permite registrar y revisar notas, logros y evaluaciones cuantitativas o cualitativas.',
+      currentPath: pathname,
+    }
+  }
+
+  if (pathname.startsWith('/reports')) {
+    return {
+      pageName: 'Reportes académicos',
+      pageSummary: 'Consulta boletines, reportes, consolidados y resúmenes académicos de la institución.',
+      currentPath: pathname,
+    }
+  }
+
+  if (pathname.startsWith('/teacher-workspace')) {
+    return {
+      pageName: 'Espacio del docente',
+      pageSummary: 'Organiza tableros, calendarios, notas, listas de verificación y seguimiento del aula.',
+      currentPath: pathname,
+    }
+  }
+
+  if (pathname.startsWith('/attendance')) {
+    return {
+      pageName: 'Asistencia',
+      pageSummary: 'Gestiona registros y reportes de asistencia de estudiantes y docentes.',
+      currentPath: pathname,
+    }
+  }
+
+  if (pathname.startsWith('/finance')) {
+    return {
+      pageName: 'Finanzas',
+      pageSummary: 'Administra facturación, pagos, obligaciones, conceptos y reportes financieros.',
+      currentPath: pathname,
+    }
+  }
+
+  if (pathname === '/' || pathname === '') {
+    return {
+      pageName: 'Inicio',
+      pageSummary: 'Pantalla principal de Edusyn con acceso rápido a los módulos disponibles.',
+      currentPath: pathname,
+    }
+  }
+
+  const label = pathname.split('/').filter(Boolean).map((part) => part.replace(/[-_]/g, ' ')).join(' ')
+  return {
+    pageName: label ? label.replace(/\b\w/g, (m) => m.toUpperCase()) : 'Edusyn',
+    pageSummary: 'Pantalla o módulo actual de Edusyn.',
+    currentPath: pathname,
+  }
+}
+
 export default function ValeriaAssistant() {
   const { institution } = useAuth()
+  const location = useLocation()
   const { isOpen, launchOptions, closeValeria, openValeria } = useValeriaAssistant()
   const [messages, setMessages] = useState<ValeriaMessage[]>([])
   const [draft, setDraft] = useState('')
@@ -39,6 +106,8 @@ export default function ValeriaAssistant() {
     const question = (overrideQuestion ?? draft).trim()
     if (!question || loading) return
 
+    const pageContext = getPageContext(location.pathname)
+    const recentConversation = messages.slice(-4).map((m) => ({ role: m.role, content: m.content }))
     const userMsg: ValeriaMessage = { id: `${Date.now()}-u`, role: 'user', content: question }
     setMessages((m) => [...m, userMsg])
     setDraft('')
@@ -49,9 +118,13 @@ export default function ValeriaAssistant() {
       const { data } = await apdApi.askValeria({
         institutionId: institution?.id,
         question,
-        context: launchOptions?.context ? { ...launchOptions.context, institutionName: institution?.name } : { institutionName: institution?.name },
+        context: {
+          institutionName: institution?.name,
+          ...pageContext,
+          ...(launchOptions?.context || {}),
+        },
         includeVisuals: false,
-        conversation: messages.map((m) => ({ role: m.role, content: m.content })),
+        conversation: recentConversation,
       })
       setMessages((m) => [...m, { id: `${Date.now()}-a`, role: 'assistant', content: data.answer }])
     } catch (err: any) {

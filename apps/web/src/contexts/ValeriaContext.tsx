@@ -2,6 +2,9 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, 
 
 export interface ValeriaContextPayload {
   institutionName?: string
+  pageName?: string
+  pageSummary?: string
+  currentPath?: string
   gradeName?: string
   subjectName?: string
   topic?: string
