@@ -72,7 +72,7 @@ export class ApdAiService implements IApdAiService {
 
   private getDefaultModel(provider: string): string {
     switch (provider) {
-      case 'OPENROUTER': return 'meta-llama/llama-3.1-8b-instruct:free';
+      case 'OPENROUTER': return 'google/gemma-2-9b-it:free';
       case 'XAI': return 'grok-3-mini';
       case 'GROQ': return 'llama-3.1-8b-instant';
       case 'GEMINI': return 'gemini-2.0-flash';
@@ -92,7 +92,7 @@ export class ApdAiService implements IApdAiService {
       throw new Error('OpenRouter no está habilitado');
     }
 
-    const model = this.config.model || 'meta-llama/llama-3.1-8b-instruct:free';
+    const model = this.config.model || 'google/gemma-2-9b-it:free';
     const url = 'https://openrouter.ai/api/v1/chat/completions';
 
     const response = await fetch(url, {
