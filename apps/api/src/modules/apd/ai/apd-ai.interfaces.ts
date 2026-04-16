@@ -180,6 +180,17 @@ export interface ApdAiTeacherQuestionResponse {
   answer: string;
   keyPoints: string[];
   nextSteps?: string[];
+  activityDraft?: {
+    title: string;
+    description: string;
+    type?: string;
+    maxScore?: string;
+    allowLateSubmit?: boolean;
+    shuffleQuestions?: boolean;
+    showResults?: boolean;
+    maxAttempts?: string;
+    timeLimitMinutes?: string;
+  };
   visualSuggestion?: {
     kind: 'SVG' | 'IMAGE' | 'NONE';
     placement?: 'QUESTION_IMAGE' | 'CONTEXT_IMAGE' | 'INLINE';

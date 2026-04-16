@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { valeriaAssistantBridge } from '../contexts/ValeriaContext'
+import { type ValeriaActivityDraft, valeriaAssistantBridge } from '../contexts/ValeriaContext'
 import { classroomApi, storageApi, liveSessionApi, apdApi } from '../lib/api'
 import LiveQuiz from '../components/LiveQuiz'
 import { CreateSelfAssessmentForm, StudentSelfAssessment, SelfAssessmentResults } from '../components/SelfAssessmentUI'
@@ -2039,6 +2039,32 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     }
   }
 
+  const applyValeriaActivityDraft = (draft: ValeriaActivityDraft) => {
+    const normalizedType = draft.type === 'EXAM'
+      ? 'EXAM'
+      : draft.type === 'QUIZ'
+        ? 'QUIZ'
+        : 'TASK'
+
+    setForm(prev => ({
+      ...prev,
+      title: draft.title || prev.title,
+      description: draft.description || prev.description,
+      type: normalizedType,
+      sectionId: prev.sectionId || sections[0]?.id || '',
+      maxScore: draft.maxScore || prev.maxScore || '5.0',
+      allowLateSubmit: draft.allowLateSubmit ?? prev.allowLateSubmit,
+      shuffleQuestions: draft.shuffleQuestions ?? prev.shuffleQuestions,
+      showResults: draft.showResults ?? prev.showResults,
+      maxAttempts: draft.maxAttempts || prev.maxAttempts || '1',
+      timeLimitMinutes: draft.timeLimitMinutes || prev.timeLimitMinutes || '',
+    }))
+    setShowAddQuestion(false)
+    setEditingQuestion(null)
+    setShowCreate(true)
+    setShowValeriaModal(false)
+  }
+
   const askValeria = async (question: string) => {
     const trimmed = question.trim()
     if (!trimmed) return
@@ -2090,6 +2116,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       context: buildValeriaContext(),
       includeVisuals: valeriaIncludeVisuals,
       visualPlacement: valeriaVisualPlacement,
+      onCreateActivity: applyValeriaActivityDraft,
       onApplyVisual: (svg: string) => setQForm(prev => ({ ...prev, imageUrl: svgToDataUrl(svg) })),
     }
   }

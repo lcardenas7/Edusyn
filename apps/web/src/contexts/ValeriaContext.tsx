@@ -12,6 +12,18 @@ export interface ValeriaContextPayload {
   details?: string
 }
 
+export interface ValeriaActivityDraft {
+  title: string
+  description: string
+  type?: string
+  maxScore?: string
+  allowLateSubmit?: boolean
+  shuffleQuestions?: boolean
+  showResults?: boolean
+  maxAttempts?: string
+  timeLimitMinutes?: string
+}
+
 export interface ValeriaLaunchOptions {
   title?: string
   subtitle?: string
@@ -20,6 +32,7 @@ export interface ValeriaLaunchOptions {
   includeVisuals?: boolean
   visualPlacement?: 'QUESTION_IMAGE' | 'CONTEXT_IMAGE' | 'INLINE'
   onApplyVisual?: (svg: string) => void
+  onCreateActivity?: (draft: ValeriaActivityDraft) => void
 }
 
 interface ValeriaAssistantContextValue {

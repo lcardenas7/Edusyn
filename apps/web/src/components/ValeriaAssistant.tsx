@@ -3,7 +3,7 @@ import { Copy, Loader2, Send, Sparkles, Trash2, X } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { apdApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
-import { useValeriaAssistant } from '../contexts/ValeriaContext'
+import { type ValeriaActivityDraft, useValeriaAssistant } from '../contexts/ValeriaContext'
 
 interface ValeriaMessage {
   id: string
@@ -90,6 +90,7 @@ export default function ValeriaAssistant() {
   const [draft, setDraft] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [activityDraft, setActivityDraft] = useState<ValeriaActivityDraft | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -113,6 +114,7 @@ export default function ValeriaAssistant() {
     setDraft('')
     setLoading(true)
     setError('')
+    setActivityDraft(null)
 
     try {
       const { data } = await apdApi.askValeria({
@@ -126,6 +128,9 @@ export default function ValeriaAssistant() {
         includeVisuals: false,
         conversation: recentConversation,
       })
+      if (data?.activityDraft) {
+        setActivityDraft(data.activityDraft)
+      }
       setMessages((m) => [...m, { id: `${Date.now()}-a`, role: 'assistant', content: data.answer }])
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Error al consultar')
@@ -138,6 +143,13 @@ export default function ValeriaAssistant() {
     setMessages([])
     setDraft('')
     setError('')
+    setActivityDraft(null)
+  }
+
+  const createActivityFromDraft = () => {
+    if (!activityDraft || !launchOptions?.onCreateActivity) return
+    launchOptions.onCreateActivity(activityDraft)
+    setActivityDraft(null)
   }
 
   const copyText = async (text: string) => {
@@ -207,6 +219,23 @@ export default function ValeriaAssistant() {
                 </div>
               </div>
             ))}
+            {activityDraft && launchOptions?.onCreateActivity && (
+              <div className="rounded-2xl border border-violet-200 bg-violet-50 px-3 py-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">Actividad sugerida</p>
+                <p className="mt-1 text-sm font-semibold text-slate-800">{activityDraft.title}</p>
+                <p className="mt-1 text-xs text-slate-600 line-clamp-3">{activityDraft.description}</p>
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-violet-700 border border-violet-200">{activityDraft.type || 'TASK'}</span>
+                  <button
+                    type="button"
+                    onClick={createActivityFromDraft}
+                    className="rounded-full bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700"
+                  >
+                    Crear actividad con Valeria
+                  </button>
+                </div>
+              </div>
+            )}
             {loading && (
               <div className="flex justify-start">
                 <div className="flex items-center gap-2 rounded-2xl bg-violet-50 px-3 py-2 text-xs text-violet-600">

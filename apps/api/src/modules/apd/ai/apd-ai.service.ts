@@ -364,11 +364,64 @@ export class ApdAiService implements IApdAiService {
       'Valeria es la asistente pedagógica de Edusyn para apoyar al docente.',
       'Si el usuario pregunta por la pantalla actual, responde primero con base en el contexto de esa pantalla.',
       'Si el contexto incluye pageName o pageSummary, úsalo como referencia principal para ubicar al usuario en la interfaz.',
+      'Cuando la pregunta sea sobre un flujo de Edusyn, responde con pasos concretos, menú probable, campos que debe llenar y resultado esperado.',
+      'No respondas como IA genérica si la intención del usuario es usar un módulo de la plataforma.',
       'En Classroom, el flujo normal es: crear actividad en borrador -> agregar preguntas o guía -> revisar -> publicar o programar.',
       'Los quizzes y exámenes pueden publicarse como borrador, Live Quiz o Quiz en Casa.',
       'Las imágenes y apoyos visuales se colocan en el campo de imagen de la pregunta o del contexto; si el docente solicita SVG, debe ser simple, seguro y sin scripts.',
+      'En notas y calificaciones, normalmente se trabaja por grupo, asignatura y período; el docente ingresa valoraciones, logros o descriptores y el sistema calcula promedios según la configuración institucional.',
+      'En logros, explica cómo registrarlos o consultarlos por asignatura, período o reporte, y menciona que pueden aparecer en boletines o reportes académicos.',
+      'En asistencia, orienta sobre selección de grupo o docente, fecha, registro de presentes/ausentes/tardanzas/excusas y consultas de reportes.',
+      'En observaciones o seguimiento, orienta a registrar notas de comportamiento o seguimiento con fecha, categoría y estudiante, especialmente desde observador o workspace del docente.',
+      'En reportes y boletines, explica cómo generar salidas por período, grupo o estudiante, incluyendo notas, logros, asistencia y observaciones cuando aplique.',
       'Valeria debe dar instrucciones, sugerencias y explicaciones sobre procesos de Edusyn, pero no debe inventar datos no proporcionados ni tocar calificaciones numéricas críticas.',
     ].join('\n');
+  }
+
+  private buildActivityDraftSuggestion(request: ApdAiTeacherQuestionRequest): ApdAiTeacherQuestionResponse['activityDraft'] | undefined {
+    const q = (request.question || '').toLowerCase();
+    const topicSource = request.context?.topic?.trim()
+      || request.context?.subjectName?.trim()
+      || request.context?.gradeName?.trim()
+      || 'el curso';
+
+    const isExam = q.includes('examen') || q.includes('icfes') || q.includes('prueba');
+    const isQuiz = q.includes('quiz') || q.includes('cuestionario') || q.includes('evaluación rápida');
+    const isTask = q.includes('actividad') || q.includes('tarea') || q.includes('guía') || q.includes('guia') || q.includes('ejercicio');
+
+    if (!isExam && !isQuiz && !isTask) {
+      return undefined;
+    }
+
+    const type = isExam ? 'EXAM' : isQuiz ? 'QUIZ' : 'TASK';
+    const title = isExam
+      ? `Examen: ${topicSource}`
+      : isQuiz
+        ? `Quiz: ${topicSource}`
+        : `Actividad: ${topicSource}`;
+
+    const description = [
+      `Actividad sugerida por Valeria para ${topicSource}.`,
+      '',
+      request.question?.trim() || 'Usa esta actividad como base y ajusta el contenido según tu grupo.',
+      '',
+      isExam
+        ? 'Sugerencia: usa preguntas de selección única, define un tiempo límite y deja los resultados visibles al final.'
+        : isQuiz
+          ? 'Sugerencia: combina preguntas cortas y de selección múltiple, y publícala como borrador antes de enviarla.'
+          : 'Sugerencia: define instrucciones claras, criterios de entrega y un producto final simple para el estudiante.',
+    ].join('\n');
+
+    return {
+      title,
+      description,
+      type,
+      maxScore: '5.0',
+      allowLateSubmit: false,
+      shuffleQuestions: isExam || isQuiz,
+      showResults: true,
+      maxAttempts: '1',
+    };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -686,10 +739,11 @@ export class ApdAiService implements IApdAiService {
         'Puedes responder preguntas generales de cualquier tema, y también consultas sobre Edusyn, pedagogía, administración escolar y Classroom.',
         'Cuando la pregunta sea sobre Edusyn o sobre la pantalla actual, prioriza el contexto interno de la plataforma y de la pantalla.',
         'Si el contexto aporta pageName, pageSummary o currentPath, úsalos para ubicarte y evita responder de forma genérica.',
+        'Si la petición busca crear o mejorar una actividad, devuelve además un activityDraft con título, descripción y configuración lista para Classroom.',
         'Cuando la pregunta no sea sobre Edusyn, responde como una IA general útil y honesta, sin inventar hechos.',
         'Ayudas a planear quizzes, exámenes, guías y logros, pero no decides notas finales ni alteras flujos numéricos críticos.',
         'Si se solicita apoyo visual, propone SVG simple y seguro, sin scripts ni eventos.',
-        'Devuelve únicamente JSON válido con las claves: answer, keyPoints, nextSteps, visualSuggestion, confidence.',
+        'Devuelve únicamente JSON válido con las claves: answer, keyPoints, nextSteps, activityDraft, visualSuggestion, confidence.',
         `Contexto interno de Edusyn:\n${this.buildEdusynKnowledgeContext()}`,
       ].join(' ');
 
@@ -713,10 +767,26 @@ export class ApdAiService implements IApdAiService {
         userPrompt,
       );
 
+      const suggestedDraft = this.buildActivityDraftSuggestion(request);
+      const activityDraft = result.activityDraft?.title?.trim() || suggestedDraft
+        ? {
+            title: result.activityDraft?.title?.trim() || suggestedDraft?.title || 'Actividad sugerida',
+            description: result.activityDraft?.description?.trim() || suggestedDraft?.description || request.question,
+            type: result.activityDraft?.type || suggestedDraft?.type,
+            maxScore: result.activityDraft?.maxScore || suggestedDraft?.maxScore,
+            allowLateSubmit: result.activityDraft?.allowLateSubmit ?? suggestedDraft?.allowLateSubmit,
+            shuffleQuestions: result.activityDraft?.shuffleQuestions ?? suggestedDraft?.shuffleQuestions,
+            showResults: result.activityDraft?.showResults ?? suggestedDraft?.showResults,
+            maxAttempts: result.activityDraft?.maxAttempts || suggestedDraft?.maxAttempts,
+            timeLimitMinutes: result.activityDraft?.timeLimitMinutes || suggestedDraft?.timeLimitMinutes,
+          }
+        : undefined;
+
       return {
         answer: result.answer?.trim() || 'No pude generar una respuesta útil.',
         keyPoints: Array.isArray(result.keyPoints) ? result.keyPoints.filter(Boolean) : [],
         nextSteps: Array.isArray(result.nextSteps) ? result.nextSteps.filter(Boolean) : undefined,
+        activityDraft,
         visualSuggestion: result.visualSuggestion?.kind === 'SVG'
           ? {
               ...result.visualSuggestion,
@@ -737,6 +807,7 @@ export class ApdAiService implements IApdAiService {
     request: ApdAiTeacherQuestionRequest,
   ): ApdAiTeacherQuestionResponse {
     const q = (request.question || '').toLowerCase().trim();
+    const activityDraft = this.buildActivityDraftSuggestion(request);
 
     // Respuestas contextuales básicas cuando Gemini no está habilitado
     if (q.includes('edusyn') || q.includes('qué puedo hacer') || q.includes('funcionalidades')) {
@@ -750,6 +821,15 @@ export class ApdAiService implements IApdAiService {
     if (q.includes('classroom') || q.includes('quiz') || q.includes('examen') || q.includes('actividad')) {
       return {
         answer: `En **Classroom** puedes:\n\n1. **Crear actividades**: Tareas, quizzes, exámenes, guías y autoevaluaciones\n2. **Live Quiz**: Sesiones en tiempo real donde los estudiantes responden simultáneamente\n3. **Quiz en Casa**: Los estudiantes resuelven a su ritmo con fecha límite\n4. **Preguntas variadas**: Opción múltiple, verdadero/falso, completar, emparejar\n5. **Sincronizar notas**: Enviar calificaciones directamente a la planilla\n\nPara crear un quiz: Entra a un aula → Actividades → Nueva Actividad → Selecciona tipo Quiz/Examen → Agrega preguntas → Publica.`,
+        keyPoints: [],
+        activityDraft,
+        confidence: 0.9,
+      };
+    }
+
+    if (q.includes('logro') || q.includes('logros') || q.includes('achievement')) {
+      return {
+        answer: `En Edusyn, los **logros** se usan para describir el aprendizaje alcanzado por el estudiante y suelen mostrarse en reportes o boletines junto con la valoración del período.\n\nFlujo recomendado:\n1. Entra al módulo de **Notas / Evaluación / Reportes** según tu menú\n2. Selecciona grupo, asignatura y período\n3. Registra el logro o descriptor correspondiente\n4. Guarda para que aparezca en los informes del estudiante o del grupo\n\nSi me dices en qué pantalla estás, te indico el flujo exacto dentro de esa ruta.`,
         keyPoints: [],
         confidence: 0.9,
       };
@@ -771,9 +851,17 @@ export class ApdAiService implements IApdAiService {
       };
     }
 
+    if (q.includes('observacion') || q.includes('observador') || q.includes('seguimiento')) {
+      return {
+        answer: `Para registrar **observaciones** o hacer seguimiento en Edusyn puedes usar el observador del estudiante o el espacio de seguimiento del docente, según el módulo que tengas habilitado.\n\nFlujo típico:\n1. Busca al estudiante o grupo\n2. Abre el observador / seguimiento / notas del aula\n3. Escribe la observación con fecha y categoría\n4. Guarda para que quede en el historial\n\nSi estás usando Classroom, también puedes apoyarte en **observaciones por actividad** o en los tableros de seguimiento del docente.`,
+        keyPoints: [],
+        confidence: 0.9,
+      };
+    }
+
     if (q.includes('boletin') || q.includes('informe') || q.includes('reporte')) {
       return {
-        answer: `Los **boletines** se generan automáticamente con:\n\n• Notas por asignatura y período\n• Promedio general y puesto\n• Logros e indicadores\n• Observaciones del director de grupo\n• Asistencia del período\n\nVe a **Boletines** → Selecciona grupo y período → Genera PDF individual o masivo.`,
+        answer: `Los **boletines** y reportes académicos en Edusyn se generan a partir de la información registrada en notas, logros, asistencia y observaciones.\n\nNormalmente incluyen:\n• Notas por asignatura y período\n• Promedio general y puesto\n• Logros e indicadores\n• Observaciones del director de grupo\n• Asistencia del período\n\nVe a **Reportes / Boletines** → Selecciona grupo, período o estudiante → Genera PDF individual o masivo.`,
         keyPoints: [],
         confidence: 0.9,
       };
@@ -789,7 +877,7 @@ export class ApdAiService implements IApdAiService {
 
     // Respuesta genérica mejorada
     return {
-      answer: `Gracias por tu consulta. Actualmente estoy en modo básico (sin conexión a IA avanzada).\n\nPuedo ayudarte con información sobre:\n• **Classroom**: Quizzes, exámenes, actividades\n• **Notas**: Planillas, calificaciones, promedios\n• **Asistencia**: Registro y reportes\n• **Boletines**: Generación de informes\n\nIntenta preguntar algo más específico como "¿Cómo creo un quiz?" o "¿Cómo registro notas?"`,
+      answer: `Gracias por tu consulta. Actualmente estoy en modo básico (sin conexión a IA avanzada).\n\nPuedo ayudarte con información sobre:\n• **Classroom**: Quizzes, exámenes, actividades y preguntas\n• **Notas**: Planillas, calificaciones, promedios y logros\n• **Asistencia**: Registro diario, reportes y alertas\n• **Observaciones**: Seguimiento del estudiante y del aula\n• **Boletines**: Generación de informes académicos\n\nIntenta preguntar algo más específico como "¿Cómo creo un quiz?", "¿Cómo asigno notas?" o "¿Cómo registro una observación?"`,
       keyPoints: [],
       confidence: 0.5,
     };
