@@ -1120,9 +1120,190 @@ export class ApdAiService implements IApdAiService {
     };
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PARSER DE PREGUNTAS PEGADAS (ChatGPT, Google, etc.)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Detecta si el texto del usuario contiene preguntas formateadas (pegadas de ChatGPT u otra fuente).
+   * Busca patrones como: "1. ¿Pregunta?\na) Opción\nb) Opción\n..."
+   */
+  private detectsPastedQuestions(text: string): boolean {
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    let numberedQuestions = 0;
+    let optionLines = 0;
+
+    for (const line of lines) {
+      // Detectar líneas numeradas como preguntas: "1.", "1)", "1.-", "Pregunta 1:"
+      if (/^\d+[\.\)\-]\s*.{10,}/.test(line)) {
+        numberedQuestions++;
+      }
+      // Detectar opciones: "a)", "A.", "a.", "A)", "a.-"
+      if (/^[a-dA-D][\.\)\-]\s*.{2,}/.test(line)) {
+        optionLines++;
+      }
+    }
+
+    // Al menos 2 preguntas numeradas Y al menos 4 opciones
+    return numberedQuestions >= 2 && optionLines >= 4;
+  }
+
+  /**
+   * Parsea preguntas pegadas de texto formateado (ChatGPT, etc.) y las convierte en ApdAiQuestionDraft[].
+   * Soporta formatos:
+   * - "1. ¿Pregunta?\na) Opción\nb) Opción\nc) Opción\nd) Opción\nRespuesta: a"
+   * - "1. Verdadero o falso: Afirmación\nRespuesta: Verdadero"
+   * - Variantes con A., a), A), a.-, etc.
+   */
+  private parsePastedQuestions(text: string): ApdAiQuestionDraft[] {
+    const questions: ApdAiQuestionDraft[] = [];
+    
+    // Dividir el texto en bloques de preguntas
+    // Cada bloque empieza con un número seguido de punto, paréntesis o guión
+    const blocks = text.split(/(?=\n\s*\d+[\.\)\-]\s)/);
+    
+    for (const block of blocks) {
+      const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length === 0) continue;
+
+      // Extraer texto de la pregunta (primera línea numerada)
+      const questionMatch = lines[0].match(/^\d+[\.\)\-]\s*(.+)/);
+      if (!questionMatch) continue;
+
+      let questionText = questionMatch[1].trim();
+      // Limpiar asteriscos de markdown
+      questionText = questionText.replace(/\*\*/g, '').trim();
+
+      // Detectar si es Verdadero/Falso
+      const isTrueFalse = /verdadero\s*(?:o|\/)\s*falso/i.test(questionText)
+        || /true\s*(?:or|\/)\s*false/i.test(questionText);
+
+      // Extraer opciones
+      const options: string[] = [];
+      let correctAnswer: string | undefined;
+      let explanation: string | undefined;
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+
+        // Detectar opción: "a)", "A.", "a.", "A)", "a.-"
+        const optionMatch = line.match(/^([a-dA-D])[\.\)\-]+\s*(.+)/);
+        if (optionMatch) {
+          let optText = optionMatch[2].trim();
+          optText = optText.replace(/\*\*/g, '').trim();
+          // Detectar si tiene marca de correcta: ✓, ✔, (correcta), *
+          const isMarkedCorrect = /[✓✔]/.test(line) || /\(correcta?\)/i.test(line) || /^\*/.test(optText);
+          if (isMarkedCorrect) {
+            optText = optText.replace(/[✓✔\*]/g, '').replace(/\(correcta?\)/gi, '').trim();
+            correctAnswer = optText;
+          }
+          options.push(optText);
+          continue;
+        }
+
+        // Detectar respuesta: "Respuesta: a", "Respuesta correcta: B", "Correct: a"
+        const answerMatch = line.match(/^(?:respuesta|respuesta\s+correcta|correct[ao]?|answer)\s*:\s*(.+)/i);
+        if (answerMatch) {
+          const answerValue = answerMatch[1].trim().replace(/\*\*/g, '');
+          // Si es una letra (a, b, c, d), mapear a la opción correspondiente
+          const letterMatch = answerValue.match(/^([a-dA-D])[\.\)\s]?$/);
+          if (letterMatch && options.length > 0) {
+            const idx = letterMatch[1].toLowerCase().charCodeAt(0) - 'a'.charCodeAt(0);
+            if (idx >= 0 && idx < options.length) {
+              correctAnswer = options[idx];
+            }
+          } else {
+            // Es el texto directo de la respuesta (ej: "Verdadero")
+            correctAnswer = answerValue;
+          }
+          continue;
+        }
+
+        // Detectar explicación: "Explicación:", "Justificación:", "Nota:"
+        const explMatch = line.match(/^(?:explicaci[oó]n|justificaci[oó]n|nota|explanation)\s*:\s*(.+)/i);
+        if (explMatch) {
+          explanation = explMatch[1].trim();
+          continue;
+        }
+      }
+
+      // Construir la pregunta
+      if (isTrueFalse) {
+        questions.push({
+          type: 'TRUE_FALSE',
+          text: questionText,
+          options: ['Verdadero', 'Falso'],
+          correctAnswer: correctAnswer || 'Verdadero',
+          points: 1,
+          explanation,
+        });
+      } else if (options.length >= 2) {
+        questions.push({
+          type: 'MULTIPLE_CHOICE',
+          text: questionText,
+          options,
+          correctAnswer: correctAnswer || options[0],
+          points: 1,
+          explanation,
+        });
+      }
+    }
+
+    return questions;
+  }
+
+  /**
+   * Intenta detectar y parsear preguntas pegadas del usuario.
+   * Si las detecta, retorna la respuesta con el quiz armado. Si no, retorna undefined.
+   */
+  private tryParsePastedQuiz(request: ApdAiTeacherQuestionRequest): ApdAiTeacherQuestionResponse | undefined {
+    const text = request.question || '';
+    
+    if (!this.detectsPastedQuestions(text)) {
+      return undefined;
+    }
+
+    const parsedQuestions = this.parsePastedQuestions(text);
+    if (parsedQuestions.length < 2) {
+      return undefined;
+    }
+
+    this.logger.log(`Parser detectó ${parsedQuestions.length} preguntas pegadas del usuario`);
+
+    const extractedTopic = this.extractTopicFromQuestion(text) || 'Quiz personalizado';
+    const topicLabel = extractedTopic.replace(/^./, (c) => c.toUpperCase());
+
+    return {
+      answer: `✅ **¡Listo!** He detectado y organizado **${parsedQuestions.length} preguntas** de tu texto.\n\nHe creado un borrador de quiz con todas las preguntas, opciones y respuestas correctas extraídas automáticamente.\n\n**Resumen:**\n- ${parsedQuestions.filter(q => q.type === 'MULTIPLE_CHOICE').length} preguntas de selección múltiple\n- ${parsedQuestions.filter(q => q.type === 'TRUE_FALSE').length} preguntas de verdadero/falso\n\n_Revisa el borrador y ajusta lo que necesites antes de publicar._`,
+      keyPoints: [
+        `${parsedQuestions.length} preguntas parseadas correctamente`,
+        'Las respuestas correctas fueron detectadas automáticamente',
+        'Puedes editar cualquier pregunta antes de publicar',
+      ],
+      activityDraft: {
+        title: `Quiz: ${topicLabel}`,
+        description: `Quiz creado a partir de preguntas proporcionadas por el docente.`,
+        type: 'QUIZ',
+        maxScore: '5.0',
+        allowLateSubmit: false,
+        shuffleQuestions: true,
+        showResults: true,
+        maxAttempts: '1',
+        questions: parsedQuestions,
+      },
+      confidence: 0.95,
+    };
+  }
+
   async answerTeacherQuestion(
     request: ApdAiTeacherQuestionRequest,
   ): Promise<ApdAiTeacherQuestionResponse> {
+    // PRIMERO: intentar parsear preguntas pegadas (no requiere IA)
+    const pastedQuiz = this.tryParsePastedQuiz(request);
+    if (pastedQuiz) {
+      return pastedQuiz;
+    }
+
     if (!this.isEnabled()) {
       return this.placeholderTeacherQuestion(request);
     }
