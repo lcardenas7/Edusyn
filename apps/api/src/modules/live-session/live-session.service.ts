@@ -351,6 +351,12 @@ export class LiveSessionService implements OnModuleDestroy {
       },
     });
     if (!session) throw new NotFoundException('Sesión no encontrada');
+
+    // Apply questionOrder so frontend receives questions in the same order the backend evaluates
+    if (session.activity?.questions) {
+      session.activity.questions = this.orderQuestionsForSession(session.activity.questions, session.config);
+    }
+
     return session;
   }
 
@@ -687,7 +693,7 @@ export class LiveSessionService implements OnModuleDestroy {
     const questions = await this.prisma.activityQuestion.findMany({
       where: { activityId: session.activityId },
       orderBy: { sortOrder: 'asc' },
-      select: { id: true, correctAnswer: true, points: true, type: true, options: true },
+      select: { id: true, correctAnswer: true, points: true, type: true, options: true, explanation: true },
     });
     const orderedQuestions = this.orderQuestionsForSession(questions, session.config);
     const currentQ = orderedQuestions[session.currentQuestionIdx];
@@ -819,6 +825,17 @@ export class LiveSessionService implements OnModuleDestroy {
           this.doCloseQuestionWithData(sessionId, session.currentQuestionIdx, currentQ);
         }, 300);
       }
+    }
+
+    // For ASYNC_HOME: include correctAnswer and explanation so the frontend can show them immediately
+    const isAsyncHome = session.deliveryMode === 'ASYNC_HOME' && !!session.parentSessionId;
+    if (isAsyncHome) {
+      return {
+        isCorrect,
+        points: saved.points,
+        correctAnswer: currentQ.correctAnswer,
+        explanation: currentQ.explanation || null,
+      };
     }
 
     return { isCorrect, points: saved.points };
