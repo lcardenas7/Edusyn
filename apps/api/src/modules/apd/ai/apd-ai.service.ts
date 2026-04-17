@@ -1126,108 +1126,149 @@ export class ApdAiService implements IApdAiService {
 
   /**
    * Detecta si el texto del usuario contiene preguntas formateadas (pegadas de ChatGPT u otra fuente).
-   * Busca patrones como: "1. ¿Pregunta?\na) Opción\nb) Opción\n..."
    */
   private detectsPastedQuestions(text: string): boolean {
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-    let numberedQuestions = 0;
+    let numberedLines = 0;
     let optionLines = 0;
+    let answerLines = 0;
 
     for (const line of lines) {
-      // Detectar líneas numeradas como preguntas: "1.", "1)", "1.-", "Pregunta 1:"
-      if (/^\d+[\.\)\-]\s*.{10,}/.test(line)) {
-        numberedQuestions++;
-      }
-      // Detectar opciones: "a)", "A.", "a.", "A)", "a.-"
-      if (/^[a-dA-D][\.\)\-]\s*.{2,}/.test(line)) {
-        optionLines++;
-      }
+      if (/^\d+[\.\)\-]/.test(line)) numberedLines++;
+      if (/^[a-dA-D][\.\)\-]\s*.{1,}/.test(line)) optionLines++;
+      if (/(?:respuesta|✅|answer)/i.test(line)) answerLines++;
     }
 
-    // Al menos 2 preguntas numeradas Y al menos 4 opciones
-    return numberedQuestions >= 2 && optionLines >= 4;
+    // Al menos 2 preguntas numeradas Y (opciones O respuestas de V/F)
+    return numberedLines >= 2 && (optionLines >= 4 || answerLines >= 2);
   }
 
   /**
-   * Parsea preguntas pegadas de texto formateado (ChatGPT, etc.) y las convierte en ApdAiQuestionDraft[].
-   * Soporta formatos:
-   * - "1. ¿Pregunta?\na) Opción\nb) Opción\nc) Opción\nd) Opción\nRespuesta: a"
-   * - "1. Verdadero o falso: Afirmación\nRespuesta: Verdadero"
-   * - Variantes con A., a), A), a.-, etc.
+   * Parsea preguntas pegadas de texto formateado (ChatGPT, etc.).
+   * 
+   * Soporta formatos multi-línea como:
+   *   1. (Selección múltiple)
+   *   ¿Cuál es la pregunta real?
+   *   A. Opción
+   *   B. Opción
+   *   ✅ Respuesta: B. Opción
+   * 
+   * Y también formato de una línea:
+   *   1. ¿Cuál es la pregunta?
+   *   a) Opción
+   *   Respuesta: a
    */
   private parsePastedQuestions(text: string): ApdAiQuestionDraft[] {
     const questions: ApdAiQuestionDraft[] = [];
     
-    // Dividir el texto en bloques de preguntas
-    // Cada bloque empieza con un número seguido de punto, paréntesis o guión
-    const blocks = text.split(/(?=\n\s*\d+[\.\)\-]\s)/);
+    // Dividir en bloques por líneas que empiezan con número
+    const blocks: string[] = [];
+    let currentBlock = '';
+    
+    for (const line of text.split('\n')) {
+      const trimmed = line.trim();
+      // Nueva pregunta: línea que empieza con "N." o "N)" o "N-"
+      if (/^\d+[\.\)\-]/.test(trimmed) && currentBlock.length > 0) {
+        blocks.push(currentBlock);
+        currentBlock = '';
+      }
+      currentBlock += line + '\n';
+    }
+    if (currentBlock.trim()) blocks.push(currentBlock);
     
     for (const block of blocks) {
       const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
       if (lines.length === 0) continue;
 
-      // Extraer texto de la pregunta (primera línea numerada)
-      const questionMatch = lines[0].match(/^\d+[\.\)\-]\s*(.+)/);
-      if (!questionMatch) continue;
+      // Verificar que empiece con número
+      if (!/^\d+[\.\)\-]/.test(lines[0])) continue;
 
-      let questionText = questionMatch[1].trim();
-      // Limpiar asteriscos de markdown
-      questionText = questionText.replace(/\*\*/g, '').trim();
-
-      // Detectar si es Verdadero/Falso
-      const isTrueFalse = /verdadero\s*(?:o|\/)\s*falso/i.test(questionText)
-        || /true\s*(?:or|\/)\s*false/i.test(questionText);
-
-      // Extraer opciones
+      // Extraer todas las partes del bloque
       const options: string[] = [];
       let correctAnswer: string | undefined;
       let explanation: string | undefined;
+      const questionParts: string[] = [];
 
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i];
+      for (const line of lines) {
+        const cleaned = line.replace(/\*\*/g, '').trim();
 
-        // Detectar opción: "a)", "A.", "a.", "A)", "a.-"
-        const optionMatch = line.match(/^([a-dA-D])[\.\)\-]+\s*(.+)/);
+        // Detectar opción: "A.", "a)", "A)", "a.-", "A.-"
+        const optionMatch = cleaned.match(/^([a-dA-D])[\.\)\-]+\s*(.+)/);
         if (optionMatch) {
           let optText = optionMatch[2].trim();
-          optText = optText.replace(/\*\*/g, '').trim();
-          // Detectar si tiene marca de correcta: ✓, ✔, (correcta), *
-          const isMarkedCorrect = /[✓✔]/.test(line) || /\(correcta?\)/i.test(line) || /^\*/.test(optText);
-          if (isMarkedCorrect) {
-            optText = optText.replace(/[✓✔\*]/g, '').replace(/\(correcta?\)/gi, '').trim();
+          // Detectar marca de correcta: ✓, ✔, (correcta)
+          if (/[✓✔]/.test(line) || /\(correcta?\)/i.test(line)) {
+            optText = optText.replace(/[✓✔]/g, '').replace(/\(correcta?\)/gi, '').trim();
             correctAnswer = optText;
           }
           options.push(optText);
           continue;
         }
 
-        // Detectar respuesta: "Respuesta: a", "Respuesta correcta: B", "Correct: a"
-        const answerMatch = line.match(/^(?:respuesta|respuesta\s+correcta|correct[ao]?|answer)\s*:\s*(.+)/i);
+        // Detectar respuesta con ✅ o "Respuesta:"
+        // Formatos: "✅ Respuesta: B. Erling Haaland", "Respuesta: b", "✅ Respuesta: Verdadero"
+        const answerMatch = cleaned.match(/^(?:✅\s*)?(?:respuesta|respuesta\s+correcta|correct[ao]?|answer)\s*:\s*(.+)/i);
         if (answerMatch) {
-          const answerValue = answerMatch[1].trim().replace(/\*\*/g, '');
-          // Si es una letra (a, b, c, d), mapear a la opción correspondiente
-          const letterMatch = answerValue.match(/^([a-dA-D])[\.\)\s]?$/);
-          if (letterMatch && options.length > 0) {
-            const idx = letterMatch[1].toLowerCase().charCodeAt(0) - 'a'.charCodeAt(0);
+          let answerValue = answerMatch[1].trim();
+          // Limpiar "B. Texto" → extraer letra y texto
+          const letterWithText = answerValue.match(/^([a-dA-D])[\.\)\-]\s*(.+)/);
+          if (letterWithText && options.length > 0) {
+            // Usar la letra para encontrar la opción correcta
+            const idx = letterWithText[1].toLowerCase().charCodeAt(0) - 'a'.charCodeAt(0);
             if (idx >= 0 && idx < options.length) {
               correctAnswer = options[idx];
+            } else {
+              correctAnswer = letterWithText[2].trim();
             }
           } else {
-            // Es el texto directo de la respuesta (ej: "Verdadero")
-            correctAnswer = answerValue;
+            // Solo una letra: "b" → mapear al índice
+            const justLetter = answerValue.match(/^([a-dA-D])$/i);
+            if (justLetter && options.length > 0) {
+              const idx = justLetter[1].toLowerCase().charCodeAt(0) - 'a'.charCodeAt(0);
+              if (idx >= 0 && idx < options.length) {
+                correctAnswer = options[idx];
+              }
+            } else {
+              // Texto directo: "Verdadero", "Falso"
+              correctAnswer = answerValue;
+            }
           }
           continue;
         }
 
-        // Detectar explicación: "Explicación:", "Justificación:", "Nota:"
-        const explMatch = line.match(/^(?:explicaci[oó]n|justificaci[oó]n|nota|explanation)\s*:\s*(.+)/i);
+        // Detectar explicación
+        const explMatch = cleaned.match(/^(?:explicaci[oó]n|justificaci[oó]n|nota|explanation)\s*:\s*(.+)/i);
         if (explMatch) {
           explanation = explMatch[1].trim();
           continue;
         }
+
+        // Todo lo demás es parte del texto de la pregunta
+        questionParts.push(cleaned);
       }
 
-      // Construir la pregunta
+      // Construir el texto de la pregunta:
+      // Unir todas las partes que no son opciones/respuestas/explicaciones
+      // Filtrar: número inicial, etiquetas como "(Selección múltiple)", "(Falso / Verdadero)"
+      let questionText = questionParts
+        .map(p => p.replace(/^\d+[\.\)\-]\s*/, '').trim()) // quitar numeración
+        .filter(p => {
+          if (!p) return false;
+          // Filtrar etiquetas de tipo
+          if (/^\(?\s*(?:selecci[oó]n\s+m[uú]ltiple|opci[oó]n\s+m[uú]ltiple|falso\s*[\/-]\s*verdadero|verdadero\s*[\/-]\s*falso|an[aá]lisis|selecci[oó]n\s+m[uú]ltiple\s*-\s*an[aá]lisis)\s*\)?$/i.test(p)) return false;
+          return true;
+        })
+        .join(' ')
+        .trim();
+
+      if (!questionText || questionText.length < 5) continue;
+
+      // Detectar si es Verdadero/Falso
+      const blockText = block.toLowerCase();
+      const isTrueFalse = /falso\s*[\/-]\s*verdadero|verdadero\s*[\/-]\s*falso/i.test(blockText)
+        || (options.length === 0 && correctAnswer && /^(verdadero|falso|true|false)$/i.test(correctAnswer));
+
+      // Construir la pregunta final
       if (isTrueFalse) {
         questions.push({
           type: 'TRUE_FALSE',
