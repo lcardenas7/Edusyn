@@ -71,12 +71,20 @@ export class ApdAiService implements IApdAiService {
     return 'GEMINI'; // fallback
   }
 
+  // Modelos de OpenRouter en orden de prioridad para cascada de reintentos
+  private static readonly OPENROUTER_MODEL_CASCADE = [
+    'openai/gpt-oss-120b:free',
+    'nvidia/nemotron-3-super-120b-a12b:free',
+    'nousresearch/hermes-3-llama-3.1-405b:free',
+    'meta-llama/llama-3.3-70b-instruct:free',
+    'google/gemma-4-31b-it:free',
+    'nvidia/nemotron-nano-9b-v2:free',
+  ];
+
   private getDefaultModel(provider: string): string {
     switch (provider) {
-      // OpenRouter: usar Meta Llama 3.3 70B (gratis, 70B params, estable y de alta calidad)
-      case 'OPENROUTER': return 'meta-llama/llama-3.3-70b-instruct:free';
+      case 'OPENROUTER': return ApdAiService.OPENROUTER_MODEL_CASCADE[0];
       case 'XAI': return 'grok-3-mini';
-      // Groq: usar Llama 3.3 70B para mejor calidad
       case 'GROQ': return 'llama-3.3-70b-versatile';
       case 'GEMINI': return 'gemini-2.0-flash';
       default: return 'gemini-2.0-flash';
@@ -95,7 +103,38 @@ export class ApdAiService implements IApdAiService {
       throw new Error('OpenRouter no está habilitado');
     }
 
-    const model = this.config.model || 'google/gemma-2-9b-it:free';
+    const modelsToTry = this.config.model && !ApdAiService.OPENROUTER_MODEL_CASCADE.includes(this.config.model)
+      ? [this.config.model, ...ApdAiService.OPENROUTER_MODEL_CASCADE]
+      : ApdAiService.OPENROUTER_MODEL_CASCADE;
+
+    let lastError: Error | null = null;
+
+    for (const model of modelsToTry) {
+      try {
+        this.logger.log(`OpenRouter intentando modelo: ${model}`);
+        const result = await this.callOpenRouterWithModel<T>(model, systemInstruction, userPrompt);
+        this.logger.log(`OpenRouter modelo exitoso: ${model}`);
+        return result;
+      } catch (err: any) {
+        lastError = err;
+        const is429 = err?.message?.includes('429') || err?.message?.includes('rate-limit');
+        if (is429) {
+          this.logger.warn(`OpenRouter modelo ${model} rate-limited (429), probando siguiente...`);
+          continue;
+        }
+        // Para otros errores, no reintentar con otro modelo
+        throw err;
+      }
+    }
+
+    throw lastError || new Error('Todos los modelos de OpenRouter fallaron');
+  }
+
+  private async callOpenRouterWithModel<T>(
+    model: string,
+    systemInstruction: string,
+    userPrompt: string,
+  ): Promise<T> {
     const url = 'https://openrouter.ai/api/v1/chat/completions';
 
     const response = await fetch(url, {
@@ -113,7 +152,7 @@ export class ApdAiService implements IApdAiService {
           { role: 'user', content: userPrompt },
         ],
         temperature: this.config.temperature ?? 0.7,
-        max_tokens: this.config.maxTokens ?? 2000,
+        max_tokens: Math.max(this.config.maxTokens ?? 2000, 4000),
       }),
     });
 
@@ -453,7 +492,10 @@ export class ApdAiService implements IApdAiService {
 
   private buildActivityDraftSuggestion(request: ApdAiTeacherQuestionRequest): ApdAiTeacherQuestionResponse['activityDraft'] | undefined {
     const q = (request.question || '').toLowerCase();
-    const topicSource = request.context?.topic?.trim()
+    // PRIORIZAR tema extraído de la pregunta del usuario sobre el contexto de página
+    const extractedTopic = this.extractTopicFromQuestion(request.question || '');
+    const topicSource = extractedTopic
+      || request.context?.topic?.trim()
       || request.context?.subjectName?.trim()
       || request.context?.gradeName?.trim()
       || 'el curso';
@@ -505,22 +547,27 @@ export class ApdAiService implements IApdAiService {
    * Busca patrones como "sobre X", "de X", "tema X", etc.
    */
   private extractTopicFromQuestion(question: string): string | undefined {
-    const q = question.toLowerCase();
-    
-    // Patrones comunes para extraer el tema
+    // Patrones ordenados de más específico a más general
     const patterns = [
-      /(?:quiz|examen|cuestionario|evaluaci[oó]n|prueba|preguntas?)\s+(?:sobre|de|acerca de|del tema)\s+(.+?)(?:\s+(?:para|con|de\s+\d+|,|\.|$))/i,
-      /(?:sobre|acerca de|del tema)\s+(.+?)(?:\s+(?:para|con|de\s+\d+|,|\.|pros|contras|ventajas|$))/i,
-      /(?:tema|t[oó]pico)\s*:?\s*(.+?)(?:\s+(?:para|con|,|\.|$))/i,
+      // "tema de X" o "el tema de X"
+      /(?:el\s+)?tema\s+(?:de|del)\s+(.+?)(?:\s*[,.]|\s+(?:deben|las opciones|organiza|con\s+\d+|para\s+\w+\s+grado))/i,
+      // "preguntas relacionadas con el tema de X"
+      /preguntas?\s+(?:relacionadas?\s+)?(?:con\s+(?:el\s+tema\s+(?:de|del)\s+)?|sobre\s+(?:el\s+tema\s+(?:de|del)\s+)?)(.+?)(?:\s*[,.]|\s+(?:deben|las opciones|organiza|con\s+\d+|para\s+\w+\s+grado))/i,
+      // "quiz/examen de N preguntas sobre X" o "quiz sobre X"
+      /(?:quiz|examen|cuestionario|evaluaci[oó]n|prueba)\s+(?:(?:en\s+el\s+classrr?oom\s+)?(?:de\s+)?\d+\s+pre[gq]untas?\s+)?(?:sobre|de|acerca de|del tema(?:\s+de)?|relacionad[ao]s?\s+con(?:\s+el\s+tema\s+de)?)\s+(.+?)(?:\s*[,.]|\s+(?:deben|las opciones|organiza|para\s+\w+\s+grado))/i,
+      // "sobre X" (más general, captura amplia)
+      /(?:sobre|acerca de)\s+(?:el\s+tema\s+(?:de|del)\s+)?(.+?)(?:\s*[,.]|\s+(?:deben|las opciones|organiza|con\s+\d+\s+pre|para\s+\w+\s+grado))/i,
+      // "tema: X" o "tema X"
+      /(?:tema|t[oó]pico)\s*:?\s+(.+?)(?:\s*[,.]|\s+(?:deben|las opciones|organiza|para|con\s+\d+))/i,
     ];
     
     for (const pattern of patterns) {
       const match = question.match(pattern);
       if (match?.[1]) {
         let topic = match[1].trim();
-        // Limpiar el tema de palabras comunes al final
-        topic = topic.replace(/\s+(y|con|para|de|del|la|el|los|las)\s*$/i, '').trim();
-        if (topic.length > 2 && topic.length < 100) {
+        // Limpiar palabras sueltas al final
+        topic = topic.replace(/\s+(y|con|para|de|del|la|el|los|las|en)\s*$/i, '').trim();
+        if (topic.length > 2 && topic.length < 150) {
           return topic;
         }
       }
@@ -1161,14 +1208,33 @@ export class ApdAiService implements IApdAiService {
       };
     }
 
-    if (q.includes('classroom') || q.includes('quiz') || q.includes('examen') || q.includes('actividad')) {
+    if (q.includes('quiz') || q.includes('examen') || q.includes('cuestionario') || q.includes('pregunta')) {
+      const extractedTopic = this.extractTopicFromQuestion(request.question || '') || 'el tema solicitado';
+      return {
+        answer: `⚠️ **Modo sin conexión a IA**: No pude conectarme al servicio de inteligencia artificial para generar las preguntas específicas sobre **"${extractedTopic}"**.\n\nHe creado el borrador de la actividad (título y configuración), pero **las preguntas NO fueron generadas** porque necesito la IA para crear contenido específico del tema.\n\n**¿Qué puedes hacer?**\n1. **Reintentar** — Envía tu solicitud de nuevo en unos segundos\n2. **Crear manualmente** — Usa el borrador creado y agrega tus propias preguntas\n\n_El servicio de IA puede estar temporalmente ocupado. Normalmente se recupera en 1-2 minutos._`,
+        keyPoints: [
+          `Tema detectado: ${extractedTopic}`,
+          'Las preguntas deben generarse con IA o manualmente',
+          'Reintenta en unos segundos si necesitas generación automática',
+        ],
+        activityDraft: activityDraft
+          ? {
+              ...activityDraft,
+              questions: undefined, // NO generar preguntas genéricas falsas
+            }
+          : undefined,
+        confidence: 0.3,
+      };
+    }
+
+    if (q.includes('classroom') || q.includes('actividad')) {
       return {
         answer: `En **Classroom** puedes:\n\n1. **Crear actividades**: Tareas, quizzes, exámenes, guías y autoevaluaciones\n2. **Live Quiz**: Sesiones en tiempo real donde los estudiantes responden simultáneamente\n3. **Quiz en Casa**: Los estudiantes resuelven a su ritmo con fecha límite\n4. **Preguntas variadas**: Opción múltiple, verdadero/falso, completar, emparejar\n5. **Sincronizar notas**: Enviar calificaciones directamente a la planilla\n\nPara crear un quiz: Entra a un aula → Actividades → Nueva Actividad → Selecciona tipo Quiz/Examen → Agrega preguntas → Publica.`,
         keyPoints: [],
         activityDraft: activityDraft
           ? {
               ...activityDraft,
-              questions: questionDrafts,
+              questions: undefined,
             }
           : undefined,
         confidence: 0.9,
