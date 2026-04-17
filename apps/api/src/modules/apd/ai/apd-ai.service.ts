@@ -380,6 +380,75 @@ export class ApdAiService implements IApdAiService {
     ].join('\n');
   }
 
+  /**
+   * Construye el prompt del sistema optimizado para generación de quizzes educativos.
+   */
+  private buildQuizSystemPrompt(request: ApdAiTeacherQuestionRequest): string {
+    const q = (request.question || '').toLowerCase();
+    const isQuizRequest = q.includes('quiz') || q.includes('examen') || q.includes('pregunta') || q.includes('cuestionario') || q.includes('evaluación');
+    const requestedCount = this.extractQuestionCount(request.question || '');
+    const extractedTopic = this.extractTopicFromQuestion(request.question || '');
+    const wantsTrueFalse = q.includes('falso') || q.includes('verdadero') || q.includes('v/f');
+
+    const basePrompt = [
+      'Eres Valeria, asistente IA educativa de Edusyn. Responde en español, claro y práctico.',
+    ];
+
+    if (isQuizRequest) {
+      basePrompt.push(
+        '',
+        '=== INSTRUCCIONES CRÍTICAS PARA GENERAR QUIZ ===',
+        `TEMA DETECTADO: "${extractedTopic || 'tema solicitado por el usuario'}"`,
+        `CANTIDAD REQUERIDA: ${requestedCount} preguntas`,
+        '',
+        'REGLAS OBLIGATORIAS:',
+        `1. Genera EXACTAMENTE ${requestedCount} preguntas sobre "${extractedTopic || 'el tema solicitado'}".`,
+        '2. Las preguntas deben ser ESPECÍFICAS del tema, con contenido educativo real.',
+        '3. NO generes preguntas genéricas como "¿Cuál es una ventaja de X?" o "¿Quién debe supervisar X?".',
+        '4. Cada pregunta debe evaluar un concepto o conocimiento específico del tema.',
+        '5. Las 4 opciones deben ser PLAUSIBLES - no uses opciones obviamente incorrectas.',
+        '6. VARÍA la posición de la respuesta correcta (no siempre A).',
+        wantsTrueFalse 
+          ? '7. INCLUYE preguntas tipo TRUE_FALSE (Verdadero/Falso) como solicitó el usuario.'
+          : '7. Usa principalmente MULTIPLE_CHOICE con 4 opciones.',
+        '8. Adapta la dificultad al nivel educativo mencionado.',
+        '',
+        'FORMATO JSON para activityDraft.questions:',
+        '[',
+        '  {',
+        '    "type": "MULTIPLE_CHOICE" | "TRUE_FALSE",',
+        '    "text": "Pregunta específica sobre el tema",',
+        '    "options": ["Opción A", "Opción B", "Opción C", "Opción D"],',
+        '    "correctAnswer": "Texto exacto de la opción correcta",',
+        '    "points": 1,',
+        '    "explanation": "Breve explicación de por qué es correcta"',
+        '  }',
+        ']',
+        '',
+        'EJEMPLO para "pensamiento computacional":',
+        '- "¿Qué es la descomposición en pensamiento computacional?" (concepto específico)',
+        '- "¿Cuál es un ejemplo de abstracción?" (aplicación práctica)',
+        '- "Verdadero o falso: Un algoritmo es una secuencia de pasos para resolver un problema" (TRUE_FALSE)',
+        '',
+      );
+    }
+
+    basePrompt.push(
+      'Devuelve JSON válido con: answer, keyPoints, activityDraft (con questions), confidence.',
+      `Contexto Edusyn:\n${this.buildEdusynKnowledgeContext()}`,
+    );
+
+    return basePrompt.join('\n');
+  }
+
+  /**
+   * Randomiza la posición de la respuesta correcta en las opciones.
+   */
+  private shuffleOptionsWithCorrectAnswer(options: string[], correctAnswer: string): { options: string[]; correctAnswer: string } {
+    const shuffled = [...options].sort(() => Math.random() - 0.5);
+    return { options: shuffled, correctAnswer };
+  }
+
   private buildActivityDraftSuggestion(request: ApdAiTeacherQuestionRequest): ApdAiTeacherQuestionResponse['activityDraft'] | undefined {
     const q = (request.question || '').toLowerCase();
     const topicSource = request.context?.topic?.trim()
@@ -500,176 +569,205 @@ export class ApdAiService implements IApdAiService {
     }
 
     const topicLabel = topicSource.replace(/^./, (char) => char.toUpperCase());
-    const isExam = activityType === 'EXAM' || q.includes('examen') || q.includes('prueba');
     const requestedCount = this.extractQuestionCount(request.question || '');
+    const wantsTrueFalse = q.includes('falso') || q.includes('verdadero') || q.includes('v/f');
 
-    // Detectar subtemas específicos mencionados en la pregunta
-    const mentionsPros = q.includes('pros') || q.includes('ventajas') || q.includes('beneficios');
-    const mentionsCons = q.includes('contras') || q.includes('desventajas') || q.includes('riesgos') || q.includes('peligros');
-    const mentionsSecurity = q.includes('seguridad') || q.includes('privacidad') || q.includes('protección');
+    // Banco de preguntas con opciones que se randomizarán
+    const rawQuestions: Array<{
+      type: 'MULTIPLE_CHOICE' | 'TRUE_FALSE';
+      text: string;
+      options: string[];
+      correctIndex: number; // índice de la respuesta correcta (antes de randomizar)
+      explanation: string;
+    }> = [
+      // Preguntas de concepto
+      {
+        type: 'MULTIPLE_CHOICE',
+        text: `¿Cuál de las siguientes opciones describe mejor qué es ${topicLabel}?`,
+        options: [
+          `Un conjunto de conceptos y habilidades relacionados con ${topicLabel}`,
+          'Un tipo de software de computadora únicamente',
+          'Una materia que solo se estudia en la universidad',
+          'Un pasatiempo sin aplicación práctica',
+        ],
+        correctIndex: 0,
+        explanation: `${topicLabel} abarca conceptos y habilidades aplicables en diversos contextos.`,
+      },
+      {
+        type: 'MULTIPLE_CHOICE',
+        text: `¿Por qué es importante estudiar ${topicLabel}?`,
+        options: [
+          'Solo es importante para programadores',
+          'No tiene ninguna importancia real',
+          `Desarrolla habilidades de análisis y resolución de problemas`,
+          'Es obligatorio pero no tiene beneficios',
+        ],
+        correctIndex: 2,
+        explanation: `Estudiar ${topicLabel} desarrolla habilidades valiosas para la vida.`,
+      },
+      {
+        type: 'MULTIPLE_CHOICE',
+        text: `¿En qué áreas se puede aplicar ${topicLabel}?`,
+        options: [
+          'Solo en matemáticas',
+          'Únicamente en informática',
+          'En ninguna área práctica',
+          `En múltiples áreas: ciencias, arte, vida cotidiana`,
+        ],
+        correctIndex: 3,
+        explanation: `${topicLabel} tiene aplicaciones en diversas áreas del conocimiento.`,
+      },
+      {
+        type: 'MULTIPLE_CHOICE',
+        text: `¿Cuál es una característica fundamental de ${topicLabel}?`,
+        options: [
+          'Requiere memorizar fórmulas complejas',
+          `Implica analizar problemas y buscar soluciones sistemáticas`,
+          'Solo se puede aprender con computadoras',
+          'Es exclusivo para adultos',
+        ],
+        correctIndex: 1,
+        explanation: `${topicLabel} se centra en el análisis y la resolución sistemática de problemas.`,
+      },
+      {
+        type: 'MULTIPLE_CHOICE',
+        text: `¿Qué habilidad NO está directamente relacionada con ${topicLabel}?`,
+        options: [
+          'Descomponer problemas en partes más pequeñas',
+          'Identificar patrones',
+          `Memorizar datos sin analizarlos`,
+          'Crear algoritmos o pasos ordenados',
+        ],
+        correctIndex: 2,
+        explanation: `${topicLabel} enfatiza el análisis, no la memorización sin comprensión.`,
+      },
+      {
+        type: 'MULTIPLE_CHOICE',
+        text: `¿Cómo puede ${topicLabel} ayudarte en la vida diaria?`,
+        options: [
+          `Organizando tareas y resolviendo problemas de forma lógica`,
+          'No tiene aplicación fuera del aula',
+          'Solo sirve para usar computadoras',
+          'Únicamente para hacer tareas escolares',
+        ],
+        correctIndex: 0,
+        explanation: `${topicLabel} ayuda a organizar el pensamiento y resolver problemas cotidianos.`,
+      },
+      {
+        type: 'MULTIPLE_CHOICE',
+        text: `¿Cuál es el primer paso recomendado al abordar un problema usando ${topicLabel}?`,
+        options: [
+          'Escribir código inmediatamente',
+          'Pedir ayuda sin intentar',
+          'Ignorar el problema',
+          `Entender y analizar el problema antes de buscar soluciones`,
+        ],
+        correctIndex: 3,
+        explanation: 'Comprender el problema es esencial antes de buscar soluciones.',
+      },
+      {
+        type: 'MULTIPLE_CHOICE',
+        text: `¿Qué significa "descomponer" en el contexto de ${topicLabel}?`,
+        options: [
+          'Destruir algo físicamente',
+          `Dividir un problema grande en partes más pequeñas y manejables`,
+          'Olvidar información innecesaria',
+          'Combinar varios problemas en uno',
+        ],
+        correctIndex: 1,
+        explanation: 'La descomposición es dividir problemas complejos en partes más simples.',
+      },
+    ];
 
-    // Generar preguntas dinámicas basadas en el tema
-    const questionBank: ApdAiQuestionDraft[] = [];
-
-    // Preguntas sobre ventajas/pros
-    if (mentionsPros || (!mentionsCons && !mentionsSecurity)) {
-      questionBank.push(
-        {
-          type: 'MULTIPLE_CHOICE',
-          text: `¿Cuál es una ventaja principal de ${topicLabel}?`,
-          options: [
-            `Facilita la comunicación y el acceso a información`,
-            'No tiene ningún beneficio real',
-            'Solo sirve para perder el tiempo',
-            'Es completamente peligroso',
-          ],
-          correctAnswer: 'Facilita la comunicación y el acceso a información',
-          points: 1,
-          explanation: `Una de las principales ventajas de ${topicLabel} es mejorar la comunicación.`,
-        },
-        {
-          type: 'MULTIPLE_CHOICE',
-          text: `¿Cómo puede ${topicLabel} beneficiar el aprendizaje?`,
-          options: [
-            'Permite acceder a recursos educativos y colaborar con otros',
-            'No tiene relación con el aprendizaje',
-            'Solo distrae a los estudiantes',
-            'Está prohibido en todas las escuelas',
-          ],
-          correctAnswer: 'Permite acceder a recursos educativos y colaborar con otros',
-          points: 1,
-          explanation: `${topicLabel} puede ser una herramienta educativa valiosa cuando se usa correctamente.`,
-        },
-      );
-    }
-
-    // Preguntas sobre desventajas/contras
-    if (mentionsCons || mentionsPros) {
-      questionBank.push(
-        {
-          type: 'MULTIPLE_CHOICE',
-          text: `¿Cuál es un riesgo potencial de ${topicLabel}?`,
-          options: [
-            'Exposición a contenido inapropiado o ciberacoso',
-            'No existe ningún riesgo',
-            'Mejora automáticamente las calificaciones',
-            'Siempre es 100% seguro',
-          ],
-          correctAnswer: 'Exposición a contenido inapropiado o ciberacoso',
-          points: 1,
-          explanation: `Es importante conocer los riesgos de ${topicLabel} para usarlo de forma responsable.`,
-        },
-        {
-          type: 'MULTIPLE_CHOICE',
-          text: `¿Qué problema puede causar el uso excesivo de ${topicLabel}?`,
-          options: [
-            'Adicción, aislamiento social y problemas de sueño',
-            'Ningún problema, siempre es beneficioso',
-            'Mejora la salud física',
-            'Aumenta la concentración en clase',
-          ],
-          correctAnswer: 'Adicción, aislamiento social y problemas de sueño',
-          points: 1,
-          explanation: 'El uso excesivo puede afectar la salud mental y física.',
-        },
-      );
-    }
-
-    // Preguntas sobre seguridad
-    if (mentionsSecurity || mentionsCons) {
-      questionBank.push(
-        {
-          type: 'MULTIPLE_CHOICE',
-          text: `¿Cuál es una buena práctica de seguridad en ${topicLabel}?`,
-          options: [
-            'Usar contraseñas fuertes y no compartir información personal',
-            'Compartir la contraseña con todos los amigos',
-            'Publicar la dirección de casa',
-            'Aceptar solicitudes de desconocidos',
-          ],
-          correctAnswer: 'Usar contraseñas fuertes y no compartir información personal',
-          points: 1,
-          explanation: 'Proteger la información personal es fundamental para la seguridad en línea.',
-        },
-        {
-          type: 'MULTIPLE_CHOICE',
-          text: `¿Qué debes hacer si un desconocido te contacta en ${topicLabel}?`,
-          options: [
-            'No responder y contarle a un adulto de confianza',
-            'Darle tu número de teléfono',
-            'Aceptar encontrarte en persona',
-            'Compartir fotos personales',
-          ],
-          correctAnswer: 'No responder y contarle a un adulto de confianza',
-          points: 1,
-          explanation: 'Siempre debemos ser cautelosos con personas desconocidas en internet.',
-        },
-        {
-          type: 'MULTIPLE_CHOICE',
-          text: `¿Qué es el ciberacoso?`,
-          options: [
-            'Usar internet para molestar, amenazar o humillar a alguien',
-            'Un juego de computadora',
-            'Una forma de hacer amigos',
-            'Un tipo de red social',
-          ],
-          correctAnswer: 'Usar internet para molestar, amenazar o humillar a alguien',
-          points: 1,
-          explanation: 'El ciberacoso es un problema serio que debemos prevenir y denunciar.',
-        },
-      );
-    }
-
-    // Preguntas generales sobre el tema
-    questionBank.push(
+    // Preguntas tipo Verdadero/Falso
+    const trueFalseQuestions: Array<{
+      type: 'TRUE_FALSE';
+      text: string;
+      options: string[];
+      correctIndex: number;
+      explanation: string;
+    }> = [
       {
         type: 'TRUE_FALSE',
-        text: `Verdadero o falso: ${topicLabel} puede tener tanto aspectos positivos como negativos.`,
+        text: `Verdadero o falso: ${topicLabel} solo se puede aprender usando computadoras.`,
         options: ['Verdadero', 'Falso'],
-        correctAnswer: 'Verdadero',
-        points: 1,
-        explanation: `Como toda herramienta, ${topicLabel} tiene ventajas y desventajas según cómo se use.`,
+        correctIndex: 1,
+        explanation: `${topicLabel} se puede aprender con o sin computadoras, usando lógica y análisis.`,
       },
       {
-        type: 'MULTIPLE_CHOICE',
-        text: `¿Cuál es la mejor actitud frente a ${topicLabel}?`,
-        options: [
-          'Usarlo de forma responsable y consciente',
-          'Evitarlo completamente',
-          'Usarlo sin ningún límite',
-          'Ignorar los consejos de los adultos',
-        ],
-        correctAnswer: 'Usarlo de forma responsable y consciente',
-        points: 1,
-        explanation: 'El uso responsable es la clave para aprovechar los beneficios y evitar los riesgos.',
+        type: 'TRUE_FALSE',
+        text: `Verdadero o falso: ${topicLabel} ayuda a desarrollar el pensamiento lógico.`,
+        options: ['Verdadero', 'Falso'],
+        correctIndex: 0,
+        explanation: `${topicLabel} fortalece las habilidades de razonamiento lógico.`,
       },
       {
-        type: 'MULTIPLE_CHOICE',
-        text: `¿Quién debe supervisar el uso de ${topicLabel} en menores de edad?`,
-        options: [
-          'Los padres o adultos responsables',
-          'Nadie, los niños pueden manejarlo solos',
-          'Solo los amigos',
-          'Las empresas de internet',
-        ],
-        correctAnswer: 'Los padres o adultos responsables',
-        points: 1,
-        explanation: 'La supervisión adulta es importante para garantizar un uso seguro.',
+        type: 'TRUE_FALSE',
+        text: `Verdadero o falso: Un algoritmo es una secuencia ordenada de pasos para resolver un problema.`,
+        options: ['Verdadero', 'Falso'],
+        correctIndex: 0,
+        explanation: 'Un algoritmo es precisamente una serie de pasos ordenados para lograr un objetivo.',
       },
-    );
+      {
+        type: 'TRUE_FALSE',
+        text: `Verdadero o falso: ${topicLabel} es útil solo para quienes quieren ser programadores.`,
+        options: ['Verdadero', 'Falso'],
+        correctIndex: 1,
+        explanation: `${topicLabel} es útil para cualquier persona, no solo programadores.`,
+      },
+      {
+        type: 'TRUE_FALSE',
+        text: `Verdadero o falso: Identificar patrones es una habilidad importante en ${topicLabel}.`,
+        options: ['Verdadero', 'Falso'],
+        correctIndex: 0,
+        explanation: 'Reconocer patrones ayuda a encontrar soluciones más eficientes.',
+      },
+      {
+        type: 'TRUE_FALSE',
+        text: `Verdadero o falso: La abstracción consiste en enfocarse en los detalles importantes e ignorar los irrelevantes.`,
+        options: ['Verdadero', 'Falso'],
+        correctIndex: 0,
+        explanation: 'La abstracción permite simplificar problemas enfocándose en lo esencial.',
+      },
+    ];
 
-    // Pregunta abierta para exámenes
-    if (isExam) {
-      questionBank.push({
-        type: 'SHORT_ANSWER',
-        text: `Explica con tus palabras cómo usar ${topicLabel} de forma segura y responsable.`,
-        points: 2,
-        explanation: 'Pregunta abierta para valorar comprensión y argumentación.',
+    // Combinar preguntas según lo solicitado
+    let questionBank = wantsTrueFalse
+      ? [...trueFalseQuestions, ...rawQuestions]
+      : [...rawQuestions, ...trueFalseQuestions];
+
+    // Randomizar y construir las preguntas finales
+    const finalQuestions: ApdAiQuestionDraft[] = questionBank
+      .slice(0, requestedCount)
+      .map((q, idx) => {
+        if (q.type === 'TRUE_FALSE') {
+          return {
+            type: q.type,
+            text: q.text,
+            options: q.options,
+            correctAnswer: q.options[q.correctIndex],
+            points: 1,
+            explanation: q.explanation,
+            sortOrder: idx,
+          };
+        }
+
+        // Para MULTIPLE_CHOICE, randomizar las opciones
+        const correctAnswer = q.options[q.correctIndex];
+        const shuffled = [...q.options].sort(() => Math.random() - 0.5);
+        
+        return {
+          type: q.type,
+          text: q.text,
+          options: shuffled,
+          correctAnswer: correctAnswer,
+          points: 1,
+          explanation: q.explanation,
+          sortOrder: idx,
+        };
       });
-    }
 
-    // Limitar al número solicitado
-    return questionBank.slice(0, requestedCount);
+    return finalQuestions;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -981,29 +1079,7 @@ export class ApdAiService implements IApdAiService {
     }
 
     try {
-      const systemInstruction = [
-        'Eres Valeria, la asistente IA de Edusyn.',
-        'Responde en español, con tono claro, cercano, breve y práctico.',
-        'Puedes responder preguntas generales de cualquier tema, y también consultas sobre Edusyn, pedagogía, administración escolar y Classroom.',
-        'Cuando la pregunta sea sobre Edusyn o sobre la pantalla actual, prioriza el contexto interno de la plataforma y de la pantalla.',
-        'Si el contexto aporta pageName, pageSummary o currentPath, úsalos para ubicarte y evita responder de forma genérica.',
-        '',
-        '### GENERACIÓN DE QUIZZES Y EXÁMENES ###',
-        'Si la petición busca crear un quiz o examen con preguntas:',
-        '1. Extrae el TEMA EXACTO que el usuario menciona (ej: "redes sociales", "fracciones", "la célula").',
-        '2. Extrae la CANTIDAD de preguntas solicitadas (ej: "10 preguntas", "5 preguntas"). Si no especifica, genera 5.',
-        '3. Extrae el GRADO o nivel educativo si lo menciona (ej: "sexto grado", "primaria").',
-        '4. Genera preguntas ESPECÍFICAS sobre ese tema, NO preguntas genéricas sobre Classroom o Edusyn.',
-        '5. Usa formato MULTIPLE_CHOICE con 4 opciones (A, B, C, D) a menos que pida otro formato.',
-        '6. Incluye correctAnswer con el texto exacto de la opción correcta.',
-        '7. Cada pregunta debe tener: type, text, options (array de 4 strings), correctAnswer, points (1-2), explanation.',
-        '',
-        'Cuando la pregunta no sea sobre Edusyn, responde como una IA general útil y honesta, sin inventar hechos.',
-        'Ayudas a planear quizzes, exámenes, guías y logros, pero no decides notas finales ni alteras flujos numéricos críticos.',
-        'Si se solicita apoyo visual, propone SVG simple y seguro, sin scripts ni eventos.',
-        'Devuelve únicamente JSON válido con las claves: answer, keyPoints, nextSteps, activityDraft, visualSuggestion, confidence.',
-        `Contexto interno de Edusyn:\n${this.buildEdusynKnowledgeContext()}`,
-      ].join(' ');
+      const systemInstruction = this.buildQuizSystemPrompt(request);
 
       const userPrompt = [
         `Pregunta del docente: ${request.question}`,
