@@ -1070,33 +1070,30 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         answer: answerValue,
         responseTimeMs,
       })
-      // Buffer the result — don't reveal yet, wait for QUESTION_CLOSED
-      pendingResultRef.current = data
-      
-      // For ASYNC_HOME: if QUESTION_CLOSED SSE doesn't arrive within 3s,
-      // reveal the result directly so the student can use the manual advance button
+      // For ASYNC_HOME: reveal result immediately — don't wait for QUESTION_CLOSED SSE.
+      // The student has their own session, so we already have the result from the answer() response.
       if (!isTeacher && deliveryModeRef.current === 'ASYNC_HOME') {
-        setTimeout(() => {
-          // Only reveal if we're still stuck on 'question' phase (QUESTION_CLOSED didn't arrive)
-          if (phaseRef.current === 'question' && pendingResultRef.current) {
-            const result = pendingResultRef.current
-            setAnswerResult(result)
-            if (result.isCorrect) {
-              if (soundsOn) playSound('correct')
-              fireConfetti('correct')
-              setStreak(prev => prev + 1)
-            } else {
-              if (soundsOn) playSound('incorrect')
-              setStreak(0)
-            }
-            pendingResultRef.current = null
-            stopTimer()
-            stopMusic()
-            setPhase('answer_reveal')
-            // Fetch per-question ranking after revealing result
-            if (currentQuestion?.questionId) fetchQuestionRanking(currentQuestion.questionId)
-          }
-        }, 3000)
+        setAnswerResult(data)
+        if (data.isCorrect) {
+          if (soundsOn) playSound('correct')
+          fireConfetti('correct')
+          setStreak(prev => prev + 1)
+        } else {
+          if (soundsOn) playSound('incorrect')
+          setStreak(0)
+        }
+        // Also set correctAnswer from the response if available
+        if (data.correctAnswer) setCorrectAnswer(data.correctAnswer)
+        if (data.explanation) setExplanation(data.explanation)
+        pendingResultRef.current = null
+        stopTimer()
+        stopMusic()
+        setPhase('answer_reveal')
+        // Fetch per-question ranking
+        if (currentQuestion?.questionId) fetchQuestionRanking(currentQuestion.questionId)
+      } else {
+        // SYNC live quiz: buffer result, wait for teacher's QUESTION_CLOSED event
+        pendingResultRef.current = data
       }
     } catch (err: any) {
       pendingResultRef.current = { isCorrect: false, points: 0 }
