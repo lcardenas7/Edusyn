@@ -14,6 +14,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { SkipTenantCheck } from '../auth/decorators/skip-tenant-check.decorator';
 import { ApdService } from './apd.service';
 import { ApdAlertsService } from './apd-alerts.service';
 import { ApdAcademicService } from './apd-academic.service';
@@ -569,6 +570,7 @@ export class ApdController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Post('ai/valeria')
+  @SkipTenantCheck()
   @Roles(
     'SUPERADMIN',
     'SUPER_ADMIN',

@@ -429,12 +429,59 @@ export class ApdAiService implements IApdAiService {
     };
   }
 
+  /**
+   * Extrae el tema principal de la pregunta del usuario.
+   * Busca patrones como "sobre X", "de X", "tema X", etc.
+   */
+  private extractTopicFromQuestion(question: string): string | undefined {
+    const q = question.toLowerCase();
+    
+    // Patrones comunes para extraer el tema
+    const patterns = [
+      /(?:quiz|examen|cuestionario|evaluaci[oó]n|prueba|preguntas?)\s+(?:sobre|de|acerca de|del tema)\s+(.+?)(?:\s+(?:para|con|de\s+\d+|,|\.|$))/i,
+      /(?:sobre|acerca de|del tema)\s+(.+?)(?:\s+(?:para|con|de\s+\d+|,|\.|pros|contras|ventajas|$))/i,
+      /(?:tema|t[oó]pico)\s*:?\s*(.+?)(?:\s+(?:para|con|,|\.|$))/i,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = question.match(pattern);
+      if (match?.[1]) {
+        let topic = match[1].trim();
+        // Limpiar el tema de palabras comunes al final
+        topic = topic.replace(/\s+(y|con|para|de|del|la|el|los|las)\s*$/i, '').trim();
+        if (topic.length > 2 && topic.length < 100) {
+          return topic;
+        }
+      }
+    }
+    
+    return undefined;
+  }
+
+  /**
+   * Extrae la cantidad de preguntas solicitadas de la pregunta del usuario.
+   */
+  private extractQuestionCount(question: string): number {
+    const match = question.match(/(\d+)\s*preguntas?/i);
+    if (match?.[1]) {
+      const count = parseInt(match[1], 10);
+      if (count >= 1 && count <= 50) {
+        return count;
+      }
+    }
+    return 5; // default
+  }
+
   private buildQuestionDraftSuggestion(
     request: ApdAiTeacherQuestionRequest,
     activityType?: 'QUIZ' | 'EXAM' | 'TASK',
   ): ApdAiQuestionDraft[] | undefined {
     const q = (request.question || '').toLowerCase();
-    const topicSource = request.context?.topic?.trim()
+    
+    // Priorizar tema extraído de la pregunta del usuario
+    const extractedTopic = this.extractTopicFromQuestion(request.question || '');
+    const topicSource = extractedTopic
+      || request.context?.topic?.trim()
       || request.context?.subjectName?.trim()
       || request.context?.gradeName?.trim()
       || 'el tema';
@@ -454,51 +501,175 @@ export class ApdAiService implements IApdAiService {
 
     const topicLabel = topicSource.replace(/^./, (char) => char.toUpperCase());
     const isExam = activityType === 'EXAM' || q.includes('examen') || q.includes('prueba');
+    const requestedCount = this.extractQuestionCount(request.question || '');
 
-    const questionBank: ApdAiQuestionDraft[] = [
-      {
-        type: 'MULTIPLE_CHOICE',
-        text: `¿Cuál opción describe mejor ${topicLabel}?`,
-        options: [
-          `Es un concepto clave relacionado con ${topicLabel}`,
-          'No tiene relación con el tema',
-          'Solo aplica a tareas administrativas',
-          'Es una respuesta incorrecta',
-        ],
-        correctAnswer: `Es un concepto clave relacionado con ${topicLabel}`,
-        points: 1,
-        explanation: `Sirve para comprobar comprensión básica sobre ${topicLabel}.`,
-      },
+    // Detectar subtemas específicos mencionados en la pregunta
+    const mentionsPros = q.includes('pros') || q.includes('ventajas') || q.includes('beneficios');
+    const mentionsCons = q.includes('contras') || q.includes('desventajas') || q.includes('riesgos') || q.includes('peligros');
+    const mentionsSecurity = q.includes('seguridad') || q.includes('privacidad') || q.includes('protección');
+
+    // Generar preguntas dinámicas basadas en el tema
+    const questionBank: ApdAiQuestionDraft[] = [];
+
+    // Preguntas sobre ventajas/pros
+    if (mentionsPros || (!mentionsCons && !mentionsSecurity)) {
+      questionBank.push(
+        {
+          type: 'MULTIPLE_CHOICE',
+          text: `¿Cuál es una ventaja principal de ${topicLabel}?`,
+          options: [
+            `Facilita la comunicación y el acceso a información`,
+            'No tiene ningún beneficio real',
+            'Solo sirve para perder el tiempo',
+            'Es completamente peligroso',
+          ],
+          correctAnswer: 'Facilita la comunicación y el acceso a información',
+          points: 1,
+          explanation: `Una de las principales ventajas de ${topicLabel} es mejorar la comunicación.`,
+        },
+        {
+          type: 'MULTIPLE_CHOICE',
+          text: `¿Cómo puede ${topicLabel} beneficiar el aprendizaje?`,
+          options: [
+            'Permite acceder a recursos educativos y colaborar con otros',
+            'No tiene relación con el aprendizaje',
+            'Solo distrae a los estudiantes',
+            'Está prohibido en todas las escuelas',
+          ],
+          correctAnswer: 'Permite acceder a recursos educativos y colaborar con otros',
+          points: 1,
+          explanation: `${topicLabel} puede ser una herramienta educativa valiosa cuando se usa correctamente.`,
+        },
+      );
+    }
+
+    // Preguntas sobre desventajas/contras
+    if (mentionsCons || mentionsPros) {
+      questionBank.push(
+        {
+          type: 'MULTIPLE_CHOICE',
+          text: `¿Cuál es un riesgo potencial de ${topicLabel}?`,
+          options: [
+            'Exposición a contenido inapropiado o ciberacoso',
+            'No existe ningún riesgo',
+            'Mejora automáticamente las calificaciones',
+            'Siempre es 100% seguro',
+          ],
+          correctAnswer: 'Exposición a contenido inapropiado o ciberacoso',
+          points: 1,
+          explanation: `Es importante conocer los riesgos de ${topicLabel} para usarlo de forma responsable.`,
+        },
+        {
+          type: 'MULTIPLE_CHOICE',
+          text: `¿Qué problema puede causar el uso excesivo de ${topicLabel}?`,
+          options: [
+            'Adicción, aislamiento social y problemas de sueño',
+            'Ningún problema, siempre es beneficioso',
+            'Mejora la salud física',
+            'Aumenta la concentración en clase',
+          ],
+          correctAnswer: 'Adicción, aislamiento social y problemas de sueño',
+          points: 1,
+          explanation: 'El uso excesivo puede afectar la salud mental y física.',
+        },
+      );
+    }
+
+    // Preguntas sobre seguridad
+    if (mentionsSecurity || mentionsCons) {
+      questionBank.push(
+        {
+          type: 'MULTIPLE_CHOICE',
+          text: `¿Cuál es una buena práctica de seguridad en ${topicLabel}?`,
+          options: [
+            'Usar contraseñas fuertes y no compartir información personal',
+            'Compartir la contraseña con todos los amigos',
+            'Publicar la dirección de casa',
+            'Aceptar solicitudes de desconocidos',
+          ],
+          correctAnswer: 'Usar contraseñas fuertes y no compartir información personal',
+          points: 1,
+          explanation: 'Proteger la información personal es fundamental para la seguridad en línea.',
+        },
+        {
+          type: 'MULTIPLE_CHOICE',
+          text: `¿Qué debes hacer si un desconocido te contacta en ${topicLabel}?`,
+          options: [
+            'No responder y contarle a un adulto de confianza',
+            'Darle tu número de teléfono',
+            'Aceptar encontrarte en persona',
+            'Compartir fotos personales',
+          ],
+          correctAnswer: 'No responder y contarle a un adulto de confianza',
+          points: 1,
+          explanation: 'Siempre debemos ser cautelosos con personas desconocidas en internet.',
+        },
+        {
+          type: 'MULTIPLE_CHOICE',
+          text: `¿Qué es el ciberacoso?`,
+          options: [
+            'Usar internet para molestar, amenazar o humillar a alguien',
+            'Un juego de computadora',
+            'Una forma de hacer amigos',
+            'Un tipo de red social',
+          ],
+          correctAnswer: 'Usar internet para molestar, amenazar o humillar a alguien',
+          points: 1,
+          explanation: 'El ciberacoso es un problema serio que debemos prevenir y denunciar.',
+        },
+      );
+    }
+
+    // Preguntas generales sobre el tema
+    questionBank.push(
       {
         type: 'TRUE_FALSE',
-        text: `Verdadero o falso: al trabajar ${topicLabel}, conviene usar ejemplos y práctica guiada.`,
+        text: `Verdadero o falso: ${topicLabel} puede tener tanto aspectos positivos como negativos.`,
         options: ['Verdadero', 'Falso'],
         correctAnswer: 'Verdadero',
         points: 1,
-        explanation: 'Refuerza la aplicación del contenido con apoyo pedagógico.',
+        explanation: `Como toda herramienta, ${topicLabel} tiene ventajas y desventajas según cómo se use.`,
       },
       {
         type: 'MULTIPLE_CHOICE',
-        text: `¿Qué acción ayuda más a reforzar ${topicLabel}?`,
+        text: `¿Cuál es la mejor actitud frente a ${topicLabel}?`,
         options: [
-          'Resolver un ejercicio con acompañamiento',
-          'Evitar revisar el contenido',
-          'Responder al azar sin leer',
-          'Saltarse la explicación inicial',
+          'Usarlo de forma responsable y consciente',
+          'Evitarlo completamente',
+          'Usarlo sin ningún límite',
+          'Ignorar los consejos de los adultos',
         ],
-        correctAnswer: 'Resolver un ejercicio con acompañamiento',
+        correctAnswer: 'Usarlo de forma responsable y consciente',
         points: 1,
-        explanation: `La práctica guiada ayuda a consolidar ${topicLabel}.`,
+        explanation: 'El uso responsable es la clave para aprovechar los beneficios y evitar los riesgos.',
       },
-      ...(isExam ? [{
-        type: 'SHORT_ANSWER' as const,
-        text: `Explica con tus palabras un aspecto importante de ${topicLabel}.`,
+      {
+        type: 'MULTIPLE_CHOICE',
+        text: `¿Quién debe supervisar el uso de ${topicLabel} en menores de edad?`,
+        options: [
+          'Los padres o adultos responsables',
+          'Nadie, los niños pueden manejarlo solos',
+          'Solo los amigos',
+          'Las empresas de internet',
+        ],
+        correctAnswer: 'Los padres o adultos responsables',
+        points: 1,
+        explanation: 'La supervisión adulta es importante para garantizar un uso seguro.',
+      },
+    );
+
+    // Pregunta abierta para exámenes
+    if (isExam) {
+      questionBank.push({
+        type: 'SHORT_ANSWER',
+        text: `Explica con tus palabras cómo usar ${topicLabel} de forma segura y responsable.`,
         points: 2,
         explanation: 'Pregunta abierta para valorar comprensión y argumentación.',
-      }] : []),
-    ];
+      });
+    }
 
-    return questionBank;
+    // Limitar al número solicitado
+    return questionBank.slice(0, requestedCount);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -816,7 +987,17 @@ export class ApdAiService implements IApdAiService {
         'Puedes responder preguntas generales de cualquier tema, y también consultas sobre Edusyn, pedagogía, administración escolar y Classroom.',
         'Cuando la pregunta sea sobre Edusyn o sobre la pantalla actual, prioriza el contexto interno de la plataforma y de la pantalla.',
         'Si el contexto aporta pageName, pageSummary o currentPath, úsalos para ubicarte y evita responder de forma genérica.',
-        'Si la petición busca crear o mejorar una actividad, devuelve además un activityDraft con título, descripción, configuración lista para Classroom y, cuando aplique, preguntas sugeridas.',
+        '',
+        '### GENERACIÓN DE QUIZZES Y EXÁMENES ###',
+        'Si la petición busca crear un quiz o examen con preguntas:',
+        '1. Extrae el TEMA EXACTO que el usuario menciona (ej: "redes sociales", "fracciones", "la célula").',
+        '2. Extrae la CANTIDAD de preguntas solicitadas (ej: "10 preguntas", "5 preguntas"). Si no especifica, genera 5.',
+        '3. Extrae el GRADO o nivel educativo si lo menciona (ej: "sexto grado", "primaria").',
+        '4. Genera preguntas ESPECÍFICAS sobre ese tema, NO preguntas genéricas sobre Classroom o Edusyn.',
+        '5. Usa formato MULTIPLE_CHOICE con 4 opciones (A, B, C, D) a menos que pida otro formato.',
+        '6. Incluye correctAnswer con el texto exacto de la opción correcta.',
+        '7. Cada pregunta debe tener: type, text, options (array de 4 strings), correctAnswer, points (1-2), explanation.',
+        '',
         'Cuando la pregunta no sea sobre Edusyn, responde como una IA general útil y honesta, sin inventar hechos.',
         'Ayudas a planear quizzes, exámenes, guías y logros, pero no decides notas finales ni alteras flujos numéricos críticos.',
         'Si se solicita apoyo visual, propone SVG simple y seguro, sin scripts ni eventos.',

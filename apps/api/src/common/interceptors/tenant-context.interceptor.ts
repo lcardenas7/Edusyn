@@ -4,10 +4,12 @@ import {
   ExecutionContext,
   CallHandler,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { PrismaClient } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { tenantContext } from '../../prisma/tenant-context';
+import { SKIP_TENANT_CHECK_KEY } from '../../modules/auth/decorators/skip-tenant-check.decorator';
 
 /**
  * Interceptor global que ejecuta CADA request autenticado dentro de una
@@ -29,7 +31,10 @@ import { tenantContext } from '../../prisma/tenant-context';
  */
 @Injectable()
 export class TenantContextInterceptor implements NestInterceptor {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly reflector: Reflector,
+  ) {}
 
   intercept(
     context: ExecutionContext,
@@ -37,6 +42,14 @@ export class TenantContextInterceptor implements NestInterceptor {
   ): Observable<any> {
     const request = context.switchToHttp().getRequest();
     const user = request?.user;
+    const skipTransaction = this.reflector.getAllAndOverride<boolean>(SKIP_TENANT_CHECK_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (skipTransaction) {
+      return next.handle();
+    }
 
     if (!user?.institutionId) {
       // No tenant context needed (login, register, public routes, superadmin)
@@ -78,7 +91,7 @@ export class TenantContextInterceptor implements NestInterceptor {
           },
           {
             maxWait: 10000,  // 10s max wait for a connection from pool
-            timeout: 60000,  // 60s transaction timeout (file uploads may take longer)
+            timeout: 120000,  // 120s transaction timeout for slower DB-heavy operations
           },
         )
         .then(() => {
