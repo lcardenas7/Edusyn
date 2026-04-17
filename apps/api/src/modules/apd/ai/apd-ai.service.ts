@@ -73,10 +73,10 @@ export class ApdAiService implements IApdAiService {
 
   private getDefaultModel(provider: string): string {
     switch (provider) {
-      // OpenRouter: usar Gemma 4 31B (gratis, 31B params, excelente para contenido educativo)
-      case 'OPENROUTER': return 'google/gemma-4-31b-it:free';
+      // OpenRouter: usar Meta Llama 3.3 70B (gratis, 70B params, estable y de alta calidad)
+      case 'OPENROUTER': return 'meta-llama/llama-3.3-70b-instruct:free';
       case 'XAI': return 'grok-3-mini';
-      // Groq: usar Llama 3.3 70B para mejor calidad (si disponible) o mantener 8B
+      // Groq: usar Llama 3.3 70B para mejor calidad
       case 'GROQ': return 'llama-3.3-70b-versatile';
       case 'GEMINI': return 'gemini-2.0-flash';
       default: return 'gemini-2.0-flash';
