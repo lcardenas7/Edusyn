@@ -219,7 +219,7 @@ export default function ValeriaAssistant() {
                 </div>
               </div>
             ))}
-            {activityDraft && launchOptions?.onCreateActivity && (
+            {activityDraft && (
               <div className="rounded-2xl border border-violet-200 bg-violet-50 px-3 py-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">Actividad sugerida</p>
                 <p className="mt-1 text-sm font-semibold text-slate-800">{activityDraft.title}</p>
@@ -231,13 +231,19 @@ export default function ValeriaAssistant() {
                       {activityDraft.questions.length} pregunta{activityDraft.questions.length === 1 ? '' : 's'} listas
                     </span>
                   )}
-                  <button
-                    type="button"
-                    onClick={createActivityFromDraft}
-                    className="rounded-full bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700"
-                  >
-                    Crear actividad con Valeria
-                  </button>
+                  {launchOptions?.onCreateActivity ? (
+                    <button
+                      type="button"
+                      onClick={createActivityFromDraft}
+                      className="rounded-full bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700"
+                    >
+                      Crear actividad con Valeria
+                    </button>
+                  ) : (
+                    <p className="text-[11px] text-amber-600 font-medium">
+                      Abre Valeria desde Classroom para crear la actividad directamente
+                    </p>
+                  )}
                 </div>
                 {Array.isArray(activityDraft.questions) && activityDraft.questions.length > 0 && (
                   <div className="mt-2 space-y-1 rounded-xl bg-white/70 p-2 text-xs text-slate-600">

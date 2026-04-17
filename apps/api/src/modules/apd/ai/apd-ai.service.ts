@@ -1168,8 +1168,10 @@ export class ApdAiService implements IApdAiService {
     for (const line of text.split('\n')) {
       const trimmed = line.trim();
       // Nueva pregunta: línea que empieza con "N." o "N)" o "N-"
-      if (/^\d+[\.\)\-]/.test(trimmed) && currentBlock.length > 0) {
-        blocks.push(currentBlock);
+      if (/^\d+[\.\)\-]/.test(trimmed)) {
+        if (currentBlock.trim()) {
+          blocks.push(currentBlock);
+        }
         currentBlock = '';
       }
       currentBlock += line + '\n';
