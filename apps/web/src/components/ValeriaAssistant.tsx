@@ -226,6 +226,11 @@ export default function ValeriaAssistant() {
                 <p className="mt-1 text-xs text-slate-600 line-clamp-3">{activityDraft.description}</p>
                 <div className="mt-2 flex items-center gap-2 flex-wrap">
                   <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-violet-700 border border-violet-200">{activityDraft.type || 'TASK'}</span>
+                  {Array.isArray(activityDraft.questions) && activityDraft.questions.length > 0 && (
+                    <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-slate-600 border border-slate-200">
+                      {activityDraft.questions.length} pregunta{activityDraft.questions.length === 1 ? '' : 's'} listas
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={createActivityFromDraft}
@@ -234,6 +239,16 @@ export default function ValeriaAssistant() {
                     Crear actividad con Valeria
                   </button>
                 </div>
+                {Array.isArray(activityDraft.questions) && activityDraft.questions.length > 0 && (
+                  <div className="mt-2 space-y-1 rounded-xl bg-white/70 p-2 text-xs text-slate-600">
+                    {activityDraft.questions.slice(0, 3).map((question, index) => (
+                      <p key={`${question.text}-${index}`} className="line-clamp-2">• {question.text}</p>
+                    ))}
+                    {activityDraft.questions.length > 3 && (
+                      <p className="text-[11px] text-slate-400">y {activityDraft.questions.length - 3} pregunta{activityDraft.questions.length - 3 === 1 ? '' : 's'} más</p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
             {loading && (

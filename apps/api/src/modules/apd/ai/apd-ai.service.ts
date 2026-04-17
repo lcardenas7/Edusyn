@@ -13,6 +13,7 @@ import {
   ApdAiRecommendAdjustmentsResponse,
   ApdAiTeacherQuestionRequest,
   ApdAiTeacherQuestionResponse,
+  ApdAiQuestionDraft,
   ApdAiServiceConfig,
 } from './apd-ai.interfaces';
 
@@ -368,6 +369,7 @@ export class ApdAiService implements IApdAiService {
       'No respondas como IA genérica si la intención del usuario es usar un módulo de la plataforma.',
       'En Classroom, el flujo normal es: crear actividad en borrador -> agregar preguntas o guía -> revisar -> publicar o programar.',
       'Los quizzes y exámenes pueden publicarse como borrador, Live Quiz o Quiz en Casa.',
+      'Si la petición es crear un quiz o un examen, incluye también una lista de preguntas dentro de activityDraft.questions y procura que sean editables y listas para crear en Classroom.',
       'Las imágenes y apoyos visuales se colocan en el campo de imagen de la pregunta o del contexto; si el docente solicita SVG, debe ser simple, seguro y sin scripts.',
       'En notas y calificaciones, normalmente se trabaja por grupo, asignatura y período; el docente ingresa valoraciones, logros o descriptores y el sistema calcula promedios según la configuración institucional.',
       'En logros, explica cómo registrarlos o consultarlos por asignatura, período o reporte, y menciona que pueden aparecer en boletines o reportes académicos.',
@@ -412,6 +414,8 @@ export class ApdAiService implements IApdAiService {
           : 'Sugerencia: define instrucciones claras, criterios de entrega y un producto final simple para el estudiante.',
     ].join('\n');
 
+    const questions = this.buildQuestionDraftSuggestion(request, type);
+
     return {
       title,
       description,
@@ -421,7 +425,80 @@ export class ApdAiService implements IApdAiService {
       shuffleQuestions: isExam || isQuiz,
       showResults: true,
       maxAttempts: '1',
+      questions,
     };
+  }
+
+  private buildQuestionDraftSuggestion(
+    request: ApdAiTeacherQuestionRequest,
+    activityType?: 'QUIZ' | 'EXAM' | 'TASK',
+  ): ApdAiQuestionDraft[] | undefined {
+    const q = (request.question || '').toLowerCase();
+    const topicSource = request.context?.topic?.trim()
+      || request.context?.subjectName?.trim()
+      || request.context?.gradeName?.trim()
+      || 'el tema';
+
+    const shouldGenerate = activityType === 'QUIZ'
+      || activityType === 'EXAM'
+      || q.includes('quiz')
+      || q.includes('examen')
+      || q.includes('cuestionario')
+      || q.includes('pregunta')
+      || q.includes('evaluación')
+      || q.includes('prueba');
+
+    if (!shouldGenerate) {
+      return undefined;
+    }
+
+    const topicLabel = topicSource.replace(/^./, (char) => char.toUpperCase());
+    const isExam = activityType === 'EXAM' || q.includes('examen') || q.includes('prueba');
+
+    const questionBank: ApdAiQuestionDraft[] = [
+      {
+        type: 'MULTIPLE_CHOICE',
+        text: `¿Cuál opción describe mejor ${topicLabel}?`,
+        options: [
+          `Es un concepto clave relacionado con ${topicLabel}`,
+          'No tiene relación con el tema',
+          'Solo aplica a tareas administrativas',
+          'Es una respuesta incorrecta',
+        ],
+        correctAnswer: `Es un concepto clave relacionado con ${topicLabel}`,
+        points: 1,
+        explanation: `Sirve para comprobar comprensión básica sobre ${topicLabel}.`,
+      },
+      {
+        type: 'TRUE_FALSE',
+        text: `Verdadero o falso: al trabajar ${topicLabel}, conviene usar ejemplos y práctica guiada.`,
+        options: ['Verdadero', 'Falso'],
+        correctAnswer: 'Verdadero',
+        points: 1,
+        explanation: 'Refuerza la aplicación del contenido con apoyo pedagógico.',
+      },
+      {
+        type: 'MULTIPLE_CHOICE',
+        text: `¿Qué acción ayuda más a reforzar ${topicLabel}?`,
+        options: [
+          'Resolver un ejercicio con acompañamiento',
+          'Evitar revisar el contenido',
+          'Responder al azar sin leer',
+          'Saltarse la explicación inicial',
+        ],
+        correctAnswer: 'Resolver un ejercicio con acompañamiento',
+        points: 1,
+        explanation: `La práctica guiada ayuda a consolidar ${topicLabel}.`,
+      },
+      ...(isExam ? [{
+        type: 'SHORT_ANSWER' as const,
+        text: `Explica con tus palabras un aspecto importante de ${topicLabel}.`,
+        points: 2,
+        explanation: 'Pregunta abierta para valorar comprensión y argumentación.',
+      }] : []),
+    ];
+
+    return questionBank;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -739,7 +816,7 @@ export class ApdAiService implements IApdAiService {
         'Puedes responder preguntas generales de cualquier tema, y también consultas sobre Edusyn, pedagogía, administración escolar y Classroom.',
         'Cuando la pregunta sea sobre Edusyn o sobre la pantalla actual, prioriza el contexto interno de la plataforma y de la pantalla.',
         'Si el contexto aporta pageName, pageSummary o currentPath, úsalos para ubicarte y evita responder de forma genérica.',
-        'Si la petición busca crear o mejorar una actividad, devuelve además un activityDraft con título, descripción y configuración lista para Classroom.',
+        'Si la petición busca crear o mejorar una actividad, devuelve además un activityDraft con título, descripción, configuración lista para Classroom y, cuando aplique, preguntas sugeridas.',
         'Cuando la pregunta no sea sobre Edusyn, responde como una IA general útil y honesta, sin inventar hechos.',
         'Ayudas a planear quizzes, exámenes, guías y logros, pero no decides notas finales ni alteras flujos numéricos críticos.',
         'Si se solicita apoyo visual, propone SVG simple y seguro, sin scripts ni eventos.',
@@ -768,6 +845,9 @@ export class ApdAiService implements IApdAiService {
       );
 
       const suggestedDraft = this.buildActivityDraftSuggestion(request);
+      const suggestedQuestions = suggestedDraft?.questions?.length
+        ? suggestedDraft.questions
+        : this.buildQuestionDraftSuggestion(request, suggestedDraft?.type as 'QUIZ' | 'EXAM' | 'TASK' | undefined);
       const activityDraft = result.activityDraft?.title?.trim() || suggestedDraft
         ? {
             title: result.activityDraft?.title?.trim() || suggestedDraft?.title || 'Actividad sugerida',
@@ -779,6 +859,7 @@ export class ApdAiService implements IApdAiService {
             showResults: result.activityDraft?.showResults ?? suggestedDraft?.showResults,
             maxAttempts: result.activityDraft?.maxAttempts || suggestedDraft?.maxAttempts,
             timeLimitMinutes: result.activityDraft?.timeLimitMinutes || suggestedDraft?.timeLimitMinutes,
+            questions: result.activityDraft?.questions?.length ? result.activityDraft.questions : suggestedQuestions,
           }
         : undefined;
 
@@ -808,6 +889,9 @@ export class ApdAiService implements IApdAiService {
   ): ApdAiTeacherQuestionResponse {
     const q = (request.question || '').toLowerCase().trim();
     const activityDraft = this.buildActivityDraftSuggestion(request);
+    const questionDrafts = activityDraft?.questions?.length
+      ? activityDraft.questions
+      : this.buildQuestionDraftSuggestion(request, activityDraft?.type as 'QUIZ' | 'EXAM' | 'TASK' | undefined);
 
     // Respuestas contextuales básicas cuando Gemini no está habilitado
     if (q.includes('edusyn') || q.includes('qué puedo hacer') || q.includes('funcionalidades')) {
@@ -822,7 +906,12 @@ export class ApdAiService implements IApdAiService {
       return {
         answer: `En **Classroom** puedes:\n\n1. **Crear actividades**: Tareas, quizzes, exámenes, guías y autoevaluaciones\n2. **Live Quiz**: Sesiones en tiempo real donde los estudiantes responden simultáneamente\n3. **Quiz en Casa**: Los estudiantes resuelven a su ritmo con fecha límite\n4. **Preguntas variadas**: Opción múltiple, verdadero/falso, completar, emparejar\n5. **Sincronizar notas**: Enviar calificaciones directamente a la planilla\n\nPara crear un quiz: Entra a un aula → Actividades → Nueva Actividad → Selecciona tipo Quiz/Examen → Agrega preguntas → Publica.`,
         keyPoints: [],
-        activityDraft,
+        activityDraft: activityDraft
+          ? {
+              ...activityDraft,
+              questions: questionDrafts,
+            }
+          : undefined,
         confidence: 0.9,
       };
     }

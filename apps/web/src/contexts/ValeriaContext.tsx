@@ -22,6 +22,20 @@ export interface ValeriaActivityDraft {
   showResults?: boolean
   maxAttempts?: string
   timeLimitMinutes?: string
+  questions?: ValeriaQuestionDraft[]
+}
+
+export interface ValeriaQuestionDraft {
+  type?: 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER'
+  text: string
+  options?: string[]
+  correctAnswer?: string
+  points?: number
+  explanation?: string
+  imageUrl?: string
+  subjectArea?: string
+  competency?: string
+  contextId?: string
 }
 
 export interface ValeriaLaunchOptions {

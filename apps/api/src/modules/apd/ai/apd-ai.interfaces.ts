@@ -176,6 +176,19 @@ export interface ApdAiTeacherQuestionRequest {
   visualPlacement?: 'QUESTION_IMAGE' | 'CONTEXT_IMAGE' | 'INLINE';
 }
 
+export interface ApdAiQuestionDraft {
+  type?: 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER';
+  text: string;
+  options?: string[];
+  correctAnswer?: string;
+  points?: number;
+  explanation?: string;
+  imageUrl?: string;
+  subjectArea?: string;
+  competency?: string;
+  contextId?: string;
+}
+
 export interface ApdAiTeacherQuestionResponse {
   answer: string;
   keyPoints: string[];
@@ -190,6 +203,7 @@ export interface ApdAiTeacherQuestionResponse {
     showResults?: boolean;
     maxAttempts?: string;
     timeLimitMinutes?: string;
+    questions?: ApdAiQuestionDraft[];
   };
   visualSuggestion?: {
     kind: 'SVG' | 'IMAGE' | 'NONE';

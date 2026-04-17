@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { type ValeriaActivityDraft, valeriaAssistantBridge } from '../contexts/ValeriaContext'
+import { type ValeriaActivityDraft, type ValeriaQuestionDraft, valeriaAssistantBridge } from '../contexts/ValeriaContext'
 import { classroomApi, storageApi, liveSessionApi, apdApi } from '../lib/api'
 import LiveQuiz from '../components/LiveQuiz'
 import { CreateSelfAssessmentForm, StudentSelfAssessment, SelfAssessmentResults } from '../components/SelfAssessmentUI'
@@ -1964,6 +1964,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [valeriaResponse, setValeriaResponse] = useState<any>(null)
   const [valeriaIncludeVisuals, setValeriaIncludeVisuals] = useState(true)
   const [valeriaVisualPlacement, setValeriaVisualPlacement] = useState<'QUESTION_IMAGE' | 'CONTEXT_IMAGE' | 'INLINE'>('QUESTION_IMAGE')
+  const [pendingValeriaQuestions, setPendingValeriaQuestions] = useState<ValeriaQuestionDraft[]>([])
 
   // Gradebook sync
   const [gradebookConfig, setGradebookConfig] = useState<any>(null)
@@ -2042,7 +2043,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const applyValeriaActivityDraft = (draft: ValeriaActivityDraft) => {
     const normalizedType = draft.type === 'EXAM'
       ? 'EXAM'
-      : draft.type === 'QUIZ'
+      : draft.type === 'QUIZ' || (Array.isArray(draft.questions) && draft.questions.length > 0)
         ? 'QUIZ'
         : 'TASK'
 
@@ -2059,10 +2060,49 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       maxAttempts: draft.maxAttempts || prev.maxAttempts || '1',
       timeLimitMinutes: draft.timeLimitMinutes || prev.timeLimitMinutes || '',
     }))
+    setPendingValeriaQuestions(Array.isArray(draft.questions) ? draft.questions : [])
     setShowAddQuestion(false)
     setEditingQuestion(null)
     setShowCreate(true)
     setShowValeriaModal(false)
+  }
+
+  const normalizeValeriaQuestionType = (
+    type?: string,
+  ): 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER' => {
+    if (type === 'TRUE_FALSE') return 'TRUE_FALSE'
+    if (type === 'SHORT_ANSWER') return 'SHORT_ANSWER'
+    return 'MULTIPLE_CHOICE'
+  }
+
+  const createValeriaQuestions = async (activityId: string, drafts: ValeriaQuestionDraft[]) => {
+    for (const question of drafts) {
+      const normalizedType = normalizeValeriaQuestionType(question.type)
+      const options = Array.isArray(question.options) ? question.options.map((option) => option.trim()).filter(Boolean) : []
+      const payload: any = {
+        type: normalizedType,
+        text: question.text,
+        points: question.points ?? 1,
+        explanation: question.explanation || undefined,
+        imageUrl: question.imageUrl || undefined,
+        subjectArea: question.subjectArea || undefined,
+        competency: question.competency || undefined,
+        contextId: question.contextId || undefined,
+      }
+
+      if (normalizedType === 'TRUE_FALSE') {
+        payload.options = ['Verdadero', 'Falso']
+        payload.correctAnswer = question.correctAnswer || 'Verdadero'
+      } else if (normalizedType === 'MULTIPLE_CHOICE') {
+        const normalizedOptions = options.length >= 2 ? options : ['Opción 1', 'Opción 2']
+        payload.options = normalizedOptions
+        payload.correctAnswer = question.correctAnswer || normalizedOptions[0]
+      } else if (question.correctAnswer) {
+        payload.correctAnswer = question.correctAnswer
+      }
+
+      await classroomApi.addQuestion(activityId, payload)
+    }
   }
 
   const askValeria = async (question: string) => {
@@ -2106,7 +2146,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     const defaultPrompt = selectedActivity && isQuizEditorType(selectedActivity.type) && showAddQuestion
       ? `Ayúdame a mejorar la pregunta que estoy creando en Classroom. Dame un borrador pedagógico claro, dime si conviene usar una imagen SVG o un contexto visual, y sugiere cómo ubicarla en el campo de imagen.`
       : selectedActivity && isQuizEditorType(selectedActivity.type)
-      ? `Explícame cómo debo preparar ${getQuizTypeLabel(selectedActivity.type)} de "${selectedActivity.title}" en Classroom. Dame el flujo recomendado, si conviene borrador, Live Quiz o Quiz en Casa, y un consejo visual si aplica.`
+      ? `Explícame cómo debo preparar ${getQuizTypeLabel(selectedActivity.type)} de "${selectedActivity.title}" en Classroom. Dame el flujo recomendado, si conviene borrador, Live Quiz o Quiz en Casa, y además sugiéreme preguntas listas para crear en la actividad.`
       : `Explícame flujos, instructivos y recomendaciones útiles de Edusyn para docentes. Incluye quién creó la plataforma, cómo funciona Classroom y sugerencias prácticas.`
 
     return {
@@ -2136,12 +2176,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       setCreating(true)
       let attachmentUrl: string | undefined
       let attachmentName: string | undefined
+      const generatedQuestions = pendingValeriaQuestions
       if (attachFile) {
         const { data } = await classroomApi.uploadMaterial(attachFile)
         attachmentUrl = data.data.path || data.data.url
         attachmentName = attachFile.name
       }
-      await classroomApi.createActivity(classroom.id, {
+      const { data: createdActivity } = await classroomApi.createActivity(classroom.id, {
         sectionId: form.sectionId, type: form.type, title: form.title,
         description: form.description || undefined,
         maxScore: parseFloat(form.maxScore) || 5.0,
@@ -2153,10 +2194,19 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         maxAttempts: parseInt(form.maxAttempts) || 1,
         timeLimitMinutes: form.timeLimitMinutes ? parseInt(form.timeLimitMinutes) : undefined,
       } as any)
+      const isQuizDraft = isQuizEditorType(form.type)
+      if (isQuizDraft && generatedQuestions.length > 0) {
+        await createValeriaQuestions(createdActivity.id, generatedQuestions)
+      }
       setForm({ title: '', description: '', sectionId: '', maxScore: '5.0', dueDate: '', allowLateSubmit: false, type: 'TASK', shuffleQuestions: false, showResults: true, maxAttempts: '1', timeLimitMinutes: '' })
       setAttachFile(null)
+      setPendingValeriaQuestions([])
       setShowCreate(false)
       loadActivities()
+
+      if (isQuizDraft) {
+        await openActivity(createdActivity)
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al crear actividad')
     } finally { setCreating(false) }
@@ -4885,6 +4935,36 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                             </ul>
                           </div>
                         )}
+                        {valeriaResponse.activityDraft && (
+                          <div className="rounded-2xl border border-violet-200 bg-violet-50 p-3 space-y-2">
+                            <div className="flex items-center justify-between gap-3 flex-wrap">
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">Borrador de actividad</p>
+                                <p className="text-sm font-semibold text-slate-800">{valeriaResponse.activityDraft.title}</p>
+                              </div>
+                              <button
+                                onClick={() => applyValeriaActivityDraft(valeriaResponse.activityDraft)}
+                                className="px-3 py-2 text-xs rounded-lg bg-violet-600 text-white hover:bg-violet-700"
+                              >
+                                Crear con este borrador
+                              </button>
+                            </div>
+                            <p className="text-xs text-slate-600 whitespace-pre-line">{valeriaResponse.activityDraft.description}</p>
+                            {Array.isArray(valeriaResponse.activityDraft.questions) && valeriaResponse.activityDraft.questions.length > 0 && (
+                              <div className="space-y-1 text-xs text-slate-600">
+                                <p className="font-semibold text-slate-700">
+                                  {valeriaResponse.activityDraft.questions.length} pregunta{valeriaResponse.activityDraft.questions.length === 1 ? '' : 's'} sugeridas
+                                </p>
+                                {valeriaResponse.activityDraft.questions.slice(0, 3).map((question: any, index: number) => (
+                                  <p key={`${question.text}-${index}`} className="line-clamp-2">• {question.text}</p>
+                                ))}
+                                {valeriaResponse.activityDraft.questions.length > 3 && (
+                                  <p className="text-[11px] text-slate-400">y {valeriaResponse.activityDraft.questions.length - 3} pregunta{valeriaResponse.activityDraft.questions.length - 3 === 1 ? '' : 's'} más</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
                         <div className="flex flex-wrap gap-2 pt-1">
                           <button onClick={copyValeriaAnswer} className="px-3 py-2 text-xs rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center gap-2">
                             <Copy className="w-3.5 h-3.5" /> Copiar
@@ -5017,7 +5097,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               <p className="text-sm text-purple-500">Las preguntas se agregan después de crear el quiz</p>
             )}
             <div className="flex gap-3">
-              <button onClick={() => { setShowCreate(false); setAttachFile(null) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
+              <button onClick={() => { setShowCreate(false); setAttachFile(null); setPendingValeriaQuestions([]) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
               <button onClick={handleCreate} disabled={!form.title.trim() || !form.sectionId || creating} className={`px-5 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2 ${isQuizEditorType(form.type) ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`} style={{ minHeight: '44px' }}>
                 {creating && <Loader2 className="w-4 h-4 animate-spin" />}
                 {creating ? 'Creando...' : `Crear ${form.type === 'TASK' ? 'Tarea' : form.type === 'QUIZ' ? 'Quiz' : form.type === 'EXAM' ? 'Examen' : form.type === 'LIVE_QUIZ' ? 'Live Quiz' : form.type === 'HOME_QUIZ' ? 'Quiz en Casa' : form.type === 'ICFES_SIMULATOR' ? 'Simulacro' : 'Actividad'}`}
