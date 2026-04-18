@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
 import { 
   GraduationCap, 
   Users, 
@@ -21,14 +22,33 @@ import {
   Phone,
   MapPin,
   Sparkles,
-  Play,
   MessageCircle,
-  ArrowUpRight
+  Zap,
+  Target,
+  Layers,
+  Send
 } from 'lucide-react'
 
 export default function LandingPage() {
+  // Smooth scroll para enlaces internos
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      const anchor = target.closest('a[href^="#"]')
+      if (anchor) {
+        e.preventDefault()
+        const id = anchor.getAttribute('href')?.slice(1)
+        if (id) {
+          document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }
+    }
+    document.addEventListener('click', handleClick)
+    return () => document.removeEventListener('click', handleClick)
+  }, [])
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white scroll-smooth">
       {/* Header/Navbar */}
       <header className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-b border-slate-100 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -184,119 +204,133 @@ export default function LandingPage() {
       </section>
 
       {/* Promo / Demo Section */}
-      <section id="about" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+      <section id="about" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white via-blue-50/30 to-white overflow-hidden">
         <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-amber-100 text-amber-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
-                <Sparkles className="w-4 h-4" />
-                Conoce EduSyn en una sola mirada
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-6">
-                Una plataforma pensada para que la institución se vea, se entienda y funcione mejor
-              </h2>
-              <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                EduSyn centraliza la gestión académica y administrativa para que tu equipo tenga más control,
-                menos reprocesos y mejor comunicación con toda la comunidad educativa.
-              </p>
+          {/* Header */}
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 px-5 py-2.5 rounded-full text-sm font-semibold mb-6 shadow-sm">
+              <Sparkles className="w-4 h-4 animate-pulse" />
+              Descubre EduSyn
+            </div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-6 leading-tight">
+              La plataforma que tu institución<br className="hidden sm:block" />
+              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">necesita para crecer</span>
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Centraliza la gestión académica y administrativa. Más control, menos reprocesos, mejor comunicación.
+            </p>
+          </div>
 
-              <div className="space-y-4">
-                <div className="flex gap-4 p-4 rounded-2xl border border-slate-200 bg-slate-50">
-                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <BookOpen className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900 mb-1">Qué es</h3>
-                    <p className="text-slate-600">Un sistema de gestión educativa que conecta académica, evaluación, asistencia, comunicaciones y reportes.</p>
-                  </div>
+          {/* Animated Feature Showcase */}
+          <div className="grid lg:grid-cols-3 gap-6 mb-16">
+            {/* Card 1 - Qué es */}
+            <div className="group relative bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100 hover:border-blue-200 hover:-translate-y-2">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-6 shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform duration-300">
+                  <Target className="w-7 h-7 text-white" />
                 </div>
-
-                <div className="flex gap-4 p-4 rounded-2xl border border-slate-200 bg-slate-50">
-                  <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                    <Users className="w-6 h-6 text-indigo-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900 mb-1">Cómo funciona</h3>
-                    <p className="text-slate-600">Cada rol ve lo que necesita: docentes registran, directivos analizan y familias consultan información clave.</p>
-                  </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-3">¿Qué es EduSyn?</h3>
+                <p className="text-slate-600 leading-relaxed mb-4">
+                  Un sistema integral de gestión educativa que conecta académica, evaluación, asistencia, comunicaciones y reportes en una sola plataforma.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">Todo en uno</span>
+                  <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">En la nube</span>
                 </div>
-
-                <div className="flex gap-4 p-4 rounded-2xl border border-slate-200 bg-slate-50">
-                  <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <BarChart3 className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900 mb-1">Puntos fuertes</h3>
-                    <p className="text-slate-600">Orden, trazabilidad, reportes al instante, y una experiencia clara para docentes y administrativos.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-8 flex flex-col sm:flex-row gap-4">
-                <a
-                  href="https://wa.me/573104019732"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="bg-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-green-700 transition-all shadow-lg flex items-center justify-center gap-2"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  WhatsApp 3104019732
-                </a>
-                <a
-                  href="mailto:info@edusyn.co"
-                  className="border-2 border-slate-300 text-slate-700 px-6 py-3 rounded-xl font-semibold hover:border-blue-600 hover:text-blue-600 transition-all flex items-center justify-center gap-2"
-                >
-                  <Mail className="w-4 h-4" />
-                  info@edusyn.co
-                </a>
               </div>
             </div>
 
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-indigo-600/20 blur-3xl rounded-full" />
-              <div className="relative bg-slate-950 rounded-3xl p-6 shadow-2xl overflow-hidden border border-slate-800">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.16),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(99,102,241,0.16),transparent_30%)]" />
-                <div className="relative">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10">
-                      <Play className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <div className="text-white font-semibold">Presentación rápida de EduSyn</div>
-                      <div className="text-slate-300 text-sm">Visual tipo video / demo sin depender de archivos externos</div>
-                    </div>
-                  </div>
+            {/* Card 2 - Cómo funciona */}
+            <div className="group relative bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100 hover:border-indigo-200 hover:-translate-y-2">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center mb-6 shadow-lg shadow-indigo-500/30 group-hover:scale-110 transition-transform duration-300">
+                  <Layers className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-3">¿Cómo funciona?</h3>
+                <p className="text-slate-600 leading-relaxed mb-4">
+                  Cada rol ve lo que necesita: docentes registran notas y asistencia, directivos analizan datos, y familias consultan información clave.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full">Multi-rol</span>
+                  <span className="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full">Permisos</span>
+                </div>
+              </div>
+            </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="rounded-2xl bg-white/8 border border-white/10 p-4">
-                      <div className="text-xs uppercase tracking-wide text-blue-200 mb-1">1. Organiza</div>
-                      <div className="text-white font-semibold mb-1">Datos académicos</div>
-                      <div className="text-slate-300 text-sm">Años, períodos, cursos, asignaturas y docentes.</div>
-                    </div>
-                    <div className="rounded-2xl bg-white/8 border border-white/10 p-4">
-                      <div className="text-xs uppercase tracking-wide text-blue-200 mb-1">2. Registra</div>
-                      <div className="text-white font-semibold mb-1">Notas y asistencia</div>
-                      <div className="text-slate-300 text-sm">Seguimiento diario con trazabilidad y control por rol.</div>
-                    </div>
-                    <div className="rounded-2xl bg-white/8 border border-white/10 p-4">
-                      <div className="text-xs uppercase tracking-wide text-blue-200 mb-1">3. Analiza</div>
-                      <div className="text-white font-semibold mb-1">Reportes claros</div>
-                      <div className="text-slate-300 text-sm">Indicadores, alertas y exportaciones para decisión rápida.</div>
-                    </div>
-                    <div className="rounded-2xl bg-white/8 border border-white/10 p-4">
-                      <div className="text-xs uppercase tracking-wide text-blue-200 mb-1">4. Comunica</div>
-                      <div className="text-white font-semibold mb-1">Toda la comunidad</div>
-                      <div className="text-slate-300 text-sm">Docentes, directivos, estudiantes y acudientes conectados.</div>
-                    </div>
-                  </div>
+            {/* Card 3 - Puntos fuertes */}
+            <div className="group relative bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100 hover:border-emerald-200 hover:-translate-y-2">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-green-500/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-6 shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-300">
+                  <Zap className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-3">Puntos fuertes</h3>
+                <p className="text-slate-600 leading-relaxed mb-4">
+                  Orden, trazabilidad, reportes al instante, boletines automáticos y una experiencia clara para docentes y administrativos.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full">Reportes</span>
+                  <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full">Automático</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-                  <div className="mt-6 rounded-2xl bg-white/10 border border-white/10 p-4 flex items-center justify-between gap-4">
-                    <div>
-                      <div className="text-white font-semibold">¿Quieres ver una demo real?</div>
-                      <div className="text-slate-300 text-sm">Escríbenos a info@edusyn.co o al 3104019732.</div>
+          {/* Process Steps - Animated Timeline */}
+          <div className="relative mb-16">
+            <div className="absolute top-1/2 left-0 right-0 h-1 bg-gradient-to-r from-blue-200 via-indigo-200 to-emerald-200 rounded-full hidden lg:block" style={{ transform: 'translateY(-50%)' }} />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { step: '01', title: 'Organiza', desc: 'Años, períodos, cursos y docentes', color: 'blue', icon: BookOpen },
+                { step: '02', title: 'Registra', desc: 'Notas y asistencia diaria', color: 'indigo', icon: ClipboardList },
+                { step: '03', title: 'Analiza', desc: 'Reportes e indicadores', color: 'purple', icon: BarChart3 },
+                { step: '04', title: 'Comunica', desc: 'Toda la comunidad conectada', color: 'emerald', icon: Users },
+              ].map((item, i) => (
+                <div key={i} className="relative group">
+                  <div className={`bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-all duration-300 border border-slate-100 hover:border-${item.color}-200 text-center hover:-translate-y-1`}>
+                    <div className={`w-12 h-12 mx-auto rounded-xl bg-gradient-to-br from-${item.color}-500 to-${item.color}-600 flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                      <item.icon className="w-6 h-6 text-white" />
                     </div>
-                    <ArrowUpRight className="w-5 h-5 text-white flex-shrink-0" />
+                    <div className={`text-xs font-bold text-${item.color}-600 mb-1`}>PASO {item.step}</div>
+                    <h4 className="font-bold text-slate-900 mb-1">{item.title}</h4>
+                    <p className="text-sm text-slate-500">{item.desc}</p>
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA Section */}
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl blur-xl opacity-20" />
+            <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-8 sm:p-12 text-center overflow-hidden">
+              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
+              <div className="relative">
+                <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4">
+                  ¿Listo para transformar tu institución?
+                </h3>
+                <p className="text-blue-100 mb-8 max-w-xl mx-auto">
+                  Agenda una demostración personalizada y descubre cómo EduSyn puede ayudarte.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <a
+                    href="https://wa.me/573104019732"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group bg-white text-blue-600 px-8 py-4 rounded-xl font-semibold hover:bg-blue-50 transition-all shadow-xl flex items-center justify-center gap-3 hover:scale-105 active:scale-95"
+                  >
+                    <MessageCircle className="w-5 h-5 group-hover:animate-bounce" />
+                    Escríbenos por WhatsApp
+                  </a>
+                  <a
+                    href="mailto:info@edusyn.co"
+                    className="group border-2 border-white/30 text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/10 transition-all flex items-center justify-center gap-3 hover:border-white/60"
+                  >
+                    <Send className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    info@edusyn.co
+                  </a>
                 </div>
               </div>
             </div>
