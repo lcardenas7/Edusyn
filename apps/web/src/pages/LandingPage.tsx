@@ -1,7 +1,11 @@
 import { Link } from 'react-router-dom'
-import { useEffect, lazy, Suspense } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 
 const AnimatedDemo = lazy(() => import('../components/landing/AnimatedDemo'))
+const AttendanceDemo = lazy(() => import('../components/landing/AttendanceDemo'))
+const GradesDemo = lazy(() => import('../components/landing/GradesDemo'))
+const AchievementsDemo = lazy(() => import('../components/landing/AchievementsDemo'))
+const RecoveryDemo = lazy(() => import('../components/landing/RecoveryDemo'))
 import { 
   GraduationCap, 
   Users, 
@@ -32,7 +36,10 @@ import {
   Monitor,
   Bot,
   Wand2,
-  Video
+  Video,
+  MonitorPlay,
+  Trophy,
+  RefreshCw
 } from 'lucide-react'
 
 export default function LandingPage() {
@@ -353,22 +360,8 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Animated Demo Section */}
-          <div className="mb-16">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Mira cómo funciona</h3>
-              <p className="text-slate-600">Crea un quiz con Valeria IA en segundos</p>
-            </div>
-            <div className="max-w-4xl mx-auto">
-              <Suspense fallback={
-                <div className="w-full aspect-[16/10] bg-slate-100 rounded-2xl animate-pulse flex items-center justify-center">
-                  <div className="text-slate-400 text-sm">Cargando demo...</div>
-                </div>
-              }>
-                <AnimatedDemo />
-              </Suspense>
-            </div>
-          </div>
+          {/* Animated Demo Section with Tabs */}
+          <DemoSection />
 
           {/* Process Steps - Animated Timeline */}
           <div className="relative mb-16">
@@ -808,6 +801,89 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DEMO SECTION CON TABS
+// ═══════════════════════════════════════════════════════════════════════════
+
+type DemoType = 'aula-virtual' | 'asistencia' | 'calificaciones' | 'logros' | 'recuperaciones'
+
+const DEMO_TABS: Array<{ id: DemoType; label: string; icon: any; color: string; description: string }> = [
+  { id: 'aula-virtual', label: 'Aula Virtual', icon: MonitorPlay, color: 'violet', description: 'Crea quizzes con Valeria IA y lanza Live Quiz' },
+  { id: 'asistencia', label: 'Asistencia', icon: Calendar, color: 'green', description: 'Registra asistencia en segundos' },
+  { id: 'calificaciones', label: 'Calificaciones', icon: BookOpen, color: 'indigo', description: 'Ingresa notas por actividad' },
+  { id: 'logros', label: 'Logros', icon: Trophy, color: 'amber', description: 'Asigna logros y observaciones' },
+  { id: 'recuperaciones', label: 'Recuperaciones', icon: RefreshCw, color: 'emerald', description: 'Gestiona nivelaciones fácilmente' },
+]
+
+function DemoSection() {
+  const [activeDemo, setActiveDemo] = useState<DemoType>('aula-virtual')
+  const currentTab = DEMO_TABS.find(t => t.id === activeDemo)!
+
+  return (
+    <div className="mb-16">
+      <div className="text-center mb-6">
+        <h3 className="text-2xl font-bold text-slate-900 mb-2">Mira cómo funciona</h3>
+        <p className="text-slate-600">Explora los flujos principales de EduSyn</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex flex-wrap justify-center gap-2 mb-6">
+        {DEMO_TABS.map((tab) => {
+          const isActive = activeDemo === tab.id
+          const Icon = tab.icon
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveDemo(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                isActive 
+                  ? `bg-${tab.color}-100 text-${tab.color}-700 ring-2 ring-${tab.color}-300 shadow-sm` 
+                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              }`}
+              style={isActive ? {
+                backgroundColor: tab.color === 'violet' ? '#ede9fe' : 
+                                 tab.color === 'green' ? '#dcfce7' :
+                                 tab.color === 'indigo' ? '#e0e7ff' :
+                                 tab.color === 'amber' ? '#fef3c7' :
+                                 tab.color === 'emerald' ? '#d1fae5' : '#f1f5f9',
+                color: tab.color === 'violet' ? '#6d28d9' : 
+                       tab.color === 'green' ? '#15803d' :
+                       tab.color === 'indigo' ? '#4338ca' :
+                       tab.color === 'amber' ? '#b45309' :
+                       tab.color === 'emerald' ? '#047857' : '#475569',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              } : {}}
+            >
+              <Icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Description */}
+      <div className="text-center mb-4">
+        <p className="text-sm text-slate-500">{currentTab.description}</p>
+      </div>
+
+      {/* Demo container */}
+      <div className="max-w-4xl mx-auto">
+        <Suspense fallback={
+          <div className="w-full aspect-[16/10] bg-slate-100 rounded-2xl animate-pulse flex items-center justify-center">
+            <div className="text-slate-400 text-sm">Cargando demo...</div>
+          </div>
+        }>
+          {activeDemo === 'aula-virtual' && <AnimatedDemo />}
+          {activeDemo === 'asistencia' && <AttendanceDemo />}
+          {activeDemo === 'calificaciones' && <GradesDemo />}
+          {activeDemo === 'logros' && <AchievementsDemo />}
+          {activeDemo === 'recuperaciones' && <RecoveryDemo />}
+        </Suspense>
+      </div>
     </div>
   )
 }
