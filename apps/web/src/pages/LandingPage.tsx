@@ -19,7 +19,11 @@ import {
   ClipboardList,
   Mail,
   Phone,
-  MapPin
+  MapPin,
+  Sparkles,
+  Play,
+  MessageCircle,
+  ArrowUpRight
 } from 'lucide-react'
 
 export default function LandingPage() {
@@ -43,6 +47,9 @@ export default function LandingPage() {
             <nav className="hidden md:flex items-center gap-8">
               <a href="#features" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
                 Características
+              </a>
+              <a href="#about" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
+                Conócenos
               </a>
               <a href="#modules" className="text-slate-600 hover:text-blue-600 transition-colors font-medium">
                 Módulos
@@ -95,26 +102,26 @@ export default function LandingPage() {
                   <ArrowRight className="w-5 h-5" />
                 </Link>
                 <a 
-                  href="#contact" 
+                  href="#about" 
                   className="border-2 border-slate-300 text-slate-700 px-8 py-4 rounded-xl font-semibold hover:border-blue-600 hover:text-blue-600 transition-all flex items-center justify-center gap-2 text-lg"
                 >
                   Solicitar Demo
                 </a>
               </div>
               
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-6 mt-12 pt-8 border-t border-slate-200">
-                <div>
-                  <div className="text-3xl font-bold text-blue-600">500+</div>
-                  <div className="text-slate-600 text-sm">Instituciones</div>
+              {/* Product highlights */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-12 pt-8 border-t border-slate-200">
+                <div className="bg-white/80 backdrop-blur rounded-2xl border border-slate-200 p-4 shadow-sm">
+                  <div className="text-sm font-semibold text-slate-900 mb-1">Gestión integral</div>
+                  <div className="text-slate-600 text-sm">Académico, asistencia, evaluación y reportes en un solo sistema.</div>
                 </div>
-                <div>
-                  <div className="text-3xl font-bold text-blue-600">50K+</div>
-                  <div className="text-slate-600 text-sm">Estudiantes</div>
+                <div className="bg-white/80 backdrop-blur rounded-2xl border border-slate-200 p-4 shadow-sm">
+                  <div className="text-sm font-semibold text-slate-900 mb-1">Multirol</div>
+                  <div className="text-slate-600 text-sm">Docentes, directivos, estudiantes y acudientes con acceso por permisos.</div>
                 </div>
-                <div>
-                  <div className="text-3xl font-bold text-blue-600">99.9%</div>
-                  <div className="text-slate-600 text-sm">Disponibilidad</div>
+                <div className="bg-white/80 backdrop-blur rounded-2xl border border-slate-200 p-4 shadow-sm">
+                  <div className="text-sm font-semibold text-slate-900 mb-1">Implementación rápida</div>
+                  <div className="text-slate-600 text-sm">Pensado para adaptarse a la operación real de tu institución.</div>
                 </div>
               </div>
             </div>
@@ -169,6 +176,127 @@ export default function LandingPage() {
                     <Bell className="w-4 h-4 text-blue-600" />
                   </div>
                   <div className="text-sm font-medium text-slate-700">Nueva notificación</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Promo / Demo Section */}
+      <section id="about" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 bg-amber-100 text-amber-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
+                <Sparkles className="w-4 h-4" />
+                Conoce EduSyn en una sola mirada
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-6">
+                Una plataforma pensada para que la institución se vea, se entienda y funcione mejor
+              </h2>
+              <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                EduSyn centraliza la gestión académica y administrativa para que tu equipo tenga más control,
+                menos reprocesos y mejor comunicación con toda la comunidad educativa.
+              </p>
+
+              <div className="space-y-4">
+                <div className="flex gap-4 p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <BookOpen className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 mb-1">Qué es</h3>
+                    <p className="text-slate-600">Un sistema de gestión educativa que conecta académica, evaluación, asistencia, comunicaciones y reportes.</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                  <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                    <Users className="w-6 h-6 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 mb-1">Cómo funciona</h3>
+                    <p className="text-slate-600">Cada rol ve lo que necesita: docentes registran, directivos analizan y familias consultan información clave.</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                  <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <BarChart3 className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 mb-1">Puntos fuertes</h3>
+                    <p className="text-slate-600">Orden, trazabilidad, reportes al instante, y una experiencia clara para docentes y administrativos.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 flex flex-col sm:flex-row gap-4">
+                <a
+                  href="https://wa.me/573104019732"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="bg-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-green-700 transition-all shadow-lg flex items-center justify-center gap-2"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  WhatsApp 3104019732
+                </a>
+                <a
+                  href="mailto:info@edusyn.co"
+                  className="border-2 border-slate-300 text-slate-700 px-6 py-3 rounded-xl font-semibold hover:border-blue-600 hover:text-blue-600 transition-all flex items-center justify-center gap-2"
+                >
+                  <Mail className="w-4 h-4" />
+                  info@edusyn.co
+                </a>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-indigo-600/20 blur-3xl rounded-full" />
+              <div className="relative bg-slate-950 rounded-3xl p-6 shadow-2xl overflow-hidden border border-slate-800">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.16),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(99,102,241,0.16),transparent_30%)]" />
+                <div className="relative">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10">
+                      <Play className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <div className="text-white font-semibold">Presentación rápida de EduSyn</div>
+                      <div className="text-slate-300 text-sm">Visual tipo video / demo sin depender de archivos externos</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="rounded-2xl bg-white/8 border border-white/10 p-4">
+                      <div className="text-xs uppercase tracking-wide text-blue-200 mb-1">1. Organiza</div>
+                      <div className="text-white font-semibold mb-1">Datos académicos</div>
+                      <div className="text-slate-300 text-sm">Años, períodos, cursos, asignaturas y docentes.</div>
+                    </div>
+                    <div className="rounded-2xl bg-white/8 border border-white/10 p-4">
+                      <div className="text-xs uppercase tracking-wide text-blue-200 mb-1">2. Registra</div>
+                      <div className="text-white font-semibold mb-1">Notas y asistencia</div>
+                      <div className="text-slate-300 text-sm">Seguimiento diario con trazabilidad y control por rol.</div>
+                    </div>
+                    <div className="rounded-2xl bg-white/8 border border-white/10 p-4">
+                      <div className="text-xs uppercase tracking-wide text-blue-200 mb-1">3. Analiza</div>
+                      <div className="text-white font-semibold mb-1">Reportes claros</div>
+                      <div className="text-slate-300 text-sm">Indicadores, alertas y exportaciones para decisión rápida.</div>
+                    </div>
+                    <div className="rounded-2xl bg-white/8 border border-white/10 p-4">
+                      <div className="text-xs uppercase tracking-wide text-blue-200 mb-1">4. Comunica</div>
+                      <div className="text-white font-semibold mb-1">Toda la comunidad</div>
+                      <div className="text-slate-300 text-sm">Docentes, directivos, estudiantes y acudientes conectados.</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 rounded-2xl bg-white/10 border border-white/10 p-4 flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-white font-semibold">¿Quieres ver una demo real?</div>
+                      <div className="text-slate-300 text-sm">Escríbenos a info@edusyn.co o al 3104019732.</div>
+                    </div>
+                    <ArrowUpRight className="w-5 h-5 text-white flex-shrink-0" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -477,7 +605,7 @@ export default function LandingPage() {
               <ArrowRight className="w-5 h-5" />
             </Link>
             <a 
-              href="mailto:contacto@edusyn.co" 
+              href="mailto:info@edusyn.co" 
               className="border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/10 transition-all flex items-center justify-center gap-2 text-lg"
             >
               Solicitar Demo
@@ -532,11 +660,11 @@ export default function LandingPage() {
               <ul className="space-y-3">
                 <li className="flex items-center gap-3 text-slate-400">
                   <Mail className="w-5 h-5" />
-                  <span>contacto@edusyn.co</span>
+                  <span>info@edusyn.co</span>
                 </li>
                 <li className="flex items-center gap-3 text-slate-400">
                   <Phone className="w-5 h-5" />
-                  <span>+57 300 123 4567</span>
+                  <span>3104019732</span>
                 </li>
                 <li className="flex items-center gap-3 text-slate-400">
                   <MapPin className="w-5 h-5" />
