@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
+
+const AnimatedDemo = lazy(() => import('../components/landing/AnimatedDemo'))
 import { 
   GraduationCap, 
   Users, 
@@ -348,6 +350,23 @@ export default function LandingPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Animated Demo Section */}
+          <div className="mb-16">
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">Mira cómo funciona</h3>
+              <p className="text-slate-600">Crea un quiz con Valeria IA en segundos</p>
+            </div>
+            <div className="max-w-4xl mx-auto">
+              <Suspense fallback={
+                <div className="w-full aspect-[16/10] bg-slate-100 rounded-2xl animate-pulse flex items-center justify-center">
+                  <div className="text-slate-400 text-sm">Cargando demo...</div>
+                </div>
+              }>
+                <AnimatedDemo />
+              </Suspense>
             </div>
           </div>
 
