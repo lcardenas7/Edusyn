@@ -26,7 +26,11 @@ import {
   Zap,
   Target,
   Layers,
-  Send
+  Send,
+  Monitor,
+  Bot,
+  Wand2,
+  Video
 } from 'lucide-react'
 
 export default function LandingPage() {
@@ -273,6 +277,75 @@ export default function LandingPage() {
                 <div className="flex flex-wrap gap-2">
                   <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full">Reportes</span>
                   <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full">Automático</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Aula Virtual & Valeria IA - Featured Section */}
+          <div className="grid lg:grid-cols-2 gap-6 mb-16">
+            {/* Aula Virtual */}
+            <div className="group relative bg-gradient-to-br from-violet-50 to-purple-50 rounded-3xl p-8 border border-violet-100 hover:border-violet-300 transition-all duration-500 overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-400/20 to-purple-400/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+              <div className="relative flex flex-col sm:flex-row gap-6 items-start">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                  <Monitor className="w-8 h-8 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-xl font-bold text-slate-900">Aula Virtual</h3>
+                    <span className="px-2 py-0.5 bg-violet-100 text-violet-700 text-xs font-semibold rounded-full">Nuevo</span>
+                  </div>
+                  <p className="text-slate-600 leading-relaxed mb-4">
+                    Crea clases interactivas con contenido multimedia, quizzes en tiempo real, y seguimiento del progreso de cada estudiante. Todo integrado con tu gestión académica.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-violet-700 text-xs font-medium rounded-full shadow-sm">
+                      <Video className="w-3.5 h-3.5" />
+                      Clases en vivo
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-violet-700 text-xs font-medium rounded-full shadow-sm">
+                      <ClipboardList className="w-3.5 h-3.5" />
+                      Quizzes interactivos
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-violet-700 text-xs font-medium rounded-full shadow-sm">
+                      <BarChart3 className="w-3.5 h-3.5" />
+                      Progreso en tiempo real
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Valeria IA */}
+            <div className="group relative bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl p-8 border border-amber-100 hover:border-amber-300 transition-all duration-500 overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/20 to-orange-400/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+              <div className="relative flex flex-col sm:flex-row gap-6 items-start">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                  <Bot className="w-8 h-8 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-xl font-bold text-slate-900">Valeria IA</h3>
+                    <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full animate-pulse">IA</span>
+                  </div>
+                  <p className="text-slate-600 leading-relaxed mb-4">
+                    Tu asistente inteligente que te ayuda en todo: genera contenido para el aula, crea evaluaciones, analiza el desempeño de estudiantes y te guía en cada paso del flujo académico.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-amber-700 text-xs font-medium rounded-full shadow-sm">
+                      <Wand2 className="w-3.5 h-3.5" />
+                      Genera contenido
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-amber-700 text-xs font-medium rounded-full shadow-sm">
+                      <FileText className="w-3.5 h-3.5" />
+                      Crea evaluaciones
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-amber-700 text-xs font-medium rounded-full shadow-sm">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Asistencia 24/7
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
