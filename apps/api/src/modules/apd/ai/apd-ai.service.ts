@@ -73,11 +73,11 @@ export class ApdAiService implements IApdAiService {
 
   // Modelos de OpenRouter en orden de prioridad para cascada de reintentos
   private static readonly OPENROUTER_MODEL_CASCADE = [
-    'openai/gpt-oss-120b:free',
-    'nvidia/nemotron-3-super-120b-a12b:free',
-    'nousresearch/hermes-3-llama-3.1-405b:free',
-    'meta-llama/llama-3.3-70b-instruct:free',
     'google/gemma-4-31b-it:free',
+    'z-ai/glm-4.5-air:free',
+    'meta-llama/llama-3.3-70b-instruct:free',
+    'google/gemma-4-26b-a4b-it:free',
+    'openai/gpt-oss-20b:free',
     'nvidia/nemotron-nano-9b-v2:free',
   ];
 
@@ -117,9 +117,16 @@ export class ApdAiService implements IApdAiService {
         return result;
       } catch (err: any) {
         lastError = err;
-        const is429 = err?.message?.includes('429') || err?.message?.includes('rate-limit');
-        if (is429) {
-          this.logger.warn(`OpenRouter modelo ${model} rate-limited (429), probando siguiente...`);
+        const errMessage = String(err?.message || err || '');
+        const is429 = errMessage.includes('429') || errMessage.toLowerCase().includes('rate-limit');
+        const isRetryableProviderError =
+          /OpenRouter HTTP (5\d\d)/i.test(errMessage) ||
+          errMessage.includes('no healthy upstream') ||
+          errMessage.toLowerCase().includes('provider returned error') ||
+          errMessage.toLowerCase().includes('temporarily unavailable');
+
+        if (is429 || isRetryableProviderError) {
+          this.logger.warn(`OpenRouter modelo ${model} falló con error recuperable (${errMessage}), probando siguiente...`);
           continue;
         }
         // Para otros errores, no reintentar con otro modelo
