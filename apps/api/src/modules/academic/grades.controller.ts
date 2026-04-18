@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Delete, Param, UseGuards, Request, Query, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Get, Post, Patch, Delete, Param, UseGuards, Request, Query, BadRequestException } from '@nestjs/common';
 
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -50,6 +50,22 @@ export class GradesController {
   ) {
     const institutionId = await requireInstitutionId(this.prisma as any, req);
     return this.gradesService.syncGradesAndGroups(institutionId, body.grades);
+  }
+
+  @Patch(':id')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
+  async update(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body() body: { name?: string; stage?: string; number?: number },
+    @Query('institutionId') institutionId?: string
+  ) {
+    try {
+      const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
+      return await this.gradesService.update(id, instId, body as any);
+    } catch (err: any) {
+      throw new BadRequestException(err.message);
+    }
   }
 
   @Delete(':id')

@@ -215,6 +215,7 @@ export const academicTermsApi = {
 export const teacherAssignmentsApi = {
   getAll: (params?: { academicYearId?: string; groupId?: string; teacherId?: string; activeOnly?: boolean }) => api.get('/teacher-assignments', { params }),
   create: (data: { academicYearId: string; groupId: string; subjectId: string; teacherId: string; weeklyHours?: number }) => api.post('/teacher-assignments', data),
+  delete: (id: string) => api.delete(`/teacher-assignments/${id}`),
   deleteAll: (academicYearId?: string) => api.delete('/teacher-assignments/all', { params: { academicYearId } }),
   
   // Reemplazo individual
@@ -580,6 +581,7 @@ export const academicGradesApi = {
   getAll: (institutionId?: string) => api.get('/grades', { params: { institutionId } }),
   getActive: (institutionId?: string) => api.get('/grades/active', { params: { institutionId } }),
   create: (data: { name: string; stage: string; number?: number }) => api.post('/grades', data),
+  update: (id: string, data: { name?: string; stage?: string; number?: number }) => api.patch(`/grades/${id}`, data),
   sync: (grades: any[]) => api.post('/grades/sync', { grades }),
   delete: (id: string) => api.delete(`/grades/${id}`),
 }

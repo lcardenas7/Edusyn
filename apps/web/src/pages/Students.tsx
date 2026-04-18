@@ -1007,19 +1007,23 @@ export default function Students() {
       // ═══════════════════════════════════════════════════════════════════════════
       
       // Tabla de equivalencias: nombres textuales de grados → número
+      // Incluye "ciclo" para instituciones que usan esa nomenclatura (ej: CICLO 3, CICLO 4, CICLO 5, CICLO 6)
       const gradeTextToNumber: Record<string, string> = {
         'primero': '1', 'segundo': '2', 'tercero': '3', 'cuarto': '4',
         'quinto': '5', 'sexto': '6', 'septimo': '7', 'octavo': '8',
         'noveno': '9', 'decimo': '10', 'undecimo': '11', 'once': '11',
-        'transicion': '0', 'prejardin': '-2', 'jardin': '-1', 'kinder': '-1'
+        'transicion': '0', 'prejardin': '-2', 'jardin': '-1', 'kinder': '-1',
+        // Ciclos (educación para adultos / CLEI)
+        'ciclo1': '1', 'ciclo2': '2', 'ciclo3': '3', 'ciclo4': '4',
+        'ciclo5': '5', 'ciclo6': '6',
       }
       
       // Helper para convertir número a TODOS los nombres posibles del grado
       const numberToGradeNames = (num: string): string[] => {
         const names: Record<string, string[]> = {
           '-2': ['prejardin'], '-1': ['jardin'], '0': ['transicion'],
-          '1': ['primero'], '2': ['segundo'], '3': ['tercero'], '4': ['cuarto'],
-          '5': ['quinto'], '6': ['sexto'], '7': ['septimo'], '8': ['octavo'],
+          '1': ['primero', 'ciclo1'], '2': ['segundo', 'ciclo2'], '3': ['tercero', 'ciclo3'], '4': ['cuarto', 'ciclo4'],
+          '5': ['quinto', 'ciclo5'], '6': ['sexto', 'ciclo6'], '7': ['septimo'], '8': ['octavo'],
           '9': ['noveno'], '10': ['decimo'], '11': ['undecimo', 'once']
         }
         return names[num] || [num]
@@ -1164,21 +1168,45 @@ export default function Students() {
           const combinedSearch = normalizeText(`${gradeNum}${section}`)
           const groupFallback = availableGroups.find(g => {
             const gradeObj = g.grade as any
+            const gradeNameNorm = normalizeText(g.grade?.name || '')
+            const groupNameNorm = normalizeText(g.name)
+            
             // Solo match exacto con grade.number + group.name
             if (gradeObj?.number != null) {
               const fullName = normalizeText(`${gradeObj.number}${g.name}`)
               if (fullName === combinedSearch) return true
             }
+            
             // También: si el group.name ES el combinado (ej: grupo se llama "11A") 
             // pero SOLO si el grado también coincide por nombre
-            const groupNameNorm = normalizeText(g.name)
             if (groupNameNorm === combinedSearch) {
               // Verificar que el grado realmente corresponde
-              const gradeNameNorm = normalizeText(g.grade?.name || '')
               if (gradeNamesExpected.some(name => gradeNameNorm.includes(name)) || gradeNameNorm.includes(gradeNum!)) {
                 return true
               }
             }
+            
+            // NUEVO: Si el grupo se llama "Ciclo 6A" (nombre completo con grado + sección)
+            // y el grado es "Ciclo 6", buscar coincidencia por nombre completo
+            // Ej: Excel="CICLO 6A", gradeNum="6", section="A"
+            //     BD: grade.name="Ciclo 6", group.name="Ciclo 6A " (o similar)
+            const expectedGroupFullName = normalizeText(`ciclo${gradeNum}${section}`)
+            if (groupNameNorm.replace(/\s+/g, '') === expectedGroupFullName) {
+              // Verificar que el grado también coincide
+              if (gradeNameNorm.includes(`ciclo${gradeNum}`) || gradeNameNorm.includes(gradeNum!)) {
+                return true
+              }
+            }
+            
+            // Estrategia adicional: el nombre del grupo contiene el número del grado + sección
+            // Ej: group.name="Ciclo 6A", buscamos "6" + "A" dentro del nombre
+            if (groupNameNorm.includes(gradeNum!) && groupNameNorm.includes(section!.toLowerCase())) {
+              // Verificar que el grado coincide
+              if (gradeNameNorm.includes(gradeNum!) || gradeNamesExpected.some(name => gradeNameNorm.includes(name))) {
+                return true
+              }
+            }
+            
             return false
           })
           if (groupFallback) {

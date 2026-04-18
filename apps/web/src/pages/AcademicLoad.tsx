@@ -340,10 +340,16 @@ export default function AcademicLoad() {
     }
   }
 
-  const deleteLoad = () => {
+  const deleteLoad = async () => {
     if (!deleteConfirm) return
-    setLoads(loads.filter(l => l.id !== deleteConfirm.id))
-    setDeleteConfirm(null)
+    try {
+      await teacherAssignmentsApi.delete(deleteConfirm.id)
+      setLoads(loads.filter(l => l.id !== deleteConfirm.id))
+      setDeleteConfirm(null)
+    } catch (err: any) {
+      console.error('Error deleting assignment:', err)
+      alert(err.response?.data?.message || 'Error al eliminar la asignación')
+    }
   }
 
   const uniqueAreas = [...new Set(subjects.map(s => ({ id: s.areaId, name: s.areaName })))]

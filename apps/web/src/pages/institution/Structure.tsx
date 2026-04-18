@@ -414,11 +414,20 @@ export default function Structure() {
     const stage = levelCodeToStage[levelCode] || 'BASICA_PRIMARIA'
     
     if (editingGrade) {
-      setGrades(grades.map(g => 
-        g.id === editingGrade.id 
-          ? { ...g, name: gradeForm.name, levelId: gradeForm.levelId, order: gradeForm.order }
-          : g
-      ))
+      // Actualizar grado en la BD
+      try {
+        await academicGradesApi.update(editingGrade.id, {
+          name: gradeForm.name,
+          stage,
+          number: gradeForm.order,
+        })
+        // Recargar grados desde API para reflejar el cambio
+        await loadGradesFromAPI()
+      } catch (err: any) {
+        console.error('[Structure] Error updating grade:', err)
+        alert(err.response?.data?.message || 'Error al actualizar el grado')
+        return
+      }
     } else {
       // Crear grado en la BD
       try {

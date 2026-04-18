@@ -77,6 +77,25 @@ export class GradesService {
     });
   }
 
+  async update(id: string, institutionId: string, data: { name?: string; stage?: GradeStage; number?: number }) {
+    // Verificar que el grado pertenece a esta institución
+    const grade = await this.prisma.grade.findFirst({
+      where: { id, institutionId },
+    });
+    if (!grade) {
+      throw new Error('Grado no encontrado en esta institución.');
+    }
+
+    return this.prisma.grade.update({
+      where: { id },
+      data: {
+        ...(data.name && { name: data.name }),
+        ...(data.stage && { stage: data.stage }),
+        ...(data.number !== undefined && { number: data.number }),
+      },
+    });
+  }
+
   async delete(id: string, institutionId: string) {
     // Verificar que el grado pertenece a esta institución
     const grade = await this.prisma.grade.findFirst({
