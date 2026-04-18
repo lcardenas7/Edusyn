@@ -335,6 +335,41 @@ export class TeacherAssignmentsService {
   }
 
   /**
+   * Eliminar una asignación individual.
+   * Solo permite eliminar si no tiene datos asociados (notas, asistencia, etc.).
+   */
+  async delete(assignmentId: string, institutionId: string) {
+    const assignment = await this.prisma.teacherAssignment.findFirst({
+      where: { id: assignmentId, institutionId },
+    });
+
+    if (!assignment) {
+      throw new NotFoundException('Asignación no encontrada');
+    }
+
+    // Verificar si tiene datos asociados que impidan el borrado
+    const [partialGrades, scheduleEntries] = await Promise.all([
+      this.prisma.partialGrade.count({ where: { teacherAssignmentId: assignmentId } }),
+      this.prisma.scheduleEntry.count({ where: { teacherAssignmentId: assignmentId } }),
+    ]);
+
+    if (partialGrades > 0) {
+      throw new BadRequestException(
+        `No se puede eliminar: la asignación tiene ${partialGrades} nota(s) registrada(s). Use "Finalizar" en su lugar.`
+      );
+    }
+
+    // Si tiene horario, eliminarlo también
+    if (scheduleEntries > 0) {
+      await this.prisma.scheduleEntry.deleteMany({ where: { teacherAssignmentId: assignmentId } });
+    }
+
+    await this.prisma.teacherAssignment.delete({ where: { id: assignmentId } });
+
+    return { success: true, message: 'Asignación eliminada correctamente' };
+  }
+
+  /**
    * TEMPORAL: Eliminar toda la carga académica de la institución
    */
   async deleteAll(institutionId: string, academicYearId?: string) {
