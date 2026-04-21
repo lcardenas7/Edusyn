@@ -2178,4 +2178,36 @@ export const liveSessionApi = {
     api.post(`/live-session/${sessionId}/create-team`, { name }),
   reset: (sessionId: string) =>
     api.post(`/live-session/${sessionId}/reset`),
+  getParticipants: (sessionId: string) =>
+    api.get(`/live-session/${sessionId}/participants`),
+  updateAvatar: (sessionId: string, avatarId: string) =>
+    api.post(`/live-session/${sessionId}/avatar`, { avatarId }),
+  sendReaction: (sessionId: string, emoji: string) =>
+    api.post(`/live-session/${sessionId}/reaction`, { emoji }),
 }
+
+// Pool curado de nombres de equipo para sesiones TEAM.
+// El docente (o el primer estudiante) elige de aquí para evitar nombres
+// inapropiados o poco pedagógicos.
+export const LIVE_QUIZ_TEAM_POOL: { name: string; color: string; emoji: string }[] = [
+  { name: 'Equipo Agua',      color: '#06b6d4', emoji: '💧' },
+  { name: 'Equipo Fuego',     color: '#ef4444', emoji: '🔥' },
+  { name: 'Equipo Tierra',    color: '#78350f', emoji: '🌱' },
+  { name: 'Equipo Aire',      color: '#0ea5e9', emoji: '🌬️' },
+  { name: 'Equipo Sol',       color: '#f59e0b', emoji: '☀️' },
+  { name: 'Equipo Luna',      color: '#6366f1', emoji: '🌙' },
+  { name: 'Equipo Rayo',      color: '#eab308', emoji: '⚡' },
+  { name: 'Equipo Estrella',  color: '#c026d3', emoji: '⭐' },
+  { name: 'Equipo Océano',    color: '#0284c7', emoji: '🌊' },
+  { name: 'Equipo Bosque',    color: '#16a34a', emoji: '🌳' },
+  { name: 'Equipo Montaña',   color: '#525252', emoji: '⛰️' },
+  { name: 'Equipo Galaxia',   color: '#7c3aed', emoji: '🌌' },
+  { name: 'Equipo Relámpago', color: '#facc15', emoji: '🌩️' },
+  { name: 'Equipo Viento',    color: '#94a3b8', emoji: '🌀' },
+  { name: 'Equipo Volcán',    color: '#dc2626', emoji: '🌋' },
+  { name: 'Equipo Nieve',     color: '#e2e8f0', emoji: '❄️' },
+  { name: 'Equipo Arcoíris',  color: '#ec4899', emoji: '🌈' },
+  { name: 'Equipo Trueno',    color: '#475569', emoji: '🌪️' },
+  { name: 'Equipo Cometa',    color: '#f97316', emoji: '☄️' },
+  { name: 'Equipo Planeta',   color: '#14b8a6', emoji: '🪐' },
+]

@@ -1912,7 +1912,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [questions, setQuestions] = useState<any[]>([])
   const [questionsLoading, setQuestionsLoading] = useState(false)
   const [showAddQuestion, setShowAddQuestion] = useState(false)
-  const [qForm, setQForm] = useState({ type: 'MULTIPLE_CHOICE', text: '', imageUrl: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [] as string[], blanks: [] as string[], matchPairs: [{ left: '', right: '' }] as { left: string; right: string }[], points: '1', explanation: '', subjectArea: '', contextId: '' })
+  const [qForm, setQForm] = useState({ type: 'MULTIPLE_CHOICE', text: '', imageUrl: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [] as string[], blanks: [] as string[], matchPairs: [{ left: '', right: '' }] as { left: string; right: string }[], points: '1', explanation: '', subjectArea: '', contextId: '', timeLimitSeconds: '' })
   const [editingQuestion, setEditingQuestion] = useState<string | null>(null)
   const [savingQuestion, setSavingQuestion] = useState(false)
   const questionFormRef = useRef<HTMLDivElement>(null)
@@ -2661,7 +2661,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }, [reviewingSubmission, submissions])
 
   // Quiz question handlers (teacher)
-  const resetQForm = () => setQForm({ type: 'MULTIPLE_CHOICE', text: '', imageUrl: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }], points: '1', explanation: '', subjectArea: '', contextId: '' })
+  const resetQForm = () => setQForm({ type: 'MULTIPLE_CHOICE', text: '', imageUrl: '', options: ['', '', '', ''], correctAnswer: '', correctAnswers: [], blanks: [], matchPairs: [{ left: '', right: '' }], points: '1', explanation: '', subjectArea: '', contextId: '', timeLimitSeconds: '' })
 
   // Context handlers (teacher)
   const resetCtxForm = () => { setCtxForm({ title: '', text: '', imageUrl: '', viewPolicy: 'ALWAYS' }); setEditingContextId(null); setShowContextForm(false) }
@@ -2700,7 +2700,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     if (!selectedActivity || !qForm.text.trim()) return
     try {
       setSavingQuestion(true)
-      const payload: any = { type: qForm.type, text: qForm.text, imageUrl: qForm.imageUrl || undefined, points: parseFloat(qForm.points) || 1, explanation: qForm.explanation || undefined, subjectArea: qForm.subjectArea || undefined, contextId: qForm.contextId || undefined }
+      const payload: any = { type: qForm.type, text: qForm.text, imageUrl: qForm.imageUrl || undefined, points: parseFloat(qForm.points) || 1, explanation: qForm.explanation || undefined, subjectArea: qForm.subjectArea || undefined, contextId: qForm.contextId || undefined, timeLimitSeconds: qForm.timeLimitSeconds ? parseInt(qForm.timeLimitSeconds) : undefined }
       if (qForm.type === 'MULTIPLE_CHOICE' || qForm.type === 'TRUE_FALSE') {
         payload.options = qForm.type === 'TRUE_FALSE' ? ['Verdadero', 'Falso'] : qForm.options.filter(o => o.trim())
         payload.correctAnswer = qForm.correctAnswer
@@ -2775,6 +2775,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       explanation: q.explanation || '',
       subjectArea: q.subjectArea || '',
       contextId: q.contextId || '',
+      timeLimitSeconds: q.timeLimitSeconds ? String(q.timeLimitSeconds) : '',
     })
     setEditingQuestion(q.id)
     setShowAddQuestion(true)
@@ -3511,6 +3512,22 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Puntos</label>
                     <input type="number" step="0.1" min="0.1" value={qForm.points} onChange={e => setQForm({ ...qForm, points: e.target.value })} className="w-full border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      <Clock className="w-3.5 h-3.5 inline mr-1" />
+                      Tiempo (seg)
+                    </label>
+                    <input 
+                      type="number" 
+                      min="5" 
+                      max="300" 
+                      step="5"
+                      value={qForm.timeLimitSeconds} 
+                      onChange={e => setQForm({ ...qForm, timeLimitSeconds: e.target.value })} 
+                      placeholder="Global"
+                      className="w-full border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base" 
+                    />
                   </div>
                   {isIcfes(act.type) && (
                     <div>

@@ -1599,8 +1599,9 @@ model StudentEnrollment {
   activityAssignments  ActivityAssignment[]
 
   // Live Quiz
-  liveSessionAnswers LiveSessionAnswer[]
-  liveTeamMembers    LiveSessionTeamMember[]
+  liveSessionAnswers   LiveSessionAnswer[]
+  liveTeamMembers      LiveSessionTeamMember[]
+  liveSessionParticipants LiveSessionParticipant[]
 
   // Evaluación Actitudinal
   attitudinalAsEvaluator AttitudinalSubmission[] @relation("AttitudinalEvaluator")
@@ -5166,6 +5167,9 @@ model ActivityQuestion {
   competency        String?
   sortOrder         Int          @default(0)
 
+  // Per-question time limit (seconds). If null, uses session-level timeLimitOverride.
+  timeLimitSeconds  Int?
+
   activity    ClassroomActivity   @relation(fields: [activityId], references: [id], onDelete: Cascade)
   context     QuestionContext?    @relation(fields: [contextId], references: [id], onDelete: SetNull)
   answers     QuestionAnswer[]
@@ -5290,8 +5294,9 @@ model LiveSession {
   parentSession LiveSession?    @relation("LiveSessionParent", fields: [parentSessionId], references: [id], onDelete: SetNull)
   childSessions  LiveSession[]   @relation("LiveSessionParent")
   studentEnrollment StudentEnrollment? @relation(fields: [studentEnrollmentId], references: [id], onDelete: SetNull)
-  answers   LiveSessionAnswer[]
-  teams     LiveSessionTeam[]
+  answers      LiveSessionAnswer[]
+  teams        LiveSessionTeam[]
+  participants LiveSessionParticipant[]
 
   @@index([classroomId, status])
   @@index([teacherId])
@@ -5343,6 +5348,24 @@ model LiveSessionTeamMember {
   studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, studentEnrollmentId])
+}
+
+// Tracks every student that has ever joined a Live Quiz session. Persists avatar
+// selection and connection metadata so the ranking display is stable across
+// server restarts, SSE reconnects and session resets.
+model LiveSessionParticipant {
+  id                  String   @id @default(cuid())
+  sessionId           String
+  studentEnrollmentId String
+  avatarId            String?
+  joinedAt            DateTime @default(now())
+  lastSeenAt          DateTime @default(now())
+
+  session           LiveSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, studentEnrollmentId])
+  @@index([sessionId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

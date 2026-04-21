@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { liveSessionApi, toPublicFileUrl } from '../lib/api'
+import { liveSessionApi, toPublicFileUrl, LIVE_QUIZ_TEAM_POOL } from '../lib/api'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import {
@@ -374,6 +374,30 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
   })
   const [showAvatarPicker, setShowAvatarPicker] = useState(false)
 
+  // Lobby participants (docente en modo individual ve aquí quién se conectó)
+  const [lobbyParticipants, setLobbyParticipants] = useState<Array<{
+    enrollmentId: string
+    name: string
+    avatarId: string | null
+    isConnected: boolean
+  }>>([])
+
+  // Flying reactions overlay
+  const [reactions, setReactions] = useState<Array<{ id: number; emoji: string; name: string; x: number }>>([])
+  const reactionIdRef = useRef(0)
+  const lastReactionSentRef = useRef(0)
+  const [showReactionPicker, setShowReactionPicker] = useState(false)
+
+  // Reaction emoji pool
+  const REACTION_EMOJIS = ['🔥', '❤️', '👏', '😂', '🎉', '💯', '🤯', '👀']
+
+  // Team name picker (docente): pool curado en LIVE_QUIZ_TEAM_POOL
+  const [selectedTeamNames, setSelectedTeamNames] = useState<string[]>([])
+  // Students unassigned vs. assigned for team mode
+  const [teamStudentsCatalog, setTeamStudentsCatalog] = useState<any[]>([])
+  const [loadingTeamStudents, setLoadingTeamStudents] = useState(false)
+  const [pickingIntoTeamId, setPickingIntoTeamId] = useState<string | null>(null)
+
   // SSE
   const eventSourceRef = useRef<EventSource | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -429,7 +453,9 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         config: { 
           timeLimitOverride: globalTimeLimit, 
           autoClose: autoCloseOnTimeout, 
-          teamAssignment: 'STUDENT_CHOICE', // Siempre estudiantes eligen/crean equipos
+          // El docente crea los equipos desde un pool curado y asigna estudiantes
+          // desde la lista (el estudiante no puede auto-asignarse).
+          teamAssignment: 'TEACHER_ASSIGNED',
           deliveryMode,
         } 
       })
@@ -572,8 +598,13 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       setQuestionIndex(data.index)
       questionIndexRef.current = data.index
       setTotalQuestions(data.total)
-      setTimeLimit(data.timeLimit || 15)
-      setTimeLeft(data.timeLimit || 15)
+      const tLim = data.timeLimit || 15
+      // Reconexión justa: si el backend reporta elapsedMs > 0 (replay),
+      // arrancamos el timer con el tiempo restante real — no con el total.
+      const elapsedSec = Math.floor((data.elapsedMs || 0) / 1000)
+      const remaining = Math.max(1, tLim - elapsedSec)
+      setTimeLimit(tLim)
+      setTimeLeft(remaining)
       setIsBonus(data.isBonus || false)
       setMultiplier(data.multiplier || 1)
       setSelectedAnswer('')
@@ -589,9 +620,11 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       setExplanation(null)
       setContextExpanded(false)
       setTotalAnswered(0)
-      setAnswerStartTime(Date.now())
+      // answerStartTime compensa el elapsed para que responseTimeMs enviado al
+      // backend coincida con la verdadera duración de la pregunta.
+      setAnswerStartTime(Date.now() - (data.elapsedMs || 0))
       setPhase('question')
-      startTimer(data.timeLimit || 15)
+      startTimer(remaining)
       // Auto-start suspense music for everyone
       startMusic()
     })
@@ -670,6 +703,44 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     es.addEventListener('TEAMS_UPDATED', (e: any) => {
       const data = JSON.parse(e.data)
       setTeams(data)
+    })
+
+    // Lobby de conectados (todos los roles; el docente lo usa para ver quién
+    // entró, los estudiantes ven cuántos compañeros hay esperando).
+    es.addEventListener('LOBBY_UPDATE', (e: any) => {
+      try {
+        const data = JSON.parse(e.data)
+        if (Array.isArray(data)) setLobbyParticipants(data)
+      } catch {}
+    })
+
+    // Avatar actualizado por un estudiante (broadcast para que el docente
+    // vea el cambio en tiempo real).
+    es.addEventListener('AVATAR_UPDATED', (e: any) => {
+      try {
+        const data = JSON.parse(e.data)
+        setLobbyParticipants(prev =>
+          prev.map(p => p.enrollmentId === data.studentEnrollmentId ? { ...p, avatarId: data.avatarId } : p)
+        )
+        // También actualizar el ranking actual si el estudiante está ahí
+        setRanking(rankingRef.current.map(r =>
+          r.studentEnrollmentId === data.studentEnrollmentId ? { ...r, avatarId: data.avatarId } : r
+        ))
+      } catch {}
+    })
+
+    // Reacciones flotantes (emojis que vuelan por la pantalla)
+    es.addEventListener('REACTION', (e: any) => {
+      try {
+        const data = JSON.parse(e.data)
+        const id = ++reactionIdRef.current
+        const x = 10 + Math.random() * 80 // 10–90% del ancho
+        setReactions(prev => [...prev, { id, emoji: data.emoji, name: data.name, x }])
+        // Auto-remove tras la animación (~3s)
+        setTimeout(() => {
+          setReactions(prev => prev.filter(r => r.id !== id))
+        }, 3200)
+      } catch {}
     })
 
     es.addEventListener('SESSION_ENDED', async () => {
@@ -1198,6 +1269,112 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
     } finally { setCreatingTeam(false) }
   }
 
+  // Cambio de avatar (estudiante): persiste al servidor además del localStorage,
+  // así el ranking refleja el avatar elegido incluso tras reiniciar la sesión
+  // o el servidor (fix al bug "me cambió el avatar").
+  const handleChangeAvatar = useCallback(async (newId: string) => {
+    setMyAvatarId(newId)
+    localStorage.setItem('liveQuizAvatar', newId)
+    if (sessionId && !isTeacher) {
+      try {
+        await liveSessionApi.updateAvatar(sessionId, newId)
+      } catch (err) {
+        // silencioso — seguimos funcionando con el valor local
+      }
+    }
+  }, [sessionId, isTeacher])
+
+  // Enviar reacción (throttle 1.5s para evitar spam)
+  const handleSendReaction = useCallback(async (emoji: string) => {
+    if (!sessionId) return
+    const now = Date.now()
+    if (now - lastReactionSentRef.current < 1500) return
+    lastReactionSentRef.current = now
+    try {
+      await liveSessionApi.sendReaction(sessionId, emoji)
+    } catch { /* ignore */ }
+  }, [sessionId])
+
+  // Cargar lista completa de estudiantes del grupo (docente, modo TEAM)
+  // para presentar "arrastra estudiantes a equipos".
+  const loadTeamStudentsCatalog = useCallback(async () => {
+    if (!sessionId || !isTeacher) return
+    setLoadingTeamStudents(true)
+    try {
+      const { data } = await liveSessionApi.searchStudents(sessionId, '')
+      setTeamStudentsCatalog(data || [])
+    } catch {} finally { setLoadingTeamStudents(false) }
+  }, [sessionId, isTeacher])
+
+  // Asignar estudiante a un equipo desde el selector
+  const assignStudentToTeam = useCallback(async (enrollmentId: string, teamId: string) => {
+    if (!sessionId) return
+    try {
+      await liveSessionApi.addPartner(sessionId, teamId, enrollmentId)
+      setTeamStudentsCatalog(prev => prev.map(s =>
+        s.enrollmentId === enrollmentId ? { ...s, teamId } : s,
+      ))
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al asignar estudiante')
+    }
+  }, [sessionId])
+
+  // Quitar estudiante de su equipo actual
+  const unassignStudent = useCallback(async (enrollmentId: string) => {
+    if (!sessionId) return
+    try {
+      await liveSessionApi.removeFromTeam(sessionId, enrollmentId)
+      setTeamStudentsCatalog(prev => prev.map(s =>
+        s.enrollmentId === enrollmentId ? { ...s, teamId: null } : s,
+      ))
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al quitar estudiante')
+    }
+  }, [sessionId])
+
+  // Crear los equipos elegidos por el docente (del pool curado)
+  const handleCreateSelectedTeams = useCallback(async () => {
+    if (!sessionId || selectedTeamNames.length < 2) {
+      alert('Selecciona al menos 2 equipos')
+      return
+    }
+    try {
+      const teamsPayload = selectedTeamNames.map(name => {
+        const preset = LIVE_QUIZ_TEAM_POOL.find(t => t.name === name)
+        return { name, color: preset?.color || '#6366f1' }
+      })
+      await liveSessionApi.createTeams(sessionId, teamsPayload)
+      // refrescar lista de estudiantes (estarán sin asignar)
+      loadTeamStudentsCatalog()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al crear equipos')
+    }
+  }, [sessionId, selectedTeamNames, loadTeamStudentsCatalog])
+
+  // Exportar ranking final a CSV (estudiantes, puntos, correctas)
+  const handleExportRankingCSV = useCallback(() => {
+    if (ranking.length === 0) return
+    const headers = ['Puesto', 'Estudiante', 'Puntos', 'Puntos académicos', 'Correctas']
+    const rows = ranking.map(r => [
+      r.rank,
+      `"${(r.name || '').replace(/"/g, '""')}"`,
+      r.totalPoints ?? 0,
+      r.academicPoints ?? '',
+      r.correctAnswers ?? '',
+    ].join(','))
+    const csv = [headers.join(','), ...rows].join('\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const title = (session?.activity?.title || activityTitle || 'live-quiz').replace(/[^\w\d-]+/g, '_')
+    a.download = `ranking_${title}_${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [ranking, session?.activity?.title, activityTitle])
+
   const handleOrderMove = (from: number, to: number) => {
     if (answered) return
     const arr = [...orderAnswers]
@@ -1242,6 +1419,28 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
         <div className="absolute top-1/3 left-1/2 w-20 h-20 bg-white/5 rounded-xl rotate-6" />
       </div>
 
+      {/* Floating reactions overlay */}
+      <div className="fixed inset-0 pointer-events-none z-[60] overflow-hidden">
+        <AnimatePresence>
+          {reactions.map(r => (
+            <motion.div
+              key={r.id}
+              initial={{ opacity: 1, y: '100vh', x: `${r.x}%`, scale: 0.5 }}
+              animate={{ opacity: [1, 1, 0], y: '-20vh', scale: [0.5, 1.2, 1] }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 3, ease: 'easeOut' }}
+              className="absolute bottom-0 flex flex-col items-center"
+              style={{ left: `${r.x}%`, transform: 'translateX(-50%)' }}
+            >
+              <span className="text-4xl drop-shadow-lg">{r.emoji}</span>
+              <span className="text-white text-xs font-bold bg-black/30 px-2 py-0.5 rounded-full mt-1 backdrop-blur-sm">
+                {r.name.split(' ')[0]}
+              </span>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
       {/* Top bar */}
       <div className="relative flex items-center justify-between px-4 py-3 bg-white/90 backdrop-blur-md shadow-lg shadow-black/5">
         <div className="flex items-center gap-3">
@@ -1265,6 +1464,43 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
               <AnimalAvatar avatarId={myAvatarId} size="sm" />
             </button>
           )}
+          {/* Reaction button (visible during question/answer phases) */}
+          {(phase === 'question' || phase === 'answer_reveal' || phase === 'ranking' || phase === 'finished') && (
+            <div className="relative">
+              <button
+                onClick={() => setShowReactionPicker(!showReactionPicker)}
+                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors"
+                title="Enviar reacción"
+              >
+                <span className="text-lg">🎉</span>
+              </button>
+              <AnimatePresence>
+                {showReactionPicker && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.8, y: -10 }}
+                    className="absolute top-full right-0 mt-2 bg-slate-800 rounded-2xl shadow-2xl border border-white/20 p-2 z-50"
+                  >
+                    <div className="grid grid-cols-4 gap-1">
+                      {REACTION_EMOJIS.map(emoji => (
+                        <button
+                          key={emoji}
+                          onClick={() => {
+                            handleSendReaction(emoji)
+                            setShowReactionPicker(false)
+                          }}
+                          className="w-10 h-10 rounded-xl hover:bg-white/20 flex items-center justify-center text-2xl transition-all hover:scale-110"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
           <button onClick={toggleMusic} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors" title={musicOn ? 'Silenciar música' : 'Activar música'}>
             {musicOn ? <Volume2 className="w-5 h-5 text-[#4ECDC4]" /> : <VolumeX className="w-5 h-5 text-slate-400" />}
           </button>
@@ -1286,8 +1522,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
             <AvatarSelector 
               selected={myAvatarId} 
               onSelect={(id) => {
-                setMyAvatarId(id)
-                localStorage.setItem('liveQuizAvatar', id)
+                handleChangeAvatar(id)
                 setShowAvatarPicker(false)
               }} 
             />
@@ -1531,87 +1766,225 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
           </div>
 
           {isTeacher ? (
-            <div className="space-y-6 w-full max-w-lg">
-              {/* Team display + assignment (teacher, TEAM mode) */}
-              {mode === 'TEAM' && teams.length > 0 && (
-                <div className="bg-white/5 rounded-2xl p-4 space-y-3">
+            <div className="space-y-6 w-full max-w-2xl">
+              {/* Panel de conectados (INDIVIDUAL, SYNC) — el docente ve en vivo
+                  quién se fue conectando, con avatar. Fix al bug reportado
+                  "no veo los estudiantes que están conectados". */}
+              {mode === 'INDIVIDUAL' && deliveryMode === 'SYNC' && (
+                <div className="bg-white/5 rounded-2xl p-4 space-y-3 border border-white/10">
                   <div className="flex items-center justify-between">
-                    <p className="text-white/80 font-semibold text-sm">Equipos</p>
-                    {(session?.config as any)?.teamAssignment === 'TEACHER_ASSIGNED' && (
-                      <button
-                        onClick={async () => {
-                          setShowTeamAssigner(!showTeamAssigner)
-                          if (!showTeamAssigner && groupStudents.length === 0) {
-                            try {
-                              const { data } = await liveSessionApi.searchStudents(sessionId, '')
-                              setGroupStudents(data)
-                              const assignments: Record<string, string> = {}
-                              data.forEach((s: any) => { if (s.teamId) assignments[s.enrollmentId] = s.teamId })
-                              setTeamAssignments(assignments)
-                            } catch {}
-                          }
-                        }}
-                        className="text-xs text-purple-400 hover:text-purple-300 font-semibold"
-                      >
-                        {showTeamAssigner ? 'Ocultar asignación' : '✏️ Asignar estudiantes'}
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                      <p className="text-white/80 font-semibold text-sm">
+                        Conectados: {lobbyParticipants.filter(p => p.isConnected).length}
+                        {lobbyParticipants.length > lobbyParticipants.filter(p => p.isConnected).length && (
+                          <span className="text-white/40 ml-1">
+                            / {lobbyParticipants.length} totales
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const { data } = await liveSessionApi.getParticipants(sessionId)
+                          setLobbyParticipants(data || [])
+                        } catch {}
+                      }}
+                      className="text-xs text-white/50 hover:text-white font-semibold flex items-center gap-1"
+                      title="Refrescar"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Actualizar
+                    </button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {teams.map((t: any) => (
-                      <div key={t.id} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10" style={{ backgroundColor: t.color + '20' }}>
-                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
-                        <span className="text-white text-sm font-medium truncate">{t.name}</span>
-                        <span className="text-white/40 text-xs ml-auto">{t.members?.length || 0}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Teacher assignment panel */}
-                  {showTeamAssigner && (
-                    <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
-                      <p className="text-white/60 text-xs">Asigna cada estudiante a un equipo:</p>
-                      <div className="max-h-48 overflow-y-auto space-y-1">
-                        {groupStudents.map((s: any) => (
-                          <div key={s.enrollmentId} className="flex items-center gap-2 px-2 py-1.5 bg-white/5 rounded-lg">
-                            <span className="text-white text-xs flex-1 truncate">{s.name}</span>
-                            <select
-                              value={teamAssignments[s.enrollmentId] || ''}
-                              onChange={async (e) => {
-                                const newTeamId = e.target.value
-                                if (newTeamId === '') {
-                                  // Remove from team
-                                  if (teamAssignments[s.enrollmentId]) {
-                                    try {
-                                      await liveSessionApi.removeFromTeam(sessionId, s.enrollmentId)
-                                      setTeamAssignments(prev => {
-                                        const copy = { ...prev }
-                                        delete copy[s.enrollmentId]
-                                        return copy
-                                      })
-                                    } catch {}
-                                  }
-                                  return
-                                }
-                                setTeamAssignments(prev => ({ ...prev, [s.enrollmentId]: newTeamId }))
-                                try {
-                                  await liveSessionApi.addPartner(sessionId, newTeamId, s.enrollmentId)
-                                } catch {}
-                              }}
-                              className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-xs"
-                            >
-                              <option value="">Sin equipo</option>
-                              {teams.map((t: any) => (
-                                <option key={t.id} value={t.id} style={{ color: '#000' }}>{t.name}</option>
-                              ))}
-                            </select>
-                          </div>
-                        ))}
-                      </div>
+                  {lobbyParticipants.length === 0 ? (
+                    <p className="text-white/40 text-sm text-center py-4">
+                      Aún no hay estudiantes. Pídeles que abran el quiz desde su aula.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-56 overflow-y-auto">
+                      {lobbyParticipants.map(p => (
+                        <div
+                          key={p.enrollmentId}
+                          className={`flex flex-col items-center gap-1 p-2 rounded-xl text-center ${p.isConnected ? 'bg-white/10' : 'bg-white/5 opacity-50'}`}
+                          title={p.isConnected ? 'Conectado' : 'Desconectado'}
+                        >
+                          <AnimalAvatar avatarId={p.avatarId || getAvatarFromName(p.name).id} size="sm" />
+                          <p className="text-white text-xs font-medium truncate w-full">{p.name.split(' ')[0]}</p>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
               )}
+
+              {/* Team display + assignment (teacher, TEAM mode) */}
+              {mode === 'TEAM' && teams.length === 0 && (
+                <div className="bg-gradient-to-br from-purple-500/10 to-indigo-500/10 border-2 border-purple-400/40 rounded-2xl p-5 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Users className="w-6 h-6 text-purple-400" />
+                    <div>
+                      <p className="text-white font-bold">Elige los equipos</p>
+                      <p className="text-purple-300 text-xs">Selecciona entre 2 y 10 equipos del banco</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
+                    {LIVE_QUIZ_TEAM_POOL.map(t => {
+                      const selected = selectedTeamNames.includes(t.name)
+                      return (
+                        <button
+                          key={t.name}
+                          onClick={() => {
+                            setSelectedTeamNames(prev =>
+                              prev.includes(t.name)
+                                ? prev.filter(n => n !== t.name)
+                                : prev.length >= 10 ? prev : [...prev, t.name],
+                            )
+                          }}
+                          className={`p-2.5 rounded-xl text-xs font-bold flex flex-col items-center gap-1 transition-all border-2 ${
+                            selected
+                              ? 'border-white ring-2 ring-white/50 scale-105 shadow-lg'
+                              : 'border-white/10 hover:border-white/30 opacity-80 hover:opacity-100'
+                          }`}
+                          style={{ backgroundColor: t.color + (selected ? 'ff' : '40') }}
+                        >
+                          <span className="text-xl">{t.emoji}</span>
+                          <span className="text-white text-xs">{t.name.replace('Equipo ', '')}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <button
+                    onClick={handleCreateSelectedTeams}
+                    disabled={selectedTeamNames.length < 2}
+                    className="w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle2 className="w-5 h-5" />
+                    Crear {selectedTeamNames.length} equipo{selectedTeamNames.length !== 1 ? 's' : ''}
+                  </button>
+                </div>
+              )}
+
+              {mode === 'TEAM' && teams.length > 0 && (() => {
+                // Lazy-load catalog
+                if (teamStudentsCatalog.length === 0 && !loadingTeamStudents) {
+                  loadTeamStudentsCatalog()
+                }
+                const unassigned = teamStudentsCatalog.filter(s => !s.teamId)
+                return (
+                  <div className="bg-white/5 rounded-2xl p-4 space-y-4 border border-white/10">
+                    <div className="flex items-center justify-between">
+                      <p className="text-white/80 font-semibold text-sm">Equipos ({teams.length})</p>
+                      <button
+                        onClick={loadTeamStudentsCatalog}
+                        className="text-xs text-white/50 hover:text-white flex items-center gap-1"
+                      >
+                        <RefreshCw className="w-3 h-3" /> Actualizar
+                      </button>
+                    </div>
+
+                    {/* Teams grid — click to open member picker */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {teams.map((t: any) => {
+                        const preset = LIVE_QUIZ_TEAM_POOL.find(p => p.name === t.name)
+                        const memberCount = t.members?.length || 0
+                        const active = pickingIntoTeamId === t.id
+                        return (
+                          <button
+                            key={t.id}
+                            onClick={() => setPickingIntoTeamId(active ? null : t.id)}
+                            className={`p-3 rounded-xl text-left transition-all border-2 ${
+                              active ? 'border-white ring-2 ring-white/50' : 'border-white/10 hover:border-white/30'
+                            }`}
+                            style={{ backgroundColor: t.color + (active ? 'cc' : '40') }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">{preset?.emoji || '🏳️'}</span>
+                              <span className="text-white text-xs font-bold truncate">{t.name.replace('Equipo ', '')}</span>
+                            </div>
+                            <p className="text-white/80 text-[10px] mt-1">
+                              {memberCount} integrante{memberCount !== 1 ? 's' : ''}
+                            </p>
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {/* Member list of active team */}
+                    {pickingIntoTeamId && (() => {
+                      const activeTeam = teams.find((t: any) => t.id === pickingIntoTeamId)
+                      if (!activeTeam) return null
+                      const members = teamStudentsCatalog.filter(s => s.teamId === pickingIntoTeamId)
+                      return (
+                        <div className="bg-black/30 rounded-xl p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-white font-bold text-sm">Integrantes de {activeTeam.name}</p>
+                            <button
+                              onClick={() => setPickingIntoTeamId(null)}
+                              className="text-white/40 hover:text-white text-xs"
+                            >✕</button>
+                          </div>
+                          {members.length === 0 ? (
+                            <p className="text-white/40 text-xs italic text-center py-2">Sin integrantes. Selecciona estudiantes abajo.</p>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              {members.map(m => (
+                                <button
+                                  key={m.enrollmentId}
+                                  onClick={() => unassignStudent(m.enrollmentId)}
+                                  className="px-2 py-1 bg-white/20 hover:bg-red-500/40 rounded-lg text-white text-xs flex items-center gap-1.5 transition-all"
+                                  title="Click para sacar del equipo"
+                                >
+                                  {m.name} <X className="w-3 h-3" />
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
+
+                    {/* Unassigned students — click to add to active team */}
+                    <div>
+                      <p className="text-white/60 text-xs font-semibold mb-2">
+                        {pickingIntoTeamId
+                          ? `Clic en un nombre para agregarlo a ${teams.find((t: any) => t.id === pickingIntoTeamId)?.name}`
+                          : `Estudiantes sin asignar (${unassigned.length})`}
+                      </p>
+                      {loadingTeamStudents ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="w-5 h-5 animate-spin text-white/60" />
+                        </div>
+                      ) : unassigned.length === 0 ? (
+                        <p className="text-green-400 text-xs text-center py-3">✓ Todos los estudiantes tienen equipo</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
+                          {unassigned.map(s => (
+                            <button
+                              key={s.enrollmentId}
+                              onClick={() => {
+                                if (pickingIntoTeamId) {
+                                  assignStudentToTeam(s.enrollmentId, pickingIntoTeamId)
+                                } else {
+                                  alert('Primero selecciona un equipo arriba')
+                                }
+                              }}
+                              disabled={!pickingIntoTeamId}
+                              className={`px-2.5 py-1.5 rounded-lg text-xs transition-all ${
+                                pickingIntoTeamId
+                                  ? 'bg-white/10 hover:bg-white/30 text-white cursor-pointer'
+                                  : 'bg-white/5 text-white/40 cursor-not-allowed'
+                              }`}
+                            >
+                              {s.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
 
               {deliveryMode === 'ASYNC_HOME' ? (
                 /* ASYNC HOME: El profesor solo publica, los estudiantes inician solos */
@@ -1987,10 +2360,7 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                     {ANIMAL_AVATARS.map((avatar) => (
                       <motion.button
                         key={avatar.id}
-                        onClick={() => {
-                          setMyAvatarId(avatar.id)
-                          localStorage.setItem(`liveQuizAvatar_${sessionId}`, avatar.id)
-                        }}
+                        onClick={() => handleChangeAvatar(avatar.id)}
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.95 }}
                         className={`aspect-square rounded-xl flex items-center justify-center text-2xl transition-all ${
@@ -2802,6 +3172,18 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
                 </div>
               )}
               
+              {/* Teacher: Export ranking to CSV */}
+              {isTeacher && ranking.length > 0 && (
+                <motion.button
+                  onClick={handleExportRankingCSV}
+                  className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-400/30 flex items-center gap-2 mx-auto"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <BarChart3 className="w-5 h-5" /> Exportar ranking (CSV)
+                </motion.button>
+              )}
+
               <motion.button 
                 onClick={onClose} 
                 className="px-8 py-4 bg-gradient-to-r from-[#4ECDC4] to-[#3BA89F] text-white rounded-2xl text-lg font-black shadow-xl shadow-teal-400/30 transition-all"
@@ -2829,7 +3211,14 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
 
     // MULTIPLE_CHOICE / TRUE_FALSE
     if (type === 'MULTIPLE_CHOICE' || type === 'TRUE_FALSE') {
-      const opts = Array.isArray(options) ? options as string[] : []
+      const rawOpts = Array.isArray(options) ? options : []
+      // Normalize options: can be string or { text, imageUrl }
+      const opts = rawOpts.map((opt: any) => {
+        if (typeof opt === 'string') return { text: opt, imageUrl: null }
+        return { text: opt.text || opt, imageUrl: toPublicFileUrl(opt.imageUrl) }
+      })
+      // Check if any option has an image
+      const hasImages = opts.some(o => o.imageUrl)
       // Blooket/Kahoot style colors with shapes
       const optStyles = [
         { bg: 'bg-[#FF6B6B] hover:bg-[#E85555]', shape: '▲' },
@@ -2841,25 +3230,37 @@ export default function LiveQuiz({ classroomId, isTeacher, onClose, activityId, 
       ]
       return (
         <motion.div 
-          className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+          className={`grid gap-3 ${hasImages ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2'}`}
           variants={staggerContainer}
           initial="initial"
           animate="animate"
         >
-          {opts.map((opt: string, i: number) => (
+          {opts.map((opt, i: number) => (
             <motion.button
               key={i}
-              onClick={() => handleSelectOption(opt)}
+              onClick={() => handleSelectOption(opt.text)}
               disabled={answered}
               variants={optionVariants}
               whileHover={{ scale: 1.03, y: -2 }}
               whileTap={{ scale: 0.97 }}
-              className={`relative p-5 sm:p-6 rounded-2xl text-white font-bold text-base sm:text-lg text-left transition-all ${optStyles[i % optStyles.length].bg} disabled:opacity-50 shadow-xl overflow-hidden`}
+              className={`relative rounded-2xl text-white font-bold transition-all ${optStyles[i % optStyles.length].bg} disabled:opacity-50 shadow-xl overflow-hidden ${
+                hasImages ? 'p-2 flex flex-col items-center' : 'p-5 sm:p-6 text-base sm:text-lg text-left'
+              }`}
             >
-              {/* Shape icon */}
-              <span className="absolute top-3 left-3 text-white/30 text-2xl">{optStyles[i % optStyles.length].shape}</span>
+              {/* Shape icon (only for non-image options) */}
+              {!hasImages && (
+                <span className="absolute top-3 left-3 text-white/30 text-2xl">{optStyles[i % optStyles.length].shape}</span>
+              )}
+              {/* Option image */}
+              {opt.imageUrl && (
+                <img 
+                  src={opt.imageUrl} 
+                  alt={opt.text} 
+                  className="w-full h-24 sm:h-32 object-contain rounded-xl bg-white/10 mb-2"
+                />
+              )}
               {/* Answer text */}
-              <span className="relative z-10 block pl-8">{opt}</span>
+              <span className={`relative z-10 block ${hasImages ? 'text-center text-sm' : 'pl-8'}`}>{opt.text}</span>
               {/* Decorative gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
             </motion.button>

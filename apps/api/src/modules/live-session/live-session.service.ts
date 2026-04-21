@@ -21,7 +21,11 @@ export type LiveEventType =
   | 'QUESTION_CLOSED'
   | 'SESSION_FINISHED'
   | 'SESSION_ENDED'
-  | 'SESSION_RESET';
+  | 'SESSION_RESET'
+  | 'LOBBY_UPDATE'
+  | 'TEAMS_UPDATED'
+  | 'REACTION'
+  | 'AVATAR_UPDATED';
 
 export interface LiveEvent {
   type: LiveEventType;
@@ -46,31 +50,61 @@ export class LiveSessionService implements OnModuleDestroy {
   // Map of sessionId → snapshot of connected students count at question start (for reliable auto-close)
   private questionConnectedSnapshot = new Map<string, number>();
   // Map of sessionId → current question data (for timer auto-close without Prisma query)
-  private currentQuestionData = new Map<string, { questionIdx: number; questionId: string; correctAnswer: any; explanation: string | null }>();
+  private currentQuestionData = new Map<string, {
+    questionIdx: number;
+    questionId: string;
+    correctAnswer: any;
+    explanation: string | null;
+    startedAt: number; // ms epoch — authoritative para calcular responseTimeMs en reconexiones
+    timeLimitSeconds: number; // efectivo (por pregunta o de sesión)
+  }>();
   // Map of sessionId → Map of enrollmentId → avatarId (for ranking display)
   private studentAvatars = new Map<string, Map<string, string>>();
 
   constructor(private prisma: PrismaService) {}
 
-  // Track student connection and store avatar
+  // Track student connection and store avatar. Also persists to DB so avatar
+  // survives server restarts / session resets (root cause del bug histórico
+  // "me cambia el avatar en el ranking").
   trackStudentConnection(sessionId: string, studentEnrollmentId: string, avatarId?: string) {
     if (!this.connectedStudents.has(sessionId)) {
       this.connectedStudents.set(sessionId, new Set());
     }
     this.connectedStudents.get(sessionId)!.add(studentEnrollmentId);
-    
-    // Store avatar for ranking display
+
+    // Store avatar in memory (fast path for ranking queries)
     if (avatarId) {
       if (!this.studentAvatars.has(sessionId)) {
         this.studentAvatars.set(sessionId, new Map());
       }
       this.studentAvatars.get(sessionId)!.set(studentEnrollmentId, avatarId);
     }
-    
+
+    // Persist to DB (fire-and-forget: nunca bloquear SSE)
+    this.prisma.liveSessionParticipant
+      .upsert({
+        where: { sessionId_studentEnrollmentId: { sessionId, studentEnrollmentId } },
+        create: { sessionId, studentEnrollmentId, avatarId: avatarId || null },
+        update: {
+          lastSeenAt: new Date(),
+          ...(avatarId ? { avatarId } : {}),
+        },
+      })
+      .then(() => {
+        // Broadcast lobby snapshot (throttled: solo si la sesión está en WAITING)
+        this.broadcastLobbyUpdate(sessionId).catch((err) =>
+          this.logger.warn(`broadcastLobbyUpdate failed: ${err instanceof Error ? err.message : err}`),
+        );
+      })
+      .catch((err) => {
+        this.logger.warn(`upsert LiveSessionParticipant failed: ${err instanceof Error ? err.message : err}`);
+      });
+
     this.logger.log(`Student ${studentEnrollmentId} connected to session ${sessionId} with avatar ${avatarId || 'none'}. Total: ${this.connectedStudents.get(sessionId)!.size}`);
   }
 
-  // Get student avatar
+  // Get student avatar (in-memory first, fallback a DB mediante mapa cargado
+  // bajo demanda en getRanking)
   getStudentAvatar(sessionId: string, studentEnrollmentId: string): string | undefined {
     return this.studentAvatars.get(sessionId)?.get(studentEnrollmentId);
   }
@@ -78,6 +112,142 @@ export class LiveSessionService implements OnModuleDestroy {
   // Get connected student count
   getConnectedStudentCount(sessionId: string): number {
     return this.connectedStudents.get(sessionId)?.size || 0;
+  }
+
+  // Update avatar selection of a student (called when student picks a new avatar
+  // mid-lobby / mid-game). Persists a DB y actualiza el mapa en memoria.
+  async updateStudentAvatar(sessionId: string, userId: string, avatarId: string) {
+    if (!avatarId || typeof avatarId !== 'string' || avatarId.length > 50) {
+      throw new BadRequestException('avatarId inválido');
+    }
+
+    const session = await this.prisma.liveSession.findUnique({
+      where: { id: sessionId },
+      select: { id: true, classroomId: true, status: true },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+    if (session.status === 'FINISHED') {
+      throw new BadRequestException('La sesión ya finalizó');
+    }
+
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: session.classroomId },
+      include: { teacherAssignment: { select: { groupId: true, academicYearId: true } } },
+    });
+    if (!classroom) throw new NotFoundException('Aula no encontrada');
+
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: {
+        student: { userId },
+        groupId: classroom.teacherAssignment.groupId,
+        academicYearId: classroom.teacherAssignment.academicYearId,
+        status: 'ACTIVE',
+      },
+      select: { id: true },
+    });
+    if (!enrollment) throw new ForbiddenException('No está matriculado');
+
+    await this.prisma.liveSessionParticipant.upsert({
+      where: { sessionId_studentEnrollmentId: { sessionId, studentEnrollmentId: enrollment.id } },
+      create: { sessionId, studentEnrollmentId: enrollment.id, avatarId },
+      update: { avatarId, lastSeenAt: new Date() },
+    });
+
+    // Actualizar cache en memoria
+    if (!this.studentAvatars.has(sessionId)) {
+      this.studentAvatars.set(sessionId, new Map());
+    }
+    this.studentAvatars.get(sessionId)!.set(enrollment.id, avatarId);
+
+    // Broadcast para que el lobby del docente actualice en vivo
+    this.broadcast(sessionId, {
+      type: 'AVATAR_UPDATED',
+      data: { studentEnrollmentId: enrollment.id, avatarId },
+    });
+    this.broadcastLobbyUpdate(sessionId).catch(() => {});
+
+    return { success: true };
+  }
+
+  // Returns the full list of students that have joined (ever) this session,
+  // with name + avatar + connected flag. Used by teacher's lobby panel.
+  async getLobbyParticipants(sessionId: string) {
+    const participants = await this.prisma.liveSessionParticipant.findMany({
+      where: { sessionId },
+      include: {
+        studentEnrollment: {
+          select: {
+            id: true,
+            student: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
+      orderBy: { joinedAt: 'asc' },
+    });
+
+    const connectedSet = this.connectedStudents.get(sessionId) || new Set<string>();
+
+    return participants.map((p) => ({
+      enrollmentId: p.studentEnrollmentId,
+      name: `${p.studentEnrollment.student.firstName} ${p.studentEnrollment.student.lastName}`,
+      avatarId: p.avatarId,
+      joinedAt: p.joinedAt,
+      lastSeenAt: p.lastSeenAt,
+      isConnected: connectedSet.has(p.studentEnrollmentId),
+    }));
+  }
+
+  // Broadcast a lightweight lobby update (list of joined students).
+  // Called after every student connection + avatar change.
+  private async broadcastLobbyUpdate(sessionId: string) {
+    const participants = await this.getLobbyParticipants(sessionId);
+    this.broadcast(sessionId, { type: 'LOBBY_UPDATE', data: participants });
+  }
+
+  // Ephemeral reaction broadcast (emoji). No DB storage — solo engagement en vivo.
+  async sendReaction(sessionId: string, userId: string, emoji: string) {
+    const ALLOWED = ['👍', '❤️', '😂', '😮', '🔥', '👏', '🎉', '🤔'];
+    if (!ALLOWED.includes(emoji)) {
+      throw new BadRequestException('Emoji no permitido');
+    }
+
+    const session = await this.prisma.liveSession.findUnique({
+      where: { id: sessionId },
+      select: { id: true, classroomId: true, teacherId: true, status: true },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+    if (session.status === 'FINISHED') return { success: false };
+
+    // Verify sender is enrolled or is teacher (no hace falta más auth)
+    let avatarId: string | null = null;
+    let displayName = 'Invitado';
+    if (session.teacherId === userId) {
+      displayName = 'Docente';
+    } else {
+      const classroom = await this.prisma.classroom.findUnique({
+        where: { id: session.classroomId },
+        include: { teacherAssignment: { select: { groupId: true, academicYearId: true } } },
+      });
+      if (!classroom) throw new NotFoundException('Aula no encontrada');
+      const enrollment = await this.prisma.studentEnrollment.findFirst({
+        where: {
+          student: { userId },
+          groupId: classroom.teacherAssignment.groupId,
+          academicYearId: classroom.teacherAssignment.academicYearId,
+          status: 'ACTIVE',
+        },
+        include: { student: { select: { firstName: true, lastName: true } } },
+      });
+      if (!enrollment) throw new ForbiddenException('No está matriculado');
+      displayName = enrollment.student.firstName;
+      avatarId = this.getStudentAvatar(sessionId, enrollment.id) || null;
+    }
+
+    this.broadcast(sessionId, {
+      type: 'REACTION',
+      data: { emoji, name: displayName, avatarId, ts: Date.now() },
+    });
+    return { success: true };
   }
 
   onModuleDestroy() {
@@ -137,7 +307,7 @@ export class LiveSessionService implements OnModuleDestroy {
     const questions = await this.prisma.activityQuestion.findMany({
       where: { activityId: session.activityId },
       orderBy: { sortOrder: 'asc' },
-      select: { id: true, type: true, text: true, imageUrl: true, options: true, points: true, context: true },
+      select: { id: true, type: true, text: true, imageUrl: true, options: true, points: true, timeLimitSeconds: true, context: true },
     });
     const orderedQuestions = this.orderQuestionsForSession(questions, session.config);
     const q = orderedQuestions[session.currentQuestionIdx];
@@ -149,9 +319,16 @@ export class LiveSessionService implements OnModuleDestroy {
     const config = (session.config as any) || {};
     const isBonus = config.bonusQuestions?.includes(session.currentQuestionIdx) || false;
     const multiplier = config.multipliers?.[String(session.currentQuestionIdx)] || 1;
-    const timeLimit = config.timeLimitOverride || 15;
+    const timeLimit = q.timeLimitSeconds || config.timeLimitOverride || 15;
 
-    this.logger.log(`getReplayEvent: sending QUESTION event for questionId=${q.id}, index=${session.currentQuestionIdx}`);
+    // Reconnect fairness: compute actual elapsed ms so the client timer resumes
+    // at the real remaining time instead of starting fresh.
+    const questionData = this.currentQuestionData.get(sessionId);
+    const elapsedMs = questionData?.startedAt
+      ? Math.min(Date.now() - questionData.startedAt, timeLimit * 1000)
+      : 0;
+
+    this.logger.log(`getReplayEvent: sending QUESTION event for questionId=${q.id}, index=${session.currentQuestionIdx}, elapsedMs=${elapsedMs}`);
     return {
       type: 'QUESTION',
       data: {
@@ -166,6 +343,7 @@ export class LiveSessionService implements OnModuleDestroy {
         isBonus,
         multiplier,
         timeLimit,
+        elapsedMs,
         context: q.context || null,
       },
     };
@@ -568,7 +746,7 @@ export class LiveSessionService implements OnModuleDestroy {
     const questions = await this.prisma.activityQuestion.findMany({
       where: { activityId: session.activityId },
       orderBy: { sortOrder: 'asc' },
-      select: { id: true, type: true, text: true, imageUrl: true, options: true, points: true, sortOrder: true, context: { select: { id: true, title: true, text: true, imageUrl: true } } },
+      select: { id: true, type: true, text: true, imageUrl: true, options: true, points: true, sortOrder: true, timeLimitSeconds: true, context: { select: { id: true, title: true, text: true, imageUrl: true } } },
     });
     const orderedQuestions = this.orderQuestionsForSession(questions, session.config);
 
@@ -589,13 +767,16 @@ export class LiveSessionService implements OnModuleDestroy {
     const config = (session.config as any) || {};
     const isBonus = config.bonusQuestions?.includes(nextIdx) || false;
     const multiplier = config.multipliers?.[String(nextIdx)] || 1;
-    const timeLimit = config.timeLimitOverride || 15;
+    // Per-question time wins over session-level override
+    const timeLimit = q.timeLimitSeconds || config.timeLimitOverride || 15;
 
     // Cancel any pending timer from previous question & reset closed tracking for new question
     this.clearQuestionTimer(sessionId);
     this.closedQuestions.delete(sessionId); // allow new question to be closed by timer/auto-close
     // Snapshot connected students count for reliable auto-close
     this.questionConnectedSnapshot.set(sessionId, this.getConnectedStudentCount(sessionId));
+
+    const startedAt = Date.now();
 
     this.broadcast(sessionId, {
       type: 'QUESTION',
@@ -611,6 +792,10 @@ export class LiveSessionService implements OnModuleDestroy {
         isBonus,
         multiplier,
         timeLimit,
+        // elapsedMs=0 on first broadcast; used by replay so reconnected students
+        // see the true remaining time (no más "se reconectan y tienen timer
+        // nuevo para ganar puntos injustamente").
+        elapsedMs: 0,
         context: q.context || null,
       },
     });
@@ -626,6 +811,8 @@ export class LiveSessionService implements OnModuleDestroy {
       questionId: q.id,
       correctAnswer: fullQuestion?.correctAnswer,
       explanation: fullQuestion?.explanation || null,
+      startedAt,
+      timeLimitSeconds: timeLimit,
     });
 
     // Start server-side auto-close timer (reliable fallback)
@@ -704,9 +891,26 @@ export class LiveSessionService implements OnModuleDestroy {
     // Check correctness
     const isCorrect = this.checkAnswer(currentQ, answer);
 
-    // Calculate points
+    // Calculate points — uses server-side authoritative timing (the startedAt
+    // captured when the question was broadcast) so reconnected students no
+    // longer get an unfair fresh timer.
     const config = (session.config as any) || {};
-    const timeLimit = (config.timeLimitOverride || 15) * 1000; // ms
+    const questionData = this.currentQuestionData.get(sessionId);
+    const effectiveTimeLimitSec = questionData?.timeLimitSeconds
+      || (currentQ as any).timeLimitSeconds
+      || config.timeLimitOverride
+      || 15;
+    const timeLimit = effectiveTimeLimitSec * 1000; // ms
+    // Server-authoritative elapsed wins over client-reported responseTimeMs.
+    // Keep the min so students who submit quickly before the server timestamp
+    // registers don't get penalised by clock skew.
+    const serverElapsedMs = questionData?.startedAt
+      ? Math.max(0, Date.now() - questionData.startedAt)
+      : responseTimeMs;
+    const effectiveResponseTimeMs = Math.min(
+      Math.max(serverElapsedMs, responseTimeMs),
+      timeLimit,
+    );
     const basePoints = Number(currentQ.points) * 1000;
     const isBonus = config.bonusQuestions?.includes(session.currentQuestionIdx) || false;
     const multiplier = config.multipliers?.[String(session.currentQuestionIdx)] || 1;
@@ -714,7 +918,7 @@ export class LiveSessionService implements OnModuleDestroy {
     let points = 0;
     if (isCorrect) {
       // points = base * (1 - responseTime / (timeLimit * 2)), clamped to [0, base]
-      points = basePoints * (1 - responseTimeMs / (timeLimit * 2));
+      points = basePoints * (1 - effectiveResponseTimeMs / (timeLimit * 2));
       points = Math.max(0, Math.round(points));
       if (isBonus) points = points * multiplier;
     }
@@ -739,7 +943,7 @@ export class LiveSessionService implements OnModuleDestroy {
           teamId,
           answer,
           isCorrect,
-          responseTimeMs: Math.min(responseTimeMs, timeLimit),
+          responseTimeMs: effectiveResponseTimeMs,
           points,
         },
       });
@@ -993,9 +1197,10 @@ export class LiveSessionService implements OnModuleDestroy {
       },
     });
 
-    // Clear any stored avatars for this session
-    this.studentAvatars.delete(sessionId);
-    
+    // NOTE: no borramos `studentAvatars` ni `LiveSessionParticipant`. Los
+    // avatares elegidos por los estudiantes deben sobrevivir el reset para
+    // que no cambien al reiniciar la sesión (bug histórico reportado).
+
     // Broadcast reset event to all connected clients
     this.broadcast(sessionId, { type: 'SESSION_RESET', data: { deletedAnswers: deleted.count } });
 
@@ -1346,11 +1551,20 @@ export class LiveSessionService implements OnModuleDestroy {
 
     const topResults = sortedResults.slice(0, limit);
     const enrollmentIds = topResults.map((result) => result.studentEnrollmentId);
-    const enrollments = await this.prisma.studentEnrollment.findMany({
-      where: { id: { in: enrollmentIds } },
-      select: { id: true, student: { select: { firstName: true, lastName: true } } },
-    });
+    const [enrollments, participants] = await Promise.all([
+      this.prisma.studentEnrollment.findMany({
+        where: { id: { in: enrollmentIds } },
+        select: { id: true, student: { select: { firstName: true, lastName: true } } },
+      }),
+      // Fallback persistente: si el mapa en memoria se perdió por reinicio del
+      // servidor, recuperamos el avatar elegido desde la DB.
+      this.prisma.liveSessionParticipant.findMany({
+        where: { sessionId, studentEnrollmentId: { in: enrollmentIds } },
+        select: { studentEnrollmentId: true, avatarId: true },
+      }),
+    ]);
     const nameMap = new Map(enrollments.map((e) => [e.id, `${e.student.firstName} ${e.student.lastName}`]));
+    const dbAvatarMap = new Map(participants.map((p) => [p.studentEnrollmentId, p.avatarId]));
 
     return topResults.map((result, i) => ({
       rank: i + 1,
@@ -1359,7 +1573,10 @@ export class LiveSessionService implements OnModuleDestroy {
       totalPoints: Math.round(result.totalPoints),
       academicPoints: Math.round(result.academicPoints * 100) / 100,
       correctAnswers: result.correctAnswers,
-      avatarId: this.getStudentAvatar(sessionId, result.studentEnrollmentId),
+      avatarId:
+        this.getStudentAvatar(sessionId, result.studentEnrollmentId) ||
+        dbAvatarMap.get(result.studentEnrollmentId) ||
+        undefined,
     }));
   }
 
@@ -1447,11 +1664,18 @@ export class LiveSessionService implements OnModuleDestroy {
 
     const topResults = sortedResults.slice(0, limit);
     const enrollmentIds = topResults.map((result) => result.studentEnrollmentId);
-    const enrollments = await this.prisma.studentEnrollment.findMany({
-      where: { id: { in: enrollmentIds } },
-      select: { id: true, student: { select: { firstName: true, lastName: true } } },
-    });
+    const [enrollments, participants] = await Promise.all([
+      this.prisma.studentEnrollment.findMany({
+        where: { id: { in: enrollmentIds } },
+        select: { id: true, student: { select: { firstName: true, lastName: true } } },
+      }),
+      this.prisma.liveSessionParticipant.findMany({
+        where: { studentEnrollmentId: { in: enrollmentIds } },
+        select: { studentEnrollmentId: true, avatarId: true, sessionId: true },
+      }),
+    ]);
     const nameMap = new Map(enrollments.map((e) => [e.id, `${e.student.firstName} ${e.student.lastName}`]));
+    const dbAvatarMap = new Map(participants.map((p) => [p.studentEnrollmentId, p.avatarId]));
 
     const ranking = topResults.map((result, i) => ({
       rank: i + 1,
@@ -1460,7 +1684,10 @@ export class LiveSessionService implements OnModuleDestroy {
       totalPoints: Math.round(result.totalPoints),
       academicPoints: Math.round(result.academicPoints * 100) / 100,
       correctAnswers: result.correctAnswers,
-      avatarId: this.getStudentAvatar(result.sessionId, result.studentEnrollmentId),
+      avatarId:
+        this.getStudentAvatar(result.sessionId, result.studentEnrollmentId) ||
+        dbAvatarMap.get(result.studentEnrollmentId) ||
+        undefined,
     }));
 
     // completedCount = students with answers (for backward compat), plus new granular fields

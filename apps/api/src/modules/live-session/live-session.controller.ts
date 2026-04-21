@@ -331,4 +331,41 @@ export class LiveSessionController {
     await this.verifySessionTenant(sessionId, req.user.institutionId);
     return this.liveSessionService.getPerQuestionRanking(sessionId, questionId);
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Lobby participants (docente ve conectados en modo individual)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/participants')
+  async getParticipants(@Param('id') sessionId: string, @Request() req: any) {
+    await this.verifySessionTenant(sessionId, req.user.institutionId);
+    return this.liveSessionService.getLobbyParticipants(sessionId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Avatar update + Reactions
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/avatar')
+  async updateAvatar(
+    @Param('id') sessionId: string,
+    @Request() req: any,
+    @Body() body: { avatarId: string },
+  ) {
+    await this.verifySessionTenant(sessionId, req.user.institutionId);
+    return this.liveSessionService.updateStudentAvatar(sessionId, req.user.id, body.avatarId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/reaction')
+  async sendReaction(
+    @Param('id') sessionId: string,
+    @Request() req: any,
+    @Body() body: { emoji: string },
+  ) {
+    await this.verifySessionTenant(sessionId, req.user.institutionId);
+    return this.liveSessionService.sendReaction(sessionId, req.user.id, body.emoji);
+  }
 }
