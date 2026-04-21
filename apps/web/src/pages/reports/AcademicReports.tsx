@@ -13,6 +13,7 @@ import {
 import { useReportsData } from '../../hooks/useReportsData'
 import { useAuth } from '../../contexts/AuthContext'
 import { teacherAssignmentsApi, periodFinalGradesApi, reportsApi } from '../../lib/api'
+import { useSortable, SortableHeader } from '../../components/reports/SortableTable'
 
 const CHART_COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6']
 const PROMOTION_COLORS = { promoted: '#22c55e', atRisk: '#f59e0b', notPromoted: '#ef4444' }
@@ -31,6 +32,7 @@ const reportBlocks: ReportBlock[] = [
       { id: 'avg-area', name: 'Promedio por áreas', description: '¿Qué área tiene mejor o peor rendimiento?', icon: FileSpreadsheet },
       { id: 'ranking-students', name: 'Ranking de estudiantes', description: '¿Quiénes son los mejores y peores del grupo?', icon: TrendingUp },
       { id: 'ranking-institutional', name: 'Ranking institucional', description: 'Ranking de toda la institución, por grado o nivel educativo', icon: Users },
+      { id: 'honor-roll', name: 'Cuadro de Honor', description: 'Top N estudiantes por grado (para actos cívicos y estímulos)', icon: TrendingUp },
       { id: 'grade-distribution', name: 'Distribución de notas', description: '¿Cómo se distribuyen las calificaciones?', icon: BarChart3 },
     ],
   },
@@ -126,6 +128,14 @@ export default function AcademicReports() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set())
   const [reSnapshotLoading, setReSnapshotLoading] = useState(false)
+
+  // Ordenamiento dinámico compartido (se resetea al cambiar de reporte)
+  const { sortData, sortState, handleSort } = useSortable<any>()
+  React.useEffect(() => {
+    // reset sort al cambiar reporte
+    if (sortState.sortColumn) handleSort(sortState.sortColumn) // toggle to reset
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedReport])
 
   const currentMeta = allReports.find(r => r.id === selectedReport)
   const style = currentMeta ? BLOCK_STYLES[currentMeta.blockColor] : BLOCK_STYLES.green
@@ -273,6 +283,29 @@ export default function AcademicReports() {
           else if (filterLevel !== 'all') params.stage = filterLevel
           const res = await reportsApi.getInstitutionalRanking(filterYear, params)
           setReportData(res.data)
+          break
+        }
+        case 'honor-roll': {
+          // Cuadro de Honor: top N por grado usando el ranking institucional
+          const params: any = {}
+          if (filterPeriod) params.termId = filterPeriod
+          if (filterLevel !== 'all') params.stage = filterLevel
+          const res = await reportsApi.getInstitutionalRanking(filterYear, params)
+          const results = res.data?.results || []
+          // Agrupar por grado
+          const byGrade = new Map<string, any[]>()
+          results.forEach((r: any) => {
+            const gradeKey = r.gradeName || r.group?.split(' ')[0] || 'Sin grado'
+            if (!byGrade.has(gradeKey)) byGrade.set(gradeKey, [])
+            byGrade.get(gradeKey)!.push(r)
+          })
+          // Top N (default 3) por grado, ordenado por promedio desc
+          const topN = 3
+          const honorRoll = Array.from(byGrade.entries()).map(([gradeName, students]) => ({
+            gradeName,
+            students: [...students].sort((a, b) => (b.average || 0) - (a.average || 0)).slice(0, topN),
+          }))
+          setReportData({ ...res.data, honorRoll })
           break
         }
         case 'grade-distribution': {
@@ -698,6 +731,12 @@ export default function AcademicReports() {
       case 'ranking-students':
         return wrap(<><SelectYear /><SelectGroup required /><SelectTerm /><BtnSearch /></>, 4)
 
+      case 'honor-roll':
+        return wrap(<><SelectYear /><SelectStage /><SelectTerm /><BtnSearch label="Generar Cuadro" /></>, 4,
+          <div className={`${style.bg} rounded-lg p-3 text-sm ${style.text}`}>
+            <strong>🏆</strong> Muestra los 3 mejores estudiantes de cada grado. Use el filtro de nivel para limitar (p.ej. solo primaria).
+          </div>)
+
       case 'ranking-institutional':
         return wrap(<><SelectYear /><SelectGroup /><SelectGrade /><SelectStage /><SelectTerm /><BtnSearch /></>, 6,
           <div className={`${style.bg} rounded-lg p-3 text-sm ${style.text}`}>
@@ -820,16 +859,16 @@ export default function AcademicReports() {
             <thead className="bg-slate-100">
               <tr>
                 <th className="px-3 py-2 text-left sticky left-0 bg-slate-100">Nro</th>
-                <th className="px-3 py-2 text-left sticky left-10 bg-slate-100">Estudiante</th>
-                <th className="px-3 py-2 text-left">Grupo</th>
+                <SortableHeader column="name" label="Estudiante" sort={sortState} className="px-3 py-2 sticky left-10 bg-slate-100" />
+                <SortableHeader column="group" label="Grupo" sort={sortState} className="px-3 py-2" />
                 {showGrades && subjectList.map(subj => <th key={subj} className="px-3 py-2 text-center whitespace-nowrap">{subj}</th>)}
-                <th className="px-3 py-2 text-center">Promedio</th>
-                <th className="px-3 py-2 text-center">Reprobadas</th>
-                {showPerformance && <th className="px-3 py-2 text-center">Desempeño</th>}
+                <SortableHeader column="average" label="Promedio" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="failedCount" label="Reprobadas" align="center" sort={sortState} className="px-3 py-2" />
+                {showPerformance && <SortableHeader column="performance" label="Desempeño" align="center" sort={sortState} className="px-3 py-2" />}
               </tr>
             </thead>
             <tbody>
-              {studentsGradesData.map((row, idx) => (
+              {sortData(studentsGradesData).map((row, idx) => (
                 <tr key={idx} className="border-b hover:bg-slate-50">
                   <td className="px-3 py-2 sticky left-0 bg-white">{row.nro}</td>
                   <td className="px-3 py-2 font-medium sticky left-10 bg-white">{row.name}</td>
@@ -897,13 +936,17 @@ export default function AcademicReports() {
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-100"><tr>
-              <th className="px-3 py-2 text-left">Asignatura</th><th className="px-3 py-2 text-left">Área</th>
-              <th className="px-3 py-2 text-center">Promedio</th><th className="px-3 py-2 text-center">Aprobación %</th>
-              <th className="px-3 py-2 text-center">Reprobación %</th><th className="px-3 py-2 text-center">Mejor</th>
-              <th className="px-3 py-2 text-center">Peor</th><th className="px-3 py-2 text-center">Estudiantes</th>
+              <SortableHeader column="subjectName" label="Asignatura" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="areaName" label="Área" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="average" label="Promedio" align="center" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="approvalRate" label="Aprobación %" align="center" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="failRate" label="Reprobación %" align="center" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="bestGrade" label="Mejor" align="center" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="worstGrade" label="Peor" align="center" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="totalStudents" label="Estudiantes" align="center" sort={sortState} className="px-3 py-2" />
             </tr></thead>
             <tbody>
-              {reportData.results.map((r: any, i: number) => (
+              {sortData(reportData.results).map((r: any, i: number) => (
                 <tr key={i} className="border-b hover:bg-slate-50">
                   <td className="px-3 py-2 font-medium">{r.subjectName}</td><td className="px-3 py-2 text-slate-500 text-xs">{r.areaName}</td>
                   <td className="px-3 py-2 text-center font-medium">{r.average?.toFixed(1)}</td>
@@ -1086,12 +1129,15 @@ export default function AcademicReports() {
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-100"><tr>
-              <th className="px-3 py-2 text-center">Pos.</th><th className="px-3 py-2 text-left">Estudiante</th>
-              <th className="px-3 py-2 text-left">Grupo</th><th className="px-3 py-2 text-center">Promedio</th>
-              <th className="px-3 py-2 text-center">Asignaturas</th><th className="px-3 py-2 text-center">Desempeño</th>
+              <SortableHeader column="position" label="Pos." align="center" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="studentName" label="Estudiante" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="group" label="Grupo" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="average" label="Promedio" align="center" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="subjectCount" label="Asignaturas" align="center" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="performance" label="Desempeño" align="center" sort={sortState} className="px-3 py-2" />
             </tr></thead>
             <tbody>
-              {rkData.map((r: any, i: number) => (
+              {sortData(rkData).map((r: any, i: number) => (
                 <tr key={i} className={`border-b hover:bg-slate-50 ${i < 3 ? 'bg-green-50' : ''}`}>
                   <td className="px-3 py-2 text-center font-bold">{r.position}</td>
                   <td className="px-3 py-2 font-medium">{r.studentName}</td>
@@ -1154,12 +1200,15 @@ export default function AcademicReports() {
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-100"><tr>
-              <th className="px-3 py-2 text-center">Pos.</th><th className="px-3 py-2 text-left">Estudiante</th>
-              <th className="px-3 py-2 text-left">Grupo</th><th className="px-3 py-2 text-center">Promedio</th>
-              <th className="px-3 py-2 text-center">Asignaturas</th><th className="px-3 py-2 text-center">Desempeño</th>
+              <SortableHeader column="position" label="Pos." align="center" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="studentName" label="Estudiante" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="group" label="Grupo" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="average" label="Promedio" align="center" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="subjectCount" label="Asignaturas" align="center" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="performance" label="Desempeño" align="center" sort={sortState} className="px-3 py-2" />
             </tr></thead>
             <tbody>
-              {rkData.map((r: any, i: number) => (
+              {sortData(rkData).map((r: any, i: number) => (
                 <tr key={i} className={`border-b hover:bg-slate-50 ${i < 3 ? 'bg-green-50' : i >= rkTotal - 3 ? 'bg-red-50' : ''}`}>
                   <td className="px-3 py-2 text-center font-bold">{r.position}</td>
                   <td className="px-3 py-2 font-medium">{r.studentName}</td>
@@ -1171,6 +1220,56 @@ export default function AcademicReports() {
               ))}
             </tbody>
           </table>
+          </div>
+        </div>
+      )
+    }
+
+    // ── Cuadro de Honor ──
+    if (selectedReport === 'honor-roll' && reportData?.honorRoll) {
+      const hrData: Array<{ gradeName: string; students: any[] }> = reportData.honorRoll
+      if (hrData.length === 0) return (
+        <div className="text-center py-12"><TrendingUp className="w-12 h-12 text-slate-300 mx-auto mb-3" /><p className="text-slate-500">Sin datos para el cuadro de honor</p></div>
+      )
+      const totalHonorees = hrData.reduce((s, g) => s + g.students.length, 0)
+      const bestAvg = hrData.flatMap(g => g.students).reduce((max, s) => (s.average > max ? s.average : max), 0)
+      return (
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center"><p className="text-xs uppercase text-amber-600">Grados</p><p className="text-2xl font-bold text-amber-700">{hrData.length}</p></div>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"><p className="text-xs uppercase text-blue-600">Estudiantes honrados</p><p className="text-2xl font-bold text-blue-700">{totalHonorees}</p></div>
+            <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center"><p className="text-xs uppercase text-green-600">Mejor promedio</p><p className="text-2xl font-bold text-green-700">{bestAvg.toFixed(2)}</p></div>
+          </div>
+          <div className="space-y-3">
+            {hrData.map(({ gradeName, students }) => (
+              <div key={gradeName} className="border border-amber-200 rounded-xl overflow-hidden">
+                <div className="bg-gradient-to-r from-amber-100 to-amber-50 px-4 py-2 font-semibold text-amber-800 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" /> {gradeName}
+                </div>
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50"><tr>
+                    <th className="px-3 py-2 text-center w-16">Puesto</th>
+                    <th className="px-3 py-2 text-left">Estudiante</th>
+                    <th className="px-3 py-2 text-left">Grupo</th>
+                    <th className="px-3 py-2 text-center">Promedio</th>
+                    <th className="px-3 py-2 text-center">Desempeño</th>
+                  </tr></thead>
+                  <tbody>
+                    {students.map((s: any, i: number) => (
+                      <tr key={i} className={`border-t ${i === 0 ? 'bg-amber-50/60' : i === 1 ? 'bg-slate-50' : i === 2 ? 'bg-orange-50/40' : ''}`}>
+                        <td className="px-3 py-2 text-center font-bold text-lg">
+                          {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+                        </td>
+                        <td className="px-3 py-2 font-medium">{s.studentName}</td>
+                        <td className="px-3 py-2 text-slate-600">{s.group}</td>
+                        <td className="px-3 py-2 text-center font-bold">{s.average?.toFixed(2)}</td>
+                        <td className="px-3 py-2 text-center">{perfBadge(s.performance)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
           </div>
         </div>
       )
@@ -1236,12 +1335,15 @@ export default function AcademicReports() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-100"><tr>
-                <th className="px-3 py-2 text-left">Asignatura</th><th className="px-3 py-2 text-left">Área</th>
-                <th className="px-3 py-2 text-center">Promedio Actual</th><th className="px-3 py-2 text-center">Nota Mínima Requerida</th>
-                <th className="px-3 py-2 text-center">Estado</th><th className="px-3 py-2 text-left">Detalle</th>
+                <SortableHeader column="subjectName" label="Asignatura" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="areaName" label="Área" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="currentAnnualGrade" label="Promedio Actual" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="minimumRequired" label="Nota Mínima Requerida" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="status" label="Estado" align="center" sort={sortState} className="px-3 py-2" />
+                <th className="px-3 py-2 text-left">Detalle</th>
               </tr></thead>
               <tbody>
-                {(minimumGradeData.subjects || []).map((subj: any, idx: number) => (
+                {sortData(minimumGradeData.subjects || []).map((subj: any, idx: number) => (
                   <tr key={idx} className={`border-b hover:bg-slate-50 ${subj.status === 'impossible' ? 'bg-red-50' : subj.status === 'at_risk' ? 'bg-amber-50' : ''}`}>
                     <td className="px-3 py-2 font-medium">{subj.subjectName}</td>
                     <td className="px-3 py-2 text-slate-500 text-xs">{subj.areaName}</td>
@@ -1264,12 +1366,14 @@ export default function AcademicReports() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-100"><tr>
-              <th className="px-3 py-2 text-left">Nro</th><th className="px-3 py-2 text-left">Estudiante</th>
-              <th className="px-3 py-2 text-left">Asignatura Crítica</th><th className="px-3 py-2 text-center">Nota Mínima Requerida</th>
-              <th className="px-3 py-2 text-center">Estado</th>
+              <th className="px-3 py-2 text-left">Nro</th>
+              <SortableHeader column="studentName" label="Estudiante" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="subjectName" label="Asignatura Crítica" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="minimumRequired" label="Nota Mínima Requerida" align="center" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="status" label="Estado" align="center" sort={sortState} className="px-3 py-2" />
             </tr></thead>
             <tbody>
-              {minimumGradeGroupData.map((row, idx) => (
+              {sortData(minimumGradeGroupData).map((row, idx) => (
                 <tr key={idx} className={`border-b hover:bg-slate-50 ${row.status === 'Imposible' ? 'bg-red-50' : row.status === 'En riesgo' ? 'bg-amber-50' : ''}`}>
                   <td className="px-3 py-2">{idx + 1}</td>
                   <td className="px-3 py-2 font-medium">{row.studentName}</td>
@@ -1447,13 +1551,16 @@ export default function AcademicReports() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-100"><tr>
-                <th className="px-3 py-2 text-left">Estudiante</th><th className="px-3 py-2 text-left">Grupo</th>
-                <th className="px-3 py-2 text-center">Total Asig.</th><th className="px-3 py-2 text-center">Promueve</th>
-                <th className="px-3 py-2 text-center">En Riesgo</th><th className="px-3 py-2 text-center">No Promueve</th>
-                <th className="px-3 py-2 text-center">Proyección</th>
+                <SortableHeader column="studentName" label="Estudiante" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="group" label="Grupo" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="totalSubjects" label="Total Asig." align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="projectedApproved" label="Promueve" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="atRisk" label="En Riesgo" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="projectedFailed" label="No Promueve" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="overallProjection" label="Proyección" align="center" sort={sortState} className="px-3 py-2" />
               </tr></thead>
               <tbody>
-                {reportData.results.map((r: any, i: number) => (
+                {sortData(reportData.results).map((r: any, i: number) => (
                   <tr key={i} className={`border-b hover:bg-slate-50 ${r.overallProjection === 'NO_PROMUEVE' ? 'bg-red-50' : r.overallProjection === 'EN_RIESGO' ? 'bg-amber-50' : ''}`}>
                     <td className="px-3 py-2 font-medium">{r.studentName}</td><td className="px-3 py-2">{r.group}</td>
                     <td className="px-3 py-2 text-center">{r.totalSubjects}</td>
@@ -1578,10 +1685,12 @@ export default function AcademicReports() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-100"><tr>
-                  <th className="px-3 py-2 text-left">Estudiante</th><th className="px-3 py-2 text-center">Promedio</th><th className="px-3 py-2 text-center">Desempeño</th>
+                  <SortableHeader column="studentName" label="Estudiante" sort={sortState} className="px-3 py-2" />
+                  <SortableHeader column="average" label="Promedio" align="center" sort={sortState} className="px-3 py-2" />
+                  <SortableHeader column="performance" label="Desempeño" align="center" sort={sortState} className="px-3 py-2" />
                 </tr></thead>
                 <tbody>
-                  {reportData.students.map((s: any, i: number) => (
+                  {sortData(reportData.students).map((s: any, i: number) => (
                     <tr key={i} className="border-b hover:bg-slate-50">
                       <td className="px-3 py-2 font-medium">{s.studentName}</td>
                       <td className="px-3 py-2 text-center">{s.average?.toFixed(1)}</td>
@@ -1602,12 +1711,15 @@ export default function AcademicReports() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-100"><tr>
-              <th className="px-3 py-2 text-left">Docente</th><th className="px-3 py-2 text-left">Asignatura</th>
-              <th className="px-3 py-2 text-left">Grupo</th><th className="px-3 py-2 text-center">Promedio</th>
-              <th className="px-3 py-2 text-center">Aprobación %</th><th className="px-3 py-2 text-center">Estudiantes</th>
+              <SortableHeader column="teacherName" label="Docente" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="subjectName" label="Asignatura" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="groupName" label="Grupo" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="average" label="Promedio" align="center" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="approvalRate" label="Aprobación %" align="center" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="totalStudents" label="Estudiantes" align="center" sort={sortState} className="px-3 py-2" />
             </tr></thead>
             <tbody>
-              {reportData.results.map((r: any, i: number) => (
+              {sortData(reportData.results).map((r: any, i: number) => (
                 <tr key={i} className="border-b hover:bg-slate-50">
                   <td className="px-3 py-2 font-medium">{r.teacherName}</td><td className="px-3 py-2">{r.subjectName}</td>
                   <td className="px-3 py-2">{r.groupName}</td>
@@ -1806,17 +1918,17 @@ export default function AcademicReports() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-100"><tr>
-                <th className="px-3 py-2 text-left">Año</th>
-                <th className="px-3 py-2 text-center">Promedio</th>
-                <th className="px-3 py-2 text-center">Δ Prom.</th>
-                <th className="px-3 py-2 text-center">Aprobación %</th>
-                <th className="px-3 py-2 text-center">Δ Aprob.</th>
-                <th className="px-3 py-2 text-center">Estudiantes</th>
-                <th className="px-3 py-2 text-center">Δ Est.</th>
-                <th className="px-3 py-2 text-center">Grupos</th>
+                <SortableHeader column="yearName" label="Año" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="average" label="Promedio" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="avgVariation" label="Δ Prom." align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="approvalRate" label="Aprobación %" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="approvalVariation" label="Δ Aprob." align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="totalStudents" label="Estudiantes" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="studentVariation" label="Δ Est." align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="totalGroups" label="Grupos" align="center" sort={sortState} className="px-3 py-2" />
               </tr></thead>
               <tbody>
-                {reportData.results.map((yr: any, i: number) => (
+                {sortData(reportData.results).map((yr: any, i: number) => (
                   <tr key={yr.academicYearId} className="border-b hover:bg-slate-50">
                     <td className="px-3 py-2 font-medium">{yr.yearName}</td>
                     <td className="px-3 py-2 text-center font-medium">{yr.average}</td>

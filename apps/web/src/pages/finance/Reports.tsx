@@ -10,6 +10,7 @@ import {
   DollarSign,
 } from 'lucide-react'
 import { financeReportsApi } from '../../lib/api'
+import { useSortable, SortableHeader } from '../../components/reports/SortableTable'
 
 type ReportTab = 'portfolio' | 'debtors' | 'monthly' | 'profitability'
 
@@ -21,6 +22,7 @@ export default function FinanceReports() {
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<any>(null)
   const [year, setYear] = useState(new Date().getFullYear())
+  const { sortData, sortState } = useSortable<any>()
 
   const fetchReport = async () => {
     setLoading(true)
@@ -143,14 +145,14 @@ export default function FinanceReports() {
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tercero</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Documento</th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo pendiente</th>
+                      <SortableHeader column="thirdPartyName" label="Tercero" sort={sortState} className="px-6 py-3 text-xs font-medium text-gray-500 uppercase" />
+                      <SortableHeader column="thirdPartyDocument" label="Documento" sort={sortState} className="px-6 py-3 text-xs font-medium text-gray-500 uppercase" />
+                      <SortableHeader column="thirdPartyType" label="Tipo" align="center" sort={sortState} className="px-6 py-3 text-xs font-medium text-gray-500 uppercase" />
+                      <SortableHeader column="balanceSum" label="Saldo pendiente" align="right" sort={sortState} className="px-6 py-3 text-xs font-medium text-gray-500 uppercase" />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {data.map((item: any, idx: number) => (
+                    {sortData(data.map((d: any) => ({ ...d, balanceSum: Number(d._sum?.balance || 0) }))).map((item: any, idx: number) => (
                       <tr key={item.thirdPartyId} className="hover:bg-gray-50">
                         <td className="px-6 py-4 text-gray-500">{idx + 1}</td>
                         <td className="px-6 py-4 font-medium text-gray-900">{item.thirdPartyName || item.thirdPartyId}</td>
@@ -177,14 +179,14 @@ export default function FinanceReports() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mes</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ingresos</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Egresos</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Balance</th>
+                      <SortableHeader column="month" label="Mes" sort={sortState} className="px-6 py-3 text-xs font-medium text-gray-500 uppercase" />
+                      <SortableHeader column="income" label="Ingresos" align="right" sort={sortState} className="px-6 py-3 text-xs font-medium text-gray-500 uppercase" />
+                      <SortableHeader column="expense" label="Egresos" align="right" sort={sortState} className="px-6 py-3 text-xs font-medium text-gray-500 uppercase" />
+                      <SortableHeader column="balance" label="Balance" align="right" sort={sortState} className="px-6 py-3 text-xs font-medium text-gray-500 uppercase" />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {data.map((item: any) => (
+                    {sortData(data).map((item: any) => (
                       <tr key={item.month} className="hover:bg-gray-50">
                         <td className="px-6 py-4 font-medium text-gray-900">{monthNames[item.month - 1]}</td>
                         <td className="px-6 py-4 text-right text-green-600">
@@ -229,17 +231,17 @@ export default function FinanceReports() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoría</th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Obligaciones</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Cobrado</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Recaudado</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Gastos</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Utilidad</th>
+                      <SortableHeader column="conceptName" label="Concepto" sort={sortState} className="px-6 py-3 text-xs font-medium text-gray-500 uppercase" />
+                      <SortableHeader column="categoryName" label="Categoría" sort={sortState} className="px-6 py-3 text-xs font-medium text-gray-500 uppercase" />
+                      <SortableHeader column="obligationCount" label="Obligaciones" align="center" sort={sortState} className="px-6 py-3 text-xs font-medium text-gray-500 uppercase" />
+                      <SortableHeader column="totalCharged" label="Cobrado" align="right" sort={sortState} className="px-6 py-3 text-xs font-medium text-gray-500 uppercase" />
+                      <SortableHeader column="totalCollected" label="Recaudado" align="right" sort={sortState} className="px-6 py-3 text-xs font-medium text-gray-500 uppercase" />
+                      <SortableHeader column="totalExpenses" label="Gastos" align="right" sort={sortState} className="px-6 py-3 text-xs font-medium text-gray-500 uppercase" />
+                      <SortableHeader column="profit" label="Utilidad" align="right" sort={sortState} className="px-6 py-3 text-xs font-medium text-gray-500 uppercase" />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {data.map((item: any) => (
+                    {sortData(data).map((item: any) => (
                       <tr key={item.conceptId} className="hover:bg-gray-50">
                         <td className="px-6 py-4 font-medium text-gray-900">{item.conceptName}</td>
                         <td className="px-6 py-4">

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import {
   Calendar, Users, GraduationCap, ClipboardList, UserCheck,
-  AlertTriangle, BarChart3, ArrowLeft, Search, BookOpen, ChevronUp, ChevronDown,
+  AlertTriangle, BarChart3, ArrowLeft, Search, BookOpen,
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useReportsData } from '../../hooks/useReportsData'
@@ -11,6 +11,7 @@ import AttendanceReportLayout, {
   KPICard, kpiColorFromPct, sortByRisk, getRowBg, getStatusBadge,
   getPctColor, EmptyState, THRESHOLDS, setAttendanceThresholds,
 } from '../../components/reports/AttendanceReportLayout'
+import { useSortable, SortableHeader } from '../../components/reports/SortableTable'
 
 // ─── Types & constants ─────────────────────────────────────────────────
 interface ReportItem { id: string; name: string; description: string; icon: any; feature?: string }
@@ -111,8 +112,7 @@ export default function AttendanceReports() {
   const [filterMinPercent, setFilterMinPercent] = useState('80')
   const [teacherAssignments, setTeacherAssignments] = useState<any[]>([])
   const [loadingAssignments, setLoadingAssignments] = useState(false)
-  const [sortColumn, setSortColumn] = useState<string | null>(null)
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const { sortData, sortState } = useSortable<any>()
 
   const [attendanceData, setAttendanceData] = useState<any[]>([])
   const [attendanceDetailData, setAttendanceDetailData] = useState<any[]>([])
@@ -468,68 +468,23 @@ export default function AttendanceReports() {
   const td = 'px-3 py-2.5 text-sm'
   const tfoot = (n: number) => <div className="px-4 py-3 bg-slate-50 border-t text-xs text-slate-500">{n} registros encontrados</div>
 
-  // Función para manejar el click en encabezados de columna
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortColumn(column)
-      setSortDirection('asc')
-    }
-  }
-
-  // Componente de encabezado ordenable
-  const SortableHeader = ({ column, label, align = 'left' }: { column: string; label: string; align?: 'left' | 'center' }) => (
-    <th
-      className={`${th} text-${align} cursor-pointer hover:bg-slate-100 select-none transition-colors`}
-      onClick={() => handleSort(column)}
-    >
-      <div className={`flex items-center gap-1 ${align === 'center' ? 'justify-center' : ''}`}>
-        {label}
-        {sortColumn === column ? (
-          sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
-        ) : (
-          <span className="w-3 h-3 opacity-30">↕</span>
-        )}
-      </div>
-    </th>
-  )
-
-  // Función para ordenar datos
-  const sortData = <T extends Record<string, any>>(data: T[]): T[] => {
-    if (!sortColumn) return data
-    return [...data].sort((a, b) => {
-      let aVal = a[sortColumn]
-      let bVal = b[sortColumn]
-      // Manejar strings (nombre, grupo, estado)
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
-        const cmp = aVal.localeCompare(bVal, 'es', { sensitivity: 'base' })
-        return sortDirection === 'asc' ? cmp : -cmp
-      }
-      // Manejar números
-      aVal = Number(aVal) || 0
-      bVal = Number(bVal) || 0
-      return sortDirection === 'asc' ? aVal - bVal : bVal - aVal
-    })
-  }
-
   // Reusable table for group-like data (group, subject, critical share same shape)
   function GroupTable({ data, showLate = true }: { data: any[]; showLate?: boolean }) {
     const sorted = sortData(data)
     return (<div className="overflow-x-auto">
       <table className="w-full"><thead className="bg-slate-50 border-b border-slate-200"><tr>
         <th className={`${th} text-left w-12`}>#</th>
-        <SortableHeader column="name" label="Estudiante" />
-        <SortableHeader column="group" label="Grupo" />
-        <SortableHeader column="totalClasses" label="Total" align="center" />
-        <SortableHeader column="attended" label="Asist." align="center" />
-        <SortableHeader column="absent" label="Fallas" align="center" />
+        <SortableHeader column="name" label="Estudiante" sort={sortState} className={th} />
+        <SortableHeader column="group" label="Grupo" sort={sortState} className={th} />
+        <SortableHeader column="totalClasses" label="Total" align="center" sort={sortState} className={th} />
+        <SortableHeader column="attended" label="Asist." align="center" sort={sortState} className={th} />
+        <SortableHeader column="absent" label="Fallas" align="center" sort={sortState} className={th} />
         {showLate && <>
-          <SortableHeader column="late" label="Tardanzas" align="center" />
-          <SortableHeader column="excused" label="Excusas" align="center" />
+          <SortableHeader column="late" label="Tardanzas" align="center" sort={sortState} className={th} />
+          <SortableHeader column="excused" label="Excusas" align="center" sort={sortState} className={th} />
         </>}
-        <SortableHeader column="pct" label="%" align="center" />
-        <SortableHeader column="status" label="Estado" align="center" />
+        <SortableHeader column="pct" label="%" align="center" sort={sortState} className={th} />
+        <SortableHeader column="status" label="Estado" align="center" sort={sortState} className={th} />
       </tr></thead><tbody className="divide-y divide-slate-100">
         {sorted.map((r, i) => (<tr key={i} className={`${getRowBg(r.status)} hover:bg-slate-50/80 transition-colors`}>
           <td className={`${td} text-slate-400`}>{i + 1}</td>

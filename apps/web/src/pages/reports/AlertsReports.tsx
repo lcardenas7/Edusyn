@@ -13,6 +13,7 @@ import { Link } from 'react-router-dom'
 import { useReportsData } from '../../hooks/useReportsData'
 import { useAuth } from '../../contexts/AuthContext'
 import { teacherAssignmentsApi, periodFinalGradesApi } from '../../lib/api'
+import { useSortable, SortableHeader } from '../../components/reports/SortableTable'
 
 interface ReportItem {
   id: string
@@ -32,10 +33,17 @@ export default function AlertsReports() {
   const { hasFeature } = useAuth()
   const {
     academicYears, terms, groups,
+    gradingScale,
     filterYear, setFilterYear,
     filterPeriod, setFilterPeriod,
     filterGrade, setFilterGrade,
   } = useReportsData()
+
+  // Umbrales desde configuración institucional (no hardcoded)
+  const { minPassingGrade, maxGrade } = gradingScale
+  // Bajo rendimiento = por debajo del 70% del rango entre aprobatorio y máximo
+  const lowPerformanceThreshold = minPassingGrade + (maxGrade - minPassingGrade) * 0.25
+  const highRiskThreshold = minPassingGrade // Por debajo del aprobatorio
 
   const [selectedReport, setSelectedReport] = useState<string | null>(null)
   const [showReport, setShowReport] = useState(false)
@@ -43,6 +51,7 @@ export default function AlertsReports() {
 
   // Datos de reportes
   const [alertsData, setAlertsData] = useState<any[]>([])
+  const { sortData, sortState } = useSortable<any>()
 
   // Filtrar reportes según features
   const filteredReports = alertsReports.filter(r => !r.feature || hasFeature(r.feature))
@@ -95,10 +104,10 @@ export default function AlertsReports() {
             studentGrades.forEach((s) => {
               const avg = s.grades.length > 0 ? s.grades.reduce((a: number, b: number) => a + b, 0) / s.grades.length : 0
               
-              // Para bajo rendimiento: promedio < 3.5
-              // Para riesgo de reprobación: 2+ materias perdidas
-              const shouldInclude = reportId === 'alert-low-performance' 
-                ? (avg < 3.5 || s.failedCount > 0)
+              // Bajo rendimiento: promedio bajo el umbral institucional o con materias perdidas
+              // Riesgo de reprobación: 2+ materias perdidas
+              const shouldInclude = reportId === 'alert-low-performance'
+                ? (avg < lowPerformanceThreshold || s.failedCount > 0)
                 : (s.failedCount >= 2)
               
               if (shouldInclude) {
@@ -108,7 +117,7 @@ export default function AlertsReports() {
                   group: s.group,
                   avg: avg,
                   failed: s.failedCount,
-                  risk: avg < 3.0 ? 'Alto' : s.failedCount >= 2 ? 'Alto' : 'Medio'
+                  risk: avg < highRiskThreshold ? 'Alto' : s.failedCount >= 2 ? 'Alto' : 'Medio'
                 })
               }
             })
@@ -217,27 +226,28 @@ export default function AlertsReports() {
     }
 
     if (alertsData.length > 0) {
+      const sortedAlerts = sortData(alertsData)
       return (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-100">
               <tr>
                 <th className="px-3 py-2 text-left">Nro</th>
-                <th className="px-3 py-2 text-left">Estudiante</th>
-                <th className="px-3 py-2 text-left">Grupo</th>
-                <th className="px-3 py-2 text-center">Promedio</th>
-                <th className="px-3 py-2 text-center">Materias Perdidas</th>
-                <th className="px-3 py-2 text-center">Nivel de Riesgo</th>
+                <SortableHeader column="name" label="Estudiante" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="group" label="Grupo" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="avg" label="Promedio" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="failed" label="Materias Perdidas" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="risk" label="Nivel de Riesgo" align="center" sort={sortState} className="px-3 py-2" />
               </tr>
             </thead>
             <tbody>
-              {alertsData.map((row, idx) => (
+              {sortedAlerts.map((row, idx) => (
                 <tr key={idx} className="border-b hover:bg-slate-50">
-                  <td className="px-3 py-2">{row.nro}</td>
+                  <td className="px-3 py-2">{idx + 1}</td>
                   <td className="px-3 py-2 font-medium">{row.name}</td>
                   <td className="px-3 py-2">{row.group}</td>
                   <td className="px-3 py-2 text-center">
-                    <span className={row.avg < 3.0 ? 'text-red-600 font-medium' : ''}>{row.avg?.toFixed(1)}</span>
+                    <span className={row.avg < highRiskThreshold ? 'text-red-600 font-medium' : ''}>{row.avg?.toFixed(1)}</span>
                   </td>
                   <td className="px-3 py-2 text-center">
                     {row.failed > 0 ? (

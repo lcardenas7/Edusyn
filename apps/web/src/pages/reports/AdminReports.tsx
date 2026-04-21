@@ -15,7 +15,8 @@ import {
 import { Link } from 'react-router-dom'
 import { useReportsData } from '../../hooks/useReportsData'
 import { useAuth } from '../../contexts/AuthContext'
-import { teacherAssignmentsApi } from '../../lib/api'
+import { teacherAssignmentsApi, enrollmentsApi, groupsApi } from '../../lib/api'
+import { useSortable, SortableHeader } from '../../components/reports/SortableTable'
 
 interface ReportItem {
   id: string
@@ -50,6 +51,11 @@ export default function AdminReports() {
   // Datos de reportes
   const [teacherLoadData, setTeacherLoadData] = useState<any[]>([])
   const [groupLoadData, setGroupLoadData] = useState<any[]>([])
+  const [hoursSummaryData, setHoursSummaryData] = useState<any[]>([])
+  const [enrollmentSummaryData, setEnrollmentSummaryData] = useState<any[]>([])
+  const [coverageData, setCoverageData] = useState<any[]>([])
+  const [staffListData, setStaffListData] = useState<any[]>([])
+  const { sortData, sortState } = useSortable<any>()
 
   // Filtrar reportes según features
   const filteredReports = adminReports.filter(r => !r.feature || hasFeature(r.feature))
@@ -110,19 +116,33 @@ export default function AdminReports() {
       
       // Reportes de carga por grupo
       if (reportId === 'load-group') {
-        const assignmentsRes = await teacherAssignmentsApi.getAll({ academicYearId: filterYear })
+        const [assignmentsRes, enrollmentsRes] = await Promise.all([
+          teacherAssignmentsApi.getAll({ academicYearId: filterYear }),
+          enrollmentsApi.getAll({ academicYearId: filterYear, status: 'ACTIVE' }),
+        ])
         const assignments = assignmentsRes.data || []
-        
-        // Agrupar por grupo
+        const enrollments: any[] = enrollmentsRes.data || []
+
+        // Conteo real de estudiantes activos por grupo
+        const studentsByGroup = new Map<string, number>()
+        enrollments.forEach((e: any) => {
+          const gid = e.groupId || e.group?.id
+          if (!gid) return
+          studentsByGroup.set(gid, (studentsByGroup.get(gid) || 0) + 1)
+        })
+
+        // Agrupar asignaciones por grupo (incluye director)
         const groupMap = new Map<string, any>()
         assignments.forEach((a: any) => {
           const groupId = a.group?.id
           if (!groupId) return
           if (!groupMap.has(groupId)) {
+            const dir = a.group?.director
+            const directorName = dir ? [dir.lastName, dir.firstName].filter(Boolean).join(' ') : ''
             groupMap.set(groupId, {
               id: groupId,
-              name: `${a.group.grade?.name || ''} ${a.group.name}`,
-              director: '',
+              name: `${a.group.grade?.name || ''} ${a.group.name}`.trim(),
+              director: directorName,
               subjects: new Set(),
               teachers: new Set()
             })
@@ -131,18 +151,144 @@ export default function AdminReports() {
           if (a.subject?.name) group.subjects.add(a.subject.name)
           if (a.teacherId) group.teachers.add(a.teacherId)
         })
-        
+
         const groupData = Array.from(groupMap.values()).map((g, idx) => ({
           nro: idx + 1,
           group: g.name,
           director: g.director || 'Sin asignar',
-          students: 0,
+          students: studentsByGroup.get(g.id) || 0,
           subjects: g.subjects.size,
           teachers: g.teachers.size,
           complete: g.subjects.size >= 8
         }))
-        
+
         setGroupLoadData(groupData)
+      }
+
+      // Resumen de horas por nivel/jornada
+      if (reportId === 'hours-summary') {
+        const res = await teacherAssignmentsApi.getAll({ academicYearId: filterYear })
+        const rows: any[] = res.data || []
+        const byKey = new Map<string, any>()
+        rows.forEach((a: any) => {
+          const stage = a.group?.grade?.stage || 'SIN_NIVEL'
+          const shift = a.group?.shift?.name || a.group?.shift?.type || 'SIN_JORNADA'
+          const key = `${stage}|${shift}`
+          if (!byKey.has(key)) byKey.set(key, { stage, shift, hours: 0, teachers: new Set(), groups: new Set(), subjects: new Set() })
+          const e = byKey.get(key)
+          e.hours += Number(a.weeklyHours) || 2
+          if (a.teacherId) e.teachers.add(a.teacherId)
+          if (a.group?.id) e.groups.add(a.group.id)
+          if (a.subject?.id) e.subjects.add(a.subject.id)
+        })
+        setHoursSummaryData(Array.from(byKey.values()).map((e, idx) => ({
+          nro: idx + 1, stage: e.stage, shift: e.shift, hours: e.hours,
+          teachers: e.teachers.size, groups: e.groups.size, subjects: e.subjects.size,
+        })))
+      }
+
+      // Resumen de matrícula: estudiantes por grado y por grupo
+      if (reportId === 'enrollment-summary') {
+        const res = await enrollmentsApi.getAll({ academicYearId: filterYear, status: 'ACTIVE' })
+        const enrollments: any[] = res.data || []
+        const byGroup = new Map<string, any>()
+        enrollments.forEach((e: any) => {
+          const gid = e.groupId || e.group?.id
+          if (!gid) return
+          if (!byGroup.has(gid)) {
+            byGroup.set(gid, {
+              groupId: gid,
+              grade: e.group?.grade?.name || '-',
+              stage: e.group?.grade?.stage || '-',
+              group: `${e.group?.grade?.name || ''} ${e.group?.name || ''}`.trim(),
+              capacity: e.group?.maxCapacity || 0,
+              enrolled: 0,
+            })
+          }
+          byGroup.get(gid).enrolled += 1
+        })
+        setEnrollmentSummaryData(Array.from(byGroup.values()).map((g, idx) => ({
+          ...g, nro: idx + 1,
+          occupancy: g.capacity > 0 ? Math.round((g.enrolled / g.capacity) * 100) : 0,
+        })))
+      }
+
+      // Listado de personal: docentes (de asignaciones) + directores (de grupos)
+      if (reportId === 'staff-list') {
+        const [assignmentsRes, groupsRes] = await Promise.all([
+          teacherAssignmentsApi.getAll({ academicYearId: filterYear }),
+          groupsApi.getAll(),
+        ])
+        const assignments: any[] = assignmentsRes.data || []
+        const groups: any[] = groupsRes.data || []
+
+        type StaffEntry = { id: string; name: string; email: string; roles: Set<string>; subjects: Set<string>; groups: Set<string> }
+        const staffMap = new Map<string, StaffEntry>()
+
+        const ensure = (id: string, name: string, email?: string) => {
+          if (!staffMap.has(id)) {
+            staffMap.set(id, { id, name, email: email || '', roles: new Set(), subjects: new Set(), groups: new Set() })
+          }
+          return staffMap.get(id)!
+        }
+
+        // Docentes
+        assignments.forEach((a: any) => {
+          if (!a.teacher?.id) return
+          const t = a.teacher
+          const name = [t.lastName, t.secondLastName, t.firstName, t.secondName].filter(Boolean).join(' ').toUpperCase() || 'Docente'
+          const entry = ensure(t.id, name, t.email)
+          entry.roles.add('DOCENTE')
+          if (a.subject?.name) entry.subjects.add(a.subject.name)
+          if (a.group) entry.groups.add(`${a.group.grade?.name || ''} ${a.group.name || ''}`.trim())
+        })
+
+        // Directores de grupo
+        groups.forEach((g: any) => {
+          if (!g.director?.id) return
+          const d = g.director
+          const name = [d.lastName, d.firstName].filter(Boolean).join(' ').toUpperCase() || 'Director'
+          const entry = ensure(d.id, name)
+          entry.roles.add('DIRECTOR_GRUPO')
+          entry.groups.add(`${g.grade?.name || ''} ${g.name || ''}`.trim())
+        })
+
+        setStaffListData(Array.from(staffMap.values()).map((s, idx) => ({
+          nro: idx + 1,
+          name: s.name,
+          email: s.email,
+          roles: Array.from(s.roles).join(', '),
+          subjects: Array.from(s.subjects).join(', '),
+          groups: Array.from(s.groups).join(', '),
+          roleCount: s.roles.size,
+        })))
+      }
+
+      // Cobertura académica: % de asignaturas cubiertas por grupo
+      if (reportId === 'coverage') {
+        const res = await teacherAssignmentsApi.getAll({ academicYearId: filterYear })
+        const assignments: any[] = res.data || []
+        const byGroup = new Map<string, any>()
+        assignments.forEach((a: any) => {
+          const gid = a.group?.id; if (!gid) return
+          if (!byGroup.has(gid)) {
+            byGroup.set(gid, {
+              groupId: gid,
+              group: `${a.group.grade?.name || ''} ${a.group.name || ''}`.trim(),
+              subjects: new Set<string>(),
+              assignedSubjects: new Set<string>(),
+            })
+          }
+          const e = byGroup.get(gid)
+          if (a.subject?.id) e.subjects.add(a.subject.id)
+          if (a.teacherId && a.subject?.id) e.assignedSubjects.add(a.subject.id)
+        })
+        setCoverageData(Array.from(byGroup.values()).map((g, idx) => {
+          const total = g.subjects.size
+          const covered = g.assignedSubjects.size
+          const pct = total > 0 ? Math.round((covered / total) * 100) : 0
+          return { nro: idx + 1, group: g.group, totalSubjects: total, coveredSubjects: covered, coveragePct: pct }
+        }))
       }
 
     } catch (err) {
@@ -194,7 +340,7 @@ export default function AdminReports() {
   const renderFilters = () => {
     return (
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Año Escolar</label>
             <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
@@ -204,22 +350,7 @@ export default function AdminReports() {
               ))}
             </select>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Sede</label>
-            <select className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-              <option value="all">Todas</option>
-              <option value="principal">Principal</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Jornada</label>
-            <select className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
-              <option value="all">Todas</option>
-              <option value="manana">Mañana</option>
-              <option value="tarde">Tarde</option>
-            </select>
-          </div>
-          <div className="flex items-end">
+          <div className="flex items-end sm:col-span-2">
             <button onClick={() => selectedReport && loadReportData(selectedReport)} className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 w-full">Buscar</button>
           </div>
         </div>
@@ -244,15 +375,15 @@ export default function AdminReports() {
             <thead className="bg-slate-100">
               <tr>
                 <th className="px-3 py-2 text-left">Nro</th>
-                <th className="px-3 py-2 text-left">Docente</th>
-                <th className="px-3 py-2 text-left">Asignaturas</th>
-                <th className="px-3 py-2 text-left">Grupos</th>
-                <th className="px-3 py-2 text-center">Horas</th>
-                <th className="px-3 py-2 text-center">Estado</th>
+                <SortableHeader column="name" label="Docente" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="subjects" label="Asignaturas" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="groups" label="Grupos" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="hours" label="Horas" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="status" label="Estado" align="center" sort={sortState} className="px-3 py-2" />
               </tr>
             </thead>
             <tbody>
-              {teacherLoadData.map((row, idx) => (
+              {sortData(teacherLoadData).map((row, idx) => (
                 <tr key={idx} className="border-b hover:bg-slate-50">
                   <td className="px-3 py-2">{row.nro}</td>
                   <td className="px-3 py-2 font-medium">{row.name}</td>
@@ -279,16 +410,16 @@ export default function AdminReports() {
             <thead className="bg-slate-100">
               <tr>
                 <th className="px-3 py-2 text-left">Nro</th>
-                <th className="px-3 py-2 text-left">Grupo</th>
-                <th className="px-3 py-2 text-left">Director</th>
-                <th className="px-3 py-2 text-center">Estudiantes</th>
-                <th className="px-3 py-2 text-center">Asignaturas</th>
-                <th className="px-3 py-2 text-center">Docentes</th>
-                <th className="px-3 py-2 text-center">Estado</th>
+                <SortableHeader column="group" label="Grupo" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="director" label="Director" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="students" label="Estudiantes" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="subjects" label="Asignaturas" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="teachers" label="Docentes" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="complete" label="Estado" align="center" sort={sortState} className="px-3 py-2" />
               </tr>
             </thead>
             <tbody>
-              {groupLoadData.map((row, idx) => (
+              {sortData(groupLoadData).map((row, idx) => (
                 <tr key={idx} className="border-b hover:bg-slate-50">
                   <td className="px-3 py-2">{row.nro}</td>
                   <td className="px-3 py-2 font-medium">{row.group}</td>
@@ -305,6 +436,160 @@ export default function AdminReports() {
               ))}
             </tbody>
           </table>
+        </div>
+      )
+    }
+
+    // Resumen de horas
+    if (selectedReport === 'hours-summary' && hoursSummaryData.length > 0) {
+      return (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-100"><tr>
+              <th className="px-3 py-2 text-left">Nro</th>
+              <SortableHeader column="stage" label="Nivel" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="shift" label="Jornada" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="hours" label="Horas semanales" align="center" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="teachers" label="Docentes" align="center" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="groups" label="Grupos" align="center" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="subjects" label="Asignaturas" align="center" sort={sortState} className="px-3 py-2" />
+            </tr></thead>
+            <tbody>
+              {sortData(hoursSummaryData).map((r, i) => (
+                <tr key={i} className="border-b hover:bg-slate-50">
+                  <td className="px-3 py-2">{i + 1}</td>
+                  <td className="px-3 py-2 font-medium">{r.stage}</td>
+                  <td className="px-3 py-2">{r.shift}</td>
+                  <td className="px-3 py-2 text-center font-bold">{r.hours}</td>
+                  <td className="px-3 py-2 text-center">{r.teachers}</td>
+                  <td className="px-3 py-2 text-center">{r.groups}</td>
+                  <td className="px-3 py-2 text-center">{r.subjects}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
+    }
+
+    // Resumen matrícula
+    if (selectedReport === 'enrollment-summary' && enrollmentSummaryData.length > 0) {
+      const total = enrollmentSummaryData.reduce((s, r) => s + r.enrolled, 0)
+      return (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-blue-50 rounded-xl p-3 text-center"><p className="text-xs text-blue-500 uppercase">Total matriculados</p><p className="text-2xl font-bold text-blue-700">{total}</p></div>
+            <div className="bg-slate-50 rounded-xl p-3 text-center"><p className="text-xs text-slate-500 uppercase">Grupos</p><p className="text-2xl font-bold text-slate-700">{enrollmentSummaryData.length}</p></div>
+            <div className="bg-green-50 rounded-xl p-3 text-center"><p className="text-xs text-green-500 uppercase">Promedio por grupo</p><p className="text-2xl font-bold text-green-700">{Math.round(total / Math.max(enrollmentSummaryData.length, 1))}</p></div>
+            <div className="bg-amber-50 rounded-xl p-3 text-center"><p className="text-xs text-amber-500 uppercase">Ocupación promedio</p><p className="text-2xl font-bold text-amber-700">{Math.round(enrollmentSummaryData.reduce((s, r) => s + r.occupancy, 0) / Math.max(enrollmentSummaryData.length, 1))}%</p></div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-100"><tr>
+                <th className="px-3 py-2 text-left">Nro</th>
+                <SortableHeader column="stage" label="Nivel" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="grade" label="Grado" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="group" label="Grupo" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="enrolled" label="Matriculados" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="capacity" label="Capacidad" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="occupancy" label="Ocupación %" align="center" sort={sortState} className="px-3 py-2" />
+              </tr></thead>
+              <tbody>
+                {sortData(enrollmentSummaryData).map((r, i) => (
+                  <tr key={i} className="border-b hover:bg-slate-50">
+                    <td className="px-3 py-2">{i + 1}</td>
+                    <td className="px-3 py-2 text-xs text-slate-500">{r.stage}</td>
+                    <td className="px-3 py-2">{r.grade}</td>
+                    <td className="px-3 py-2 font-medium">{r.group}</td>
+                    <td className="px-3 py-2 text-center font-bold">{r.enrolled}</td>
+                    <td className="px-3 py-2 text-center text-slate-500">{r.capacity || '-'}</td>
+                    <td className="px-3 py-2 text-center">
+                      <span className={`px-2 py-0.5 rounded text-xs ${r.occupancy >= 90 ? 'bg-red-100 text-red-700' : r.occupancy >= 70 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {r.capacity > 0 ? `${r.occupancy}%` : '-'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )
+    }
+
+    // Listado de personal
+    if (selectedReport === 'staff-list' && staffListData.length > 0) {
+      return (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-100"><tr>
+              <th className="px-3 py-2 text-left">Nro</th>
+              <SortableHeader column="name" label="Nombre" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="email" label="Email" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="roles" label="Rol(es)" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="subjects" label="Asignaturas" sort={sortState} className="px-3 py-2" />
+              <SortableHeader column="groups" label="Grupos" sort={sortState} className="px-3 py-2" />
+            </tr></thead>
+            <tbody>
+              {sortData(staffListData).map((r, i) => (
+                <tr key={i} className="border-b hover:bg-slate-50">
+                  <td className="px-3 py-2">{i + 1}</td>
+                  <td className="px-3 py-2 font-medium">{r.name}</td>
+                  <td className="px-3 py-2 text-slate-500 text-xs">{r.email || '—'}</td>
+                  <td className="px-3 py-2">
+                    {r.roles.split(', ').map((role: string) => (
+                      <span key={role} className="inline-block mr-1 px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs">{role}</span>
+                    ))}
+                  </td>
+                  <td className="px-3 py-2 text-slate-600 max-w-xs truncate">{r.subjects || '—'}</td>
+                  <td className="px-3 py-2 text-slate-600 max-w-xs truncate">{r.groups || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
+    }
+
+    // Cobertura académica
+    if (selectedReport === 'coverage' && coverageData.length > 0) {
+      const avgCoverage = Math.round(coverageData.reduce((s, r) => s + r.coveragePct, 0) / coverageData.length)
+      const fullCoverage = coverageData.filter(r => r.coveragePct >= 100).length
+      const partialCoverage = coverageData.length - fullCoverage
+      return (
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            <div className={`rounded-xl p-3 text-center ${avgCoverage >= 90 ? 'bg-green-50' : avgCoverage >= 70 ? 'bg-amber-50' : 'bg-red-50'}`}>
+              <p className="text-xs uppercase text-slate-500">Cobertura promedio</p>
+              <p className={`text-2xl font-bold ${avgCoverage >= 90 ? 'text-green-700' : avgCoverage >= 70 ? 'text-amber-700' : 'text-red-700'}`}>{avgCoverage}%</p>
+            </div>
+            <div className="bg-green-50 rounded-xl p-3 text-center"><p className="text-xs text-green-500 uppercase">Grupos cubiertos</p><p className="text-2xl font-bold text-green-700">{fullCoverage}</p></div>
+            <div className="bg-amber-50 rounded-xl p-3 text-center"><p className="text-xs text-amber-500 uppercase">Grupos incompletos</p><p className="text-2xl font-bold text-amber-700">{partialCoverage}</p></div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-100"><tr>
+                <th className="px-3 py-2 text-left">Nro</th>
+                <SortableHeader column="group" label="Grupo" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="totalSubjects" label="Asignaturas" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="coveredSubjects" label="Cubiertas" align="center" sort={sortState} className="px-3 py-2" />
+                <SortableHeader column="coveragePct" label="Cobertura %" align="center" sort={sortState} className="px-3 py-2" />
+              </tr></thead>
+              <tbody>
+                {sortData(coverageData).map((r, i) => (
+                  <tr key={i} className={`border-b hover:bg-slate-50 ${r.coveragePct < 70 ? 'bg-red-50/40' : r.coveragePct < 100 ? 'bg-amber-50/40' : ''}`}>
+                    <td className="px-3 py-2">{i + 1}</td>
+                    <td className="px-3 py-2 font-medium">{r.group}</td>
+                    <td className="px-3 py-2 text-center">{r.totalSubjects}</td>
+                    <td className="px-3 py-2 text-center">{r.coveredSubjects}</td>
+                    <td className="px-3 py-2 text-center">
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${r.coveragePct >= 100 ? 'bg-green-100 text-green-700' : r.coveragePct >= 70 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{r.coveragePct}%</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )
     }
