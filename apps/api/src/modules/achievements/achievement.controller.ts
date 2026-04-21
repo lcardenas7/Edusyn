@@ -56,7 +56,6 @@ export class AchievementController {
     },
   ) {
     try {
-      console.log('[AchievementController] Upserting config for institution:', body.institutionId);
       return await this.configService.upsertConfig(body);
     } catch (error) {
       console.error('[AchievementController] Error upserting config:', error);

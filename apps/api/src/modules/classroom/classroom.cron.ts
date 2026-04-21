@@ -8,7 +8,7 @@ export class ClassroomCronService {
 
   constructor(private readonly classroomService: ClassroomService) {}
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async handleScheduledPublications() {
     try {
       const count = await this.classroomService.processScheduledPublications();

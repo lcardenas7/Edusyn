@@ -48,8 +48,6 @@ export class InstitutionalDocumentsService {
     file: Express.Multer.File,
     uploadedById: string,
   ) {
-    console.log('[InstitutionalDocuments] Creating document:', { dto, uploadedById, fileName: file?.originalname });
-    
     // Validar archivo
     this.validateFile(file);
     
@@ -57,9 +55,7 @@ export class InstitutionalDocumentsService {
     await this.checkStorageLimit(dto.institutionId, file.size);
     
     // Subir archivo a Supabase
-    console.log('[InstitutionalDocuments] Uploading to Supabase...');
     const uploadResult = await this.uploadDocument(dto.institutionId, file, dto.category);
-    console.log('[InstitutionalDocuments] Upload result:', uploadResult);
     
     // Crear registro en BD
     try {
@@ -83,8 +79,6 @@ export class InstitutionalDocumentsService {
         },
       });
       
-      console.log('[InstitutionalDocuments] Document created:', document.id);
-      
       // Actualizar uso de almacenamiento
       await this.updateStorageUsage(dto.institutionId, file.size);
       
@@ -102,8 +96,6 @@ export class InstitutionalDocumentsService {
   }
 
   async findAll(institutionId: string, userRoles?: string[]) {
-    console.log('[InstitutionalDocuments] findAll - institutionId:', institutionId, 'userRoles:', userRoles);
-    
     const documents = await this.prisma.institutionalDocument.findMany({
       where: {
         institutionId,
@@ -119,8 +111,6 @@ export class InstitutionalDocumentsService {
         { createdAt: 'desc' },
       ],
     });
-    
-    console.log('[InstitutionalDocuments] Found documents:', documents.length);
     
     // Filtrar por visibilidad de rol si no es admin
     let filtered = documents;
@@ -342,15 +332,11 @@ export class InstitutionalDocumentsService {
     recalculatedUsage: number;
     message: string;
   }> {
-    console.log('[InstitutionalDocuments] Cleaning up orphaned files for institution:', institutionId);
-    
     // 1. Obtener todos los documentos registrados en BD para esta institución
     const dbDocuments = await this.prisma.institutionalDocument.findMany({
       where: { institutionId },
       select: { fileUrl: true, fileSize: true },
     });
-    
-    console.log('[InstitutionalDocuments] Documents in DB:', dbDocuments.length);
     
     // Extraer paths de los documentos en BD
     const dbPaths = new Set(
@@ -366,26 +352,18 @@ export class InstitutionalDocumentsService {
     let allStorageFiles: string[] = [];
     
     try {
-      console.log('[InstitutionalDocuments] Scanning storage path:', basePath);
-      
       const folders = await this.storageService.listFiles(
         this.storageService.buckets.documentos,
         basePath,
       );
       
-      console.log('[InstitutionalDocuments] Items found:', folders?.length || 0);
-      
       if (folders && folders.length > 0) {
         for (const folder of folders) {
           const categoryPath = `${basePath}/${folder.name}`;
-          console.log('[InstitutionalDocuments] Scanning category:', categoryPath);
-          
           const files = await this.storageService.listFiles(
             this.storageService.buckets.documentos,
             categoryPath,
           );
-          
-          console.log('[InstitutionalDocuments] Files in', folder.name, ':', files?.length || 0);
           
           if (files) {
             for (const file of files) {
@@ -394,16 +372,12 @@ export class InstitutionalDocumentsService {
                 allStorageFiles.push(fullPath);
                 if (!dbPaths.has(fullPath)) {
                   orphanedFiles.push(fullPath);
-                  console.log('[InstitutionalDocuments] Orphaned file found:', fullPath);
                 }
               }
             }
           }
         }
       }
-      
-      console.log('[InstitutionalDocuments] Total files in storage:', allStorageFiles.length);
-      console.log('[InstitutionalDocuments] Orphaned files:', orphanedFiles.length);
       
     } catch (error) {
       console.error('[InstitutionalDocuments] Error scanning storage:', error);
@@ -413,13 +387,11 @@ export class InstitutionalDocumentsService {
     const deletedFiles: string[] = [];
     for (const filePath of orphanedFiles) {
       try {
-        console.log('[InstitutionalDocuments] Deleting:', filePath);
         await this.storageService.deleteFile(
           this.storageService.buckets.documentos,
           filePath,
         );
         deletedFiles.push(filePath);
-        console.log('[InstitutionalDocuments] Deleted orphaned file:', filePath);
       } catch (error) {
         console.error('[InstitutionalDocuments] Error deleting file:', filePath, error);
       }
@@ -440,10 +412,6 @@ export class InstitutionalDocumentsService {
       },
     });
     
-    console.log('[InstitutionalDocuments] Cleanup complete:', {
-      deletedFiles: deletedFiles.length,
-      recalculatedUsage: totalSize,
-    });
     
     return {
       deletedFiles,

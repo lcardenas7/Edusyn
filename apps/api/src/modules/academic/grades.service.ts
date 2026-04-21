@@ -116,8 +116,6 @@ export class GradesService {
 
   // Sincronizar grados y grupos desde el frontend
   async syncGradesAndGroups(institutionId: string, grades: SyncGradeDto[]) {
-    console.log(`[GradesService] Sincronizando ${grades.length} grados para institución ${institutionId}`);
-
     // 1. Asegurar que existe un campus por defecto
     let campus = await this.prisma.campus.findFirst({
       where: { institutionId }
@@ -134,7 +132,6 @@ export class GradesService {
           address: institution?.address || '',
         }
       });
-      console.log(`[GradesService] Campus creado: ${campus.name}`);
     }
 
     // 2. Asegurar que existen los shifts
@@ -160,7 +157,6 @@ export class GradesService {
             type: shiftDef.type,
           }
         });
-        console.log(`[GradesService] Shift creado: ${shift.name}`);
       }
       shiftMap[shiftDef.name] = shift.id;
     }
@@ -192,7 +188,6 @@ export class GradesService {
             number: gradeData.order,
           }
         });
-        console.log(`[GradesService] Grado creado: ${grade.name} para institución ${institutionId}`);
       }
 
       // Crear grupos para este grado
@@ -219,7 +214,6 @@ export class GradesService {
               maxCapacity: groupData.capacity,
             }
           });
-          console.log(`[GradesService] Grupo creado: ${gradeData.name} ${group.name}`);
         }
       }
 

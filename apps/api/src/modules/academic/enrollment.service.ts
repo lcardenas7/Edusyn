@@ -764,13 +764,6 @@ export class EnrollmentService {
     });
     const tutoringAttendanceMigrated = tutoringResult.count;
 
-    console.log(
-      `[ChangeGroup] Migración de notas para enrollment ${enrollmentId}: ` +
-      `${partialGradesMigrated} PartialGrades, ${studentGradesMigrated} StudentGrades (referenciados), ` +
-      `${attendanceMigrated} AttendanceRecords, ${tutoringAttendanceMigrated} TutoringAttendance. ` +
-      `Asignaturas: ${subjectsMatched.length} migradas, ${subjectsNotMatched.length} sin equivalente.`
-    );
-
     return {
       partialGradesMigrated,
       studentGradesMigrated,
@@ -1241,7 +1234,6 @@ export class EnrollmentService {
         }
       });
 
-      console.log(`[Enrollment] Academic snapshot created for enrollment ${enrollmentId}`);
     } catch (error) {
       // No fallar la matrícula si el snapshot falla, solo loguear
       console.error(`[Enrollment] Error creating academic snapshot for enrollment ${enrollmentId}:`, error);

@@ -74,25 +74,18 @@ export class ScheduleGeneratorService {
     const { academicYearId, shiftId, groupIds, clearExisting = true, respectAvailability = true, activeDays, groupTeacherBlocks = true } = options;
     const daysToUse: DayOfWeek[] = activeDays && activeDays.length > 0 ? activeDays : DAYS;
 
-    console.log('[ScheduleGenerator] Starting generation with options:', {
-      institutionId, academicYearId, shiftId, groupIds, clearExisting, activeDays: daysToUse,
-    });
-
     // 1. Obtener grupos objetivo (filtrados por shiftId si se especifica)
     // getTargetGroups throws if no groups found with diagnostic info
     const groups = await this.getTargetGroups(institutionId, academicYearId, groupIds, shiftId);
-    console.log('[ScheduleGenerator] Found groups:', groups.length, groups.map(g => ({ id: g.id, name: g.name, shiftId: g.shiftId })));
 
     // 2. Obtener TeacherAssignments para esos grupos
     const assignments = await this.getAssignments(academicYearId, groups.map(g => g.id));
-    console.log('[ScheduleGenerator] Found assignments:', assignments.length, assignments.slice(0, 3).map(a => ({ subject: a.subjectName, group: a.groupName, hours: a.weeklyHours })));
     if (assignments.length === 0) {
       throw new BadRequestException('No hay asignaciones docente-materia-grupo. Importe la carga académica primero.');
     }
 
     // 3. Obtener bloques de tiempo por grupo (según su jornada/shift)
     const groupTimeBlocks = await this.getGroupTimeBlocks(institutionId, groups);
-    console.log('[ScheduleGenerator] TimeBlocks per group:', Array.from(groupTimeBlocks.entries()).map(([gid, blocks]) => ({ groupId: gid, blocksCount: blocks.length, types: blocks.map(b => b.type) })));
 
     // 4. Obtener disponibilidad docente
     const teacherAvailability = respectAvailability
@@ -121,8 +114,6 @@ export class ScheduleGeneratorService {
     for (const [groupId, blocks] of groupTimeBlocks.entries()) {
       totalClassBlocks += blocks.length;
     }
-    console.log('[ScheduleGenerator] Total CLASS blocks across all groups:', totalClassBlocks);
-
     if (totalClassBlocks === 0) {
       console.error('[ScheduleGenerator] No CLASS blocks found for any group!');
       return {
@@ -148,15 +139,6 @@ export class ScheduleGeneratorService {
       daysToUse,
       groupTeacherBlocks,
     );
-
-    console.log('[ScheduleGenerator] Generation result:', {
-      success: result.success,
-      placedHours: result.placedHours,
-      unplacedHours: result.unplacedHours,
-      createdInDb: result.createdInDb,
-      failedInDb: result.failedInDb,
-      conflictsCount: result.conflicts.length,
-    });
 
     return result;
   }
@@ -245,7 +227,6 @@ export class ScheduleGeneratorService {
 
     for (const group of groups) {
       if (!group.shiftId && !group.shift?.id) {
-        console.log(`[ScheduleGenerator] Group ${group.name} has no shiftId, skipping`);
         continue;
       }
       const shiftId = group.shiftId || group.shift?.id;
@@ -255,11 +236,8 @@ export class ScheduleGeneratorService {
         orderBy: { order: 'asc' },
       });
 
-      console.log(`[ScheduleGenerator] Group ${group.name} (shift ${shiftId}): found ${blocks.length} total blocks, types:`, blocks.map(b => b.type));
-
       // Solo bloques de tipo CLASS son asignables
       const classBlocks = blocks.filter(b => b.type === 'CLASS');
-      console.log(`[ScheduleGenerator] Group ${group.name}: ${classBlocks.length} CLASS blocks available`);
       result.set(group.id, classBlocks);
     }
 
@@ -675,7 +653,6 @@ export class ScheduleGeneratorService {
     // Crear entries en batch
     let createdCount = 0;
     let failedCount = 0;
-    console.log(`[ScheduleGenerator] Creating ${entriesToCreate.length} schedule entries in DB...`);
     for (const entry of entriesToCreate) {
       try {
         await this.prisma.scheduleEntry.create({ data: entry });
@@ -691,7 +668,6 @@ export class ScheduleGeneratorService {
         }
       }
     }
-    console.log(`[ScheduleGenerator] DB results: ${createdCount} created, ${failedCount} failed of ${entriesToCreate.length} total`);
 
     // Compilar detalles por grupo
     const groupMap = new Map<string, GroupGenerationDetail>();

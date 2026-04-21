@@ -8,8 +8,6 @@ export class GroupsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateGroupDto) {
-    console.log('[GroupsService] Creating group with dto:', dto);
-
     // Validar que el grado pertenece a la misma institución que el campus
     const [campus, grade] = await Promise.all([
       this.prisma.campus.findUnique({ where: { id: dto.campusId }, select: { institutionId: true } }),
@@ -36,17 +34,13 @@ export class GroupsService {
           shift: true,
         },
       });
-      console.log('[GroupsService] Group created:', group.id, group.name);
       return group;
     } catch (error: any) {
-      console.error('[GroupsService] Error creating group:', error.message);
       throw error;
     }
   }
 
   async list(params: { campusId?: string; shiftId?: string; gradeId?: string; institutionId?: string }) {
-    console.log('[GroupsService] Listando grupos con params:', params);
-    
     const groups = await this.prisma.group.findMany({
       where: {
         campusId: params.campusId,
@@ -74,17 +68,6 @@ export class GroupsService {
         { name: 'asc' },
       ],
     });
-    
-    // Log detallado para debugging
-    console.log(`[GroupsService] Encontrados ${groups.length} grupos para institutionId: ${params.institutionId}`);
-    if (groups.length > 0) {
-      console.log('[GroupsService] Muestra de grupos:', groups.slice(0, 3).map(g => ({
-        name: g.name,
-        grade: g.grade?.name,
-        campusInstitutionId: g.campus?.institutionId,
-        institutionName: (g.campus as any)?.institution?.name
-      })));
-    }
     
     return groups;
   }

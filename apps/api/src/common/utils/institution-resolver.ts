@@ -33,7 +33,6 @@ export async function resolveInstitutionId(
     ));
 
   if (isSuperAdmin && queryInstitutionId) {
-    console.log(`[InstitutionResolver] SUPERADMIN usando institutionId del query: ${queryInstitutionId}`);
     return queryInstitutionId;
   }
 
@@ -53,12 +52,10 @@ export async function resolveInstitutionId(
     });
     
     if (institutionUser?.institutionId) {
-      console.log(`[InstitutionResolver] institutionId obtenido de InstitutionUser: ${institutionUser.institutionId}`);
       return institutionUser.institutionId;
     }
   }
 
-  console.warn(`[InstitutionResolver] No se pudo resolver institutionId para usuario ${user.id}`);
   return undefined;
 }
 

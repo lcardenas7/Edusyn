@@ -23,13 +23,11 @@ export class TeachersController {
     
     // Si no viene en el JWT, buscarlo en la BD (fallback robusto)
     if (!institutionId && req.user?.id) {
-      console.log(`[TeachersController] institutionId no está en JWT, buscando en BD para usuario ${req.user.id}`);
       const institutionUser = await this.prisma.institutionUser.findFirst({
         where: { userId: req.user.id },
         select: { institutionId: true }
       });
       institutionId = institutionUser?.institutionId;
-      console.log(`[TeachersController] institutionId encontrado en BD: ${institutionId}`);
     }
 
     if (!institutionId) {
@@ -54,16 +52,10 @@ export class TeachersController {
       institutionId = institutionUser?.institutionId;
     }
 
-    console.log(`[TeachersController.list] userId=${req.user?.id}, institutionId=${institutionId}, isActive=${isActive}`);
-
-    const teachers = await this.teachersService.list({
+    return this.teachersService.list({
       institutionId,
       isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
     });
-
-    console.log(`[TeachersController.list] Found ${teachers.length} teachers`);
-    
-    return teachers;
   }
 
   @Get(':id')

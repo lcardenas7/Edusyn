@@ -43,7 +43,6 @@ export class ScheduleGeneratorController {
         select: { institutionId: true },
       });
       if (year?.institutionId) {
-        console.log(`[Timetabling] Resolved institutionId ${year.institutionId} from academicYearId ${academicYearId}`);
         return year.institutionId;
       }
     }
@@ -222,8 +221,6 @@ export class ScheduleGeneratorController {
     if (!institutionId) {
       return { success: false, errors: ['No se pudo resolver la institución. Contacte soporte.'] };
     }
-    console.log(`[Import] institutionId=${institutionId}, academicYearId=${academicYearId}, user=${req.user.id}, role=${req.user.isSuperAdmin ? 'SUPERADMIN' : 'INSTITUTIONAL'}`);
-
     const importResult = await this.excelService.importTeachingLoad(
       institutionId,
       academicYearId,
@@ -243,8 +240,6 @@ export class ScheduleGeneratorController {
     const uniqueTeachers = new Set(assignments.map(a => a.teacherId));
     const uniqueGroups = new Set(assignments.map(a => a.groupId));
     const totalHours = assignments.reduce((sum, a) => sum + (a.weeklyHours || 0), 0);
-    console.log(`[Import] Post-import check: ${assignments.length} assignments found for institutionId=${institutionId}`);
-
     return {
       ...importResult,
       teachingLoad: {
@@ -800,12 +795,7 @@ export class ScheduleGeneratorController {
     @Query('shiftId') shiftId?: string,
   ) {
     const institutionId = await this.resolveInstitutionId(req, academicYearId);
-    console.log(`[TeachingLoad] institutionId=${institutionId}, academicYearId=${academicYearId}, shiftId=${shiftId || 'ALL'}, user=${req.user?.id}`);
     if (!institutionId) return { assignments: [], summary: { totalAssignments: 0, uniqueTeachers: 0, uniqueGroups: 0, totalWeeklyHours: 0 } };
-
-    // Also check raw count without shiftId for diagnostics
-    const totalCount = await this.prisma.teacherAssignment.count({ where: { academicYearId, institutionId } });
-    console.log(`[TeachingLoad] Total assignments (no shift filter): ${totalCount}`);
 
     const assignments = await this.prisma.teacherAssignment.findMany({
       where: {
@@ -1178,7 +1168,6 @@ export class ScheduleGeneratorController {
   ) {
     const institutionId = await this.resolveInstitutionId(req, academicYearId);
     const userId = req.user.sub || req.user.id;
-    console.log('[ScheduleViews] Request:', { institutionId, academicYearId, view, filterId, userId, isSuperAdmin: req.user.isSuperAdmin });
 
     if (!institutionId) {
       console.error('[ScheduleViews] No institutionId — cannot resolve from JWT or academicYearId');
@@ -1226,14 +1215,6 @@ export class ScheduleGeneratorController {
       },
       orderBy: [{ timeBlock: { order: 'asc' } }, { dayOfWeek: 'asc' }],
     });
-    console.log(`[ScheduleViews] Found ${entries.length} schedule entries for institution ${institutionId}, year ${academicYearId}`);
-    if (entries.length === 0) {
-      // Debug: check if there are ANY entries for this institution
-      const totalInstitutionEntries = await this.prisma.scheduleEntry.count({ where: { institutionId } });
-      const totalYearEntries = await this.prisma.scheduleEntry.count({ where: { academicYearId } });
-      console.log(`[ScheduleViews] DEBUG: Total entries for institution: ${totalInstitutionEntries}, for year: ${totalYearEntries}`);
-    }
-
     // Formatear cada entrada
     const formatEntry = (e: any) => ({
       id: e.id,
@@ -1281,9 +1262,6 @@ export class ScheduleGeneratorController {
       isFullAccess = userCaps.effectiveRoles.some(r =>
         ['SUPERADMIN', 'ADMIN_INSTITUTIONAL'].includes(r),
       );
-      console.log('[ScheduleViews] Capabilities check:', { effectiveRoles: userCaps.effectiveRoles, isFullAccess });
-    } else {
-      console.log('[ScheduleViews] Admin bypass from JWT, skipping capabilities check');
     }
 
     if (!isFullAccess) {

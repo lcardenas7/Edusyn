@@ -21,7 +21,6 @@ export class TimeBlocksController {
 
   @Get()
   async findAll(@Request() req, @Query('shiftId') shiftId?: string) {
-    console.log('[TimeBlocks.findAll] user:', req.user?.id, 'institutionId:', req.user?.institutionId, 'shiftId:', shiftId);
     try {
       return await this.timeBlocksService.findAll(req.user.institutionId, shiftId);
     } catch (error: any) {

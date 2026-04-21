@@ -140,7 +140,6 @@ export class PartialGradesService {
               where: { id: { in: migrateIds } },
               data: { teacherAssignmentId: currentAssignmentId },
             });
-            console.log(`[PartialGrades] Migrated ${migrateIds.length} grades from historical assignments to current assignment ${currentAssignmentId.substring(0, 8)}`);
           }
         }
       }

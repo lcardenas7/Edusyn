@@ -35,41 +35,22 @@ export class AcademicYearLifecycleController {
   @Get()
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA')
   async getYears(@Query('institutionId') institutionId: string) {
-    console.log('[AcademicYearController] getYears called with institutionId:', institutionId);
     if (!institutionId) {
       return [];
     }
-    const years = await this.yearService.getYearsByInstitution(institutionId);
-    console.log('[AcademicYearController] Returning', years.length, 'years with terms');
-    return years;
+    return this.yearService.getYearsByInstitution(institutionId);
   }
 
   @Get('institution/:institutionId')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA')
   async getYearsByInstitution(@Param('institutionId') institutionId: string) {
-    try {
-      console.log('[AcademicYearLifecycle] getYearsByInstitution called for:', institutionId);
-      const result = await this.yearService.getYearsByInstitution(institutionId);
-      console.log('[AcademicYearLifecycle] getYearsByInstitution returned', result?.length, 'years');
-      return result;
-    } catch (error) {
-      console.error('[AcademicYearLifecycle] getYearsByInstitution ERROR:', error?.message || error);
-      throw error;
-    }
+    return this.yearService.getYearsByInstitution(institutionId);
   }
 
   @Get('institution/:institutionId/current')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA', 'ESTUDIANTE')
   async getCurrentYear(@Param('institutionId') institutionId: string) {
-    try {
-      console.log('[AcademicYearLifecycle] getCurrentYear called for:', institutionId);
-      const result = await this.yearService.getCurrentYear(institutionId);
-      console.log('[AcademicYearLifecycle] getCurrentYear returned:', result?.id || 'null');
-      return result;
-    } catch (error) {
-      console.error('[AcademicYearLifecycle] getCurrentYear ERROR:', error?.message || error);
-      throw error;
-    }
+    return this.yearService.getCurrentYear(institutionId);
   }
 
   @Get(':yearId')

@@ -97,37 +97,6 @@ export class TeachersService {
   async list(params: { institutionId?: string; isActive?: boolean }) {
     const { institutionId, isActive } = params;
 
-    console.log(`[TeachersService.list] institutionId=${institutionId}, isActive=${isActive}`);
-
-    // Primero verificar cuántos docentes hay en total con rol DOCENTE
-    const totalDocentes = await this.prisma.user.count({
-      where: {
-        roles: { some: { role: { name: 'DOCENTE' } } },
-      },
-    });
-    console.log(`[TeachersService.list] Total docentes con rol DOCENTE: ${totalDocentes}`);
-
-    // Verificar cuántos usuarios hay en la institución (sin filtrar por rol)
-    if (institutionId) {
-      // Listar TODOS los usuarios de la institución con sus roles
-      const usuariosConRoles = await this.prisma.institutionUser.findMany({
-        where: { institutionId },
-        include: {
-          user: {
-            include: {
-              roles: { include: { role: true } },
-            },
-          },
-        },
-      });
-      
-      console.log(`[TeachersService.list] Total usuarios en institución: ${usuariosConRoles.length}`);
-      usuariosConRoles.forEach((iu, i) => {
-        const rolesStr = iu.user.roles.map(r => r.role.name).join(', ') || 'SIN ROLES';
-        console.log(`[TeachersService.list] Usuario ${i + 1}: ${iu.user.email} - Roles: [${rolesStr}]`);
-      });
-    }
-
     // Get users with DOCENTE role, filtered by institution
     return this.prisma.user.findMany({
       where: {

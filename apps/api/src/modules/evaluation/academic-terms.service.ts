@@ -17,7 +17,6 @@ export class AcademicTermsService {
       },
       orderBy: { year: 'desc' },
     });
-    console.log('[AcademicTermsService] Years found:', years.length, 'for institutionId:', institutionId);
     return years;
   }
 

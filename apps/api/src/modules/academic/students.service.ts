@@ -926,7 +926,6 @@ export class StudentsService {
       }
     }
 
-    console.log(`[bulkDeleteWithoutRecords] Total: ${students.length}, Con registros: ${studentsWithRecords.length}, Sin registros: ${studentsToDelete.length}`);
 
     if (studentsToDelete.length === 0) {
       return { deleted: 0, skipped: studentsWithRecords.length, message: 'No hay estudiantes sin registros para eliminar' };

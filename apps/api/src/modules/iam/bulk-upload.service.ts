@@ -309,8 +309,6 @@ export class BulkUploadService {
       }
     });
 
-    console.log('[BulkUpload] Column mapping:', columnMap);
-
     // Fallback a posiciones fijas si no se encontraron encabezados
     if (!columnMap.firstName) columnMap.firstName = 1;
     if (!columnMap.lastName) columnMap.lastName = 2;
@@ -357,8 +355,6 @@ export class BulkUploadService {
         data: { name: 'DOCENTE' },
       });
     }
-
-    console.log(`[BulkUpload] Procesando ${rows.length} filas de docentes`);
 
     // Procesar cada fila
     for (let i = 0; i < rows.length; i++) {

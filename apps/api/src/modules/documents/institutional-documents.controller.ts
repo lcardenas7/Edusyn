@@ -41,15 +41,6 @@ export class InstitutionalDocumentsController {
     @Body('visibleToRoles') visibleToRolesStr: string,
     @Request() req: any,
   ) {
-    console.log('[DocumentsController] POST /institutional-documents', {
-      institutionId,
-      title,
-      category,
-      hasFile: !!file,
-      fileName: file?.originalname,
-      userId: req.user?.id,
-    });
-    
     const visibleToRoles = visibleToRolesStr ? JSON.parse(visibleToRolesStr) : [];
     
     // Validar y convertir categoría
@@ -68,9 +59,7 @@ export class InstitutionalDocumentsController {
     };
     
     try {
-      const result = await this.documentsService.create(dto, file, req.user.id);
-      console.log('[DocumentsController] Document created successfully:', result.id);
-      return result;
+      return this.documentsService.create(dto, file, req.user.id);
     } catch (error) {
       console.error('[DocumentsController] Error creating document:', error);
       throw error;
@@ -134,7 +123,6 @@ export class InstitutionalDocumentsController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL')
   async cleanupOrphanedFiles(@Request() req: any, @Body('institutionId') institutionId?: string) {
     const instId = await requireInstitutionId(this.prisma as any, req, institutionId);
-    console.log('[DocumentsController] POST /institutional-documents/cleanup', { institutionId: instId });
     return this.documentsService.cleanupOrphanedFiles(instId);
   }
 }
