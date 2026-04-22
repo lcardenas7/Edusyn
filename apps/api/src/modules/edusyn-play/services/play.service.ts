@@ -407,7 +407,7 @@ export class PlayService {
     const guests = await this.prisma.liveSessionGuest.findMany({
       where: { sessionId },
       orderBy: [{ score: 'desc' }, { correctAnswers: 'desc' }],
-      select: { id: true, nickname: true, avatarEmoji: true, score: true, correctAnswers: true, totalAnswered: true },
+      select: { id: true, nickname: true, avatarEmoji: true, score: true, correctAnswers: true, totalAnswers: true },
     });
 
     return {
