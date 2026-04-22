@@ -313,7 +313,6 @@ export class PlayService {
       data: {
         activityId: activity.id,
         title: data.title.trim(),
-        slides: [],
         playMode: 'LIVE',
       },
     });
