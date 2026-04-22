@@ -127,6 +127,20 @@ enum StudyModality {
   HYBRID // Híbrido
 }
 
+// Tipo de institución (SCHOOL = colegio normal, PERSONAL = workspace Edusyn Play)
+enum InstitutionType {
+  SCHOOL
+  UNIVERSITY
+  PERSONAL
+}
+
+// Modo de cuenta del usuario (Edusyn Play)
+enum AccountMode {
+  INSTITUTIONAL
+  PERSONAL
+  HYBRID
+}
+
 // Estado de la institución
 enum InstitutionStatus {
   ACTIVE
@@ -235,6 +249,7 @@ model User {
   birthDate          DateTime?
   isActive           Boolean       @default(true)
   isSuperAdmin       Boolean       @default(false) // SuperAdmin del sistema
+  accountMode        AccountMode   @default(INSTITUTIONAL) // Modo de cuenta (Edusyn Play)
   mustChangePassword Boolean       @default(false) // Forzar cambio de contraseña en primer login
   signatureImageUrl  String? // URL de imagen de firma (subida por el usuario)
   createdAt          DateTime      @default(now())
@@ -407,6 +422,9 @@ model Institution {
   email       String? // Email institucional
   website     String? // Sitio web
   status      InstitutionStatus @default(TRIAL)
+  type        InstitutionType   @default(SCHOOL) // SCHOOL | UNIVERSITY | PERSONAL (Edusyn Play)
+  isHidden    Boolean           @default(false) // No aparece en selectores públicos
+  ownerUserId String? // Dueño (si type=PERSONAL pero multi-tenant; en workspace compartido es null)
   trialEndsAt DateTime? // Fecha fin del período de prueba
   createdById String? // SuperAdmin que creó la institución
   createdAt   DateTime          @default(now())
@@ -5008,6 +5026,8 @@ model Classroom {
   coverImage          String?
   color               String?
   isActive            Boolean  @default(true)
+  ownerUserId         String?  // Edusyn Play: dueño personal (null en modo institucional)
+  isPersonal          Boolean  @default(false) // Shortcut para queries de Edusyn Play
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -5021,6 +5041,8 @@ model Classroom {
 
   @@index([institutionId])
   @@index([teacherAssignmentId])
+  @@index([ownerUserId])
+  @@index([isPersonal])
 }
 
 model ClassroomSection {
@@ -5279,6 +5301,13 @@ enum LiveSessionDeliveryMode {
   ASYNC_HOME
 }
 
+// Modo de invitados para sesiones en vivo (Edusyn Play)
+enum GuestMode {
+  DISABLED      // Solo matriculados (comportamiento actual)
+  MIXED         // Matriculados + invitados con código
+  GUESTS_ONLY   // Solo invitados (modo Edusyn Play puro)
+}
+
 model LiveSession {
   id                 String            @id @default(cuid())
   classroomId        String
@@ -5291,6 +5320,11 @@ model LiveSession {
   studentEnrollmentId String?
   currentQuestionIdx Int               @default(-1)
   config             Json? // { bonusQuestions: [idx], multipliers: {idx: 2}, timeLimitOverride: 15 }
+  // Edusyn Play: invitados vía código público
+  joinCode           String?           @unique // Código de 6 dígitos para /join
+  guestMode          GuestMode         @default(DISABLED)
+  publicUrl          String?           // URL pública para compartir
+  guestsCount        Int               @default(0) // Contador rápido
   createdAt          DateTime          @default(now())
   startedAt          DateTime?
   finishedAt         DateTime?
@@ -5310,6 +5344,7 @@ model LiveSession {
   @@index([parentSessionId])
   @@index([studentEnrollmentId])
   @@index([deliveryMode, status])
+  @@index([joinCode])
 }
 
 model LiveSessionAnswer {
@@ -5561,6 +5596,12 @@ enum LessonProgressStatus {
   COMPLETED
 }
 
+// Modo de reproducción de Lección
+enum LessonPlayMode {
+  SCORM // Auto-avance, cada estudiante a su ritmo (actual)
+  LIVE  // Presentación sincronizada estilo Nearpod (Edusyn Play)
+}
+
 model Lesson {
   id          String   @id @default(cuid())
   activityId  String   @unique  // 1:1 con ClassroomActivity tipo LESSON
@@ -5571,12 +5612,14 @@ model Lesson {
   badgeTitle  String?  @default("Lección completada")
   badgeColor  String?  @default("#8B5CF6")
   estimatedMinutes Int? // Tiempo estimado de la lección
+  playMode    LessonPlayMode @default(SCORM) // SCORM auto-avance o LIVE sincronizada
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  activity  ClassroomActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  slides    LessonSlide[]
-  progress  LessonProgress[]
+  activity     ClassroomActivity    @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  slides       LessonSlide[]
+  progress     LessonProgress[]
+  liveSessions LiveLessonSession[]
 
   @@index([activityId])
 }
@@ -5636,4 +5679,121 @@ model LessonProgress {
   @@unique([lessonId, studentEnrollmentId])
   @@index([lessonId])
   @@index([studentEnrollmentId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EDUSYN PLAY — Invitados, Lecciones Live, Reacciones y Conversión a nota
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Invitado (sin cuenta) que entró a una LiveSession (quiz) o LiveLessonSession vía código
+model LiveSessionGuest {
+  id              String        @id @default(cuid())
+  sessionId       String        // Polimórfico: LiveSession.id o LiveLessonSession.id (sin FK para permitir ambos)
+  sessionKind     String        @default("QUIZ")  // QUIZ | LESSON
+
+  nickname        String
+  avatarEmoji     String?       // 🦊 🐼 🐧 🦄 🐵 🐙 🦁 🐯
+  guestToken      String        @unique
+
+  // Antiabuso (hashes, nunca IP cruda)
+  ipHash          String?
+  userAgent       String?       @db.Text
+  fingerprint     String?
+
+  score           Int           @default(0)
+  correctAnswers  Int           @default(0)
+  totalAnswers    Int           @default(0)
+  finalRank       Int?
+  percent         Float?        // % final de aciertos
+
+  joinedAt        DateTime      @default(now())
+  lastSeenAt      DateTime      @default(now())
+  finishedAt      DateTime?
+
+  // Fase 2: reclamar resultado (vincular a cuenta real al loguearse)
+  claimedByUserId String?
+  claimedAt       DateTime?
+
+  answers         LiveSessionGuestAnswer[]
+  reactions       LiveSessionReaction[]
+
+  @@unique([sessionId, nickname])
+  @@index([sessionId])
+  @@index([guestToken])
+}
+
+model LiveSessionGuestAnswer {
+  id              String            @id @default(cuid())
+  guestId         String
+  guest           LiveSessionGuest  @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  questionId      String?           // FK lógica a ActivityQuestion (sin constraint para soportar slides)
+  slideId         String?           // FK lógica a LessonSlide
+  selectedOption  String?
+  answerText      String?           @db.Text
+  isCorrect       Boolean           @default(false)
+  pointsAwarded   Int               @default(0)
+  timeTakenMs     Int?
+  answeredAt      DateTime          @default(now())
+
+  @@index([guestId])
+  @@index([questionId])
+  @@index([slideId])
+}
+
+// Sesión de Lección Live (estilo Nearpod/Pear Deck) — presentación sincronizada
+model LiveLessonSession {
+  id                String        @id @default(cuid())
+  lessonId          String
+  activityId        String
+  classroomId       String
+  teacherId         String
+
+  joinCode          String        @unique
+  guestMode         GuestMode     @default(GUESTS_ONLY)
+  currentSlideIndex Int           @default(0)
+  status            String        @default("LOBBY")  // LOBBY | RUNNING | PAUSED | FINISHED
+  publicUrl         String?
+  guestsCount       Int           @default(0)
+
+  startedAt         DateTime?
+  endedAt           DateTime?
+  createdAt         DateTime      @default(now())
+
+  lesson            Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([joinCode])
+  @@index([activityId])
+  @@index([classroomId])
+  @@index([teacherId])
+}
+
+// Reacciones en vivo (💡 🤔 ❤ 👏) durante una Lección Live
+model LiveSessionReaction {
+  id              String              @id @default(cuid())
+  sessionId       String              // LiveSession.id o LiveLessonSession.id
+  slideIndex      Int?
+  guestId         String?
+  guest           LiveSessionGuest?   @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  emoji           String              // 💡 🤔 ❤ 👏
+  createdAt       DateTime            @default(now())
+
+  @@index([sessionId, slideIndex])
+  @@index([guestId])
+}
+
+// Histórico de conversiones a nota (para que el docente pueda reimprimir la planilla)
+model GuestGradeConversion {
+  id              String        @id @default(cuid())
+  sessionId       String        // LiveSession.id o LiveLessonSession.id
+  createdByUserId String
+  maxScore        Float         @default(5)
+  minScore        Float         @default(1)
+  passingScore    Float         @default(3)
+  method          String        @default("PROPORTIONAL")
+  payload         Json          // Snapshot de nicknames + notas calculadas
+  createdAt       DateTime      @default(now())
+
+  @@index([sessionId])
+  @@index([createdByUserId])
 }

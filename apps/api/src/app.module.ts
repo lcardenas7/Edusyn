@@ -37,6 +37,7 @@ import { TeacherWorkspaceModule } from './modules/teacher-workspace/teacher-work
 import { ClassroomModule } from './modules/classroom/classroom.module';
 import { LiveSessionModule } from './modules/live-session/live-session.module';
 import { StaffLeaveModule } from './modules/staff-leave/staff-leave.module';
+import { EdusynPlayModule } from './modules/edusyn-play/edusyn-play.module';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 import { TenantGuard } from './modules/auth/guards/tenant.guard';
 
@@ -82,6 +83,7 @@ import { TenantGuard } from './modules/auth/guards/tenant.guard';
     ClassroomModule,
     LiveSessionModule,
     StaffLeaveModule,
+    EdusynPlayModule,
   ],
   controllers: [AppController],
   providers: [
