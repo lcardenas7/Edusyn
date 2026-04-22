@@ -75,6 +75,32 @@ export class PlayController {
     return this.playService.deleteLesson(req.user.id, id);
   }
 
+  // ── Live Quiz Session ─────────────────────────────────
+  @Post('quizzes/:activityId/live')
+  async createLiveQuiz(@Request() req: any, @Param('activityId') activityId: string) {
+    return this.playService.createLiveQuizSession(req.user.id, activityId);
+  }
+
+  @Get('live/:sessionId')
+  async getLiveQuizStatus(@Request() req: any, @Param('sessionId') sessionId: string) {
+    return this.playService.getLiveQuizStatus(req.user.id, sessionId);
+  }
+
+  @Post('live/:sessionId/start')
+  async startLiveQuiz(@Request() req: any, @Param('sessionId') sessionId: string) {
+    return this.playService.startLiveQuizSession(req.user.id, sessionId);
+  }
+
+  @Post('live/:sessionId/next')
+  async nextQuestionLive(@Request() req: any, @Param('sessionId') sessionId: string) {
+    return this.playService.nextQuestionLive(req.user.id, sessionId);
+  }
+
+  @Post('live/:sessionId/finish')
+  async finishLiveQuiz(@Request() req: any, @Param('sessionId') sessionId: string) {
+    return this.playService.finishLiveQuiz(req.user.id, sessionId);
+  }
+
   // ── Sessions ─────────────────────────────────────────
   @Get('sessions')
   async listSessions(@Request() req: any) {

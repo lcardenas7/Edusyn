@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { PlayWorkspaceService } from './play-workspace.service';
 
@@ -273,6 +273,167 @@ export class PlayService {
     if (q.activity.classroomId !== classroomId) throw new ForbiddenException('Sin acceso');
     await this.prisma.activityQuestion.delete({ where: { id: questionId } });
     return { deleted: true };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LIVE QUIZ SESSION
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async createLiveQuizSession(userId: string, activityId: string) {
+    const classroomId = await this.resolveClassroom(userId);
+    const activity = await this.prisma.classroomActivity.findFirst({
+      where: { id: activityId, classroomId },
+      include: { questions: { orderBy: { sortOrder: 'asc' }, select: { id: true } } },
+    });
+    if (!activity) throw new NotFoundException('Quiz no encontrado');
+    if (activity.questions.length === 0) throw new BadRequestException('El quiz no tiene preguntas. Agrega al menos una antes de jugar.');
+
+    await this.enforceFreeLimits(userId, 'SESSION');
+
+    // Close old WAITING/ACTIVE sessions
+    await this.prisma.liveSession.updateMany({
+      where: { classroomId, status: { in: ['WAITING', 'ACTIVE'] } },
+      data: { status: 'FINISHED', finishedAt: new Date() },
+    });
+
+    // Generate unique join code
+    let joinCode: string | null = null;
+    for (let i = 0; i < 10; i++) {
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const existing = await this.prisma.liveSession.findUnique({ where: { joinCode: code } });
+      if (!existing) { joinCode = code; break; }
+    }
+    if (!joinCode) throw new BadRequestException('No se pudo generar código, intenta de nuevo');
+
+    const questionOrder = activity.questions.map(q => q.id);
+
+    const session = await this.prisma.liveSession.create({
+      data: {
+        classroomId,
+        activityId,
+        teacherId: userId,
+        mode: 'INDIVIDUAL',
+        deliveryMode: 'SYNC',
+        status: 'WAITING',
+        joinCode,
+        guestMode: 'GUESTS_ONLY',
+        guestsCount: 0,
+        config: { questionOrder },
+      },
+    });
+
+    return {
+      id: session.id,
+      joinCode: session.joinCode,
+      status: session.status,
+      guestsCount: session.guestsCount,
+      activityTitle: activity.title,
+      questionCount: activity.questions.length,
+    };
+  }
+
+  async startLiveQuizSession(userId: string, sessionId: string) {
+    const classroomId = await this.resolveClassroom(userId);
+    const session = await this.prisma.liveSession.findFirst({
+      where: { id: sessionId, classroomId, teacherId: userId },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+    if (session.status !== 'WAITING') throw new BadRequestException('La sesión ya fue iniciada');
+
+    const updated = await this.prisma.liveSession.update({
+      where: { id: sessionId },
+      data: { status: 'ACTIVE', startedAt: new Date(), currentQuestionIdx: 0 },
+    });
+
+    return { id: updated.id, status: updated.status, currentQuestionIdx: updated.currentQuestionIdx };
+  }
+
+  async nextQuestionLive(userId: string, sessionId: string) {
+    const classroomId = await this.resolveClassroom(userId);
+    const session = await this.prisma.liveSession.findFirst({
+      where: { id: sessionId, classroomId, teacherId: userId },
+      include: { activity: { include: { questions: { orderBy: { sortOrder: 'asc' } } } } },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+    if (session.status !== 'ACTIVE') throw new BadRequestException('La sesión no está activa');
+
+    const totalQuestions = session.activity.questions.length;
+    const nextIdx = session.currentQuestionIdx + 1;
+
+    if (nextIdx >= totalQuestions) {
+      // Finish
+      await this.prisma.liveSession.update({
+        where: { id: sessionId },
+        data: { status: 'FINISHED', finishedAt: new Date() },
+      });
+      return { finished: true, currentQuestionIdx: nextIdx, totalQuestions };
+    }
+
+    await this.prisma.liveSession.update({
+      where: { id: sessionId },
+      data: { currentQuestionIdx: nextIdx },
+    });
+
+    const question = session.activity.questions[nextIdx];
+    return {
+      finished: false,
+      currentQuestionIdx: nextIdx,
+      totalQuestions,
+      question: {
+        id: question.id,
+        type: question.type,
+        text: question.text,
+        options: question.options,
+        points: question.points,
+      },
+    };
+  }
+
+  async getLiveQuizStatus(userId: string, sessionId: string) {
+    const classroomId = await this.resolveClassroom(userId);
+    const session = await this.prisma.liveSession.findFirst({
+      where: { id: sessionId, classroomId, teacherId: userId },
+      include: {
+        activity: {
+          select: {
+            title: true,
+            questions: { orderBy: { sortOrder: 'asc' }, select: { id: true, type: true, text: true, options: true, points: true } },
+          },
+        },
+      },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+
+    const guests = await this.prisma.liveSessionGuest.findMany({
+      where: { sessionId },
+      orderBy: [{ score: 'desc' }, { correctAnswers: 'desc' }],
+      select: { id: true, nickname: true, avatarEmoji: true, score: true, correctAnswers: true, totalAnswered: true },
+    });
+
+    return {
+      id: session.id,
+      joinCode: session.joinCode,
+      status: session.status,
+      guestsCount: session.guestsCount,
+      currentQuestionIdx: session.currentQuestionIdx,
+      activityTitle: session.activity.title,
+      totalQuestions: session.activity.questions.length,
+      questions: session.activity.questions,
+      guests,
+    };
+  }
+
+  async finishLiveQuiz(userId: string, sessionId: string) {
+    const classroomId = await this.resolveClassroom(userId);
+    const session = await this.prisma.liveSession.findFirst({
+      where: { id: sessionId, classroomId, teacherId: userId },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+    await this.prisma.liveSession.update({
+      where: { id: sessionId },
+      data: { status: 'FINISHED', finishedAt: new Date() },
+    });
+    return { finished: true };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

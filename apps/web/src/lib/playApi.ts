@@ -85,6 +85,12 @@ export const playPanelApi = {
   createLesson: (data: { title: string; description?: string }) =>
     playAxios.post('/play/lessons', data),
   deleteLesson: (id: string) => playAxios.delete(`/play/lessons/${id}`),
+  // Live Quiz Session
+  createLiveQuiz: (activityId: string) => playAxios.post(`/play/quizzes/${activityId}/live`),
+  getLiveQuizStatus: (sessionId: string) => playAxios.get(`/play/live/${sessionId}`),
+  startLiveQuiz: (sessionId: string) => playAxios.post(`/play/live/${sessionId}/start`),
+  nextQuestionLive: (sessionId: string) => playAxios.post(`/play/live/${sessionId}/next`),
+  finishLiveQuiz: (sessionId: string) => playAxios.post(`/play/live/${sessionId}/finish`),
   // Sessions
   listSessions: () => playAxios.get('/play/sessions'),
 }

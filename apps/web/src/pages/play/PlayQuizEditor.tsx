@@ -14,6 +14,13 @@ import {
   FileQuestion,
   Hash,
   Type,
+  Play,
+  Copy,
+  Users,
+  Radio,
+  SkipForward,
+  Square,
+  Trophy,
 } from 'lucide-react'
 
 interface Option {
@@ -61,6 +68,11 @@ export default function PlayQuizEditor() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editingIdx, setEditingIdx] = useState<number | null>(null)
+
+  // Live session state
+  const [liveSession, setLiveSession] = useState<any>(null)
+  const [launchingLive, setLaunchingLive] = useState(false)
+  const [pollingInterval, setPollingInterval] = useState<any>(null)
 
   // New question form
   const [newType, setNewType] = useState('MULTIPLE_CHOICE')
@@ -159,6 +171,86 @@ export default function PlayQuizEditor() {
     setShowAddForm(true)
   }
 
+  // ── Live Quiz Session ──────────────────────────────────
+  const handleLaunchLive = async () => {
+    if (!quizId) return
+    if (questions.length === 0) {
+      setError('Agrega al menos una pregunta antes de jugar en vivo')
+      return
+    }
+    setLaunchingLive(true)
+    setError('')
+    try {
+      const res = await playPanelApi.createLiveQuiz(quizId)
+      setLiveSession(res.data)
+      // Start polling for guest count
+      const interval = setInterval(async () => {
+        try {
+          const status = await playPanelApi.getLiveQuizStatus(res.data.id)
+          setLiveSession(status.data)
+        } catch {}
+      }, 3000)
+      setPollingInterval(interval)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al crear sesión en vivo')
+    } finally {
+      setLaunchingLive(false)
+    }
+  }
+
+  const handleStartGame = async () => {
+    if (!liveSession) return
+    try {
+      await playPanelApi.startLiveQuiz(liveSession.id)
+      const status = await playPanelApi.getLiveQuizStatus(liveSession.id)
+      setLiveSession(status.data)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al iniciar')
+    }
+  }
+
+  const handleNextQuestion = async () => {
+    if (!liveSession) return
+    try {
+      const res = await playPanelApi.nextQuestionLive(liveSession.id)
+      if (res.data.finished) {
+        const status = await playPanelApi.getLiveQuizStatus(liveSession.id)
+        setLiveSession(status.data)
+      } else {
+        setLiveSession((prev: any) => ({
+          ...prev,
+          currentQuestionIdx: res.data.currentQuestionIdx,
+          status: 'ACTIVE',
+        }))
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error')
+    }
+  }
+
+  const handleFinishGame = async () => {
+    if (!liveSession) return
+    try {
+      await playPanelApi.finishLiveQuiz(liveSession.id)
+      if (pollingInterval) clearInterval(pollingInterval)
+      const status = await playPanelApi.getLiveQuizStatus(liveSession.id)
+      setLiveSession(status.data)
+    } catch {}
+  }
+
+  const handleCloseLive = () => {
+    if (pollingInterval) clearInterval(pollingInterval)
+    setLiveSession(null)
+  }
+
+  const copyJoinCode = () => {
+    if (liveSession?.joinCode) {
+      navigator.clipboard.writeText(liveSession.joinCode)
+      setSuccess('Código copiado!')
+      setTimeout(() => setSuccess(''), 2000)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -184,12 +276,22 @@ export default function PlayQuizEditor() {
           </h1>
           <p className="text-sm text-gray-500">{questions.length} pregunta(s)</p>
         </div>
-        <button
-          onClick={openAddForm}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium transition text-sm"
-        >
-          <Plus className="w-4 h-4" /> Agregar Pregunta
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleLaunchLive}
+            disabled={launchingLive || questions.length === 0}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition text-sm disabled:opacity-50"
+          >
+            {launchingLive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+            Jugar en Vivo
+          </button>
+          <button
+            onClick={openAddForm}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium transition text-sm"
+          >
+            <Plus className="w-4 h-4" /> Agregar Pregunta
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -204,6 +306,144 @@ export default function PlayQuizEditor() {
         <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-green-500" />
           <span className="text-sm text-green-700">{success}</span>
+        </div>
+      )}
+
+      {/* Live Quiz Session Panel */}
+      {liveSession && (
+        <div className="mb-6 bg-gradient-to-r from-green-600 to-emerald-700 rounded-2xl p-6 text-white shadow-lg">
+          {/* WAITING / LOBBY */}
+          {liveSession.status === 'WAITING' && (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Radio className="w-5 h-5 animate-pulse" />
+                  <span className="font-bold text-lg">Esperando jugadores...</span>
+                </div>
+                <button onClick={handleCloseLive} className="text-white/60 hover:text-white text-sm">Cancelar</button>
+              </div>
+
+              <div className="text-center mb-6">
+                <p className="text-green-100 text-sm mb-2">Comparte este código con tus participantes</p>
+                <div className="flex items-center justify-center gap-3">
+                  <div className="bg-white text-green-800 text-4xl font-mono font-bold px-6 py-3 rounded-xl tracking-[0.3em] select-all">
+                    {liveSession.joinCode}
+                  </div>
+                  <button onClick={copyJoinCode} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition" title="Copiar código">
+                    <Copy className="w-5 h-5" />
+                  </button>
+                </div>
+                <p className="text-green-200 text-xs mt-2">Los participantes entran en <strong>edusyn.co/join</strong></p>
+              </div>
+
+              <div className="flex items-center justify-between bg-white/10 rounded-xl p-4">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  <span className="font-medium">{liveSession.guestsCount || 0} conectados</span>
+                </div>
+                <button
+                  onClick={handleStartGame}
+                  disabled={!liveSession.guestsCount}
+                  className="px-6 py-2.5 bg-white text-green-700 rounded-lg font-bold hover:bg-green-50 transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  <Play className="w-4 h-4" /> Iniciar Juego
+                </button>
+              </div>
+
+              {liveSession.guests && liveSession.guests.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {liveSession.guests.map((g: any) => (
+                    <span key={g.id} className="bg-white/20 px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                      {g.avatarEmoji || '👤'} {g.nickname}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ACTIVE */}
+          {liveSession.status === 'ACTIVE' && (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Radio className="w-5 h-5 text-red-300 animate-pulse" />
+                  <span className="font-bold text-lg">En vivo</span>
+                  <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">{liveSession.guestsCount || 0} jugadores</span>
+                </div>
+                <span className="text-sm text-green-200">
+                  Pregunta {(liveSession.currentQuestionIdx ?? 0) + 1} / {liveSession.totalQuestions}
+                </span>
+              </div>
+
+              {/* Current question preview */}
+              {liveSession.questions && liveSession.questions[liveSession.currentQuestionIdx] && (
+                <div className="bg-white/10 rounded-xl p-4 mb-4">
+                  <p className="font-medium text-sm">{liveSession.questions[liveSession.currentQuestionIdx].text}</p>
+                </div>
+              )}
+
+              {/* Progress bar */}
+              <div className="w-full bg-white/20 rounded-full h-2 mb-4">
+                <div
+                  className="bg-white rounded-full h-2 transition-all"
+                  style={{ width: `${(((liveSession.currentQuestionIdx ?? 0) + 1) / liveSession.totalQuestions) * 100}%` }}
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleNextQuestion}
+                  className="flex-1 py-2.5 bg-white text-green-700 rounded-lg font-bold hover:bg-green-50 transition flex items-center justify-center gap-2"
+                >
+                  <SkipForward className="w-4 h-4" />
+                  {(liveSession.currentQuestionIdx ?? 0) + 1 >= liveSession.totalQuestions ? 'Finalizar' : 'Siguiente Pregunta'}
+                </button>
+                <button
+                  onClick={handleFinishGame}
+                  className="py-2.5 px-4 bg-red-500/80 text-white rounded-lg font-medium hover:bg-red-500 transition flex items-center gap-2"
+                >
+                  <Square className="w-4 h-4" /> Terminar
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* FINISHED */}
+          {liveSession.status === 'FINISHED' && (
+            <>
+              <div className="flex items-center gap-2 mb-4">
+                <Trophy className="w-6 h-6 text-yellow-300" />
+                <span className="font-bold text-lg">Juego Terminado</span>
+              </div>
+
+              {liveSession.guests && liveSession.guests.length > 0 ? (
+                <div className="space-y-2 mb-4">
+                  <p className="text-green-100 text-sm font-medium">Ranking Final</p>
+                  {liveSession.guests.slice(0, 10).map((g: any, i: number) => (
+                    <div key={g.id} className="flex items-center gap-3 bg-white/10 rounded-lg p-3">
+                      <span className="text-lg font-bold w-8 text-center">
+                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
+                      </span>
+                      <span className="text-lg">{g.avatarEmoji || '👤'}</span>
+                      <span className="flex-1 font-medium">{g.nickname}</span>
+                      <span className="font-bold">{g.score} pts</span>
+                      <span className="text-xs text-green-200">{g.correctAnswers}/{g.totalAnswered} correctas</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-green-100 text-sm mb-4">No hubo participantes</p>
+              )}
+
+              <button
+                onClick={handleCloseLive}
+                className="w-full py-2.5 bg-white text-green-700 rounded-lg font-bold hover:bg-green-50 transition"
+              >
+                Cerrar
+              </button>
+            </>
+          )}
         </div>
       )}
 
