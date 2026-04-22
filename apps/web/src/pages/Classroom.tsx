@@ -4895,6 +4895,31 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             </div>
           </div>
         )}
+
+        {/* Lesson Player overlay (inside detail view) */}
+        {showLessonPlayer && lessonActivityId && (
+          <Suspense fallback={<div className="fixed inset-0 z-[100] bg-violet-900 flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-white" /></div>}>
+            <LessonPlayer
+              activityId={lessonActivityId}
+              isTeacher={isTeacher}
+              onClose={() => { setShowLessonPlayer(false); setLessonActivityId('') }}
+            />
+          </Suspense>
+        )}
+
+        {/* Lesson Editor overlay (inside detail view) */}
+        {showLessonEditor && lessonActivityId && (
+          <Suspense fallback={<div className="fixed inset-0 z-[100] bg-white flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-violet-600" /></div>}>
+            <div className="fixed inset-0 z-[100] bg-white">
+              <LessonEditor
+                activityId={lessonActivityId}
+                classroomTitle={classroom.title}
+                onClose={() => { setShowLessonEditor(false); setLessonActivityId('') }}
+                onPreview={() => { setShowLessonEditor(false); setShowLessonPlayer(true) }}
+              />
+            </div>
+          </Suspense>
+        )}
       </div>
     )
   }
