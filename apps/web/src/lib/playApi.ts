@@ -65,6 +65,9 @@ export const authPlayApi = {
 export const playPanelApi = {
   dashboard: () => playAxios.get('/play/dashboard'),
   listQuizzes: () => playAxios.get('/play/quizzes'),
+  createQuiz: (data: { title: string; description?: string; type?: string }) =>
+    playAxios.post('/play/quizzes', data),
+  deleteQuiz: (id: string) => playAxios.delete(`/play/quizzes/${id}`),
   listLessons: () => playAxios.get('/play/lessons'),
   listSessions: () => playAxios.get('/play/sessions'),
 }

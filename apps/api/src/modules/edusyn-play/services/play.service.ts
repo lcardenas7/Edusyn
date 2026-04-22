@@ -71,6 +71,60 @@ export class PlayService {
     };
   }
 
+  async createQuiz(userId: string, data: { title: string; description?: string; type?: string }) {
+    await this.enforceFreeLimits(userId, 'QUIZ');
+    const classroomId = await this.resolveClassroom(userId);
+
+    // Buscar o crear la sección default "Quizzes"
+    let section = await this.prisma.classroomSection.findFirst({
+      where: { classroomId, title: 'Quizzes' },
+    });
+    if (!section) {
+      const maxOrder = await this.prisma.classroomSection.aggregate({
+        where: { classroomId },
+        _max: { sortOrder: true },
+      });
+      section = await this.prisma.classroomSection.create({
+        data: { classroomId, title: 'Quizzes', sortOrder: (maxOrder._max.sortOrder ?? -1) + 1 },
+      });
+    }
+
+    const validTypes = ['QUIZ', 'LIVE_QUIZ', 'HOME_QUIZ'];
+    const actType = validTypes.includes(data.type || '') ? data.type! : 'LIVE_QUIZ';
+
+    return this.prisma.classroomActivity.create({
+      data: {
+        classroomId,
+        sectionId: section.id,
+        title: data.title.trim(),
+        description: data.description?.trim() || undefined,
+        type: actType as any,
+        isPublished: false,
+        isVisible: true,
+        maxScore: 100,
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        type: true,
+        isPublished: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  async deleteQuiz(userId: string, quizId: string) {
+    const classroomId = await this.resolveClassroom(userId);
+    const activity = await this.prisma.classroomActivity.findFirst({
+      where: { id: quizId, classroomId },
+    });
+    if (!activity) throw new NotFoundException('Quiz no encontrado');
+    await this.prisma.classroomActivity.delete({ where: { id: quizId } });
+    return { deleted: true };
+  }
+
   async listQuizzes(userId: string) {
     const classroomId = await this.resolveClassroom(userId);
     return this.prisma.classroomActivity.findMany({

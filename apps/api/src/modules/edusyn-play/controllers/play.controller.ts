@@ -1,4 +1,4 @@
-import { Controller, Get, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PlayService } from '../services/play.service';
 
@@ -19,6 +19,16 @@ export class PlayController {
   @Get('quizzes')
   async listQuizzes(@Request() req: any) {
     return this.playService.listQuizzes(req.user.id);
+  }
+
+  @Post('quizzes')
+  async createQuiz(@Request() req: any, @Body() body: { title: string; description?: string; type?: string }) {
+    return this.playService.createQuiz(req.user.id, body);
+  }
+
+  @Delete('quizzes/:id')
+  async deleteQuiz(@Request() req: any, @Param('id') id: string) {
+    return this.playService.deleteQuiz(req.user.id, id);
   }
 
   @Get('lessons')
