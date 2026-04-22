@@ -193,6 +193,156 @@ export class PlayService {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // QUESTIONS CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  private async assertActivityOwnership(activityId: string, userId: string) {
+    const classroomId = await this.resolveClassroom(userId);
+    const activity = await this.prisma.classroomActivity.findFirst({
+      where: { id: activityId, classroomId },
+    });
+    if (!activity) throw new NotFoundException('Actividad no encontrada');
+    return activity;
+  }
+
+  async listQuestions(activityId: string, userId: string) {
+    await this.assertActivityOwnership(activityId, userId);
+    return this.prisma.activityQuestion.findMany({
+      where: { activityId },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
+  async addQuestion(activityId: string, userId: string, dto: {
+    type: string; text: string; options?: any; correctAnswer?: string;
+    points?: number; explanation?: string; imageUrl?: string;
+  }) {
+    await this.assertActivityOwnership(activityId, userId);
+    const maxSort = await this.prisma.activityQuestion.aggregate({
+      where: { activityId },
+      _max: { sortOrder: true },
+    });
+    return this.prisma.activityQuestion.create({
+      data: {
+        activityId,
+        type: dto.type as any,
+        text: dto.text,
+        options: dto.options ?? undefined,
+        correctAnswer: dto.correctAnswer ?? undefined,
+        points: dto.points ?? 10,
+        explanation: dto.explanation ?? undefined,
+        imageUrl: dto.imageUrl ?? undefined,
+        sortOrder: (maxSort._max.sortOrder ?? -1) + 1,
+      },
+    });
+  }
+
+  async updateQuestion(questionId: string, userId: string, dto: {
+    text?: string; options?: any; correctAnswer?: string;
+    points?: number; explanation?: string; imageUrl?: string;
+  }) {
+    const q = await this.prisma.activityQuestion.findUnique({
+      where: { id: questionId },
+      include: { activity: { select: { classroomId: true } } },
+    });
+    if (!q) throw new NotFoundException('Pregunta no encontrada');
+    const classroomId = await this.resolveClassroom(userId);
+    if (q.activity.classroomId !== classroomId) throw new ForbiddenException('Sin acceso');
+
+    return this.prisma.activityQuestion.update({
+      where: { id: questionId },
+      data: {
+        text: dto.text,
+        options: dto.options,
+        correctAnswer: dto.correctAnswer,
+        points: dto.points,
+        explanation: dto.explanation,
+        imageUrl: dto.imageUrl,
+      },
+    });
+  }
+
+  async deleteQuestion(questionId: string, userId: string) {
+    const q = await this.prisma.activityQuestion.findUnique({
+      where: { id: questionId },
+      include: { activity: { select: { classroomId: true } } },
+    });
+    if (!q) throw new NotFoundException('Pregunta no encontrada');
+    const classroomId = await this.resolveClassroom(userId);
+    if (q.activity.classroomId !== classroomId) throw new ForbiddenException('Sin acceso');
+    await this.prisma.activityQuestion.delete({ where: { id: questionId } });
+    return { deleted: true };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LESSONS CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async createLesson(userId: string, data: { title: string; description?: string }) {
+    await this.enforceFreeLimits(userId, 'LESSON');
+    const classroomId = await this.resolveClassroom(userId);
+
+    let section = await this.prisma.classroomSection.findFirst({
+      where: { classroomId, title: 'Lecciones' },
+    });
+    if (!section) {
+      const maxOrder = await this.prisma.classroomSection.aggregate({
+        where: { classroomId },
+        _max: { sortOrder: true },
+      });
+      section = await this.prisma.classroomSection.create({
+        data: { classroomId, title: 'Lecciones', sortOrder: (maxOrder._max.sortOrder ?? -1) + 1 },
+      });
+    }
+
+    const activity = await this.prisma.classroomActivity.create({
+      data: {
+        classroomId,
+        sectionId: section.id,
+        title: data.title.trim(),
+        description: data.description?.trim() || undefined,
+        type: 'LESSON' as any,
+        isPublished: false,
+        isVisible: true,
+        maxScore: 100,
+      },
+    });
+
+    const lesson = await this.prisma.lesson.create({
+      data: {
+        activityId: activity.id,
+        title: data.title.trim(),
+        slides: [],
+        playMode: 'LIVE',
+      },
+    });
+
+    return {
+      id: activity.id,
+      title: activity.title,
+      description: activity.description,
+      type: activity.type,
+      isPublished: activity.isPublished,
+      createdAt: activity.createdAt,
+      lesson: { id: lesson.id, title: lesson.title, playMode: lesson.playMode },
+    };
+  }
+
+  async deleteLesson(userId: string, activityId: string) {
+    const classroomId = await this.resolveClassroom(userId);
+    const activity = await this.prisma.classroomActivity.findFirst({
+      where: { id: activityId, classroomId, type: 'LESSON' as any },
+      include: { lesson: true },
+    });
+    if (!activity) throw new NotFoundException('Lección no encontrada');
+    if (activity.lesson) {
+      await this.prisma.lesson.delete({ where: { id: activity.lesson.id } });
+    }
+    await this.prisma.classroomActivity.delete({ where: { id: activityId } });
+    return { deleted: true };
+  }
+
   async enforceFreeLimits(userId: string, kind: 'QUIZ' | 'LESSON' | 'SESSION'): Promise<void> {
     const d = await this.dashboard(userId);
     if (kind === 'QUIZ' && d.stats.quizCount >= PlayService.LIMITS.MAX_QUIZZES) {

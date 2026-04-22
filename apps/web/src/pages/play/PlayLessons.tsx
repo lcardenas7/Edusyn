@@ -4,19 +4,21 @@ import {
   BookOpen,
   Plus,
   Search,
-  Radio,
   Clock,
-  MoreVertical,
   Loader2,
   Sparkles,
   Presentation,
+  Trash2,
+  X,
+  AlertCircle,
+  Zap,
+  Timer,
 } from 'lucide-react'
 
 interface Lesson {
   id: string
   title: string
-  slidesCount?: number
-  playMode?: string
+  lesson?: { id: string; title: string; playMode?: string; estimatedMinutes?: number; badgeEmoji?: string }
   createdAt: string
 }
 
@@ -25,12 +27,61 @@ export default function PlayLessons() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
-  useEffect(() => {
+  // Create modal
+  const [showCreate, setShowCreate] = useState(false)
+  const [createTitle, setCreateTitle] = useState('')
+  const [createDesc, setCreateDesc] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [error, setError] = useState('')
+
+  const loadLessons = () => {
     playPanelApi.listLessons()
       .then(res => setLessons(res.data || []))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { loadLessons() }, [])
+
+  const handleCreate = async () => {
+    if (!createTitle.trim()) {
+      setError('El título es obligatorio')
+      return
+    }
+    setCreating(true)
+    setError('')
+    try {
+      await playPanelApi.createLesson({
+        title: createTitle.trim(),
+        description: createDesc.trim() || undefined,
+      })
+      setShowCreate(false)
+      setCreateTitle('')
+      setCreateDesc('')
+      loadLessons()
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al crear lección')
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const handleDelete = async (id: string, title: string) => {
+    if (!confirm(`¿Eliminar "${title}"? Esta acción no se puede deshacer.`)) return
+    try {
+      await playPanelApi.deleteLesson(id)
+      setLessons(prev => prev.filter(l => l.id !== id))
+    } catch {
+      alert('Error al eliminar lección')
+    }
+  }
+
+  const openCreate = () => {
+    setShowCreate(true)
+    setError('')
+    setCreateTitle('')
+    setCreateDesc('')
+  }
 
   const filtered = lessons.filter(l =>
     l.title.toLowerCase().includes(search.toLowerCase())
@@ -45,8 +96,8 @@ export default function PlayLessons() {
   }
 
   const playModeBadge = (mode?: string) => {
-    if (mode === 'LIVE') return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-fuchsia-100 text-fuchsia-700">En vivo</span>
-    if (mode === 'SELF_PACED') return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Auto-ritmo</span>
+    if (mode === 'LIVE') return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-fuchsia-100 text-fuchsia-700"><Zap className="w-3 h-3" /> En vivo</span>
+    if (mode === 'SELF_PACED') return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700"><Timer className="w-3 h-3" /> Auto-ritmo</span>
     return null
   }
 
@@ -61,7 +112,10 @@ export default function PlayLessons() {
           </h1>
           <p className="text-gray-500 text-sm mt-1">Crea lecciones interactivas con slides sincronizados</p>
         </div>
-        <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-fuchsia-600 text-white rounded-lg hover:bg-fuchsia-700 font-medium transition shadow-sm">
+        <button
+          onClick={openCreate}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-fuchsia-600 text-white rounded-lg hover:bg-fuchsia-700 font-medium transition shadow-sm"
+        >
           <Plus className="w-4 h-4" /> Nueva Lección
         </button>
       </div>
@@ -81,7 +135,7 @@ export default function PlayLessons() {
       )}
 
       {/* Empty State */}
-      {lessons.length === 0 && (
+      {lessons.length === 0 && !showCreate && (
         <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-fuchsia-50 flex items-center justify-center mb-4">
             <Sparkles className="w-8 h-8 text-fuchsia-500" />
@@ -90,7 +144,10 @@ export default function PlayLessons() {
           <p className="text-gray-500 max-w-sm mx-auto mb-6">
             Diseña presentaciones interactivas. Tus participantes siguen tus slides en tiempo real desde sus dispositivos.
           </p>
-          <button className="inline-flex items-center gap-2 px-5 py-2.5 bg-fuchsia-600 text-white rounded-lg hover:bg-fuchsia-700 font-medium transition">
+          <button
+            onClick={openCreate}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-fuchsia-600 text-white rounded-lg hover:bg-fuchsia-700 font-medium transition"
+          >
             <Plus className="w-4 h-4" /> Crear Lección
           </button>
         </div>
@@ -103,23 +160,28 @@ export default function PlayLessons() {
             <div key={lesson.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow group cursor-pointer">
               <div className="flex items-start justify-between mb-3">
                 <div className="w-10 h-10 rounded-lg bg-fuchsia-100 flex items-center justify-center">
-                  <Presentation className="w-5 h-5 text-fuchsia-600" />
+                  {lesson.lesson?.badgeEmoji ? (
+                    <span className="text-lg">{lesson.lesson.badgeEmoji}</span>
+                  ) : (
+                    <Presentation className="w-5 h-5 text-fuchsia-600" />
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  {playModeBadge(lesson.playMode)}
-                  <button className="p-1 rounded-lg hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition">
-                    <MoreVertical className="w-4 h-4 text-gray-400" />
-                  </button>
-                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDelete(lesson.id, lesson.title) }}
+                  className="p-1.5 rounded-lg hover:bg-red-50 opacity-0 group-hover:opacity-100 transition"
+                  title="Eliminar lección"
+                >
+                  <Trash2 className="w-4 h-4 text-red-400 hover:text-red-600" />
+                </button>
               </div>
               <h3 className="font-semibold text-gray-900 truncate mb-2">{lesson.title}</h3>
-              <div className="flex items-center gap-4 text-xs text-gray-500">
-                <span className="flex items-center gap-1">
-                  <BookOpen className="w-3.5 h-3.5" /> {lesson.slidesCount ?? 0} slides
-                </span>
-                <span className="flex items-center gap-1">
-                  <Radio className="w-3.5 h-3.5" /> Live
-                </span>
+              <div className="flex items-center gap-2">
+                {playModeBadge(lesson.lesson?.playMode)}
+                {lesson.lesson?.estimatedMinutes && (
+                  <span className="text-xs text-gray-400 flex items-center gap-1">
+                    <Clock className="w-3 h-3" /> {lesson.lesson.estimatedMinutes} min
+                  </span>
+                )}
               </div>
               <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
                 <Clock className="w-3 h-3" />
@@ -127,6 +189,76 @@ export default function PlayLessons() {
               </p>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Create Lesson Modal */}
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
+            <button
+              onClick={() => setShowCreate(false)}
+              className="absolute top-4 right-4 p-1 rounded-lg hover:bg-gray-100 transition"
+            >
+              <X className="w-5 h-5 text-gray-400" />
+            </button>
+
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Nueva Lección</h2>
+            <p className="text-sm text-gray-500 mb-5">Crea una lección y luego agrega slides</p>
+
+            {error && (
+              <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                <span className="text-sm text-red-700">{error}</span>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Título *</label>
+                <input
+                  type="text"
+                  value={createTitle}
+                  onChange={e => setCreateTitle(e.target.value)}
+                  placeholder="Ej: Introducción a la fotosíntesis"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fuchsia-500 focus:border-fuchsia-500 transition"
+                  autoFocus
+                  onKeyDown={e => e.key === 'Enter' && handleCreate()}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Descripción (opcional)</label>
+                <textarea
+                  value={createDesc}
+                  onChange={e => setCreateDesc(e.target.value)}
+                  placeholder="Breve descripción de la lección..."
+                  rows={2}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fuchsia-500 focus:border-fuchsia-500 transition resize-none"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowCreate(false)}
+                  className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleCreate}
+                  disabled={creating}
+                  className="flex-1 py-2.5 bg-fuchsia-600 text-white rounded-lg hover:bg-fuchsia-700 font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {creating ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <><Plus className="w-4 h-4" /> Crear Lección</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

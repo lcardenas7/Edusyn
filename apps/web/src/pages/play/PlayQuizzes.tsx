@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { playPanelApi } from '../../lib/playApi'
 import {
   FileQuestion,
@@ -30,6 +31,7 @@ const QUIZ_TYPE_LABELS: Record<string, { label: string; icon: any; color: string
 }
 
 export default function PlayQuizzes() {
+  const navigate = useNavigate()
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -59,7 +61,7 @@ export default function PlayQuizzes() {
     setCreating(true)
     setError('')
     try {
-      await playPanelApi.createQuiz({
+      const res = await playPanelApi.createQuiz({
         title: createTitle.trim(),
         description: createDesc.trim() || undefined,
         type: createType,
@@ -68,7 +70,7 @@ export default function PlayQuizzes() {
       setCreateTitle('')
       setCreateDesc('')
       setCreateType('LIVE_QUIZ')
-      loadQuizzes()
+      navigate(`/play/quizzes/${res.data.id}/edit`)
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al crear quiz')
     } finally {
@@ -165,13 +167,13 @@ export default function PlayQuizzes() {
             const typeInfo = QUIZ_TYPE_LABELS[quiz.type] || QUIZ_TYPE_LABELS['QUIZ']
             const TypeIcon = typeInfo.icon
             return (
-              <div key={quiz.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow group">
+              <div key={quiz.id} onClick={() => navigate(`/play/quizzes/${quiz.id}/edit`)} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow group cursor-pointer">
                 <div className="flex items-start justify-between mb-3">
                   <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center">
                     <FileQuestion className="w-5 h-5 text-violet-600" />
                   </div>
                   <button
-                    onClick={() => handleDelete(quiz.id, quiz.title)}
+                    onClick={(e) => { e.stopPropagation(); handleDelete(quiz.id, quiz.title) }}
                     className="p-1.5 rounded-lg hover:bg-red-50 opacity-0 group-hover:opacity-100 transition"
                     title="Eliminar quiz"
                   >

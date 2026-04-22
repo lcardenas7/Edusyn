@@ -64,11 +64,28 @@ export const authPlayApi = {
 // ═══════════════════════════════════════════════════════════════════════════
 export const playPanelApi = {
   dashboard: () => playAxios.get('/play/dashboard'),
+  // Quizzes
   listQuizzes: () => playAxios.get('/play/quizzes'),
   createQuiz: (data: { title: string; description?: string; type?: string }) =>
     playAxios.post('/play/quizzes', data),
   deleteQuiz: (id: string) => playAxios.delete(`/play/quizzes/${id}`),
+  // Questions
+  listQuestions: (activityId: string) => playAxios.get(`/play/quizzes/${activityId}/questions`),
+  addQuestion: (activityId: string, data: {
+    type: string; text: string; options?: any; correctAnswer?: string;
+    points?: number; explanation?: string;
+  }) => playAxios.post(`/play/quizzes/${activityId}/questions`, data),
+  updateQuestion: (questionId: string, data: {
+    text?: string; options?: any; correctAnswer?: string;
+    points?: number; explanation?: string;
+  }) => playAxios.put(`/play/questions/${questionId}`, data),
+  deleteQuestion: (questionId: string) => playAxios.delete(`/play/questions/${questionId}`),
+  // Lessons
   listLessons: () => playAxios.get('/play/lessons'),
+  createLesson: (data: { title: string; description?: string }) =>
+    playAxios.post('/play/lessons', data),
+  deleteLesson: (id: string) => playAxios.delete(`/play/lessons/${id}`),
+  // Sessions
   listSessions: () => playAxios.get('/play/sessions'),
 }
 
