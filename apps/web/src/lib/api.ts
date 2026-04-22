@@ -2186,6 +2186,121 @@ export const liveSessionApi = {
     api.post(`/live-session/${sessionId}/reaction`, { emoji }),
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// LECCIONES INTERACTIVAS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface LessonSlide {
+  id: string
+  lessonId: string
+  type: 'CONTENT' | 'ACTIVITY' | 'CHECKPOINT' | 'BADGE_REVEAL'
+  sortOrder: number
+  title?: string
+  body?: string
+  imageUrl?: string
+  videoUrl?: string
+  audioUrl?: string
+  layout?: string
+  activityData?: {
+    questionType: string
+    question: string
+    options?: string[]
+    correctAnswer?: string
+    explanation?: string
+    points?: number
+    hint?: string
+  }
+  badgeEmoji?: string
+  badgeTitle?: string
+}
+
+export interface Lesson {
+  id: string
+  activityId: string
+  title: string
+  description?: string
+  coverImage?: string
+  badgeEmoji?: string
+  badgeTitle?: string
+  badgeColor?: string
+  estimatedMinutes?: number
+  slides: LessonSlide[]
+  activity?: { id: string; classroomId: string; title: string; isPublished: boolean }
+}
+
+export interface LessonProgress {
+  id?: string
+  lessonId: string
+  studentEnrollmentId: string
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED'
+  currentSlideIndex: number
+  completedSlides: string[]
+  answers: Record<string, { answer: any; isCorrect: boolean; points: number; maxPoints: number }>
+  score: number
+  maxScore: number
+  badgeEarned: boolean
+  lastCheckpointIndex: number
+  startedAt?: string
+  completedAt?: string
+  timeSpentSeconds: number
+}
+
+export interface LessonStudentProgress {
+  id: string
+  studentEnrollmentId: string
+  studentName: string
+  status: string
+  currentSlideIndex: number
+  totalSlides: number
+  progressPercent: number
+  score: number
+  maxScore: number
+  badgeEarned: boolean
+  timeSpentSeconds: number
+  startedAt?: string
+  completedAt?: string
+}
+
+export const lessonApi = {
+  // Teacher CRUD
+  create: (activityId: string, data: Partial<Lesson> & { slides?: Partial<LessonSlide>[] }) =>
+    api.post(`/classrooms/activities/${activityId}/lesson`, data),
+  getByActivity: (activityId: string) =>
+    api.get<Lesson>(`/classrooms/activities/${activityId}/lesson`),
+  update: (lessonId: string, data: Partial<Lesson>) =>
+    api.put<Lesson>(`/classrooms/lessons/${lessonId}`, data),
+  delete: (lessonId: string) =>
+    api.delete(`/classrooms/lessons/${lessonId}`),
+
+  // Slides
+  addSlide: (lessonId: string, data: Partial<LessonSlide>) =>
+    api.post<LessonSlide>(`/classrooms/lessons/${lessonId}/slides`, data),
+  reorderSlides: (lessonId: string, slideIds: string[]) =>
+    api.put(`/classrooms/lessons/${lessonId}/slides/reorder`, { slideIds }),
+  bulkUpdateSlides: (lessonId: string, slides: Partial<LessonSlide>[]) =>
+    api.put<Lesson>(`/classrooms/lessons/${lessonId}/slides/bulk`, { slides }),
+  updateSlide: (slideId: string, data: Partial<LessonSlide>) =>
+    api.put<LessonSlide>(`/classrooms/slides/${slideId}`, data),
+  deleteSlide: (slideId: string) =>
+    api.delete(`/classrooms/slides/${slideId}`),
+
+  // Student progress
+  getMyProgress: (lessonId: string) =>
+    api.get<LessonProgress>(`/classrooms/lessons/${lessonId}/my-progress`),
+  start: (lessonId: string) =>
+    api.post<LessonProgress>(`/classrooms/lessons/${lessonId}/start`),
+  advance: (lessonId: string, data: { slideIndex: number; slideId: string; answer?: any; timeSpentDelta?: number }) =>
+    api.post(`/classrooms/lessons/${lessonId}/advance`, data),
+
+  // Teacher progress overview
+  getAllProgress: (lessonId: string) =>
+    api.get<LessonStudentProgress[]>(`/classrooms/lessons/${lessonId}/progress`),
+
+  // AI generation
+  generateAI: (data: { topic: string; content: string; gradeName?: string }) =>
+    api.post(`/classrooms/lessons/generate-ai`, data),
+}
+
 // Pool curado de nombres de equipo para sesiones TEAM.
 // El docente (o el primer estudiante) elige de aquí para evitar nombres
 // inapropiados o poco pedagógicos.

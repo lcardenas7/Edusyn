@@ -1609,6 +1609,9 @@ model StudentEnrollment {
   peerAsEvaluator        PeerAssessmentPair[]    @relation("PeerEvaluator")
   peerAsTarget           PeerAssessmentPair[]    @relation("PeerTarget")
 
+  // Lecciones interactivas
+  lessonProgress         LessonProgress[]        @relation("LessonProgressEnrollment")
+
   @@unique([studentId, academicYearId])
 }
 
@@ -4974,6 +4977,7 @@ enum ClassroomActivityType {
   ICFES_SIMULATOR
   SELF_ASSESSMENT // Autoevaluación actitudinal
   PEER_ASSESSMENT // Coevaluación actitudinal
+  LESSON          // Lección interactiva con slides y actividades
 }
 
 enum QuestionType {
@@ -5114,6 +5118,9 @@ model ClassroomActivity {
   rubric                  AttitudinalRubric?      @relation("ActivityRubric", fields: [rubricId], references: [id], onDelete: SetNull)
   attitudinalSubmissions  AttitudinalSubmission[]
   peerAssessmentPairs     PeerAssessmentPair[]
+
+  // Lección interactiva
+  lesson                  Lesson?
 
   @@index([classroomId])
   @@index([sectionId])
@@ -5535,4 +5542,98 @@ model StaffLeaveRequest {
   @@index([institutionId, status])
   @@index([requesterId])
   @@index([startDate])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LECCIONES INTERACTIVAS
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum LessonSlideType {
+  CONTENT        // Texto rico + multimedia
+  ACTIVITY       // Mini-quiz embebido
+  CHECKPOINT     // Marcador de progreso seguro
+  BADGE_REVEAL   // Último slide: insignia + celebración
+}
+
+enum LessonProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  activityId  String   @unique  // 1:1 con ClassroomActivity tipo LESSON
+  title       String
+  description String?  @db.Text
+  coverImage  String?
+  badgeEmoji  String?  @default("🏆")
+  badgeTitle  String?  @default("Lección completada")
+  badgeColor  String?  @default("#8B5CF6")
+  estimatedMinutes Int? // Tiempo estimado de la lección
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  activity  ClassroomActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  slides    LessonSlide[]
+  progress  LessonProgress[]
+
+  @@index([activityId])
+}
+
+model LessonSlide {
+  id           String          @id @default(cuid())
+  lessonId     String
+  type         LessonSlideType
+  sortOrder    Int             @default(0)
+
+  // CONTENT slide data
+  title        String?
+  body         String?         @db.Text   // HTML rico
+  imageUrl     String?
+  videoUrl     String?
+  audioUrl     String?
+  layout       String?         @default("text-left-image-right") // layout hint
+
+  // ACTIVITY slide data (JSON con pregunta embebida)
+  activityData Json?
+  // { questionType, question, options[], correctAnswer, explanation, points, hint }
+
+  // BADGE_REVEAL data
+  badgeEmoji   String?
+  badgeTitle   String?
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+  @@index([lessonId, sortOrder])
+}
+
+model LessonProgress {
+  id                  String               @id @default(cuid())
+  lessonId            String
+  studentEnrollmentId String
+  status              LessonProgressStatus @default(NOT_STARTED)
+  currentSlideIndex   Int                  @default(0)
+  completedSlides     Json?                // Array de slide IDs completados
+  answers             Json?                // { slideId: { answer, isCorrect, points } }
+  score               Decimal              @default(0) @db.Decimal(7, 2)
+  maxScore            Decimal              @default(0) @db.Decimal(7, 2)
+  badgeEarned         Boolean              @default(false)
+  lastCheckpointIndex Int                  @default(0) // Último checkpoint alcanzado
+  startedAt           DateTime?
+  completedAt         DateTime?
+  timeSpentSeconds    Int                  @default(0)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  lesson            Lesson            @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  studentEnrollment StudentEnrollment @relation("LessonProgressEnrollment", fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, studentEnrollmentId])
+  @@index([lessonId])
+  @@index([studentEnrollmentId])
 }

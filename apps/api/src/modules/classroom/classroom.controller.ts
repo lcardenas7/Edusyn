@@ -4,6 +4,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ClassroomService } from './classroom.service';
 import { AttitudinalService } from './attitudinal.service';
+import { LessonService } from './lesson.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { resolveInstitutionId } from '../../common/utils/institution-resolver';
 import { AttitudinalRubricType } from '@prisma/client';
@@ -14,6 +15,7 @@ export class ClassroomController {
   constructor(
     private readonly service: ClassroomService,
     private readonly attitudinalService: AttitudinalService,
+    private readonly lessonService: LessonService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -805,5 +807,187 @@ export class ClassroomController {
   @Roles('DOCENTE', 'COORDINADOR')
   async syncAttitudinalToGradebook(@Param('activityId') activityId: string, @Body() body: { academicTermId: string }) {
     return this.attitudinalService.syncToGradebook(activityId, body.academicTermId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LECCIONES INTERACTIVAS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  @Post('activities/:activityId/lesson')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async createLesson(@Param('activityId') activityId: string, @Body() body: {
+    title: string;
+    description?: string;
+    coverImage?: string;
+    badgeEmoji?: string;
+    badgeTitle?: string;
+    badgeColor?: string;
+    estimatedMinutes?: number;
+    slides?: Array<{
+      type: string;
+      sortOrder: number;
+      title?: string;
+      body?: string;
+      imageUrl?: string;
+      videoUrl?: string;
+      audioUrl?: string;
+      layout?: string;
+      activityData?: any;
+      badgeEmoji?: string;
+      badgeTitle?: string;
+    }>;
+  }) {
+    return this.lessonService.createLesson(activityId, body);
+  }
+
+  @Get('activities/:activityId/lesson')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async getLessonByActivity(@Param('activityId') activityId: string) {
+    return this.lessonService.getLessonByActivity(activityId);
+  }
+
+  @Put('lessons/:lessonId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async updateLesson(@Param('lessonId') lessonId: string, @Body() body: {
+    title?: string;
+    description?: string;
+    coverImage?: string;
+    badgeEmoji?: string;
+    badgeTitle?: string;
+    badgeColor?: string;
+    estimatedMinutes?: number;
+  }) {
+    return this.lessonService.updateLesson(lessonId, body);
+  }
+
+  @Delete('lessons/:lessonId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async deleteLesson(@Param('lessonId') lessonId: string) {
+    return this.lessonService.deleteLesson(lessonId);
+  }
+
+  // Slides CRUD
+  @Post('lessons/:lessonId/slides')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async addSlide(@Param('lessonId') lessonId: string, @Body() body: {
+    type: string;
+    sortOrder?: number;
+    title?: string;
+    body?: string;
+    imageUrl?: string;
+    videoUrl?: string;
+    audioUrl?: string;
+    layout?: string;
+    activityData?: any;
+    badgeEmoji?: string;
+    badgeTitle?: string;
+  }) {
+    return this.lessonService.addSlide(lessonId, body);
+  }
+
+  @Put('lessons/:lessonId/slides/reorder')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async reorderSlides(@Param('lessonId') lessonId: string, @Body() body: { slideIds: string[] }) {
+    return this.lessonService.reorderSlides(lessonId, body.slideIds);
+  }
+
+  @Put('lessons/:lessonId/slides/bulk')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async bulkUpdateSlides(@Param('lessonId') lessonId: string, @Body() body: {
+    slides: Array<{
+      id?: string;
+      type: string;
+      sortOrder: number;
+      title?: string;
+      body?: string;
+      imageUrl?: string;
+      videoUrl?: string;
+      audioUrl?: string;
+      layout?: string;
+      activityData?: any;
+      badgeEmoji?: string;
+      badgeTitle?: string;
+    }>;
+  }) {
+    return this.lessonService.bulkUpdateSlides(lessonId, body.slides);
+  }
+
+  @Put('slides/:slideId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async updateSlide(@Param('slideId') slideId: string, @Body() body: {
+    type?: string;
+    sortOrder?: number;
+    title?: string;
+    body?: string;
+    imageUrl?: string;
+    videoUrl?: string;
+    audioUrl?: string;
+    layout?: string;
+    activityData?: any;
+    badgeEmoji?: string;
+    badgeTitle?: string;
+  }) {
+    return this.lessonService.updateSlide(slideId, body);
+  }
+
+  @Delete('slides/:slideId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async deleteSlide(@Param('slideId') slideId: string) {
+    return this.lessonService.deleteSlide(slideId);
+  }
+
+  // Student progress
+  @Get('lessons/:lessonId/my-progress')
+  @Roles('ESTUDIANTE')
+  async getMyLessonProgress(@Param('lessonId') lessonId: string, @Request() req: any) {
+    const userId = req.user.id;
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { student: { userId }, status: 'ACTIVE' },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!enrollment) throw new Error('No se encontró matrícula activa');
+    return this.lessonService.getMyProgress(lessonId, enrollment.id);
+  }
+
+  @Post('lessons/:lessonId/start')
+  @Roles('ESTUDIANTE')
+  async startLesson(@Param('lessonId') lessonId: string, @Request() req: any) {
+    const userId = req.user.id;
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { student: { userId }, status: 'ACTIVE' },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!enrollment) throw new Error('No se encontró matrícula activa');
+    return this.lessonService.startLesson(lessonId, enrollment.id);
+  }
+
+  @Post('lessons/:lessonId/advance')
+  @Roles('ESTUDIANTE')
+  async advanceSlide(@Param('lessonId') lessonId: string, @Request() req: any, @Body() body: {
+    slideIndex: number;
+    slideId: string;
+    answer?: any;
+    timeSpentDelta?: number;
+  }) {
+    const userId = req.user.id;
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { student: { userId }, status: 'ACTIVE' },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!enrollment) throw new Error('No se encontró matrícula activa');
+    return this.lessonService.advanceSlide(lessonId, enrollment.id, body);
+  }
+
+  @Get('lessons/:lessonId/progress')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async getAllLessonProgress(@Param('lessonId') lessonId: string) {
+    return this.lessonService.getAllProgress(lessonId);
+  }
+
+  // AI: generate lesson structure from text
+  @Post('lessons/generate-ai')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async generateLessonAI(@Body() body: { topic: string; content: string; gradeName?: string }) {
+    return this.lessonService.generateLessonStructure(body.topic, body.content, body.gradeName);
   }
 }
