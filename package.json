@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@nestjs/throttler": "^6.5.0",
+    "google-auth-library": "^9.15.1",
     "helmet": "^8.1.0"
   }
 }
