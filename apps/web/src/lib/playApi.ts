@@ -55,6 +55,8 @@ export const authPlayApi = {
     playAxios.post('/auth/register-play', data),
   login: (data: { email: string; password: string }) =>
     playAxios.post('/auth/login-play', data),
+  googleLogin: (idToken: string) =>
+    playAxios.post('/auth/google-play', { idToken }),
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

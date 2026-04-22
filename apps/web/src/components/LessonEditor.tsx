@@ -14,6 +14,7 @@ import { valeriaAssistantBridge } from '../contexts/ValeriaContext'
 
 interface LessonEditorProps {
   activityId: string
+  activityTitle?: string
   classroomTitle?: string
   gradeName?: string
   subjectName?: string
@@ -73,7 +74,7 @@ const LAYOUT_OPTIONS = [
 // ═══════════════════════════════════════════════════════════════════════════
 
 export default function LessonEditor({
-  activityId, classroomTitle, gradeName, subjectName, onClose, onPreview,
+  activityId, activityTitle, classroomTitle, gradeName, subjectName, onClose, onPreview,
 }: LessonEditorProps) {
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [loading, setLoading] = useState(true)
@@ -118,6 +119,8 @@ export default function LessonEditor({
       setSlides(data.slides.map(slideToForm))
     } catch {
       // No lesson exists yet — start fresh
+      setTitle(activityTitle || classroomTitle || '')
+      setShowMetadata(true)
       setSlides([
         createEmptySlide('CONTENT', 0),
         createEmptySlide('BADGE_REVEAL', 1),

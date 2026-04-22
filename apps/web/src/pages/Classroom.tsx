@@ -4913,6 +4913,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             <div className="fixed inset-0 z-[100] bg-white">
               <LessonEditor
                 activityId={lessonActivityId}
+                activityTitle={act.title}
                 classroomTitle={classroom.title}
                 onClose={() => { setShowLessonEditor(false); setLessonActivityId('') }}
                 onPreview={() => { setShowLessonEditor(false); setShowLessonPlayer(true) }}
@@ -5292,6 +5293,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           <div className="fixed inset-0 z-[100] bg-white">
             <LessonEditor
               activityId={lessonActivityId}
+              activityTitle={activities.find(a => a.id === lessonActivityId)?.title}
               classroomTitle={classroom.title}
               onClose={() => { setShowLessonEditor(false); setLessonActivityId('') }}
               onPreview={() => { setShowLessonEditor(false); setShowLessonPlayer(true) }}

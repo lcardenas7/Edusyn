@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { usePlayAuth } from '../../contexts/PlayAuthContext'
+import GoogleSignInButton from '../../components/play/GoogleSignInButton'
 import { 
   Sparkles, Mail, Lock, User, Eye, EyeOff, AlertCircle, 
   ArrowRight, GraduationCap, Zap, Users, Trophy 
@@ -8,7 +9,8 @@ import {
 
 export default function RegisterPlay() {
   const navigate = useNavigate()
-  const { register, isAuthenticated } = usePlayAuth()
+  const { register, googleLogin, isAuthenticated } = usePlayAuth()
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -103,7 +105,41 @@ export default function RegisterPlay() {
           </div>
 
           <h2 className="text-2xl font-bold text-gray-900 mb-1">Crear cuenta</h2>
-          <p className="text-gray-500 mb-8">Regístrate gratis y empieza a crear sesiones interactivas</p>
+          <p className="text-gray-500 mb-6">Regístrate gratis y empieza a crear sesiones interactivas</p>
+
+          {/* Google Sign-In */}
+          <div className="mb-4">
+            <GoogleSignInButton
+              text="signup_with"
+              onSuccess={async (idToken) => {
+                setGoogleLoading(true)
+                setError('')
+                try {
+                  await googleLogin(idToken)
+                  navigate('/play')
+                } catch (err: any) {
+                  setError(err.response?.data?.message || 'Error con Google Sign-In')
+                } finally {
+                  setGoogleLoading(false)
+                }
+              }}
+              onError={(err) => setError(err)}
+            />
+            {googleLoading && (
+              <div className="flex justify-center mt-2">
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-violet-600 border-t-transparent" />
+              </div>
+            )}
+          </div>
+
+          <div className="relative mb-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-3 bg-white text-gray-400">o con tu correo</span>
+            </div>
+          </div>
 
           {error && (
             <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">

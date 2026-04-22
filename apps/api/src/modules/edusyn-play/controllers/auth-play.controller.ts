@@ -28,4 +28,15 @@ export class AuthPlayController {
   async loginPlay(@Body() dto: { email: string; password: string }) {
     return this.authPlay.loginPlay(dto);
   }
+
+  /**
+   * Google Sign-In para Edusyn Play.
+   * Recibe id_token de Google, verifica, register-or-login, devuelve JWT.
+   */
+  @Post('google-play')
+  @SkipTenantCheck()
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
+  async googlePlay(@Body() dto: { idToken: string }) {
+    return this.authPlay.googleLoginPlay(dto.idToken);
+  }
 }

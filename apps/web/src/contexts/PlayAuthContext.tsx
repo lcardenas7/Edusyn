@@ -6,6 +6,7 @@ interface PlayUser {
   email: string
   firstName: string
   lastName: string
+  photo?: string | null
   accountMode: string
 }
 
@@ -15,6 +16,7 @@ interface PlayAuthContextType {
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
   register: (data: { email: string; password: string; firstName: string; lastName: string }) => Promise<void>
+  googleLogin: (idToken: string) => Promise<void>
   logout: () => void
 }
 
@@ -54,6 +56,14 @@ export function PlayAuthProvider({ children }: { children: ReactNode }) {
     setUser(userData)
   }
 
+  const googleLogin = async (idToken: string) => {
+    const res = await authPlayApi.googleLogin(idToken)
+    const { access_token, user: userData } = res.data
+    localStorage.setItem('play_token', access_token)
+    localStorage.setItem('play_user', JSON.stringify(userData))
+    setUser(userData)
+  }
+
   const logout = () => {
     localStorage.removeItem('play_token')
     localStorage.removeItem('play_user')
@@ -67,6 +77,7 @@ export function PlayAuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       login,
       register,
+      googleLogin,
       logout,
     }}>
       {children}

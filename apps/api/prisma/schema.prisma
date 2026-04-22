@@ -250,6 +250,8 @@ model User {
   isActive           Boolean       @default(true)
   isSuperAdmin       Boolean       @default(false) // SuperAdmin del sistema
   accountMode        AccountMode   @default(INSTITUTIONAL) // Modo de cuenta (Edusyn Play)
+  googleId           String?       @unique // Google OAuth sub ID
+  photo              String?       // URL de foto de perfil (Google o subida)
   mustChangePassword Boolean       @default(false) // Forzar cambio de contraseña en primer login
   signatureImageUrl  String? // URL de imagen de firma (subida por el usuario)
   createdAt          DateTime      @default(now())
