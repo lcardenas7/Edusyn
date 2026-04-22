@@ -44,6 +44,17 @@ import DifferentialSupport from './pages/DifferentialSupport'
 import TeacherWorkspace from './pages/TeacherWorkspace'
 import Classroom from './pages/Classroom'
 import Layout from './components/Layout'
+import PlayLayout from './components/play/PlayLayout'
+import { PlayAuthProvider, usePlayAuth } from './contexts/PlayAuthContext'
+import {
+  RegisterPlay,
+  LoginPlay,
+  PlayDashboard,
+  PlayQuizzes,
+  PlayLessons,
+  PlaySessions,
+  JoinPage,
+} from './pages/play'
 
 // Nuevas páginas por dominio (Refactor UX)
 import Scale from './pages/academic/config/Scale'
@@ -149,6 +160,32 @@ function SuperAdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function PlayProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = usePlayAuth()
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
+      </div>
+    )
+  }
+  if (!isAuthenticated) return <Navigate to="/login-play" replace />
+  return <>{children}</>
+}
+
+function PlayRoutes() {
+  return (
+    <PlayAuthProvider>
+      <Routes>
+        <Route path="/" element={<PlayProtectedRoute><PlayLayout><PlayDashboard /></PlayLayout></PlayProtectedRoute>} />
+        <Route path="/quizzes" element={<PlayProtectedRoute><PlayLayout><PlayQuizzes /></PlayLayout></PlayProtectedRoute>} />
+        <Route path="/lessons" element={<PlayProtectedRoute><PlayLayout><PlayLessons /></PlayLayout></PlayProtectedRoute>} />
+        <Route path="/sessions" element={<PlayProtectedRoute><PlayLayout><PlaySessions /></PlayLayout></PlayProtectedRoute>} />
+      </Routes>
+    </PlayAuthProvider>
+  )
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -162,6 +199,15 @@ function App() {
         <Route path="/login" element={<InstitutionLogin />} />
         <Route path="/login/:slug" element={<InstitutionLogin />} />
         <Route path="/auth/login" element={<Login />} />
+        
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* EDUSYN PLAY - Docentes personales + Invitados              */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        <Route path="/register-play" element={<PlayAuthProvider><RegisterPlay /></PlayAuthProvider>} />
+        <Route path="/login-play" element={<PlayAuthProvider><LoginPlay /></PlayAuthProvider>} />
+        <Route path="/join" element={<JoinPage />} />
+        <Route path="/join/:code" element={<JoinPage />} />
+        <Route path="/play/*" element={<PlayRoutes />} />
         
         {/* Cambio obligatorio de contraseña */}
         <Route

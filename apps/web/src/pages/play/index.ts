@@ -1,0 +1,7 @@
+export { default as RegisterPlay } from './RegisterPlay'
+export { default as LoginPlay } from './LoginPlay'
+export { default as PlayDashboard } from './PlayDashboard'
+export { default as PlayQuizzes } from './PlayQuizzes'
+export { default as PlayLessons } from './PlayLessons'
+export { default as PlaySessions } from './PlaySessions'
+export { default as JoinPage } from './JoinPage'
