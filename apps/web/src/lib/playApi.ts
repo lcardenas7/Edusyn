@@ -130,6 +130,7 @@ export const guestApi = {
   lookup: (code: string) => guestAxios.get(`/public/join/${code}`),
   join: (code: string, data: { nickname: string; avatarEmoji?: string; fingerprint?: string }) =>
     guestAxios.post(`/public/join/${code}`, data),
+  getSessionStatus: (sessionId: string) => guestAxios.get(`/public/session/${sessionId}/status`),
   ranking: (sessionId: string) => guestAxios.get(`/public/session/${sessionId}/ranking`),
   submitAnswer: (sessionId: string, data: {
     questionId?: string;

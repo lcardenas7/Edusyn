@@ -74,6 +74,13 @@ export class GuestPublicController {
     });
   }
 
+  /** Estado público de la sesión (para polling). */
+  @Get('session/:sessionId/status')
+  @Throttle({ default: { ttl: 60000, limit: 120 } })
+  async getSessionStatus(@Param('sessionId') sessionId: string) {
+    return this.guestService.getQuizSessionStatus(sessionId);
+  }
+
   /** Invitado envía reacción (💡 🤔 ❤ 👏). */
   @Post('session/:sessionId/reaction')
   @UseGuards(GuestGuard)

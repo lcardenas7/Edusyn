@@ -320,4 +320,68 @@ export class GuestService {
       rank: idx + 1,
     }));
   }
+
+  /** Estado público de la sesión para que los invitados hagan polling. */
+  async getQuizSessionStatus(sessionId: string) {
+    const session = await this.prisma.liveSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        id: true,
+        status: true,
+        currentQuestionIdx: true,
+        guestsCount: true,
+        activity: {
+          select: {
+            title: true,
+            questions: {
+              orderBy: { sortOrder: 'asc' },
+              select: {
+                id: true,
+                type: true,
+                text: true,
+                options: true,
+                points: true,
+                sortOrder: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+
+    // Apply questionOrder from config if shuffled
+    let questions = session.activity.questions;
+    const config = session.config as any;
+    if (config?.questionOrder && Array.isArray(config.questionOrder)) {
+      const orderedIds = config.questionOrder;
+      questions = orderedIds
+        .map(id => questions.find(q => q.id === id))
+        .filter(Boolean);
+    }
+
+    // Current question (without correct answer)
+    let currentQuestion = null;
+    if (session.status === 'ACTIVE' && session.currentQuestionIdx >= 0 && session.currentQuestionIdx < questions.length) {
+      const q = questions[session.currentQuestionIdx];
+      currentQuestion = {
+        id: q.id,
+        type: q.type,
+        text: q.text,
+        options: q.options,
+        points: q.points,
+        sortOrder: q.sortOrder,
+      };
+    }
+
+    return {
+      id: session.id,
+      status: session.status,
+      currentQuestionIdx: session.currentQuestionIdx,
+      guestsCount: session.guestsCount,
+      activityTitle: session.activity.title,
+      totalQuestions: questions.length,
+      currentQuestion,
+    };
+  }
 }

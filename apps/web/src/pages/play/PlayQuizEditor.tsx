@@ -428,7 +428,7 @@ export default function PlayQuizEditor() {
                       <span className="text-lg">{g.avatarEmoji || '👤'}</span>
                       <span className="flex-1 font-medium">{g.nickname}</span>
                       <span className="font-bold">{g.score} pts</span>
-                      <span className="text-xs text-green-200">{g.correctAnswers}/{g.totalAnswered} correctas</span>
+                      <span className="text-xs text-green-200">{g.correctAnswers}/{g.totalAnswers} correctas</span>
                     </div>
                   ))}
                 </div>

@@ -25,7 +25,23 @@ interface SessionInfo {
   type: 'quiz' | 'lesson'
 }
 
-type Step = 'code' | 'nickname' | 'lobby' | 'error'
+type Step = 'code' | 'nickname' | 'lobby' | 'active' | 'finished' | 'error'
+
+interface SessionStatus {
+  id: string
+  status: 'WAITING' | 'ACTIVE' | 'FINISHED'
+  currentQuestionIdx: number
+  guestsCount: number
+  activityTitle: string
+  totalQuestions: number
+  currentQuestion?: {
+    id: string
+    type: string
+    text: string
+    options?: any
+    points: number
+  }
+}
 
 export default function JoinPage() {
   const { code: urlCode } = useParams<{ code: string }>()
@@ -36,9 +52,11 @@ export default function JoinPage() {
   const [nickname, setNickname] = useState('')
   const [avatar, setAvatar] = useState(AVATAR_EMOJIS[Math.floor(Math.random() * AVATAR_EMOJIS.length)])
   const [session, setSession] = useState<SessionInfo | null>(null)
+  const [sessionStatus, setSessionStatus] = useState<SessionStatus | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [lookingUp, setLookingUp] = useState(!!urlCode)
+  const [pollingInterval, setPollingInterval] = useState<any>(null)
 
   const codeInputRef = useRef<HTMLInputElement>(null)
 
@@ -48,6 +66,63 @@ export default function JoinPage() {
       lookupCode(urlCode)
     }
   }, [urlCode])
+
+  // Polling for session status after joining
+  useEffect(() => {
+    if (step === 'lobby' && session?.sessionId) {
+      // Start polling every 3 seconds
+      const interval = setInterval(async () => {
+        try {
+          const res = await guestApi.getSessionStatus(session.sessionId)
+          const status = res.data
+          setSessionStatus(status)
+
+          // Handle state transitions
+          if (status.status === 'ACTIVE') {
+            setStep('active')
+          } else if (status.status === 'FINISHED') {
+            setStep('finished')
+            // Stop polling when finished
+            if (pollingInterval) clearInterval(pollingInterval)
+          }
+        } catch (err) {
+          // Silently fail polling
+        }
+      }, 3000)
+      setPollingInterval(interval)
+
+      // Cleanup on unmount or step change
+      return () => clearInterval(interval)
+    } else if (step === 'active' && session?.sessionId) {
+      // Keep polling during active state for question changes
+      const interval = setInterval(async () => {
+        try {
+          const res = await guestApi.getSessionStatus(session.sessionId)
+          const status = res.data
+          setSessionStatus(status)
+          if (status.status === 'FINISHED') {
+            setStep('finished')
+            if (pollingInterval) clearInterval(pollingInterval)
+          }
+        } catch {}
+      }, 2000)
+      setPollingInterval(interval)
+      return () => clearInterval(interval)
+    } else {
+      // Clear polling when not in lobby/active
+      if (pollingInterval) {
+        clearInterval(pollingInterval)
+        setPollingInterval(null)
+      }
+    }
+  }, [step, session?.sessionId])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) clearInterval(pollingInterval)
+    }
+  }, [pollingInterval])
 
   const lookupCode = async (joinCode: string) => {
     setLookingUp(true)
@@ -104,6 +179,20 @@ export default function JoinPage() {
       setError(err.response?.data?.message || 'No se pudo unir a la sesión')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Submit answer
+  const handleAnswer = async (questionId: string, selectedOption?: string, answerText?: string) => {
+    try {
+      await guestApi.submitAnswer(session!.sessionId, {
+        questionId,
+        selectedOption,
+        answerText,
+        timeTakenMs: 0, // Could track time if needed
+      })
+    } catch (err) {
+      // Silently fail answer submission
     }
   }
 
@@ -280,6 +369,14 @@ export default function JoinPage() {
               <span className="text-sm text-gray-400">Esperando que inicie la sesión</span>
             </div>
 
+            <div className="bg-violet-50 rounded-xl p-4 mb-4">
+              <div className="flex items-center justify-center gap-2">
+                <Users className="w-5 h-5 text-violet-600" />
+                <span className="text-lg font-bold text-violet-900">{sessionStatus?.guestCount || session?.guestCount || 0}</span>
+                <span className="text-sm text-violet-600">conectados</span>
+              </div>
+            </div>
+
             {session && (
               <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-600">
                 <p className="font-medium text-gray-900">{session.title}</p>
@@ -288,6 +385,122 @@ export default function JoinPage() {
             )}
 
             <div className="mt-6 flex justify-center gap-4 text-xs text-gray-400">
+              <span className="flex items-center gap-1"><Trophy className="w-3.5 h-3.5" /> Ranking en vivo</span>
+              <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Responde rápido</span>
+              <span className="flex items-center gap-1"><Smile className="w-3.5 h-3.5" /> Reacciones</span>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ STEP 4: Active Question ═══ */}
+        {step === 'active' && sessionStatus?.currentQuestion && (
+          <div className="bg-white rounded-2xl shadow-2xl p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <div className="text-3xl">{avatar}</div>
+                <div>
+                  <h3 className="font-bold text-gray-900">{nickname}</h3>
+                  <p className="text-xs text-gray-500">Pregunta {sessionStatus.currentQuestionIdx + 1} / {sessionStatus.totalQuestions}</p>
+                </div>
+              </div>
+              <div className="bg-violet-100 px-3 py-1 rounded-full text-sm font-medium text-violet-700">
+                {sessionStatus.guestsCount} jugadores
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+              <div
+                className="bg-violet-600 rounded-full h-2 transition-all"
+                style={{ width: `${((sessionStatus.currentQuestionIdx + 1) / sessionStatus.totalQuestions) * 100}%` }}
+              />
+            </div>
+
+            {/* Question */}
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">{sessionStatus.currentQuestion.text}</h2>
+              
+              {/* Multiple Choice */}
+              {sessionStatus.currentQuestion.type === 'MULTIPLE_CHOICE' && sessionStatus.currentQuestion.options && (
+                <div className="space-y-3">
+                  {JSON.parse(sessionStatus.currentQuestion.options).map((opt: any, idx: number) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleAnswer(sessionStatus.currentQuestion!.id, opt.text)}
+                      className="w-full text-left p-4 bg-gray-50 hover:bg-violet-50 border border-gray-200 hover:border-violet-300 rounded-xl transition-colors"
+                    >
+                      <span className="font-medium text-gray-700">{String.fromCharCode(65 + idx)}.</span> {opt.text}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* True/False */}
+              {sessionStatus.currentQuestion.type === 'TRUE_FALSE' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => handleAnswer(sessionStatus.currentQuestion!.id, 'true')}
+                    className="p-4 bg-green-50 hover:bg-green-100 border border-green-200 hover:border-green-300 rounded-xl transition-colors font-medium text-green-700"
+                  >
+                    ✅ Verdadero
+                  </button>
+                  <button
+                    onClick={() => handleAnswer(sessionStatus.currentQuestion!.id, 'false')}
+                    className="p-4 bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 rounded-xl transition-colors font-medium text-red-700"
+                  >
+                    ❌ Falso
+                  </button>
+                </div>
+              )}
+
+              {/* Short Answer */}
+              {sessionStatus.currentQuestion.type === 'SHORT_ANSWER' && (
+                <div>
+                  <textarea
+                    placeholder="Escribe tu respuesta..."
+                    className="w-full p-4 border border-gray-200 rounded-xl resize-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+                    rows={3}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && e.ctrlKey) {
+                        const text = (e.target as HTMLTextAreaElement).value.trim()
+                        if (text) handleAnswer(sessionStatus.currentQuestion!.id, undefined, text)
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={(e) => {
+                      const textarea = e.currentTarget.parentElement?.querySelector('textarea')
+                      const text = textarea?.value.trim()
+                      if (text) handleAnswer(sessionStatus.currentQuestion!.id, undefined, text)
+                    }}
+                    className="mt-3 w-full py-3 bg-violet-600 text-white rounded-xl font-medium hover:bg-violet-700 transition-colors"
+                  >
+                    Enviar respuesta
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="text-center text-xs text-gray-400">
+              <Clock className="w-3.5 h-3.5 inline mr-1" />
+              Responde rápido para más puntos
+            </div>
+          </div>
+        )}
+
+        {/* ═══ STEP 5: Finished - Ranking ═══ */}
+        {step === 'finished' && (
+          <div className="bg-white rounded-2xl shadow-2xl p-8 text-center">
+            <div className="text-6xl mb-4">🏆</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Juego Terminado!</h2>
+            <p className="text-gray-500 mb-6">Gracias por participar</p>
+
+            <div className="bg-gray-50 rounded-xl p-4 mb-6">
+              <p className="font-medium text-gray-900">{session?.title}</p>
+              <p className="text-xs text-gray-400 mt-1">por {session?.teacherName}</p>
+            </div>
+
+            <div className="flex justify-center gap-4 text-xs text-gray-400">
               <span className="flex items-center gap-1"><Trophy className="w-3.5 h-3.5" /> Ranking en vivo</span>
               <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Responde rápido</span>
               <span className="flex items-center gap-1"><Smile className="w-3.5 h-3.5" /> Reacciones</span>
