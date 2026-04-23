@@ -43,6 +43,14 @@ interface SessionStatus {
   }
 }
 
+interface AnswerFeedback {
+  questionId: string
+  sent: boolean
+  isCorrect?: boolean
+  pointsAwarded?: number
+  error?: string
+}
+
 function getQuestionOptions(rawOptions: unknown): Array<{ id?: string; text?: string }> {
   if (Array.isArray(rawOptions)) {
     return rawOptions as Array<{ id?: string; text?: string }>
@@ -72,6 +80,8 @@ export default function JoinPage() {
   const [error, setError] = useState('')
   const [lookingUp, setLookingUp] = useState(!!urlCode)
   const [pollingInterval, setPollingInterval] = useState<any>(null)
+  const [answerFeedback, setAnswerFeedback] = useState<AnswerFeedback | null>(null)
+  const [totalScore, setTotalScore] = useState(0)
 
   const codeInputRef = useRef<HTMLInputElement>(null)
 
@@ -139,6 +149,11 @@ export default function JoinPage() {
     }
   }, [pollingInterval])
 
+  // Clear per-question feedback when question changes
+  useEffect(() => {
+    setAnswerFeedback(null)
+  }, [sessionStatus?.currentQuestion?.id])
+
   const lookupCode = async (joinCode: string) => {
     setLookingUp(true)
     setError('')
@@ -189,6 +204,8 @@ export default function JoinPage() {
         nickname: nickname.trim(),
         avatar,
       }))
+      setTotalScore(0)
+      setAnswerFeedback(null)
       setStep('lobby')
     } catch (err: any) {
       setError(err.response?.data?.message || 'No se pudo unir a la sesión')
@@ -199,15 +216,32 @@ export default function JoinPage() {
 
   // Submit answer
   const handleAnswer = async (questionId: string, selectedOption?: string, answerText?: string) => {
+    if (!session?.sessionId) return
+    if (answerFeedback?.questionId === questionId && !answerFeedback.error) return
+
+    setAnswerFeedback({ questionId, sent: true })
     try {
-      await guestApi.submitAnswer(session!.sessionId, {
+      const res = await guestApi.submitAnswer(session.sessionId, {
         questionId,
         selectedOption,
         answerText,
         timeTakenMs: 0, // Could track time if needed
       })
+      const points = Number(res.data?.pointsAwarded || 0)
+      const isCorrect = Boolean(res.data?.isCorrect)
+      setAnswerFeedback({
+        questionId,
+        sent: true,
+        isCorrect,
+        pointsAwarded: points,
+      })
+      setTotalScore(prev => prev + points)
     } catch (err) {
-      // Silently fail answer submission
+      setAnswerFeedback({
+        questionId,
+        sent: true,
+        error: 'No se pudo enviar la respuesta. Intenta de nuevo.',
+      })
     }
   }
 
@@ -448,12 +482,17 @@ export default function JoinPage() {
                   }
                   return (
                     <div className="space-y-3">
-                      {options.map((opt, idx: number) => (
-                        <button
-                          key={opt.id || idx}
-                          onClick={() => handleAnswer(sessionStatus.currentQuestion!.id, opt.id || opt.text || '')}
-                          className="w-full text-left p-4 bg-gray-50 hover:bg-violet-50 border border-gray-200 hover:border-violet-300 rounded-xl transition-colors"
-                        >
+	                      {options.map((opt, idx: number) => (
+	                        <button
+	                          key={opt.id || idx}
+	                          onClick={() => handleAnswer(sessionStatus.currentQuestion!.id, opt.id || opt.text || '')}
+	                          disabled={answerFeedback?.questionId === sessionStatus.currentQuestion!.id && !answerFeedback?.error}
+	                          className={`w-full text-left p-4 border rounded-xl transition-colors ${
+	                            answerFeedback?.questionId === sessionStatus.currentQuestion!.id && !answerFeedback?.error
+	                              ? 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed'
+	                              : 'bg-gray-50 hover:bg-violet-50 border-gray-200 hover:border-violet-300'
+	                          }`}
+	                        >
                           <span className="font-medium text-gray-700">{String.fromCharCode(65 + idx)}.</span> {opt.text}
                         </button>
                       ))}
@@ -467,13 +506,23 @@ export default function JoinPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => handleAnswer(sessionStatus.currentQuestion!.id, 'true')}
-                    className="p-4 bg-green-50 hover:bg-green-100 border border-green-200 hover:border-green-300 rounded-xl transition-colors font-medium text-green-700"
+                    disabled={answerFeedback?.questionId === sessionStatus.currentQuestion!.id && !answerFeedback?.error}
+                    className={`p-4 border rounded-xl transition-colors font-medium ${
+                      answerFeedback?.questionId === sessionStatus.currentQuestion!.id && !answerFeedback?.error
+                        ? 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed'
+                        : 'bg-green-50 hover:bg-green-100 border-green-200 hover:border-green-300 text-green-700'
+                    }`}
                   >
                     ✅ Verdadero
                   </button>
                   <button
                     onClick={() => handleAnswer(sessionStatus.currentQuestion!.id, 'false')}
-                    className="p-4 bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 rounded-xl transition-colors font-medium text-red-700"
+                    disabled={answerFeedback?.questionId === sessionStatus.currentQuestion!.id && !answerFeedback?.error}
+                    className={`p-4 border rounded-xl transition-colors font-medium ${
+                      answerFeedback?.questionId === sessionStatus.currentQuestion!.id && !answerFeedback?.error
+                        ? 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed'
+                        : 'bg-red-50 hover:bg-red-100 border-red-200 hover:border-red-300 text-red-700'
+                    }`}
                   >
                     ❌ Falso
                   </button>
@@ -500,15 +549,39 @@ export default function JoinPage() {
                       const text = textarea?.value.trim()
                       if (text) handleAnswer(sessionStatus.currentQuestion!.id, undefined, text)
                     }}
-                    className="mt-3 w-full py-3 bg-violet-600 text-white rounded-xl font-medium hover:bg-violet-700 transition-colors"
+                    disabled={answerFeedback?.questionId === sessionStatus.currentQuestion!.id && !answerFeedback?.error}
+                    className={`mt-3 w-full py-3 rounded-xl font-medium transition-colors ${
+                      answerFeedback?.questionId === sessionStatus.currentQuestion!.id && !answerFeedback?.error
+                        ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                        : 'bg-violet-600 text-white hover:bg-violet-700'
+                    }`}
                   >
                     Enviar respuesta
                   </button>
                 </div>
               )}
+
+              {answerFeedback?.questionId === sessionStatus.currentQuestion.id && (
+                <div className={`mt-4 p-3 rounded-lg border text-sm ${
+                  answerFeedback.error
+                    ? 'bg-red-50 border-red-200 text-red-700'
+                    : answerFeedback.isCorrect === undefined
+                      ? 'bg-blue-50 border-blue-200 text-blue-700'
+                      : answerFeedback.isCorrect
+                        ? 'bg-green-50 border-green-200 text-green-700'
+                        : 'bg-amber-50 border-amber-200 text-amber-700'
+                }`}>
+                  {answerFeedback.error
+                    ? answerFeedback.error
+                    : answerFeedback.isCorrect === undefined
+                      ? 'Respuesta enviada. Validando...'
+                      : `Respuesta enviada. ${answerFeedback.isCorrect ? 'Correcta' : 'Incorrecta'} - +${answerFeedback.pointsAwarded || 0} pts`}
+                </div>
+              )}
             </div>
 
-            <div className="text-center text-xs text-gray-400">
+            <div className="text-center text-xs text-gray-400 space-y-1">
+              <div className="font-semibold text-violet-600">Puntaje acumulado: {totalScore} pts</div>
               <Clock className="w-3.5 h-3.5 inline mr-1" />
               Responde rápido para más puntos
             </div>
@@ -527,6 +600,11 @@ export default function JoinPage() {
               <p className="text-xs text-gray-400 mt-1">por {session?.teacherName}</p>
             </div>
 
+            <div className="bg-violet-50 rounded-xl p-4 mb-6">
+              <p className="text-sm text-violet-700">Tu puntaje final</p>
+              <p className="text-3xl font-bold text-violet-900">{totalScore} pts</p>
+            </div>
+
             <div className="flex justify-center gap-4 text-xs text-gray-400">
               <span className="flex items-center gap-1"><Trophy className="w-3.5 h-3.5" /> Ranking en vivo</span>
               <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Responde rápido</span>
@@ -543,3 +621,4 @@ export default function JoinPage() {
     </div>
   )
 }
+
