@@ -43,6 +43,7 @@ guestAxios.interceptors.request.use((config) => {
   const token = localStorage.getItem('guest_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+    config.headers['X-Guest-Token'] = token
   }
   return config
 })
