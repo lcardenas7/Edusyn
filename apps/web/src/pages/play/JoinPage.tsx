@@ -372,7 +372,7 @@ export default function JoinPage() {
             <div className="bg-violet-50 rounded-xl p-4 mb-4">
               <div className="flex items-center justify-center gap-2">
                 <Users className="w-5 h-5 text-violet-600" />
-                <span className="text-lg font-bold text-violet-900">{sessionStatus?.guestCount || session?.guestCount || 0}</span>
+                <span className="text-lg font-bold text-violet-900">{sessionStatus?.guestsCount || session?.guestsCount || 0}</span>
                 <span className="text-sm text-violet-600">conectados</span>
               </div>
             </div>

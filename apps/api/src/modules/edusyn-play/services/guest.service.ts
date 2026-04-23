@@ -330,6 +330,7 @@ export class GuestService {
         status: true,
         currentQuestionIdx: true,
         guestsCount: true,
+        config: true,
         activity: {
           select: {
             title: true,
@@ -354,14 +355,21 @@ export class GuestService {
     let questions = session.activity.questions;
     const config = session.config as any;
     if (config?.questionOrder && Array.isArray(config.questionOrder)) {
-      const orderedIds = config.questionOrder;
+      const orderedIds = config.questionOrder as string[];
       questions = orderedIds
         .map(id => questions.find(q => q.id === id))
-        .filter(Boolean);
+        .filter((q): q is (typeof questions)[number] => Boolean(q));
     }
 
     // Current question (without correct answer)
-    let currentQuestion = null;
+    let currentQuestion: {
+      id: string;
+      type: string;
+      text: string;
+      options: unknown;
+      points: unknown;
+      sortOrder: number;
+    } | null = null;
     if (session.status === 'ACTIVE' && session.currentQuestionIdx >= 0 && session.currentQuestionIdx < questions.length) {
       const q = questions[session.currentQuestionIdx];
       currentQuestion = {
