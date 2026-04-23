@@ -43,6 +43,21 @@ interface SessionStatus {
   }
 }
 
+function getQuestionOptions(rawOptions: unknown): Array<{ id?: string; text?: string }> {
+  if (Array.isArray(rawOptions)) {
+    return rawOptions as Array<{ id?: string; text?: string }>
+  }
+  if (typeof rawOptions === 'string') {
+    try {
+      const parsed = JSON.parse(rawOptions)
+      return Array.isArray(parsed) ? (parsed as Array<{ id?: string; text?: string }>) : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
 export default function JoinPage() {
   const { code: urlCode } = useParams<{ code: string }>()
   const navigate = useNavigate()
@@ -422,17 +437,29 @@ export default function JoinPage() {
               
               {/* Multiple Choice */}
               {sessionStatus.currentQuestion.type === 'MULTIPLE_CHOICE' && sessionStatus.currentQuestion.options && (
-                <div className="space-y-3">
-                  {JSON.parse(sessionStatus.currentQuestion.options).map((opt: any, idx: number) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleAnswer(sessionStatus.currentQuestion!.id, opt.text)}
-                      className="w-full text-left p-4 bg-gray-50 hover:bg-violet-50 border border-gray-200 hover:border-violet-300 rounded-xl transition-colors"
-                    >
-                      <span className="font-medium text-gray-700">{String.fromCharCode(65 + idx)}.</span> {opt.text}
-                    </button>
-                  ))}
-                </div>
+                (() => {
+                  const options = getQuestionOptions(sessionStatus.currentQuestion.options)
+                  if (!options.length) {
+                    return (
+                      <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-sm text-yellow-700">
+                        Esta pregunta no tiene opciones válidas.
+                      </div>
+                    )
+                  }
+                  return (
+                    <div className="space-y-3">
+                      {options.map((opt, idx: number) => (
+                        <button
+                          key={opt.id || idx}
+                          onClick={() => handleAnswer(sessionStatus.currentQuestion!.id, opt.id || opt.text || '')}
+                          className="w-full text-left p-4 bg-gray-50 hover:bg-violet-50 border border-gray-200 hover:border-violet-300 rounded-xl transition-colors"
+                        >
+                          <span className="font-medium text-gray-700">{String.fromCharCode(65 + idx)}.</span> {opt.text}
+                        </button>
+                      ))}
+                    </div>
+                  )
+                })()
               )}
 
               {/* True/False */}
