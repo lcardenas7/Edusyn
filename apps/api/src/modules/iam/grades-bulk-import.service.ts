@@ -1193,7 +1193,7 @@ export class GradesBulkImportService {
     const instructions = [
       'Descargue esta plantilla y complete únicamente la hoja PLANTILLA.',
       'La fila 1 contiene los nombres de las asignaturas y la fila 2 los encabezados.',
-      'Cada asignatura usa las columnas IHS, COG, PROC, ACT, DEFIN y DESEMP.',
+      'Cada asignatura muestra solo COG, PROC y ACT; DEFIN y DESEMP están ocultas y se calculan automáticamente.',
       'No elimine columnas ni cambie los nombres de los encabezados.',
       'Si un valor no aplica, deje la celda vacía.',
       'La hoja DESEMPEÑOS solo sirve como referencia del catálogo académico.',
@@ -1246,7 +1246,7 @@ export class GradesBulkImportService {
 
     let startCol = 10;
     orderedSubjects.forEach((subject, subjectIndex) => {
-      const endCol = startCol + 5;
+      const endCol = startCol + 4;
       sheet.mergeCells(1, startCol, 1, endCol);
       const titleCell = sheet.getCell(1, startCol);
       titleCell.value = subject.name;
@@ -1260,7 +1260,7 @@ export class GradesBulkImportService {
         right: { style: 'thin' },
       };
 
-      const headers = ['IHS', 'COG', 'PROC', 'ACT', 'DEFIN', 'DESEMP.'];
+      const headers = ['COG', 'PROC', 'ACT', 'DEFIN', 'DESEMP.'];
       headers.forEach((header, offset) => {
         const cell = sheet.getCell(2, startCol + offset);
         cell.value = header;
@@ -1275,12 +1275,16 @@ export class GradesBulkImportService {
         };
       });
 
+      // Ocultar columnas automáticas para que el docente solo vea COG, PROC y ACT
+      sheet.getColumn(startCol + 3).hidden = true;
+      sheet.getColumn(startCol + 4).hidden = true;
+
       // Fila vacía de ejemplo/entrada inicial
-      for (let offset = 0; offset < 6; offset++) {
+      for (let offset = 0; offset < 5; offset++) {
         sheet.getCell(3, startCol + offset).value = '';
       }
 
-      startCol += 6;
+      startCol += 5;
     });
 
     // Formato general de la plantilla
