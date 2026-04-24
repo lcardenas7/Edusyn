@@ -444,11 +444,11 @@ export class GradesBulkImportService {
     for (let i = 0; i < headers.length; i++) {
       const h = headers[i].toUpperCase().trim();
       if ((h.includes('NOMBRE') || h.includes('NOMBRES')) && (h.includes('APELLIDO') || h.includes('APELLIDOS'))) {
-        nameCol = i;
+        nameCol = i + 1;
       } else if (h.includes('DOC') || h.includes('IDENTIDAD') || h.includes('CEDULA')) {
-        docCol = i;
+        docCol = i + 1;
       } else if (h.includes('GRUPO') || h.includes('CURSO')) {
-        groupCol = i;
+        groupCol = i + 1;
       }
     }
 
@@ -473,15 +473,15 @@ export class GradesBulkImportService {
       
       // Detectar columnas de notas
       if (h === 'COG' || h.includes('COGNITIVO')) {
-        cogCol = i;
+        cogCol = i + 1;
         // Buscar nombre de asignatura en fila superior o inferior
         currentSubject = this.findSubjectName(subjectHeaders, lastRowValues, i);
       } else if (h === 'PROC' || h.includes('PROCEDIMENTAL')) {
-        procCol = i;
+        procCol = i + 1;
       } else if (h === 'ACT' || h.includes('ACTITUDINAL')) {
-        actCol = i;
+        actCol = i + 1;
       } else if (h === 'DEF' || h === 'DEFIN' || h.includes('DEFINITIVA')) {
-        defCol = i;
+        defCol = i + 1;
         
         // Al encontrar DEF, guardamos la asignatura completa
         if (currentSubject && cogCol > 0) {
@@ -517,11 +517,11 @@ export class GradesBulkImportService {
           // Buscar COG, PROC, ACT, DEF en las columnas cercanas
           for (let j = i; j < Math.min(i + 10, headers.length); j++) {
             const h = String(headers[j] || '').toUpperCase().trim();
-            if (h === 'COG') cogCol = j;
-            if (h === 'PROC' || h === 'PROCACT') procCol = j;
-            if (h === 'ACT') actCol = j;
+            if (h === 'COG') cogCol = j + 1;
+            if (h === 'PROC' || h === 'PROCACT') procCol = j + 1;
+            if (h === 'ACT') actCol = j + 1;
             if (h === 'DEF' || h === 'DEFIN') {
-              defCol = j;
+              defCol = j + 1;
               if (cogCol > 0) {
                 subjectColumns.push({
                   subjectName,
