@@ -4,6 +4,8 @@ import {
   Get,
   Put,
   Param,
+  Header,
+  StreamableFile,
   UseGuards,
   Request,
   UploadedFile,
@@ -52,6 +54,25 @@ export class GradesBulkImportController {
   async getAvailableTerms(@Request() req: any) {
     const institutionId = await this.getInstitutionId(req.user.id);
     return this.importService.getAvailableTerms(institutionId);
+  }
+
+  @Get('template')
+  @Header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  async downloadTemplate(
+    @Request() req: any,
+    @Query('gradeId') gradeId: string,
+  ) {
+    if (!gradeId) {
+      throw new BadRequestException('Debe seleccionar un grado');
+    }
+
+    const institutionId = await this.getInstitutionId(req.user.id);
+    const buffer = await this.importService.generateImportTemplate(institutionId, gradeId);
+
+    return new StreamableFile(buffer, {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition: `attachment; filename="plantilla_notas_${gradeId}.xlsx"`,
+    });
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

@@ -2361,6 +2361,12 @@ export const gradesBulkImportApi = {
   
   getAvailableTerms: () => 
     api.get<Array<{ id: string; name: string; status: string }>>('/admin/grades-import/terms'),
+
+  downloadTemplate: (gradeId: string) =>
+    api.get('/admin/grades-import/template', {
+      params: { gradeId },
+      responseType: 'blob',
+    }),
   
   preview: (file: File, gradeId: string, academicTermId: string) => {
     const formData = new FormData()

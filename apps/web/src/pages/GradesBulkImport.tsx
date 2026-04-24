@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { 
   Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, XCircle, 
-  Users, BookOpen, ArrowRight, Loader2, Info, UserPlus, UserMinus,
+  Users, BookOpen, ArrowRight, Loader2, Info, UserPlus, UserMinus, Download,
   Heart, ToggleLeft, ToggleRight, UserCheck
 } from 'lucide-react'
 import { gradesBulkImportApi, GradesImportPreview, GradesImportResult, ConvivenciaStatus } from '../lib/api'
@@ -97,6 +97,31 @@ export default function GradesBulkImport() {
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error actualizando Convivencia')
+    }
+  }
+
+  const handleDownloadTemplate = async () => {
+    if (!selectedGrade) {
+      setError('Seleccione un grado antes de descargar la plantilla')
+      return
+    }
+
+    try {
+      setLoading(true)
+      const res = await gradesBulkImportApi.downloadTemplate(selectedGrade)
+      const blob = res.data instanceof Blob ? res.data : new Blob([res.data])
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `plantilla_notas_${selectedGradeInfo?.name || selectedGrade}.xlsx`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'No se pudo descargar la plantilla')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -360,7 +385,6 @@ export default function GradesBulkImport() {
         {step === 'select' && (
           <div className="bg-white rounded-xl shadow-sm border p-6 space-y-6">
             <div className="grid grid-cols-2 gap-6">
-              {/* Grado */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Grado a importar
@@ -371,7 +395,7 @@ export default function GradesBulkImport() {
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">Seleccione un grado...</option>
-                  {grades.map(g => (
+                  {grades.map((g) => (
                     <option key={g.id} value={g.id}>
                       {g.name} ({g.groups.length} grupos)
                     </option>
@@ -379,12 +403,11 @@ export default function GradesBulkImport() {
                 </select>
                 {selectedGradeInfo && (
                   <p className="text-xs text-gray-500 mt-1">
-                    Grupos: {selectedGradeInfo.groups.map(g => g.name).join(', ')}
+                    Grupos: {selectedGradeInfo.groups.map((g) => g.name).join(', ')}
                   </p>
                 )}
               </div>
 
-              {/* Período */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Período académico
@@ -395,7 +418,7 @@ export default function GradesBulkImport() {
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">Seleccione un período...</option>
-                  {terms.map(t => (
+                  {terms.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name} {t.status === 'OPEN' ? '(Abierto)' : t.status === 'CLOSED' ? '(Cerrado)' : ''}
                     </option>
@@ -404,11 +427,25 @@ export default function GradesBulkImport() {
               </div>
             </div>
 
-            {/* File Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Archivo Excel del consolidado
               </label>
+              <div className="flex items-center justify-between mb-2 gap-3 flex-wrap">
+                <p className="text-xs text-gray-500">
+                  Descargue primero la plantilla oficial, diligénciela y luego súbala aquí.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleDownloadTemplate}
+                  disabled={!selectedGrade || loading}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  Descargar plantilla
+                </button>
+              </div>
+
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-indigo-400 transition-colors">
                 <input
                   type="file"
@@ -434,16 +471,16 @@ export default function GradesBulkImport() {
               </div>
             </div>
 
-            {/* Info Box */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-start gap-3">
                 <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-blue-800">
                   <p className="font-medium mb-1">Formato esperado del Excel:</p>
                   <ul className="list-disc list-inside space-y-1 text-blue-700">
-                    <li>Columnas: Nombre, Documento, Grupo</li>
-                    <li>Por cada asignatura: COG, PROC, ACT, DEF</li>
-                    <li>Una hoja por grado o curso</li>
+                    <li>Fila 1: nombres de asignaturas</li>
+                    <li>Fila 2: encabezados técnicos de importación</li>
+                    <li>Datos desde la fila 3 en adelante</li>
+                    <li>Use la plantilla descargable para evitar errores de formato</li>
                   </ul>
                 </div>
               </div>

@@ -970,6 +970,209 @@ export class GradesBulkImportService {
     }));
   }
 
+  /**
+   * Genera una plantilla oficial de importación de notas para un grado.
+   * La plantilla está pensada para ser editable por Rectoría y compatible con
+   * el parser de importación: fila 1 = nombres de asignaturas, fila 2 = encabezados,
+   * fila 3+ = datos de estudiantes.
+   */
+  async generateImportTemplate(institutionId: string, gradeId: string): Promise<Buffer> {
+    const subjects = await this.getSystemSubjects(institutionId, gradeId);
+    const orderedSubjects = this.orderTemplateSubjects(subjects);
+
+    if (orderedSubjects.length === 0) {
+      throw new BadRequestException('No hay asignaturas disponibles para generar la plantilla');
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Edusyn';
+    workbook.created = new Date();
+    workbook.modified = new Date();
+
+    // Hoja de instrucciones
+    const info = workbook.addWorksheet('INSTRUCCIONES', {
+      properties: { tabColor: { argb: 'FF4F46E5' } },
+    });
+    info.getCell('A1').value = 'PLANTILLA OFICIAL DE IMPORTACIÓN DE NOTAS';
+    info.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+    info.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } };
+    info.mergeCells('A1:F1');
+    info.getCell('A3').value = 'Instrucciones';
+    info.getCell('A3').font = { bold: true };
+    const instructions = [
+      'Descargue esta plantilla y complete únicamente la hoja PLANTILLA.',
+      'La fila 1 contiene los nombres de las asignaturas y la fila 2 los encabezados.',
+      'Cada asignatura usa las columnas IHS, COG, PROC, ACT, DEFIN y DESEMP.',
+      'No elimine columnas ni cambie los nombres de los encabezados.',
+      'Si un valor no aplica, deje la celda vacía.',
+      'La hoja DESEMPEÑOS solo sirve como referencia del catálogo académico.',
+    ];
+    instructions.forEach((text, idx) => {
+      info.getCell(`A${5 + idx}`).value = `• ${text}`;
+    });
+    info.getColumn(1).width = 120;
+
+    // Hoja principal para diligenciar
+    const sheet = workbook.addWorksheet('PLANTILLA', {
+      properties: { tabColor: { argb: 'FF22C55E' } },
+      views: [{ state: 'frozen', ySplit: 2, xSplit: 9 }],
+    });
+
+    const metadataHeaders = [
+      'N°',
+      'NOMBRES Y APELLIDOS',
+      'DOC. IDENTIDAD',
+      'GRUPO',
+      'DIRECTOR DE GRUPO',
+      'JORNADA',
+      'PERIODO',
+      'AÑO',
+      'PROMEDIO',
+    ];
+
+    metadataHeaders.forEach((header, index) => {
+      const cell = sheet.getCell(2, index + 1);
+      cell.value = header;
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF111827' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+    });
+
+    const subjectHeaderStyles = [
+      { argb: 'FFDBEAFE' },
+      { argb: 'FFE0E7FF' },
+      { argb: 'FFE0F2FE' },
+      { argb: 'FFDCFCE7' },
+      { argb: 'FFFCE7F3' },
+      { argb: 'FFFFEDD5' },
+    ];
+
+    let startCol = 10;
+    orderedSubjects.forEach((subject, subjectIndex) => {
+      const endCol = startCol + 5;
+      sheet.mergeCells(1, startCol, 1, endCol);
+      const titleCell = sheet.getCell(1, startCol);
+      titleCell.value = subject.name;
+      titleCell.font = { bold: true, color: { argb: 'FF111827' } };
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: subjectHeaderStyles[subjectIndex % subjectHeaderStyles.length] };
+      titleCell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+
+      const headers = ['IHS', 'COG', 'PROC', 'ACT', 'DEFIN', 'DESEMP.'];
+      headers.forEach((header, offset) => {
+        const cell = sheet.getCell(2, startCol + offset);
+        cell.value = header;
+        cell.font = { bold: true, color: { argb: 'FF111827' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+      });
+
+      // Fila vacía de ejemplo/entrada inicial
+      for (let offset = 0; offset < 6; offset++) {
+        sheet.getCell(3, startCol + offset).value = '';
+      }
+
+      startCol += 6;
+    });
+
+    // Formato general de la plantilla
+    sheet.getRow(1).height = 24;
+    sheet.getRow(2).height = 28;
+    sheet.views = [{ state: 'frozen', ySplit: 2, xSplit: 9 }];
+
+    for (let i = 1; i <= sheet.columnCount; i++) {
+      if (i <= 2) sheet.getColumn(i).width = i === 1 ? 8 : 34;
+      else if (i <= 8) sheet.getColumn(i).width = 16;
+      else if (i === 9) sheet.getColumn(i).width = 12;
+      else sheet.getColumn(i).width = 12;
+    }
+
+    // Referencia rápida del catálogo
+    const catalog = workbook.addWorksheet('DESEMPEÑOS', {
+      properties: { tabColor: { argb: 'FFF59E0B' } },
+    });
+    catalog.getCell('A1').value = 'ASIGNATURA';
+    catalog.getCell('B1').value = 'COGNITIVO';
+    catalog.getCell('C1').value = 'PROCEDIMENTAL';
+    catalog.getCell('D1').value = 'ACTITUDINAL';
+    ['A1', 'B1', 'C1', 'D1'].forEach(ref => {
+      const cell = catalog.getCell(ref);
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF92400E' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    });
+
+    // Aquí se deja una referencia simple de nombres; no se requieren descriptores para importar.
+    orderedSubjects.forEach((subject, index) => {
+      catalog.getCell(index + 2, 1).value = subject.name;
+      catalog.getCell(index + 2, 2).value = 'Complete el descriptor cognitivo aquí';
+      catalog.getCell(index + 2, 3).value = 'Complete el descriptor procedimental aquí';
+      catalog.getCell(index + 2, 4).value = 'Complete el descriptor actitudinal aquí';
+    });
+    catalog.getColumn(1).width = 28;
+    catalog.getColumn(2).width = 60;
+    catalog.getColumn(3).width = 60;
+    catalog.getColumn(4).width = 60;
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer as ArrayBuffer);
+  }
+
+  private orderTemplateSubjects(subjects: Array<{ id: string; name: string }>) {
+    const preferredOrder = [
+      'MATEMATICAS',
+      'ESTADISTICA',
+      'LENGUAJE',
+      'LECTURA CRÍTICA',
+      'LECTURA CRITICA',
+      'FUND. LENGUA INGLESA',
+      'SPEAKING AND LIFE SKILLS',
+      'BIOLOGIA',
+      'MEDIO AMBIENTE',
+      'C. SOCIALES',
+      'HISTORIA',
+      'GEOGRAFIA',
+      'CATEDRA DE PAZ',
+      'ETICA',
+      'RELIGION',
+      'ARTE',
+      'ED. FISICA',
+      'INFORMATICA',
+      'CONVIVENCIA',
+    ];
+
+    const normalized = (value: string) => this.normalizeSubjectName(value);
+    const orderIndex = (name: string) => {
+      const idx = preferredOrder.findIndex(item => normalized(item) === normalized(name));
+      return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+    };
+
+    return [...subjects]
+      .sort((a, b) => {
+        const diff = orderIndex(a.name) - orderIndex(b.name);
+        if (diff !== 0) return diff;
+        return a.name.localeCompare(b.name);
+      })
+      .map(subject => ({ id: subject.id, name: subject.name }));
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // CONVIVENCIA: Asignatura especial para el tutor del grupo
   // ═══════════════════════════════════════════════════════════════════════════
