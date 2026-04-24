@@ -145,7 +145,7 @@ export class GradesBulkImportService {
 
     const warnings: string[] = [];
     if (studentsInSystemNotInExcel.length > 0) {
-      warnings.push(`${studentsInSystemNotInExcel.length} estudiantes del sistema no están en el Excel y serán marcados como retirados`);
+      warnings.push(`${studentsInSystemNotInExcel.length} estudiantes del sistema no están en el Excel y serán eliminados del sistema`);
     }
     const notFoundSubjects = subjectsPreview.filter(s => !s.foundInSystem);
     if (notFoundSubjects.length > 0) {
@@ -214,6 +214,8 @@ export class GradesBulkImportService {
       },
     };
 
+    const keptStudentIds = new Set<string>();
+
     // Mapear asignaturas Excel → Sistema
     const subjectMap = new Map<string, { id: string; name: string }>();
     for (const sc of subjectColumns) {
@@ -262,12 +264,14 @@ export class GradesBulkImportService {
             });
 
             if (group) {
+              await this.syncStudentIdentity(globalStudent.studentId, excelStudent);
               enrollmentId = await this.reEnrollStudent(
                 institutionId,
                 globalStudent.studentId,
                 academicYear.id,
                 group.id,
               );
+              keptStudentIds.add(globalStudent.studentId);
               result.summary.studentsUpdated++;
             } else {
               result.warnings.push({
@@ -285,6 +289,7 @@ export class GradesBulkImportService {
               excelStudent,
             );
             enrollmentId = created.enrollmentId;
+            keptStudentIds.add(created.studentId);
             result.summary.studentsCreated++;
             result.details.created.push({
               name: excelStudent.fullName,
@@ -298,6 +303,8 @@ export class GradesBulkImportService {
             continue;
           }
         } else {
+          await this.syncStudentIdentity(systemStudent.studentId, excelStudent);
+          keptStudentIds.add(systemStudent.studentId);
           enrollmentId = systemStudent.enrollmentId;
           result.summary.studentsUpdated++;
         }
@@ -344,22 +351,16 @@ export class GradesBulkImportService {
       }
     }
 
-    // Desactivar estudiantes que no están en el Excel
-    if (options.deactivateMissingStudents) {
-      const excelDocs = new Set(excelStudents.map(e => e.documentNumber));
-      const toDeactivate = systemStudents.filter(ss => !excelDocs.has(ss.documentNumber));
+    // Eliminar estudiantes que no están en el Excel (regla solicitada: eliminación forzada)
+    const toDelete = systemStudents.filter(ss => !keptStudentIds.has(ss.studentId));
 
-      for (const student of toDeactivate) {
-        await this.prisma.studentEnrollment.update({
-          where: { id: student.enrollmentId },
-          data: { status: 'WITHDRAWN' },
-        });
-        result.summary.studentsDeactivated++;
-        result.details.deactivated.push({
-          name: student.fullName,
-          document: student.documentNumber,
-        });
-      }
+    for (const student of toDelete) {
+      await this.forceDeleteStudent(student.studentId);
+      result.summary.studentsDeactivated++;
+      result.details.deactivated.push({
+        name: student.fullName,
+        document: student.documentNumber,
+      });
     }
 
     result.success = result.errors.length === 0;
@@ -725,8 +726,65 @@ export class GradesBulkImportService {
     academicYearId: string,
     excelStudent: StudentGradeRow,
   ) {
-    // Parsear nombre (formato típico: APELLIDO1 APELLIDO2 NOMBRE1 NOMBRE2)
-    const nameParts = excelStudent.fullName.split(' ').filter(p => p.trim());
+    const { firstName, secondName, lastName, secondLastName } = this.parseStudentFullName(excelStudent.fullName);
+
+    // Buscar grupo por código
+    const group = await this.prisma.group.findFirst({
+      where: {
+        gradeId,
+        name: { contains: excelStudent.groupCode, mode: 'insensitive' },
+      },
+    });
+
+    if (!group) {
+      throw new BadRequestException(`Grupo no encontrado: ${excelStudent.groupCode}`);
+    }
+
+    const student = await this.prisma.student.create({
+      data: {
+        institutionId,
+        documentType: 'TI',
+        documentNumber: excelStudent.documentNumber,
+        firstName,
+        secondName: secondName || null,
+        lastName,
+        secondLastName: secondLastName || null,
+      },
+    });
+
+    const enrollment = await this.prisma.studentEnrollment.create({
+      data: {
+        institutionId,
+        studentId: student.id,
+        academicYearId,
+        groupId: group.id,
+        status: 'ACTIVE',
+        enrollmentType: 'NEW',
+      },
+    });
+
+    return { studentId: student.id, enrollmentId: enrollment.id };
+  }
+
+  private async syncStudentIdentity(studentId: string, excelStudent: StudentGradeRow) {
+    await this.prisma.student.update({
+      where: { id: studentId },
+      data: {
+        documentNumber: excelStudent.documentNumber,
+      },
+    });
+  }
+
+  private async forceDeleteStudent(studentId: string) {
+    await this.prisma.$transaction(async tx => {
+      await tx.educationalSupportProfile.deleteMany({ where: { studentId } });
+      await tx.candidate.deleteMany({ where: { studentId } });
+      await tx.student.delete({ where: { id: studentId } });
+    });
+  }
+
+  private parseStudentFullName(fullName: string) {
+    const nameParts = fullName.split(' ').filter(p => p.trim());
     let lastName = '';
     let secondLastName = '';
     let firstName = '';
@@ -749,44 +807,7 @@ export class GradesBulkImportService {
       lastName = 'SIN APELLIDO';
     }
 
-    // Buscar grupo por código
-    const group = await this.prisma.group.findFirst({
-      where: {
-        gradeId,
-        name: { contains: excelStudent.groupCode, mode: 'insensitive' },
-      },
-    });
-
-    if (!group) {
-      throw new BadRequestException(`Grupo no encontrado: ${excelStudent.groupCode}`);
-    }
-
-    // Crear el registro de Student
-    const student = await this.prisma.student.create({
-      data: {
-        institutionId,
-        documentType: 'TI',
-        documentNumber: excelStudent.documentNumber,
-        firstName,
-        secondName: secondName || null,
-        lastName,
-        secondLastName: secondLastName || null,
-      },
-    });
-
-    // Crear matrícula
-    const enrollment = await this.prisma.studentEnrollment.create({
-      data: {
-        institutionId,
-        studentId: student.id,
-        academicYearId,
-        groupId: group.id,
-        status: 'ACTIVE',
-        enrollmentType: 'NEW',
-      },
-    });
-
-    return { studentId: student.id, enrollmentId: enrollment.id };
+    return { firstName, secondName, lastName, secondLastName };
   }
 
   private async findTeacherAssignment(

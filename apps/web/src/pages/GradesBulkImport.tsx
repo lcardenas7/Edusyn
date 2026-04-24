@@ -680,15 +680,16 @@ export default function GradesBulkImport() {
                 <label className="flex items-start gap-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={options.deactivateMissingStudents}
+                    checked={true}
+                    disabled
                     onChange={(e) => setOptions({ ...options, deactivateMissingStudents: e.target.checked })}
                     className="mt-1 w-4 h-4 text-indigo-600 rounded"
                   />
                   <div>
-                    <p className="font-medium text-gray-900">Marcar como retirados los que no están en Excel</p>
+                    <p className="font-medium text-gray-900">Eliminar del sistema a los que no están en Excel</p>
                     <p className="text-sm text-gray-500">
                       {preview.studentsInSystemNotInExcel.length} estudiantes del sistema no aparecen en el Excel.
-                      Se marcarán como RETIRADOS.
+                      Se eliminarán automáticamente del sistema al importar.
                     </p>
                   </div>
                 </label>
@@ -788,7 +789,7 @@ export default function GradesBulkImport() {
               </div>
               <div className="bg-white rounded-lg shadow-sm border p-4 text-center">
                 <p className="text-3xl font-bold text-amber-600">{result.summary.studentsDeactivated}</p>
-                <p className="text-sm text-gray-500">Retirados</p>
+                <p className="text-sm text-gray-500">Eliminados</p>
               </div>
             </div>
 
