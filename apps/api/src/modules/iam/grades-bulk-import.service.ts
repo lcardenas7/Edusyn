@@ -87,8 +87,8 @@ export class GradesBulkImportService {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer as any);
 
-    // Obtener la primera hoja (o la hoja activa)
-    const sheet = workbook.worksheets[0];
+    // Obtener la hoja de datos real (la plantilla genera INSTRUCCIONES primero)
+    const sheet = this.getImportWorksheet(workbook);
     if (!sheet) {
       throw new BadRequestException('El archivo Excel no contiene hojas');
     }
@@ -182,13 +182,13 @@ export class GradesBulkImportService {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer as any);
 
-    const sheet = workbook.worksheets[0];
+    const sheet = this.getImportWorksheet(workbook);
     if (!sheet) {
       throw new BadRequestException('El archivo Excel no contiene hojas');
     }
 
-    const { subjectColumns, nameCol, docCol, groupCol } = this.detectColumnStructure(sheet);
-    const excelStudents = this.readStudentsFromSheet(sheet, nameCol, docCol, groupCol, subjectColumns);
+    const { subjectColumns, nameCol, docCol, groupCol, headerRowNum } = this.detectColumnStructure(sheet);
+    const excelStudents = this.readStudentsFromSheet(sheet, nameCol, docCol, groupCol, subjectColumns, headerRowNum);
 
     // Obtener datos del sistema
     const systemStudents = await this.getSystemStudents(institutionId, gradeId);
@@ -727,6 +727,28 @@ export class GradesBulkImportService {
     }
 
     return Array.from(subjectMap.values());
+  }
+
+  private getImportWorksheet(workbook: ExcelJS.Workbook): ExcelJS.Worksheet | undefined {
+    const templateSheet = workbook.getWorksheet('PLANTILLA');
+    if (templateSheet) {
+      return templateSheet;
+    }
+
+    for (const sheet of workbook.worksheets) {
+      for (let i = 1; i <= Math.min(sheet.rowCount, 5); i++) {
+        const values = this.getRowTexts(sheet.getRow(i));
+        const hasNameHeader = values.some(v => /NOMBRES?/i.test(v) || /APELLIDOS?/i.test(v));
+        const hasDocumentHeader = values.some(v => /DOC|IDENTIDAD|C[EÉ]DULA/i.test(v));
+        const hasGroupHeader = values.some(v => /GRUPO|CURSO/i.test(v));
+
+        if ((hasNameHeader && hasDocumentHeader) || (hasNameHeader && hasGroupHeader) || (hasDocumentHeader && hasGroupHeader)) {
+          return sheet;
+        }
+      }
+    }
+
+    return workbook.worksheets[0];
   }
 
   private async getActiveAcademicYear(institutionId: string) {
