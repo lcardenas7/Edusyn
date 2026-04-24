@@ -106,11 +106,15 @@ export class GradesBulkImportService {
     const systemSubjects = await this.getSystemSubjects(institutionId, gradeId);
 
     // Comparar estudiantes
+    const matchedStudentIds = new Set<string>();
     const studentsPreview = excelStudents.map(es => {
       const found = systemStudents.find(ss => 
         ss.documentNumber === es.documentNumber ||
         this.normalizeString(ss.fullName) === this.normalizeString(es.fullName)
       );
+      if (found) {
+        matchedStudentIds.add(found.studentId);
+      }
       return {
         rowNumber: es.rowNumber,
         fullName: es.fullName,
@@ -122,9 +126,8 @@ export class GradesBulkImportService {
     });
 
     // Estudiantes en sistema que no están en Excel
-    const excelDocs = new Set(excelStudents.map(e => e.documentNumber));
     const studentsInSystemNotInExcel = systemStudents
-      .filter(ss => !excelDocs.has(ss.documentNumber))
+      .filter(ss => !matchedStudentIds.has(ss.studentId))
       .map(ss => ({
         name: ss.fullName,
         documentNumber: ss.documentNumber,
