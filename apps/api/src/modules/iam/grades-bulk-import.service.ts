@@ -643,35 +643,62 @@ export class GradesBulkImportService {
   }
 
   private async getSystemSubjects(institutionId: string, gradeId: string) {
-    // Obtener asignaturas asignadas a este grado a través de TeacherAssignment
-    const assignments = await this.prisma.teacherAssignment.findMany({
-      where: {
-        institutionId,
-        group: { gradeId },
-        endDate: null,
+    const activeYear = await this.getActiveAcademicYear(institutionId);
+
+    // 1) Intentar obtener las asignaturas desde la plantilla académica del grado
+    const gradeTemplate = await this.prisma.gradeTemplate.findUnique({
+      where: { gradeId_academicYearId: { gradeId, academicYearId: activeYear.id } },
+      include: {
+        template: {
+          include: {
+            templateAreas: {
+              include: {
+                templateSubjects: {
+                  include: { subject: true },
+                  orderBy: { order: 'asc' },
+                },
+              },
+              orderBy: { order: 'asc' },
+            },
+          },
+        },
       },
-      select: {
-        subject: { select: { id: true, name: true } },
-      },
-      distinct: ['subjectId'],
     });
 
-    // También buscar asignaturas del catálogo de la institución
-    const catalogSubjects = await this.prisma.subject.findMany({
-      where: {
-        area: { institutionId },
-        isActive: true,
-      },
-      select: { id: true, name: true },
-    });
-
-    // Combinar y deduplicar
     const subjectMap = new Map<string, { id: string; name: string }>();
-    for (const a of assignments) {
-      if (a.subject) subjectMap.set(a.subject.id, a.subject);
+
+    if (gradeTemplate?.template) {
+      for (const area of gradeTemplate.template.templateAreas) {
+        for (const templateSubject of area.templateSubjects) {
+          if (templateSubject.subject) {
+            subjectMap.set(templateSubject.subject.id, {
+              id: templateSubject.subject.id,
+              name: templateSubject.subject.name,
+            });
+          }
+        }
+      }
     }
-    for (const s of catalogSubjects) {
-      if (!subjectMap.has(s.id)) subjectMap.set(s.id, s);
+
+    // 2) Fallback: si no hay plantilla, usar las asignaturas activas del grado
+    if (subjectMap.size === 0) {
+      const assignments = await this.prisma.teacherAssignment.findMany({
+        where: {
+          institutionId,
+          group: { gradeId },
+          endDate: null,
+        },
+        select: {
+          subject: { select: { id: true, name: true } },
+        },
+        distinct: ['subjectId'],
+      });
+
+      for (const assignment of assignments) {
+        if (assignment.subject) {
+          subjectMap.set(assignment.subject.id, assignment.subject);
+        }
+      }
     }
 
     return Array.from(subjectMap.values());
