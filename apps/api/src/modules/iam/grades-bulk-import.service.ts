@@ -14,6 +14,13 @@ interface SubjectColumns {
   defCol: number;
 }
 
+interface SystemStudentMatch {
+  studentId: string;
+  fullName: string;
+  documentNumber: string;
+  enrollmentId: string;
+}
+
 interface StudentGradeRow {
   rowNumber: number;
   fullName: string;
@@ -108,10 +115,7 @@ export class GradesBulkImportService {
     // Comparar estudiantes
     const matchedStudentIds = new Set<string>();
     const studentsPreview = excelStudents.map(es => {
-      const found = systemStudents.find(ss => 
-        ss.documentNumber === es.documentNumber ||
-        this.normalizeString(ss.fullName) === this.normalizeString(es.fullName)
-      );
+      const found = this.findBestStudentMatch(systemStudents, es.fullName, es.documentNumber);
       if (found) {
         matchedStudentIds.add(found.studentId);
       }
@@ -237,24 +241,16 @@ export class GradesBulkImportService {
     for (const excelStudent of excelStudents) {
       try {
         // 1. Buscar estudiante en el grado actual
-        let systemStudent = systemStudents.find(ss => 
-          ss.documentNumber === excelStudent.documentNumber
-        );
-
-        // Si no se encuentra por documento, buscar por nombre
-        if (!systemStudent) {
-          systemStudent = systemStudents.find(ss => 
-            this.normalizeString(ss.fullName) === this.normalizeString(excelStudent.fullName)
-          );
-        }
+        let systemStudent = this.findBestStudentMatch(systemStudents, excelStudent.fullName, excelStudent.documentNumber);
 
         let enrollmentId: string;
 
         if (!systemStudent) {
           // 2. Buscar en toda la institución (puede estar en otro grado)
-          const globalStudent = await this.findStudentInInstitution(
+          const globalStudent = await this.findStudentInInstitutionByDocumentOrName(
             institutionId,
             excelStudent.documentNumber,
+            excelStudent.fullName,
           );
 
           if (globalStudent) {
@@ -1000,6 +996,104 @@ export class GradesBulkImportService {
       .trim();
   }
 
+  private normalizeStudentSignature(name: string): string {
+    return this.normalizeString(name)
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private tokenizeStudentName(name: string): string[] {
+    return this.normalizeStudentSignature(name)
+      .split(' ')
+      .filter(Boolean);
+  }
+
+  private levenshteinDistance(a: string, b: string): number {
+    if (a === b) return 0;
+    if (!a.length) return b.length;
+    if (!b.length) return a.length;
+
+    const prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      const curr = [i];
+      for (let j = 1; j <= b.length; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        curr[j] = Math.min(
+          curr[j - 1] + 1,
+          prev[j] + 1,
+          prev[j - 1] + cost,
+        );
+      }
+      prev.splice(0, prev.length, ...curr);
+    }
+
+    return prev[b.length];
+  }
+
+  private tokenSimilarity(a: string, b: string): number {
+    const normA = this.normalizeStudentSignature(a);
+    const normB = this.normalizeStudentSignature(b);
+    if (!normA || !normB) return 0;
+    if (normA === normB) return 1;
+
+    const distance = this.levenshteinDistance(normA, normB);
+    const maxLen = Math.max(normA.length, normB.length);
+    return maxLen === 0 ? 0 : 1 - distance / maxLen;
+  }
+
+  private areLikelySameStudentName(candidateName: string, excelName: string): boolean {
+    const candidateNorm = this.normalizeStudentSignature(candidateName);
+    const excelNorm = this.normalizeStudentSignature(excelName);
+    if (!candidateNorm || !excelNorm) return false;
+    if (candidateNorm === excelNorm) return true;
+
+    const candidateTokens = this.tokenizeStudentName(candidateName);
+    const excelTokens = this.tokenizeStudentName(excelName);
+    if (candidateTokens.length === 0 || excelTokens.length === 0) return false;
+
+    const minTokens = Math.min(candidateTokens.length, excelTokens.length);
+    const maxTokens = Math.max(candidateTokens.length, excelTokens.length);
+    if (maxTokens - minTokens > 1) return false;
+
+    let matched = 0;
+    let totalScore = 0;
+
+    for (let i = 0; i < minTokens; i++) {
+      const score = this.tokenSimilarity(candidateTokens[i], excelTokens[i]);
+      totalScore += score;
+      if (score >= 0.8) matched++;
+    }
+
+    const averageScore = totalScore / minTokens;
+    return matched >= Math.max(2, Math.ceil(minTokens * 0.75)) && averageScore >= 0.82;
+  }
+
+  private findBestStudentMatch(
+    students: SystemStudentMatch[],
+    excelFullName: string,
+    excelDocumentNumber: string,
+  ) {
+    const exactDocument = students.find(s => s.documentNumber === excelDocumentNumber);
+    if (exactDocument) return exactDocument;
+
+    const exactName = students.find(s => this.normalizeStudentSignature(s.fullName) === this.normalizeStudentSignature(excelFullName));
+    if (exactName) return exactName;
+
+    const nameMatches = students.filter(s => this.areLikelySameStudentName(s.fullName, excelFullName));
+    if (nameMatches.length === 1) return nameMatches[0];
+
+    if (nameMatches.length > 1) {
+      return nameMatches.sort((a, b) => {
+        const aScore = this.tokenSimilarity(a.fullName, excelFullName);
+        const bScore = this.tokenSimilarity(b.fullName, excelFullName);
+        return bScore - aScore;
+      })[0];
+    }
+
+    return null;
+  }
+
   private normalizeSubjectName(name: string): string {
     return this.normalizeString(name)
       .replace(/[^a-z0-9]/g, '')
@@ -1515,9 +1609,9 @@ export class GradesBulkImportService {
    * Busca un estudiante en toda la institución por documento.
    * Si lo encuentra en otro grado, lo puede rematricular.
    */
-  private async findStudentInInstitution(institutionId: string, documentNumber: string) {
+  private async findStudentInInstitutionByDocumentOrName(institutionId: string, documentNumber: string, fullName: string) {
     // Buscar en Student (registro maestro)
-    const student = await this.prisma.student.findFirst({
+    const byDocument = await this.prisma.student.findFirst({
       where: {
         institutionId,
         documentNumber,
@@ -1535,13 +1629,44 @@ export class GradesBulkImportService {
       },
     });
 
-    if (!student) return null;
+    if (byDocument) {
+      return {
+        studentId: byDocument.id,
+        fullName: `${byDocument.lastName} ${byDocument.secondLastName || ''} ${byDocument.firstName} ${byDocument.secondName || ''}`.trim(),
+        documentNumber: byDocument.documentNumber,
+        currentEnrollment: byDocument.enrollments[0] || null,
+      };
+    }
+
+    const students = await this.prisma.student.findMany({
+      where: {
+        institutionId,
+        isActive: true,
+      },
+      include: {
+        enrollments: {
+          where: { status: 'ACTIVE' },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          include: {
+            group: { include: { grade: true } },
+          },
+        },
+      },
+    });
+
+    const matched = students.find(student => {
+      const candidateName = `${student.lastName} ${student.secondLastName || ''} ${student.firstName} ${student.secondName || ''}`.trim();
+      return this.areLikelySameStudentName(candidateName, fullName);
+    });
+
+    if (!matched) return null;
 
     return {
-      studentId: student.id,
-      fullName: `${student.lastName} ${student.secondLastName || ''} ${student.firstName} ${student.secondName || ''}`.trim(),
-      documentNumber: student.documentNumber,
-      currentEnrollment: student.enrollments[0] || null,
+      studentId: matched.id,
+      fullName: `${matched.lastName} ${matched.secondLastName || ''} ${matched.firstName} ${matched.secondName || ''}`.trim(),
+      documentNumber: matched.documentNumber,
+      currentEnrollment: matched.enrollments[0] || null,
     };
   }
 

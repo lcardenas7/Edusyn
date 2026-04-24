@@ -596,6 +596,41 @@ export default function GradesBulkImport() {
               </div>
             )}
 
+            {preview.students.filter(s => !s.existsInSystem).length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                <div className="px-4 py-3 border-b bg-blue-50 flex items-center justify-between">
+                  <h3 className="font-medium text-blue-900">Estudiantes nuevos</h3>
+                  <span className="text-sm font-medium text-blue-700">
+                    {preview.students.filter(s => !s.existsInSystem).length} registros
+                  </span>
+                </div>
+                <div className="max-h-72 overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-blue-50 sticky top-0">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-blue-700">Fila</th>
+                        <th className="px-4 py-2 text-left text-blue-700">Nombre</th>
+                        <th className="px-4 py-2 text-left text-blue-700">Documento</th>
+                        <th className="px-4 py-2 text-left text-blue-700">Grupo</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {preview.students
+                        .filter(s => !s.existsInSystem)
+                        .map((student, index) => (
+                          <tr key={`${student.documentNumber}-${index}`} className="hover:bg-blue-50/60">
+                            <td className="px-4 py-2 text-gray-500">{student.rowNumber}</td>
+                            <td className="px-4 py-2 text-gray-900 font-medium">{student.fullName}</td>
+                            <td className="px-4 py-2 text-gray-600">{student.documentNumber}</td>
+                            <td className="px-4 py-2 text-gray-600">{student.groupCode}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {/* Students Table */}
             <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
               <div className="px-4 py-3 border-b bg-gray-50">
