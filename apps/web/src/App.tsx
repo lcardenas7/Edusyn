@@ -41,6 +41,7 @@ import AcademicTemplates from './pages/AcademicTemplates'
 import ForceChangePassword from './pages/ForceChangePassword'
 import PedagogicalSupport from './pages/PedagogicalSupport'
 import DifferentialSupport from './pages/DifferentialSupport'
+import GradesBulkImport from './pages/GradesBulkImport'
 import TeacherWorkspace from './pages/TeacherWorkspace'
 import Classroom from './pages/Classroom'
 import Layout from './components/Layout'
@@ -348,6 +349,11 @@ function App() {
                   <Route path="/students/pedagogical-support" element={<PedagogicalSupport />} />
                   <Route path="/pedagogical-support" element={<PedagogicalSupport />} />
                   <Route path="/differential-support" element={<DifferentialSupport />} />
+                  
+                  {/* ═══════════════════════════════════════════════════════════ */}
+                  {/* IMPORTACIÓN MASIVA DE NOTAS (Solo Rector)                    */}
+                  {/* ═══════════════════════════════════════════════════════════ */}
+                  <Route path="/admin/grades-import" element={<GradesBulkImport />} />
                   
                   {/* ═══════════════════════════════════════════════════════════ */}
                   {/* MÓDULO FINANCIERO                                            */}

@@ -2301,6 +2301,107 @@ export const lessonApi = {
     api.post(`/classrooms/lessons/generate-ai`, data),
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// IMPORTACIÓN MASIVA DE NOTAS (Solo Rector/Admin)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface GradesImportPreview {
+  students: Array<{
+    rowNumber: number
+    fullName: string
+    documentNumber: string
+    groupCode: string
+    existsInSystem: boolean
+    enrollmentId?: string
+  }>
+  subjects: Array<{
+    name: string
+    foundInSystem: boolean
+    subjectId?: string
+  }>
+  studentsInSystemNotInExcel: Array<{
+    name: string
+    documentNumber: string
+    enrollmentId: string
+  }>
+  canProceed: boolean
+  warnings: string[]
+}
+
+export interface GradesImportResult {
+  success: boolean
+  summary: {
+    totalStudents: number
+    studentsCreated: number
+    studentsUpdated: number
+    studentsDeactivated: number
+    gradesImported: number
+    subjectsFound: number
+  }
+  errors: Array<{ row: number; message: string; data?: any }>
+  warnings: Array<{ row: number; message: string }>
+  details: {
+    created: Array<{ name: string; document: string }>
+    deactivated: Array<{ name: string; document: string }>
+    subjectsNotFound: string[]
+  }
+}
+
+export interface ConvivenciaStatus {
+  groupId: string
+  groupName: string
+  convivenciaEnabled: boolean
+  hasDirector: boolean
+  director: string | null
+}
+
+export const gradesBulkImportApi = {
+  getAvailableGrades: () => 
+    api.get<Array<{ id: string; name: string; stage: string; groups: Array<{ id: string; name: string }> }>>('/admin/grades-import/grades'),
+  
+  getAvailableTerms: () => 
+    api.get<Array<{ id: string; name: string; status: string }>>('/admin/grades-import/terms'),
+  
+  preview: (file: File, gradeId: string, academicTermId: string) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post<GradesImportPreview>(
+      `/admin/grades-import/preview?gradeId=${gradeId}&academicTermId=${academicTermId}`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    )
+  },
+  
+  execute: (
+    file: File, 
+    gradeId: string, 
+    academicTermId: string,
+    options: {
+      createMissingStudents?: boolean
+      deactivateMissingStudents?: boolean
+      overwriteExistingGrades?: boolean
+    }
+  ) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    Object.entries(options).forEach(([key, value]) => {
+      formData.append(key, String(value))
+    })
+    return api.post<GradesImportResult>(
+      `/admin/grades-import/execute?gradeId=${gradeId}&academicTermId=${academicTermId}`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    )
+  },
+
+  // Convivencia
+  getConvivenciaStatus: (gradeId: string) =>
+    api.get<ConvivenciaStatus[]>(`/admin/grades-import/convivencia/${gradeId}`),
+  
+  toggleConvivencia: (groupId: string, enabled: boolean) =>
+    api.put<{ success: boolean; message: string }>(`/admin/grades-import/convivencia/${groupId}`, { enabled }),
+}
+
 // Pool curado de nombres de equipo para sesiones TEAM.
 // El docente (o el primer estudiante) elige de aquí para evitar nombres
 // inapropiados o poco pedagógicos.
