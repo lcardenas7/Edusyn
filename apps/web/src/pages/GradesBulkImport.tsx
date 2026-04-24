@@ -567,6 +567,35 @@ export default function GradesBulkImport() {
               </div>
             )}
 
+            {preview.studentsInSystemNotInExcel.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                <div className="px-4 py-3 border-b bg-amber-50 flex items-center justify-between">
+                  <h3 className="font-medium text-amber-900">Estudiantes que serán eliminados</h3>
+                  <span className="text-sm font-medium text-amber-700">
+                    {preview.studentsInSystemNotInExcel.length} registros
+                  </span>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-amber-50 sticky top-0">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-amber-700">Nombre</th>
+                        <th className="px-4 py-2 text-left text-amber-700">Documento</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {preview.studentsInSystemNotInExcel.map((student, index) => (
+                        <tr key={`${student.documentNumber}-${index}`} className="hover:bg-amber-50/60">
+                          <td className="px-4 py-2 text-gray-900 font-medium">{student.name}</td>
+                          <td className="px-4 py-2 text-gray-600">{student.documentNumber}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {/* Students Table */}
             <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
               <div className="px-4 py-3 border-b bg-gray-50">
