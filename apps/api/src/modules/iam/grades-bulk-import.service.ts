@@ -255,12 +255,7 @@ export class GradesBulkImportService {
 
           if (globalStudent) {
             // Estudiante existe en la institución, rematricularlo en el grupo correcto
-            const group = await this.prisma.group.findFirst({
-              where: {
-                gradeId,
-                name: { contains: excelStudent.groupCode, mode: 'insensitive' },
-              },
-            });
+            const group = await this.findBestGroupMatch(gradeId, excelStudent.groupCode);
 
             if (group) {
               await this.syncStudentIdentity(globalStudent.studentId, excelStudent);
@@ -441,13 +436,24 @@ export class GradesBulkImportService {
 
     // Detectar columnas básicas
     for (let i = 0; i < headers.length; i++) {
-      const h = headers[i].toUpperCase().trim();
+      const h = this.normalizeString(headers[i] || '').toUpperCase().trim();
       if ((h.includes('NOMBRE') || h.includes('NOMBRES')) && (h.includes('APELLIDO') || h.includes('APELLIDOS'))) {
         nameCol = i + 1;
       } else if (h.includes('DOC') || h.includes('IDENTIDAD') || h.includes('CEDULA')) {
         docCol = i + 1;
-      } else if (h.includes('GRUPO') || h.includes('CURSO')) {
+      } else if (h === 'GRUPO' || h === 'CURSO' || h === 'GRUPO/CURSO') {
         groupCol = i + 1;
+      }
+    }
+
+    // Fallback suave solo si no se encontró una columna real de grupo
+    if (groupCol === -1) {
+      for (let i = 0; i < headers.length; i++) {
+        const h = this.normalizeString(headers[i] || '').toUpperCase().trim();
+        if ((h.includes('GRUPO') || h.includes('CURSO')) && !h.includes('DIRECTOR')) {
+          groupCol = i + 1;
+          break;
+        }
       }
     }
 
@@ -774,12 +780,7 @@ export class GradesBulkImportService {
     const { firstName, secondName, lastName, secondLastName } = this.parseStudentFullName(excelStudent.fullName);
 
     // Buscar grupo por código
-    const group = await this.prisma.group.findFirst({
-      where: {
-        gradeId,
-        name: { contains: excelStudent.groupCode, mode: 'insensitive' },
-      },
-    });
+    const group = await this.findBestGroupMatch(gradeId, excelStudent.groupCode);
 
     if (!group) {
       throw new BadRequestException(`Grupo no encontrado: ${excelStudent.groupCode}`);
@@ -863,12 +864,7 @@ export class GradesBulkImportService {
     subjectId: string,
   ) {
     // Buscar grupo
-    const group = await this.prisma.group.findFirst({
-      where: {
-        gradeId,
-        name: { contains: groupCode, mode: 'insensitive' },
-      },
-    });
+    const group = await this.findBestGroupMatch(gradeId, groupCode);
 
     if (!group) return null;
 
@@ -1001,6 +997,79 @@ export class GradesBulkImportService {
       .replace(/[^a-z0-9\s]/g, '')
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  private normalizeGroupSignature(value: string): string {
+    const text = this.normalizeString(value)
+      .replace(/[^a-z0-9]/g, '');
+
+    return text
+      .replace(/primero/g, '1')
+      .replace(/primero/g, '1')
+      .replace(/segundo/g, '2')
+      .replace(/tercero/g, '3')
+      .replace(/cuarto/g, '4')
+      .replace(/quinto/g, '5')
+      .replace(/sexto/g, '6')
+      .replace(/septimo/g, '7')
+      .replace(/septima/g, '7')
+      .replace(/septimos/g, '7')
+      .replace(/septimas/g, '7')
+      .replace(/octavo/g, '8')
+      .replace(/octava/g, '8')
+      .replace(/noveno/g, '9')
+      .replace(/novena/g, '9')
+      .replace(/decimo/g, '10')
+      .replace(/decima/g, '10')
+      .replace(/once/g, '11')
+      .replace(/undecimo/g, '11')
+      .replace(/undecima/g, '11')
+      .replace(/doce/g, '12')
+      .replace(/duodecimo/g, '12')
+      .replace(/duodecima/g, '12');
+  }
+
+  private async findBestGroupMatch(gradeId: string, excelGroupCode: string) {
+    const groups = await this.prisma.group.findMany({
+      where: { gradeId },
+      include: {
+        grade: {
+          select: { id: true, name: true, number: true },
+        },
+      },
+    });
+
+    const target = this.normalizeGroupSignature(excelGroupCode);
+    if (!target) return null;
+
+    const candidates = groups.map(group => {
+      const gradeNumber = group.grade?.number != null ? String(group.grade.number) : '';
+      const gradeName = group.grade?.name || '';
+      const groupName = group.name || '';
+
+      const signatures = [
+        this.normalizeGroupSignature(groupName),
+        this.normalizeGroupSignature(`${gradeNumber}${groupName}`),
+        this.normalizeGroupSignature(`${gradeName}${groupName}`),
+        this.normalizeGroupSignature(`${gradeName} ${groupName}`),
+        this.normalizeGroupSignature(`grado ${gradeNumber}${groupName}`),
+      ].filter(Boolean);
+
+      return {
+        group,
+        signatures,
+      };
+    });
+
+    const exactMatch = candidates.find(candidate => candidate.signatures.includes(target));
+    if (exactMatch) return exactMatch.group;
+
+    const containsMatch = candidates.find(candidate =>
+      candidate.signatures.some(signature => signature.includes(target) || target.includes(signature)),
+    );
+    if (containsMatch) return containsMatch.group;
+
+    return null;
   }
 
   private tokenizeStudentName(name: string): string[] {
