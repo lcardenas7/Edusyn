@@ -94,10 +94,10 @@ export class GradesBulkImportService {
     }
 
     // Detectar estructura de columnas
-    const { subjectColumns, nameCol, docCol, groupCol } = this.detectColumnStructure(sheet);
+    const { subjectColumns, nameCol, docCol, groupCol, headerRowNum } = this.detectColumnStructure(sheet);
 
     // Leer estudiantes del Excel
-    const excelStudents = this.readStudentsFromSheet(sheet, nameCol, docCol, groupCol, subjectColumns);
+    const excelStudents = this.readStudentsFromSheet(sheet, nameCol, docCol, groupCol, subjectColumns, headerRowNum);
 
     // Obtener estudiantes actuales del sistema para este grado
     const systemStudents = await this.getSystemStudents(institutionId, gradeId);
@@ -389,6 +389,7 @@ export class GradesBulkImportService {
     nameCol: number;
     docCol: number;
     groupCol: number;
+    headerRowNum: number;
   } {
     // Buscar fila de encabezados (puede estar en fila 1, 2 o 3)
     let headerRow: ExcelJS.Row | undefined;
@@ -396,11 +397,13 @@ export class GradesBulkImportService {
 
     for (let i = 1; i <= 5; i++) {
       const row = sheet.getRow(i);
-      const values = row.values as any[];
-      if (values && values.some(v => 
-        typeof v === 'string' && 
-        (v.toUpperCase().includes('NOMBRE') || v.toUpperCase().includes('APELLIDO'))
-      )) {
+      const values = this.getRowTexts(row);
+      const hasNameHeader = values.some(v => /NOMBRES?/i.test(v) || /APELLIDOS?/i.test(v));
+      const hasDocumentHeader = values.some(v => /DOC|IDENTIDAD|C[EÉ]DULA/i.test(v));
+      const hasGroupHeader = values.some(v => /GRUPO|CURSO/i.test(v));
+
+      // Si la fila tiene al menos dos marcas de encabezado, la tomamos como cabecera
+      if ((hasNameHeader && hasDocumentHeader) || (hasNameHeader && hasGroupHeader) || (hasDocumentHeader && hasGroupHeader)) {
         headerRow = row;
         headerRowNum = i;
         break;
@@ -408,19 +411,39 @@ export class GradesBulkImportService {
     }
 
     if (!headerRow) {
-      throw new BadRequestException('No se encontró la fila de encabezados');
+      // Fallback: buscar la fila que más se parezca al encabezado esperado
+      let bestScore = 0;
+      for (let i = 1; i <= Math.min(sheet.rowCount, 10); i++) {
+        const row = sheet.getRow(i);
+        const values = this.getRowTexts(row);
+        const score = [
+          values.some(v => /NOMBRES?/i.test(v) || /APELLIDOS?/i.test(v)) ? 1 : 0,
+          values.some(v => /DOC|IDENTIDAD|C[EÉ]DULA/i.test(v)) ? 1 : 0,
+          values.some(v => /GRUPO|CURSO/i.test(v)) ? 1 : 0,
+        ].reduce((acc, item) => acc + item, 0);
+
+        if (score > bestScore) {
+          bestScore = score;
+          headerRow = row;
+          headerRowNum = i;
+        }
+      }
+
+      if (!headerRow || bestScore === 0) {
+        throw new BadRequestException('No se encontró la fila de encabezados');
+      }
     }
 
-    const headers = headerRow.values as any[];
+    const headers = this.getRowTexts(headerRow);
     let nameCol = -1;
     let docCol = -1;
     let groupCol = -1;
     const subjectColumns: SubjectColumns[] = [];
 
     // Detectar columnas básicas
-    for (let i = 1; i < headers.length; i++) {
-      const h = String(headers[i] || '').toUpperCase().trim();
-      if (h.includes('NOMBRE') && h.includes('APELLIDO')) {
+    for (let i = 0; i < headers.length; i++) {
+      const h = headers[i].toUpperCase().trim();
+      if ((h.includes('NOMBRE') || h.includes('NOMBRES')) && (h.includes('APELLIDO') || h.includes('APELLIDOS'))) {
         nameCol = i;
       } else if (h.includes('DOC') || h.includes('IDENTIDAD') || h.includes('CEDULA')) {
         docCol = i;
@@ -526,7 +549,7 @@ export class GradesBulkImportService {
       throw new BadRequestException('No se encontró la columna de documento');
     }
 
-    return { subjectColumns, nameCol, docCol, groupCol };
+    return { subjectColumns, nameCol, docCol, groupCol, headerRowNum };
   }
 
   private findSubjectName(subjectHeaders: any[], lastRowValues: any[], colIndex: number): string {
@@ -555,19 +578,12 @@ export class GradesBulkImportService {
     docCol: number,
     groupCol: number,
     subjectColumns: SubjectColumns[],
+    headerRowNum?: number,
   ): StudentGradeRow[] {
     const students: StudentGradeRow[] = [];
     
     // Encontrar fila de inicio de datos (después de encabezados)
-    let startRow = 1;
-    for (let i = 1; i <= 5; i++) {
-      const row = sheet.getRow(i);
-      const nameVal = row.getCell(nameCol).value;
-      if (nameVal && String(nameVal).toUpperCase().includes('NOMBRE')) {
-        startRow = i + 1;
-        break;
-      }
-    }
+    const startRow = (headerRowNum || 1) + 1;
 
     // Leer datos
     for (let rowNum = startRow; rowNum <= sheet.rowCount; rowNum++) {
@@ -613,6 +629,14 @@ export class GradesBulkImportService {
     }
 
     return students;
+  }
+
+  private getRowTexts(row: ExcelJS.Row): string[] {
+    const texts: string[] = [];
+    row.eachCell({ includeEmpty: true }, cell => {
+      texts.push(String(cell.text ?? cell.value ?? '').trim());
+    });
+    return texts;
   }
 
   private parseGrade(value: any): number | null {
