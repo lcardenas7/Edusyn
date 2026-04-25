@@ -57,6 +57,7 @@ interface Grade {
   name: string
   stage: string
   gradeTemplates?: { template: { id: string; name: string } }[]
+  activeAssignmentsCount?: number
 }
 
 interface AcademicYear {
@@ -420,6 +421,28 @@ export default function AcademicTemplates() {
     }
   }
 
+  const syncGradeTemplateFromAssignments = async (grade: Grade) => {
+    if (!selectedYear?.id) {
+      alert('Error: Debe seleccionar un año académico')
+      return
+    }
+
+    if (!grade.activeAssignmentsCount) {
+      alert('Este grado no tiene asignaciones activas para sincronizar')
+      return
+    }
+
+    setSaving(true)
+    try {
+      await academicTemplatesApi.syncFromAssignments(grade.id, selectedYear.id)
+      await loadData()
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Error al sincronizar la plantilla desde las asignaciones')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   // Obtener asignaturas disponibles para un área específica
   const getAvailableSubjects = (areaId: string) => {
     const area = areas.find(a => a.id === areaId)
@@ -730,21 +753,48 @@ export default function AcademicTemplates() {
                   <td className="px-6 py-4 whitespace-nowrap text-gray-500">{grade.stage}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {grade.gradeTemplates?.[0] ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-sm">
-                        <Layers className="w-3 h-3" />
-                        {grade.gradeTemplates[0].template.name}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-sm w-fit">
+                          <Layers className="w-3 h-3" />
+                          {grade.gradeTemplates[0].template.name}
+                        </span>
+                        {grade.activeAssignmentsCount ? (
+                          <span className="text-xs text-gray-500">
+                            {grade.activeAssignmentsCount} asignatura{grade.activeAssignmentsCount !== 1 ? 's' : ''} activa{grade.activeAssignmentsCount !== 1 ? 's' : ''}
+                          </span>
+                        ) : null}
+                      </div>
                     ) : (
-                      <span className="text-gray-400 text-sm">Sin asignar</span>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-gray-400 text-sm">Sin asignar</span>
+                        {grade.activeAssignmentsCount ? (
+                          <span className="text-xs text-amber-600">
+                            {grade.activeAssignmentsCount} asignatura{grade.activeAssignmentsCount !== 1 ? 's' : ''} lista{grade.activeAssignmentsCount !== 1 ? 's' : ''} para sincronizar
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">No hay asignaciones activas</span>
+                        )}
+                      </div>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <button
-                      onClick={() => openAssignModal(grade)}
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                    >
-                      {grade.gradeTemplates?.[0] ? 'Cambiar' : 'Asignar'}
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      {grade.activeAssignmentsCount ? (
+                        <button
+                          onClick={() => syncGradeTemplateFromAssignments(grade)}
+                          disabled={saving}
+                          className="text-emerald-600 hover:text-emerald-800 text-sm font-medium disabled:opacity-50"
+                        >
+                          {grade.gradeTemplates?.[0] ? 'Sincronizar' : 'Crear desde asignaciones'}
+                        </button>
+                      ) : null}
+                      <button
+                        onClick={() => openAssignModal(grade)}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        {grade.gradeTemplates?.[0] ? 'Cambiar' : 'Asignar'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

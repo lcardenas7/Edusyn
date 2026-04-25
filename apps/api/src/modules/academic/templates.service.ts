@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AcademicLevel, AreaCalculationType, AreaApprovalRule, AreaRecoveryRule, GroupExceptionType } from '@prisma/client';
+import { AcademicLevel, AreaCalculationType, AreaApprovalRule, AreaRecoveryRule, GroupExceptionType, GradeStage } from '@prisma/client';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SERVICIO DE PLANTILLAS ACADÉMICAS
@@ -407,6 +407,212 @@ export class TemplatesService {
     });
   }
 
+  async syncTemplateFromActiveAssignments(gradeId: string, academicYearId: string) {
+    const grade = await this.prisma.grade.findUnique({
+      where: { id: gradeId },
+      select: {
+        id: true,
+        institutionId: true,
+        name: true,
+        stage: true,
+      },
+    });
+
+    if (!grade) {
+      throw new NotFoundException('Grado no encontrado');
+    }
+
+    const assignments = await this.prisma.teacherAssignment.findMany({
+      where: {
+        institutionId: grade.institutionId,
+        academicYearId,
+        group: { gradeId },
+        endDate: null,
+      },
+      include: {
+        subject: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            area: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (assignments.length === 0) {
+      throw new BadRequestException('No hay asignaciones activas para sincronizar este grado');
+    }
+
+    const level = this.mapGradeStageToAcademicLevel(grade.stage);
+
+    const existingGradeTemplate = await this.prisma.gradeTemplate.findUnique({
+      where: { gradeId_academicYearId: { gradeId, academicYearId } },
+      include: {
+        template: {
+          include: {
+            templateAreas: {
+              include: {
+                area: true,
+                templateSubjects: { include: { subject: true } },
+              },
+              orderBy: { order: 'asc' },
+            },
+          },
+        },
+      },
+    });
+
+    let template = existingGradeTemplate?.template;
+
+    if (!template) {
+      const reusableTemplate = await this.prisma.academicTemplate.findFirst({
+        where: {
+          institutionId: grade.institutionId,
+          academicYearId,
+          level,
+          isActive: true,
+          gradeTemplates: { none: {} },
+        },
+        include: {
+          templateAreas: {
+            include: {
+              area: true,
+              templateSubjects: { include: { subject: true } },
+            },
+            orderBy: { order: 'asc' },
+          },
+        },
+        orderBy: [
+          { isDefault: 'desc' },
+          { createdAt: 'asc' },
+        ],
+      });
+
+      if (reusableTemplate) {
+        template = reusableTemplate;
+      }
+    }
+
+    if (!template) {
+      template = await this.createTemplate({
+        institutionId: grade.institutionId,
+        academicYearId,
+        name: `Plantilla ${grade.name}`,
+        description: `Plantilla creada desde las asignaciones activas de ${grade.name}`,
+        level,
+        isDefault: false,
+        achievementsPerPeriod: 1,
+        useAttitudinalAchievement: false,
+      });
+    }
+
+    if (!existingGradeTemplate || existingGradeTemplate.templateId !== template.id) {
+      await this.assignTemplateToGrade(gradeId, template.id, academicYearId, existingGradeTemplate?.overrides);
+    }
+
+    const templateAreas = template.templateAreas ?? [];
+    const templateAreaMap = new Map(templateAreas.map(area => [area.areaId, area]));
+
+    const groupedAssignments = new Map<string, {
+      area: { id: string; name: string; code: string | null };
+      subjects: Map<string, { id: string; name: string; code: string | null; weeklyHours: number }>;
+    }>();
+
+    for (const assignment of assignments) {
+      const subject = assignment.subject;
+      if (!subject.area) {
+        throw new BadRequestException(
+          `La asignatura "${subject.name}" no tiene área asociada. Asigne el área en el catálogo antes de sincronizar la plantilla.`,
+        );
+      }
+
+      if (!groupedAssignments.has(subject.area.id)) {
+        groupedAssignments.set(subject.area.id, {
+          area: subject.area,
+          subjects: new Map(),
+        });
+      }
+
+      const bucket = groupedAssignments.get(subject.area.id)!;
+      const current = bucket.subjects.get(subject.id);
+      const weeklyHours = assignment.weeklyHours ?? current?.weeklyHours ?? 0;
+
+      bucket.subjects.set(subject.id, {
+        id: subject.id,
+        name: subject.name,
+        code: subject.code,
+        weeklyHours,
+      });
+    }
+
+    const areaCount = groupedAssignments.size || 1;
+    let areaOrder = templateAreas.length;
+
+    for (const [areaId, bucket] of groupedAssignments.entries()) {
+      let templateArea = templateAreaMap.get(areaId);
+
+      if (!templateArea) {
+        templateArea = await this.prisma.templateArea.create({
+          data: {
+            templateId: template.id,
+            areaId: bucket.area.id,
+            weightPercentage: templateAreas.length === 0 ? Math.round((100 / areaCount) * 10) / 10 : 0,
+            calculationType: 'AVERAGE',
+            approvalRule: 'AREA_AVERAGE',
+            recoveryRule: 'INDIVIDUAL_SUBJECT',
+            isMandatory: true,
+            order: areaOrder++,
+          },
+          include: {
+            area: true,
+            templateSubjects: { include: { subject: true } },
+          },
+        });
+        templateAreaMap.set(areaId, templateArea);
+      }
+
+      const subjectCount = bucket.subjects.size || 1;
+      let subjectOrder = templateArea.templateSubjects.length;
+
+      for (const subject of bucket.subjects.values()) {
+        const existingSubject = templateArea.templateSubjects.find(ts => ts.subjectId === subject.id);
+
+        if (!existingSubject) {
+          const created = await this.prisma.templateSubject.create({
+            data: {
+              templateAreaId: templateArea.id,
+              subjectId: subject.id,
+              weeklyHours: subject.weeklyHours,
+              weightPercentage: templateAreas.length === 0 ? Math.round((100 / subjectCount) * 10) / 10 : 0,
+              isDominant: false,
+              order: subjectOrder++,
+            },
+            include: { subject: true },
+          });
+          templateArea.templateSubjects.push(created);
+          continue;
+        }
+
+        if (existingSubject.weeklyHours === 0 && subject.weeklyHours > 0) {
+          await this.prisma.templateSubject.update({
+            where: { id: existingSubject.id },
+            data: { weeklyHours: subject.weeklyHours },
+          });
+        }
+      }
+    }
+
+    return this.getGradeTemplate(gradeId, academicYearId);
+  }
+
   async removeTemplateFromGrade(gradeId: string, academicYearId: string) {
     return this.prisma.gradeTemplate.delete({ 
       where: { gradeId_academicYearId: { gradeId, academicYearId } } 
@@ -446,7 +652,54 @@ export class TemplatesService {
       orderBy: [{ stage: 'asc' }, { number: 'asc' }],
     });
 
-    return grades;
+    const gradeIds = grades.map(grade => grade.id);
+    const assignmentCounts = gradeIds.length > 0
+      ? await this.prisma.teacherAssignment.groupBy({
+          by: ['groupId'],
+          where: {
+            institutionId,
+            academicYearId,
+            endDate: null,
+            group: { gradeId: { in: gradeIds } },
+          },
+          _count: { _all: true },
+        })
+      : [];
+
+    const groupGrades = gradeIds.length > 0
+      ? await this.prisma.group.findMany({
+          where: { gradeId: { in: gradeIds } },
+          select: { id: true, gradeId: true },
+        })
+      : [];
+
+    const groupToGrade = new Map(groupGrades.map(group => [group.id, group.gradeId]));
+    const countsByGrade = new Map<string, number>();
+
+    for (const item of assignmentCounts) {
+      const gradeId = groupToGrade.get(item.groupId);
+      if (!gradeId) continue;
+      countsByGrade.set(gradeId, (countsByGrade.get(gradeId) || 0) + item._count._all);
+    }
+
+    return grades.map(grade => ({
+      ...grade,
+      activeAssignmentsCount: countsByGrade.get(grade.id) || 0,
+    }));
+  }
+
+  private mapGradeStageToAcademicLevel(stage: GradeStage): AcademicLevel {
+    switch (stage) {
+      case 'PREESCOLAR':
+        return 'PREESCOLAR';
+      case 'BASICA_PRIMARIA':
+        return 'PRIMARIA';
+      case 'BASICA_SECUNDARIA':
+        return 'SECUNDARIA';
+      case 'MEDIA':
+      default:
+        return 'MEDIA';
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

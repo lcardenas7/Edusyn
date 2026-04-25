@@ -1260,6 +1260,8 @@ export const academicTemplatesApi = {
   // Asignación a grados (por año académico)
   assignToGrade: (gradeId: string, templateId: string, academicYearId: string, overrides?: any) => 
     api.post(`/academic-templates/grades/${gradeId}/assign`, { templateId, academicYearId, overrides }),
+  syncFromAssignments: (gradeId: string, academicYearId: string) =>
+    api.post(`/academic-templates/grades/${gradeId}/sync-from-assignments`, { academicYearId }),
   removeFromGrade: (gradeId: string, academicYearId: string) => 
     api.delete(`/academic-templates/grades/${gradeId}/assign`, { params: { academicYearId } }),
   getGradeTemplate: (gradeId: string, academicYearId: string) => 

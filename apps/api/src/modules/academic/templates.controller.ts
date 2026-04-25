@@ -204,6 +204,15 @@ export class TemplatesController {
     return this.templatesService.assignTemplateToGrade(gradeId, body.templateId, body.academicYearId, body.overrides);
   }
 
+  @Post('grades/:gradeId/sync-from-assignments')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async syncTemplateFromActiveAssignments(
+    @Param('gradeId') gradeId: string,
+    @Body() body: { academicYearId: string },
+  ) {
+    return this.templatesService.syncTemplateFromActiveAssignments(gradeId, body.academicYearId);
+  }
+
   @Delete('grades/:gradeId/assign')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async removeTemplateFromGrade(
