@@ -385,6 +385,8 @@ export class GradesBulkImportService {
     groupCol: number;
     headerRowNum: number;
   } {
+    const subjectStartCol = 10; // J
+
     // Buscar fila de encabezados (puede estar en fila 1, 2 o 3)
     let headerRow: ExcelJS.Row | undefined;
     let headerRowNum = 1;
@@ -473,7 +475,7 @@ export class GradesBulkImportService {
     const lastDataRow = sheet.lastRow;
     const lastRowValues = lastDataRow ? lastDataRow.values as any[] : [];
 
-    for (let i = 1; i < headers.length; i++) {
+    for (let i = subjectStartCol - 1; i < headers.length; i++) {
       const h = String(headers[i] || '').toUpperCase().trim();
       
       // Detectar columnas de notas
@@ -514,7 +516,7 @@ export class GradesBulkImportService {
       const lastRow = sheet.getRow(sheet.rowCount);
       const lastRowVals = lastRow.values as any[];
       
-      for (let i = 1; i < lastRowVals.length; i++) {
+      for (let i = subjectStartCol - 1; i < lastRowVals.length; i++) {
         const val = String(lastRowVals[i] || '').trim();
         if (val && !['', 'MATEMATICAS', 'ESTADISTICA', 'LENGUAJE'].includes(val.toUpperCase())) {
           // Es un nombre de asignatura, buscar sus columnas
@@ -558,8 +560,10 @@ export class GradesBulkImportService {
   }
 
   private findSubjectName(subjectHeaders: any[], lastRowValues: any[], colIndex: number): string {
+    const subjectStartCol = 10; // J
+
     // Buscar en fila de encabezados de asignaturas
-    for (let i = colIndex; i >= 1; i--) {
+    for (let i = colIndex; i >= subjectStartCol; i--) {
       const val = String(subjectHeaders[i] || '').trim();
       if (this.isLikelySubjectName(val)) {
         return val;
@@ -567,7 +571,7 @@ export class GradesBulkImportService {
     }
     
     // Buscar en última fila
-    for (let i = colIndex; i >= 1; i--) {
+    for (let i = colIndex; i >= subjectStartCol; i--) {
       const val = String(lastRowValues[i] || '').trim();
       if (this.isLikelySubjectName(val)) {
         return val;
