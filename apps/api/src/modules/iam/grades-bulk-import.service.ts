@@ -345,16 +345,25 @@ export class GradesBulkImportService {
       }
     }
 
-    // Eliminar estudiantes que no están en el Excel (regla solicitada: eliminación forzada)
-    const toDelete = systemStudents.filter(ss => !keptStudentIds.has(ss.studentId));
+    // Eliminar o desactivar estudiantes que no están en el Excel
+    if (options.deactivateMissingStudents) {
+      const toDelete = systemStudents.filter(ss => !keptStudentIds.has(ss.studentId));
 
-    for (const student of toDelete) {
-      await this.forceDeleteStudent(student.studentId);
-      result.summary.studentsDeactivated++;
-      result.details.deactivated.push({
-        name: student.fullName,
-        document: student.documentNumber,
-      });
+      for (const student of toDelete) {
+        try {
+          await this.deactivateOrDeleteStudent(student.studentId);
+          result.summary.studentsDeactivated++;
+          result.details.deactivated.push({
+            name: student.fullName,
+            document: student.documentNumber,
+          });
+        } catch (error: any) {
+          result.warnings.push({
+            row: 0,
+            message: `No se pudo desactivar/eliminar a ${student.fullName} (${student.documentNumber}): ${error.message}`,
+          });
+        }
+      }
     }
 
     result.success = result.errors.length === 0;
@@ -843,6 +852,79 @@ export class GradesBulkImportService {
 
   private async forceDeleteStudent(studentId: string) {
     await this.prisma.$transaction(async tx => {
+      const supportProfiles = await tx.educationalSupportProfile.findMany({
+        where: { studentId },
+        select: { id: true },
+      });
+
+      if (supportProfiles.length > 0) {
+        const supportProfileIds = supportProfiles.map(profile => profile.id);
+
+        await tx.pedagogicalSupportPlan.deleteMany({
+          where: { supportProfileId: { in: supportProfileIds } },
+        });
+
+        await tx.studentObservation.deleteMany({
+          where: { supportProfileId: { in: supportProfileIds } },
+        });
+      }
+
+      await tx.educationalSupportProfile.deleteMany({ where: { studentId } });
+      await tx.candidate.deleteMany({ where: { studentId } });
+      await tx.student.delete({ where: { id: studentId } });
+    });
+  }
+
+  private async deactivateOrDeleteStudent(studentId: string) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      include: {
+        enrollments: {
+          include: {
+            grades: { take: 1 },
+            attendanceRecords: { take: 1 },
+            studentObservations: { take: 1 },
+          },
+        },
+      },
+    });
+
+    if (!student) {
+      return;
+    }
+
+    const hasAcademicHistory = student.enrollments.some(
+      e => e.grades.length > 0 || e.attendanceRecords.length > 0 || e.studentObservations.length > 0,
+    );
+
+    if (hasAcademicHistory) {
+      await this.prisma.student.update({
+        where: { id: studentId },
+        data: {
+          isActive: false,
+          deletedAt: new Date(),
+          deletedReason: 'Desactivado por importación masiva de notas',
+        },
+      });
+      return;
+    }
+
+    await this.prisma.$transaction(async tx => {
+      await tx.studentObservation.deleteMany({
+        where: {
+          studentEnrollment: { studentId },
+        },
+      });
+
+      await tx.pedagogicalSupportPlan.deleteMany({
+        where: {
+          studentEnrollment: { studentId },
+        },
+      });
+
+      await tx.studentGuardian.deleteMany({ where: { studentId } });
+      await tx.studentDocument.deleteMany({ where: { studentId } });
+      await tx.studentEnrollment.deleteMany({ where: { studentId } });
       await tx.educationalSupportProfile.deleteMany({ where: { studentId } });
       await tx.candidate.deleteMany({ where: { studentId } });
       await tx.student.delete({ where: { id: studentId } });
