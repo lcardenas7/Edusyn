@@ -114,6 +114,33 @@ export class ReportsService {
     };
   }
 
+  private async getExpectedSubjectIdsByEnrollment(
+    enrollments: Array<{ id: string; groupId: string }>,
+    academicYearId: string,
+  ): Promise<Map<string, string[]>> {
+    const cacheByGroup = new Map<string, string[]>();
+    const result = new Map<string, string[]>();
+
+    for (const enrollment of enrollments) {
+      if (!cacheByGroup.has(enrollment.groupId)) {
+        const structure = await this.getEnrollmentSubjects(enrollment.id, enrollment.groupId, academicYearId);
+        const subjectIds = structure.areas
+          .flatMap(area => area.subjects.map(subject => subject.id))
+          .filter((id): id is string => Boolean(id));
+        cacheByGroup.set(enrollment.groupId, subjectIds);
+      }
+
+      result.set(enrollment.id, cacheByGroup.get(enrollment.groupId) || []);
+    }
+
+    return result;
+  }
+
+  private average(values: number[]): number {
+    if (values.length === 0) return 0;
+    return values.reduce((acc, value) => acc + value, 0) / values.length;
+  }
+
   async getReportCardData(studentEnrollmentId: string, academicTermId: string) {
     // Delegar al motor centralizado — resuelve snapshot vs live automáticamente
     const result = await this.academicDataSource.getStudentReportCardData(
@@ -1144,30 +1171,52 @@ export class ReportsService {
    */
   async getStudentRanking(institutionId: string, academicYearId: string, groupId: string, termId?: string, reportMode?: ReportMode) {
     const rulesCtx = await this.institutionContext.getContext(institutionId);
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: {
+        institutionId,
+        academicYearId,
+        groupId,
+        status: EnrollmentStatus.ACTIVE,
+      },
+      include: {
+        student: { select: { firstName: true, lastName: true } },
+        group: { select: { id: true, name: true, grade: { select: { name: true } } } },
+      },
+    });
+
     const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId, reportMode });
 
-    // Agrupar por estudiante → promedio de todas sus asignaturas
-    const studentMap = new Map<string, { name: string; group: string; scores: number[] }>();
+    const expectedSubjectsByEnrollment = await this.getExpectedSubjectIdsByEnrollment(
+      enrollments.map(enrollment => ({ id: enrollment.id, groupId: enrollment.groupId })),
+      academicYearId,
+    );
+
+    const scoresByStudentSubject = new Map<string, Map<string, number[]>>();
     for (const g of grades) {
-      const key = g.studentEnrollmentId;
-      if (!studentMap.has(key)) {
-        studentMap.set(key, {
-          name: g.studentFullName || `${g.studentLastName} ${g.studentFirstName}`,
-          group: g.groupName,
-          scores: [],
-        });
-      }
-      studentMap.get(key)!.scores.push(g.finalScore);
+      const studentMap = scoresByStudentSubject.get(g.studentEnrollmentId) || new Map<string, number[]>();
+      const subjectScores = studentMap.get(g.subjectId) || [];
+      subjectScores.push(g.finalScore);
+      studentMap.set(g.subjectId, subjectScores);
+      scoresByStudentSubject.set(g.studentEnrollmentId, studentMap);
     }
 
-    const results = Array.from(studentMap.values())
-      .map(data => {
-        const avg = data.scores.reduce((a, b) => a + b, 0) / data.scores.length;
+    const results = enrollments
+      .map(enrollment => {
+        const expectedSubjectIds = expectedSubjectsByEnrollment.get(enrollment.id) || [];
+        const subjectScores = expectedSubjectIds.map(subjectId => {
+          const gradesForSubject = scoresByStudentSubject.get(enrollment.id)?.get(subjectId) || [];
+          return this.average(gradesForSubject);
+        });
+
+        const avg = expectedSubjectIds.length > 0
+          ? this.average(subjectScores)
+          : 0;
+
         return {
-          studentName: data.name,
-          group: data.group,
+          studentName: `${enrollment.student.lastName} ${enrollment.student.firstName}`,
+          group: `${enrollment.group.grade.name} ${enrollment.group.name}`,
           average: Math.round(avg * 10) / 10,
-          subjectCount: data.scores.length,
+          subjectCount: expectedSubjectIds.length,
           performance: getPerformanceLevel(avg, rulesCtx).label,
         };
       })
@@ -1209,7 +1258,7 @@ export class ReportsService {
       where: enrollmentWhere,
       include: {
         student: { select: { firstName: true, lastName: true } },
-        group: { select: { name: true, grade: { select: { name: true, stage: true } } } },
+        group: { select: { id: true, name: true, grade: { select: { name: true, stage: true } } } },
       },
     });
 
@@ -1218,6 +1267,10 @@ export class ReportsService {
     }
 
     const enrollmentIds = enrollments.map(e => e.id);
+    const expectedSubjectsByEnrollment = await this.getExpectedSubjectIdsByEnrollment(
+      enrollments.map(enrollment => ({ id: enrollment.id, groupId: enrollment.groupId })),
+      academicYearId,
+    );
 
     // Obtener notas finales de período para estas matrículas
     const termWhere: any = { studentEnrollmentId: { in: enrollmentIds } };
@@ -1229,12 +1282,13 @@ export class ReportsService {
       where: termWhere,
       select: {
         studentEnrollmentId: true,
+        subjectId: true,
         finalScore: true,
       },
     });
 
     // Agrupar por estudiante
-    const studentMap = new Map<string, { name: string; group: string; grade: string; stage: string; scores: number[] }>();
+    const studentMap = new Map<string, { name: string; group: string; grade: string; stage: string; subjectIds: string[]; scoresBySubject: Map<string, number[]> }>();
     
     for (const enrollment of enrollments) {
       const key = enrollment.id;
@@ -1243,29 +1297,33 @@ export class ReportsService {
         group: `${enrollment.group.grade.name} ${enrollment.group.name}`,
         grade: enrollment.group.grade.name,
         stage: enrollment.group.grade.stage,
-        scores: [],
+        subjectIds: expectedSubjectsByEnrollment.get(enrollment.id) || [],
+        scoresBySubject: new Map<string, number[]>(),
       });
     }
 
     for (const pg of periodGrades) {
       const student = studentMap.get(pg.studentEnrollmentId);
       if (student && pg.finalScore !== null) {
-        student.scores.push(Number(pg.finalScore));
+        const list = student.scoresBySubject.get(pg.subjectId) || [];
+        list.push(Number(pg.finalScore));
+        student.scoresBySubject.set(pg.subjectId, list);
       }
     }
 
     // Calcular promedios y ordenar
     const results = Array.from(studentMap.entries())
-      .filter(([_, data]) => data.scores.length > 0)
+      .filter(([_, data]) => data.subjectIds.length > 0)
       .map(([_, data]) => {
-        const avg = data.scores.reduce((a, b) => a + b, 0) / data.scores.length;
+        const subjectAverages = data.subjectIds.map(subjectId => this.average(data.scoresBySubject.get(subjectId) || []));
+        const avg = data.subjectIds.length > 0 ? this.average(subjectAverages) : 0;
         return {
           studentName: data.name,
           group: data.group,
           grade: data.grade,
           stage: data.stage,
           average: Math.round(avg * 100) / 100,
-          subjectCount: data.scores.length,
+          subjectCount: data.subjectIds.length,
           performance: getPerformanceLevel(avg, rulesCtx).label,
         };
       })
