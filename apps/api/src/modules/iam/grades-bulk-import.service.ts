@@ -842,6 +842,35 @@ export class GradesBulkImportService {
   }
 
   private async syncStudentIdentity(studentId: string, excelStudent: StudentGradeRow) {
+    const currentStudent = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      select: {
+        institutionId: true,
+        documentNumber: true,
+      },
+    });
+
+    if (!currentStudent) {
+      return;
+    }
+
+    if (currentStudent.documentNumber === excelStudent.documentNumber) {
+      return;
+    }
+
+    const conflictingStudent = await this.prisma.student.findFirst({
+      where: {
+        institutionId: currentStudent.institutionId,
+        documentNumber: excelStudent.documentNumber,
+        NOT: { id: studentId },
+      },
+      select: { id: true },
+    });
+
+    if (conflictingStudent) {
+      return;
+    }
+
     await this.prisma.student.update({
       where: { id: studentId },
       data: {
