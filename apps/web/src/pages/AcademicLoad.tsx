@@ -33,6 +33,7 @@ interface Subject {
 interface Group {
   id: string
   name: string
+  gradeId: string
   grade: string
   shift: string
 }
@@ -86,6 +87,15 @@ export default function AcademicLoad() {
   const [transferPreview, setTransferPreview] = useState<any>(null)
   const [selectedAssignments, setSelectedAssignments] = useState<string[]>([])
 
+  // Convivencia Modal State
+  const [showConvivenciaModal, setShowConvivenciaModal] = useState(false)
+  const [convivenciaGradeId, setConvivenciaGradeId] = useState<string>('')
+  const [convivenciaUseTutor, setConvivenciaUseTutor] = useState(true)
+  const [convivenciaCountInAverage, setConvivenciaCountInAverage] = useState(true)
+  const [convivenciaTeacherId, setConvivenciaTeacherId] = useState<string>('')
+  const [convivenciaLoading, setConvivenciaLoading] = useState(false)
+  const [convivenciaMessage, setConvivenciaMessage] = useState<string>('')
+
   // Cargar datos iniciales
   useEffect(() => {
     const fetchData = async () => {
@@ -114,6 +124,7 @@ export default function AcademicLoad() {
         const groupsData = (groupsRes.data || []).map((g: any) => ({
           id: g.id,
           name: g.name,
+          gradeId: g.grade?.id || g.gradeId || '',
           grade: g.grade?.name || '',
           shift: g.shift?.name || '',
         }))
@@ -355,6 +366,70 @@ export default function AcademicLoad() {
   const uniqueAreas = [...new Set(subjects.map(s => ({ id: s.areaId, name: s.areaName })))]
     .filter((v, i, a) => a.findIndex(t => t.id === v.id) === i)
 
+  const uniqueGrades = [...new Map(groups.filter(g => g.gradeId).map(g => [g.gradeId, { id: g.gradeId, name: g.grade }])).values()]
+    .filter(Boolean)
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  const selectedConvivenciaGrade = uniqueGrades.find(g => g.id === convivenciaGradeId)
+
+  const reloadAssignments = async () => {
+    if (!academicYearId) return
+    const assignmentsRes = await teacherAssignmentsApi.getAll({ academicYearId })
+    const assignmentsData = (assignmentsRes.data || []).map((a: any) => ({
+      id: a.id,
+      teacherId: a.teacherId,
+      teacherName: `${a.teacher?.firstName || ''} ${a.teacher?.lastName || ''}`.toUpperCase(),
+      academicYearId: a.academicYearId,
+      groupId: a.groupId,
+      groupName: a.group?.name || '',
+      grade: a.group?.grade?.name || '',
+      areaId: a.subject?.area?.id || '',
+      areaName: a.subject?.area?.name || '',
+      subjectId: a.subjectId,
+      subjectName: a.subject?.name || '',
+      role: 'TITULAR' as const,
+      weeklyHours: a.weeklyHours || 0,
+      status: 'ACTIVE' as const,
+    }))
+    setLoads(assignmentsData)
+  }
+
+  const activateConvivencia = async () => {
+    setConvivenciaMessage('')
+    if (!academicYearId) {
+      setConvivenciaMessage('No hay año académico configurado.')
+      return
+    }
+    if (!convivenciaGradeId) {
+      setConvivenciaMessage('Debe seleccionar un grado.')
+      return
+    }
+    if (!convivenciaUseTutor && !convivenciaTeacherId) {
+      setConvivenciaMessage('Debe seleccionar un docente responsable.')
+      return
+    }
+
+    setConvivenciaLoading(true)
+    try {
+      const response = await teacherAssignmentsApi.activateConvivencia({
+        institutionId: institution?.id,
+        academicYearId,
+        gradeId: convivenciaGradeId,
+        useTutor: convivenciaUseTutor,
+        countInAverage: convivenciaCountInAverage,
+        teacherId: convivenciaUseTutor ? undefined : convivenciaTeacherId,
+      })
+
+      setConvivenciaMessage(response.data?.message || 'Convivencia activada correctamente.')
+      await reloadAssignments()
+    } catch (err: any) {
+      console.error('Error activating convivencia:', err)
+      setConvivenciaMessage(err.response?.data?.message || 'Error al activar Convivencia')
+    } finally {
+      setConvivenciaLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -445,6 +520,21 @@ export default function AcademicLoad() {
           >
             <Plus className="w-4 h-4" />
             Nueva Asignación
+          </button>
+          <button
+            onClick={() => {
+              setConvivenciaMessage('')
+              setConvivenciaGradeId(uniqueGrades[0]?.id || '')
+              setConvivenciaUseTutor(true)
+              setConvivenciaCountInAverage(true)
+              setConvivenciaTeacherId('')
+              setShowConvivenciaModal(true)
+            }}
+            disabled={saving || uniqueGrades.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+          >
+            <CheckCircle className="w-4 h-4" />
+            Activar Convivencia
           </button>
         </div>
       </div>
@@ -765,6 +855,136 @@ export default function AcademicLoad() {
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 {editingLoad ? 'Guardar Cambios' : 'Crear Asignación'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Convivencia */}
+      {showConvivenciaModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Activar Convivencia</h3>
+              <button onClick={() => setShowConvivenciaModal(false)} className="p-1 hover:bg-slate-100 rounded">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <p className="text-sm text-slate-600 mb-4">
+              Activa la asignatura especial <strong>Convivencia</strong> para todos los grupos de un grado y la configura como evaluación actitudinal.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Grado <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={convivenciaGradeId}
+                  onChange={(e) => setConvivenciaGradeId(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                >
+                  <option value="">Seleccione un grado</option>
+                  {uniqueGrades.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConvivenciaUseTutor(true)
+                    setConvivenciaTeacherId('')
+                  }}
+                  className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                    convivenciaUseTutor
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-700'
+                      : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  Asignar al tutor
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConvivenciaUseTutor(false)}
+                  className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                    !convivenciaUseTutor
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-700'
+                      : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  Asignar docente específico
+                </button>
+              </div>
+
+              <div className="p-4 rounded-lg border border-slate-200 bg-slate-50">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={convivenciaCountInAverage}
+                    onChange={(e) => setConvivenciaCountInAverage(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <div>
+                    <span className="block text-sm font-medium text-slate-800">
+                      Incluir en el promedio
+                    </span>
+                    <span className="block text-xs text-slate-500 mt-1">
+                      Si se desactiva, Convivencia se registrará solo como evaluación actitudinal y no afectará el promedio ni el ranking.
+                    </span>
+                  </div>
+                </label>
+              </div>
+
+              {!convivenciaUseTutor && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Docente responsable <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={convivenciaTeacherId}
+                    onChange={(e) => setConvivenciaTeacherId(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                  >
+                    <option value="">Seleccione un docente</option>
+                    {teachers.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {selectedConvivenciaGrade && (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700">
+                  Se activará para el grado <strong>{selectedConvivenciaGrade.name}</strong>.
+                </div>
+              )}
+
+              {convivenciaMessage && (
+                <div className="p-3 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-700">
+                  {convivenciaMessage}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowConvivenciaModal(false)}
+                className="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={activateConvivencia}
+                disabled={convivenciaLoading || !convivenciaGradeId || (!convivenciaUseTutor && !convivenciaTeacherId)}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {convivenciaLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {convivenciaLoading ? 'Activando...' : 'Activar'}
               </button>
             </div>
           </div>

@@ -407,7 +407,11 @@ export class TemplatesService {
     });
   }
 
-  async syncTemplateFromActiveAssignments(gradeId: string, academicYearId: string) {
+  async syncTemplateFromActiveAssignments(
+    gradeId: string,
+    academicYearId: string,
+    options?: { countInAverage?: boolean },
+  ) {
     const grade = await this.prisma.grade.findUnique({
       where: { id: gradeId },
       select: {
@@ -521,6 +525,10 @@ export class TemplatesService {
     const templateAreas = template.templateAreas ?? [];
     const templateAreaMap = new Map(templateAreas.map(area => [area.areaId, area]));
 
+    const isConvivencia = (subject: { name: string; code: string | null }) => {
+      return subject.code?.toUpperCase() === 'CONV' || /convivencia/i.test(subject.name);
+    };
+
     const groupedAssignments = new Map<string, {
       area: { id: string; name: string; code: string | null };
       subjects: Map<string, { id: string; name: string; code: string | null; weeklyHours: number }>;
@@ -558,18 +566,37 @@ export class TemplatesService {
 
     for (const [areaId, bucket] of groupedAssignments.entries()) {
       let templateArea = templateAreaMap.get(areaId);
+      const isConvivenciaArea = bucket.area.code?.toUpperCase() === 'CONV' || /convivencia/i.test(bucket.area.name);
+      const specialArea = isConvivenciaArea && options?.countInAverage === false;
 
       if (!templateArea) {
         templateArea = await this.prisma.templateArea.create({
           data: {
             templateId: template.id,
             areaId: bucket.area.id,
-            weightPercentage: templateAreas.length === 0 ? Math.round((100 / areaCount) * 10) / 10 : 0,
-            calculationType: 'AVERAGE',
+            weightPercentage: specialArea ? 0 : (templateAreas.length === 0 ? Math.round((100 / areaCount) * 10) / 10 : 0),
+            calculationType: specialArea ? 'INFORMATIVE' : 'AVERAGE',
             approvalRule: 'AREA_AVERAGE',
             recoveryRule: 'INDIVIDUAL_SUBJECT',
-            isMandatory: true,
+            isMandatory: !specialArea,
             order: areaOrder++,
+          },
+          include: {
+            area: true,
+            templateSubjects: { include: { subject: true } },
+          },
+        });
+        templateAreaMap.set(areaId, templateArea);
+      } else if (
+        (specialArea && (templateArea.calculationType !== 'INFORMATIVE' || templateArea.weightPercentage !== 0 || templateArea.isMandatory)) ||
+        (!specialArea && isConvivenciaArea && (templateArea.calculationType !== 'AVERAGE' || templateArea.isMandatory === false))
+      ) {
+        templateArea = await this.prisma.templateArea.update({
+          where: { id: templateArea.id },
+          data: {
+            weightPercentage: specialArea ? 0 : (templateArea.weightPercentage > 0 ? templateArea.weightPercentage : Math.round((100 / areaCount) * 10) / 10),
+            calculationType: specialArea ? 'INFORMATIVE' : 'AVERAGE',
+            isMandatory: specialArea ? false : true,
           },
           include: {
             area: true,
@@ -584,20 +611,36 @@ export class TemplatesService {
 
       for (const subject of bucket.subjects.values()) {
         const existingSubject = templateArea.templateSubjects.find(ts => ts.subjectId === subject.id);
+        const specialSubject = isConvivencia(subject);
 
         if (!existingSubject) {
           const created = await this.prisma.templateSubject.create({
             data: {
               templateAreaId: templateArea.id,
               subjectId: subject.id,
-              weeklyHours: subject.weeklyHours,
-              weightPercentage: templateAreas.length === 0 ? Math.round((100 / subjectCount) * 10) / 10 : 0,
+              weeklyHours: specialSubject ? 1 : subject.weeklyHours,
+              weightPercentage: specialSubject ? 100 : (templateAreas.length === 0 ? Math.round((100 / subjectCount) * 10) / 10 : 0),
               isDominant: false,
               order: subjectOrder++,
+              achievementsPerPeriod: specialSubject ? 1 : undefined,
+              useAttitudinalAchievement: specialSubject ? true : undefined,
             },
             include: { subject: true },
           });
           templateArea.templateSubjects.push(created);
+          continue;
+        }
+
+        if (specialSubject) {
+          await this.prisma.templateSubject.update({
+            where: { id: existingSubject.id },
+            data: {
+              weeklyHours: 1,
+              weightPercentage: 100,
+              useAttitudinalAchievement: true,
+              achievementsPerPeriod: 1,
+            },
+          });
           continue;
         }
 

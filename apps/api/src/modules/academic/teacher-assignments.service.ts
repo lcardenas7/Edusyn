@@ -2,10 +2,14 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTeacherAssignmentDto } from './dto/create-teacher-assignment.dto';
+import { TemplatesService } from './templates.service';
 
 @Injectable()
 export class TeacherAssignmentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly templatesService: TemplatesService,
+  ) {}
 
   private readonly assignmentIncludes = {
     teacher: true,
@@ -13,6 +17,179 @@ export class TeacherAssignmentsService {
     group: { include: { grade: true } },
     academicYear: true,
   };
+
+  private async getOrCreateConvivenciaSubject(institutionId: string): Promise<{ id: string; name: string; code: string | null }> {
+    let area = await this.prisma.area.findFirst({
+      where: {
+        institutionId,
+        OR: [
+          { name: { contains: 'Convivencia', mode: 'insensitive' } },
+          { name: { contains: 'Formación', mode: 'insensitive' } },
+          { name: { contains: 'Ética', mode: 'insensitive' } },
+        ],
+      },
+    });
+
+    if (!area) {
+      area = await this.prisma.area.create({
+        data: {
+          institutionId,
+          name: 'Formación y Convivencia',
+          code: 'CONV',
+          description: 'Área de formación integral y convivencia escolar',
+          order: 99,
+        },
+      });
+    }
+
+    let subject = await this.prisma.subject.findFirst({
+      where: {
+        areaId: area.id,
+        name: { contains: 'Convivencia', mode: 'insensitive' },
+      },
+    });
+
+    if (!subject) {
+      subject = await this.prisma.subject.create({
+        data: {
+          areaId: area.id,
+          name: 'Convivencia',
+          code: 'CONV',
+          description: 'Evaluación de convivencia escolar',
+          subjectType: 'MANDATORY',
+          order: 1,
+        },
+      });
+    }
+
+    return { id: subject.id, name: subject.name, code: subject.code };
+  }
+
+  async activateConvivenciaForGrade(params: {
+    institutionId: string;
+    academicYearId: string;
+    gradeId: string;
+    useTutor: boolean;
+    countInAverage: boolean;
+    teacherId?: string;
+  }) {
+    const grade = await this.prisma.grade.findUnique({
+      where: { id: params.gradeId },
+      select: { id: true, name: true, stage: true, institutionId: true },
+    });
+
+    if (!grade) throw new BadRequestException('Grado no encontrado');
+    if (grade.institutionId !== params.institutionId) {
+      throw new BadRequestException('El grado no pertenece a la institución seleccionada');
+    }
+
+    const groups = await this.prisma.group.findMany({
+      where: { gradeId: params.gradeId },
+      include: {
+        director: { select: { id: true, firstName: true, lastName: true } },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    if (groups.length === 0) {
+      throw new BadRequestException('No hay grupos para este grado');
+    }
+
+    const convivencia = await this.getOrCreateConvivenciaSubject(params.institutionId);
+
+    if (!params.useTutor && !params.teacherId) {
+      throw new BadRequestException('Debe seleccionar un docente responsable');
+    }
+
+    const skippedGroups: Array<{ groupId: string; groupName: string; reason: string }> = [];
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const group of groups) {
+        const assignedTeacherId = params.useTutor ? group.directorId : params.teacherId!;
+
+        if (!assignedTeacherId) {
+          skippedGroups.push({
+            groupId: group.id,
+            groupName: group.name,
+            reason: params.useTutor ? 'El grupo no tiene tutor asignado' : 'No hay docente seleccionado',
+          });
+          continue;
+        }
+
+        const existing = await tx.teacherAssignment.findFirst({
+          where: {
+            institutionId: params.institutionId,
+            academicYearId: params.academicYearId,
+            groupId: group.id,
+            subjectId: convivencia.id,
+            endDate: null,
+          },
+          select: { id: true, teacherId: true },
+        });
+
+        if (existing) {
+          if (existing.teacherId !== assignedTeacherId) {
+            await tx.teacherAssignment.update({
+              where: { id: existing.id },
+              data: { teacherId: assignedTeacherId },
+            });
+          }
+        } else {
+          await tx.teacherAssignment.create({
+            data: {
+              institutionId: params.institutionId,
+              academicYearId: params.academicYearId,
+              groupId: group.id,
+              subjectId: convivencia.id,
+              teacherId: assignedTeacherId,
+              weeklyHours: 1,
+              startDate: new Date(),
+            },
+          });
+        }
+
+        await tx.groupSubjectException.upsert({
+          where: {
+            groupId_subjectId_academicYearId: {
+              groupId: group.id,
+              subjectId: convivencia.id,
+              academicYearId: params.academicYearId,
+            },
+          },
+          update: {
+            type: 'INCLUDE',
+            reason: params.useTutor
+              ? 'Convivencia activada automáticamente con tutor'
+              : 'Convivencia activada por docente específico',
+          },
+          create: {
+            groupId: group.id,
+            subjectId: convivencia.id,
+            academicYearId: params.academicYearId,
+            type: 'INCLUDE',
+            reason: params.useTutor
+              ? 'Convivencia activada automáticamente con tutor'
+              : 'Convivencia activada por docente específico',
+          },
+        });
+      }
+    });
+
+    await this.templatesService.syncTemplateFromActiveAssignments(params.gradeId, params.academicYearId, {
+      countInAverage: params.countInAverage,
+    });
+
+    return {
+      success: true,
+      subject: convivencia,
+      grade: { id: grade.id, name: grade.name, stage: grade.stage },
+      totalGroups: groups.length,
+      skippedGroups,
+      message: params.useTutor
+        ? `Convivencia activada para ${grade.name} usando el tutor de cada grupo.`
+        : `Convivencia activada para ${grade.name} con el docente seleccionado.`,
+    };
+  }
 
   async create(dto: CreateTeacherAssignmentDto) {
     // Validar que existan los registros relacionados

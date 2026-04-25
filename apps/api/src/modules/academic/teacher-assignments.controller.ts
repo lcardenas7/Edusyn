@@ -49,6 +49,36 @@ export class TeacherAssignmentsController {
     );
   }
 
+  /**
+   * Activar Convivencia como asignatura institucional para todos los grupos de un grado.
+   * Puede asignarse al tutor de cada grupo o a un docente específico.
+   */
+  @Post('convivencia/activate')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR')
+  async activateConvivencia(
+    @Request() req: any,
+    @Body() body: {
+      gradeId: string;
+      academicYearId: string;
+      useTutor: boolean;
+      countInAverage: boolean;
+      teacherId?: string;
+      institutionId?: string;
+    },
+  ) {
+    const instId = await resolveInstitutionId(this.prisma as any, req, body.institutionId);
+    if (!instId) throw new Error('No se pudo determinar la institución');
+
+    return this.teacherAssignmentsService.activateConvivenciaForGrade({
+      institutionId: instId,
+      academicYearId: body.academicYearId,
+      gradeId: body.gradeId,
+      useTutor: body.useTutor,
+      countInAverage: body.countInAverage,
+      teacherId: body.teacherId,
+    });
+  }
+
   @Get()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR', 'SECRETARIA')
   async list(

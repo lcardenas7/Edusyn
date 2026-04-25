@@ -2703,7 +2703,9 @@ export class ReportsService {
         const validGrades = subjectResults.filter(s => s.grade !== null);
         let areaAverage: number | null = null;
 
-        if (validGrades.length > 0) {
+        if (area.calculationType === 'INFORMATIVE') {
+          areaAverage = null;
+        } else if (validGrades.length > 0) {
           if (area.calculationType === 'WEIGHTED') {
             const weightedSum = validGrades.reduce((acc, s) => acc + (s.grade! * s.weightPercentage), 0);
             const totalWeight = validGrades.reduce((acc, s) => acc + s.weightPercentage, 0);
@@ -3013,7 +3015,10 @@ export class ReportsService {
       }
 
       // Live calculation
-      const allGrades = card.subjectGrades.filter((s: any) => s.grade !== null);
+      const allGrades = card.areaGrades
+        .filter((area: any) => area.calculationType !== 'INFORMATIVE')
+        .flatMap((area: any) => area.subjects)
+        .filter((s: any) => s.grade !== null);
       const generalAvg = allGrades.length > 0
         ? Math.round((allGrades.reduce((sum: number, s: any) => sum + s.grade!, 0) / allGrades.length) * 10) / 10
         : null;
@@ -3262,13 +3267,16 @@ export class ReportsService {
 
         // ── Calcular datos derivados por grupo (ranking, promedios, promoción) ──
         const cardStats = groupData.cards.map((card) => {
-          const allGrades = card.subjectGrades.filter((s: any) => s.grade !== null);
-          const generalAverage = allGrades.length > 0
-            ? Math.round((allGrades.reduce((sum: number, s: any) => sum + s.grade!, 0) / allGrades.length) * 10) / 10
+          const countableGrades = card.areaGrades
+            .filter((area: any) => area.calculationType !== 'INFORMATIVE')
+            .flatMap((area: any) => area.subjects)
+            .filter((s: any) => s.grade !== null);
+          const generalAverage = countableGrades.length > 0
+            ? Math.round((countableGrades.reduce((sum: number, s: any) => sum + s.grade!, 0) / countableGrades.length) * 10) / 10
             : null;
-          const failedCount = allGrades.filter((s: any) => isFailing(s.grade ?? 0, rulesCtx)).length;
-          const approvedCount = allGrades.length - failedCount;
-          const promotionStatus = allGrades.length === 0
+          const failedCount = countableGrades.filter((s: any) => isFailing(s.grade ?? 0, rulesCtx)).length;
+          const approvedCount = countableGrades.length - failedCount;
+          const promotionStatus = countableGrades.length === 0
             ? 'PENDIENTE'
             : failedCount === 0 ? 'APRUEBA' : 'NO_APRUEBA';
           return { enrollmentId: card.enrollmentId, generalAverage, failedCount, approvedCount, promotionStatus };
@@ -3471,7 +3479,10 @@ export class ReportsService {
 
           // Calcular datos derivados (misma lógica que finalizeTerm)
           const cardStats = groupData.cards.map((card) => {
-            const allGrades = card.subjectGrades.filter((s: any) => s.grade !== null);
+            const allGrades = card.areaGrades
+              .filter((area: any) => area.calculationType !== 'INFORMATIVE')
+              .flatMap((area: any) => area.subjects)
+              .filter((s: any) => s.grade !== null);
             const generalAverage = allGrades.length > 0
               ? Math.round((allGrades.reduce((sum: number, s: any) => sum + s.grade!, 0) / allGrades.length) * 10) / 10
               : null;

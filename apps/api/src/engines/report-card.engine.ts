@@ -375,8 +375,12 @@ function generateQuantitativeHierarchical(
   })
 
   const subjectGrades = areaGrades.flatMap(a => a.subjects)
-  const validGrades = subjectGrades.filter(s => s.grade !== null)
-  const generalAverage = calculateSimpleAverage(subjectGrades)
+  const countableSubjectGrades = areaGrades
+    .filter(a => a.calculationType !== 'INFORMATIVE')
+    .flatMap(a => a.subjects)
+
+  const validGrades = countableSubjectGrades.filter(s => s.grade !== null)
+  const generalAverage = calculateSimpleAverage(countableSubjectGrades)
   const generalPerf = generalAverage !== null ? getPerformanceLevel(generalAverage, ctx) : null
 
   return {

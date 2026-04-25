@@ -217,6 +217,8 @@ export const teacherAssignmentsApi = {
   create: (data: { academicYearId: string; groupId: string; subjectId: string; teacherId: string; weeklyHours?: number }) => api.post('/teacher-assignments', data),
   delete: (id: string) => api.delete(`/teacher-assignments/${id}`),
   deleteAll: (academicYearId?: string) => api.delete('/teacher-assignments/all', { params: { academicYearId } }),
+  activateConvivencia: (data: { institutionId?: string; academicYearId: string; gradeId: string; useTutor: boolean; countInAverage: boolean; teacherId?: string }) =>
+    api.post('/teacher-assignments/convivencia/activate', data),
   
   // Reemplazo individual
   replace: (id: string, data: { newTeacherId: string; reason: string; endDate?: string }) => 
