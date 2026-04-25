@@ -469,7 +469,7 @@ export class GradesBulkImportService {
 
     // Buscar fila de nombres de asignaturas (puede estar una fila arriba de los encabezados)
     const subjectRow = headerRowNum > 1 ? sheet.getRow(headerRowNum - 1) : null;
-    const subjectHeaders = subjectRow ? subjectRow.values as any[] : [];
+    const subjectHeaders = subjectRow ? (subjectRow.values as any[]) : [];
 
     // También revisar la última fila para nombres de asignaturas (como en tu Excel)
     const lastDataRow = sheet.lastRow;
@@ -517,7 +517,7 @@ export class GradesBulkImportService {
       const lastRowVals = lastRow.values as any[];
       
       for (let i = subjectStartCol - 1; i < lastRowVals.length; i++) {
-        const val = String(lastRowVals[i] || '').trim();
+        const val = String(lastRowVals[i + 1] || '').trim();
         if (val && !['', 'MATEMATICAS', 'ESTADISTICA', 'LENGUAJE'].includes(val.toUpperCase())) {
           // Es un nombre de asignatura, buscar sus columnas
           const subjectName = val;
@@ -561,9 +561,10 @@ export class GradesBulkImportService {
 
   private findSubjectName(subjectHeaders: any[], lastRowValues: any[], colIndex: number): string {
     const subjectStartCol = 9; // J en índice 0-based
+    const excelColIndex = colIndex + 1; // ExcelJS row.values es 1-based
 
     // Buscar en fila de encabezados de asignaturas
-    for (let i = colIndex; i >= subjectStartCol; i--) {
+    for (let i = excelColIndex; i >= subjectStartCol + 1; i--) {
       const val = String(subjectHeaders[i] || '').trim();
       if (this.isLikelySubjectName(val)) {
         return val;
@@ -571,7 +572,7 @@ export class GradesBulkImportService {
     }
     
     // Buscar en última fila
-    for (let i = colIndex; i >= subjectStartCol; i--) {
+    for (let i = excelColIndex; i >= subjectStartCol + 1; i--) {
       const val = String(lastRowValues[i] || '').trim();
       if (this.isLikelySubjectName(val)) {
         return val;
