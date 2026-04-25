@@ -561,7 +561,7 @@ export class GradesBulkImportService {
     // Buscar en fila de encabezados de asignaturas
     for (let i = colIndex; i >= 1; i--) {
       const val = String(subjectHeaders[i] || '').trim();
-      if (val && val.length > 3 && !['COG', 'PROC', 'ACT', 'DEF', 'IHS'].includes(val.toUpperCase())) {
+      if (this.isLikelySubjectName(val)) {
         return val;
       }
     }
@@ -569,12 +569,27 @@ export class GradesBulkImportService {
     // Buscar en última fila
     for (let i = colIndex; i >= 1; i--) {
       const val = String(lastRowValues[i] || '').trim();
-      if (val && val.length > 3 && !['COG', 'PROC', 'ACT', 'DEF', 'IHS'].includes(val.toUpperCase())) {
+      if (this.isLikelySubjectName(val)) {
         return val;
       }
     }
     
     return `Asignatura_Col${colIndex}`;
+  }
+
+  private isLikelySubjectName(value: string): boolean {
+    const normalized = this.normalizeString(value);
+    if (!normalized) return false;
+
+    const upper = normalized.toUpperCase();
+    const forbidden = new Set(['COG', 'PROC', 'ACT', 'DEF', 'DEFIN', 'IHS', 'NOMBRE', 'NOMBRES', 'GRUPO', 'CURSO']);
+    if (forbidden.has(upper)) return false;
+
+    if (/^(19|20)\d{2}$/.test(normalized)) return false;
+    if (/^\d+(?:[.,]\d+)?$/.test(normalized)) return false;
+    if (!/[a-záéíóúñ]/i.test(normalized)) return false;
+
+    return normalized.length > 2;
   }
 
   private readStudentsFromSheet(
