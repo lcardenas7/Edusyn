@@ -491,7 +491,7 @@ export class GradesBulkImportService {
         defCol = i + 1;
         
         // Al encontrar DEF, guardamos la asignatura completa
-        if (currentSubject && cogCol > 0) {
+        if (currentSubject && cogCol > 0 && !currentSubject.startsWith('Asignatura_Col')) {
           subjectColumns.push({
             subjectName: currentSubject,
             cogCol,
@@ -560,7 +560,7 @@ export class GradesBulkImportService {
   }
 
   private findSubjectName(subjectHeaders: any[], lastRowValues: any[], colIndex: number): string {
-    const subjectStartCol = 10; // J
+    const subjectStartCol = 9; // J en índice 0-based
 
     // Buscar en fila de encabezados de asignaturas
     for (let i = colIndex; i >= subjectStartCol; i--) {
@@ -578,7 +578,7 @@ export class GradesBulkImportService {
       }
     }
     
-    return `Asignatura_Col${colIndex}`;
+    return `Asignatura_Col${colIndex + 1}`;
   }
 
   private isLikelySubjectName(value: string): boolean {
