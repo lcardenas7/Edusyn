@@ -462,6 +462,77 @@ export class ObserverService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // DATOS DE COMISIÓN — actas individuales y remisiones para el acta formal
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async getCommissionData(institutionId: string, academicYearId: string, gradeId: string, actaTypes: string[]) {
+    const [actas, referrals] = await Promise.all([
+      this.prisma.studentObservation.findMany({
+        where: {
+          institutionId,
+          type: { in: actaTypes as any },
+          studentEnrollment: { academicYearId, group: { gradeId } },
+        },
+        select: {
+          id: true, type: true, category: true, subcategory: true,
+          status: true, date: true, requiresFollowUp: true,
+          studentEnrollment: {
+            select: {
+              student: { select: { firstName: true, lastName: true } },
+              group: { select: { name: true, grade: { select: { name: true } } } },
+            },
+          },
+        },
+        orderBy: { date: 'desc' },
+      }),
+      this.prisma.observerReferral.findMany({
+        where: {
+          studentEnrollment: {
+            academicYearId,
+            group: { campus: { institutionId }, gradeId },
+          },
+        },
+        select: {
+          id: true, status: true, referredToRole: true, createdAt: true,
+          studentEnrollment: {
+            select: {
+              student: { select: { firstName: true, lastName: true } },
+              group: { select: { name: true, grade: { select: { name: true } } } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    const TYPE_LABEL: Record<string, string> = {
+      ACTA_TYPE_I: 'Tipo I', ACTA_TYPE_II: 'Tipo II', ACTA_TYPE_III: 'Tipo III',
+    };
+
+    return {
+      actas: actas.map(a => ({
+        id: a.id,
+        type: a.type,
+        typeLabel: TYPE_LABEL[a.type] || a.type,
+        category: a.category,
+        subcategory: a.subcategory || '',
+        status: a.status,
+        date: a.date,
+        requiresFollowUp: a.requiresFollowUp,
+        studentName: `${a.studentEnrollment.student.lastName} ${a.studentEnrollment.student.firstName}`,
+        groupName: `${a.studentEnrollment.group.grade?.name || ''} ${a.studentEnrollment.group.name}`.trim(),
+      })),
+      referrals: referrals.map(r => ({
+        id: r.id,
+        status: r.status,
+        referredToRole: r.referredToRole,
+        date: r.createdAt,
+        studentName: `${r.studentEnrollment.student.lastName} ${r.studentEnrollment.student.firstName}`,
+        groupName: `${r.studentEnrollment.group.grade?.name || ''} ${r.studentEnrollment.group.name}`.trim(),
+      })),
+    };
+  }
+
   // ESTADÍSTICAS CONVIVENCIALES (para coordinadores — informes de período)
   // ═══════════════════════════════════════════════════════════════════════════
 
