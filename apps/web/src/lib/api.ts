@@ -381,6 +381,8 @@ export const observerApi = {
   // Estadísticas convivenciales
   getConvivencialStats: (academicYearId: string, filters?: { groupId?: string; gradeId?: string; startDate?: string; endDate?: string }) =>
     api.get('/observer/stats/convivencial', { params: { academicYearId, ...filters } }),
+  getCommissionData: (academicYearId: string, gradeId: string, actaTypes?: string) =>
+    api.get('/observer/commission-data', { params: { academicYearId, gradeId, actaTypes } }),
 }
 
 // Preventive Alerts
@@ -413,6 +415,8 @@ export const reportsApi = {
     api.get('/reports/academic/institutional-ranking', { params: { academicYearId, ...params } }),
   getGradeDistribution: (academicYearId: string, groupId: string, params?: { subjectId?: string; termId?: string }) =>
     api.get('/reports/academic/grade-distribution', { params: { academicYearId, groupId, ...params } }),
+  getSubjectLevelDistribution: (academicYearId: string, params?: { groupId?: string; gradeId?: string; termId?: string; stage?: string }) =>
+    api.get('/reports/academic/subject-level-distribution', { params: { academicYearId, ...params } }),
   getFailedSubjects: (academicYearId: string, groupId: string, termId?: string) =>
     api.get('/reports/academic/failed-subjects', { params: { academicYearId, groupId, termId } }),
   getRecoveryList: (academicYearId: string, groupId: string, params?: { termId?: string; minScore?: number; maxScore?: number }) =>

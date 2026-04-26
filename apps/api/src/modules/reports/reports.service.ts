@@ -3812,6 +3812,112 @@ export class ReportsService {
   }
 
   /**
+   * Reporte: Distribución de estudiantes por nivel de desempeño, desglosado por asignatura.
+   * Para cada asignatura retorna cuántos estudiantes hay en cada nivel (Bajo/Básico/Alto/Superior).
+   * Soporta filtros por grupo, grado, nivel educativo y período.
+   */
+  async getSubjectLevelDistribution(
+    institutionId: string,
+    academicYearId: string,
+    groupId?: string,
+    gradeId?: string,
+    termId?: string,
+    stage?: string,
+  ) {
+    const rulesCtx = await this.institutionContext.getContext(institutionId);
+
+    // Construir filtro de matrícula anidado
+    const enrollmentFilter: any = {
+      institutionId,
+      academicYearId,
+      status: EnrollmentStatus.ACTIVE,
+    };
+    if (groupId) {
+      enrollmentFilter.groupId = groupId;
+    } else if (gradeId) {
+      enrollmentFilter.group = { gradeId };
+    } else if (stage) {
+      enrollmentFilter.group = { grade: { stage } };
+    }
+
+    // Obtener notas finales con filtro de matrícula
+    const pfgWhere: any = { studentEnrollment: enrollmentFilter };
+    if (termId) pfgWhere.academicTermId = termId;
+
+    const pfgData = await this.prisma.periodFinalGrade.findMany({
+      where: pfgWhere,
+      select: {
+        subjectId: true,
+        finalScore: true,
+        subject: {
+          select: {
+            name: true,
+            area: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    // Construir orden de niveles de desempeño
+    const perfLevelOrder: string[] =
+      rulesCtx.performanceLevels.length > 0
+        ? [...rulesCtx.performanceLevels].sort((a, b) => a.order - b.order).map(l => l.name)
+        : ['Bajo', 'Básico', 'Alto', 'Superior'];
+
+    // Agrupar notas por asignatura
+    const subjectMap = new Map<string, { name: string; areaName: string; scores: number[] }>();
+    for (const g of pfgData) {
+      if (g.finalScore === null) continue;
+      if (!subjectMap.has(g.subjectId)) {
+        subjectMap.set(g.subjectId, {
+          name: g.subject.name,
+          areaName: g.subject.area?.name || '',
+          scores: [],
+        });
+      }
+      subjectMap.get(g.subjectId)!.scores.push(Number(g.finalScore));
+    }
+
+    // Calcular distribución por nivel para cada asignatura
+    const results = Array.from(subjectMap.entries()).map(([subjectId, data]) => {
+      const { scores } = data;
+      const total = scores.length;
+
+      // Clasificar cada nota usando el engine
+      const labelCounts = new Map<string, number>(perfLevelOrder.map(l => [l, 0]));
+      for (const score of scores) {
+        const label = getPerformanceLevel(score, rulesCtx).label;
+        labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1);
+      }
+
+      const avg = total > 0 ? scores.reduce((a, b) => a + b, 0) / total : 0;
+      const passingCount = scores.filter(s => !isFailing(s, rulesCtx)).length;
+
+      return {
+        subjectId,
+        subjectName: data.name,
+        areaName: data.areaName,
+        totalStudents: total,
+        average: Math.round(avg * 10) / 10,
+        approvalRate: total > 0 ? Math.round((passingCount / total) * 1000) / 10 : 0,
+        levels: perfLevelOrder.map(label => {
+          const count = labelCounts.get(label) ?? 0;
+          return {
+            label,
+            count,
+            percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
+          };
+        }),
+      };
+    });
+
+    return {
+      performanceLevelLabels: perfLevelOrder,
+      results: results.sort((a, b) => a.subjectName.localeCompare(b.subjectName)),
+    };
+  }
+
+  /**
    * Lee el snapshot más reciente de un estudiante para un período.
    * Retorna null si no existe snapshot.
    */

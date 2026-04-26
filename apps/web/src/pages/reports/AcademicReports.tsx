@@ -36,6 +36,7 @@ const reportBlocks: ReportBlock[] = [
       { id: 'ranking-institutional', name: 'Ranking institucional', description: 'Ranking de toda la institución, por grado o nivel educativo', icon: Users },
       { id: 'honor-roll', name: 'Top 5 por grado', description: 'Ranking de los 5 mejores estudiantes de cada grado', icon: TrendingUp },
       { id: 'grade-distribution', name: 'Estudiantes por nivel', description: 'Cuántos estudiantes hay en cada nivel de desempeño por curso o grado', icon: BarChart3 },
+      { id: 'subject-level-dist', name: 'Niveles por asignatura', description: 'Cantidad y % de estudiantes en Bajo/Básico/Alto/Superior para cada asignatura', icon: BarChart3 },
     ],
   },
   {
@@ -289,26 +290,45 @@ export default function AcademicReports() {
           break
         }
         case 'honor-roll': {
-          // Cuadro de Honor: top N por grado usando el ranking institucional
           const params: any = {}
           if (filterPeriod) params.termId = filterPeriod
-          if (filterLevel !== 'all') params.stage = filterLevel
+          if (filterGrade !== 'all') params.groupId = filterGrade
+          else if (filterGradeId !== 'all') params.gradeId = filterGradeId
+          else if (filterLevel !== 'all') params.stage = filterLevel
           const res = await reportsApi.getInstitutionalRanking(filterYear, params)
           const results = res.data?.results || []
-          // Agrupar por grado
-          const byGrade = new Map<string, any[]>()
-          results.forEach((r: any) => {
-            const gradeKey = r.gradeName || r.group?.split(' ')[0] || 'Sin grado'
-            if (!byGrade.has(gradeKey)) byGrade.set(gradeKey, [])
-            byGrade.get(gradeKey)!.push(r)
-          })
-          // Top N configurable por grado, ordenado por promedio desc
           const topN = honorRollTopN
-          const honorRoll = Array.from(byGrade.entries()).map(([gradeName, students]) => ({
-            gradeName,
-            students: [...students].sort((a, b) => (b.average || 0) - (a.average || 0)).slice(0, topN),
-          }))
-          setReportData({ ...res.data, honorRoll })
+          let honorRoll: any[]
+          let gradeIntegral: any[] | null = null
+          if (filterGrade !== 'all') {
+            const g = groups.find((g: any) => g.id === filterGrade)
+            const label = g ? `${g.grade?.name || ''} ${g.name}`.trim() : 'Curso'
+            honorRoll = [{ gradeName: label, students: [...results].sort((a: any, b: any) => (b.average || 0) - (a.average || 0)).slice(0, topN) }]
+          } else if (filterGradeId !== 'all') {
+            const byGroup = new Map<string, any[]>()
+            results.forEach((r: any) => {
+              const key = r.group || 'Sin curso'
+              if (!byGroup.has(key)) byGroup.set(key, [])
+              byGroup.get(key)!.push(r)
+            })
+            honorRoll = Array.from(byGroup.entries()).map(([groupName, students]) => ({
+              gradeName: groupName,
+              students: [...students].sort((a: any, b: any) => (b.average || 0) - (a.average || 0)).slice(0, topN),
+            }))
+            gradeIntegral = [...results].sort((a: any, b: any) => (b.average || 0) - (a.average || 0)).slice(0, topN)
+          } else {
+            const byGrade = new Map<string, any[]>()
+            results.forEach((r: any) => {
+              const gradeKey = r.grade || r.group?.split(' ')[0] || 'Sin grado'
+              if (!byGrade.has(gradeKey)) byGrade.set(gradeKey, [])
+              byGrade.get(gradeKey)!.push(r)
+            })
+            honorRoll = Array.from(byGrade.entries()).map(([gradeName, students]) => ({
+              gradeName,
+              students: [...students].sort((a: any, b: any) => (b.average || 0) - (a.average || 0)).slice(0, topN),
+            }))
+          }
+          setReportData({ ...res.data, honorRoll, gradeIntegral })
           break
         }
         case 'grade-distribution': {
@@ -317,6 +337,16 @@ export default function AcademicReports() {
             subjectId: filterSubject !== 'all' ? filterSubject : undefined,
             termId: filterPeriod || undefined,
           })
+          setReportData(res.data)
+          break
+        }
+        case 'subject-level-dist': {
+          const sldParams: any = {}
+          if (filterGrade !== 'all') sldParams.groupId = filterGrade
+          else if (filterGradeId !== 'all') sldParams.gradeId = filterGradeId
+          else if (filterLevel !== 'all') sldParams.stage = filterLevel
+          if (filterPeriod) sldParams.termId = filterPeriod
+          const res = await reportsApi.getSubjectLevelDistribution(filterYear, sldParams)
           setReportData(res.data)
           break
         }
@@ -1064,16 +1094,24 @@ export default function AcademicReports() {
       case 'ranking-students':
         return wrap(<><SelectYear /><SelectGroup required /><SelectTerm /><BtnSearch /></>, 4)
 
-      case 'honor-roll':
-        return wrap(<><SelectYear /><SelectStage /><SelectTerm /><div>
+      case 'honor-roll': {
+        const hrGradeGroups = filterGradeId !== 'all' ? groups.filter((g: any) => g.grade?.id === filterGradeId) : groups
+        return wrap(<><SelectYear /><SelectGrade /><div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Curso (opcional)</label>
+            <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
+              <option value="all">Todo el grado</option>
+              {hrGradeGroups.map((g: any) => <option key={g.id} value={g.id}>{g.grade?.name} {g.name}</option>)}
+            </select>
+          </div><SelectTerm /><div>
           <label className="block text-xs font-medium text-slate-600 mb-1">Top N</label>
           <select value={honorRollTopN} onChange={(e) => setHonorRollTopN(Number(e.target.value))} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
             {[1, 3, 5, 10].map(n => <option key={n} value={n}>Top {n}</option>)}
           </select>
-        </div><BtnSearch label={`Generar Top ${honorRollTopN}`} /></>, 4,
+        </div><BtnSearch label={`Generar Top ${honorRollTopN}`} /></>, 6,
           <div className={`${style.bg} rounded-lg p-3 text-sm ${style.text}`}>
-            <strong>🏆</strong> Muestra los {honorRollTopN} mejores estudiantes de cada grado. Use el filtro de nivel para limitar (p.ej. solo primaria).
+            <strong>🏆</strong> Selecciona un grado para ver los {honorRollTopN} mejores por curso (con tabla integral del grado). Elige también un curso para ver solo ese curso.
           </div>)
+      }
 
       case 'ranking-institutional':
         return wrap(<><SelectYear /><SelectGroup /><SelectGrade /><SelectStage /><SelectTerm /><BtnSearch /></>, 6,
@@ -1085,6 +1123,12 @@ export default function AcademicReports() {
         return wrap(<><SelectYear /><SelectGroup required /><SelectSubject /><SelectTerm /><BtnSearch /></>, 5,
           <div className={`${style.bg} rounded-lg p-3 text-sm ${style.text}`}>
             <strong>📊</strong> Muestra cuántos estudiantes se ubican en cada nivel de desempeño dentro del grupo seleccionado.
+          </div>)
+
+      case 'subject-level-dist':
+        return wrap(<><SelectYear /><SelectGrade /><SelectGroup /><SelectTerm /><BtnSearch /></>, 5,
+          <div className={`${style.bg} rounded-lg p-3 text-sm ${style.text}`}>
+            <strong>📊</strong> Muestra cuántos estudiantes (y %) están en cada nivel de desempeño para cada asignatura. Filtra por grado, curso o período.
           </div>)
 
       case 'min-grade':
@@ -1569,48 +1613,52 @@ export default function AcademicReports() {
     // ── Cuadro de Honor ──
     if (selectedReport === 'honor-roll' && reportData?.honorRoll) {
       const hrData: Array<{ gradeName: string; students: any[] }> = reportData.honorRoll
+      const gradeIntegral: any[] | null = reportData.gradeIntegral || null
       if (hrData.length === 0) return (
         <div className="text-center py-12"><TrendingUp className="w-12 h-12 text-slate-300 mx-auto mb-3" /><p className="text-slate-500">Sin datos para el cuadro de honor</p></div>
       )
-      const totalHonorees = hrData.reduce((s, g) => s + g.students.length, 0)
-      const bestAvg = hrData.flatMap(g => g.students).reduce((max, s) => (s.average > max ? s.average : max), 0)
+      const allStudents = hrData.flatMap(g => g.students)
+      const totalHonorees = allStudents.length
+      const bestAvg = allStudents.reduce((max, s) => (s.average > max ? s.average : max), 0)
+      const renderHonorTable = (students: any[], label: string, isIntegral = false) => (
+        <div key={label} className={`border ${isIntegral ? 'border-green-300' : 'border-amber-200'} rounded-xl overflow-hidden`}>
+          <div className={`bg-gradient-to-r ${isIntegral ? 'from-green-100 to-green-50' : 'from-amber-100 to-amber-50'} px-4 py-2 font-semibold ${isIntegral ? 'text-green-800' : 'text-amber-800'} flex items-center gap-2`}>
+            <TrendingUp className="w-4 h-4" /> {label}
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50"><tr>
+              <th className="px-3 py-2 text-center w-16">Puesto</th>
+              <th className="px-3 py-2 text-left">Estudiante</th>
+              <th className="px-3 py-2 text-left">Grupo</th>
+              <th className="px-3 py-2 text-center">Promedio</th>
+              <th className="px-3 py-2 text-center">Desempeño</th>
+            </tr></thead>
+            <tbody>
+              {students.map((s: any, i: number) => (
+                <tr key={i} className={`border-t ${i === 0 ? 'bg-amber-50/60' : i === 1 ? 'bg-slate-50' : i === 2 ? 'bg-orange-50/40' : ''}`}>
+                  <td className="px-3 py-2 text-center font-bold text-lg">
+                    {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+                  </td>
+                  <td className="px-3 py-2 font-medium">{s.studentName}</td>
+                  <td className="px-3 py-2 text-slate-600">{s.group}</td>
+                  <td className="px-3 py-2 text-center font-bold">{s.average?.toFixed(2)}</td>
+                  <td className="px-3 py-2 text-center">{perfBadge(s.performance)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
       return (
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center"><p className="text-xs uppercase text-amber-600">Grados</p><p className="text-2xl font-bold text-amber-700">{hrData.length}</p></div>
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"><p className="text-xs uppercase text-blue-600">Estudiantes honrados</p><p className="text-2xl font-bold text-blue-700">{totalHonorees}</p></div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center"><p className="text-xs uppercase text-amber-600">{gradeIntegral ? 'Cursos' : 'Grados'}</p><p className="text-2xl font-bold text-amber-700">{hrData.length}</p></div>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"><p className="text-xs uppercase text-blue-600">Estudiantes</p><p className="text-2xl font-bold text-blue-700">{totalHonorees}</p></div>
             <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center"><p className="text-xs uppercase text-green-600">Mejor promedio</p><p className="text-2xl font-bold text-green-700">{bestAvg.toFixed(2)}</p></div>
           </div>
           <div className="space-y-3">
-            {hrData.map(({ gradeName, students }) => (
-              <div key={gradeName} className="border border-amber-200 rounded-xl overflow-hidden">
-                <div className="bg-gradient-to-r from-amber-100 to-amber-50 px-4 py-2 font-semibold text-amber-800 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" /> {gradeName}
-                </div>
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50"><tr>
-                    <th className="px-3 py-2 text-center w-16">Puesto</th>
-                    <th className="px-3 py-2 text-left">Estudiante</th>
-                    <th className="px-3 py-2 text-left">Grupo</th>
-                    <th className="px-3 py-2 text-center">Promedio</th>
-                    <th className="px-3 py-2 text-center">Desempeño</th>
-                  </tr></thead>
-                  <tbody>
-                    {students.map((s: any, i: number) => (
-                      <tr key={i} className={`border-t ${i === 0 ? 'bg-amber-50/60' : i === 1 ? 'bg-slate-50' : i === 2 ? 'bg-orange-50/40' : ''}`}>
-                        <td className="px-3 py-2 text-center font-bold text-lg">
-                          {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
-                        </td>
-                        <td className="px-3 py-2 font-medium">{s.studentName}</td>
-                        <td className="px-3 py-2 text-slate-600">{s.group}</td>
-                        <td className="px-3 py-2 text-center font-bold">{s.average?.toFixed(2)}</td>
-                        <td className="px-3 py-2 text-center">{perfBadge(s.performance)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
+            {hrData.map(({ gradeName, students }) => renderHonorTable(students, gradeName))}
+            {gradeIntegral && gradeIntegral.length > 0 && renderHonorTable(gradeIntegral, 'Integral del Grado', true)}
           </div>
         </div>
       )
@@ -1654,6 +1702,71 @@ export default function AcademicReports() {
                 <span className="w-16 text-xs text-slate-500 text-right">{d.percentage?.toFixed(1)}%</span>
               </div>
             ))}
+          </div>
+        </div>
+      )
+    }
+
+    // ── Niveles de desempeño por asignatura ──
+    if (selectedReport === 'subject-level-dist' && reportData?.results) {
+      const sldResults: any[] = reportData.results
+      const levelLabels: string[] = reportData.performanceLevelLabels || ['Bajo', 'Básico', 'Alto', 'Superior']
+      if (sldResults.length === 0) return (
+        <div className="text-center py-12"><BarChart3 className="w-12 h-12 text-slate-300 mx-auto mb-3" /><p className="text-slate-500">Sin datos de desempeño por asignatura</p></div>
+      )
+      const defaultLevelColors = ['#f87171', '#fbbf24', '#60a5fa', '#4ade80']
+      const levelHexColors: Record<string, string> = {}
+      levelLabels.forEach((l, i) => {
+        const institutionalLevel = gradingScale.performanceLevels.find((pl: any) => pl.name === l)
+        levelHexColors[l] = institutionalLevel?.color || defaultLevelColors[i] || '#94a3b8'
+      })
+      const totalSubjects = sldResults.length
+      const totalStudentsTotal = sldResults.reduce((s: number, r: any) => s + r.totalStudents, 0)
+      const overallAvg = sldResults.length > 0 ? sldResults.reduce((s: number, r: any) => s + r.average, 0) / sldResults.length : 0
+      return (
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"><p className="text-xs text-blue-500 uppercase">Asignaturas</p><p className="text-2xl font-bold text-blue-700">{totalSubjects}</p></div>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center"><p className="text-xs text-slate-500 uppercase">Total registros</p><p className="text-2xl font-bold text-slate-700">{totalStudentsTotal}</p></div>
+            <div className={`${overallAvg >= minPassingGrade ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-xl p-3 text-center`}><p className="text-xs text-slate-500 uppercase">Promedio general</p><p className={`text-2xl font-bold ${overallAvg >= minPassingGrade ? 'text-green-700' : 'text-red-700'}`}>{overallAvg.toFixed(1)}</p></div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-100">
+                <tr>
+                  <th className="px-3 py-2 text-left">Asignatura</th>
+                  <th className="px-3 py-2 text-left text-slate-500 text-xs">Área</th>
+                  <th className="px-3 py-2 text-center">Total</th>
+                  <th className="px-3 py-2 text-center">Promedio</th>
+                  <th className="px-3 py-2 text-center">Aprobación</th>
+                  {levelLabels.map(l => <th key={l} className="px-3 py-2 text-center">{l}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {sldResults.map((r: any) => (
+                  <tr key={r.subjectId} className="border-b hover:bg-slate-50">
+                    <td className="px-3 py-2 font-medium">{r.subjectName}</td>
+                    <td className="px-3 py-2 text-slate-400 text-xs">{r.areaName}</td>
+                    <td className="px-3 py-2 text-center">{r.totalStudents}</td>
+                    <td className="px-3 py-2 text-center font-medium">{r.average?.toFixed(1)}</td>
+                    <td className="px-3 py-2 text-center">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${r.approvalRate >= 80 ? 'bg-green-100 text-green-700' : r.approvalRate >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{r.approvalRate?.toFixed(1)}%</span>
+                    </td>
+                    {(r.levels || []).map((lv: any) => (
+                      <td key={lv.label} className="px-3 py-2 text-center">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="font-medium">{lv.count}</span>
+                          <div className="w-full bg-slate-100 rounded-full h-1.5 min-w-[40px]">
+                            <div className="h-1.5 rounded-full" style={{ width: `${lv.percentage}%`, backgroundColor: levelHexColors[lv.label] || '#94a3b8' }}></div>
+                          </div>
+                          <span className="text-xs text-slate-400">{lv.percentage?.toFixed(1)}%</span>
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )

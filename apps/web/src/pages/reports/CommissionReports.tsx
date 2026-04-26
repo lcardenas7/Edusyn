@@ -19,6 +19,7 @@ interface ActaConfig {
   assistants: Array<{ name: string; role: string; courses: string }>
   includeSections: {
     academicLevels: boolean
+    subjectLevels: boolean
     top5: boolean
     convivencia: boolean
     psico: boolean
@@ -44,6 +45,7 @@ interface LoadedData {
   performanceBuckets: Array<{ label: string; count: number }>
   convivencia: any
   academicSummary: { totalStudents: number; generalAverage: number; approvedCount: number; riskCount: number }
+  subjectLevelData: { performanceLevelLabels: string[]; results: any[] } | null
 }
 
 type RankingMode = 'separate' | 'integral' | 'both'
@@ -136,6 +138,26 @@ function buildActaHtml(
         </div>`
       }).join('')}
     </div>`
+    body += `<hr style="border:none;border-top:0.5px solid #e2e8f0;margin:14px 0;">`
+  }
+
+  // 3b. Niveles por asignatura
+  if (cfg.includeSections.subjectLevels && d.subjectLevelData?.results?.length) {
+    const { performanceLevelLabels: lvls, results: sldRows } = d.subjectLevelData
+    const barColors: Record<string, string> = { 'Bajo': '#E24B4A', 'B\u00e1sico': '#EF9F27', 'Alto': '#639922', 'Superior': '#378ADD' }
+    const defaults = ['#E24B4A', '#EF9F27', '#639922', '#378ADD']
+    body += secTitle('3b', 'Desempe\u00f1o por asignatura y nivel')
+    body += `<table style="width:100%;border-collapse:collapse;"><thead>${th(['Asignatura', 'Total', 'Prom.', ...lvls.map(l => `${l} (n / %)`)]) }</thead><tbody>${
+      sldRows.map((r: any, i: number) => tr([
+        r.subjectName,
+        r.totalStudents,
+        r.average?.toFixed(1),
+        ...r.levels.map((lv: any, li: number) => {
+          const col = barColors[lv.label] || defaults[li] || pc
+          return `<span style="color:${col};font-weight:600;">${lv.count}</span> <span style="color:#64748b;">(${lv.percentage?.toFixed(1)}%)</span>`
+        }),
+      ], i % 2 === 1)).join('')
+    }</tbody></table>`
     body += `<hr style="border:none;border-top:0.5px solid #e2e8f0;margin:14px 0;">`
   }
 
@@ -298,6 +320,7 @@ export default function CommissionReports() {
   const [actaObs, setActaObs] = useState<any[]>([])
   const [referrals, setReferrals] = useState<any[]>([])
   const [logoBase64, setLogoBase64] = useState('')
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const gradeOptions = useMemo(() => {
     const map = new Map<string, { id: string; name: string }>()
@@ -323,7 +346,7 @@ export default function CommissionReports() {
       { name: '', role: 'Director(a) de grupo', courses: '' },
       { name: '', role: 'Psicoorientador(a)', courses: '\u2014' },
     ],
-    includeSections: { academicLevels: true, top5: true, convivencia: true, psico: true, analysis: true, commitments: true },
+    includeSections: { academicLevels: true, subjectLevels: false, top5: true, convivencia: true, psico: true, analysis: true, commitments: true },
     actaTypes: ['ACTA_TYPE_I', 'ACTA_TYPE_II', 'ACTA_TYPE_III'],
     analysisText: '', convivenciaSuggestion: '',
     commitments: [...DEFAULT_COMMITMENTS],
@@ -351,7 +374,7 @@ export default function CommissionReports() {
   }, [])
 
   useEffect(() => { if (!selectedGradeId && gradeOptions.length > 0) setSelectedGradeId(gradeOptions[0].id) }, [gradeOptions, selectedGradeId])
-  useEffect(() => { setLoadedData(null); setActaObs([]); setReferrals([]) }, [filterYear, filterPeriod, selectedGradeId])
+  useEffect(() => { setLoadedData(null); setActaObs([]); setReferrals([]); setLoadError(null) }, [filterYear, filterPeriod, selectedGradeId])
   useEffect(() => {
     if (selectedGradeName && selectedYearLabel && !actaConfig.actaNumber)
       updateConfig('actaNumber', `CEP-${selectedGradeName.replace(/\s+/g, '')}-${selectedYearLabel}-001`)
@@ -390,15 +413,22 @@ export default function CommissionReports() {
     if (!filterYear || !selectedGradeId || selectedGradeGroups.length === 0) return
     setLoadingData(true)
     try {
-      const [gradeRankingRes, convivenciaRes, groupRankings, obsRes] = await Promise.all([
+      setLoadError(null)
+      const [gradeRankingRes, convivenciaRes, groupRankings, obsResult] = await Promise.all([
         reportsApi.getInstitutionalRanking(filterYear, { gradeId: selectedGradeId, termId: filterPeriod || undefined }),
-        observerApi.getConvivencialStats(filterYear, { gradeId: selectedGradeId }),
+        observerApi.getConvivencialStats(filterYear, { gradeId: selectedGradeId }).catch(() => ({ data: null })),
         Promise.all(selectedGradeGroups.map(async group => {
           const res = await reportsApi.getStudentRanking(filterYear, group.id, filterPeriod || undefined)
           return { groupId: group.id, groupName: `${group.grade?.name || ''} ${group.name}`.trim(), results: res.data?.results || [] }
         })),
-        api.get('/observer/commission-data', { params: { academicYearId: filterYear, gradeId: selectedGradeId, actaTypes: actaConfig.actaTypes.join(',') } }),
+        api.get('/observer/commission-data', { params: { academicYearId: filterYear, gradeId: selectedGradeId, actaTypes: actaConfig.actaTypes.join(',') } })
+          .catch((err: any) => {
+            const status = err?.response?.status
+            if (status === 403 || status === 404) return { data: { actas: [], referrals: [] } }
+            throw err
+          }),
       ])
+      const obsRes = obsResult
       const rankingResults: any[] = gradeRankingRes.data?.results || []
       const pass = gradingScale.minPassingGrade
       const avg = rankingResults.length > 0
@@ -422,7 +452,18 @@ export default function CommissionReports() {
           approvedCount: rankingResults.filter((r: any) => Number(r.average) >= pass).length,
           riskCount: rankingResults.filter((r: any) => Number(r.average) < pass).length,
         },
+        subjectLevelData: null,
       }
+      // Cargar niveles por asignatura (tolerante a errores)
+      let subjectLevelData: LoadedData['subjectLevelData'] = null
+      try {
+        const sldRes = await reportsApi.getSubjectLevelDistribution(filterYear, {
+          gradeId: selectedGradeId,
+          termId: filterPeriod || undefined,
+        })
+        subjectLevelData = sldRes.data || null
+      } catch {}
+      data.subjectLevelData = subjectLevelData
       setLoadedData(data)
       setActaObs(obsRes.data?.actas || [])
       setReferrals(obsRes.data?.referrals || [])
@@ -443,7 +484,7 @@ export default function CommissionReports() {
         updateConfig('convivenciaSuggestion', 'Fortalecer la comunicaci\u00f3n entre docentes, familias y orientaci\u00f3n escolar para el seguimiento de los casos identificados.')
     } catch (err) {
       console.error('Error loading commission data:', err)
-      alert('No fue posible cargar la informaci\u00f3n para la comisi\u00f3n')
+      setLoadError('No fue posible cargar algunos datos. Verifica la conexi\u00f3n y vuelve a intentarlo.')
     } finally {
       setLoadingData(false)
     }
@@ -534,9 +575,14 @@ export default function CommissionReports() {
             </select>
           </div>
         </div>
+        {loadError && (
+          <div className="mt-3 flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg px-3 py-2">
+            <span className="font-medium">⚠️</span> {loadError}
+          </div>
+        )}
         <div className="mt-3 flex items-center justify-between">
           <p className="text-xs text-slate-400">
-            {loadedData ? `Datos cargados: ${loadedData.gradeName} \u00b7 ${loadedData.termLabel}` : canLoad ? 'Listo para cargar' : 'Selecciona a\u00f1o y grado para continuar'}
+            {loadedData ? `Datos cargados: ${loadedData.gradeName} · ${loadedData.termLabel}` : canLoad ? 'Listo para cargar' : 'Selecciona año y grado para continuar'}
           </p>
           <button onClick={() => void loadData()} disabled={!canLoad || loadingData}
             className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm disabled:opacity-50">
@@ -631,7 +677,8 @@ export default function CommissionReports() {
                 </div>
               </div>
               {([
-                ['academicLevels', 'Desempeño académico por niveles'],
+                ['academicLevels', 'Desempeño académico por niveles (global)'],
+                ['subjectLevels', 'Niveles por asignatura (tabla detallada)'],
                 ['top5', 'Top N por curso / grado'],
                 ['convivencia', 'Situaciones convivenciales (actas formales)'],
                 ['psico', 'Remisiones a psicoorientación'],

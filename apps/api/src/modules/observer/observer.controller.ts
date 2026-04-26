@@ -52,7 +52,7 @@ export class ObserverController {
   }
 
   @Get('stats/convivencial')
-  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
   getConvivencialStats(
     @Request() req,
     @Query('academicYearId') academicYearId: string,
@@ -113,6 +113,20 @@ export class ObserverController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'ESTUDIANTE')
   getStudentSummary(@Param('studentEnrollmentId') studentEnrollmentId: string) {
     return this.observerService.getStudentSummary(studentEnrollmentId);
+  }
+
+  @Get('commission-data')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'DOCENTE')
+  getCommissionData(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('gradeId') gradeId: string,
+    @Query('actaTypes') actaTypes?: string,
+  ) {
+    const types = actaTypes
+      ? actaTypes.split(',').filter(t => ['ACTA_TYPE_I', 'ACTA_TYPE_II', 'ACTA_TYPE_III'].includes(t))
+      : ['ACTA_TYPE_I', 'ACTA_TYPE_II', 'ACTA_TYPE_III']
+    return this.observerService.getCommissionData(req.user.institutionId, academicYearId, gradeId, types)
   }
 
   @Get(':id')

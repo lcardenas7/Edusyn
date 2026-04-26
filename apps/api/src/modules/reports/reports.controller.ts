@@ -227,6 +227,20 @@ export class ReportsController {
     return this.reportsService.getGradeDistribution(institutionId, academicYearId, groupId, subjectId, termId, reportMode);
   }
 
+  @Get('academic/subject-level-distribution')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async getSubjectLevelDistribution(
+    @Request() req,
+    @Query('academicYearId') academicYearId: string,
+    @Query('groupId') groupId?: string,
+    @Query('gradeId') gradeId?: string,
+    @Query('termId') termId?: string,
+    @Query('stage') stage?: string,
+  ) {
+    const institutionId = req.user.institutionId;
+    return this.reportsService.getSubjectLevelDistribution(institutionId, academicYearId, groupId, gradeId, termId, stage);
+  }
+
   @Get('academic/failed-subjects')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async getFailedSubjects(
