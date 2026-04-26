@@ -1998,41 +1998,78 @@ export default function AcademicReports() {
         </div>
       )
 
-      const SubjectTable = ({ results }: { results: any[] }) => (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-3 py-2.5 text-left font-semibold text-slate-700">Asignatura</th>
-                <th className="px-3 py-2.5 text-left font-semibold text-slate-500 text-xs hidden sm:table-cell">Área</th>
-                <th className="px-3 py-2.5 text-center font-semibold text-slate-700">Prom.</th>
-                <th className="px-3 py-2.5 text-center font-semibold text-slate-700">Aprob.</th>
-                <th className="px-3 py-2.5 text-left font-semibold text-slate-700 min-w-[140px]">Distribución</th>
-                {sldLevelLabels.map(l => (
-                  <th key={l} className="px-2 py-2.5 text-center text-xs font-semibold" style={{ color: sldLevelColors[l] }}>{l}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {[...results].sort(sortFn).map((r: any, idx: number) => (
-                <tr key={r.subjectId} className={`border-b border-slate-100 ${idx % 2 === 1 ? 'bg-slate-50/50' : ''} hover:bg-blue-50/30 transition-colors`}>
-                  <td className="px-3 py-3 font-semibold text-slate-800">{r.subjectName}</td>
-                  <td className="px-3 py-3 text-xs text-slate-400 hidden sm:table-cell">{r.areaName}</td>
-                  <td className="px-3 py-3 text-center"><span className={`font-bold text-sm ${r.average >= minPassingGrade ? 'text-green-700' : 'text-red-600'}`}>{r.average?.toFixed(2)}</span></td>
-                  <td className="px-3 py-3 text-center"><span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${r.approvalRate >= 80 ? 'bg-green-100 text-green-700' : r.approvalRate >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{r.approvalRate?.toFixed(1)}%</span></td>
-                  <td className="px-3 py-3 min-w-[140px]"><SldStackedBar r={r} height="h-5" /></td>
-                  {(r.levels || []).map((lv: any) => (
-                    <td key={lv.label} className={`px-2 py-3 text-center ${lv.count === 0 ? 'opacity-35' : ''}`}>
-                      <p className="font-bold text-slate-800">{lv.count > 0 ? lv.count : '—'}</p>
-                      <p className="text-[10px] text-slate-400">{lv.count > 0 ? `${lv.percentage?.toFixed(1)}%` : ''}</p>
-                    </td>
-                  ))}
+      const SubjectTable = ({ results, groupLabel }: { results: any[]; groupLabel?: string }) => {
+        const scaleRange2 = scaleMax - scaleMin || 1
+        const avgColor = (avg: number) => {
+          const pct = ((avg - scaleMin) / scaleRange2) * 100
+          if (pct >= 74) return 'text-green-700'
+          if (pct >= 58) return 'text-amber-600'
+          return 'text-red-600'
+        }
+        return (
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+            {groupLabel && (
+              <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 border-b border-slate-200">
+                <span className="font-bold text-slate-700 text-sm">{groupLabel}</span>
+                {results[0]?.totalStudents != null && (
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">{results[0].totalStudents} estudiantes</span>
+                )}
+              </div>
+            )}
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-4 py-2.5 text-left font-semibold text-slate-700 uppercase text-xs tracking-wide">Asignatura</th>
+                  <th className="px-3 py-2.5 text-center font-semibold text-slate-700 uppercase text-xs tracking-wide">Prom.</th>
+                  <th className="px-3 py-2.5 text-center font-semibold text-slate-700 uppercase text-xs tracking-wide">Aprob.</th>
+                  <th className="px-3 py-2.5 text-left font-semibold text-slate-700 uppercase text-xs tracking-wide min-w-[160px]">Distribución</th>
+                  <th className="px-3 py-2.5 text-center font-semibold text-slate-700 uppercase text-xs tracking-wide">Conteos</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
+              </thead>
+              <tbody>
+                {[...results].sort(sortFn).map((r: any, idx: number) => (
+                  <tr key={r.subjectId} className={`border-b border-slate-100 ${idx % 2 === 1 ? 'bg-slate-50/30' : ''} hover:bg-blue-50/20 transition-colors`}>
+                    <td className="px-4 py-3">
+                      <p className="font-bold text-slate-800">{r.subjectName}</p>
+                      {r.areaName && <p className="text-xs text-slate-400 font-normal mt-0.5">{r.areaName}</p>}
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <span className={`font-bold text-lg ${avgColor(r.average || 0)}`}>{r.average?.toFixed(2)}</span>
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${r.approvalRate >= 80 ? 'bg-green-100 text-green-700' : r.approvalRate >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                        {r.approvalRate?.toFixed(1)}%
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 min-w-[160px]">
+                      {/* Barra puramente visual — sin texto encima */}
+                      <div className="flex h-5 rounded overflow-hidden w-full">
+                        {(r.levels || []).map((lv: any) => lv.count > 0 && (
+                          <div key={lv.label} className="h-full"
+                            style={{ width: `${(lv.count / (r.totalStudents || 1)) * 100}%`, backgroundColor: sldLevelColors[lv.label] || '#94a3b8' }}
+                            title={`${lv.label}: ${lv.count} (${lv.percentage?.toFixed(1)}%)`} />
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-3 py-3">
+                      {/* Conteos por nivel — cada uno con etiqueta abreviada, número y % */}
+                      <div className="flex gap-3 justify-end">
+                        {(r.levels || []).map((lv: any) => (
+                          <div key={lv.label} className={`text-center min-w-[30px] ${lv.count === 0 ? 'opacity-30' : ''}`}>
+                            <p className="text-[10px] font-bold" style={{ color: sldLevelColors[lv.label] }}>{lv.label.slice(0, 3)}</p>
+                            <p className="text-sm font-bold text-slate-800 leading-tight">{lv.count > 0 ? lv.count : '—'}</p>
+                            <p className="text-[10px] text-slate-400">{lv.count > 0 ? `${lv.percentage?.toFixed(1)}%` : ''}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      }
 
       // ─── MODO POR CURSO ───
       if (reportData?.byCourse) {
@@ -2047,15 +2084,21 @@ export default function AcademicReports() {
               <div className={`${overallAvg >= minPassingGrade ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-xl p-3 text-center`}><p className="text-xs text-slate-500 uppercase font-medium">Prom. general</p><p className={`text-2xl font-bold ${overallAvg >= minPassingGrade ? 'text-green-700' : 'text-red-700'}`}>{overallAvg.toFixed(2)}</p></div>
             </div>
             <ControlBar />
-            <div className="space-y-6">
+            <div className="space-y-4">
               {courses.map((course: any) => (
                 <div key={course.groupId}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="h-px flex-1 bg-slate-200" />
-                    <span className="text-sm font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">{course.groupName}</span>
-                    <div className="h-px flex-1 bg-slate-200" />
-                  </div>
-                  {sldViewMode === 'cards' ? <SubjectCards results={course.results || []} /> : <SubjectTable results={course.results || []} />}
+                  {sldViewMode === 'cards' ? (
+                    <>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="h-px flex-1 bg-slate-200" />
+                        <span className="text-sm font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">{course.groupName}</span>
+                        <div className="h-px flex-1 bg-slate-200" />
+                      </div>
+                      <SubjectCards results={course.results || []} />
+                    </>
+                  ) : (
+                    <SubjectTable results={course.results || []} groupLabel={course.groupName} />
+                  )}
                 </div>
               ))}
             </div>

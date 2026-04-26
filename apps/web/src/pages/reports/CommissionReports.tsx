@@ -321,6 +321,7 @@ export default function CommissionReports() {
   const [referrals, setReferrals] = useState<any[]>([])
   const [logoBase64, setLogoBase64] = useState('')
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [actaSubjectFilter, setActaSubjectFilter] = useState<string[]>([]) // IDs; vacío = todas
 
   const gradeOptions = useMemo(() => {
     const map = new Map<string, { id: string; name: string }>()
@@ -490,10 +491,20 @@ export default function CommissionReports() {
     }
   }, [filterYear, filterPeriod, selectedGradeId, selectedGradeGroups, selectedGradeName, selectedYearLabel, selectedTermLabel, gradingScale, actaConfig.actaTypes, actaConfig.analysisText, actaConfig.convivenciaSuggestion, actaConfig.assistants])
 
+  const filteredSubjectData = (): LoadedData['subjectLevelData'] => {
+    if (!loadedData?.subjectLevelData) return null
+    if (actaSubjectFilter.length === 0) return loadedData.subjectLevelData
+    return {
+      ...loadedData.subjectLevelData,
+      results: loadedData.subjectLevelData.results.filter((r: any) => actaSubjectFilter.includes(r.subjectId)),
+    }
+  }
+
   const downloadPdf = () => {
     if (!loadedData) return
     setDownloading(true)
-    const html = buildActaHtml(actaConfig, loadedData, actaObs, referrals, institution?.name || '', logoBase64)
+    const dataForDownload = { ...loadedData, subjectLevelData: filteredSubjectData() }
+    const html = buildActaHtml(actaConfig, dataForDownload, actaObs, referrals, institution?.name || '', logoBase64)
     const win = window.open('', '_blank')
     if (!win) { alert('Permite las ventanas emergentes para descargar el PDF'); setDownloading(false); return }
     win.document.write(html)
@@ -507,7 +518,8 @@ export default function CommissionReports() {
     if (!loadedData) return
     setDownloading(true)
     try {
-      const inner = buildActaHtml(actaConfig, loadedData, actaObs, referrals, institution?.name || '', logoBase64)
+      const dataForDownload = { ...loadedData, subjectLevelData: filteredSubjectData() }
+      const inner = buildActaHtml(actaConfig, dataForDownload, actaObs, referrals, institution?.name || '', logoBase64)
       const bodyMatch = inner.match(/<body[^>]*>([\s\S]*)<\/body>/i)
       const bodyContent = bodyMatch ? bodyMatch[1] : inner
       const wordHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
@@ -685,11 +697,39 @@ export default function CommissionReports() {
                 ['analysis', 'Análisis general del grado'],
                 ['commitments', 'Compromisos y acuerdos'],
               ] as [keyof ActaConfig['includeSections'], string][]).map(([key, label]) => (
-                <label key={key} className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" checked={actaConfig.includeSections[key]}
-                    onChange={e => updateConfig('includeSections', { ...actaConfig.includeSections, [key]: e.target.checked })} className="rounded" />
-                  <span className="text-sm text-slate-700">{label}</span>
-                </label>
+                <div key={key}>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" checked={actaConfig.includeSections[key]}
+                      onChange={e => updateConfig('includeSections', { ...actaConfig.includeSections, [key]: e.target.checked })} className="rounded" />
+                    <span className="text-sm text-slate-700">{label}</span>
+                  </label>
+                  {/* Selector de asignaturas para la sección de niveles */}
+                  {key === 'subjectLevels' && actaConfig.includeSections.subjectLevels && loadedData?.subjectLevelData?.results?.length ? (
+                    <div className="ml-6 mt-2 border border-slate-200 rounded-lg p-3 bg-slate-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-medium text-slate-600">Asignaturas a incluir <span className="text-slate-400 font-normal">(ninguna = todas)</span></p>
+                        {actaSubjectFilter.length > 0 && (
+                          <button onClick={() => setActaSubjectFilter([])} className="text-xs text-slate-400 hover:text-red-500">× Limpiar</button>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {loadedData.subjectLevelData.results.map((r: any) => {
+                          const sel = actaSubjectFilter.includes(r.subjectId)
+                          return (
+                            <button key={r.subjectId} type="button"
+                              onClick={() => setActaSubjectFilter(prev => prev.includes(r.subjectId) ? prev.filter(x => x !== r.subjectId) : [...prev, r.subjectId])}
+                              className={`px-2 py-0.5 rounded text-xs border transition-colors ${sel ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-300 hover:border-teal-400'}`}>
+                              {r.subjectName}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {actaSubjectFilter.length > 0 && (
+                        <p className="text-xs text-teal-600 mt-1.5">{actaSubjectFilter.length} asignatura{actaSubjectFilter.length > 1 ? 's' : ''} seleccionada{actaSubjectFilter.length > 1 ? 's' : ''}</p>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
               ))}
               {actaConfig.includeSections.convivencia && (
                 <div className="ml-6 flex gap-2 flex-wrap mt-1">
