@@ -34,8 +34,8 @@ const reportBlocks: ReportBlock[] = [
       { id: 'avg-area', name: 'Promedio por áreas', description: '¿Qué área tiene mejor o peor rendimiento?', icon: FileSpreadsheet },
       { id: 'ranking-students', name: 'Ranking de estudiantes', description: '¿Quiénes son los mejores y peores del grupo?', icon: TrendingUp },
       { id: 'ranking-institutional', name: 'Ranking institucional', description: 'Ranking de toda la institución, por grado o nivel educativo', icon: Users },
-      { id: 'honor-roll', name: 'Cuadro de Honor', description: 'Top N estudiantes por grado (para actos cívicos y estímulos)', icon: TrendingUp },
-      { id: 'grade-distribution', name: 'Distribución de notas', description: '¿Cómo se distribuyen las calificaciones?', icon: BarChart3 },
+      { id: 'honor-roll', name: 'Top 5 por grado', description: 'Ranking de los 5 mejores estudiantes de cada grado', icon: TrendingUp },
+      { id: 'grade-distribution', name: 'Estudiantes por nivel', description: 'Cuántos estudiantes hay en cada nivel de desempeño por curso o grado', icon: BarChart3 },
     ],
   },
   {
@@ -116,6 +116,7 @@ export default function AcademicReports() {
   const [loadingReport, setLoadingReport] = useState(false)
   const [filterLevel, setFilterLevel] = useState('all')
   const [filterGradeId, setFilterGradeId] = useState('all')
+  const [honorRollTopN, setHonorRollTopN] = useState(5)
   const [showOnlyFailed, setShowOnlyFailed] = useState(false)
   const [showGrades, setShowGrades] = useState(true)
   const [showPerformance, setShowPerformance] = useState(false)
@@ -301,8 +302,8 @@ export default function AcademicReports() {
             if (!byGrade.has(gradeKey)) byGrade.set(gradeKey, [])
             byGrade.get(gradeKey)!.push(r)
           })
-          // Top N (default 3) por grado, ordenado por promedio desc
-          const topN = 3
+          // Top N configurable por grado, ordenado por promedio desc
+          const topN = honorRollTopN
           const honorRoll = Array.from(byGrade.entries()).map(([gradeName, students]) => ({
             gradeName,
             students: [...students].sort((a, b) => (b.average || 0) - (a.average || 0)).slice(0, topN),
@@ -1064,9 +1065,14 @@ export default function AcademicReports() {
         return wrap(<><SelectYear /><SelectGroup required /><SelectTerm /><BtnSearch /></>, 4)
 
       case 'honor-roll':
-        return wrap(<><SelectYear /><SelectStage /><SelectTerm /><BtnSearch label="Generar Cuadro" /></>, 4,
+        return wrap(<><SelectYear /><SelectStage /><SelectTerm /><div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Top N</label>
+          <select value={honorRollTopN} onChange={(e) => setHonorRollTopN(Number(e.target.value))} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
+            {[1, 3, 5, 10].map(n => <option key={n} value={n}>Top {n}</option>)}
+          </select>
+        </div><BtnSearch label={`Generar Top ${honorRollTopN}`} /></>, 4,
           <div className={`${style.bg} rounded-lg p-3 text-sm ${style.text}`}>
-            <strong>🏆</strong> Muestra los 3 mejores estudiantes de cada grado. Use el filtro de nivel para limitar (p.ej. solo primaria).
+            <strong>🏆</strong> Muestra los {honorRollTopN} mejores estudiantes de cada grado. Use el filtro de nivel para limitar (p.ej. solo primaria).
           </div>)
 
       case 'ranking-institutional':
@@ -1076,7 +1082,10 @@ export default function AcademicReports() {
           </div>)
 
       case 'grade-distribution':
-        return wrap(<><SelectYear /><SelectGroup required /><SelectSubject /><SelectTerm /><BtnSearch /></>, 5)
+        return wrap(<><SelectYear /><SelectGroup required /><SelectSubject /><SelectTerm /><BtnSearch /></>, 5,
+          <div className={`${style.bg} rounded-lg p-3 text-sm ${style.text}`}>
+            <strong>📊</strong> Muestra cuántos estudiantes se ubican en cada nivel de desempeño dentro del grupo seleccionado.
+          </div>)
 
       case 'min-grade':
         return wrap(<><SelectYear /><SelectGroup required /><SelectStudent /><BtnSearch label="Calcular" /></>, 4,

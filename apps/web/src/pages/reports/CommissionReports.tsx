@@ -6,13 +6,15 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useReportsData } from '../../hooks/useReportsData'
-import { observerApi, reportsApi, institutionConfigApi, toPublicFileUrl } from '../../lib/api'
+import api, { observerApi, reportsApi, institutionConfigApi, toPublicFileUrl } from '../../lib/api'
 
 interface ActaConfig {
   actaNumber: string
   date: string
   time: string
   place: string
+  topN: number
+  rankingMode: RankingMode
   agenda: string[]
   assistants: Array<{ name: string; role: string; courses: string }>
   includeSections: {
@@ -37,17 +39,20 @@ interface LoadedData {
   coursesLabel: string
   dane: string
   municipality: string
+  gradeRankingResults: any[]
   groupRankings: Array<{ groupId: string; groupName: string; results: any[] }>
   performanceBuckets: Array<{ label: string; count: number }>
   convivencia: any
   academicSummary: { totalStudents: number; generalAverage: number; approvedCount: number; riskCount: number }
 }
 
+type RankingMode = 'separate' | 'integral' | 'both'
+
 const DEFAULT_AGENDA = [
   'Verificaci\u00f3n de qu\u00f3rum y apertura de la sesi\u00f3n.',
   'Lectura y aprobaci\u00f3n del acta anterior.',
   'An\u00e1lisis del desempe\u00f1o acad\u00e9mico por niveles.',
-  'Reconocimiento de los cinco (5) mejores promedios por curso.',
+  'Reconocimiento de los mejores promedios por curso y grado.',
   'Revisi\u00f3n de situaciones convivenciales y casos remitidos a psicoorientaci\u00f3n.',
   'An\u00e1lisis general del grado: aspectos acad\u00e9micos y convivenciales.',
   'Compromisos, propuestas de mejora y cierre.',
@@ -78,6 +83,8 @@ function buildActaHtml(
   const pcLight = '#E6F1FB'
   const psicoRef = referrals.filter((r: any) => String(r.referredToRole || '').toUpperCase().includes('PSICO'))
   const convByGroup: any[] = d.convivencia?.byGroup || []
+  const topN = Math.max(1, Number(cfg.topN || 5))
+  const rankingMode = cfg.rankingMode || 'both'
 
   const escudoImg = logoBase64
     ? `<img src="${logoBase64}" alt="Escudo" style="width:72px;height:72px;object-fit:contain;" />`
@@ -132,13 +139,30 @@ function buildActaHtml(
     body += `<hr style="border:none;border-top:0.5px solid #e2e8f0;margin:14px 0;">`
   }
 
-  // 4. Top 5
+  // 4. Top N
   if (cfg.includeSections.top5) {
-    for (const group of d.groupRankings) {
-      body += secTitle('4', `Top 5 estudiantes \u2014 ${group.groupName}`)
-      body += `<table style="width:100%;border-collapse:collapse;"><thead>${th(['#', 'Estudiante', 'Promedio', 'Nivel'])}</thead><tbody>${
-        (group.results || []).slice(0, 5).map((s: any, i: number) => tr([i + 1, s.studentName, Number(s.average).toFixed(2), s.performance || '-'], i % 2 === 1)).join('')
+    const appendGroupTables = () => {
+      for (const group of d.groupRankings) {
+        body += secTitle('4', `Top ${topN} estudiantes \u2014 ${group.groupName}`)
+        body += `<table style="width:100%;border-collapse:collapse;"><thead>${th(['#', 'Estudiante', 'Promedio', 'Nivel'])}</thead><tbody>${
+          (group.results || []).slice(0, topN).map((s: any, i: number) => tr([i + 1, s.studentName, Number(s.average).toFixed(2), s.performance || '-'], i % 2 === 1)).join('')
+        }</tbody></table><div style="margin-bottom:10px;"></div>`
+      }
+    }
+
+    const appendIntegralTable = () => {
+      const ordered = [...d.gradeRankingResults].sort((a: any, b: any) => (b.average || 0) - (a.average || 0)).slice(0, topN)
+      body += secTitle('4', `Top ${topN} integral del grado ${d.gradeName}`)
+      body += `<table style="width:100%;border-collapse:collapse;"><thead>${th(['#', 'Estudiante', 'Curso', 'Promedio', 'Nivel'])}</thead><tbody>${
+        ordered.map((s: any, i: number) => tr([i + 1, s.studentName, s.group || s.groupName || '-', Number(s.average).toFixed(2), s.performance || '-'], i % 2 === 1)).join('')
       }</tbody></table><div style="margin-bottom:10px;"></div>`
+    }
+
+    if (rankingMode === 'separate') appendGroupTables()
+    else if (rankingMode === 'integral') appendIntegralTable()
+    else {
+      appendIntegralTable()
+      appendGroupTables()
     }
     body += `<hr style="border:none;border-top:0.5px solid #e2e8f0;margin:14px 0;">`
   }
@@ -291,6 +315,8 @@ export default function CommissionReports() {
     date: new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' }),
     time: '8:00 a.m. \u2013 10:30 a.m.',
     place: 'Sala de profesores',
+    topN: 5,
+    rankingMode: 'both',
     agenda: [...DEFAULT_AGENDA],
     assistants: [
       { name: '', role: 'Coordinador(a)', courses: '' },
@@ -338,7 +364,25 @@ export default function CommissionReports() {
   useEffect(() => {
     if (!lsKey) return
     const stored = localStorage.getItem(lsKey)
-    if (stored) { try { setActaConfig(JSON.parse(stored)) } catch {} }
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        setActaConfig(prev => ({
+          ...prev,
+          ...parsed,
+          topN: Number(parsed.topN) > 0 ? Number(parsed.topN) : prev.topN,
+          rankingMode: parsed.rankingMode === 'separate' || parsed.rankingMode === 'integral' || parsed.rankingMode === 'both'
+            ? parsed.rankingMode
+            : prev.rankingMode,
+          includeSections: { ...prev.includeSections, ...(parsed.includeSections || {}) },
+          assistants: parsed.assistants || prev.assistants,
+          agenda: parsed.agenda || prev.agenda,
+          commitments: parsed.commitments || prev.commitments,
+          signatories: parsed.signatories || prev.signatories,
+          actaTypes: parsed.actaTypes || prev.actaTypes,
+        }))
+      } catch {}
+    }
   }, [lsKey])
   useEffect(() => { if (lsKey) localStorage.setItem(lsKey, JSON.stringify(actaConfig)) }, [lsKey, actaConfig])
 
@@ -346,7 +390,6 @@ export default function CommissionReports() {
     if (!filterYear || !selectedGradeId || selectedGradeGroups.length === 0) return
     setLoadingData(true)
     try {
-      const observerCommissionApi = observerApi as any
       const [gradeRankingRes, convivenciaRes, groupRankings, obsRes] = await Promise.all([
         reportsApi.getInstitutionalRanking(filterYear, { gradeId: selectedGradeId, termId: filterPeriod || undefined }),
         observerApi.getConvivencialStats(filterYear, { gradeId: selectedGradeId }),
@@ -354,7 +397,7 @@ export default function CommissionReports() {
           const res = await reportsApi.getStudentRanking(filterYear, group.id, filterPeriod || undefined)
           return { groupId: group.id, groupName: `${group.grade?.name || ''} ${group.name}`.trim(), results: res.data?.results || [] }
         })),
-        observerCommissionApi.getCommissionData(filterYear, selectedGradeId, actaConfig.actaTypes.join(',')),
+        api.get('/observer/commission-data', { params: { academicYearId: filterYear, gradeId: selectedGradeId, actaTypes: actaConfig.actaTypes.join(',') } }),
       ])
       const rankingResults: any[] = gradeRankingRes.data?.results || []
       const pass = gradingScale.minPassingGrade
@@ -372,6 +415,7 @@ export default function CommissionReports() {
         gradeName: selectedGradeName, yearLabel: selectedYearLabel, termLabel: selectedTermLabel,
         coursesLabel: selectedGradeGroups.map(g => `${g.grade?.name || ''} ${g.name}`.trim()).join(' \u00b7 '),
         dane: institutionRaw.dane || '', municipality: institutionRaw.municipality || '',
+        gradeRankingResults: rankingResults,
         groupRankings, performanceBuckets: buckets, convivencia: convivenciaRes.data,
         academicSummary: {
           totalStudents: rankingResults.length, generalAverage: avg,
@@ -562,12 +606,36 @@ export default function CommissionReports() {
               <h2 className="font-semibold text-slate-900 text-sm">Secciones del acta</h2>
             </div>
             <div className="p-4 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Top N estudiantes</label>
+                  <select
+                    value={actaConfig.topN}
+                    onChange={e => updateConfig('topN', Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  >
+                    {[1, 3, 5, 10].map(n => <option key={n} value={n}>Top {n}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Modo de ranking</label>
+                  <select
+                    value={actaConfig.rankingMode}
+                    onChange={e => updateConfig('rankingMode', e.target.value as RankingMode)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  >
+                    <option value="both">Integral y separado</option>
+                    <option value="integral">Solo integral por grado</option>
+                    <option value="separate">Solo separado por curso</option>
+                  </select>
+                </div>
+              </div>
               {([
-                ['academicLevels', 'Desempe\u00f1o acad\u00e9mico por niveles'],
-                ['top5', 'Top 5 por curso'],
+                ['academicLevels', 'Desempeño académico por niveles'],
+                ['top5', 'Top N por curso / grado'],
                 ['convivencia', 'Situaciones convivenciales (actas formales)'],
-                ['psico', 'Remisiones a psicoorientaci\u00f3n'],
-                ['analysis', 'An\u00e1lisis general del grado'],
+                ['psico', 'Remisiones a psicoorientación'],
+                ['analysis', 'Análisis general del grado'],
                 ['commitments', 'Compromisos y acuerdos'],
               ] as [keyof ActaConfig['includeSections'], string][]).map(([key, label]) => (
                 <label key={key} className="flex items-center gap-3 cursor-pointer">
@@ -593,12 +661,12 @@ export default function CommissionReports() {
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
               <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
                 <FileText className="w-4 h-4 text-orange-600" />
-                <h2 className="font-semibold text-slate-900 text-sm">An\u00e1lisis general</h2>
+                <h2 className="font-semibold text-slate-900 text-sm">Análisis general</h2>
               </div>
               <div className="p-4">
                 <textarea value={actaConfig.analysisText} onChange={e => updateConfig('analysisText', e.target.value)}
                   rows={4} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none"
-                  placeholder="Texto de an\u00e1lisis general del grado..." />
+                  placeholder="Texto de análisis general del grado..." />
               </div>
             </div>
           )}
@@ -709,7 +777,10 @@ export default function CommissionReports() {
                 </div>
               )}
               {loadedData && actaConfig.includeSections.top5 && (
-                <div><p className="font-semibold text-slate-700 mb-1">4. Top 5 \u2014 {loadedData.groupRankings.length} curso(s)</p></div>
+                <div>
+                  <p className="font-semibold text-slate-700 mb-1">4. Top {actaConfig.topN} — {loadedData.groupRankings.length} curso(s)</p>
+                  <p className="text-slate-600">Modo: {actaConfig.rankingMode === 'both' ? 'integral y separado' : actaConfig.rankingMode === 'integral' ? 'solo integral por grado' : 'solo separado por curso'}</p>
+                </div>
               )}
               {actaConfig.includeSections.convivencia && (
                 <div>
