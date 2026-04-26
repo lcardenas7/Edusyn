@@ -52,21 +52,24 @@ const CATEGORIES: ReportCategory[] = [
     ],
   },
   {
-    id: 'academic', name: 'Académico', description: 'Consolidados y rendimiento estudiantil',
+    id: 'academic', name: 'Académico', description: 'Consolidados, ranking y rendimiento estudiantil',
     icon: BookOpen, href: '/reports/academic', color: 'green', reportCount: 14,
     reports: [
       { id: 'cons-subjects', name: 'Consolidado asignaturas', href: '/reports/academic', icon: ClipboardList },
-      { id: 'ranking-students', name: 'Ranking estudiantes', href: '/reports/academic', icon: TrendingUp },
-      { id: 'avg-subject', name: 'Promedio asignaturas', href: '/reports/academic', icon: BookOpen },
+      { id: 'ranking-students', name: 'Ranking de estudiantes', href: '/reports/academic', icon: TrendingUp },
+      { id: 'avg-subject', name: 'Promedio por asignatura', href: '/reports/academic', icon: BookOpen },
+      { id: 'performance-levels', name: 'Distribución por niveles', href: '/reports/academic', icon: BarChart3 },
       { id: 'teacher-performance', name: 'Rendimiento docente', href: '/reports/academic', icon: Users },
     ],
   },
   {
-    id: 'convivencia', name: 'Convivencia', description: 'Observador, situaciones y seguimiento convivencial',
-    icon: Shield, href: '/observer-stats', color: 'amber', reportCount: 4,
+    id: 'convivencia', name: 'Convivencia', description: 'Observador, actas, situaciones y remisiones',
+    icon: Shield, href: '/observer-stats', color: 'amber', reportCount: 6,
     reports: [
       { id: 'conv-stats', name: 'Informe convivencial', href: '/observer-stats', icon: BarChart3 },
-      { id: 'conv-observer', name: 'Observador', href: '/observer', icon: ClipboardList },
+      { id: 'conv-observer', name: 'Observador del estudiante', href: '/observer', icon: ClipboardList },
+      { id: 'conv-actas', name: 'Actas formales (Tipo I, II, III)', href: '/observer-stats', icon: FileText },
+      { id: 'conv-psico', name: 'Remisiones a psicoorientación', href: '/observer-stats', icon: UserX },
       { id: 'conv-alerts', name: 'Alertas convivenciales', href: '/observer-stats', icon: AlertTriangle },
     ],
   },
@@ -107,13 +110,10 @@ const CATEGORIES: ReportCategory[] = [
     ],
   },
   {
-    id: 'commission', name: 'Comisión', description: 'Acta consolidada, top 5 y convivencia por grado',
-    icon: ClipboardList, href: '/reports/commission', color: 'slate', reportCount: 4,
+    id: 'commission', name: 'Comisión de Evaluación', description: 'Genera el acta formal de comisión con datos académicos y convivenciales',
+    icon: ClipboardList, href: '/reports/commission', color: 'teal', reportCount: 1,
     reports: [
-      { id: 'commission-academic', name: 'Resumen académico', href: '/reports/commission', icon: BarChart3 },
-      { id: 'commission-top5', name: 'Top 5 por curso', href: '/reports/commission', icon: TrendingUp },
-      { id: 'commission-convivencia', name: 'Situación convivencial', href: '/reports/commission', icon: Shield },
-      { id: 'commission-acta', name: 'Acta consolidada', href: '/reports/commission', icon: FileText },
+      { id: 'commission-acta', name: 'Acta de comisión (configurable)', href: '/reports/commission', icon: FileText },
     ],
   },
 ]
@@ -126,6 +126,7 @@ const COLOR_MAP: Record<string, { bg: string; bgLight: string; border: string; t
   indigo: { bg: 'bg-indigo-600', bgLight: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-600', hover: 'hover:border-indigo-400', ring: 'ring-indigo-200' },
   red:    { bg: 'bg-red-500',    bgLight: 'bg-red-50',    border: 'border-red-200',    text: 'text-red-600',    hover: 'hover:border-red-400',    ring: 'ring-red-200' },
   slate:  { bg: 'bg-slate-700',   bgLight: 'bg-slate-50',  border: 'border-slate-200',   text: 'text-slate-700',   hover: 'hover:border-slate-400',   ring: 'ring-slate-200' },
+  teal:   { bg: 'bg-teal-600',   bgLight: 'bg-teal-50',   border: 'border-teal-200',   text: 'text-teal-600',   hover: 'hover:border-teal-400',   ring: 'ring-teal-200' },
 }
 
 export default function ReportsHub() {
