@@ -121,6 +121,8 @@ export default function AcademicReports() {
   const [honorRollMode, setHonorRollMode] = useState<'both' | 'separate' | 'integral'>('both')
   const [gradeDistMode, setGradeDistMode] = useState<'both' | 'separate' | 'integral'>('both')
   const [filterSubjectIds, setFilterSubjectIds] = useState<string[]>([])
+  const [sldViewMode, setSldViewMode] = useState<'cards' | 'table'>('cards')
+  const [sldSortBy, setSldSortBy] = useState<'name' | 'avg' | 'approval' | 'low'>('name')
   const [showOnlyFailed, setShowOnlyFailed] = useState(false)
   const [showGrades, setShowGrades] = useState(true)
   const [showPerformance, setShowPerformance] = useState(false)
@@ -1874,75 +1876,183 @@ export default function AcademicReports() {
       if (sldResults.length === 0) return (
         <div className="text-center py-12"><BarChart3 className="w-12 h-12 text-slate-300 mx-auto mb-3" /><p className="text-slate-500">Sin datos de desempeño por asignatura</p></div>
       )
-      // Paleta unificada: si la institución tiene colores configurados los usamos; si no, paleta semántica fija por orden
       const semanticPalette = ['#ef4444', '#f59e0b', '#3b82f6', '#22c55e', '#8b5cf6', '#06b6d4']
       const levelHexColors: Record<string, string> = {}
       levelLabels.forEach((l, i) => {
         const inst = gradingScale.performanceLevels.find((pl: any) => pl.name === l)
         levelHexColors[l] = inst?.color || semanticPalette[i] || '#94a3b8'
       })
-      const totalSubjects = sldResults.length
-      const overallAvg = sldResults.length > 0 ? sldResults.reduce((s: number, r: any) => s + r.average, 0) / sldResults.length : 0
-      return (
-        <div className="space-y-5">
-          {/* KPIs */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"><p className="text-xs text-blue-500 uppercase">Asignaturas</p><p className="text-2xl font-bold text-blue-700">{totalSubjects}</p></div>
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center"><p className="text-xs text-slate-500 uppercase">Total est.</p><p className="text-2xl font-bold text-slate-700">{sldResults[0]?.totalStudents ?? '-'}</p></div>
-            <div className={`${overallAvg >= minPassingGrade ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-xl p-3 text-center`}><p className="text-xs text-slate-500 uppercase">Prom. general</p><p className={`text-2xl font-bold ${overallAvg >= minPassingGrade ? 'text-green-700' : 'text-red-700'}`}>{overallAvg.toFixed(1)}</p></div>
-          </div>
-          {/* Leyenda de colores — única fuente de verdad */}
-          <div className="flex flex-wrap gap-3 px-1">
-            {levelLabels.map(l => (
-              <div key={l} className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: levelHexColors[l] }} />
-                <span className="text-xs text-slate-600">{l}</span>
+      const sldSorted = [...sldResults].sort((a, b) => {
+        if (sldSortBy === 'avg') return (b.average || 0) - (a.average || 0)
+        if (sldSortBy === 'approval') return (b.approvalRate || 0) - (a.approvalRate || 0)
+        if (sldSortBy === 'low') {
+          const lowA = a.levels?.find((l: any) => l.label === levelLabels[0])?.percentage || 0
+          const lowB = b.levels?.find((l: any) => l.label === levelLabels[0])?.percentage || 0
+          return lowB - lowA
+        }
+        return (a.subjectName || '').localeCompare(b.subjectName || '', 'es')
+      })
+      const overallAvg = sldResults.reduce((s: number, r: any) => s + r.average, 0) / sldResults.length
+      const worstApproval = [...sldResults].sort((a, b) => a.approvalRate - b.approvalRate)[0]
+
+      // Barra stacked reutilizable
+      const StackedBar = ({ r, height = 'h-8' }: { r: any; height?: string }) => {
+        const total = r.totalStudents || 1
+        return (
+          <div className={`flex ${height} rounded-lg overflow-hidden w-full`}>
+            {(r.levels || []).map((lv: any) => lv.count > 0 && (
+              <div key={lv.label} className="h-full flex items-center justify-center overflow-hidden transition-all"
+                style={{ width: `${(lv.count / total) * 100}%`, backgroundColor: levelHexColors[lv.label] || '#94a3b8' }}
+                title={`${lv.label}: ${lv.count} (${lv.percentage?.toFixed(1)}%)`}>
+                {(lv.count / total) >= 0.1 && (
+                  <span className="text-white text-xs font-bold drop-shadow-sm select-none">{lv.percentage?.toFixed(0)}%</span>
+                )}
               </div>
             ))}
           </div>
-          {/* Tabla + barras stacked por asignatura */}
-          <div className="space-y-3">
-            {sldResults.map((r: any) => {
-              const total = r.totalStudents || 1
-              return (
-                <div key={r.subjectId} className="bg-white border border-slate-200 rounded-xl p-4">
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div>
-                      <p className="font-semibold text-slate-800 text-sm">{r.subjectName}</p>
+        )
+      }
+
+      return (
+        <div className="space-y-4">
+          {/* KPIs */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
+              <p className="text-xs text-blue-500 uppercase font-medium">Asignaturas</p>
+              <p className="text-2xl font-bold text-blue-700">{sldResults.length}</p>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+              <p className="text-xs text-slate-500 uppercase font-medium">Estudiantes</p>
+              <p className="text-2xl font-bold text-slate-700">{sldResults[0]?.totalStudents ?? '-'}</p>
+            </div>
+            <div className={`${overallAvg >= minPassingGrade ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-xl p-3 text-center`}>
+              <p className="text-xs text-slate-500 uppercase font-medium">Prom. general</p>
+              <p className={`text-2xl font-bold ${overallAvg >= minPassingGrade ? 'text-green-700' : 'text-red-700'}`}>{overallAvg.toFixed(2)}</p>
+            </div>
+            {worstApproval && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
+                <p className="text-xs text-red-500 uppercase font-medium">Menor aprobación</p>
+                <p className="text-sm font-bold text-red-700 truncate">{worstApproval.subjectName}</p>
+                <p className="text-xs text-red-500">{worstApproval.approvalRate?.toFixed(1)}%</p>
+              </div>
+            )}
+          </div>
+
+          {/* Barra de control: leyenda + vista + ordenamiento */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
+            <div className="flex flex-wrap gap-3">
+              {levelLabels.map(l => (
+                <div key={l} className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded flex-shrink-0" style={{ backgroundColor: levelHexColors[l] }} />
+                  <span className="text-xs text-slate-600 font-medium">{l}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <select value={sldSortBy} onChange={e => setSldSortBy(e.target.value as any)} className="text-xs border border-slate-300 rounded px-2 py-1 bg-white">
+                <option value="name">Ordenar: A–Z</option>
+                <option value="avg">Ordenar: Promedio ↓</option>
+                <option value="approval">Ordenar: Aprobación ↓</option>
+                <option value="low">Ordenar: Más bajo ↓</option>
+              </select>
+              <div className="flex border border-slate-300 rounded overflow-hidden">
+                <button onClick={() => setSldViewMode('cards')} className={`px-3 py-1 text-xs font-medium transition-colors ${sldViewMode === 'cards' ? 'bg-green-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
+                  Tarjetas
+                </button>
+                <button onClick={() => setSldViewMode('table')} className={`px-3 py-1 text-xs font-medium transition-colors ${sldViewMode === 'table' ? 'bg-green-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
+                  Tabla
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* ─── VISTA TARJETAS ─── */}
+          {sldViewMode === 'cards' && (
+            <div className="space-y-3">
+              {sldSorted.map((r: any) => (
+                <div key={r.subjectId} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                  {/* Cabecera */}
+                  <div className="flex items-center justify-between px-4 pt-3 pb-2 gap-3">
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-800">{r.subjectName}</p>
                       {r.areaName && <p className="text-xs text-slate-400">{r.areaName}</p>}
                     </div>
-                    <div className="flex gap-3 text-xs flex-shrink-0">
-                      <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded font-medium">Prom. {r.average?.toFixed(1)}</span>
+                    <div className="flex gap-2 text-xs flex-shrink-0 flex-wrap justify-end">
+                      <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded font-medium">Prom. {r.average?.toFixed(2)}</span>
                       <span className={`px-2 py-1 rounded font-medium ${r.approvalRate >= 80 ? 'bg-green-100 text-green-700' : r.approvalRate >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
-                        Aprobación {r.approvalRate?.toFixed(1)}%
+                        {r.approvalRate?.toFixed(1)}% aprobación
                       </span>
                       <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded">{r.totalStudents} est.</span>
                     </div>
                   </div>
-                  {/* Barra stacked proporcional */}
-                  <div className="flex h-6 rounded-lg overflow-hidden w-full mb-2">
-                    {(r.levels || []).map((lv: any) => lv.count > 0 && (
-                      <div key={lv.label} className="h-full flex items-center justify-center text-white text-xs font-bold overflow-hidden"
-                        style={{ width: `${(lv.count / total) * 100}%`, backgroundColor: levelHexColors[lv.label] || '#94a3b8', minWidth: lv.count > 0 ? '4px' : '0' }}
-                        title={`${lv.label}: ${lv.count} (${lv.percentage?.toFixed(1)}%)`}>
-                        {(lv.count / total) >= 0.08 ? `${lv.percentage?.toFixed(0)}%` : ''}
-                      </div>
-                    ))}
+                  {/* Barra stacked */}
+                  <div className="px-4 pb-1">
+                    <StackedBar r={r} height="h-9" />
                   </div>
-                  {/* Detalle por nivel */}
-                  <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${levelLabels.length}, 1fr)` }}>
-                    {(r.levels || []).map((lv: any) => (
-                      <div key={lv.label} className="text-center">
-                        <div className="w-2 h-2 rounded-full mx-auto mb-0.5" style={{ backgroundColor: levelHexColors[lv.label] }} />
-                        <p className="text-xs font-semibold text-slate-700">{lv.count}</p>
-                        <p className="text-[10px] text-slate-400">{lv.percentage?.toFixed(1)}%</p>
+                  {/* Detalle por nivel — fila limpia */}
+                  <div className="grid border-t border-slate-100" style={{ gridTemplateColumns: `repeat(${levelLabels.length}, 1fr)` }}>
+                    {(r.levels || []).map((lv: any, idx: number) => (
+                      <div key={lv.label} className={`px-3 py-2 text-center ${idx < levelLabels.length - 1 ? 'border-r border-slate-100' : ''}`}>
+                        <div className="flex items-center justify-center gap-1 mb-0.5">
+                          <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: levelHexColors[lv.label] }} />
+                          <span className="text-[11px] text-slate-500 font-medium">{lv.label}</span>
+                        </div>
+                        <p className="text-base font-bold text-slate-800">{lv.count}</p>
+                        <p className="text-xs text-slate-400">{lv.percentage?.toFixed(1)}%</p>
                       </div>
                     ))}
                   </div>
                 </div>
-              )
-            })}
-          </div>
+              ))}
+            </div>
+          )}
+
+          {/* ─── VISTA TABLA ─── */}
+          {sldViewMode === 'table' && (
+            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="px-3 py-2.5 text-left font-semibold text-slate-700">Asignatura</th>
+                    <th className="px-3 py-2.5 text-left font-semibold text-slate-500 text-xs hidden sm:table-cell">Área</th>
+                    <th className="px-3 py-2.5 text-center font-semibold text-slate-700">Prom.</th>
+                    <th className="px-3 py-2.5 text-center font-semibold text-slate-700">Aprob.</th>
+                    <th className="px-3 py-2.5 text-left font-semibold text-slate-700 min-w-[160px]">Distribución</th>
+                    {levelLabels.map(l => (
+                      <th key={l} className="px-2 py-2.5 text-center text-xs font-semibold" style={{ color: levelHexColors[l] }}>{l}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sldSorted.map((r: any, idx: number) => (
+                    <tr key={r.subjectId} className={`border-b border-slate-100 ${idx % 2 === 0 ? '' : 'bg-slate-50/50'} hover:bg-blue-50/30 transition-colors`}>
+                      <td className="px-3 py-3">
+                        <p className="font-semibold text-slate-800 text-sm">{r.subjectName}</p>
+                      </td>
+                      <td className="px-3 py-3 text-xs text-slate-400 hidden sm:table-cell">{r.areaName}</td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={`font-bold text-sm ${r.average >= minPassingGrade ? 'text-green-700' : 'text-red-600'}`}>{r.average?.toFixed(2)}</span>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${r.approvalRate >= 80 ? 'bg-green-100 text-green-700' : r.approvalRate >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                          {r.approvalRate?.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 min-w-[160px]">
+                        <StackedBar r={r} height="h-5" />
+                      </td>
+                      {(r.levels || []).map((lv: any) => (
+                        <td key={lv.label} className="px-2 py-3 text-center">
+                          <p className="font-bold text-slate-800">{lv.count}</p>
+                          <p className="text-[10px] text-slate-400">{lv.percentage?.toFixed(1)}%</p>
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )
     }
