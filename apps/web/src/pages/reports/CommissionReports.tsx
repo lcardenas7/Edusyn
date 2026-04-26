@@ -346,6 +346,7 @@ export default function CommissionReports() {
     if (!filterYear || !selectedGradeId || selectedGradeGroups.length === 0) return
     setLoadingData(true)
     try {
+      const observerCommissionApi = observerApi as any
       const [gradeRankingRes, convivenciaRes, groupRankings, obsRes] = await Promise.all([
         reportsApi.getInstitutionalRanking(filterYear, { gradeId: selectedGradeId, termId: filterPeriod || undefined }),
         observerApi.getConvivencialStats(filterYear, { gradeId: selectedGradeId }),
@@ -353,7 +354,7 @@ export default function CommissionReports() {
           const res = await reportsApi.getStudentRanking(filterYear, group.id, filterPeriod || undefined)
           return { groupId: group.id, groupName: `${group.grade?.name || ''} ${group.name}`.trim(), results: res.data?.results || [] }
         })),
-        observerApi.getCommissionData(filterYear, selectedGradeId, actaConfig.actaTypes.join(',')),
+        observerCommissionApi.getCommissionData(filterYear, selectedGradeId, actaConfig.actaTypes.join(',')),
       ])
       const rankingResults: any[] = gradeRankingRes.data?.results || []
       const pass = gradingScale.minPassingGrade
