@@ -118,6 +118,8 @@ export default function AcademicReports() {
   const [filterLevel, setFilterLevel] = useState('all')
   const [filterGradeId, setFilterGradeId] = useState('all')
   const [honorRollTopN, setHonorRollTopN] = useState(5)
+  const [honorRollMode, setHonorRollMode] = useState<'both' | 'separate' | 'integral'>('both')
+  const [gradeDistMode, setGradeDistMode] = useState<'both' | 'separate' | 'integral'>('both')
   const [showOnlyFailed, setShowOnlyFailed] = useState(false)
   const [showGrades, setShowGrades] = useState(true)
   const [showPerformance, setShowPerformance] = useState(false)
@@ -311,10 +313,12 @@ export default function AcademicReports() {
               if (!byGroup.has(key)) byGroup.set(key, [])
               byGroup.get(key)!.push(r)
             })
-            honorRoll = Array.from(byGroup.entries()).map(([groupName, students]) => ({
-              gradeName: groupName,
-              students: [...students].sort((a: any, b: any) => (b.average || 0) - (a.average || 0)).slice(0, topN),
-            }))
+            honorRoll = Array.from(byGroup.entries())
+              .sort(([a], [b]) => a.localeCompare(b, 'es', { numeric: true }))
+              .map(([groupName, students]) => ({
+                gradeName: groupName,
+                students: [...students].sort((a: any, b: any) => (b.average || 0) - (a.average || 0)).slice(0, topN),
+              }))
             gradeIntegral = [...results].sort((a: any, b: any) => (b.average || 0) - (a.average || 0)).slice(0, topN)
           } else {
             const byGrade = new Map<string, any[]>()
@@ -332,12 +336,41 @@ export default function AcademicReports() {
           break
         }
         case 'grade-distribution': {
-          if (filterGrade === 'all') break
-          const res = await reportsApi.getGradeDistribution(filterYear, filterGrade, {
-            subjectId: filterSubject !== 'all' ? filterSubject : undefined,
-            termId: filterPeriod || undefined,
-          })
-          setReportData(res.data)
+          if (filterGrade !== 'all') {
+            const res = await reportsApi.getGradeDistribution(filterYear, filterGrade, {
+              subjectId: filterSubject !== 'all' ? filterSubject : undefined,
+              termId: filterPeriod || undefined,
+            })
+            setReportData(res.data)
+          } else if (filterGradeId !== 'all') {
+            const gradeGroups = groups.filter((g: any) => g.grade?.id === filterGradeId)
+              .sort((a: any, b: any) => (`${a.grade?.name} ${a.name}`).localeCompare(`${b.grade?.name} ${b.name}`, 'es', { numeric: true }))
+            if (gradeGroups.length === 0) break
+            const groupResults = await Promise.all(
+              gradeGroups.map(async (g: any) => {
+                const res = await reportsApi.getGradeDistribution(filterYear, g.id, {
+                  subjectId: filterSubject !== 'all' ? filterSubject : undefined,
+                  termId: filterPeriod || undefined,
+                })
+                return { groupId: g.id, groupName: `${g.grade?.name || ''} ${g.name}`.trim(), ...res.data }
+              })
+            )
+            const allDists = groupResults.filter((r: any) => r.distribution)
+            const ranges: string[] = allDists[0]?.distribution?.map((d: any) => d.range) || []
+            const totalStudents = allDists.reduce((s: number, r: any) => s + (r.summary?.total || 0), 0)
+            const gradeIntegral = {
+              distribution: ranges.map((range: string) => {
+                const count = allDists.reduce((s: number, r: any) => s + (r.distribution?.find((d: any) => d.range === range)?.count || 0), 0)
+                return { range, count, percentage: totalStudents > 0 ? (count / totalStudents) * 100 : 0 }
+              }),
+              summary: {
+                total: totalStudents,
+                average: allDists.length > 0 ? allDists.reduce((s: number, r: any) => s + (r.summary?.average || 0), 0) / allDists.length : 0,
+                median: null, stdDev: null,
+              },
+            }
+            setReportData({ byGroup: groupResults, gradeIntegral })
+          }
           break
         }
         case 'subject-level-dist': {
@@ -1107,9 +1140,16 @@ export default function AcademicReports() {
           <select value={honorRollTopN} onChange={(e) => setHonorRollTopN(Number(e.target.value))} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
             {[1, 3, 5, 10].map(n => <option key={n} value={n}>Top {n}</option>)}
           </select>
-        </div><BtnSearch label={`Generar Top ${honorRollTopN}`} /></>, 6,
+        </div><div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Mostrar</label>
+          <select value={honorRollMode} onChange={(e) => setHonorRollMode(e.target.value as any)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
+            <option value="both">Separado + Integral</option>
+            <option value="separate">Solo por curso</option>
+            <option value="integral">Solo integral del grado</option>
+          </select>
+        </div><BtnSearch label={`Generar Top ${honorRollTopN}`} /></>, 4,
           <div className={`${style.bg} rounded-lg p-3 text-sm ${style.text}`}>
-            <strong>🏆</strong> Selecciona un grado para ver los {honorRollTopN} mejores por curso (con tabla integral del grado). Elige también un curso para ver solo ese curso.
+            <strong>🏆</strong> Selecciona un grado para ver los {honorRollTopN} mejores por curso. Usa "Mostrar" para elegir si ver separado por curso, solo el integral del grado, o ambos.
           </div>)
       }
 
@@ -1119,11 +1159,26 @@ export default function AcademicReports() {
             <strong>💡</strong> Deja todos los filtros vacíos para ver el ranking de toda la institución. Puedes filtrar por grupo, grado o nivel educativo.
           </div>)
 
-      case 'grade-distribution':
-        return wrap(<><SelectYear /><SelectGroup required /><SelectSubject /><SelectTerm /><BtnSearch /></>, 5,
+      case 'grade-distribution': {
+        const gdGroups = filterGradeId !== 'all' ? groups.filter((g: any) => g.grade?.id === filterGradeId) : groups
+        return wrap(<><SelectYear /><SelectGrade /><div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Curso (opcional)</label>
+            <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
+              <option value="all">Todo el grado</option>
+              {gdGroups.map((g: any) => <option key={g.id} value={g.id}>{g.grade?.name} {g.name}</option>)}
+            </select>
+          </div><SelectSubject /><SelectTerm /><div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Mostrar</label>
+          <select value={gradeDistMode} onChange={(e) => setGradeDistMode(e.target.value as any)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm" disabled={filterGrade !== 'all'}>
+            <option value="both">Separado + Integral</option>
+            <option value="separate">Solo por curso</option>
+            <option value="integral">Solo integral del grado</option>
+          </select>
+        </div><BtnSearch /></>, 4,
           <div className={`${style.bg} rounded-lg p-3 text-sm ${style.text}`}>
-            <strong>📊</strong> Muestra cuántos estudiantes se ubican en cada nivel de desempeño dentro del grupo seleccionado.
+            <strong>📊</strong> Selecciona un grado para ver todos los cursos. Usa "Mostrar" para elegir separado, integral o ambos.
           </div>)
+      }
 
       case 'subject-level-dist':
         return wrap(<><SelectYear /><SelectGrade /><SelectGroup /><SelectTerm /><BtnSearch /></>, 5,
@@ -1657,14 +1712,80 @@ export default function AcademicReports() {
             <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center"><p className="text-xs uppercase text-green-600">Mejor promedio</p><p className="text-2xl font-bold text-green-700">{bestAvg.toFixed(2)}</p></div>
           </div>
           <div className="space-y-3">
-            {hrData.map(({ gradeName, students }) => renderHonorTable(students, gradeName))}
-            {gradeIntegral && gradeIntegral.length > 0 && renderHonorTable(gradeIntegral, 'Integral del Grado', true)}
+            {honorRollMode !== 'integral' && hrData.map(({ gradeName, students }) => renderHonorTable(students, gradeName))}
+            {honorRollMode !== 'separate' && gradeIntegral && gradeIntegral.length > 0 && renderHonorTable(gradeIntegral, 'Integral del Grado', true)}
+            {honorRollMode === 'integral' && !gradeIntegral && hrData.map(({ gradeName, students }) => renderHonorTable(students, gradeName))}
           </div>
         </div>
       )
     }
 
     // ── Distribución de notas ──
+    const renderDistPanel = (dist: any, label?: string, isIntegral = false) => {
+      if (!dist?.distribution) return null
+      const max = Math.max(...dist.distribution.map((d: any) => d.count), 1)
+      const pieData = dist.distribution.filter((d: any) => d.count > 0).map((d: any) => ({ name: d.range, value: d.count }))
+      return (
+        <div className={`border ${isIntegral ? 'border-green-300' : 'border-slate-200'} rounded-xl overflow-hidden`}>
+          {label && (
+            <div className={`px-4 py-2 font-semibold text-sm ${isIntegral ? 'bg-green-50 text-green-800' : 'bg-amber-50 text-amber-800'} flex items-center gap-2`}>
+              <BarChart3 className="w-4 h-4" /> {label}
+            </div>
+          )}
+          <div className="p-4 space-y-3">
+            {dist.summary && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="bg-slate-50 rounded-lg p-2 text-center"><p className="text-xs text-slate-500">Total</p><p className="text-lg font-bold">{dist.summary.total}</p></div>
+                <div className="bg-slate-50 rounded-lg p-2 text-center"><p className="text-xs text-slate-500">Promedio</p><p className="text-lg font-bold">{dist.summary.average?.toFixed(2)}</p></div>
+                {dist.summary.median != null && <div className="bg-slate-50 rounded-lg p-2 text-center"><p className="text-xs text-slate-500">Mediana</p><p className="text-lg font-bold">{dist.summary.median?.toFixed(2)}</p></div>}
+                {dist.summary.stdDev != null && <div className="bg-slate-50 rounded-lg p-2 text-center"><p className="text-xs text-slate-500">Desv. Est.</p><p className="text-lg font-bold">{dist.summary.stdDev?.toFixed(2)}</p></div>}
+              </div>
+            )}
+            {pieData.length > 0 && (
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={80} paddingAngle={3} dataKey="value" label={({ name, percent }: any) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}>
+                    {pieData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+            <div className="space-y-2">
+              {dist.distribution.map((d: any, i: number) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="w-24 text-xs text-right font-medium">{d.range}</span>
+                  <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden">
+                    <div className={`h-full rounded-full ${getDistBarColor(d.range)}`} style={{ width: `${(d.count / max) * 100}%` }}></div>
+                  </div>
+                  <span className="w-8 text-sm text-right">{d.count}</span>
+                  <span className="w-14 text-xs text-slate-500 text-right">{d.percentage?.toFixed(1)}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    if (selectedReport === 'grade-distribution' && reportData?.byGroup) {
+      const byGroup: any[] = reportData.byGroup
+      const gradeIntegral: any = reportData.gradeIntegral
+      return (
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center"><p className="text-xs uppercase text-amber-600">Cursos</p><p className="text-2xl font-bold text-amber-700">{byGroup.length}</p></div>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"><p className="text-xs uppercase text-blue-600">Total estudiantes</p><p className="text-2xl font-bold text-blue-700">{gradeIntegral?.summary?.total ?? 0}</p></div>
+            <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center"><p className="text-xs uppercase text-green-600">Promedio grado</p><p className="text-2xl font-bold text-green-700">{gradeIntegral?.summary?.average?.toFixed(2) ?? '-'}</p></div>
+          </div>
+          <div className="space-y-4">
+            {gradeDistMode !== 'separate' && renderDistPanel(gradeIntegral, 'Integral del Grado', true)}
+            {gradeDistMode !== 'integral' && byGroup.map((g: any) => renderDistPanel(g, g.groupName))}
+          </div>
+        </div>
+      )
+    }
+
     if (selectedReport === 'grade-distribution' && reportData?.distribution) {
       const max = Math.max(...reportData.distribution.map((d: any) => d.count), 1)
       const pieData = reportData.distribution.filter((d: any) => d.count > 0).map((d: any) => ({ name: d.range, value: d.count }))
