@@ -16,7 +16,8 @@ import {
   UserCheck,
   UserX,
   CheckCircle,
-  TrendingDown
+  TrendingDown,
+  Shield
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -58,6 +59,15 @@ const CATEGORIES: ReportCategory[] = [
       { id: 'ranking-students', name: 'Ranking estudiantes', href: '/reports/academic', icon: TrendingUp },
       { id: 'avg-subject', name: 'Promedio asignaturas', href: '/reports/academic', icon: BookOpen },
       { id: 'teacher-performance', name: 'Rendimiento docente', href: '/reports/academic', icon: Users },
+    ],
+  },
+  {
+    id: 'convivencia', name: 'Convivencia', description: 'Observador, situaciones y seguimiento convivencial',
+    icon: Shield, href: '/observer-stats', color: 'amber', reportCount: 4,
+    reports: [
+      { id: 'conv-stats', name: 'Informe convivencial', href: '/observer-stats', icon: BarChart3 },
+      { id: 'conv-observer', name: 'Observador', href: '/observer', icon: ClipboardList },
+      { id: 'conv-alerts', name: 'Alertas convivenciales', href: '/observer-stats', icon: AlertTriangle },
     ],
   },
   {

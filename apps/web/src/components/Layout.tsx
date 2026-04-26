@@ -199,10 +199,12 @@ const institutionalNavigation: NavItem[] = [
   { 
     name: 'Reportes', 
     icon: TrendingUp, 
-    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'],
+    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'RECTOR'],
     module: 'REPORTS',
     children: [
       { name: 'Informes', href: '/reports', icon: PieChart, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'REPORTS' },
+      { name: 'Comisión', href: '/reports/commission', icon: ClipboardList, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'], module: 'REPORTS' },
+      { name: 'Convivencia', href: '/observer-stats', icon: Shield, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'], module: 'REPORTS' },
       { name: 'Boletines', href: '/report-cards', icon: FileText, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'REPORTS' },
       { name: 'Estadísticas', href: '/statistics', icon: BarChart3, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'REPORTS' },
     ]

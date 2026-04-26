@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import {
@@ -90,6 +90,7 @@ const viewButtons: Array<{ key: ViewKey; label: string; icon: any }> = [
 
 export default function CommissionReports() {
   const { institution } = useAuth()
+  const location = useLocation()
   const {
     academicYears,
     terms,
@@ -102,7 +103,14 @@ export default function CommissionReports() {
   } = useReportsData()
 
   const [selectedGradeId, setSelectedGradeId] = useState('')
-  const [activeView, setActiveView] = useState<ViewKey>('acta')
+  const initialView = useMemo<ViewKey>(() => {
+    const report = new URLSearchParams(location.search).get('report')
+    if (report === 'commission-academic') return 'academic'
+    if (report === 'commission-top5') return 'top5'
+    if (report === 'commission-convivencia') return 'convivencia'
+    return 'acta'
+  }, [location.search])
+  const [activeView, setActiveView] = useState<ViewKey>(initialView)
   const [loadingData, setLoadingData] = useState(false)
   const [downloading, setDownloading] = useState<ViewKey | null>(null)
   const [commissionData, setCommissionData] = useState<CommissionData | null>(null)
@@ -147,6 +155,10 @@ export default function CommissionReports() {
   useEffect(() => {
     setCommissionData(null)
   }, [filterYear, filterPeriod, selectedGradeId])
+
+  useEffect(() => {
+    setActiveView(initialView)
+  }, [initialView])
 
   const buildCommissionData = async (): Promise<CommissionData | null> => {
     if (!filterYear) {
@@ -299,6 +311,12 @@ export default function CommissionReports() {
       setLoadingData(false)
     }
   }
+
+  useEffect(() => {
+    if (!filterYear || !selectedGradeId || selectedGradeGroups.length === 0) return
+    if (commissionData || loadingData) return
+    void buildCommissionData()
+  }, [buildCommissionData, commissionData, filterYear, loadingData, selectedGradeGroups.length, selectedGradeId])
 
   const ensureData = async () => {
     if (commissionData) return commissionData
@@ -556,7 +574,7 @@ export default function CommissionReports() {
       const data = await ensureData()
       if (!data) return
 
-      const { doc, addHeader, addFooter, addTable, margin } = createPdf('landscape')
+      const { doc, addHeader, addFooter, addTable, margin, contentWidth } = createPdf('landscape')
       let startY = addHeader('Acta de Comisión de Evaluación y Promoción', [
         `Institución: ${data.institutionName || institution?.name || 'Edusyn'}`,
         `Grado: ${data.gradeName} | Período: ${data.termLabel} | Año: ${data.yearLabel}`,
