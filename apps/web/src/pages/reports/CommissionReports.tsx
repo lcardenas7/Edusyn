@@ -263,7 +263,7 @@ export default function CommissionReports() {
       const subjectLevelSections = selectedGradeGroups.flatMap(group => {
         const groupRanking = groupRankings.find(item => item.groupId === group.id)
         const results = groupRanking?.results || []
-        return (results.length > 0 ? results.slice(0, 5) : []).map((row, index) => ({
+        return (results.length > 0 ? results.slice(0, 5) : []).map((_row: unknown, index: number) => ({
           subjectName: `Resultado académico ${index + 1}`,
           groupName: group.name,
           totalStudents: results.length,
@@ -401,7 +401,7 @@ export default function CommissionReports() {
       return (doc as any).lastAutoTable?.finalY || startY
     }
 
-    return { doc, addHeader, addFooter, addTable, contentWidth, margin }
+    return { doc, addHeader, addFooter, addTable, contentWidth, margin, addSectionTitle, addMetaGrid }
   }
 
   const savePdf = (doc: jsPDF, filename: string) => {
@@ -414,7 +414,7 @@ export default function CommissionReports() {
       const data = await ensureData()
       if (!data) return
 
-      const { doc, addHeader, addFooter, addTable, margin, contentWidth } = createPdf('landscape')
+      const { doc, addHeader, addFooter, addTable, margin, contentWidth, addSectionTitle, addMetaGrid } = createPdf('landscape')
       let startY = addHeader('Acta de Comisión de Evaluación y Promoción', [
         `Institución: ${data.institutionName || 'Edusyn'}`,
         `Grado: ${data.gradeName}`,
@@ -574,7 +574,7 @@ export default function CommissionReports() {
       const data = await ensureData()
       if (!data) return
 
-      const { doc, addHeader, addFooter, addTable, margin, contentWidth } = createPdf('landscape')
+      const { doc, addHeader, addFooter, addTable, margin, contentWidth, addSectionTitle, addMetaGrid } = createPdf('landscape')
       let startY = addHeader('Acta de Comisión de Evaluación y Promoción', [
         `Institución: ${data.institutionName || institution?.name || 'Edusyn'}`,
         `Grado: ${data.gradeName} | Período: ${data.termLabel} | Año: ${data.yearLabel}`,
