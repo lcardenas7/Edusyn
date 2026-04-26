@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useReportsData } from '../../hooks/useReportsData'
-import api, { observerApi, reportsApi, institutionConfigApi, toPublicFileUrl } from '../../lib/api'
+import api, { observerApi, reportsApi, institutionConfigApi, teacherAssignmentsApi, toPublicFileUrl } from '../../lib/api'
 
 interface ActaConfig {
   actaNumber: string
@@ -322,6 +322,7 @@ export default function CommissionReports() {
   const [logoBase64, setLogoBase64] = useState('')
   const [loadError, setLoadError] = useState<string | null>(null)
   const [actaSubjectFilter, setActaSubjectFilter] = useState<string[]>([]) // IDs; vacío = todas
+  const [gradeGroupTeachers, setGradeGroupTeachers] = useState<Array<{groupId: string; groupName: string; teachers: Array<{id: string; name: string}>}>>([])
 
   const gradeOptions = useMemo(() => {
     const map = new Map<string, { id: string; name: string }>()
@@ -410,15 +411,80 @@ export default function CommissionReports() {
   }, [lsKey])
   useEffect(() => { if (lsKey) localStorage.setItem(lsKey, JSON.stringify(actaConfig)) }, [lsKey, actaConfig])
 
+  // ── Generadores de texto inteligente ──────────────────────────────────
+  const buildAnalysisText = (d: LoadedData, pass: number) => {
+    const { totalStudents, generalAverage: avg, approvedCount, riskCount } = d.academicSummary
+    const approvedPct = totalStudents > 0 ? ((approvedCount / totalStudents) * 100).toFixed(1) : '0'
+    const riskPct = totalStudents > 0 ? ((riskCount / totalStudents) * 100).toFixed(1) : '0'
+    const convTotal = d.convivencia?.total || 0
+    const convNeg = d.convivencia?.negative || 0
+    const perfLines = d.performanceBuckets.filter(b => b.count > 0)
+      .map(b => `${b.label}: ${b.count} (${totalStudents > 0 ? ((b.count / totalStudents) * 100).toFixed(1) : 0}%)`).join(', ')
+    const lowSubjects = d.subjectLevelData?.results
+      ?.filter((r: any) => r.approvalRate < 70)
+      .sort((a: any, b: any) => a.approvalRate - b.approvalRate)
+      .slice(0, 3)
+      .map((r: any) => `${r.subjectName} (${r.approvalRate.toFixed(1)}%)`) || []
+    const parts: string[] = [
+      `El grado ${d.gradeName} presenta un promedio general de ${avg.toFixed(2)} en el per\u00edodo ${d.termLabel}.`,
+      `De ${totalStudents} estudiantes evaluados, ${approvedCount} (${approvedPct}%) alcanzaron la nota m\u00ednima aprobatoria y ${riskCount} (${riskPct}%) presentan desempe\u00f1o por debajo del m\u00ednimo institucional (${pass.toFixed(1)}).`,
+    ]
+    if (perfLines) parts.push(`Distribuci\u00f3n por niveles: ${perfLines}.`)
+    if (lowSubjects.length > 0) parts.push(`Las asignaturas con mayor porcentaje de bajo desempe\u00f1o son: ${lowSubjects.join(', ')}.`)
+    if (convTotal > 0) parts.push(`En el \u00e1rea convivencial se registraron ${convTotal} situaciones${convNeg > 0 ? `, de las cuales ${convNeg} son de car\u00e1cter negativo y requieren seguimiento` : ''}.`)
+    else parts.push('No se registraron situaciones convivenciales relevantes durante el per\u00edodo.')
+    return parts.join(' ')
+  }
+
+  const buildImprovementPlan = (d: LoadedData, pass: number) => {
+    const { riskCount, totalStudents } = d.academicSummary
+    const riskPct = totalStudents > 0 ? ((riskCount / totalStudents) * 100).toFixed(1) : '0'
+    const convNeg = d.convivencia?.negative || 0
+    const lowSubjects = d.subjectLevelData?.results
+      ?.filter((r: any) => r.approvalRate < 70)
+      .sort((a: any, b: any) => a.approvalRate - b.approvalRate)
+      .slice(0, 4)
+      .map((r: any) => r.subjectName) || []
+    const lines: string[] = [
+      `Dise\u00f1ar e implementar estrategias pedag\u00f3gicas de nivelaci\u00f3n para los ${riskCount} estudiantes (${riskPct}%) con desempe\u00f1o por debajo de la nota m\u00ednima.`,
+    ]
+    if (lowSubjects.length > 0)
+      lines.push(`Priorizar planes de apoyo acad\u00e9mico en las asignaturas con mayor bajo desempe\u00f1o: ${lowSubjects.join(', ')}.`)
+    if (convNeg > 0)
+      lines.push(`Fortalecer los procesos de mediaci\u00f3n escolar y acompa\u00f1amiento para los ${convNeg} casos convivenciales de car\u00e1cter negativo identificados.`)
+    lines.push('Establecer comunicaci\u00f3n peri\u00f3dica y citaci\u00f3n a acudientes de estudiantes con bajo rendimiento acad\u00e9mico para acuerdos de mejora.')
+    lines.push('Realizar seguimiento quincenal al progreso de los estudiantes en riesgo con reporte al coordinador del grado.')
+    return lines.join(' ')
+  }
+
+  const buildCommitments = (d: LoadedData, pass: number): string[] => {
+    const { riskCount } = d.academicSummary
+    const convNeg = d.convivencia?.negative || 0
+    const lowSubjects = d.subjectLevelData?.results
+      ?.filter((r: any) => r.approvalRate < 70)
+      .slice(0, 2)
+      .map((r: any) => r.subjectName) || []
+    const items: string[] = [
+      `Implementar planes de nivelaci\u00f3n para los ${riskCount} estudiantes con desempe\u00f1o por debajo de la nota m\u00ednima aprobatoria.`,
+    ]
+    if (lowSubjects.length > 0)
+      items.push(`Dise\u00f1ar estrategias de apoyo espec\u00edficas en ${lowSubjects.join(' y ')}.`)
+    if (convNeg > 0)
+      items.push(`Citar a acudientes de estudiantes con situaciones convivenciales pendientes de resoluci\u00f3n.`)
+    items.push(`Realizar seguimiento semanal a los estudiantes en riesgo y reportar avances a coordinaci\u00f3n.`)
+    items.push(`Registrar la informaci\u00f3n de seguimiento en el sistema Edusyn antes de la pr\u00f3xima comisi\u00f3n.`)
+    return items
+  }
+
   const loadData = useCallback(async () => {
     if (!filterYear || !selectedGradeId || selectedGradeGroups.length === 0) return
     setLoadingData(true)
     try {
       setLoadError(null)
-      const [gradeRankingRes, convivenciaRes, groupRankings, obsResult] = await Promise.all([
+      const [gradeRankingRes, convivenciaRes, groupRankings, obsResult, assignmentsRes] = await Promise.all([
         reportsApi.getInstitutionalRanking(filterYear, { gradeId: selectedGradeId, termId: filterPeriod || undefined }),
         observerApi.getConvivencialStats(filterYear, { gradeId: selectedGradeId }).catch(() => ({ data: null })),
-        Promise.all(selectedGradeGroups.map(async group => {
+        Promise.all(selectedGradeGroups.map(async (group: any) => {
           const res = await reportsApi.getStudentRanking(filterYear, group.id, filterPeriod || undefined)
           return { groupId: group.id, groupName: `${group.grade?.name || ''} ${group.name}`.trim(), results: res.data?.results || [] }
         })),
@@ -428,6 +494,7 @@ export default function CommissionReports() {
             if (status === 403 || status === 404) return { data: { actas: [], referrals: [] } }
             throw err
           }),
+        teacherAssignmentsApi.getAll({ academicYearId: filterYear }).catch(() => ({ data: [] })),
       ])
       const obsRes = obsResult
       const rankingResults: any[] = gradeRankingRes.data?.results || []
@@ -442,9 +509,27 @@ export default function CommissionReports() {
         label, count: rankingResults.filter((r: any) => norm(String(r.performance)) === norm(label)).length,
       }))
       const institutionRaw: any = gradeRankingRes.data?.institution || {}
+
+      // ── Detectar docentes por grupo del grado ──────────────────────────
+      const allAssignments: any[] = assignmentsRes?.data || []
+      const gradeGroupIds = new Set(selectedGradeGroups.map((g: any) => g.id))
+      const groupTeacherMap = new Map<string, Map<string, string>>()
+      for (const a of allAssignments) {
+        if (!gradeGroupIds.has(a.groupId) || !a.teacher) continue
+        if (!groupTeacherMap.has(a.groupId)) groupTeacherMap.set(a.groupId, new Map())
+        const tName = `${a.teacher.firstName || ''} ${a.teacher.lastName || ''}`.trim()
+        if (tName) groupTeacherMap.get(a.groupId)!.set(a.teacherId, tName)
+      }
+      const ggt = selectedGradeGroups.map((g: any) => ({
+        groupId: g.id,
+        groupName: `${g.grade?.name || ''} ${g.name}`.trim(),
+        teachers: Array.from(groupTeacherMap.get(g.id) || new Map(), ([id, name]) => ({ id, name })),
+      }))
+      setGradeGroupTeachers(ggt)
+
       const data: LoadedData = {
         gradeName: selectedGradeName, yearLabel: selectedYearLabel, termLabel: selectedTermLabel,
-        coursesLabel: selectedGradeGroups.map(g => `${g.grade?.name || ''} ${g.name}`.trim()).join(' \u00b7 '),
+        coursesLabel: selectedGradeGroups.map((g: any) => `${g.grade?.name || ''} ${g.name}`.trim()).join(' \u00b7 '),
         dane: institutionRaw.dane || '', municipality: institutionRaw.municipality || '',
         gradeRankingResults: rankingResults,
         groupRankings, performanceBuckets: buckets, convivencia: convivenciaRes.data,
@@ -455,41 +540,47 @@ export default function CommissionReports() {
         },
         subjectLevelData: null,
       }
-      // Cargar niveles por asignatura (tolerante a errores)
-      let subjectLevelData: LoadedData['subjectLevelData'] = null
+
+      // Niveles por asignatura
       try {
-        const sldRes = await reportsApi.getSubjectLevelDistribution(filterYear, {
-          gradeId: selectedGradeId,
-          termId: filterPeriod || undefined,
-        })
-        subjectLevelData = sldRes.data || null
+        const sldRes = await reportsApi.getSubjectLevelDistribution(filterYear, { gradeId: selectedGradeId, termId: filterPeriod || undefined })
+        data.subjectLevelData = sldRes.data || null
       } catch {}
-      data.subjectLevelData = subjectLevelData
+
       setLoadedData(data)
       setActaObs(obsRes.data?.actas || [])
       setReferrals(obsRes.data?.referrals || [])
-      if (actaConfig.assistants.every(a => !a.courses)) {
-        const courses = selectedGradeGroups.map(g => g.name).join(' \u00b7 ')
-        updateConfig('assistants', actaConfig.assistants.map(a => ({ ...a, courses: a.role === 'Psicoorientador(a)' ? '\u2014' : courses })))
+
+      // ── Auto-poblar asistentes con directores de grupo ─────────────────
+      const directorRows = ggt
+        .filter(gt => gt.teachers.length > 0)
+        .map(gt => ({ name: gt.teachers[0].name, role: `Director(a) de grupo \u2013 ${gt.groupName}`, courses: gt.groupName }))
+      const hasDirectors = actaConfig.assistants.some(a => a.role?.startsWith('Director(a) de grupo'))
+      if (!hasDirectors && directorRows.length > 0) {
+        const baseAssistants = actaConfig.assistants.filter(a => !a.role?.startsWith('Director(a) de grupo'))
+        updateConfig('assistants', [...baseAssistants, ...directorRows])
       }
-      if (!actaConfig.analysisText) {
-        const convTotal = convivenciaRes.data?.total || 0
-        updateConfig('analysisText', [
-          `El grado ${selectedGradeName} presenta un promedio general de ${avg.toFixed(2)} en el per\u00edodo ${selectedTermLabel}.`,
-          `${rankingResults.filter((r: any) => Number(r.average) >= pass).length} estudiantes aprobaron con nota igual o superior al m\u00ednimo institucional.`,
-          `${rankingResults.filter((r: any) => Number(r.average) < pass).length} estudiantes presentan desempe\u00f1o por debajo de la nota m\u00ednima aprobatoria.`,
-          convTotal > 0 ? `Se registraron ${convTotal} situaciones convivenciales en el per\u00edodo.` : 'No se registraron situaciones convivenciales relevantes.',
-        ].join(' '))
-      }
-      if (!actaConfig.convivenciaSuggestion && (convivenciaRes.data?.total || 0) > 0)
-        updateConfig('convivenciaSuggestion', 'Fortalecer la comunicaci\u00f3n entre docentes, familias y orientaci\u00f3n escolar para el seguimiento de los casos identificados.')
+
+      // ── Auto-poblar firmantes con directores de grupo ──────────────────
+      const currentSigRoles = new Set(actaConfig.signatories.map(s => s.role))
+      const directorSigs = ggt
+        .filter(gt => gt.teachers.length > 0 && !currentSigRoles.has(`Director(a) ${gt.groupName}`))
+        .map(gt => ({ role: `Director(a) ${gt.groupName}`, name: gt.teachers[0].name }))
+      if (directorSigs.length > 0)
+        updateConfig('signatories', [...actaConfig.signatories, ...directorSigs])
+
+      // ── Generar textos sugeridos (solo si están vacíos) ────────────────
+      if (!actaConfig.analysisText) updateConfig('analysisText', buildAnalysisText(data, pass))
+      if (!actaConfig.convivenciaSuggestion) updateConfig('convivenciaSuggestion', buildImprovementPlan(data, pass))
+      if (actaConfig.commitments.join('') === DEFAULT_COMMITMENTS.join('') || actaConfig.commitments.every(c => DEFAULT_COMMITMENTS.includes(c)))
+        updateConfig('commitments', buildCommitments(data, pass))
     } catch (err) {
       console.error('Error loading commission data:', err)
       setLoadError('No fue posible cargar algunos datos. Verifica la conexi\u00f3n y vuelve a intentarlo.')
     } finally {
       setLoadingData(false)
     }
-  }, [filterYear, filterPeriod, selectedGradeId, selectedGradeGroups, selectedGradeName, selectedYearLabel, selectedTermLabel, gradingScale, actaConfig.actaTypes, actaConfig.analysisText, actaConfig.convivenciaSuggestion, actaConfig.assistants])
+  }, [filterYear, filterPeriod, selectedGradeId, selectedGradeGroups, selectedGradeName, selectedYearLabel, selectedTermLabel, gradingScale, actaConfig.actaTypes])
 
   const filteredSubjectData = (): LoadedData['subjectLevelData'] => {
     if (!loadedData?.subjectLevelData) return null
@@ -703,32 +794,40 @@ export default function CommissionReports() {
                       onChange={e => updateConfig('includeSections', { ...actaConfig.includeSections, [key]: e.target.checked })} className="rounded" />
                     <span className="text-sm text-slate-700">{label}</span>
                   </label>
-                  {/* Selector de asignaturas para la sección de niveles */}
-                  {key === 'subjectLevels' && actaConfig.includeSections.subjectLevels && loadedData?.subjectLevelData?.results?.length ? (
+                  {/* Selector de asignaturas */}
+                  {key === 'subjectLevels' && actaConfig.includeSections.subjectLevels && (
                     <div className="ml-6 mt-2 border border-slate-200 rounded-lg p-3 bg-slate-50">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs font-medium text-slate-600">Asignaturas a incluir <span className="text-slate-400 font-normal">(ninguna = todas)</span></p>
-                        {actaSubjectFilter.length > 0 && (
-                          <button onClick={() => setActaSubjectFilter([])} className="text-xs text-slate-400 hover:text-red-500">× Limpiar</button>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {loadedData.subjectLevelData.results.map((r: any) => {
-                          const sel = actaSubjectFilter.includes(r.subjectId)
-                          return (
-                            <button key={r.subjectId} type="button"
-                              onClick={() => setActaSubjectFilter(prev => prev.includes(r.subjectId) ? prev.filter(x => x !== r.subjectId) : [...prev, r.subjectId])}
-                              className={`px-2 py-0.5 rounded text-xs border transition-colors ${sel ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-300 hover:border-teal-400'}`}>
-                              {r.subjectName}
-                            </button>
-                          )
-                        })}
-                      </div>
-                      {actaSubjectFilter.length > 0 && (
-                        <p className="text-xs text-teal-600 mt-1.5">{actaSubjectFilter.length} asignatura{actaSubjectFilter.length > 1 ? 's' : ''} seleccionada{actaSubjectFilter.length > 1 ? 's' : ''}</p>
+                      {!loadedData ? (
+                        <p className="text-xs text-slate-400 italic">Carga los datos del grado para seleccionar asignaturas.</p>
+                      ) : !loadedData.subjectLevelData?.results?.length ? (
+                        <p className="text-xs text-amber-600">No hay datos de niveles por asignatura para este grado/per\u00edodo.</p>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs font-medium text-slate-600">Asignaturas a incluir <span className="text-slate-400 font-normal">(ninguna = todas)</span></p>
+                            {actaSubjectFilter.length > 0 && (
+                              <button onClick={() => setActaSubjectFilter([])} className="text-xs text-slate-400 hover:text-red-500">× Limpiar</button>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {loadedData.subjectLevelData.results.map((r: any) => {
+                              const sel = actaSubjectFilter.includes(r.subjectId)
+                              return (
+                                <button key={r.subjectId} type="button"
+                                  onClick={() => setActaSubjectFilter(prev => prev.includes(r.subjectId) ? prev.filter(x => x !== r.subjectId) : [...prev, r.subjectId])}
+                                  className={`px-2 py-0.5 rounded text-xs border transition-colors ${sel ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-300 hover:border-teal-400'}`}>
+                                  {r.subjectName}
+                                </button>
+                              )
+                            })}
+                          </div>
+                          {actaSubjectFilter.length > 0 && (
+                            <p className="text-xs text-teal-600 mt-1.5">{actaSubjectFilter.length} asignatura{actaSubjectFilter.length > 1 ? 's' : ''} seleccionada{actaSubjectFilter.length > 1 ? 's' : ''}</p>
+                          )}
+                        </>
                       )}
                     </div>
-                  ) : null}
+                  )}
                 </div>
               ))}
               {actaConfig.includeSections.convivencia && (
@@ -746,35 +845,50 @@ export default function CommissionReports() {
 
           {actaConfig.includeSections.analysis && (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
-                <FileText className="w-4 h-4 text-orange-600" />
-                <h2 className="font-semibold text-slate-900 text-sm">Análisis general</h2>
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                <div className="flex items-center gap-3"><FileText className="w-4 h-4 text-orange-600" /><h2 className="font-semibold text-slate-900 text-sm">An\u00e1lisis general</h2></div>
+                {loadedData && (
+                  <button onClick={() => updateConfig('analysisText', buildAnalysisText(loadedData, gradingScale.minPassingGrade))}
+                    className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200 transition-colors">
+                    \u2728 Generar sugerencia
+                  </button>
+                )}
               </div>
               <div className="p-4">
                 <textarea value={actaConfig.analysisText} onChange={e => updateConfig('analysisText', e.target.value)}
-                  rows={4} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none"
-                  placeholder="Texto de análisis general del grado..." />
+                  rows={5} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none"
+                  placeholder="Texto de an\u00e1lisis general del grado..." />
               </div>
             </div>
           )}
 
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
-              <Shield className="w-4 h-4 text-amber-600" />
-              <h2 className="font-semibold text-slate-900 text-sm">Plan de mejora convivencial</h2>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+              <div className="flex items-center gap-3"><Shield className="w-4 h-4 text-amber-600" /><h2 className="font-semibold text-slate-900 text-sm">Plan de mejora</h2></div>
+              {loadedData && (
+                <button onClick={() => updateConfig('convivenciaSuggestion', buildImprovementPlan(loadedData, gradingScale.minPassingGrade))}
+                  className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200 transition-colors">
+                  \u2728 Generar sugerencia
+                </button>
+              )}
             </div>
             <div className="p-4">
               <textarea value={actaConfig.convivenciaSuggestion} onChange={e => updateConfig('convivenciaSuggestion', e.target.value)}
-                rows={3} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none"
-                placeholder="Sugerencias de mejora convivencial..." />
+                rows={4} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none"
+                placeholder="Plan de mejora acad\u00e9mico y convivencial..." />
             </div>
           </div>
 
           {actaConfig.includeSections.commitments && (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
-                <CheckCircle className="w-4 h-4 text-emerald-600" />
-                <h2 className="font-semibold text-slate-900 text-sm">Compromisos y acuerdos</h2>
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                <div className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-emerald-600" /><h2 className="font-semibold text-slate-900 text-sm">Compromisos y acuerdos</h2></div>
+                {loadedData && (
+                  <button onClick={() => updateConfig('commitments', buildCommitments(loadedData, gradingScale.minPassingGrade))}
+                    className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200 transition-colors">
+                    \u2728 Generar sugerencia
+                  </button>
+                )}
               </div>
               <div className="p-4 space-y-2">
                 {actaConfig.commitments.map((c, i) => (
