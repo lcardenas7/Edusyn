@@ -236,9 +236,11 @@ export class ReportsController {
     @Query('gradeId') gradeId?: string,
     @Query('termId') termId?: string,
     @Query('stage') stage?: string,
+    @Query('subjectIds') subjectIds?: string,
   ) {
     const institutionId = req.user.institutionId;
-    return this.reportsService.getSubjectLevelDistribution(institutionId, academicYearId, groupId, gradeId, termId, stage);
+    const subjectIdList = subjectIds ? subjectIds.split(',').filter(Boolean) : undefined;
+    return this.reportsService.getSubjectLevelDistribution(institutionId, academicYearId, groupId, gradeId, termId, stage, subjectIdList);
   }
 
   @Get('academic/failed-subjects')

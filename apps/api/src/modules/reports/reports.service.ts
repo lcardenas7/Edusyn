@@ -3823,6 +3823,7 @@ export class ReportsService {
     gradeId?: string,
     termId?: string,
     stage?: string,
+    subjectIds?: string[],
   ) {
     const rulesCtx = await this.institutionContext.getContext(institutionId);
 
@@ -3843,6 +3844,7 @@ export class ReportsService {
     // Obtener notas finales con filtro de matrícula
     const pfgWhere: any = { studentEnrollment: enrollmentFilter };
     if (termId) pfgWhere.academicTermId = termId;
+    if (subjectIds && subjectIds.length > 0) pfgWhere.subjectId = { in: subjectIds };
 
     const pfgData = await this.prisma.periodFinalGrade.findMany({
       where: pfgWhere,

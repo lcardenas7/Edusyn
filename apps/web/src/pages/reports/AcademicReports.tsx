@@ -120,6 +120,7 @@ export default function AcademicReports() {
   const [honorRollTopN, setHonorRollTopN] = useState(5)
   const [honorRollMode, setHonorRollMode] = useState<'both' | 'separate' | 'integral'>('both')
   const [gradeDistMode, setGradeDistMode] = useState<'both' | 'separate' | 'integral'>('both')
+  const [filterSubjectIds, setFilterSubjectIds] = useState<string[]>([])
   const [showOnlyFailed, setShowOnlyFailed] = useState(false)
   const [showGrades, setShowGrades] = useState(true)
   const [showPerformance, setShowPerformance] = useState(false)
@@ -196,6 +197,15 @@ export default function AcademicReports() {
     const pct = ((start - scaleMin) / scaleRange) * 100
     if (pct >= 70) return 'bg-green-400'
     return 'bg-amber-400'
+  }
+  const getDistHexColor = (rangeLabel: string): string => {
+    const match = rangeLabel?.match(/[\d.]+/)
+    if (!match) return '#94a3b8'
+    const start = parseFloat(match[0])
+    if (start < minPassingGrade) return '#ef4444'
+    const pct = ((start - scaleMin) / scaleRange) * 100
+    if (pct >= 70) return '#22c55e'
+    return '#f59e0b'
   }
 
   const handleSelectReport = (reportId: string) => {
@@ -379,6 +389,7 @@ export default function AcademicReports() {
           else if (filterGradeId !== 'all') sldParams.gradeId = filterGradeId
           else if (filterLevel !== 'all') sldParams.stage = filterLevel
           if (filterPeriod) sldParams.termId = filterPeriod
+          if (filterSubjectIds.length > 0) sldParams.subjectIds = filterSubjectIds.join(',')
           const res = await reportsApi.getSubjectLevelDistribution(filterYear, sldParams)
           setReportData(res.data)
           break
@@ -1180,11 +1191,37 @@ export default function AcademicReports() {
           </div>)
       }
 
-      case 'subject-level-dist':
-        return wrap(<><SelectYear /><SelectGrade /><SelectGroup /><SelectTerm /><BtnSearch /></>, 5,
+      case 'subject-level-dist': {
+        const sldGroups = filterGradeId !== 'all' ? groups.filter((g: any) => g.grade?.id === filterGradeId) : groups
+        const toggleSld = (id: string) => setFilterSubjectIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+        return wrap(<>
+          <SelectYear /><SelectGrade /><div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Curso (opcional)</label>
+            <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
+              <option value="all">Todo el grado</option>
+              {sldGroups.map((g: any) => <option key={g.id} value={g.id}>{g.grade?.name} {g.name}</option>)}
+            </select>
+          </div><SelectTerm /><div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-slate-600 mb-1">Asignaturas <span className="text-slate-400 font-normal">(ninguna = todas)</span></label>
+            <div className="border border-slate-300 rounded bg-white max-h-28 overflow-y-auto p-1.5 flex flex-wrap gap-1">
+              {subjects.map(s => {
+                const sel = filterSubjectIds.includes(s.id)
+                return (
+                  <button key={s.id} type="button" onClick={() => toggleSld(s.id)}
+                    className={`px-2 py-0.5 rounded text-xs border transition-colors ${sel ? 'bg-green-600 text-white border-green-600' : 'bg-white text-slate-600 border-slate-300 hover:border-green-400'}`}>
+                    {s.name}
+                  </button>
+                )
+              })}
+            </div>
+            {filterSubjectIds.length > 0 && (
+              <button onClick={() => setFilterSubjectIds([])} className="text-xs text-slate-400 hover:text-red-500 mt-0.5">× Limpiar selección</button>
+            )}
+          </div><BtnSearch /></>, 4,
           <div className={`${style.bg} rounded-lg p-3 text-sm ${style.text}`}>
-            <strong>📊</strong> Muestra cuántos estudiantes (y %) están en cada nivel de desempeño para cada asignatura. Filtra por grado, curso o período.
+            <strong>📊</strong> Selecciona asignaturas específicas o deja vacío para verlas todas. Filtra por grado o curso.
           </div>)
+      }
 
       case 'min-grade':
         return wrap(<><SelectYear /><SelectGroup required /><SelectStudent /><BtnSearch label="Calcular" /></>, 4,
@@ -1745,7 +1782,7 @@ export default function AcademicReports() {
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={80} paddingAngle={3} dataKey="value" label={({ name, percent }: any) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}>
-                    {pieData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                    {pieData.map((d: any) => <Cell key={d.name} fill={getDistHexColor(d.name)} />)}
                   </Pie>
                   <Tooltip />
                 </PieChart>
@@ -1754,9 +1791,10 @@ export default function AcademicReports() {
             <div className="space-y-2">
               {dist.distribution.map((d: any, i: number) => (
                 <div key={i} className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: getDistHexColor(d.range) }} />
                   <span className="w-24 text-xs text-right font-medium">{d.range}</span>
                   <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden">
-                    <div className={`h-full rounded-full ${getDistBarColor(d.range)}`} style={{ width: `${(d.count / max) * 100}%` }}></div>
+                    <div className="h-full rounded-full" style={{ width: `${(d.count / max) * 100}%`, backgroundColor: getDistHexColor(d.range) }}></div>
                   </div>
                   <span className="w-8 text-sm text-right">{d.count}</span>
                   <span className="w-14 text-xs text-slate-500 text-right">{d.percentage?.toFixed(1)}%</span>
@@ -1805,7 +1843,7 @@ export default function AcademicReports() {
               <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
                   <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={100} paddingAngle={3} dataKey="value" label={({ name, percent }: any) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}>
-                    {pieData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                    {pieData.map((d: any) => <Cell key={d.name} fill={getDistHexColor(d.name)} />)}
                   </Pie>
                   <Tooltip />
                 </PieChart>
@@ -1815,9 +1853,10 @@ export default function AcademicReports() {
           <div className="space-y-2">
             {reportData.distribution.map((d: any, i: number) => (
               <div key={i} className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: getDistHexColor(d.range) }} />
                 <span className="w-24 text-sm text-right font-medium">{d.range}</span>
                 <div className="flex-1 bg-slate-100 rounded-full h-6 overflow-hidden">
-                  <div className={`h-full rounded-full ${getDistBarColor(d.range)}`} style={{ width: `${(d.count / max) * 100}%` }}></div>
+                  <div className="h-full rounded-full" style={{ width: `${(d.count / max) * 100}%`, backgroundColor: getDistHexColor(d.range) }}></div>
                 </div>
                 <span className="w-12 text-sm text-right">{d.count}</span>
                 <span className="w-16 text-xs text-slate-500 text-right">{d.percentage?.toFixed(1)}%</span>
@@ -1835,59 +1874,74 @@ export default function AcademicReports() {
       if (sldResults.length === 0) return (
         <div className="text-center py-12"><BarChart3 className="w-12 h-12 text-slate-300 mx-auto mb-3" /><p className="text-slate-500">Sin datos de desempeño por asignatura</p></div>
       )
-      const defaultLevelColors = ['#f87171', '#fbbf24', '#60a5fa', '#4ade80']
+      // Paleta unificada: si la institución tiene colores configurados los usamos; si no, paleta semántica fija por orden
+      const semanticPalette = ['#ef4444', '#f59e0b', '#3b82f6', '#22c55e', '#8b5cf6', '#06b6d4']
       const levelHexColors: Record<string, string> = {}
       levelLabels.forEach((l, i) => {
-        const institutionalLevel = gradingScale.performanceLevels.find((pl: any) => pl.name === l)
-        levelHexColors[l] = institutionalLevel?.color || defaultLevelColors[i] || '#94a3b8'
+        const inst = gradingScale.performanceLevels.find((pl: any) => pl.name === l)
+        levelHexColors[l] = inst?.color || semanticPalette[i] || '#94a3b8'
       })
       const totalSubjects = sldResults.length
-      const totalStudentsTotal = sldResults.reduce((s: number, r: any) => s + r.totalStudents, 0)
       const overallAvg = sldResults.length > 0 ? sldResults.reduce((s: number, r: any) => s + r.average, 0) / sldResults.length : 0
       return (
-        <div className="space-y-4">
+        <div className="space-y-5">
+          {/* KPIs */}
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center"><p className="text-xs text-blue-500 uppercase">Asignaturas</p><p className="text-2xl font-bold text-blue-700">{totalSubjects}</p></div>
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center"><p className="text-xs text-slate-500 uppercase">Total registros</p><p className="text-2xl font-bold text-slate-700">{totalStudentsTotal}</p></div>
-            <div className={`${overallAvg >= minPassingGrade ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-xl p-3 text-center`}><p className="text-xs text-slate-500 uppercase">Promedio general</p><p className={`text-2xl font-bold ${overallAvg >= minPassingGrade ? 'text-green-700' : 'text-red-700'}`}>{overallAvg.toFixed(1)}</p></div>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center"><p className="text-xs text-slate-500 uppercase">Total est.</p><p className="text-2xl font-bold text-slate-700">{sldResults[0]?.totalStudents ?? '-'}</p></div>
+            <div className={`${overallAvg >= minPassingGrade ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-xl p-3 text-center`}><p className="text-xs text-slate-500 uppercase">Prom. general</p><p className={`text-2xl font-bold ${overallAvg >= minPassingGrade ? 'text-green-700' : 'text-red-700'}`}>{overallAvg.toFixed(1)}</p></div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-100">
-                <tr>
-                  <th className="px-3 py-2 text-left">Asignatura</th>
-                  <th className="px-3 py-2 text-left text-slate-500 text-xs">Área</th>
-                  <th className="px-3 py-2 text-center">Total</th>
-                  <th className="px-3 py-2 text-center">Promedio</th>
-                  <th className="px-3 py-2 text-center">Aprobación</th>
-                  {levelLabels.map(l => <th key={l} className="px-3 py-2 text-center">{l}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {sldResults.map((r: any) => (
-                  <tr key={r.subjectId} className="border-b hover:bg-slate-50">
-                    <td className="px-3 py-2 font-medium">{r.subjectName}</td>
-                    <td className="px-3 py-2 text-slate-400 text-xs">{r.areaName}</td>
-                    <td className="px-3 py-2 text-center">{r.totalStudents}</td>
-                    <td className="px-3 py-2 text-center font-medium">{r.average?.toFixed(1)}</td>
-                    <td className="px-3 py-2 text-center">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${r.approvalRate >= 80 ? 'bg-green-100 text-green-700' : r.approvalRate >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{r.approvalRate?.toFixed(1)}%</span>
-                    </td>
-                    {(r.levels || []).map((lv: any) => (
-                      <td key={lv.label} className="px-3 py-2 text-center">
-                        <div className="flex flex-col items-center gap-0.5">
-                          <span className="font-medium">{lv.count}</span>
-                          <div className="w-full bg-slate-100 rounded-full h-1.5 min-w-[40px]">
-                            <div className="h-1.5 rounded-full" style={{ width: `${lv.percentage}%`, backgroundColor: levelHexColors[lv.label] || '#94a3b8' }}></div>
-                          </div>
-                          <span className="text-xs text-slate-400">{lv.percentage?.toFixed(1)}%</span>
-                        </div>
-                      </td>
+          {/* Leyenda de colores — única fuente de verdad */}
+          <div className="flex flex-wrap gap-3 px-1">
+            {levelLabels.map(l => (
+              <div key={l} className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: levelHexColors[l] }} />
+                <span className="text-xs text-slate-600">{l}</span>
+              </div>
+            ))}
+          </div>
+          {/* Tabla + barras stacked por asignatura */}
+          <div className="space-y-3">
+            {sldResults.map((r: any) => {
+              const total = r.totalStudents || 1
+              return (
+                <div key={r.subjectId} className="bg-white border border-slate-200 rounded-xl p-4">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                      <p className="font-semibold text-slate-800 text-sm">{r.subjectName}</p>
+                      {r.areaName && <p className="text-xs text-slate-400">{r.areaName}</p>}
+                    </div>
+                    <div className="flex gap-3 text-xs flex-shrink-0">
+                      <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded font-medium">Prom. {r.average?.toFixed(1)}</span>
+                      <span className={`px-2 py-1 rounded font-medium ${r.approvalRate >= 80 ? 'bg-green-100 text-green-700' : r.approvalRate >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                        Aprobación {r.approvalRate?.toFixed(1)}%
+                      </span>
+                      <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded">{r.totalStudents} est.</span>
+                    </div>
+                  </div>
+                  {/* Barra stacked proporcional */}
+                  <div className="flex h-6 rounded-lg overflow-hidden w-full mb-2">
+                    {(r.levels || []).map((lv: any) => lv.count > 0 && (
+                      <div key={lv.label} className="h-full flex items-center justify-center text-white text-xs font-bold overflow-hidden"
+                        style={{ width: `${(lv.count / total) * 100}%`, backgroundColor: levelHexColors[lv.label] || '#94a3b8', minWidth: lv.count > 0 ? '4px' : '0' }}
+                        title={`${lv.label}: ${lv.count} (${lv.percentage?.toFixed(1)}%)`}>
+                        {(lv.count / total) >= 0.08 ? `${lv.percentage?.toFixed(0)}%` : ''}
+                      </div>
                     ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </div>
+                  {/* Detalle por nivel */}
+                  <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${levelLabels.length}, 1fr)` }}>
+                    {(r.levels || []).map((lv: any) => (
+                      <div key={lv.label} className="text-center">
+                        <div className="w-2 h-2 rounded-full mx-auto mb-0.5" style={{ backgroundColor: levelHexColors[lv.label] }} />
+                        <p className="text-xs font-semibold text-slate-700">{lv.count}</p>
+                        <p className="text-[10px] text-slate-400">{lv.percentage?.toFixed(1)}%</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       )
