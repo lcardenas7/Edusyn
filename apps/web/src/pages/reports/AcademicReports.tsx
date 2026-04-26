@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
 import {
-  BookOpen, Users, GraduationCap, ClipboardList, BarChart3, Download, Printer,
+  BookOpen, Users, GraduationCap, ClipboardList, BarChart3, Download,
   ArrowLeft, ChevronLeft, Calculator, TrendingUp, FileText, AlertTriangle,
   History, UserCheck, FileSpreadsheet, Building, CheckCircle, Eye, ChevronDown, ChevronUp, RefreshCw
 } from 'lucide-react'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { Link } from 'react-router-dom'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -600,6 +602,336 @@ export default function AcademicReports() {
     const instSlug = (institution?.name || 'edusyn').replace(/\s+/g, '_').substring(0, 20)
     link.download = `${instSlug}_${filename}_${new Date().toISOString().split('T')[0]}.csv`
     link.click()
+  }
+
+  const exportToPDF = () => {
+    if (!selectedReport) return
+
+    const pdfReports = new Set([
+      'min-grade',
+      'min-grade-consolidated',
+      'failed-subjects',
+      'recovery-list',
+      'promotion-projection',
+      'cons-subjects',
+      'cons-areas',
+      'avg-subject',
+      'avg-area',
+      'ranking-students',
+      'ranking-institutional',
+      'teacher-performance',
+      'institutional-stats',
+      'annual-comparison',
+      'completeness-status',
+    ])
+
+    if (!pdfReports.has(selectedReport)) {
+      window.print()
+      return
+    }
+
+    const hasData = (() => {
+      switch (selectedReport) {
+        case 'min-grade':
+          return Boolean(minimumGradeData?.subjects?.length || minimumGradeGroupData.length)
+        case 'min-grade-consolidated':
+          return Boolean(reportData?.students?.length)
+        case 'failed-subjects':
+        case 'recovery-list':
+        case 'promotion-projection':
+        case 'avg-subject':
+        case 'avg-area':
+        case 'ranking-students':
+        case 'ranking-institutional':
+        case 'teacher-performance':
+        case 'annual-comparison':
+          return Boolean(reportData?.results?.length)
+        case 'cons-subjects':
+          return Boolean(studentsGradesData.length)
+        case 'cons-areas':
+          return Boolean(reportData?.students?.length)
+        case 'institutional-stats':
+          return Boolean(reportData?.institutional)
+        case 'completeness-status':
+          return Boolean(reportData?.groups?.length)
+        default:
+          return false
+      }
+    })()
+
+    if (!hasData) {
+      alert('No hay datos para exportar en PDF')
+      return
+    }
+
+    const wideReports = new Set([
+      'min-grade-consolidated',
+      'cons-subjects',
+      'cons-areas',
+      'avg-subject',
+      'avg-area',
+      'ranking-students',
+      'ranking-institutional',
+      'teacher-performance',
+      'institutional-stats',
+      'annual-comparison',
+      'completeness-status',
+    ])
+
+    const doc = new jsPDF({ orientation: wideReports.has(selectedReport) ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' })
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 12
+
+    const addTitle = (title: string, subtitle: string[] = []) => {
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(16)
+      doc.text(title, margin, 16)
+      if (subtitle.length > 0) {
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        subtitle.forEach((line, index) => {
+          doc.text(line, margin, 22 + index * 4)
+        })
+        return 24 + subtitle.length * 4
+      }
+      return 24
+    }
+
+    const addTable = (head: string[][], body: (string | number)[][], startY: number) => {
+      autoTable(doc, {
+        head,
+        body,
+        startY,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 7, cellPadding: 1.3, overflow: 'linebreak', valign: 'middle' },
+        headStyles: { fillColor: [30, 41, 59] },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        didDrawPage: () => {
+          doc.setFontSize(8)
+          doc.setTextColor(100)
+          doc.text(`${institution?.name || 'Edusyn'} • Página ${doc.getNumberOfPages()}`, pageWidth - margin, pageHeight - 8, { align: 'right' })
+          doc.setTextColor(0)
+        },
+      })
+      return (doc as any).lastAutoTable?.finalY || startY
+    }
+
+    const subtitle = [
+      `Reporte: ${currentMeta?.name || selectedReport}`,
+      `Generado: ${new Date().toLocaleString('es-CO')}`,
+      filterYear !== 'all' ? `Año: ${academicYears.find(y => y.id === filterYear)?.year || filterYear}` : null,
+      filterPeriod !== 'all' ? `Período: ${terms.find(t => t.id === filterPeriod)?.name || filterPeriod}` : null,
+      filterGrade !== 'all' ? `Grupo: ${groups.find(g => g.id === filterGrade)?.name || filterGrade}` : null,
+      filterSubject !== 'all' ? `Asignatura: ${subjects.find(s => s.id === filterSubject)?.name || filterSubject}` : null,
+      filterTeacher !== 'all' ? `Docente: ${(() => {
+        const t = teachers.find(x => x.id === filterTeacher)
+        return t ? `${t.firstName || ''} ${t.lastName || ''}`.trim() : filterTeacher
+      })()}` : null,
+    ].filter((v): v is string => Boolean(v))
+
+    let startY = addTitle(currentMeta?.name || 'Reporte académico', subtitle)
+
+    if (selectedReport === 'min-grade') {
+      if (minimumGradeData?.subjects?.length > 0) {
+        const body = minimumGradeData.subjects.map((subj: any) => [
+          subj.subjectName,
+          subj.areaName,
+          subj.currentAnnualGrade != null ? subj.currentAnnualGrade.toFixed(1) : '-',
+          subj.minimumRequired != null ? subj.minimumRequired.toFixed(1) : '-',
+          subj.status,
+          subj.message,
+        ])
+        addTable([['Asignatura', 'Área', 'Promedio actual', 'Nota mínima requerida', 'Estado', 'Detalle']], body, startY)
+      } else if (minimumGradeGroupData.length > 0) {
+        const body = minimumGradeGroupData.map((row: any, index: number) => [
+          String(index + 1),
+          row.studentName,
+          row.subjectName,
+          row.minimumRequired != null ? row.minimumRequired.toFixed(1) : '-',
+          row.status,
+        ])
+        addTable([['Nro', 'Estudiante', 'Asignatura crítica', 'Nota mínima requerida', 'Estado']], body, startY)
+      }
+    } else if (selectedReport === 'min-grade-consolidated' && reportData?.students) {
+      const rTerms = reportData.terms || []
+      const rSubjects = reportData.subjectColumns || []
+      const head = ['Nro', 'Estudiante']
+      rSubjects.forEach((s: any) => {
+        rTerms.forEach((t: any) => head.push(`${s.subjectName} - ${t.name}`))
+        head.push(`${s.subjectName} - Necesita`)
+      })
+      head.push('Promedio', 'Reprobadas')
+      const body = reportData.students.map((st: any, index: number) => {
+        const cells = (st.subjects || []).flatMap((subj: any) => [
+          ...(subj.termGrades || []).map((tg: any) => tg.grade != null ? tg.grade.toFixed(1) : '-'),
+          subj.status === 'approved' ? '—' : subj.minimumRequired != null ? subj.minimumRequired.toFixed(1) : '-',
+        ])
+        return [String(index + 1), st.studentName, ...cells, st.generalAverage != null ? st.generalAverage.toFixed(1) : '-', String(st.totalFailed ?? 0)]
+      })
+      addTable([head], body, startY)
+    } else if (selectedReport === 'failed-subjects' && reportData?.results) {
+      const body = reportData.results.map((r: any) => [
+        r.studentName,
+        r.subjectName,
+        r.areaName,
+        r.grade != null ? Number(r.grade).toFixed(1) : '-',
+        r.termName,
+        r.deficit != null ? Number(r.deficit).toFixed(1) : '-',
+        r.recoverable ? 'Sí' : 'No',
+      ])
+      addTable([['Estudiante', 'Asignatura', 'Área', 'Nota', 'Período', 'Déficit', 'Recuperable']], body, startY)
+    } else if (selectedReport === 'recovery-list' && reportData?.results) {
+      const body = reportData.results.map((r: any) => [
+        r.studentName,
+        r.subjectName,
+        r.grade != null ? Number(r.grade).toFixed(1) : '-',
+        r.termName,
+        r.deficit != null ? Number(r.deficit).toFixed(1) : '-',
+      ])
+      addTable([['Estudiante', 'Asignatura', 'Nota', 'Período', 'Déficit']], body, startY)
+    } else if (selectedReport === 'promotion-projection' && reportData?.results) {
+      const body = reportData.results.map((r: any) => [
+        r.studentName,
+        r.group,
+        String(r.totalSubjects ?? 0),
+        String(r.projectedApproved ?? 0),
+        String(r.atRisk ?? 0),
+        String(r.projectedFailed ?? 0),
+        r.overallProjection,
+      ])
+      addTable([['Estudiante', 'Grupo', 'Total Asig.', 'Promueve', 'En Riesgo', 'No Promueve', 'Proyección']], body, startY)
+    } else if (selectedReport === 'teacher-performance' && reportData?.results) {
+      const body = reportData.results.map((r: any) => [
+        r.teacherName,
+        r.subjectName,
+        r.groupName,
+        r.average != null ? Number(r.average).toFixed(1) : '-',
+        r.approvalRate != null ? Number(r.approvalRate).toFixed(1) : '-',
+        String(r.totalStudents ?? 0),
+      ])
+      addTable([['Docente', 'Asignatura', 'Grupo', 'Promedio', 'Aprobación %', 'Estudiantes']], body, startY)
+    } else if (selectedReport === 'avg-subject' && reportData?.results) {
+      const body = reportData.results.map((r: any) => [
+        r.subjectName,
+        r.areaName,
+        r.average != null ? Number(r.average).toFixed(1) : '-',
+        r.approvalRate != null ? Number(r.approvalRate).toFixed(1) : '-',
+        r.failRate != null ? Number(r.failRate).toFixed(1) : '-',
+        r.bestGrade != null ? Number(r.bestGrade).toFixed(1) : '-',
+        r.worstGrade != null ? Number(r.worstGrade).toFixed(1) : '-',
+        String(r.totalStudents ?? 0),
+      ])
+      addTable([['Asignatura', 'Área', 'Promedio', 'Aprobación %', 'Reprobación %', 'Mejor', 'Peor', 'Estudiantes']], body, startY)
+    } else if (selectedReport === 'avg-area' && reportData?.results) {
+      const body = reportData.results.map((r: any) => [
+        r.areaName,
+        r.average != null ? Number(r.average).toFixed(1) : '-',
+        r.approvalRate != null ? Number(r.approvalRate).toFixed(1) : '-',
+        r.failRate != null ? Number(r.failRate).toFixed(1) : '-',
+        String(r.subjectCount ?? 0),
+      ])
+      addTable([['Área', 'Promedio', 'Aprobación %', 'Reprobación %', 'Asignaturas']], body, startY)
+    } else if (selectedReport === 'ranking-students' && reportData?.results) {
+      const body = reportData.results.map((r: any) => [
+        String(r.position ?? ''),
+        r.studentName,
+        r.group,
+        r.average != null ? Number(r.average).toFixed(2) : '-',
+        String(r.subjectCount ?? 0),
+        r.performance,
+      ])
+      addTable([['Posición', 'Estudiante', 'Grupo', 'Promedio', 'Asignaturas', 'Desempeño']], body, startY)
+    } else if (selectedReport === 'ranking-institutional' && reportData?.results) {
+      const body = reportData.results.map((r: any) => [
+        String(r.position ?? ''),
+        r.studentName,
+        r.group,
+        r.average != null ? Number(r.average).toFixed(2) : '-',
+        String(r.subjectCount ?? 0),
+        r.performance,
+      ])
+      addTable([['Posición', 'Estudiante', 'Grupo', 'Promedio', 'Asignaturas', 'Desempeño']], body, startY)
+    } else if (selectedReport === 'cons-subjects' && studentsGradesData.length > 0) {
+      const allSubjects = new Set<string>()
+      studentsGradesData.forEach(s => Object.keys(s.grades).forEach(subj => allSubjects.add(subj)))
+      const subjectList = Array.from(allSubjects)
+      const head = ['Nro', 'Estudiante', 'Grupo', ...subjectList, 'Promedio', 'Reprobadas', 'Desempeño']
+      const body = studentsGradesData.map((row, index) => [
+        String(index + 1),
+        row.name,
+        row.group,
+        ...subjectList.map(subj => row.grades[subj] != null ? row.grades[subj].toFixed(parseInt(decimalPlaces)) : '-'),
+        row.average != null ? row.average.toFixed(parseInt(decimalPlaces)) : '-',
+        String(row.failedCount ?? 0),
+        row.performance,
+      ])
+      addTable([head], body, startY)
+    } else if (selectedReport === 'cons-areas' && reportData?.students) {
+      const areaCols = reportData.areaCols || []
+      const head = ['Nro', 'Estudiante', ...areaCols.map((c: any) => c.areaName), 'Promedio', 'Áreas reprobadas']
+      const body = reportData.students.map((st: any, index: number) => [
+        String(index + 1),
+        st.studentName,
+        ...(st.areaGrades || []).map((ag: any) => ag.average != null ? ag.average.toFixed(1) : '-'),
+        st.generalAverage != null ? st.generalAverage.toFixed(1) : '-',
+        String(st.failedAreas ?? 0),
+      ])
+      addTable([head], body, startY)
+    } else if (selectedReport === 'institutional-stats' && reportData?.institutional) {
+      const inst = reportData.institutional
+      const summaryBody = [
+        ['Promedio institucional', inst.average != null ? Number(inst.average).toFixed(1) : '-'],
+        ['Aprobación %', inst.approvalRate != null ? Number(inst.approvalRate).toFixed(1) : '-'],
+        ['Estudiantes', String(inst.totalStudents ?? 0)],
+        ['Grupos', String(inst.totalGroups ?? 0)],
+      ]
+      const firstY = addTable([['Métrica', 'Valor']], summaryBody, startY)
+      const stages = reportData.stages || []
+      if (stages.length > 0) {
+        let stageY = firstY + 8
+        stages.forEach((stage: any) => {
+          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(11)
+          doc.text(stage.stageLabel, margin, stageY)
+          stageY += 2
+          const stageBody = [
+            ['Promedio', stage.average != null ? Number(stage.average).toFixed(1) : '-'],
+            ['Aprobación %', stage.approvalRate != null ? Number(stage.approvalRate).toFixed(1) : '-'],
+            ['Estudiantes', String(stage.totalStudents ?? 0)],
+            ['Grupos', String(stage.totalGroups ?? 0)],
+          ]
+          stageY = addTable([['Métrica', 'Valor']], stageBody, stageY) + 8
+        })
+      }
+    } else if (selectedReport === 'annual-comparison' && reportData?.results) {
+      const body = reportData.results.map((yr: any) => [
+        yr.yearName,
+        yr.average != null ? Number(yr.average).toFixed(1) : '-',
+        yr.avgVariation != null ? String(yr.avgVariation) : '-',
+        yr.approvalRate != null ? `${Number(yr.approvalRate).toFixed(1)}%` : '-',
+        yr.approvalVariation != null ? `${yr.approvalVariation}%` : '-',
+        String(yr.totalStudents ?? 0),
+        yr.studentVariation != null ? String(yr.studentVariation) : '-',
+        String(yr.totalGroups ?? 0),
+      ])
+      addTable([['Año', 'Promedio', 'Δ Prom.', 'Aprobación %', 'Δ Aprob.', 'Estudiantes', 'Δ Est.', 'Grupos']], body, startY)
+    } else if (selectedReport === 'completeness-status' && reportData?.groups) {
+      const body = (reportData.groups || []).flatMap((g: any) =>
+        (g.subjects || []).map((s: any) => [
+          g.groupName,
+          s.subjectName,
+          s.teacherName,
+          `${s.gradeCompleteness}%`,
+          `${s.achievementCompleteness}%`,
+        ]),
+      )
+      addTable([['Grupo', 'Asignatura', 'Docente', 'Notas %', 'Logros %']], body, startY)
+    }
+
+    const instSlug = (institution?.name || 'edusyn').replace(/\s+/g, '_').substring(0, 20)
+    const filename = `${instSlug}_${selectedReport}_${new Date().toISOString().split('T')[0]}.pdf`
+    doc.save(filename)
   }
 
   const handleBack = () => {
@@ -2203,21 +2535,8 @@ export default function AcademicReports() {
           <button onClick={exportToCSV} className={`flex items-center gap-2 px-3 py-2 ${style.btnBg} text-white rounded-lg ${style.btnHover} text-sm`}>
             <Download className="w-4 h-4" /> Exportar CSV
           </button>
-          <button onClick={() => {
-            const wideReports = ['min-grade-consolidated', 'cons-subjects', 'cons-areas', 'failed-subjects', 'recovery-list', 'completeness-status']
-            const isWide = wideReports.includes(selectedReport || '')
-            if (isWide) {
-              const style = document.createElement('style')
-              style.id = 'print-landscape-override'
-              style.textContent = '@media print { @page { size: landscape; margin: 5mm; } table { font-size: 7px !important; } th, td { padding: 1px 2px !important; } }'
-              document.head.appendChild(style)
-              window.print()
-              setTimeout(() => style.remove(), 500)
-            } else {
-              window.print()
-            }
-          }} className="flex items-center gap-2 px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 text-sm">
-            <Printer className="w-4 h-4" /> Imprimir
+          <button onClick={exportToPDF} className="flex items-center gap-2 px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 text-sm">
+            <Download className="w-4 h-4" /> Exportar PDF
           </button>
         </div>
       </div>

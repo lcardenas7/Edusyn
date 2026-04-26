@@ -96,6 +96,16 @@ const CATEGORIES: ReportCategory[] = [
       { id: 'alert-att', name: 'Alertas asistencia', href: '/reports/alerts', icon: Users },
     ],
   },
+  {
+    id: 'commission', name: 'Comisión', description: 'Acta consolidada, top 5 y convivencia por grado',
+    icon: ClipboardList, href: '/reports/commission', color: 'slate', reportCount: 4,
+    reports: [
+      { id: 'commission-academic', name: 'Resumen académico', href: '/reports/commission', icon: BarChart3 },
+      { id: 'commission-top5', name: 'Top 5 por curso', href: '/reports/commission', icon: TrendingUp },
+      { id: 'commission-convivencia', name: 'Situación convivencial', href: '/reports/commission', icon: Shield },
+      { id: 'commission-acta', name: 'Acta consolidada', href: '/reports/commission', icon: FileText },
+    ],
+  },
 ]
 
 const COLOR_MAP: Record<string, { bg: string; bgLight: string; border: string; text: string; hover: string; ring: string }> = {
@@ -105,6 +115,7 @@ const COLOR_MAP: Record<string, { bg: string; bgLight: string; border: string; t
   amber:  { bg: 'bg-amber-500',  bgLight: 'bg-amber-50',  border: 'border-amber-200',  text: 'text-amber-600',  hover: 'hover:border-amber-400',  ring: 'ring-amber-200' },
   indigo: { bg: 'bg-indigo-600', bgLight: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-600', hover: 'hover:border-indigo-400', ring: 'ring-indigo-200' },
   red:    { bg: 'bg-red-500',    bgLight: 'bg-red-50',    border: 'border-red-200',    text: 'text-red-600',    hover: 'hover:border-red-400',    ring: 'ring-red-200' },
+  slate:  { bg: 'bg-slate-700',   bgLight: 'bg-slate-50',  border: 'border-slate-200',   text: 'text-slate-700',   hover: 'hover:border-slate-400',   ring: 'ring-slate-200' },
 }
 
 export default function ReportsHub() {

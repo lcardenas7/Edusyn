@@ -73,6 +73,7 @@ import AcademicHub from './pages/AcademicHub'
 import ReportsHub from './pages/ReportsHub'
 import AdminReports from './pages/reports/AdminReports'
 import AcademicReports from './pages/reports/AcademicReports'
+import CommissionReports from './pages/reports/CommissionReports'
 import AttendanceReports from './pages/reports/AttendanceReports'
 import AlertsReports from './pages/reports/AlertsReports'
 import BulletinsReports from './pages/reports/BulletinsReports'
@@ -283,6 +284,7 @@ function App() {
                   <Route path="/reports" element={<ReportsHub />} />
                   <Route path="/reports/admin" element={<AdminReports />} />
                   <Route path="/reports/academic" element={<AcademicReports />} />
+                  <Route path="/reports/commission" element={<CommissionReports />} />
                   <Route path="/reports/attendance" element={<AttendanceReports />} />
                   <Route path="/reports/alerts" element={<AlertsReports />} />
                   <Route path="/reports/bulletins" element={<BulletinsReports />} />
