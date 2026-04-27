@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useParams } from 'react-router-dom'
 import { guestApi } from '../../lib/playApi'
+import { usePlaySSE, PlaySSEEvent } from '../../lib/play-sse'
 import {
   Sparkles,
   Hash,
-  User,
   ArrowRight,
   AlertCircle,
   Loader2,
@@ -68,7 +68,6 @@ function getQuestionOptions(rawOptions: unknown): Array<{ id?: string; text?: st
 
 export default function JoinPage() {
   const { code: urlCode } = useParams<{ code: string }>()
-  const navigate = useNavigate()
 
   const [step, setStep] = useState<Step>(urlCode ? 'nickname' : 'code')
   const [code, setCode] = useState(urlCode || '')
@@ -79,7 +78,8 @@ export default function JoinPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [lookingUp, setLookingUp] = useState(!!urlCode)
-  const [pollingInterval, setPollingInterval] = useState<any>(null)
+  const [guestToken, setGuestToken] = useState<string | undefined>(undefined)
+  const [sseFallback, setSseFallback] = useState(false)
   const [answerFeedback, setAnswerFeedback] = useState<AnswerFeedback | null>(null)
   const [totalScore, setTotalScore] = useState(0)
 
@@ -92,62 +92,116 @@ export default function JoinPage() {
     }
   }, [urlCode])
 
-  // Polling for session status after joining
+  // Restaurar sesión de invitado tras refresh
   useEffect(() => {
-    if (step === 'lobby' && session?.sessionId) {
-      // Start polling every 3 seconds
-      const interval = setInterval(async () => {
-        try {
-          const res = await guestApi.getSessionStatus(session.sessionId)
-          const status = res.data
-          setSessionStatus(status)
+    const savedToken = localStorage.getItem('guest_token') || undefined
+    const savedSessionRaw = localStorage.getItem('guest_session')
+    if (!savedToken || !savedSessionRaw) return
 
-          // Handle state transitions
-          if (status.status === 'ACTIVE') {
-            setStep('active')
-          } else if (status.status === 'FINISHED') {
-            setStep('finished')
-            // Stop polling when finished
-            if (pollingInterval) clearInterval(pollingInterval)
-          }
-        } catch (err) {
-          // Silently fail polling
-        }
-      }, 3000)
-      setPollingInterval(interval)
-
-      // Cleanup on unmount or step change
-      return () => clearInterval(interval)
-    } else if (step === 'active' && session?.sessionId) {
-      // Keep polling during active state for question changes
-      const interval = setInterval(async () => {
-        try {
-          const res = await guestApi.getSessionStatus(session.sessionId)
-          const status = res.data
-          setSessionStatus(status)
-          if (status.status === 'FINISHED') {
-            setStep('finished')
-            if (pollingInterval) clearInterval(pollingInterval)
-          }
-        } catch {}
-      }, 2000)
-      setPollingInterval(interval)
-      return () => clearInterval(interval)
-    } else {
-      // Clear polling when not in lobby/active
-      if (pollingInterval) {
-        clearInterval(pollingInterval)
-        setPollingInterval(null)
+    try {
+      const saved = JSON.parse(savedSessionRaw) as {
+        sessionId: string
+        nickname?: string
+        avatar?: string
+        title?: string
+        teacherName?: string
       }
-    }
-  }, [step, session?.sessionId])
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingInterval) clearInterval(pollingInterval)
+      if (!saved.sessionId) return
+
+      setGuestToken(savedToken)
+      if (saved.nickname) setNickname(saved.nickname)
+      if (saved.avatar) setAvatar(saved.avatar)
+      setSession((prev) => prev ?? {
+        sessionId: saved.sessionId,
+        title: saved.title ?? '',
+        teacherName: saved.teacherName ?? '',
+        guestsCount: 0,
+        status: 'WAITING',
+        type: 'quiz',
+      })
+      if (step === 'code' || step === 'nickname') {
+        setStep('lobby')
+      }
+    } catch {
+      localStorage.removeItem('guest_token')
+      localStorage.removeItem('guest_session')
     }
-  }, [pollingInterval])
+  }, [])
+
+  const sseSessionId = session?.sessionId ?? ''
+
+  const handleFallbackPoll = useCallback(async () => {
+    if (!sseSessionId) return
+    try {
+      const res = await guestApi.getSessionStatus(sseSessionId)
+      const status = res.data
+      setSessionStatus(status)
+      if (status.status === 'ACTIVE') setStep('active')
+      if (status.status === 'FINISHED') setStep('finished')
+    } catch {}
+  }, [sseSessionId])
+
+  const handleSSEEvent = useCallback((event: PlaySSEEvent) => {
+    if (event.type === 'PING') return
+
+    if (event.type === 'SESSION_STATE') {
+      if (event.data?._fallback) {
+        setSseFallback(true)
+        return
+      }
+      setSseFallback(false)
+      setSessionStatus((prev) => (prev ? { ...prev, ...event.data } : event.data))
+      if (event.data?.status === 'ACTIVE') setStep('active')
+      if (event.data?.status === 'FINISHED') setStep('finished')
+      return
+    }
+
+    if (event.type === 'GUEST_JOINED') {
+      setSessionStatus((prev) => (prev ? { ...prev, guestsCount: event.data.guestsCount } : prev))
+      setSession((prev) => (prev ? { ...prev, guestsCount: event.data.guestsCount } : prev))
+      return
+    }
+
+    if (event.type === 'QUESTION_OPENED') {
+      setSessionStatus((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: 'ACTIVE',
+              currentQuestionIdx: event.data.questionIndex,
+              totalQuestions: event.data.totalQuestions,
+              currentQuestion: event.data.question,
+            }
+          : {
+              id: sseSessionId,
+              status: 'ACTIVE',
+              currentQuestionIdx: event.data.questionIndex,
+              guestsCount: session?.guestsCount ?? 0,
+              activityTitle: session?.title ?? '',
+              totalQuestions: event.data.totalQuestions,
+              currentQuestion: event.data.question,
+            }
+      )
+      setAnswerFeedback(null)
+      setStep('active')
+      return
+    }
+
+    if (event.type === 'SESSION_FINISHED') {
+      setSessionStatus((prev) => (prev ? { ...prev, status: 'FINISHED' } : prev))
+      setStep('finished')
+      return
+    }
+  }, [session?.guestsCount, session?.title, sseSessionId])
+
+  usePlaySSE({
+    sessionId: sseSessionId,
+    guestToken,
+    onEvent: handleSSEEvent,
+    onFallback: handleFallbackPoll,
+    enabled: !!sseSessionId && !!guestToken && (step === 'lobby' || step === 'active'),
+  })
 
   // Clear per-question feedback when question changes
   useEffect(() => {
@@ -196,6 +250,7 @@ export default function JoinPage() {
         nickname: nickname.trim(),
         avatarEmoji: avatar,
       })
+
       // Save guest token
       localStorage.setItem('guest_token', res.data.guestToken)
       localStorage.setItem('guest_session', JSON.stringify({
@@ -203,9 +258,13 @@ export default function JoinPage() {
         guestId: res.data.guestId,
         nickname: nickname.trim(),
         avatar,
+        title: session?.title ?? '',
+        teacherName: session?.teacherName ?? '',
       }))
+      setGuestToken(res.data.guestToken)
       setTotalScore(0)
       setAnswerFeedback(null)
+      setSseFallback(false)
       setStep('lobby')
     } catch (err: any) {
       setError(err.response?.data?.message || 'No se pudo unir a la sesión')
@@ -417,6 +476,12 @@ export default function JoinPage() {
               </div>
               <span className="text-sm text-gray-400">Esperando que inicie la sesión</span>
             </div>
+
+            {sseFallback && (
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-yellow-50 border border-yellow-200 px-3 py-1 text-xs text-yellow-700">
+                Conexión degradada
+              </div>
+            )}
 
             <div className="bg-violet-50 rounded-xl p-4 mb-4">
               <div className="flex items-center justify-center gap-2">

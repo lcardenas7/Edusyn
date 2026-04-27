@@ -9,6 +9,7 @@ import { PlayWorkspaceService } from './services/play-workspace.service';
 import { GuestTokenService } from './services/guest-token.service';
 import { AuthPlayService } from './services/auth-play.service';
 import { PlayService } from './services/play.service';
+import { PlayStreamService } from './services/play-stream.service';
 import { GuestService } from './services/guest.service';
 import { LiveLessonService } from './services/live-lesson.service';
 import { ConversionService } from './services/conversion.service';
@@ -49,11 +50,12 @@ import { ConversionController } from './controllers/conversion.controller';
     GuestTokenService,
     AuthPlayService,
     PlayService,
+    PlayStreamService,
     GuestService,
     LiveLessonService,
     ConversionService,
     GuestGuard,
   ],
-  exports: [PlayWorkspaceService, GuestTokenService, GuestService],
+  exports: [PlayWorkspaceService, GuestTokenService, GuestService, PlayStreamService],
 })
 export class EdusynPlayModule {}

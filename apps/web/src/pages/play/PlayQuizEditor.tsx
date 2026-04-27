@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { classroomApi } from '../../lib/api'
 import { playPanelApi } from '../../lib/playApi'
+import { usePlaySSE, PlaySSEEvent } from '../../lib/play-sse'
+import LiveQuizPlayer from '../../components/play/LiveQuizPlayer'
 import {
   ArrowLeft,
   Plus,
@@ -15,12 +18,9 @@ import {
   Hash,
   Type,
   Play,
-  Copy,
-  Users,
-  Radio,
-  SkipForward,
-  Square,
-  Trophy,
+  Image as ImageIcon,
+  Upload,
+  Timer,
 } from 'lucide-react'
 
 interface Option {
@@ -37,6 +37,8 @@ interface Question {
   correctAnswer: string | null
   points: number
   explanation: string | null
+  imageUrl?: string | null
+  timeLimitSeconds?: number | null
   sortOrder: number
 }
 
@@ -72,7 +74,8 @@ export default function PlayQuizEditor() {
   // Live session state
   const [liveSession, setLiveSession] = useState<any>(null)
   const [launchingLive, setLaunchingLive] = useState(false)
-  const [pollingInterval, setPollingInterval] = useState<any>(null)
+  const [sseConnected, setSseConnected] = useState(false)
+  const [sseFallback, setSseFallback] = useState(false)
 
   // New question form
   const [newType, setNewType] = useState('MULTIPLE_CHOICE')
@@ -81,6 +84,9 @@ export default function PlayQuizEditor() {
   const [newCorrectAnswer, setNewCorrectAnswer] = useState('')
   const [newPoints, setNewPoints] = useState(10)
   const [newExplanation, setNewExplanation] = useState('')
+  const [newImageUrl, setNewImageUrl] = useState('')
+  const [newTimeLimitSeconds, setNewTimeLimitSeconds] = useState('15')
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
 
   useEffect(() => {
@@ -98,7 +104,35 @@ export default function PlayQuizEditor() {
     setNewCorrectAnswer('')
     setNewPoints(10)
     setNewExplanation('')
+    setNewImageUrl('')
+    setNewTimeLimitSeconds('15')
     setError('')
+  }
+
+  const handleUploadImage = async () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.onchange = async () => {
+      const file = input.files?.[0]
+      if (!file) return
+      setUploadingImage(true)
+      setError('')
+      try {
+        const response = await classroomApi.uploadMaterial(file)
+        const uploadedUrl = response.data?.data?.url || response.data?.data?.path || response.data?.url || response.data?.path
+        if (uploadedUrl) {
+          setNewImageUrl(uploadedUrl)
+        } else {
+          setError('No se pudo obtener la URL de la imagen subida')
+        }
+      } catch (err: any) {
+        setError(err?.response?.data?.message || 'Error al subir imagen')
+      } finally {
+        setUploadingImage(false)
+      }
+    }
+    input.click()
   }
 
   const handleAddQuestion = async () => {
@@ -143,6 +177,8 @@ export default function PlayQuizEditor() {
         correctAnswer,
         points: newPoints,
         explanation: newExplanation.trim() || undefined,
+        imageUrl: newImageUrl.trim() || undefined,
+        timeLimitSeconds: newTimeLimitSeconds ? parseInt(newTimeLimitSeconds, 10) || undefined : undefined,
       })
       setQuestions(prev => [...prev, res.data])
       resetForm()
@@ -172,6 +208,67 @@ export default function PlayQuizEditor() {
   }
 
   // ── Live Quiz Session ──────────────────────────────────
+  // SSE event handler — docente recibe actualizaciones en tiempo real
+  const handleSSEEvent = useCallback((event: PlaySSEEvent) => {
+    if (event.type === 'SESSION_STATE') {
+      if (event.data?._fallback) {
+        setSseFallback(true)
+        return
+      }
+      setSseConnected(true)
+      setLiveSession((prev: any) =>
+        prev ? { ...prev, ...event.data } : event.data
+      )
+    } else if (event.type === 'GUEST_JOINED') {
+      setLiveSession((prev: any) =>
+        prev ? { ...prev, guestsCount: event.data.guestsCount } : prev
+      )
+    } else if (event.type === 'GUEST_LEFT') {
+      setLiveSession((prev: any) =>
+        prev ? { ...prev, guestsCount: Math.max(0, (prev.guestsCount ?? 1) - 1) } : prev
+      )
+    } else if (event.type === 'RANKING_UPDATED') {
+      setLiveSession((prev: any) =>
+        prev ? { ...prev, guests: event.data.ranking } : prev
+      )
+    } else if (event.type === 'SESSION_FINISHED') {
+      setLiveSession((prev: any) =>
+        prev ? { ...prev, status: 'FINISHED', guests: event.data.ranking } : prev
+      )
+    } else if (event.type === 'QUESTION_OPENED') {
+      setLiveSession((prev: any) =>
+        prev
+          ? {
+              ...prev,
+              status: 'ACTIVE',
+              currentQuestionIdx: event.data.questionIndex,
+              totalQuestions: event.data.totalQuestions,
+            }
+          : prev
+      )
+    }
+  }, [])
+
+  // Fallback polling cuando SSE falla 3 veces
+  const sseSessionId = liveSession?.id ?? ''
+  const playToken = typeof window !== 'undefined' ? localStorage.getItem('play_token') ?? undefined : undefined
+
+  const handleFallbackPoll = useCallback(async () => {
+    if (!sseSessionId) return
+    try {
+      const status = await playPanelApi.getLiveQuizStatus(sseSessionId)
+      setLiveSession(status.data)
+    } catch {}
+  }, [sseSessionId])
+
+  usePlaySSE({
+    sessionId: sseSessionId,
+    token: playToken,
+    onEvent: handleSSEEvent,
+    onFallback: handleFallbackPoll,
+    enabled: !!sseSessionId,
+  })
+
   const handleLaunchLive = async () => {
     if (!quizId) return
     if (questions.length === 0) {
@@ -183,14 +280,8 @@ export default function PlayQuizEditor() {
     try {
       const res = await playPanelApi.createLiveQuiz(quizId)
       setLiveSession(res.data)
-      // Start polling for guest count
-      const interval = setInterval(async () => {
-        try {
-          const status = await playPanelApi.getLiveQuizStatus(res.data.id)
-          setLiveSession(status.data)
-        } catch {}
-      }, 3000)
-      setPollingInterval(interval)
+      setSseConnected(false)
+      setSseFallback(false)
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al crear sesión en vivo')
     } finally {
@@ -202,8 +293,7 @@ export default function PlayQuizEditor() {
     if (!liveSession) return
     try {
       await playPanelApi.startLiveQuiz(liveSession.id)
-      const status = await playPanelApi.getLiveQuizStatus(liveSession.id)
-      setLiveSession(status.data)
+      // El SSE enviará QUESTION_OPENED actualizando el estado; no hacemos poll
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al iniciar')
     }
@@ -212,17 +302,8 @@ export default function PlayQuizEditor() {
   const handleNextQuestion = async () => {
     if (!liveSession) return
     try {
-      const res = await playPanelApi.nextQuestionLive(liveSession.id)
-      if (res.data.finished) {
-        const status = await playPanelApi.getLiveQuizStatus(liveSession.id)
-        setLiveSession(status.data)
-      } else {
-        setLiveSession((prev: any) => ({
-          ...prev,
-          currentQuestionIdx: res.data.currentQuestionIdx,
-          status: 'ACTIVE',
-        }))
-      }
+      await playPanelApi.nextQuestionLive(liveSession.id)
+      // El SSE enviará QUESTION_OPENED o SESSION_FINISHED actualizando el estado
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error')
     }
@@ -232,15 +313,14 @@ export default function PlayQuizEditor() {
     if (!liveSession) return
     try {
       await playPanelApi.finishLiveQuiz(liveSession.id)
-      if (pollingInterval) clearInterval(pollingInterval)
-      const status = await playPanelApi.getLiveQuizStatus(liveSession.id)
-      setLiveSession(status.data)
+      // El SSE enviará SESSION_FINISHED con el ranking final
     } catch {}
   }
 
   const handleCloseLive = () => {
-    if (pollingInterval) clearInterval(pollingInterval)
     setLiveSession(null)
+    setSseConnected(false)
+    setSseFallback(false)
   }
 
   const copyJoinCode = () => {
@@ -309,142 +389,17 @@ export default function PlayQuizEditor() {
         </div>
       )}
 
-      {/* Live Quiz Session Panel */}
       {liveSession && (
-        <div className="mb-6 bg-gradient-to-r from-green-600 to-emerald-700 rounded-2xl p-6 text-white shadow-lg">
-          {/* WAITING / LOBBY */}
-          {liveSession.status === 'WAITING' && (
-            <>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Radio className="w-5 h-5 animate-pulse" />
-                  <span className="font-bold text-lg">Esperando jugadores...</span>
-                </div>
-                <button onClick={handleCloseLive} className="text-white/60 hover:text-white text-sm">Cancelar</button>
-              </div>
-
-              <div className="text-center mb-6">
-                <p className="text-green-100 text-sm mb-2">Comparte este código con tus participantes</p>
-                <div className="flex items-center justify-center gap-3">
-                  <div className="bg-white text-green-800 text-4xl font-mono font-bold px-6 py-3 rounded-xl tracking-[0.3em] select-all">
-                    {liveSession.joinCode}
-                  </div>
-                  <button onClick={copyJoinCode} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition" title="Copiar código">
-                    <Copy className="w-5 h-5" />
-                  </button>
-                </div>
-                <p className="text-green-200 text-xs mt-2">Los participantes entran en <strong>edusyn.co/join</strong></p>
-              </div>
-
-              <div className="flex items-center justify-between bg-white/10 rounded-xl p-4">
-                <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  <span className="font-medium">{liveSession.guestsCount || 0} conectados</span>
-                </div>
-                <button
-                  onClick={handleStartGame}
-                  disabled={!liveSession.guestsCount}
-                  className="px-6 py-2.5 bg-white text-green-700 rounded-lg font-bold hover:bg-green-50 transition disabled:opacity-50 flex items-center gap-2"
-                >
-                  <Play className="w-4 h-4" /> Iniciar Juego
-                </button>
-              </div>
-
-              {liveSession.guests && liveSession.guests.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {liveSession.guests.map((g: any) => (
-                    <span key={g.id} className="bg-white/20 px-3 py-1 rounded-full text-sm flex items-center gap-1">
-                      {g.avatarEmoji || '👤'} {g.nickname}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-
-          {/* ACTIVE */}
-          {liveSession.status === 'ACTIVE' && (
-            <>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Radio className="w-5 h-5 text-red-300 animate-pulse" />
-                  <span className="font-bold text-lg">En vivo</span>
-                  <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">{liveSession.guestsCount || 0} jugadores</span>
-                </div>
-                <span className="text-sm text-green-200">
-                  Pregunta {(liveSession.currentQuestionIdx ?? 0) + 1} / {liveSession.totalQuestions}
-                </span>
-              </div>
-
-              {/* Current question preview */}
-              {liveSession.questions && liveSession.questions[liveSession.currentQuestionIdx] && (
-                <div className="bg-white/10 rounded-xl p-4 mb-4">
-                  <p className="font-medium text-sm">{liveSession.questions[liveSession.currentQuestionIdx].text}</p>
-                </div>
-              )}
-
-              {/* Progress bar */}
-              <div className="w-full bg-white/20 rounded-full h-2 mb-4">
-                <div
-                  className="bg-white rounded-full h-2 transition-all"
-                  style={{ width: `${(((liveSession.currentQuestionIdx ?? 0) + 1) / liveSession.totalQuestions) * 100}%` }}
-                />
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleNextQuestion}
-                  className="flex-1 py-2.5 bg-white text-green-700 rounded-lg font-bold hover:bg-green-50 transition flex items-center justify-center gap-2"
-                >
-                  <SkipForward className="w-4 h-4" />
-                  {(liveSession.currentQuestionIdx ?? 0) + 1 >= liveSession.totalQuestions ? 'Finalizar' : 'Siguiente Pregunta'}
-                </button>
-                <button
-                  onClick={handleFinishGame}
-                  className="py-2.5 px-4 bg-red-500/80 text-white rounded-lg font-medium hover:bg-red-500 transition flex items-center gap-2"
-                >
-                  <Square className="w-4 h-4" /> Terminar
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* FINISHED */}
-          {liveSession.status === 'FINISHED' && (
-            <>
-              <div className="flex items-center gap-2 mb-4">
-                <Trophy className="w-6 h-6 text-yellow-300" />
-                <span className="font-bold text-lg">Juego Terminado</span>
-              </div>
-
-              {liveSession.guests && liveSession.guests.length > 0 ? (
-                <div className="space-y-2 mb-4">
-                  <p className="text-green-100 text-sm font-medium">Ranking Final</p>
-                  {liveSession.guests.slice(0, 10).map((g: any, i: number) => (
-                    <div key={g.id} className="flex items-center gap-3 bg-white/10 rounded-lg p-3">
-                      <span className="text-lg font-bold w-8 text-center">
-                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
-                      </span>
-                      <span className="text-lg">{g.avatarEmoji || '👤'}</span>
-                      <span className="flex-1 font-medium">{g.nickname}</span>
-                      <span className="font-bold">{g.score} pts</span>
-                      <span className="text-xs text-green-200">{g.correctAnswers}/{g.totalAnswers} correctas</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-green-100 text-sm mb-4">No hubo participantes</p>
-              )}
-
-              <button
-                onClick={handleCloseLive}
-                className="w-full py-2.5 bg-white text-green-700 rounded-lg font-bold hover:bg-green-50 transition"
-              >
-                Cerrar
-              </button>
-            </>
-          )}
-        </div>
+        <LiveQuizPlayer
+          liveSession={liveSession}
+          sseConnected={sseConnected}
+          sseFallback={sseFallback}
+          onCopyJoinCode={copyJoinCode}
+          onStartGame={handleStartGame}
+          onNextQuestion={handleNextQuestion}
+          onFinishGame={handleFinishGame}
+          onClose={handleCloseLive}
+        />
       )}
 
       {/* Questions List */}
@@ -485,8 +440,16 @@ export default function PlayQuizEditor() {
                     <span className="text-xs text-gray-400 flex items-center gap-1">
                       <Hash className="w-3 h-3" /> {q.points} pts
                     </span>
+                    {q.timeLimitSeconds ? (
+                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                        <Timer className="w-3 h-3" /> {q.timeLimitSeconds}s
+                      </span>
+                    ) : null}
                   </div>
                   <p className="text-sm font-medium text-gray-900">{q.text}</p>
+                  {q.imageUrl && (
+                    <img src={q.imageUrl} alt="Pregunta" className="mt-2 h-32 w-full rounded-lg object-cover border border-gray-200" />
+                  )}
                   {q.options && Array.isArray(q.options) && (
                     <div className="mt-2 grid grid-cols-2 gap-1.5">
                       {(q.options as Option[]).map((opt) => (
@@ -657,7 +620,41 @@ export default function PlayQuizEditor() {
             </div>
           )}
 
-          {/* Points + Explanation */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Imagen (opcional)</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newImageUrl}
+                  onChange={e => setNewImageUrl(e.target.value)}
+                  placeholder="URL de imagen..."
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition"
+                />
+                <button
+                  type="button"
+                  onClick={handleUploadImage}
+                  disabled={uploadingImage}
+                  className="px-3 py-2 border border-violet-200 bg-violet-50 text-violet-700 rounded-lg text-sm font-medium hover:bg-violet-100 transition disabled:opacity-50 inline-flex items-center gap-2"
+                >
+                  {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  Subir
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tiempo límite (segundos)</label>
+              <input
+                type="number"
+                value={newTimeLimitSeconds}
+                onChange={e => setNewTimeLimitSeconds(e.target.value)}
+                min={5}
+                max={180}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition"
+              />
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Puntos</label>
@@ -679,6 +676,48 @@ export default function PlayQuizEditor() {
                 placeholder="¿Por qué es correcta?"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition"
               />
+            </div>
+          </div>
+
+          <div className="mb-4 rounded-xl border border-violet-200 bg-violet-50/50 p-4">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-violet-800">
+              <ImageIcon className="w-4 h-4" /> Vista previa
+            </div>
+            <div className="rounded-xl bg-white border border-violet-100 p-4">
+              <div className="flex items-center gap-2 mb-2 text-xs text-gray-500">
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-violet-700">
+                  <Hash className="w-3 h-3" /> {newPoints} pts
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-gray-600">
+                  <Timer className="w-3 h-3" /> {newTimeLimitSeconds || '—'}s
+                </span>
+              </div>
+              <p className="text-sm font-semibold text-gray-900 mb-3">{newText.trim() || 'Aquí verás la pregunta...'}</p>
+              {newImageUrl && (
+                <img src={newImageUrl} alt="Vista previa" className="mb-3 h-40 w-full rounded-lg object-cover border border-gray-200" />
+              )}
+              {newType === 'MULTIPLE_CHOICE' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {newOptions.filter(opt => opt.text.trim()).map((opt, index) => (
+                    <div key={opt.id} className={`rounded-lg border px-3 py-2 text-sm ${opt.isCorrect ? 'border-green-300 bg-green-50 text-green-800' : 'border-gray-200 bg-gray-50 text-gray-700'}`}>
+                      <span className="mr-2 font-bold">{String.fromCharCode(65 + index)}.</span>{opt.text}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {newType === 'TRUE_FALSE' && (
+                <div className="grid grid-cols-2 gap-2">
+                  {['Verdadero', 'Falso'].map(label => (
+                    <div key={label} className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">{label}</div>
+                  ))}
+                </div>
+              )}
+              {newType === 'SHORT_ANSWER' && (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500">Respuesta abierta del estudiante</div>
+              )}
+              {newExplanation && (
+                <p className="mt-3 text-xs italic text-gray-500">💡 {newExplanation}</p>
+              )}
             </div>
           </div>
 

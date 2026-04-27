@@ -3,6 +3,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 
 import { PrismaService } from '../../../prisma/prisma.service';
 import { GuestTokenService } from './guest-token.service';
+import { PlayService } from './play.service';
 import { generateJoinCode } from '../utils/join-code.util';
 
 export type SessionKind = 'QUIZ' | 'LESSON';
@@ -25,6 +26,7 @@ export class GuestService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tokens: GuestTokenService,
+    private readonly playService: PlayService,
   ) {}
 
   /** Genera un joinCode único (6 dígitos). Reintenta si colisiona. */
@@ -178,6 +180,15 @@ export class GuestService {
         where: { id: info.sessionId },
         data: { guestsCount: { increment: 1 } },
       });
+      const refreshed = await this.prisma.liveSession.findUnique({
+        where: { id: info.sessionId },
+        select: { guestsCount: true },
+      });
+      this.playService.emitGuestJoined(info.sessionId, {
+        nickname,
+        avatarEmoji: params.avatarEmoji || '🦊',
+        guestsCount: refreshed?.guestsCount ?? info.guestsCount + 1,
+      });
     } else {
       await this.prisma.liveLessonSession.update({
         where: { id: info.sessionId },
@@ -271,6 +282,10 @@ export class GuestService {
       },
     });
 
+    if (guest.sessionKind === 'QUIZ') {
+      await this.playService.emitRankingUpdate(guest.sessionId);
+    }
+
     return { isCorrect, pointsAwarded };
   }
 
@@ -280,7 +295,7 @@ export class GuestService {
     if (!allowed.includes(emoji)) {
       throw new BadRequestException('Emoji no permitido');
     }
-    return this.prisma.liveSessionReaction.create({
+    const reaction = await this.prisma.liveSessionReaction.create({
       data: {
         sessionId,
         slideIndex: slideIndex ?? null,
@@ -288,6 +303,8 @@ export class GuestService {
         emoji,
       },
     });
+    this.playService.emitReaction(sessionId, { guestId, emoji, slideIndex: slideIndex ?? null });
+    return reaction;
   }
 
   /** Ranking completo de la sesión (mezclado si es mixta; por ahora solo guests) */
