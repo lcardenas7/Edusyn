@@ -10,11 +10,7 @@ import { GuestTokenService } from './guest-token.service';
  */
 @Injectable()
 export class PlayService {
-  // Límites Free (Fase 1)
   static readonly LIMITS = {
-    MAX_QUIZZES: 10,
-    MAX_LESSONS: 5,
-    MAX_SESSIONS_PER_MONTH: 20,
     MAX_PARTICIPANTS_PER_SESSION: 50,
   };
 
@@ -59,7 +55,6 @@ export class PlayService {
     ]);
 
     return {
-      limits: PlayService.LIMITS,
       stats: {
         quizCount,
         lessonCount,
@@ -67,16 +62,10 @@ export class PlayService {
         totalSessions,
         totalGuests,
       },
-      usage: {
-        quizzesRemaining: Math.max(0, PlayService.LIMITS.MAX_QUIZZES - quizCount),
-        lessonsRemaining: Math.max(0, PlayService.LIMITS.MAX_LESSONS - lessonCount),
-        sessionsRemaining: Math.max(0, PlayService.LIMITS.MAX_SESSIONS_PER_MONTH - sessionsThisMonth),
-      },
     };
   }
 
   async createQuiz(userId: string, data: { title: string; description?: string; type?: string }) {
-    await this.enforceFreeLimits(userId, 'QUIZ');
     const classroomId = await this.resolveClassroom(userId);
 
     // Buscar o crear la sección default "Quizzes"
@@ -490,7 +479,6 @@ export class PlayService {
     if (!activity) throw new NotFoundException('Quiz no encontrado');
     if (activity.questions.length === 0) throw new BadRequestException('El quiz no tiene preguntas. Agrega al menos una antes de jugar.');
 
-    await this.enforceFreeLimits(userId, 'SESSION');
 
     // Close old WAITING/ACTIVE sessions
     await this.prisma.liveSession.updateMany({
@@ -1052,7 +1040,6 @@ export class PlayService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async createLesson(userId: string, data: { title: string; description?: string }) {
-    await this.enforceFreeLimits(userId, 'LESSON');
     const classroomId = await this.resolveClassroom(userId);
 
     let section = await this.prisma.classroomSection.findFirst({
@@ -1114,16 +1101,4 @@ export class PlayService {
     return { deleted: true };
   }
 
-  async enforceFreeLimits(userId: string, kind: 'QUIZ' | 'LESSON' | 'SESSION'): Promise<void> {
-    const d = await this.dashboard(userId);
-    if (kind === 'QUIZ' && d.stats.quizCount >= PlayService.LIMITS.MAX_QUIZZES) {
-      throw new ForbiddenException(`Límite del plan Free: ${PlayService.LIMITS.MAX_QUIZZES} quizzes. Actualiza a Pro para ilimitado.`);
-    }
-    if (kind === 'LESSON' && d.stats.lessonCount >= PlayService.LIMITS.MAX_LESSONS) {
-      throw new ForbiddenException(`Límite del plan Free: ${PlayService.LIMITS.MAX_LESSONS} lecciones. Actualiza a Pro para ilimitado.`);
-    }
-    if (kind === 'SESSION' && d.stats.sessionsThisMonth >= PlayService.LIMITS.MAX_SESSIONS_PER_MONTH) {
-      throw new ForbiddenException(`Límite del plan Free: ${PlayService.LIMITS.MAX_SESSIONS_PER_MONTH} sesiones/mes. Actualiza a Pro para ilimitado.`);
-    }
-  }
 }
