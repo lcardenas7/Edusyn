@@ -79,6 +79,8 @@ export class PeriodFinalGradesService {
       },
       orderBy: [
         { studentEnrollment: { student: { lastName: 'asc' } } },
+        { studentEnrollment: { student: { secondLastName: 'asc' } } },
+        { studentEnrollment: { student: { firstName: 'asc' } } },
         { subject: { name: 'asc' } },
       ],
     });

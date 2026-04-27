@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx'
 import { generateTemplate, parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
 import api, { studentsApi, guardiansApi, academicYearLifecycleApi, groupsApi, enrollmentsApi, observerApi, staffApi, apdApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
+import { compareStudents, compareFullNames } from '../utils/sortStudents'
 import { DiagnosisBadge } from '../components/StudentBadges'
 
 type StudentStatus = 'ACTIVE' | 'INACTIVE' | 'TRANSFERRED' | 'GRADUATED' | 'WITHDRAWN'
@@ -562,7 +563,7 @@ export default function Students() {
           id: response.data.studentId,
           group: selectedGroup ? `${selectedGroup.grade?.name || ''} ${selectedGroup.name}`.trim() : ''
         } as Student
-        setStudents([...students, newStudent].sort((a, b) => a.lastName.localeCompare(b.lastName)))
+        setStudents([...students, newStudent].sort(compareStudents))
         setSaveMessage({ type: 'success', text: 'Estudiante creado y matriculado correctamente' })
       } else {
         // Crear solo estudiante (sin matrícula)
@@ -583,7 +584,7 @@ export default function Students() {
           ...formData, 
           id: response.data.id 
         } as Student
-        setStudents([...students, newStudent].sort((a, b) => a.lastName.localeCompare(b.lastName)))
+        setStudents([...students, newStudent].sort(compareStudents))
         setSaveMessage({ type: 'success', text: 'Estudiante creado correctamente (sin matrícula)' })
       }
 
@@ -1444,11 +1445,7 @@ export default function Students() {
         if (!enrollment || enrollment.status !== 'ACTIVE') return false
         return enrollment.groupId === listGroupId
       })
-      .sort((a: any, b: any) => {
-        const nameA = `${a.lastName || ''} ${a.secondLastName || ''} ${a.firstName || ''}`.trim().toLowerCase()
-        const nameB = `${b.lastName || ''} ${b.secondLastName || ''} ${b.firstName || ''}`.trim().toLowerCase()
-        return nameA.localeCompare(nameB)
-      })
+      .sort((a: any, b: any) => compareStudents(a, b))
   }
 
   const getListGroupName = () => {

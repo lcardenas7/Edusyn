@@ -7,6 +7,7 @@ import {
   CheckCircle, XCircle, Trash2, BarChart3, Loader2,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { compareFullNames } from '../utils/sortStudents'
 import { DiagnosisBadge } from '../components/StudentBadges'
 import { observerApi, teacherAssignmentsApi, groupsApi, enrollmentsApi } from '../lib/api'
 import api from '../lib/api'
@@ -190,7 +191,7 @@ export default function Observer() {
           name: fullName(e.student),
           hasDiagnosis: e.student?.hasDiagnosis || false,
           diagnosisType: e.student?.diagnosisType || undefined,
-        })).sort((a: any, b: any) => a.name.localeCompare(b.name)))
+        })).sort((a: any, b: any) => compareFullNames(a.name, b.name)))
       } catch (err) {
         console.error('Error loading students:', err)
         setStudents([])

@@ -1003,12 +1003,15 @@ export class StudentsService {
           },
         },
       },
-      orderBy: {
-        student: {
-          lastName: 'asc',
-        },
-      },
+      orderBy: { createdAt: 'asc' }, // orden estable base; el orden real es por nombre completo abajo
     });
+
+    // Ordenamiento real en memoria: apellido1 + apellido2 + nombre1 + nombre2
+    // usando Intl.Collator es-CO para manejar tildes, mayúsculas y apellidos compuestos
+    const collator = new Intl.Collator('es-CO', { sensitivity: 'base', ignorePunctuation: true });
+    const sortKey = (s: any) =>
+      [s.lastName, s.secondLastName, s.firstName, s.secondName].filter(Boolean).join(' ');
+    enrollments.sort((a, b) => collator.compare(sortKey(a.student), sortKey(b.student)));
 
     // Mapear a formato académico simple (nombre completo: apellido1 apellido2 nombre1 nombre2)
     return enrollments.map((enrollment) => ({
@@ -1066,12 +1069,14 @@ export class StudentsService {
           },
         },
       },
-      orderBy: {
-        student: {
-          lastName: 'asc',
-        },
-      },
+      orderBy: { createdAt: 'asc' }, // orden estable base; el orden real es por nombre completo abajo
     });
+
+    // Ordenamiento real en memoria antes de agrupar
+    const collatorM = new Intl.Collator('es-CO', { sensitivity: 'base', ignorePunctuation: true });
+    const sortKeyM = (s: any) =>
+      [s.lastName, s.secondLastName, s.firstName, s.secondName].filter(Boolean).join(' ');
+    enrollments.sort((a, b) => collatorM.compare(sortKeyM(a.student), sortKeyM(b.student)));
 
     // Agrupar por groupId
     const result: Record<string, Array<{ id: string; name: string; enrollmentId: string; documentNumber?: string; hasDiagnosis: boolean; diagnosisType?: string; hasSupportProfile: boolean }>> = {};

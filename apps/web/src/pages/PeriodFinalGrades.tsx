@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { compareFullNames } from '../utils/sortStudents'
 import { useAuth } from '../contexts/AuthContext'
 import { 
   Save,
@@ -160,7 +161,7 @@ export default function PeriodFinalGrades() {
         }
       })
 
-      setGrades(gradeEntries.sort((a, b) => a.studentName.localeCompare(b.studentName)))
+      setGrades(gradeEntries.sort((a, b) => compareFullNames(a.studentName, b.studentName)))
     } catch (err) {
       console.error('Error loading existing grades:', err)
     }
