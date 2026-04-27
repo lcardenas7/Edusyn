@@ -12,6 +12,10 @@ import {
   Maximize2,
   Minimize2,
   Zap,
+  PauseCircle,
+  PlayCircle,
+  Shuffle,
+  RotateCcw,
 } from 'lucide-react'
 import { Podium, CircularTimer } from '../AnimalAvatars'
 import { fireConfetti, playSound } from '../../lib/play-effects'
@@ -78,6 +82,9 @@ interface LiveQuizPlayerProps {
   onNextQuestion: () => void
   onFinishGame: () => void
   onClose: () => void
+  onPauseToggle?: () => void
+  onReplay?: (opts: { shuffle?: boolean }) => void
+  isPaused?: boolean
   soundEnabled?: boolean
 }
 
@@ -92,6 +99,9 @@ export default function LiveQuizPlayer({
   onNextQuestion,
   onFinishGame,
   onClose,
+  onPauseToggle,
+  onReplay,
+  isPaused = false,
   soundEnabled = true,
 }: LiveQuizPlayerProps) {
   const prevStatusRef = useRef(liveSession.status)
@@ -223,6 +233,13 @@ export default function LiveQuizPlayer({
 
         {/* Footer controls */}
         <div className="px-8 py-4 bg-black/20 flex justify-center gap-4">
+          {onPauseToggle && (
+            <button onClick={onPauseToggle}
+              className="flex items-center gap-2 rounded-2xl px-5 py-3 font-bold text-sm bg-white/10 text-white hover:bg-white/20 transition"
+              title={isPaused ? 'Reanudar' : 'Pausar'}>
+              {isPaused ? <PlayCircle className="h-5 w-5" /> : <PauseCircle className="h-5 w-5" />}
+            </button>
+          )}
           <button onClick={onNextQuestion}
             className={`flex items-center gap-2 rounded-2xl px-8 py-3 font-black text-lg transition ${
               questionClosed ? 'bg-yellow-300 text-violet-900 shadow-lg animate-pulse' : 'bg-white/20 text-white hover:bg-white/30'
@@ -302,6 +319,12 @@ export default function LiveQuizPlayer({
                   </button>
                 </div>
                 <p className="mt-2 text-xs text-violet-100">Los participantes entran en <strong>edusyn.co/join</strong></p>
+                <button
+                  onClick={() => window.open(`/play/projector/${liveSession.id}`, '_blank')}
+                  className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/20"
+                >
+                  <Maximize2 className="h-4 w-4" /> Abrir modo proyector
+                </button>
               </div>
 
               {/* F6.23: QR code */}
@@ -551,6 +574,22 @@ export default function LiveQuizPlayer({
                 </div>
               )}
 
+              {onReplay && (
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => onReplay({ shuffle: false })}
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-white/15 px-4 py-3 font-bold text-sm text-white transition hover:bg-white/25"
+                  >
+                    <RotateCcw className="h-4 w-4" /> Jugar de nuevo
+                  </button>
+                  <button
+                    onClick={() => onReplay({ shuffle: true })}
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-white/15 px-4 py-3 font-bold text-sm text-white transition hover:bg-white/25"
+                  >
+                    <Shuffle className="h-4 w-4" /> Preguntas mezcladas
+                  </button>
+                </div>
+              )}
               <button
                 onClick={onClose}
                 className="w-full rounded-2xl bg-white px-6 py-3 font-black text-violet-700 transition hover:bg-violet-50"

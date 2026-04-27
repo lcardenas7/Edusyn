@@ -9,9 +9,20 @@ import { generateJoinCode } from '../utils/join-code.util';
 export type SessionKind = 'QUIZ' | 'LESSON';
 
 const NICKNAME_BLACKLIST = [
-  'puta', 'puto', 'mierda', 'pene', 'verga', 'coño', 'culo', 'polla',
-  'admin', 'docente', 'teacher', 'edusyn',
+  // Groserías ES
+  'puta', 'puto', 'putos', 'putas', 'mierda', 'pene', 'penes', 'verga', 'vergas',
+  'coño', 'culo', 'culos', 'polla', 'pollas', 'joder', 'gilipollas', 'marica',
+  'maricon', 'maricón', 'ojete', 'chinga', 'chingado', 'culero', 'pendejo',
+  'pendeja', 'cabron', 'cabrón', 'hijueputa', 'gonorrea', 'sapo', 'malparido',
+  // Reserved system names
+  'admin', 'administrator', 'docente', 'teacher', 'moderator', 'sistema',
+  'soporte', 'edusyn', 'root', 'superadmin', 'guest', 'bot',
 ];
+
+/** Normaliza un texto: minúsculas, sin tildes, sin puntuación */
+function normalizeForBlocklist(s: string): string {
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+}
 
 const NICKNAME_REGEX = /^[\p{L}\p{N}_\-\.]{2,20}$/u;
 
@@ -51,8 +62,8 @@ export class GuestService {
     if (!NICKNAME_REGEX.test(clean)) {
       throw new BadRequestException('Apodo inválido. Usa 2-20 caracteres, solo letras, números, _ o -');
     }
-    const lower = clean.toLowerCase();
-    if (NICKNAME_BLACKLIST.some(bad => lower.includes(bad))) {
+    const normalized = normalizeForBlocklist(clean);
+    if (NICKNAME_BLACKLIST.some(bad => normalized.includes(normalizeForBlocklist(bad)))) {
       throw new BadRequestException('Apodo no permitido, elige otro');
     }
     return clean;

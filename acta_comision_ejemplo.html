@@ -1,0 +1,250 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans); }
+  .acta { max-width: 760px; margin: 0 auto; padding: 2rem 1.5rem; background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); }
+  .header { display: flex; align-items: center; gap: 1.5rem; border-bottom: 2px solid #185FA5; padding-bottom: 1rem; margin-bottom: 1.5rem; }
+  .escudo { width: 72px; height: 72px; border-radius: 50%; background: #E6F1FB; border: 2px solid #378ADD; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .escudo svg { width: 40px; height: 40px; }
+  .header-info { flex: 1; text-align: center; }
+  .header-info .nombre-inst { font-size: 15px; font-weight: 500; color: var(--color-text-primary); }
+  .header-info .dane { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+  .header-info .titulo-acta { font-size: 18px; font-weight: 500; color: #185FA5; margin-top: 6px; text-transform: uppercase; letter-spacing: 1px; }
+  .header-info .subtitulo { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+  .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.5rem; }
+  .meta-item { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px 12px; }
+  .meta-item .label { font-size: 11px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+  .meta-item .value { font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin-top: 3px; }
+  .section { margin-bottom: 1.5rem; }
+  .section-title { font-size: 13px; font-weight: 500; color: #185FA5; text-transform: uppercase; letter-spacing: 0.5px; border-left: 3px solid #378ADD; padding-left: 8px; margin-bottom: 10px; }
+  .agenda-list { list-style: none; counter-reset: agenda; }
+  .agenda-list li { counter-increment: agenda; display: flex; gap: 10px; padding: 7px 0; border-bottom: 0.5px solid var(--color-border-tertiary); font-size: 13px; color: var(--color-text-primary); align-items: flex-start; }
+  .agenda-list li::before { content: counter(agenda) "."; font-weight: 500; color: #378ADD; min-width: 18px; }
+  .asistentes-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .asistentes-table th { background: #E6F1FB; color: #0C447C; font-weight: 500; padding: 7px 10px; text-align: left; border: 0.5px solid #B5D4F4; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .asistentes-table td { padding: 7px 10px; border: 0.5px solid var(--color-border-tertiary); color: var(--color-text-primary); vertical-align: top; }
+  .asistentes-table tr:nth-child(even) td { background: var(--color-background-secondary); }
+  .firma { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2.5rem; flex-wrap: wrap; }
+  .firma-item { flex: 1; min-width: 160px; text-align: center; }
+  .firma-line { border-bottom: 1px solid var(--color-border-primary); margin-bottom: 6px; height: 32px; }
+  .firma-name { font-size: 12px; font-weight: 500; color: var(--color-text-primary); }
+  .firma-cargo { font-size: 11px; color: var(--color-text-secondary); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .badge-blue { background: #E6F1FB; color: #0C447C; }
+  .badge-green { background: #EAF3DE; color: #27500A; }
+  .divider { border: none; border-top: 0.5px solid var(--color-border-tertiary); margin: 1.5rem 0; }
+  .reporte-preview { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem; margin-top: 8px; }
+  .rp-title { font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .nivel-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .nivel-label { font-size: 12px; width: 70px; color: var(--color-text-secondary); }
+  .nivel-bar-bg { flex: 1; height: 10px; background: var(--color-border-tertiary); border-radius: 5px; overflow: hidden; }
+  .nivel-bar { height: 100%; border-radius: 5px; }
+  .nivel-count { font-size: 12px; font-weight: 500; color: var(--color-text-primary); min-width: 24px; text-align: right; }
+  .watermark { text-align: center; margin-top: 2rem; font-size: 11px; color: var(--color-text-secondary); border-top: 0.5px solid var(--color-border-tertiary); padding-top: 1rem; }
+</style>
+
+<div class="acta">
+
+  <div class="header">
+    <div class="escudo">
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="18" stroke="#378ADD" stroke-width="2" fill="#E6F1FB"/>
+        <path d="M20 8 L24 16 L33 17 L27 23 L28 32 L20 28 L12 32 L13 23 L7 17 L16 16 Z" fill="#378ADD" opacity="0.7"/>
+        <circle cx="20" cy="20" r="5" fill="#185FA5"/>
+      </svg>
+    </div>
+    <div class="header-info">
+      <div class="nombre-inst">Institución Educativa Distrital San Pedro Claver</div>
+      <div class="dane">DANE: 113001001234 &nbsp;|&nbsp; Cartagena, Bolívar</div>
+      <div class="titulo-acta">Acta de Comisión de Evaluación y Promoción</div>
+      <div class="subtitulo">Grado Octavo &nbsp;|&nbsp; Período II &nbsp;|&nbsp; Año lectivo 2025</div>
+    </div>
+  </div>
+
+  <div class="meta-grid">
+    <div class="meta-item">
+      <div class="label">Fecha</div>
+      <div class="value">25 de abril de 2025</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">Hora</div>
+      <div class="value">8:00 a.m. – 10:30 a.m.</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">Lugar</div>
+      <div class="value">Sala de profesores, bloque B</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">Grado / Cursos</div>
+      <div class="value">8°A &nbsp;·&nbsp; 8°B &nbsp;·&nbsp; 8°C</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">Período evaluado</div>
+      <div class="value">Segundo período 2025</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">N.° de acta</div>
+      <div class="value">CEP-08-2025-002</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">1. Orden del día</div>
+    <ul class="agenda-list">
+      <li>Verificación de quórum y apertura de la sesión.</li>
+      <li>Lectura y aprobación del acta anterior (CEP-08-2025-001).</li>
+      <li>Análisis del desempeño académico por niveles — período II.</li>
+      <li>Reconocimiento de los cinco (5) mejores promedios por curso.</li>
+      <li>Revisión de situaciones convivenciales y casos remitidos a psicoorientación.</li>
+      <li>Análisis estadístico general del grado: aspectos académicos y cognitivos.</li>
+      <li>Compromisos, propuestas de mejora y cierre.</li>
+    </ul>
+  </div>
+
+  <hr class="divider">
+
+  <div class="section">
+    <div class="section-title">2. Asistentes</div>
+    <table class="asistentes-table">
+      <thead>
+        <tr>
+          <th>Nombre completo</th>
+          <th>Cargo / Asignatura</th>
+          <th>Curso(s)</th>
+          <th>Firma</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Lic. Carmen Herrera Díaz</td><td>Coordinadora académica</td><td>8A · 8B · 8C</td><td></td></tr>
+        <tr><td>Prof. Andrés Martínez León</td><td>Matemáticas</td><td>8A · 8B · 8C</td><td></td></tr>
+        <tr><td>Prof. Lucía Orozco Pérez</td><td>Español y Literatura</td><td>8A · 8B · 8C</td><td></td></tr>
+        <tr><td>Prof. Diego Solano Ríos</td><td>Ciencias Naturales</td><td>8A · 8B</td><td></td></tr>
+        <tr><td>Prof. Margarita Fonseca</td><td>Ciencias Sociales</td><td>8B · 8C</td><td></td></tr>
+        <tr><td>Prof. Julio Mendoza Castro</td><td>Inglés</td><td>8A · 8B · 8C</td><td></td></tr>
+        <tr><td>Psic. Sandra Vargas Núñez</td><td>Psicoorientadora</td><td>—</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr class="divider">
+
+  <div class="section">
+    <div class="section-title">3. Desempeño académico por niveles <span class="badge badge-blue">Matemáticas — 8°A</span></div>
+    <div class="reporte-preview">
+      <div class="rp-title">Total estudiantes: 32 &nbsp;|&nbsp; Escala 1.0 – 5.0</div>
+      <div class="nivel-row">
+        <div class="nivel-label" style="color:#A32D2D">Bajo</div>
+        <div class="nivel-bar-bg"><div class="nivel-bar" style="width:22%;background:#E24B4A;"></div></div>
+        <div class="nivel-count">7</div>
+      </div>
+      <div class="nivel-row">
+        <div class="nivel-label" style="color:#854F0B">Básico</div>
+        <div class="nivel-bar-bg"><div class="nivel-bar" style="width:47%;background:#EF9F27;"></div></div>
+        <div class="nivel-count">15</div>
+      </div>
+      <div class="nivel-row">
+        <div class="nivel-label" style="color:#27500A">Alto</div>
+        <div class="nivel-bar-bg"><div class="nivel-bar" style="width:19%;background:#639922;"></div></div>
+        <div class="nivel-count">6</div>
+      </div>
+      <div class="nivel-row">
+        <div class="nivel-label" style="color:#0C447C">Superior</div>
+        <div class="nivel-bar-bg"><div class="nivel-bar" style="width:12%;background:#378ADD;"></div></div>
+        <div class="nivel-count">4</div>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--color-text-secondary);margin-top:8px;">→ <em>Este bloque se repite por cada asignatura y curso. En el acta final aparecen todas las tablas de forma consecutiva.</em></p>
+  </div>
+
+  <hr class="divider">
+
+  <div class="section">
+    <div class="section-title">4. Top 5 estudiantes por promedio — 8°A</div>
+    <table class="asistentes-table">
+      <thead>
+        <tr><th>#</th><th>Estudiante</th><th>Promedio</th><th>Nivel</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>Valeria Montoya Suárez</td><td>4.8</td><td><span class="badge badge-blue">Superior</span></td></tr>
+        <tr><td>2</td><td>Samuel Arango Torres</td><td>4.6</td><td><span class="badge badge-blue">Superior</span></td></tr>
+        <tr><td>3</td><td>Isabella Gómez Peña</td><td>4.4</td><td><span class="badge badge-green">Alto</span></td></tr>
+        <tr><td>4</td><td>Miguel Ángel Reyes</td><td>4.3</td><td><span class="badge badge-green">Alto</span></td></tr>
+        <tr><td>5</td><td>Daniela Castro Mora</td><td>4.1</td><td><span class="badge badge-green">Alto</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr class="divider">
+
+  <div class="section">
+    <div class="section-title">5. Situaciones convivenciales y psicoorientación</div>
+    <table class="asistentes-table">
+      <thead>
+        <tr><th>Estudiante</th><th>Tipo</th><th>Situación</th><th>Manejo dado</th><th>Psicoorien.</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Carlos Pérez Ríos</td><td>Tipo I</td><td>Conflicto verbal entre pares</td><td>Diálogo restaurativo, compromiso firmado</td><td>No</td></tr>
+        <tr><td>Sofía Mendez Lagos</td><td>Tipo II</td><td>Agresión física leve en descanso</td><td>Citación acudiente, acta de compromiso</td><td>Sí</td></tr>
+        <tr><td>Juan Esteban Niño</td><td>Tipo I</td><td>Uso de celular en clase reiterado</td><td>Llamado de atención, compromiso escrito</td><td>No</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr class="divider">
+
+  <div class="section">
+    <div class="section-title">6. Análisis general del grado 8° — período II</div>
+    <div class="reporte-preview">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
+        <div style="text-align:center;padding:8px;background:var(--color-background-primary);border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);">
+          <div style="font-size:11px;color:var(--color-text-secondary);">Promedio grado</div>
+          <div style="font-size:20px;font-weight:500;color:#185FA5;">3.74</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:var(--color-background-primary);border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);">
+          <div style="font-size:11px;color:var(--color-text-secondary);">Total estudiantes</div>
+          <div style="font-size:20px;font-weight:500;color:#185FA5;">96</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:var(--color-background-primary);border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);">
+          <div style="font-size:11px;color:var(--color-text-secondary);">En riesgo (bajo)</div>
+          <div style="font-size:20px;font-weight:500;color:#E24B4A;">18</div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--color-text-secondary);line-height:1.6;">El grado 8° presenta un desempeño general en nivel básico. La asignatura con mayor índice de bajo desempeño es Matemáticas (22%). Se recomienda refuerzo en resolución de problemas y trabajo colaborativo. A nivel cognitivo, se observa baja concentración en las horas de la tarde. Psicoorientación reporta 3 estudiantes en seguimiento activo.</p>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="section">
+    <div class="section-title">7. Compromisos y acuerdos</div>
+    <ul class="agenda-list">
+      <li>El docente de Matemáticas implementará estrategias de nivelación para los 7 estudiantes en bajo desempeño del 8°A antes del 15 de mayo.</li>
+      <li>Psicoorientación realizará seguimiento semanal a Sofía Mendez Lagos y entregará informe en la próxima comisión.</li>
+      <li>La coordinación académica citará a los acudientes de los estudiantes con más de tres (3) asignaturas en bajo desempeño.</li>
+      <li>Próxima comisión: 30 de julio de 2025, 8:00 a.m.</li>
+    </ul>
+  </div>
+
+  <div class="firma">
+    <div class="firma-item">
+      <div class="firma-line"></div>
+      <div class="firma-name">Carmen Herrera Díaz</div>
+      <div class="firma-cargo">Coordinadora académica</div>
+    </div>
+    <div class="firma-item">
+      <div class="firma-line"></div>
+      <div class="firma-name">Andrés Martínez León</div>
+      <div class="firma-cargo">Docente director de grupo 8°A</div>
+    </div>
+    <div class="firma-item">
+      <div class="firma-line"></div>
+      <div class="firma-name">Sandra Vargas Núñez</div>
+      <div class="firma-cargo">Psicoorientadora</div>
+    </div>
+  </div>
+
+  <div class="watermark">
+    Documento generado por el Sistema de Comisiones — IED San Pedro Claver &nbsp;|&nbsp; Página 1 de 1
+  </div>
+
+</div>

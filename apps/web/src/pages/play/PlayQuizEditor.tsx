@@ -97,6 +97,8 @@ export default function PlayQuizEditor() {
   const [launchingLive, setLaunchingLive] = useState(false)
   const [sseConnected, setSseConnected] = useState(false)
   const [sseFallback, setSseFallback] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
+  const [isReconnecting, setIsReconnecting] = useState(false)
   const [recentReactions, setRecentReactions] = useState<Array<{ id: string; emoji: string }>>([])
   const [answerStats, setAnswerStats] = useState<{ questionId: string; answeredCount: number; totalGuests: number; percent: number } | null>(null)
 
@@ -376,6 +378,13 @@ export default function PlayQuizEditor() {
       )
     } else if (event.type === 'ANSWER_STATS') {
       setAnswerStats(event.data)
+    } else if (event.type === 'SESSION_PAUSED') {
+      setIsPaused(true)
+    } else if (event.type === 'SESSION_RESUMED') {
+      setIsPaused(false)
+    } else if (event.type === 'SESSION_RECONNECTING') {
+      if (event.data?.reason === 'offline') setIsReconnecting(true)
+      else if (event.data?.reason === 'online') setIsReconnecting(false)
     } else if (event.type === 'REACTION') {
       const bubble = { id: `${Date.now()}-${Math.random()}`, emoji: event.data?.emoji ?? '👍' }
       setRecentReactions(prev => [...prev, bubble])
@@ -451,10 +460,35 @@ export default function PlayQuizEditor() {
     } catch {}
   }
 
+  const handlePauseToggle = async () => {
+    if (!liveSession) return
+    try {
+      if (isPaused) await playPanelApi.resumeSession(liveSession.id)
+      else await playPanelApi.pauseSession(liveSession.id)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al pausar/reanudar')
+    }
+  }
+
+  const handleReplay = async (opts: { shuffle?: boolean }) => {
+    if (!liveSession) return
+    try {
+      const res = await playPanelApi.replaySession(liveSession.id, opts)
+      setLiveSession(res.data)
+      setSseConnected(false)
+      setSseFallback(false)
+      setIsPaused(false)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al reiniciar sesión')
+    }
+  }
+
   const handleCloseLive = () => {
     setLiveSession(null)
     setSseConnected(false)
     setSseFallback(false)
+    setIsPaused(false)
+    setIsReconnecting(false)
   }
 
   const copyJoinCode = () => {
@@ -528,6 +562,14 @@ export default function PlayQuizEditor() {
         </div>
       )}
 
+      {/* F6.31: banner reconectando */}
+      {isReconnecting && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white shadow-lg">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Reconectando...
+        </div>
+      )}
+
       {liveSession && (
         <LiveQuizPlayer
           liveSession={liveSession}
@@ -540,6 +582,9 @@ export default function PlayQuizEditor() {
           onNextQuestion={handleNextQuestion}
           onFinishGame={handleFinishGame}
           onClose={handleCloseLive}
+          onPauseToggle={handlePauseToggle}
+          onReplay={handleReplay}
+          isPaused={isPaused}
         />
       )}
 

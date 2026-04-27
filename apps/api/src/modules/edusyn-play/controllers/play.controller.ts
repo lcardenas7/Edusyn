@@ -198,6 +198,24 @@ export class PlayController {
     return this.playService.finishLiveQuiz(req.user.id, sessionId);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Post('live/:sessionId/pause')
+  async pauseSession(@Request() req: any, @Param('sessionId') sessionId: string) {
+    return this.playService.pauseSession(req.user.id, sessionId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('live/:sessionId/resume')
+  async resumeSession(@Request() req: any, @Param('sessionId') sessionId: string) {
+    return this.playService.resumeSession(req.user.id, sessionId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('live/:sessionId/replay')
+  async replaySession(@Request() req: any, @Param('sessionId') sessionId: string, @Body() body?: { shuffle?: boolean; keepGuests?: boolean }) {
+    return this.playService.replaySession(req.user.id, sessionId, body);
+  }
+
   // ── Sessions ─────────────────────────────────────────
   @UseGuards(JwtAuthGuard)
   @Get('sessions')

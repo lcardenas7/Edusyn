@@ -188,8 +188,8 @@ export default function PlayQuizzes() {
                   <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${typeInfo.color}`}>
                     <TypeIcon className="w-3 h-3" /> {typeInfo.label}
                   </span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${quiz.isPublished ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                    {quiz.isPublished ? 'Publicado' : 'Borrador'}
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+                    Listo para jugar
                   </span>
                 </div>
                 <p className="text-xs text-gray-400 mt-3 flex items-center gap-1">

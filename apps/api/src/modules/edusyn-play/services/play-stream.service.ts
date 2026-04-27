@@ -5,6 +5,8 @@ export type PlayEventType =
   | 'PING'
   | 'GUEST_JOINED'
   | 'GUEST_LEFT'
+  | 'SESSION_PAUSED'
+  | 'SESSION_RESUMED'
   | 'SESSION_STARTED'
   | 'QUESTION_OPENED'
   | 'QUESTION_CLOSED'

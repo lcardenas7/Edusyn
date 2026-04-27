@@ -5,6 +5,19 @@ const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 3000
 const FALLBACK_POLL_MS = 5000
 
+// F6.30: warn si la URL quedó como localhost en un build de producción
+if (
+  typeof window !== 'undefined' &&
+  !import.meta.env.VITE_PLAY_API_URL &&
+  (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+) {
+  console.warn(
+    '[Edusyn Play] VITE_PLAY_API_URL no está configurada. ' +
+    'El SSE intentará conectar a http://localhost:3000 lo cual fallará en producción. ' +
+    'Configura VITE_PLAY_API_URL en el build de Netlify/Railway.'
+  )
+}
+
 export type PlayEventType =
   | 'PING'
   | 'GUEST_JOINED'
@@ -17,6 +30,9 @@ export type PlayEventType =
   | 'REACTION'
   | 'ANSWER_STATS'
   | 'SESSION_STATE'
+  | 'SESSION_PAUSED'
+  | 'SESSION_RESUMED'
+  | 'SESSION_RECONNECTING'
 
 export interface PlaySSEEvent {
   type: PlayEventType
@@ -118,6 +134,7 @@ export function usePlaySSE({
       'PING', 'GUEST_JOINED', 'GUEST_LEFT', 'SESSION_STARTED',
       'QUESTION_OPENED', 'QUESTION_CLOSED', 'RANKING_UPDATED',
       'SESSION_FINISHED', 'REACTION', 'ANSWER_STATS', 'SESSION_STATE',
+      'SESSION_PAUSED', 'SESSION_RESUMED', 'SESSION_RECONNECTING',
     ]
     for (const type of KNOWN_TYPES) {
       es.addEventListener(type, (ev: MessageEvent) => {
@@ -149,10 +166,28 @@ export function usePlaySSE({
     if (!enabled || !sessionId) return
     connect()
 
+    // F6.31: reconexión inmediata al recuperar red
+    const handleOnline = () => {
+      if (!esRef.current || esRef.current.readyState === EventSource.CLOSED) {
+        retriesRef.current = 0
+        onEventRef.current({ type: 'SESSION_RECONNECTING', data: { reason: 'online' } })
+        connect()
+      }
+    }
+    const handleOffline = () => {
+      esRef.current?.close()
+      esRef.current = null
+      onEventRef.current({ type: 'SESSION_RECONNECTING', data: { reason: 'offline' } })
+    }
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
     return () => {
       esRef.current?.close()
       esRef.current = null
       stopFallback()
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
     }
   }, [sessionId, enabled, connect, stopFallback])
 }

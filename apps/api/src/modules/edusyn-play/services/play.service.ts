@@ -849,6 +849,102 @@ export class PlayService {
     this.stream.emit(sessionId, { type: 'REACTION', data });
   }
 
+  // F6.25: Pausar / Reanudar pregunta activa
+  private readonly pausedTimers = new Map<string, { remaining: number; pausedAt: number }>();
+
+  async pauseSession(userId: string, sessionId: string) {
+    const classroomId = await this.resolveClassroom(userId);
+    const session = await this.prisma.liveSession.findFirst({
+      where: { id: sessionId, classroomId, teacherId: userId },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+    if (session.status !== 'ACTIVE') throw new BadRequestException('La sesión no está activa');
+    if (this.pausedTimers.has(sessionId)) return { paused: true }; // ya pausada
+
+    const existing = this.questionTimers.get(sessionId);
+    const openedAt = this.questionOpenedAt.get(sessionId);
+    if (existing && openedAt) {
+      const elapsed = Date.now() - openedAt;
+      const q = await this.prisma.liveSession.findUnique({
+        where: { id: sessionId },
+        select: { activity: { select: { questions: { orderBy: { sortOrder: 'asc' }, select: { timeLimitSeconds: true } } } }, currentQuestionIdx: true },
+      });
+      const timeLimitMs = ((q?.activity.questions[q.currentQuestionIdx ?? 0] as any)?.timeLimitSeconds ?? 30) * 1000;
+      const remaining = Math.max(0, timeLimitMs - elapsed);
+      clearTimeout(existing);
+      this.questionTimers.delete(sessionId);
+      this.pausedTimers.set(sessionId, { remaining, pausedAt: Date.now() });
+    }
+    this.stream.emit(sessionId, { type: 'SESSION_PAUSED', data: {} });
+    return { paused: true };
+  }
+
+  async resumeSession(userId: string, sessionId: string) {
+    const classroomId = await this.resolveClassroom(userId);
+    const session = await this.prisma.liveSession.findFirst({
+      where: { id: sessionId, classroomId, teacherId: userId },
+      include: { activity: { include: { questions: { orderBy: { sortOrder: 'asc' } } } } },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+    const pauseInfo = this.pausedTimers.get(sessionId);
+    if (!pauseInfo) return { paused: false }; // no estaba pausada
+
+    this.pausedTimers.delete(sessionId);
+    const idx = session.currentQuestionIdx;
+    const question = session.activity.questions[idx];
+    if (question && pauseInfo.remaining > 0) {
+      const newOpenedAt = Date.now() - (((question as any).timeLimitSeconds ?? 30) * 1000 - pauseInfo.remaining);
+      this.questionOpenedAt.set(sessionId, newOpenedAt);
+      const timer = setTimeout(async () => {
+        this.questionTimers.delete(sessionId);
+        await this.emitQuestionClosed(sessionId, idx);
+      }, pauseInfo.remaining);
+      this.questionTimers.set(sessionId, timer);
+    }
+    this.stream.emit(sessionId, { type: 'SESSION_RESUMED', data: { remainingMs: pauseInfo.remaining } });
+    return { paused: false, remainingMs: pauseInfo.remaining };
+  }
+
+  // F6.27: Volver a jugar (mismos guests o shuffle)
+  async replaySession(userId: string, sessionId: string, options?: { shuffle?: boolean; keepGuests?: boolean }) {
+    const classroomId = await this.resolveClassroom(userId);
+    const session = await this.prisma.liveSession.findFirst({
+      where: { id: sessionId, classroomId, teacherId: userId },
+      select: { activityId: true, guestMode: true, status: true },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+
+    const newSession = await this.prisma.liveSession.create({
+      data: {
+        classroomId,
+        teacherId: userId,
+        activityId: session.activityId,
+        status: 'WAITING',
+        joinCode: await this.generateUniqueJoinCode(),
+        guestMode: session.guestMode,
+        guestsCount: 0,
+        config: options?.shuffle ? ({ shuffle: true } as any) : undefined,
+      },
+    });
+    return {
+      id: newSession.id,
+      joinCode: newSession.joinCode,
+      status: newSession.status,
+    };
+  }
+
+  private async generateUniqueJoinCode(): Promise<string> {
+    let code: string;
+    let attempts = 0;
+    do {
+      code = Math.floor(100000 + Math.random() * 900000).toString();
+      const existing = await this.prisma.liveSession.findFirst({ where: { joinCode: code, status: { in: ['WAITING', 'ACTIVE'] } } });
+      if (!existing) break;
+      attempts++;
+    } while (attempts < 10);
+    return code!;
+  }
+
   /** F6.24: Emite ANSWER_STATS tras cada respuesta de invitado. */
   emitAnswerStats(sessionId: string, data: { questionId: string; answeredCount: number; totalGuests: number; percent: number }): void {
     this.stream.emit(sessionId, { type: 'ANSWER_STATS', data });

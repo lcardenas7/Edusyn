@@ -121,6 +121,10 @@ export const playPanelApi = {
   startLiveQuiz: (sessionId: string) => playAxios.post(`/play/live/${sessionId}/start`),
   nextQuestionLive: (sessionId: string) => playAxios.post(`/play/live/${sessionId}/next`),
   finishLiveQuiz: (sessionId: string) => playAxios.post(`/play/live/${sessionId}/finish`),
+  pauseSession: (sessionId: string) => playAxios.post(`/play/live/${sessionId}/pause`),
+  resumeSession: (sessionId: string) => playAxios.post(`/play/live/${sessionId}/resume`),
+  replaySession: (sessionId: string, opts?: { shuffle?: boolean; keepGuests?: boolean }) =>
+    playAxios.post(`/play/live/${sessionId}/replay`, opts ?? {}),
   // Sessions
   listSessions: () => playAxios.get('/play/sessions'),
 }
