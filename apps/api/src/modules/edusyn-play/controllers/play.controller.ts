@@ -216,6 +216,12 @@ export class PlayController {
     return this.playService.replaySession(req.user.id, sessionId, body);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get('live/:sessionId/question-stats')
+  async getQuestionStats(@Request() req: any, @Param('sessionId') sessionId: string) {
+    return this.playService.getQuestionStats(req.user.id, sessionId);
+  }
+
   // ── Sessions ─────────────────────────────────────────
   @UseGuards(JwtAuthGuard)
   @Get('sessions')

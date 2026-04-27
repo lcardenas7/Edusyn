@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { PrismaService } from '../../../prisma/prisma.service';
 import { PlayWorkspaceService } from './play-workspace.service';
 import { PlayStreamService } from './play-stream.service';
+import { GuestTokenService } from './guest-token.service';
 
 /**
  * Servicio del panel /play del docente personal.
@@ -21,6 +22,7 @@ export class PlayService {
     private readonly prisma: PrismaService,
     private readonly workspace: PlayWorkspaceService,
     private readonly stream: PlayStreamService,
+    private readonly guestTokenService: GuestTokenService,
   ) {}
 
   private async resolveClassroom(userId: string): Promise<string> {
@@ -616,6 +618,7 @@ export class PlayService {
         data: { ranking: guests },
       });
       this.stream.finishStream(sessionId);
+      this.guestTokenService.revokeSession(sessionId);
       return { finished: true, currentQuestionIdx: nextIdx, totalQuestions };
     }
 
@@ -710,6 +713,7 @@ export class PlayService {
     });
     this.stream.emit(sessionId, { type: 'SESSION_FINISHED', data: { ranking: guests } });
     this.stream.finishStream(sessionId);
+    this.guestTokenService.revokeSession(sessionId);
     return { finished: true };
   }
 
@@ -948,6 +952,55 @@ export class PlayService {
   /** F6.24: Emite ANSWER_STATS tras cada respuesta de invitado. */
   emitAnswerStats(sessionId: string, data: { questionId: string; answeredCount: number; totalGuests: number; percent: number }): void {
     this.stream.emit(sessionId, { type: 'ANSWER_STATS', data });
+  }
+
+  // F6.37: Métricas de calidad por pregunta
+  async getQuestionStats(userId: string, sessionId: string) {
+    const classroomId = await this.resolveClassroom(userId);
+    const session = await this.prisma.liveSession.findFirst({
+      where: { id: sessionId, classroomId, teacherId: userId },
+      include: {
+        activity: {
+          select: {
+            questions: { orderBy: { sortOrder: 'asc' }, select: { id: true, text: true, correctAnswer: true, points: true } },
+          },
+        },
+      },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+
+    const questions = session.activity?.questions ?? [];
+    const stats = await Promise.all(
+      questions.map(async (q) => {
+        const answers = await this.prisma.liveSessionGuestAnswer.findMany({
+          where: { questionId: q.id, guest: { sessionId } },
+          select: { isCorrect: true, timeTakenMs: true, selectedOption: true, answerText: true },
+        });
+        const total = answers.length;
+        const correct = answers.filter(a => a.isCorrect).length;
+        const avgTimeMs = total > 0
+          ? answers.filter(a => a.timeTakenMs != null).reduce((s, a) => s + (a.timeTakenMs ?? 0), 0) /
+            Math.max(1, answers.filter(a => a.timeTakenMs != null).length)
+          : null;
+        return {
+          questionId: q.id,
+          questionText: q.text,
+          total,
+          correct,
+          incorrect: total - correct,
+          pctCorrect: total > 0 ? Math.round((correct / total) * 100) : 0,
+          avgTimeSec: avgTimeMs != null ? Math.round(avgTimeMs / 1000) : null,
+          difficulty: total > 0 ? (correct / total < 0.4 ? 'HARD' : correct / total < 0.7 ? 'MEDIUM' : 'EASY') : 'N/A',
+        };
+      }),
+    );
+
+    return {
+      sessionId,
+      totalGuests: session.guestsCount,
+      questions: stats,
+      hardest: stats.sort((a, b) => a.pctCorrect - b.pctCorrect)[0] ?? null,
+    };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

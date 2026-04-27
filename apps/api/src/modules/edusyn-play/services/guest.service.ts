@@ -288,6 +288,19 @@ export class GuestService {
       }
     }
 
+    // F6.34: Idempotencia — un guest solo puede responder una vez por pregunta/slide
+    const alreadyAnswered = await this.prisma.liveSessionGuestAnswer.findFirst({
+      where: {
+        guestId: params.guestId,
+        ...(params.questionId ? { questionId: params.questionId } : {}),
+        ...(params.slideId ? { slideId: params.slideId } : {}),
+      },
+      select: { id: true },
+    });
+    if (alreadyAnswered) {
+      return { accepted: true, isCorrect: false, pointsAwarded: 0 };
+    }
+
     await this.prisma.liveSessionGuestAnswer.create({
       data: {
         guestId: params.guestId,

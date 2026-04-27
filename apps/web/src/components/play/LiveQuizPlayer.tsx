@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Copy,
@@ -16,9 +16,14 @@ import {
   PlayCircle,
   Shuffle,
   RotateCcw,
+  BarChart2,
+  CheckCircle2,
+  XCircle,
+  Clock as ClockIcon,
 } from 'lucide-react'
 import { Podium, CircularTimer } from '../AnimalAvatars'
 import { fireConfetti, playSound } from '../../lib/play-effects'
+import { playPanelApi } from '../../lib/playApi'
 
 interface LiveGuest {
   id: string
@@ -106,6 +111,16 @@ export default function LiveQuizPlayer({
 }: LiveQuizPlayerProps) {
   const prevStatusRef = useRef(liveSession.status)
   const [presenterMode, setPresenterMode] = useState(false)
+  const [questionStats, setQuestionStats] = useState<any[] | null>(null)
+  const [showStats, setShowStats] = useState(false)
+
+  const loadQuestionStats = useCallback(async () => {
+    if (!liveSession.id) return
+    try {
+      const res = await playPanelApi.getQuestionStats(liveSession.id)
+      setQuestionStats(res.data?.questions ?? null)
+    } catch {}
+  }, [liveSession.id])
   const currentQuestion = useMemo(() => {
     if (liveSession.currentQuestion) return liveSession.currentQuestion
     const idx = liveSession.currentQuestionIdx ?? -1
@@ -120,9 +135,10 @@ export default function LiveQuizPlayer({
   const [timeLeft, setTimeLeft] = useState(timeLimit)
   const [questionClosed, setQuestionClosed] = useState(false)
 
-  // F6.12: Confetti + sound al terminar
+  // F6.12 + F6.37: Confetti + sound + cargar stats al terminar
   useEffect(() => {
     if (liveSession.status === 'FINISHED' && prevStatusRef.current !== 'FINISHED') {
+      loadQuestionStats()
       fireConfetti('winner')
       if (soundEnabled) playSound('winner')
     }
@@ -571,6 +587,52 @@ export default function LiveQuizPlayer({
                       <span className="text-xs text-violet-100/80">{guest.correctAnswers || 0}/{guest.totalAnswers || 0}</span>
                     </motion.div>
                   ))}
+                </div>
+              )}
+
+              {questionStats && questionStats.length > 0 && (
+                <div>
+                  <button
+                    onClick={() => setShowStats(v => !v)}
+                    className="mb-3 flex items-center gap-2 text-sm font-bold text-violet-200 hover:text-white transition"
+                  >
+                    <BarChart2 className="h-4 w-4" />
+                    {showStats ? 'Ocultar' : 'Ver'} análisis por pregunta
+                  </button>
+                  {showStats && (
+                    <div className="space-y-2 mb-4 max-h-64 overflow-y-auto pr-1">
+                      {questionStats.map((s: any, i: number) => (
+                        <div key={s.questionId} className="rounded-xl bg-black/20 px-4 py-3 text-sm">
+                          <p className="font-semibold text-violet-100 truncate mb-2">
+                            {i + 1}. {s.questionText}
+                          </p>
+                          <div className="flex items-center gap-4 text-xs">
+                            <span className={`flex items-center gap-1 font-bold ${
+                              s.difficulty === 'HARD' ? 'text-red-300' : s.difficulty === 'MEDIUM' ? 'text-amber-300' : 'text-green-300'
+                            }`}>
+                              {s.difficulty === 'HARD' ? '🔴' : s.difficulty === 'MEDIUM' ? '🟡' : '🟢'} {s.difficulty}
+                            </span>
+                            <span className="flex items-center gap-1 text-green-300">
+                              <CheckCircle2 className="h-3 w-3" />{s.pctCorrect}%
+                            </span>
+                            <span className="flex items-center gap-1 text-violet-200">
+                              <Users className="h-3 w-3" />{s.total} resp.
+                            </span>
+                            {s.avgTimeSec != null && (
+                              <span className="flex items-center gap-1 text-violet-200">
+                                <ClockIcon className="h-3 w-3" />{s.avgTimeSec}s prom.
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-2 h-1.5 rounded-full bg-white/10">
+                            <div className={`h-1.5 rounded-full transition-all ${
+                              s.pctCorrect >= 70 ? 'bg-green-400' : s.pctCorrect >= 40 ? 'bg-amber-400' : 'bg-red-400'
+                            }`} style={{ width: `${s.pctCorrect}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

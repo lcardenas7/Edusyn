@@ -52,7 +52,7 @@ export class GuestPublicController {
   /** Invitado envía respuesta (requiere guestToken). */
   @Post('session/:sessionId/answer')
   @UseGuards(GuestGuard)
-  @Throttle({ default: { ttl: 60000, limit: 60 } })
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   async answer(
     @Param('sessionId') _sessionId: string,
     @Body() body: {
