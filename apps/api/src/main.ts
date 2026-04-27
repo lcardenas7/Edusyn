@@ -39,6 +39,22 @@ async function bootstrap() {
   // 🌐 Prefijo global
   app.setGlobalPrefix('api');
 
+  // 📡 SSE — deshabilitar buffering de nginx/Railway para streams de eventos
+  // Sin este header, Railway/nginx almacena en buffer el stream y devuelve 502
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.use((req: any, res: any, next: any) => {
+    if (req.url?.includes('/stream')) {
+      const origin = req.headers.origin;
+      if (origin && corsOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+      }
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+    next();
+  });
+
   // ✅ Validaciones
   app.useGlobalPipes(
     new ValidationPipe({

@@ -1,5 +1,5 @@
 import {
-  Body, Controller, Delete, Get, MessageEvent,
+  Body, Controller, Delete, Get, Header, MessageEvent,
   Param, Patch, Post, Put, Query, Request, Res, Sse, UnauthorizedException, UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
@@ -246,11 +246,20 @@ export class PlayController {
   //     que bloquearía el pool con una conexión por cliente SSE.
   @SkipTenantCheck()
   @Sse('live/:sessionId/stream')
+  @Header('X-Accel-Buffering', 'no')
+  @Header('Cache-Control', 'no-cache')
+  @Header('Connection', 'keep-alive')
   streamLiveSession(
     @Param('sessionId') sessionId: string,
     @Query('token') token?: string,
     @Query('guestToken') guestToken?: string,
+    @Res({ passthrough: true }) res?: any,
   ): Observable<MessageEvent> {
+    // Garantizar CORS para SSE (EventSource no envía preflight)
+    if (res) {
+      res.setHeader('Access-Control-Allow-Origin', res.req?.headers?.origin || 'https://www.edusyn.co');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
     if (!token && !guestToken) throw new UnauthorizedException('Token requerido');
     if (token) {
       return from((async () => {

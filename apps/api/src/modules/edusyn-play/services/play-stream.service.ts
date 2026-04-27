@@ -62,7 +62,7 @@ export class PlayStreamService implements OnModuleDestroy {
       }, 25_000);
       this.heartbeats.set(sessionId, hb);
 
-      this.logger.debug(`Stream creado para sesión ${sessionId}`);
+      // Stream creado silenciosamente — no loguear para evitar saturar Railway
     }
     return this.streams.get(sessionId)!;
   }
@@ -80,7 +80,6 @@ export class PlayStreamService implements OnModuleDestroy {
     const subject = this.streams.get(sessionId);
     if (subject) {
       this.destroyStream(sessionId, subject);
-      this.logger.debug(`Stream finalizado para sesión ${sessionId}`);
     }
   }
 
