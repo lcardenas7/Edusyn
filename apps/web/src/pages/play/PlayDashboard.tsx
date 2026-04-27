@@ -52,8 +52,28 @@ export default function PlayDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
+      <div className="space-y-6 animate-pulse">
+        <div className="h-8 w-48 bg-gray-200 rounded-lg" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
+              <div className="h-4 w-24 bg-gray-200 rounded" />
+              <div className="h-8 w-12 bg-gray-200 rounded" />
+            </div>
+          ))}
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
+          <div className="h-4 w-40 bg-gray-200 rounded" />
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-gray-200 rounded-xl flex-shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3 w-3/4 bg-gray-200 rounded" />
+                <div className="h-3 w-1/2 bg-gray-100 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }

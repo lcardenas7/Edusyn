@@ -83,6 +83,7 @@ export default function PlayQuizEditor() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [quizTitle, setQuizTitle] = useState('')
   const [titleSaving, setTitleSaving] = useState(false)
+  const [titleSaved, setTitleSaved] = useState(false)
   const titleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -132,8 +133,11 @@ export default function PlayQuizEditor() {
     titleDebounceRef.current = setTimeout(async () => {
       if (!quizId || !val.trim()) return
       setTitleSaving(true)
-      try { await playPanelApi.updateQuiz(quizId, { title: val.trim() }) }
-      finally { setTitleSaving(false) }
+      try {
+        await playPanelApi.updateQuiz(quizId, { title: val.trim() })
+        setTitleSaved(true)
+        setTimeout(() => setTitleSaved(false), 2500)
+      } finally { setTitleSaving(false) }
     }, 1200)
   }
 
@@ -173,6 +177,12 @@ export default function PlayQuizEditor() {
 
   const handleUpdateQuestion = async () => {
     if (!editingId || !newText.trim()) return
+    // F5.2: validar puntos y timer
+    if (newPoints < 1 || newPoints > 1000) { setError('Los puntos deben estar entre 1 y 1000'); return }
+    if (newTimeLimitSeconds) {
+      const t = parseInt(newTimeLimitSeconds, 10)
+      if (isNaN(t) || t < 5 || t > 120) { setError('El tiempo límite debe estar entre 5 y 120 segundos'); return }
+    }
     let options: any = undefined
     let correctAnswer: string | undefined = undefined
     if (newType === 'MULTIPLE_CHOICE') {
@@ -233,6 +243,11 @@ export default function PlayQuizEditor() {
     input.onchange = async () => {
       const file = input.files?.[0]
       if (!file) return
+      // F5.2: imagen ≤ 2MB
+      if (file.size > 2 * 1024 * 1024) {
+        setError('La imagen no puede superar 2 MB')
+        return
+      }
       setUploadingImage(true)
       setError('')
       try {
@@ -258,6 +273,18 @@ export default function PlayQuizEditor() {
       return
     }
     if (!quizId) return
+    // F5.2: validar puntos y timer
+    if (newPoints < 1 || newPoints > 1000) {
+      setError('Los puntos deben estar entre 1 y 1000')
+      return
+    }
+    if (newTimeLimitSeconds) {
+      const t = parseInt(newTimeLimitSeconds, 10)
+      if (isNaN(t) || t < 5 || t > 120) {
+        setError('El tiempo límite debe estar entre 5 y 120 segundos')
+        return
+      }
+    }
 
     let options: any = undefined
     let correctAnswer: string | undefined = undefined
@@ -526,6 +553,7 @@ export default function PlayQuizEditor() {
               placeholder="Título del quiz"
             />
             {titleSaving && <Loader2 className="w-3.5 h-3.5 text-violet-400 animate-spin flex-shrink-0" />}
+            {titleSaved && !titleSaving && <span className="text-xs text-green-500 font-medium">Guardado ✓</span>}
           </div>
           <p className="text-sm text-gray-500">{questions.length} pregunta(s)</p>
         </div>
@@ -910,7 +938,7 @@ export default function PlayQuizEditor() {
                 value={newTimeLimitSeconds}
                 onChange={e => setNewTimeLimitSeconds(e.target.value)}
                 min={5}
-                max={180}
+                max={120}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition"
               />
             </div>
@@ -924,7 +952,7 @@ export default function PlayQuizEditor() {
                 value={newPoints}
                 onChange={e => setNewPoints(Number(e.target.value) || 10)}
                 min={1}
-                max={100}
+                max={1000}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition"
               />
             </div>

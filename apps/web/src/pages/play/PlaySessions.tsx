@@ -80,8 +80,21 @@ export default function PlaySessions() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+      <div className="space-y-4 animate-pulse">
+        <div className="h-7 w-28 bg-gray-200 rounded-lg" />
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-5 py-4 border-b border-gray-50 last:border-0">
+              <div className="flex-1 space-y-1.5">
+                <div className="h-4 w-2/3 bg-gray-200 rounded" />
+                <div className="h-3 w-1/3 bg-gray-100 rounded" />
+              </div>
+              <div className="h-6 w-16 bg-gray-100 rounded-full" />
+              <div className="h-4 w-10 bg-gray-100 rounded" />
+              <div className="h-4 w-14 bg-gray-100 rounded" />
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
