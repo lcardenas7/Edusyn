@@ -256,7 +256,7 @@ const institutionalNavigation: NavItem[] = [
   { name: 'Mis Clases', href: '/my-classes', icon: MonitorPlay, roles: ['ESTUDIANTE', 'ACUDIENTE'], module: 'VIRTUAL_CLASSROOM' },
 
   // Edusyn Play
-  { name: 'Edusyn Play', href: '/play', icon: Gamepad2, roles: ['DOCENTE', 'COORDINADOR', 'ADMIN_INSTITUTIONAL'], external: true },
+  { name: 'Edusyn Play', href: '/play-landing', icon: Gamepad2, roles: ['DOCENTE', 'COORDINADOR', 'ADMIN_INSTITUTIONAL'], external: true },
 
   // Documentos y Gestión
   { name: 'Documentos', href: '/institutional-documents', icon: FolderOpen, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'SECRETARIA'] },

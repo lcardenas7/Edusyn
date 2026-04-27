@@ -14,24 +14,26 @@ async function bootstrap() {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-  // 🔐 CORS
-  const corsOrigins = (process.env.CORS_ORIGINS
-    ? process.env.CORS_ORIGINS.split(',')
-    : [
-        'http://localhost:5173',
-        'http://localhost:3000',
-        'https://web-production-8237c.up.railway.app',
-        'https://edusyn.up.railway.app',
-        'https://www.edusyn.co',
-        'https://edusyn.co',
-      ]
-  )
-    .map((o) => o.trim())
-    .filter(Boolean);
+  // 🔐 CORS — los dominios de producción siempre están permitidos,
+  // CORS_ORIGINS solo agrega orígenes extra (ej. dev tuneles)
+  const ALWAYS_ALLOWED = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://web-production-8237c.up.railway.app',
+    'https://edusyn.up.railway.app',
+    'https://www.edusyn.co',
+    'https://edusyn.co',
+  ];
+  const extraOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+    : [];
+  const corsOrigins = [...new Set([...ALWAYS_ALLOWED, ...extraOrigins])];
 
   app.enableCors({
     origin: corsOrigins,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // 🌐 Prefijo global

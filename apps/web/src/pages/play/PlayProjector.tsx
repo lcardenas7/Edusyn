@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { playPanelApi } from '../../lib/playApi'
 import { usePlaySSE, PlaySSEEvent } from '../../lib/play-sse'
 import QRCode from 'react-qr-code'
-import { Users, Maximize2 } from 'lucide-react'
+import { Users, Maximize2, SkipForward, Pause, Play, XCircle, Loader2 } from 'lucide-react'
 
 const KAHOOT_COLORS = [
   { bg: 'bg-red-500', shape: '▲' },
@@ -17,17 +17,51 @@ export default function PlayProjector() {
   const [session, setSession] = useState<any>(null)
   const [answerStats, setAnswerStats] = useState<{ answeredCount: number; totalGuests: number; percent: number } | null>(null)
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
+  const [actioning, setActioning] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const playToken = typeof window !== 'undefined' ? localStorage.getItem('play_token') ?? undefined : undefined
   const joinUrl = session?.joinCode ? `${window.location.origin}/join/${session.joinCode}` : ''
 
-  useEffect(() => {
+  const refreshSession = useCallback(() => {
     if (!sessionId) return
     playPanelApi.getLiveQuizStatus(sessionId)
       .then(r => setSession(r.data))
       .catch(() => {})
   }, [sessionId])
+
+  useEffect(() => {
+    refreshSession()
+    // Poll cada 8s como fallback por si se pierde algún evento SSE
+    pollRef.current = setInterval(refreshSession, 8000)
+    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+  }, [refreshSession])
+
+  const doNext = async () => {
+    if (!sessionId || actioning) return
+    setActioning(true)
+    try { await playPanelApi.nextQuestionLive(sessionId) } catch {}
+    finally { setActioning(false) }
+  }
+  const doPause = async () => {
+    if (!sessionId || actioning) return
+    setActioning(true)
+    try { await playPanelApi.pauseSession(sessionId) } catch {}
+    finally { setActioning(false) }
+  }
+  const doResume = async () => {
+    if (!sessionId || actioning) return
+    setActioning(true)
+    try { await playPanelApi.resumeSession(sessionId) } catch {}
+    finally { setActioning(false) }
+  }
+  const doFinish = async () => {
+    if (!sessionId || actioning) return
+    setActioning(true)
+    try { await playPanelApi.finishLiveQuiz(sessionId) } catch {}
+    finally { setActioning(false) }
+  }
 
   const startTimer = useCallback((seconds: number) => {
     if (timerRef.current) clearInterval(timerRef.current)
@@ -44,8 +78,14 @@ export default function PlayProjector() {
   }, [])
 
   const handleSSEEvent = useCallback((event: PlaySSEEvent) => {
-    if (event.type === 'SESSION_STATE' || event.type === 'GUEST_JOINED') {
-      setSession((prev: any) => prev ? { ...prev, guestsCount: event.data?.guestsCount ?? prev.guestsCount } : prev)
+    if (event.type === 'GUEST_JOINED' || event.type === 'GUEST_LEFT' || event.type === 'SESSION_STATE') {
+      if (event.data?.guestsCount !== undefined) {
+        setSession((prev: any) => prev ? { ...prev, guestsCount: event.data.guestsCount } : prev)
+      }
+    } else if (event.type === 'SESSION_PAUSED') {
+      setSession((prev: any) => prev ? { ...prev, status: 'PAUSED' } : prev)
+    } else if (event.type === 'SESSION_RESUMED') {
+      setSession((prev: any) => prev ? { ...prev, status: 'ACTIVE' } : prev)
     } else if (event.type === 'QUESTION_OPENED') {
       setAnswerStats(null)
       const q = event.data.question
@@ -90,8 +130,11 @@ export default function PlayProjector() {
           {session.status === 'ACTIVE' && (
             <span className="rounded-full bg-green-400/20 px-3 py-1 text-xs font-bold text-green-300">EN VIVO</span>
           )}
+          {session.status === 'PAUSED' && (
+            <span className="rounded-full bg-amber-400/20 px-3 py-1 text-xs font-bold text-amber-300">PAUSADO</span>
+          )}
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-violet-200">
             <Users className="w-5 h-5" />
             <span className="text-xl font-black">{session.guestsCount ?? 0}</span>
@@ -99,6 +142,37 @@ export default function PlayProjector() {
           {session.status === 'ACTIVE' && totalQ > 0 && (
             <span className="text-sm font-bold text-violet-200">{currentIdx} / {totalQ}</span>
           )}
+
+          {/* ── Controles del docente ── */}
+          {session.status === 'ACTIVE' && (
+            <>
+              <button onClick={doPause} disabled={actioning}
+                className="flex items-center gap-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/40 px-3 py-1.5 text-sm font-bold text-amber-200 transition disabled:opacity-50">
+                {actioning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pause className="w-4 h-4" />} Pausar
+              </button>
+              <button onClick={doNext} disabled={actioning}
+                className="flex items-center gap-1.5 rounded-xl bg-green-400/20 hover:bg-green-400/40 px-3 py-1.5 text-sm font-bold text-green-200 transition disabled:opacity-50">
+                {actioning ? <Loader2 className="w-4 h-4 animate-spin" /> : <SkipForward className="w-4 h-4" />} Siguiente
+              </button>
+              <button onClick={doFinish} disabled={actioning}
+                className="flex items-center gap-1.5 rounded-xl bg-red-400/20 hover:bg-red-400/40 px-3 py-1.5 text-sm font-bold text-red-300 transition disabled:opacity-50">
+                <XCircle className="w-4 h-4" /> Finalizar
+              </button>
+            </>
+          )}
+          {session.status === 'PAUSED' && (
+            <button onClick={doResume} disabled={actioning}
+              className="flex items-center gap-1.5 rounded-xl bg-green-400/20 hover:bg-green-400/40 px-3 py-1.5 text-sm font-bold text-green-200 transition disabled:opacity-50">
+              {actioning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} Reanudar
+            </button>
+          )}
+          {session.status === 'WAITING' && (
+            <button onClick={doNext} disabled={actioning}
+              className="flex items-center gap-1.5 rounded-xl bg-green-500/30 hover:bg-green-500/50 px-4 py-2 text-sm font-black text-green-200 transition disabled:opacity-50">
+              {actioning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} Iniciar Quiz
+            </button>
+          )}
+
           <button
             onClick={() => document.documentElement.requestFullscreen?.()}
             className="rounded-lg p-2 hover:bg-white/10 transition"

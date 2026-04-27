@@ -285,7 +285,7 @@ export default function Classroom() {
               </p>
             </div>
             <a
-              href="/play"
+              href="/play-landing"
               target="_blank"
               rel="noopener noreferrer"
               className="flex-shrink-0 text-sm font-bold text-violet-600 hover:text-violet-800 underline"

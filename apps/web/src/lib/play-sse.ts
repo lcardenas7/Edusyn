@@ -1,22 +1,18 @@
 import { useEffect, useRef, useCallback } from 'react'
 
-const PLAY_API_URL = import.meta.env.VITE_PLAY_API_URL || 'http://localhost:3000'
+// Misma lógica de detección que playApi.ts — sin depender de VITE_PLAY_API_URL
+const _isProduction =
+  typeof window !== 'undefined' &&
+  (window.location.hostname.includes('railway.app') ||
+    window.location.hostname.includes('edusyn.co'))
+
+const PLAY_API_URL = _isProduction
+  ? 'https://api.edusyn.co/api'
+  : import.meta.env.VITE_PLAY_API_URL || 'http://localhost:3000'
+
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 3000
 const FALLBACK_POLL_MS = 5000
-
-// F6.30: warn si la URL quedó como localhost en un build de producción
-if (
-  typeof window !== 'undefined' &&
-  !import.meta.env.VITE_PLAY_API_URL &&
-  (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
-) {
-  console.warn(
-    '[Edusyn Play] VITE_PLAY_API_URL no está configurada. ' +
-    'El SSE intentará conectar a http://localhost:3000 lo cual fallará en producción. ' +
-    'Configura VITE_PLAY_API_URL en el build de Netlify/Railway.'
-  )
-}
 
 export type PlayEventType =
   | 'PING'

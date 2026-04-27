@@ -58,6 +58,7 @@ import {
   PlaySessions,
   JoinPage,
   PlayProjector,
+  PlayLanding,
 } from './pages/play'
 
 // Nuevas páginas por dominio (Refactor UX)
@@ -211,6 +212,7 @@ function App() {
         {/* ═══════════════════════════════════════════════════════════ */}
         {/* EDUSYN PLAY - Docentes personales + Invitados              */}
         {/* ═══════════════════════════════════════════════════════════ */}
+        <Route path="/play-landing" element={<PlayLanding />} />
         <Route path="/register-play" element={<PlayAuthProvider><RegisterPlay /></PlayAuthProvider>} />
         <Route path="/login-play" element={<PlayAuthProvider><LoginPlay /></PlayAuthProvider>} />
         <Route path="/join" element={<JoinPage />} />

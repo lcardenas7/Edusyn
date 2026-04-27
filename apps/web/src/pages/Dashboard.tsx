@@ -140,7 +140,7 @@ export default function Dashboard() {
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <a
-              href="/play"
+              href="/play-landing"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 rounded-xl bg-white text-violet-700 px-4 py-2 text-sm font-black transition hover:bg-violet-50"
