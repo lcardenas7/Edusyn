@@ -347,6 +347,17 @@ export default function JoinPage() {
     enabled: !!sseSessionId && !!guestToken && (step === 'lobby' || step === 'active'),
   })
 
+  // Safety net: polling explícito cada 4s en lobby/active
+  // Esto garantiza que si el SSE falla, el estudiante igual recibe actualizaciones
+  useEffect(() => {
+    if (!sseSessionId || !guestToken) return
+    if (step !== 'lobby' && step !== 'active') return
+    const interval = setInterval(() => {
+      handleFallbackPoll().catch(() => {})
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [sseSessionId, guestToken, step, handleFallbackPoll])
+
   // Clear per-question feedback when question changes
   useEffect(() => {
     setAnswerFeedback(null)
