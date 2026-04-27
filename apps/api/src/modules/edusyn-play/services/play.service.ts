@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { PlayWorkspaceService } from './play-workspace.service';
+import { PlayStreamService } from './play-stream.service';
 
 /**
  * Servicio del panel /play del docente personal.
@@ -19,6 +20,7 @@ export class PlayService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly workspace: PlayWorkspaceService,
+    private readonly stream: PlayStreamService,
   ) {}
 
   private async resolveClassroom(userId: string): Promise<string> {
@@ -158,6 +160,169 @@ export class PlayService {
     });
   }
 
+  private async assertLessonOwnership(activityId: string, userId: string) {
+    const classroomId = await this.resolveClassroom(userId);
+    const activity = await this.prisma.classroomActivity.findFirst({
+      where: { id: activityId, classroomId, type: 'LESSON' as any },
+      include: {
+        lesson: {
+          include: {
+            slides: {
+              orderBy: { sortOrder: 'asc' },
+            },
+          },
+        },
+      },
+    });
+    if (!activity || !activity.lesson) throw new NotFoundException('Lección no encontrada');
+    return activity;
+  }
+
+  async getLesson(userId: string, activityId: string) {
+    const activity = await this.assertLessonOwnership(activityId, userId);
+    return {
+      id: activity.id,
+      title: activity.title,
+      description: activity.description,
+      type: activity.type,
+      isPublished: activity.isPublished,
+      createdAt: activity.createdAt,
+      updatedAt: activity.updatedAt,
+      lesson: activity.lesson,
+    };
+  }
+
+  async createLessonSlide(userId: string, activityId: string, data: {
+    type: 'CONTENT' | 'ACTIVITY' | 'CHECKPOINT' | 'BADGE_REVEAL';
+    title?: string;
+    body?: string;
+    imageUrl?: string;
+    videoUrl?: string;
+    audioUrl?: string;
+    layout?: string;
+    activityData?: any;
+    badgeEmoji?: string;
+    badgeTitle?: string;
+  }) {
+    const activity = await this.assertLessonOwnership(activityId, userId);
+    const lesson = activity.lesson!;
+    const maxSort = await this.prisma.lessonSlide.aggregate({
+      where: { lessonId: lesson.id },
+      _max: { sortOrder: true },
+    });
+
+    return this.prisma.lessonSlide.create({
+      data: {
+        lessonId: lesson.id,
+        type: data.type,
+        sortOrder: (maxSort._max.sortOrder ?? -1) + 1,
+        title: data.title ?? undefined,
+        body: data.body ?? undefined,
+        imageUrl: data.imageUrl ?? undefined,
+        videoUrl: data.videoUrl ?? undefined,
+        audioUrl: data.audioUrl ?? undefined,
+        layout: data.layout ?? undefined,
+        activityData: data.activityData ?? undefined,
+        badgeEmoji: data.badgeEmoji ?? undefined,
+        badgeTitle: data.badgeTitle ?? undefined,
+      },
+    });
+  }
+
+  async updateLessonSlide(userId: string, activityId: string, slideId: string, data: {
+    type?: 'CONTENT' | 'ACTIVITY' | 'CHECKPOINT' | 'BADGE_REVEAL';
+    title?: string | null;
+    body?: string | null;
+    imageUrl?: string | null;
+    videoUrl?: string | null;
+    audioUrl?: string | null;
+    layout?: string | null;
+    activityData?: any;
+    badgeEmoji?: string | null;
+    badgeTitle?: string | null;
+  }) {
+    const activity = await this.assertLessonOwnership(activityId, userId);
+    const lesson = activity.lesson!;
+    const slide = await this.prisma.lessonSlide.findFirst({
+      where: { id: slideId, lessonId: lesson.id },
+    });
+    if (!slide) throw new NotFoundException('Slide no encontrado');
+
+    return this.prisma.lessonSlide.update({
+      where: { id: slideId },
+      data: {
+        type: data.type,
+        title: data.title,
+        body: data.body,
+        imageUrl: data.imageUrl,
+        videoUrl: data.videoUrl,
+        audioUrl: data.audioUrl,
+        layout: data.layout,
+        activityData: data.activityData,
+        badgeEmoji: data.badgeEmoji,
+        badgeTitle: data.badgeTitle,
+      },
+    });
+  }
+
+  async deleteLessonSlide(userId: string, activityId: string, slideId: string) {
+    const activity = await this.assertLessonOwnership(activityId, userId);
+    const lesson = activity.lesson!;
+    const slide = await this.prisma.lessonSlide.findFirst({
+      where: { id: slideId, lessonId: lesson.id },
+    });
+    if (!slide) throw new NotFoundException('Slide no encontrado');
+
+    await this.prisma.lessonSlide.delete({ where: { id: slideId } });
+
+    const remaining = await this.prisma.lessonSlide.findMany({
+      where: { lessonId: lesson.id },
+      orderBy: { sortOrder: 'asc' },
+      select: { id: true },
+    });
+
+    await this.prisma.$transaction(
+      remaining.map((item, index) =>
+        this.prisma.lessonSlide.update({
+          where: { id: item.id },
+          data: { sortOrder: index },
+        }),
+      ),
+    );
+
+    return { deleted: true };
+  }
+
+  async reorderLessonSlides(userId: string, activityId: string, order: string[]) {
+    const activity = await this.assertLessonOwnership(activityId, userId);
+    const lesson = activity.lesson!;
+    const currentSlides = lesson.slides;
+    if (currentSlides.length !== order.length) {
+      throw new BadRequestException('El orden enviado no coincide con la cantidad de slides');
+    }
+
+    const currentIds = new Set(currentSlides.map((slide) => slide.id));
+    for (const slideId of order) {
+      if (!currentIds.has(slideId)) {
+        throw new BadRequestException('El orden contiene slides inválidos');
+      }
+    }
+
+    await this.prisma.$transaction(
+      order.map((slideId, index) =>
+        this.prisma.lessonSlide.update({
+          where: { id: slideId },
+          data: { sortOrder: index },
+        }),
+      ),
+    );
+
+    return this.prisma.lessonSlide.findMany({
+      where: { lessonId: lesson.id },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
   async listSessions(userId: string) {
     const classroomId = await this.resolveClassroom(userId);
     return this.prisma.liveSession.findMany({
@@ -216,7 +381,7 @@ export class PlayService {
 
   async addQuestion(activityId: string, userId: string, dto: {
     type: string; text: string; options?: any; correctAnswer?: string;
-    points?: number; explanation?: string; imageUrl?: string;
+    points?: number; explanation?: string; imageUrl?: string; timeLimitSeconds?: number;
   }) {
     await this.assertActivityOwnership(activityId, userId);
     const maxSort = await this.prisma.activityQuestion.aggregate({
@@ -233,6 +398,7 @@ export class PlayService {
         points: dto.points ?? 10,
         explanation: dto.explanation ?? undefined,
         imageUrl: dto.imageUrl ?? undefined,
+        timeLimitSeconds: dto.timeLimitSeconds ?? undefined,
         sortOrder: (maxSort._max.sortOrder ?? -1) + 1,
       },
     });
@@ -240,7 +406,7 @@ export class PlayService {
 
   async updateQuestion(questionId: string, userId: string, dto: {
     text?: string; options?: any; correctAnswer?: string;
-    points?: number; explanation?: string; imageUrl?: string;
+    points?: number; explanation?: string; imageUrl?: string; timeLimitSeconds?: number;
   }) {
     const q = await this.prisma.activityQuestion.findUnique({
       where: { id: questionId },
@@ -259,6 +425,7 @@ export class PlayService {
         points: dto.points,
         explanation: dto.explanation,
         imageUrl: dto.imageUrl,
+        timeLimitSeconds: dto.timeLimitSeconds,
       },
     });
   }
@@ -322,6 +489,9 @@ export class PlayService {
       },
     });
 
+    // Pre-crear stream para que los invitados puedan conectarse antes de que inicie
+    this.stream.getOrCreateStream(session.id);
+
     return {
       id: session.id,
       joinCode: session.joinCode,
@@ -336,6 +506,7 @@ export class PlayService {
     const classroomId = await this.resolveClassroom(userId);
     const session = await this.prisma.liveSession.findFirst({
       where: { id: sessionId, classroomId, teacherId: userId },
+      include: { activity: { include: { questions: { orderBy: { sortOrder: 'asc' } } } } },
     });
     if (!session) throw new NotFoundException('Sesión no encontrada');
     if (session.status !== 'WAITING') throw new BadRequestException('La sesión ya fue iniciada');
@@ -344,6 +515,28 @@ export class PlayService {
       where: { id: sessionId },
       data: { status: 'ACTIVE', startedAt: new Date(), currentQuestionIdx: 0 },
     });
+
+    // Emitir primera pregunta al iniciar
+    const firstQuestion = session.activity?.questions?.[0];
+    if (firstQuestion) {
+      this.stream.emit(sessionId, {
+        type: 'QUESTION_OPENED',
+        data: {
+          questionIndex: 0,
+          totalQuestions: session.activity.questions.length,
+          question: {
+            id: firstQuestion.id,
+            type: firstQuestion.type,
+            text: firstQuestion.text,
+            options: firstQuestion.options,
+            points: firstQuestion.points,
+            timeLimitSeconds: firstQuestion.timeLimitSeconds ?? null,
+          },
+        },
+      });
+    } else {
+      this.stream.emit(sessionId, { type: 'SESSION_STARTED', data: { sessionId } });
+    }
 
     return { id: updated.id, status: updated.status, currentQuestionIdx: updated.currentQuestionIdx };
   }
@@ -366,6 +559,18 @@ export class PlayService {
         where: { id: sessionId },
         data: { status: 'FINISHED', finishedAt: new Date() },
       });
+
+      // Calcular ranking final de invitados
+      const guests = await this.prisma.liveSessionGuest.findMany({
+        where: { sessionId },
+        orderBy: [{ score: 'desc' }, { correctAnswers: 'desc' }],
+        select: { id: true, nickname: true, avatarEmoji: true, score: true, correctAnswers: true, totalAnswers: true },
+      });
+      this.stream.emit(sessionId, {
+        type: 'SESSION_FINISHED',
+        data: { ranking: guests },
+      });
+      this.stream.finishStream(sessionId);
       return { finished: true, currentQuestionIdx: nextIdx, totalQuestions };
     }
 
@@ -375,6 +580,21 @@ export class PlayService {
     });
 
     const question = session.activity.questions[nextIdx];
+    this.stream.emit(sessionId, {
+      type: 'QUESTION_OPENED',
+      data: {
+        questionIndex: nextIdx,
+        totalQuestions,
+        question: {
+          id: question.id,
+          type: question.type,
+          text: question.text,
+          options: question.options,
+          points: question.points,
+          timeLimitSeconds: (question as any).timeLimitSeconds ?? null,
+        },
+      },
+    });
     return {
       finished: false,
       currentQuestionIdx: nextIdx,
@@ -433,7 +653,85 @@ export class PlayService {
       where: { id: sessionId },
       data: { status: 'FINISHED', finishedAt: new Date() },
     });
+    const guests = await this.prisma.liveSessionGuest.findMany({
+      where: { sessionId },
+      orderBy: [{ score: 'desc' }, { correctAnswers: 'desc' }],
+      select: { id: true, nickname: true, avatarEmoji: true, score: true, correctAnswers: true, totalAnswers: true },
+    });
+    this.stream.emit(sessionId, { type: 'SESSION_FINISHED', data: { ranking: guests } });
+    this.stream.finishStream(sessionId);
     return { finished: true };
+  }
+
+  /**
+   * Devuelve el estado actual de la sesión para el evento inicial SSE.
+   * Retorna null si la sesión no existe o ya terminó.
+   */
+  async getSessionStateForSSE(sessionId: string): Promise<any | null> {
+    const session = await this.prisma.liveSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        id: true,
+        status: true,
+        joinCode: true,
+        guestsCount: true,
+        currentQuestionIdx: true,
+        config: true,
+        activity: {
+          select: {
+            title: true,
+            questions: {
+              orderBy: { sortOrder: 'asc' },
+              select: { id: true, type: true, text: true, options: true, points: true, timeLimitSeconds: true },
+            },
+          },
+        },
+      },
+    });
+    if (!session) return null;
+
+    const totalQuestions = session.activity?.questions?.length ?? 0;
+    const currentIdx = session.currentQuestionIdx;
+    const currentQuestion =
+      session.status === 'ACTIVE' && currentIdx >= 0 && session.activity?.questions?.[currentIdx]
+        ? session.activity.questions[currentIdx]
+        : null;
+
+    return {
+      id: session.id,
+      status: session.status,
+      joinCode: session.joinCode,
+      guestsCount: session.guestsCount,
+      totalQuestions,
+      currentQuestionIdx: currentIdx,
+      activityTitle: session.activity?.title,
+      currentQuestion,
+    };
+  }
+
+  /**
+   * Emite un evento GUEST_JOINED a todos los clientes SSE de la sesión.
+   * Llamado por GuestService después del join exitoso.
+   */
+  emitGuestJoined(sessionId: string, data: { nickname: string; avatarEmoji: string; guestsCount: number }): void {
+    this.stream.emit(sessionId, { type: 'GUEST_JOINED', data });
+  }
+
+  /**
+   * Emite RANKING_UPDATED tras cada respuesta de invitado.
+   */
+  async emitRankingUpdate(sessionId: string): Promise<void> {
+    const guests = await this.prisma.liveSessionGuest.findMany({
+      where: { sessionId },
+      orderBy: [{ score: 'desc' }, { correctAnswers: 'desc' }],
+      take: 20,
+      select: { id: true, nickname: true, avatarEmoji: true, score: true, correctAnswers: true, totalAnswers: true },
+    });
+    this.stream.emit(sessionId, { type: 'RANKING_UPDATED', data: { ranking: guests } });
+  }
+
+  emitReaction(sessionId: string, data: { guestId: string; emoji: string; slideIndex?: number | null }): void {
+    this.stream.emit(sessionId, { type: 'REACTION', data });
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

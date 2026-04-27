@@ -54,6 +54,7 @@ import {
   PlayQuizzes,
   PlayQuizEditor,
   PlayLessons,
+  PlayLessonEditor,
   PlaySessions,
   JoinPage,
 } from './pages/play'
@@ -184,6 +185,7 @@ function PlayRoutes() {
         <Route path="/quizzes" element={<PlayProtectedRoute><PlayLayout><PlayQuizzes /></PlayLayout></PlayProtectedRoute>} />
         <Route path="/quizzes/:quizId/edit" element={<PlayProtectedRoute><PlayLayout><PlayQuizEditor /></PlayLayout></PlayProtectedRoute>} />
         <Route path="/lessons" element={<PlayProtectedRoute><PlayLayout><PlayLessons /></PlayLayout></PlayProtectedRoute>} />
+        <Route path="/lessons/:lessonId/edit" element={<PlayProtectedRoute><PlayLayout><PlayLessonEditor /></PlayLayout></PlayProtectedRoute>} />
         <Route path="/sessions" element={<PlayProtectedRoute><PlayLayout><PlaySessions /></PlayLayout></PlayProtectedRoute>} />
       </Routes>
     </PlayAuthProvider>

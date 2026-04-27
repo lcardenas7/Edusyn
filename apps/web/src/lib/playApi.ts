@@ -74,17 +74,44 @@ export const playPanelApi = {
   listQuestions: (activityId: string) => playAxios.get(`/play/quizzes/${activityId}/questions`),
   addQuestion: (activityId: string, data: {
     type: string; text: string; options?: any; correctAnswer?: string;
-    points?: number; explanation?: string;
+    points?: number; explanation?: string; imageUrl?: string; timeLimitSeconds?: number;
   }) => playAxios.post(`/play/quizzes/${activityId}/questions`, data),
   updateQuestion: (questionId: string, data: {
     text?: string; options?: any; correctAnswer?: string;
-    points?: number; explanation?: string;
+    points?: number; explanation?: string; imageUrl?: string; timeLimitSeconds?: number;
   }) => playAxios.put(`/play/questions/${questionId}`, data),
   deleteQuestion: (questionId: string) => playAxios.delete(`/play/questions/${questionId}`),
   // Lessons
   listLessons: () => playAxios.get('/play/lessons'),
+  getLesson: (id: string) => playAxios.get(`/play/lessons/${id}`),
   createLesson: (data: { title: string; description?: string }) =>
     playAxios.post('/play/lessons', data),
+  createLessonSlide: (id: string, data: {
+    type: 'CONTENT' | 'ACTIVITY' | 'CHECKPOINT' | 'BADGE_REVEAL';
+    title?: string;
+    body?: string;
+    imageUrl?: string;
+    videoUrl?: string;
+    audioUrl?: string;
+    layout?: string;
+    activityData?: any;
+    badgeEmoji?: string;
+    badgeTitle?: string;
+  }) => playAxios.post(`/play/lessons/${id}/slides`, data),
+  updateLessonSlide: (id: string, slideId: string, data: {
+    type?: 'CONTENT' | 'ACTIVITY' | 'CHECKPOINT' | 'BADGE_REVEAL';
+    title?: string | null;
+    body?: string | null;
+    imageUrl?: string | null;
+    videoUrl?: string | null;
+    audioUrl?: string | null;
+    layout?: string | null;
+    activityData?: any;
+    badgeEmoji?: string | null;
+    badgeTitle?: string | null;
+  }) => playAxios.put(`/play/lessons/${id}/slides/${slideId}`, data),
+  deleteLessonSlide: (id: string, slideId: string) => playAxios.delete(`/play/lessons/${id}/slides/${slideId}`),
+  reorderLessonSlides: (id: string, order: string[]) => playAxios.patch(`/play/lessons/${id}/slides/reorder`, { order }),
   deleteLesson: (id: string) => playAxios.delete(`/play/lessons/${id}`),
   // Live Quiz Session
   createLiveQuiz: (activityId: string) => playAxios.post(`/play/quizzes/${activityId}/live`),

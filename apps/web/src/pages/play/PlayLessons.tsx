@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { playPanelApi } from '../../lib/playApi'
 import {
   BookOpen,
@@ -23,6 +24,7 @@ interface Lesson {
 }
 
 export default function PlayLessons() {
+  const navigate = useNavigate()
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -51,7 +53,7 @@ export default function PlayLessons() {
     setCreating(true)
     setError('')
     try {
-      await playPanelApi.createLesson({
+      const res = await playPanelApi.createLesson({
         title: createTitle.trim(),
         description: createDesc.trim() || undefined,
       })
@@ -59,6 +61,7 @@ export default function PlayLessons() {
       setCreateTitle('')
       setCreateDesc('')
       loadLessons()
+      if (res.data?.id) navigate(`/play/lessons/${res.data.id}/edit`)
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al crear lección')
     } finally {
@@ -157,7 +160,7 @@ export default function PlayLessons() {
       {filtered.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(lesson => (
-            <div key={lesson.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow group cursor-pointer">
+            <div key={lesson.id} onClick={() => navigate(`/play/lessons/${lesson.id}/edit`)} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow group cursor-pointer">
               <div className="flex items-start justify-between mb-3">
                 <div className="w-10 h-10 rounded-lg bg-fuchsia-100 flex items-center justify-center">
                   {lesson.lesson?.badgeEmoji ? (
