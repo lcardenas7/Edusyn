@@ -607,6 +607,8 @@ export class PlayService {
       });
       this.stream.finishStream(sessionId);
       this.guestTokenService.revokeSession(sessionId);
+      this.cancelQuestionClose(sessionId);
+      this.questionOpenedAt.delete(sessionId);
       return { finished: true, currentQuestionIdx: nextIdx, totalQuestions };
     }
 
@@ -702,6 +704,8 @@ export class PlayService {
     this.stream.emit(sessionId, { type: 'SESSION_FINISHED', data: { ranking: guests } });
     this.stream.finishStream(sessionId);
     this.guestTokenService.revokeSession(sessionId);
+    this.cancelQuestionClose(sessionId);
+    this.questionOpenedAt.delete(sessionId);
     return { finished: true };
   }
 
@@ -726,7 +730,12 @@ export class PlayService {
     this.questionOpenedAt.set(sessionId, openedAt);
     const timer = setTimeout(async () => {
       this.questionTimers.delete(sessionId);
-      await this.emitQuestionClosed(sessionId, questionIdx);
+      try {
+        await this.emitQuestionClosed(sessionId, questionIdx);
+      } catch {
+        // Silenciar errores del timer (Prisma desconectado, sesión ya finalizada, etc.)
+        // No loguear: en Railway un stack trace puede saturar 500 logs/sec
+      }
     }, seconds * 1000);
     this.questionTimers.set(sessionId, timer);
   }
