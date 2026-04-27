@@ -5,7 +5,12 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    // En producción, limitar logs para no saturar Railway (500 logs/sec)
+    logger: process.env.NODE_ENV === 'production'
+      ? ['error', 'warn']
+      : ['error', 'warn', 'log', 'debug', 'verbose'],
+  });
 
   // 🛡️ Headers de seguridad (X-Content-Type-Options, X-Frame-Options, etc.)
   app.use(helmet());
