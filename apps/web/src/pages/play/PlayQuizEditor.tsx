@@ -439,6 +439,21 @@ export default function PlayQuizEditor() {
     enabled: !!sseSessionId,
   })
 
+  // Polling de guestsCount mientras está en lobby WAITING — safety net si SSE tarda
+  useEffect(() => {
+    const sessionId = liveSession?.id
+    if (!sessionId || liveSession?.status !== 'WAITING') return
+    const interval = setInterval(async () => {
+      try {
+        const res = await playPanelApi.getLiveQuizStatus(sessionId)
+        setLiveSession((prev: any) =>
+          prev ? { ...prev, guestsCount: res.data.guestsCount } : prev
+        )
+      } catch {}
+    }, 8000)
+    return () => clearInterval(interval)
+  }, [liveSession?.id, liveSession?.status])
+
   const handleLaunchLive = async () => {
     if (!quizId) return
     if (questions.length === 0) {

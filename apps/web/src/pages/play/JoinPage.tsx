@@ -357,11 +357,18 @@ export default function JoinPage() {
     setError('')
     try {
       const res = await guestApi.lookup(joinCode)
+      if (!res.data.allowJoin) {
+        setError('Esta sesión ya terminó. Pide el código actualizado al docente.')
+        setStep('code')
+        return
+      }
       setSession(res.data)
       setStep('nickname')
     } catch (err: any) {
       if (err.response?.status === 404) {
-        setError('Código no encontrado. Verifica e intenta de nuevo.')
+        setError('Código no válido o sesión no encontrada. Verifica e intenta de nuevo.')
+      } else if (err.response?.status === 403) {
+        setError(err.response.data?.message || 'No puedes unirte a esta sesión.')
       } else {
         setError('Error al buscar la sesión')
       }
