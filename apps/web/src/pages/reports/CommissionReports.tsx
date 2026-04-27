@@ -411,6 +411,13 @@ export default function CommissionReports() {
   }, [lsKey])
   useEffect(() => { if (lsKey) localStorage.setItem(lsKey, JSON.stringify(actaConfig)) }, [lsKey, actaConfig])
 
+  // Limpiar datos cargados al cambiar grado o año
+  useEffect(() => {
+    setLoadedData(null)
+    setActaSubjectFilter([])
+    setGradeGroupTeachers([])
+  }, [selectedGradeId, filterYear])
+
   // ── Generadores de texto inteligente ──────────────────────────────────
   const buildAnalysisText = (d: LoadedData, pass: number) => {
     const { totalStudents, generalAverage: avg, approvedCount, riskCount } = d.academicSummary
@@ -551,29 +558,34 @@ export default function CommissionReports() {
       setActaObs(obsRes.data?.actas || [])
       setReferrals(obsRes.data?.referrals || [])
 
-      // ── Auto-poblar asistentes con directores de grupo ─────────────────
+      // ── Auto-poblar asistentes y firmantes con directores de grupo (siempre sobrescribe) ──
       const directorRows = ggt
         .filter(gt => gt.teachers.length > 0)
         .map(gt => ({ name: gt.teachers[0].name, role: `Director(a) de grupo \u2013 ${gt.groupName}`, courses: gt.groupName }))
-      const hasDirectors = actaConfig.assistants.some(a => a.role?.startsWith('Director(a) de grupo'))
-      if (!hasDirectors && directorRows.length > 0) {
-        const baseAssistants = actaConfig.assistants.filter(a => !a.role?.startsWith('Director(a) de grupo'))
-        updateConfig('assistants', [...baseAssistants, ...directorRows])
-      }
-
-      // ── Auto-poblar firmantes con directores de grupo ──────────────────
-      const currentSigRoles = new Set(actaConfig.signatories.map(s => s.role))
-      const directorSigs = ggt
-        .filter(gt => gt.teachers.length > 0 && !currentSigRoles.has(`Director(a) ${gt.groupName}`))
+      const newDirectorSigs = ggt
+        .filter(gt => gt.teachers.length > 0)
         .map(gt => ({ role: `Director(a) ${gt.groupName}`, name: gt.teachers[0].name }))
-      if (directorSigs.length > 0)
-        updateConfig('signatories', [...actaConfig.signatories, ...directorSigs])
-
-      // ── Generar textos sugeridos (solo si están vacíos) ────────────────
-      if (!actaConfig.analysisText) updateConfig('analysisText', buildAnalysisText(data, pass))
-      if (!actaConfig.convivenciaSuggestion) updateConfig('convivenciaSuggestion', buildImprovementPlan(data, pass))
-      if (actaConfig.commitments.join('') === DEFAULT_COMMITMENTS.join('') || actaConfig.commitments.every(c => DEFAULT_COMMITMENTS.includes(c)))
-        updateConfig('commitments', buildCommitments(data, pass))
+      // Un solo setActaConfig funcional: directores + textos generados (sin closures stale)
+      setActaConfig(prev => {
+        const analysisText = !prev.analysisText ? buildAnalysisText(data, pass) : prev.analysisText
+        const convivenciaSuggestion = !prev.convivenciaSuggestion ? buildImprovementPlan(data, pass) : prev.convivenciaSuggestion
+        const isDefaultCommitments = prev.commitments.join('') === DEFAULT_COMMITMENTS.join('') ||
+          prev.commitments.every(c => DEFAULT_COMMITMENTS.includes(c))
+        return {
+          ...prev,
+          assistants: [
+            ...prev.assistants.filter(a => !a.role?.startsWith('Director(a) de grupo')),
+            ...directorRows,
+          ],
+          signatories: [
+            ...prev.signatories.filter(s => !s.role?.startsWith('Director(a)')),
+            ...newDirectorSigs,
+          ],
+          analysisText,
+          convivenciaSuggestion,
+          commitments: isDefaultCommitments ? buildCommitments(data, pass) : prev.commitments,
+        }
+      })
     } catch (err) {
       console.error('Error loading commission data:', err)
       setLoadError('No fue posible cargar algunos datos. Verifica la conexi\u00f3n y vuelve a intentarlo.')
