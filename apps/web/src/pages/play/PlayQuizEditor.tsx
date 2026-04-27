@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { classroomApi } from '../../lib/api'
 import { playPanelApi } from '../../lib/playApi'
@@ -8,7 +8,6 @@ import {
   ArrowLeft,
   Plus,
   Trash2,
-  Save,
   Loader2,
   GripVertical,
   CheckCircle2,
@@ -18,9 +17,17 @@ import {
   Hash,
   Type,
   Play,
-  Image as ImageIcon,
   Upload,
   Timer,
+  Pencil,
+  Eye,
+  X,
+  ArrowUp,
+  ArrowDown,
+  ListOrdered,
+  ToggleLeft,
+  Save,
+  Image as ImageIcon,
 } from 'lucide-react'
 
 interface Option {
@@ -43,9 +50,18 @@ interface Question {
 }
 
 const QUESTION_TYPES = [
-  { value: 'MULTIPLE_CHOICE', label: 'Opción múltiple', icon: CheckCircle2 },
-  { value: 'TRUE_FALSE', label: 'Verdadero/Falso', icon: XCircle },
-  { value: 'SHORT_ANSWER', label: 'Respuesta corta', icon: Type },
+  { value: 'MULTIPLE_CHOICE',  label: 'Opción múltiple',   icon: CheckCircle2 },
+  { value: 'MULTIPLE_SELECT',  label: 'Selección múltiple', icon: ToggleLeft },
+  { value: 'TRUE_FALSE',       label: 'Verdadero/Falso', icon: XCircle },
+  { value: 'SHORT_ANSWER',     label: 'Respuesta corta',  icon: Type },
+  { value: 'ORDER',            label: 'Ordenar',          icon: ListOrdered },
+]
+
+const KAHOOT_PREVIEW_COLORS = [
+  'bg-red-500',
+  'bg-blue-500',
+  'bg-amber-400',
+  'bg-green-600',
 ]
 
 function generateId() {
@@ -65,24 +81,31 @@ export default function PlayQuizEditor() {
   const { quizId } = useParams<{ quizId: string }>()
   const navigate = useNavigate()
   const [questions, setQuestions] = useState<Question[]>([])
+  const [quizTitle, setQuizTitle] = useState('')
+  const [titleSaving, setTitleSaving] = useState(false)
+  const titleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [editingIdx, setEditingIdx] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null)
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
 
   // Live session state
   const [liveSession, setLiveSession] = useState<any>(null)
   const [launchingLive, setLaunchingLive] = useState(false)
   const [sseConnected, setSseConnected] = useState(false)
   const [sseFallback, setSseFallback] = useState(false)
+  const [recentReactions, setRecentReactions] = useState<Array<{ id: string; emoji: string }>>([])
+  const [answerStats, setAnswerStats] = useState<{ questionId: string; answeredCount: number; totalGuests: number; percent: number } | null>(null)
 
   // New question form
   const [newType, setNewType] = useState('MULTIPLE_CHOICE')
   const [newText, setNewText] = useState('')
   const [newOptions, setNewOptions] = useState<Option[]>(defaultOptions())
   const [newCorrectAnswer, setNewCorrectAnswer] = useState('')
-  const [newPoints, setNewPoints] = useState(10)
+  const [newPoints, setNewPoints] = useState(1000)
   const [newExplanation, setNewExplanation] = useState('')
   const [newImageUrl, setNewImageUrl] = useState('')
   const [newTimeLimitSeconds, setNewTimeLimitSeconds] = useState('15')
@@ -92,17 +115,109 @@ export default function PlayQuizEditor() {
   useEffect(() => {
     if (!quizId) return
     playPanelApi.listQuestions(quizId)
-      .then(res => setQuestions(res.data || []))
+      .then(res => {
+        setQuizTitle(res.data.title || '')
+        setQuestions(res.data.questions || [])
+      })
       .catch(() => setError('Error al cargar preguntas'))
       .finally(() => setLoading(false))
   }, [quizId])
+
+  // F6.21: Auto-save quiz title
+  const handleTitleChange = (val: string) => {
+    setQuizTitle(val)
+    if (titleDebounceRef.current) clearTimeout(titleDebounceRef.current)
+    titleDebounceRef.current = setTimeout(async () => {
+      if (!quizId || !val.trim()) return
+      setTitleSaving(true)
+      try { await playPanelApi.updateQuiz(quizId, { title: val.trim() }) }
+      finally { setTitleSaving(false) }
+    }, 1200)
+  }
+
+  // F6.17: Drag reorder handlers
+  const handleDragStart = (idx: number) => setDragIdx(idx)
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault()
+    if (dragIdx === null || dragIdx === idx) return
+    const reordered = [...questions]
+    const [moved] = reordered.splice(dragIdx, 1)
+    reordered.splice(idx, 0, moved)
+    setQuestions(reordered)
+    setDragIdx(idx)
+  }
+  const handleDragEnd = async () => {
+    setDragIdx(null)
+    if (!quizId) return
+    try { await playPanelApi.reorderQuestions(quizId, questions.map(q => q.id)) }
+    catch { setError('Error al reordenar') }
+  }
+
+  // F6.18: Open inline edit
+  const openEdit = (q: Question) => {
+    setEditingId(q.id)
+    setNewType(q.type)
+    setNewText(q.text)
+    const opts: Option[] = Array.isArray(q.options) ? (q.options as Option[]) : []
+    setNewOptions(opts.length ? opts : defaultOptions())
+    setNewCorrectAnswer(q.correctAnswer || '')
+    setNewPoints(q.points)
+    setNewExplanation(q.explanation || '')
+    setNewImageUrl(q.imageUrl || '')
+    setNewTimeLimitSeconds(q.timeLimitSeconds ? String(q.timeLimitSeconds) : '15')
+    setShowAddForm(false)
+  }
+  const cancelEdit = () => setEditingId(null)
+
+  const handleUpdateQuestion = async () => {
+    if (!editingId || !newText.trim()) return
+    let options: any = undefined
+    let correctAnswer: string | undefined = undefined
+    if (newType === 'MULTIPLE_CHOICE') {
+      const filled = newOptions.filter(o => o.text.trim())
+      if (filled.length < 2) { setError('Necesitas al menos 2 opciones'); return }
+      options = filled.map(o => ({ id: o.id, text: o.text.trim(), isCorrect: o.isCorrect }))
+      correctAnswer = filled.find(o => o.isCorrect)?.id
+    } else if (newType === 'MULTIPLE_SELECT') {
+      const filled = newOptions.filter(o => o.text.trim())
+      options = filled.map(o => ({ id: o.id, text: o.text.trim(), isCorrect: o.isCorrect }))
+      correctAnswer = filled.filter(o => o.isCorrect).map(o => o.id).sort().join(',')
+    } else if (newType === 'ORDER') {
+      const filled = newOptions.filter(o => o.text.trim())
+      options = filled.map(o => ({ id: o.id, text: o.text.trim(), isCorrect: false }))
+      correctAnswer = filled.map(o => o.id).join(',')
+    } else if (newType === 'TRUE_FALSE') {
+      options = [
+        { id: 'true', text: 'Verdadero', isCorrect: newCorrectAnswer === 'true' },
+        { id: 'false', text: 'Falso', isCorrect: newCorrectAnswer === 'false' },
+      ]
+      correctAnswer = newCorrectAnswer || 'true'
+    } else {
+      correctAnswer = newCorrectAnswer.trim() || undefined
+    }
+    setSaving(true)
+    try {
+      const res = await playPanelApi.updateQuestion(editingId, {
+        type: newType, text: newText.trim(), options, correctAnswer,
+        points: newPoints, explanation: newExplanation.trim() || undefined,
+        imageUrl: newImageUrl.trim() || undefined,
+        timeLimitSeconds: newTimeLimitSeconds ? parseInt(newTimeLimitSeconds, 10) || undefined : undefined,
+      })
+      setQuestions(prev => prev.map(q => q.id === editingId ? res.data : q))
+      setEditingId(null)
+      setSuccess('Pregunta actualizada')
+      setTimeout(() => setSuccess(''), 2000)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al actualizar')
+    } finally { setSaving(false) }
+  }
 
   const resetForm = () => {
     setNewType('MULTIPLE_CHOICE')
     setNewText('')
     setNewOptions(defaultOptions())
     setNewCorrectAnswer('')
-    setNewPoints(10)
+    setNewPoints(1000)
     setNewExplanation('')
     setNewImageUrl('')
     setNewTimeLimitSeconds('15')
@@ -147,16 +262,21 @@ export default function PlayQuizEditor() {
 
     if (newType === 'MULTIPLE_CHOICE') {
       const filled = newOptions.filter(o => o.text.trim())
-      if (filled.length < 2) {
-        setError('Necesitas al menos 2 opciones')
-        return
-      }
-      if (!filled.some(o => o.isCorrect)) {
-        setError('Marca al menos una opción correcta')
-        return
-      }
+      if (filled.length < 2) { setError('Necesitas al menos 2 opciones'); return }
+      if (!filled.some(o => o.isCorrect)) { setError('Marca al menos una opción correcta'); return }
       options = filled.map(o => ({ id: o.id, text: o.text.trim(), isCorrect: o.isCorrect }))
       correctAnswer = filled.find(o => o.isCorrect)?.id
+    } else if (newType === 'MULTIPLE_SELECT') {
+      const filled = newOptions.filter(o => o.text.trim())
+      if (filled.length < 2) { setError('Necesitas al menos 2 opciones'); return }
+      if (!filled.some(o => o.isCorrect)) { setError('Marca al menos una opción correcta'); return }
+      options = filled.map(o => ({ id: o.id, text: o.text.trim(), isCorrect: o.isCorrect }))
+      correctAnswer = filled.filter(o => o.isCorrect).map(o => o.id).sort().join(',')
+    } else if (newType === 'ORDER') {
+      const filled = newOptions.filter(o => o.text.trim())
+      if (filled.length < 2) { setError('Necesitas al menos 2 elementos'); return }
+      options = filled.map(o => ({ id: o.id, text: o.text.trim(), isCorrect: false }))
+      correctAnswer = filled.map(o => o.id).join(',')
     } else if (newType === 'TRUE_FALSE') {
       options = [
         { id: 'true', text: 'Verdadero', isCorrect: newCorrectAnswer === 'true' },
@@ -204,6 +324,7 @@ export default function PlayQuizEditor() {
 
   const openAddForm = () => {
     resetForm()
+    setEditingId(null)
     setShowAddForm(true)
   }
 
@@ -236,6 +357,7 @@ export default function PlayQuizEditor() {
         prev ? { ...prev, status: 'FINISHED', guests: event.data.ranking } : prev
       )
     } else if (event.type === 'QUESTION_OPENED') {
+      setAnswerStats(null)
       setLiveSession((prev: any) =>
         prev
           ? {
@@ -243,9 +365,21 @@ export default function PlayQuizEditor() {
               status: 'ACTIVE',
               currentQuestionIdx: event.data.questionIndex,
               totalQuestions: event.data.totalQuestions,
+              currentQuestion: event.data.question,
+              questionOpenedAt: event.data.questionOpenedAt ?? Date.now(),
             }
           : prev
       )
+    } else if (event.type === 'QUESTION_CLOSED') {
+      setLiveSession((prev: any) =>
+        prev ? { ...prev, questionClosed: true } : prev
+      )
+    } else if (event.type === 'ANSWER_STATS') {
+      setAnswerStats(event.data)
+    } else if (event.type === 'REACTION') {
+      const bubble = { id: `${Date.now()}-${Math.random()}`, emoji: event.data?.emoji ?? '👍' }
+      setRecentReactions(prev => [...prev, bubble])
+      setTimeout(() => setRecentReactions(prev => prev.filter(r => r.id !== bubble.id)), 2200)
     }
   }, [])
 
@@ -349,11 +483,16 @@ export default function PlayQuizEditor() {
         >
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <FileQuestion className="w-5 h-5 text-violet-500" />
-            Editor de Preguntas
-          </h1>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <input
+              value={quizTitle}
+              onChange={e => handleTitleChange(e.target.value)}
+              className="text-xl font-bold text-gray-900 bg-transparent border-0 border-b-2 border-transparent hover:border-gray-200 focus:border-violet-400 focus:outline-none w-full truncate"
+              placeholder="Título del quiz"
+            />
+            {titleSaving && <Loader2 className="w-3.5 h-3.5 text-violet-400 animate-spin flex-shrink-0" />}
+          </div>
           <p className="text-sm text-gray-500">{questions.length} pregunta(s)</p>
         </div>
         <div className="flex items-center gap-2">
@@ -394,6 +533,8 @@ export default function PlayQuizEditor() {
           liveSession={liveSession}
           sseConnected={sseConnected}
           sseFallback={sseFallback}
+          recentReactions={recentReactions}
+          answerStats={answerStats}
           onCopyJoinCode={copyJoinCode}
           onStartGame={handleStartGame}
           onNextQuestion={handleNextQuestion}
@@ -425,10 +566,20 @@ export default function PlayQuizEditor() {
         {questions.map((q, idx) => {
           const typeInfo = QUESTION_TYPES.find(t => t.value === q.type) || QUESTION_TYPES[0]
           const TypeIcon = typeInfo.icon
+          const isEditing = editingId === q.id
           return (
-            <div key={q.id} className="bg-white rounded-xl border border-gray-200 p-4 group">
+            <div
+              key={q.id}
+              draggable
+              onDragStart={() => handleDragStart(idx)}
+              onDragOver={e => handleDragOver(e, idx)}
+              onDragEnd={handleDragEnd}
+              className={`bg-white rounded-xl border p-4 group transition-shadow ${
+                dragIdx === idx ? 'border-violet-400 shadow-lg opacity-70' : 'border-gray-200'
+              }`}
+            >
               <div className="flex items-start gap-3">
-                <div className="flex items-center gap-1 text-gray-400 pt-1">
+                <div className="flex items-center gap-1 text-gray-400 pt-1 cursor-grab active:cursor-grabbing">
                   <GripVertical className="w-4 h-4" />
                   <span className="text-xs font-medium w-5 text-center">{idx + 1}</span>
                 </div>
@@ -476,26 +627,52 @@ export default function PlayQuizEditor() {
                     <p className="mt-1.5 text-xs text-gray-500 italic">💡 {q.explanation}</p>
                   )}
                 </div>
-                <button
-                  onClick={() => handleDeleteQuestion(q.id)}
-                  className="p-1.5 rounded-lg hover:bg-red-50 opacity-0 group-hover:opacity-100 transition"
-                  title="Eliminar"
-                >
-                  <Trash2 className="w-4 h-4 text-red-400" />
-                </button>
+                <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition">
+                  <button onClick={() => setPreviewQuestion(q)} className="p-1.5 rounded-lg hover:bg-violet-50" title="Vista previa">
+                    <Eye className="w-4 h-4 text-violet-400" />
+                  </button>
+                  <button onClick={() => isEditing ? cancelEdit() : openEdit(q)} className="p-1.5 rounded-lg hover:bg-blue-50" title="Editar">
+                    {isEditing ? <X className="w-4 h-4 text-gray-400" /> : <Pencil className="w-4 h-4 text-blue-400" />}
+                  </button>
+                  <button onClick={() => handleDeleteQuestion(q.id)} className="p-1.5 rounded-lg hover:bg-red-50" title="Eliminar">
+                    <Trash2 className="w-4 h-4 text-red-400" />
+                  </button>
+                </div>
               </div>
+
+              {/* F6.18: banner indicador de edición */}
+              {isEditing && (
+                <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-xs text-blue-700">
+                  <Pencil className="w-3.5 h-3.5" />
+                  Editar en el formulario de abajo
+                  <button onClick={cancelEdit} className="ml-auto text-blue-400 hover:text-blue-600">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
           )
         })}
       </div>
 
-      {/* Add Question Form */}
-      {showAddForm && (
-        <div className="mt-4 bg-white rounded-xl border-2 border-violet-300 p-5">
-          <h3 className="text-sm font-bold text-gray-900 mb-4">Nueva Pregunta</h3>
+      {/* Add/Edit Question Form */}
+      {(showAddForm || editingId) && (
+        <div className={`mt-4 bg-white rounded-xl border-2 p-5 ${
+          editingId ? 'border-blue-400' : 'border-violet-300'
+        }`}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-gray-900">
+              {editingId ? '✏️ Editando pregunta' : 'Nueva Pregunta'}
+            </h3>
+            {editingId && (
+              <button onClick={cancelEdit} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
+                <X className="w-3.5 h-3.5" /> Cancelar edición
+              </button>
+            )}
+          </div>
 
           {/* Type selector */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="grid grid-cols-5 gap-1.5 mb-4">
             {QUESTION_TYPES.map(t => (
               <button
                 key={t.value}
@@ -505,13 +682,13 @@ export default function PlayQuizEditor() {
                   if (t.value === 'TRUE_FALSE') setNewCorrectAnswer('true')
                   else setNewCorrectAnswer('')
                 }}
-                className={`p-2.5 rounded-lg border-2 text-center text-xs font-medium transition ${
+                className={`p-2 rounded-lg border-2 text-center text-[11px] font-medium transition ${
                   newType === t.value
                     ? 'border-violet-500 bg-violet-50 text-violet-700'
                     : 'border-gray-200 text-gray-600 hover:border-gray-300'
                 }`}
               >
-                <t.icon className={`w-4 h-4 mx-auto mb-1 ${newType === t.value ? 'text-violet-600' : 'text-gray-400'}`} />
+                <t.icon className={`w-3.5 h-3.5 mx-auto mb-0.5 ${newType === t.value ? 'text-violet-600' : 'text-gray-400'}`} />
                 {t.label}
               </button>
             ))}
@@ -531,21 +708,25 @@ export default function PlayQuizEditor() {
           </div>
 
           {/* Multiple Choice Options */}
-          {newType === 'MULTIPLE_CHOICE' && (
+          {(newType === 'MULTIPLE_CHOICE' || newType === 'MULTIPLE_SELECT') && (
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Opciones (marca la correcta)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Opciones ({newType === 'MULTIPLE_SELECT' ? 'marca TODAS las correctas' : 'marca la correcta'})
+              </label>
               <div className="space-y-2">
                 {newOptions.map((opt, i) => (
                   <div key={opt.id} className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setNewOptions(prev =>
-                        prev.map((o, j) => ({ ...o, isCorrect: j === i }))
+                        newType === 'MULTIPLE_SELECT'
+                          ? prev.map((o, j) => j === i ? { ...o, isCorrect: !o.isCorrect } : o)
+                          : prev.map((o, j) => ({ ...o, isCorrect: j === i }))
                       )}
-                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition ${
-                        opt.isCorrect
-                          ? 'border-green-500 bg-green-500'
-                          : 'border-gray-300 hover:border-green-400'
+                      className={`w-6 h-6 ${
+                        newType === 'MULTIPLE_SELECT' ? 'rounded-md' : 'rounded-full'
+                      } border-2 flex items-center justify-center flex-shrink-0 transition ${
+                        opt.isCorrect ? 'border-green-500 bg-green-500' : 'border-gray-300 hover:border-green-400'
                       }`}
                     >
                       {opt.isCorrect && <CheckCircle2 className="w-4 h-4 text-white" />}
@@ -560,23 +741,58 @@ export default function PlayQuizEditor() {
                       className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition"
                     />
                     {newOptions.length > 2 && (
-                      <button
-                        type="button"
-                        onClick={() => setNewOptions(prev => prev.filter((_, j) => j !== i))}
-                        className="p-1 text-gray-400 hover:text-red-500"
-                      >
+                      <button type="button" onClick={() => setNewOptions(prev => prev.filter((_, j) => j !== i))} className="p-1 text-gray-400 hover:text-red-500">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>
                 ))}
                 {newOptions.length < 6 && (
-                  <button
-                    type="button"
-                    onClick={() => setNewOptions(prev => [...prev, { id: generateId(), text: '', isCorrect: false }])}
-                    className="text-xs text-violet-600 hover:text-violet-700 font-medium flex items-center gap-1"
-                  >
+                  <button type="button" onClick={() => setNewOptions(prev => [...prev, { id: generateId(), text: '', isCorrect: false }])}
+                    className="text-xs text-violet-600 hover:text-violet-700 font-medium flex items-center gap-1">
                     <Plus className="w-3 h-3" /> Agregar opción
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ORDER type */}
+          {newType === 'ORDER' && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Elementos en orden correcto (el alumno los verá mezclados)</label>
+              <div className="space-y-2">
+                {newOptions.map((opt, i) => (
+                  <div key={opt.id} className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                    <input type="text" value={opt.text}
+                      onChange={e => setNewOptions(prev => prev.map((o, j) => j === i ? { ...o, text: e.target.value } : o))}
+                      placeholder={`Elemento ${i + 1}`}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition"
+                    />
+                    <div className="flex flex-col">
+                      <button type="button" disabled={i === 0}
+                        onClick={() => setNewOptions(prev => { const a = [...prev]; [a[i-1], a[i]] = [a[i], a[i-1]]; return a })}
+                        className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button type="button" disabled={i === newOptions.length - 1}
+                        onClick={() => setNewOptions(prev => { const a = [...prev]; [a[i], a[i+1]] = [a[i+1], a[i]]; return a })}
+                        className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    {newOptions.length > 2 && (
+                      <button type="button" onClick={() => setNewOptions(prev => prev.filter((_, j) => j !== i))} className="p-1 text-gray-400 hover:text-red-500">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {newOptions.length < 8 && (
+                  <button type="button" onClick={() => setNewOptions(prev => [...prev, { id: generateId(), text: '', isCorrect: false }])}
+                    className="text-xs text-violet-600 hover:text-violet-700 font-medium flex items-center gap-1">
+                    <Plus className="w-3 h-3" /> Agregar elemento
                   </button>
                 )}
               </div>
@@ -724,22 +940,88 @@ export default function PlayQuizEditor() {
           {/* Actions */}
           <div className="flex gap-3">
             <button
-              onClick={() => setShowAddForm(false)}
+              onClick={() => { setShowAddForm(false); if (editingId) cancelEdit() }}
               className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition text-sm"
             >
               Cancelar
             </button>
             <button
-              onClick={handleAddQuestion}
+              onClick={editingId ? handleUpdateQuestion : handleAddQuestion}
               disabled={saving}
-              className="flex-1 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium transition disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+              className={`flex-1 py-2.5 text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center justify-center gap-2 text-sm ${
+                editingId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-violet-600 hover:bg-violet-700'
+              }`}
             >
-              {saving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <><Save className="w-4 h-4" /> Guardar Pregunta</>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                <><Save className="w-4 h-4" /> {editingId ? 'Actualizar' : 'Guardar Pregunta'}</>
               )}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* F6.20: Preview modal */}
+      {previewQuestion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setPreviewQuestion(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-semibold text-violet-600 bg-violet-50 px-2 py-1 rounded-full">
+                {QUESTION_TYPES.find(t => t.value === previewQuestion.type)?.label || previewQuestion.type}
+              </span>
+              <button onClick={() => setPreviewQuestion(null)} className="p-1 rounded-lg hover:bg-gray-100">
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-gray-500 mb-4">
+              <span className="flex items-center gap-1"><Hash className="w-3 h-3" />{previewQuestion.points} pts</span>
+              {previewQuestion.timeLimitSeconds && <span className="flex items-center gap-1"><Timer className="w-3 h-3" />{previewQuestion.timeLimitSeconds}s</span>}
+            </div>
+            {previewQuestion.imageUrl && (
+              <img src={previewQuestion.imageUrl} alt="" className="w-full h-40 object-cover rounded-xl mb-4" />
+            )}
+            <p className="text-base font-bold text-gray-900 mb-4 leading-snug">{previewQuestion.text}</p>
+            {previewQuestion.type === 'MULTIPLE_CHOICE' && Array.isArray(previewQuestion.options) && (
+              <div className="grid grid-cols-2 gap-2">
+                {(previewQuestion.options as Option[]).map((opt, idx) => (
+                  <div key={opt.id} className={`${KAHOOT_PREVIEW_COLORS[idx % 4]} text-white rounded-xl px-4 py-3 text-sm font-semibold`}>
+                    {opt.text}
+                  </div>
+                ))}
+              </div>
+            )}
+            {previewQuestion.type === 'MULTIPLE_SELECT' && Array.isArray(previewQuestion.options) && (
+              <div className="grid grid-cols-2 gap-2">
+                {(previewQuestion.options as Option[]).map((opt, idx) => (
+                  <div key={opt.id} className={`${KAHOOT_PREVIEW_COLORS[idx % 4]} text-white rounded-xl px-4 py-3 text-sm font-semibold flex items-center gap-2`}>
+                    <span className="w-4 h-4 rounded border-2 border-white/60 flex-shrink-0" />
+                    {opt.text}
+                  </div>
+                ))}
+              </div>
+            )}
+            {previewQuestion.type === 'ORDER' && Array.isArray(previewQuestion.options) && (
+              <div className="space-y-2">
+                {[...(previewQuestion.options as Option[])].sort(() => Math.random() - 0.5).map((opt, idx) => (
+                  <div key={opt.id} className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium">
+                    <span className="w-5 h-5 rounded bg-violet-100 text-violet-600 text-xs font-bold flex items-center justify-center">{idx + 1}</span>
+                    {opt.text}
+                  </div>
+                ))}
+              </div>
+            )}
+            {previewQuestion.type === 'TRUE_FALSE' && (
+              <div className="grid grid-cols-2 gap-2">
+                {[{ t: 'Verdadero', c: 'bg-green-500' }, { t: 'Falso', c: 'bg-red-500' }].map(o => (
+                  <div key={o.t} className={`${o.c} text-white rounded-xl px-4 py-3 text-sm font-semibold text-center`}>{o.t}</div>
+                ))}
+              </div>
+            )}
+            {previewQuestion.type === 'SHORT_ANSWER' && (
+              <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-500">Respuesta abierta del estudiante</div>
+            )}
+            {previewQuestion.explanation && (
+              <p className="mt-4 text-xs italic text-gray-500">💡 {previewQuestion.explanation}</p>
+            )}
           </div>
         </div>
       )}

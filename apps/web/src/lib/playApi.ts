@@ -69,6 +69,8 @@ export const playPanelApi = {
   listQuizzes: () => playAxios.get('/play/quizzes'),
   createQuiz: (data: { title: string; description?: string; type?: string }) =>
     playAxios.post('/play/quizzes', data),
+  updateQuiz: (id: string, data: { title?: string; description?: string }) => playAxios.patch(`/play/quizzes/${id}`, data),
+  reorderQuestions: (id: string, order: string[]) => playAxios.patch(`/play/quizzes/${id}/questions/reorder`, { order }),
   deleteQuiz: (id: string) => playAxios.delete(`/play/quizzes/${id}`),
   // Questions
   listQuestions: (activityId: string) => playAxios.get(`/play/quizzes/${activityId}/questions`),
@@ -77,7 +79,7 @@ export const playPanelApi = {
     points?: number; explanation?: string; imageUrl?: string; timeLimitSeconds?: number;
   }) => playAxios.post(`/play/quizzes/${activityId}/questions`, data),
   updateQuestion: (questionId: string, data: {
-    text?: string; options?: any; correctAnswer?: string;
+    type?: string; text?: string; options?: any; correctAnswer?: string;
     points?: number; explanation?: string; imageUrl?: string; timeLimitSeconds?: number;
   }) => playAxios.put(`/play/questions/${questionId}`, data),
   deleteQuestion: (questionId: string) => playAxios.delete(`/play/questions/${questionId}`),

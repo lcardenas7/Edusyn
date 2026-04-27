@@ -206,9 +206,20 @@ export class GuestService {
     };
   }
 
+  /** Normaliza una respuesta para comparación tolerante a tildes y espacios. */
+  private normalizeAnswer(s: string): string {
+    return s
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\w\s]/g, '')
+      .trim()
+      .replace(/\s+/g, ' ');
+  }
+
   /**
    * Invitado envía una respuesta.
-   * Calcula scoring automático si la pregunta tiene correctAnswer.
+   * Persiste y actualiza score; el reveal de correcto/incorrecto se difiere al QUESTION_CLOSED.
    */
   async submitAnswer(params: {
     guestId: string;
@@ -217,7 +228,7 @@ export class GuestService {
     selectedOption?: string;
     answerText?: string;
     timeTakenMs?: number;
-  }): Promise<{ isCorrect: boolean; pointsAwarded: number }> {
+  }): Promise<{ accepted: true; isCorrect: boolean; pointsAwarded: number }> {
     const guest = await this.prisma.liveSessionGuest.findUnique({
       where: { id: params.guestId },
     });
@@ -230,13 +241,26 @@ export class GuestService {
     if (params.questionId) {
       const q = await this.prisma.activityQuestion.findUnique({
         where: { id: params.questionId },
-        select: { correctAnswer: true, points: true },
+        select: { correctAnswer: true, points: true, timeLimitSeconds: true },
       });
       if (q) {
-        const submitted = (params.selectedOption || params.answerText || '').trim().toLowerCase();
-        const correct = (q.correctAnswer || '').trim().toLowerCase();
-        isCorrect = correct.length > 0 && submitted === correct;
-        pointsAwarded = isCorrect ? Math.round(Number(q.points || 1) * 100) : 0;
+        const submitted = this.normalizeAnswer(params.selectedOption || params.answerText || '');
+        const correct = this.normalizeAnswer(q.correctAnswer || '');
+        // Support multiple correct answers separated by |
+        const correctVariants = correct.split('|').map(v => v.trim()).filter(Boolean);
+        isCorrect = correctVariants.length > 0 && correctVariants.some(v => submitted === v);
+        if (isCorrect) {
+          const basePoints = Number(q.points || 1000);
+          const openedAt = this.playService.questionOpenedAt.get(guest.sessionId);
+          if (openedAt && q.timeLimitSeconds && q.timeLimitSeconds > 0) {
+            const elapsedMs = Date.now() - openedAt;
+            const totalMs = q.timeLimitSeconds * 1000;
+            const speedFactor = Math.max(0.5, 1 - 0.5 * (elapsedMs / totalMs));
+            pointsAwarded = Math.round(basePoints * speedFactor);
+          } else {
+            pointsAwarded = basePoints;
+          }
+        }
       }
     } else if (params.slideId) {
       const slide = await this.prisma.lessonSlide.findUnique({
@@ -245,10 +269,11 @@ export class GuestService {
       });
       if (slide?.activityData) {
         const data = slide.activityData as any;
-        const submitted = (params.selectedOption || params.answerText || '').trim().toLowerCase();
-        const correct = (data.correctAnswer || '').trim().toLowerCase();
-        isCorrect = correct.length > 0 && submitted === correct;
-        pointsAwarded = isCorrect ? Math.round(Number(data.points || 1) * 100) : 0;
+        const submitted = this.normalizeAnswer(params.selectedOption || params.answerText || '');
+        const correct = this.normalizeAnswer(data.correctAnswer || '');
+        const correctVariants = correct.split('|').map((v: string) => v.trim()).filter(Boolean);
+        isCorrect = correctVariants.length > 0 && correctVariants.some((v: string) => submitted === v);
+        pointsAwarded = isCorrect ? Number(data.points || 1000) : 0;
       }
     }
 
@@ -284,9 +309,24 @@ export class GuestService {
 
     if (guest.sessionKind === 'QUIZ') {
       await this.playService.emitRankingUpdate(guest.sessionId);
+      // F6.24: emit ANSWER_STATS
+      if (params.questionId) {
+        const [answeredCount, totalGuests] = await Promise.all([
+          this.prisma.liveSessionGuestAnswer.count({
+            where: { questionId: params.questionId, guest: { sessionId: guest.sessionId } },
+          }),
+          this.prisma.liveSessionGuest.count({ where: { sessionId: guest.sessionId } }),
+        ]);
+        this.playService.emitAnswerStats(guest.sessionId, {
+          questionId: params.questionId,
+          answeredCount,
+          totalGuests,
+          percent: totalGuests > 0 ? Math.round((answeredCount / totalGuests) * 100) : 0,
+        });
+      }
     }
 
-    return { isCorrect, pointsAwarded };
+    return { accepted: true, isCorrect, pointsAwarded };
   }
 
   /** Registra una reacción en vivo (💡 🤔 ❤ 👏) */
@@ -360,6 +400,8 @@ export class GuestService {
                 options: true,
                 points: true,
                 sortOrder: true,
+                imageUrl: true,
+                timeLimitSeconds: true,
               },
             },
           },
@@ -367,6 +409,14 @@ export class GuestService {
       },
     });
     if (!session) throw new NotFoundException('Sesión no encontrada');
+
+    // F6.6: Fetch lobby guests list (separate query — sessionId is polymorphic, no FK relation)
+    const lobbyGuests = await this.prisma.liveSessionGuest.findMany({
+      where: { sessionId: session.id },
+      orderBy: { joinedAt: 'asc' },
+      take: 60,
+      select: { id: true, nickname: true, avatarEmoji: true },
+    });
 
     // Apply questionOrder from config if shuffled
     let questions = session.activity.questions;
@@ -386,6 +436,8 @@ export class GuestService {
       options: unknown;
       points: unknown;
       sortOrder: number;
+      imageUrl: string | null;
+      timeLimitSeconds: number | null;
     } | null = null;
     if (session.status === 'ACTIVE' && session.currentQuestionIdx >= 0 && session.currentQuestionIdx < questions.length) {
       const q = questions[session.currentQuestionIdx];
@@ -396,6 +448,8 @@ export class GuestService {
         options: q.options,
         points: q.points,
         sortOrder: q.sortOrder,
+        imageUrl: (q as any).imageUrl ?? null,
+        timeLimitSeconds: (q as any).timeLimitSeconds ?? null,
       };
     }
 
@@ -407,6 +461,7 @@ export class GuestService {
       activityTitle: session.activity.title,
       totalQuestions: questions.length,
       currentQuestion,
+      guests: lobbyGuests,
     };
   }
 }

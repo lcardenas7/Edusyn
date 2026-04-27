@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Copy,
@@ -9,8 +9,12 @@ import {
   Trophy,
   Users,
   Clock,
+  Maximize2,
+  Minimize2,
+  Zap,
 } from 'lucide-react'
 import { Podium, CircularTimer } from '../AnimalAvatars'
+import { fireConfetti, playSound } from '../../lib/play-effects'
 
 interface LiveGuest {
   id: string
@@ -40,29 +44,58 @@ interface LiveSessionState {
   questions?: LiveQuestion[]
   guests?: LiveGuest[]
   currentQuestion?: LiveQuestion | null
+  questionOpenedAt?: number | null
+  questionClosed?: boolean
 }
+
+interface ReactionBubble {
+  id: string
+  emoji: string
+}
+
+interface AnswerStatsData {
+  questionId: string
+  answeredCount: number
+  totalGuests: number
+  percent: number
+}
+
+const PRESENTER_COLORS = [
+  { bg: 'bg-red-500',   shape: '▲', text: 'text-white' },
+  { bg: 'bg-blue-500',  shape: '◆', text: 'text-white' },
+  { bg: 'bg-amber-400', shape: '●', text: 'text-amber-900' },
+  { bg: 'bg-green-600', shape: '■', text: 'text-white' },
+]
 
 interface LiveQuizPlayerProps {
   liveSession: LiveSessionState
   sseConnected: boolean
   sseFallback: boolean
+  recentReactions?: ReactionBubble[]
+  answerStats?: AnswerStatsData | null
   onCopyJoinCode: () => void
   onStartGame: () => void
   onNextQuestion: () => void
   onFinishGame: () => void
   onClose: () => void
+  soundEnabled?: boolean
 }
 
 export default function LiveQuizPlayer({
   liveSession,
   sseConnected,
   sseFallback,
+  recentReactions = [],
+  answerStats,
   onCopyJoinCode,
   onStartGame,
   onNextQuestion,
   onFinishGame,
   onClose,
+  soundEnabled = true,
 }: LiveQuizPlayerProps) {
+  const prevStatusRef = useRef(liveSession.status)
+  const [presenterMode, setPresenterMode] = useState(false)
   const currentQuestion = useMemo(() => {
     if (liveSession.currentQuestion) return liveSession.currentQuestion
     const idx = liveSession.currentQuestionIdx ?? -1
@@ -73,23 +106,44 @@ export default function LiveQuizPlayer({
   const totalQuestions = liveSession.totalQuestions || liveSession.questions?.length || 0
   const currentQuestionNumber = (liveSession.currentQuestionIdx ?? 0) + 1
   const progressPercent = totalQuestions > 0 ? (currentQuestionNumber / totalQuestions) * 100 : 0
-  const timeLimit = currentQuestion?.timeLimitSeconds ?? 15
+  const timeLimit = currentQuestion?.timeLimitSeconds ?? 30
   const [timeLeft, setTimeLeft] = useState(timeLimit)
+  const [questionClosed, setQuestionClosed] = useState(false)
 
+  // F6.12: Confetti + sound al terminar
+  useEffect(() => {
+    if (liveSession.status === 'FINISHED' && prevStatusRef.current !== 'FINISHED') {
+      fireConfetti('winner')
+      if (soundEnabled) playSound('winner')
+    }
+    prevStatusRef.current = liveSession.status
+  }, [liveSession.status, soundEnabled])
+
+  // F6.4: Server-driven timer using questionOpenedAt
   useEffect(() => {
     if (liveSession.status !== 'ACTIVE') return
-    setTimeLeft(timeLimit)
+    setQuestionClosed(false)
+    const openedAt = liveSession.questionOpenedAt ?? Date.now()
+    const totalMs = timeLimit * 1000
+    const elapsed = Date.now() - openedAt
+    const remaining = Math.max(0, Math.ceil((totalMs - elapsed) / 1000))
+    setTimeLeft(remaining)
+    if (remaining <= 0) {
+      setQuestionClosed(true)
+      return
+    }
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval)
+          setQuestionClosed(true)
           return 0
         }
         return prev - 1
       })
     }, 1000)
     return () => clearInterval(interval)
-  }, [liveSession.status, currentQuestion?.id, timeLimit])
+  }, [liveSession.status, currentQuestion?.id, liveSession.questionOpenedAt, timeLimit])
 
   const podiumEntries = useMemo(() => {
     return (liveSession.guests || []).slice(0, 3).map((guest, index) => ({
@@ -99,12 +153,108 @@ export default function LiveQuizPlayer({
     }))
   }, [liveSession.guests])
 
+  // F6.28: Presenter fullscreen overlay
+  const presenterOptions = useMemo(() => {
+    if (!currentQuestion?.options) return []
+    try { return Array.isArray(currentQuestion.options) ? currentQuestion.options : JSON.parse(currentQuestion.options as any) }
+    catch { return [] }
+  }, [currentQuestion])
+
   return (
+    <>
+    {/* F6.28: Presenter overlay */}
+    {presenterMode && (
+      <div className="fixed inset-0 z-50 bg-gradient-to-br from-violet-900 via-fuchsia-800 to-cyan-700 text-white flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-8 py-4 bg-black/20">
+          <div className="flex items-center gap-3">
+            <Radio className="h-5 w-5 text-rose-200 animate-pulse" />
+            <span className="font-black text-lg">Pregunta {currentQuestionNumber} / {totalQuestions}</span>
+            <span className="rounded-full bg-white/20 px-3 py-1 text-sm">{liveSession.guestsCount || 0} jugadores</span>
+            {questionClosed && <span className="rounded-full bg-rose-400/80 px-3 py-1 text-sm font-bold animate-pulse">\u23f9 Cerrada</span>}
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-2xl font-black bg-white/20 rounded-xl px-4 py-2">
+              <Clock className="h-5 w-5" />{timeLeft}s
+            </div>
+            <button onClick={() => setPresenterMode(false)} className="p-2 rounded-xl bg-white/15 hover:bg-white/25 transition">
+              <Minimize2 className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Question */}
+        <div className="flex-1 flex flex-col items-center justify-center px-12 gap-8 overflow-auto py-6">
+          {(currentQuestion as any)?.imageUrl && (
+            <img src={(currentQuestion as any).imageUrl} alt="" className="max-h-40 rounded-2xl object-cover shadow-2xl" />
+          )}
+          <h2 className="text-4xl font-black text-center leading-tight max-w-4xl drop-shadow-lg">
+            {currentQuestion?.text || 'Esperando pregunta...'}
+          </h2>
+
+          {/* Options Kahoot 2x2 */}
+          {presenterOptions.length > 0 && (
+            <div className="grid grid-cols-2 gap-4 w-full max-w-3xl">
+              {presenterOptions.map((opt: any, idx: number) => {
+                const s = PRESENTER_COLORS[idx % PRESENTER_COLORS.length]
+                return (
+                  <div key={opt.id || idx} className={`${s.bg} ${s.text} rounded-2xl p-5 flex items-center gap-3 shadow-lg text-xl font-bold`}>
+                    <span className="text-3xl">{s.shape}</span>
+                    <span>{opt.text}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Stats bar */}
+          {answerStats && answerStats.totalGuests > 0 && (
+            <div className="w-full max-w-3xl bg-white/10 rounded-2xl px-6 py-4">
+              <div className="flex justify-between text-lg font-semibold mb-2">
+                <span>{answerStats.answeredCount} / {answerStats.totalGuests} respondieron</span>
+                <span>{answerStats.percent}%</span>
+              </div>
+              <div className="w-full bg-white/20 rounded-full h-4">
+                <div className="bg-white rounded-full h-4 transition-all duration-500" style={{ width: `${answerStats.percent}%` }} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer controls */}
+        <div className="px-8 py-4 bg-black/20 flex justify-center gap-4">
+          <button onClick={onNextQuestion}
+            className={`flex items-center gap-2 rounded-2xl px-8 py-3 font-black text-lg transition ${
+              questionClosed ? 'bg-yellow-300 text-violet-900 shadow-lg animate-pulse' : 'bg-white/20 text-white hover:bg-white/30'
+            }`}>
+            <SkipForward className="h-5 w-5" />
+            {currentQuestionNumber >= totalQuestions ? 'Finalizar' : 'Siguiente pregunta'}
+          </button>
+        </div>
+      </div>
+    )}
+
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-violet-700 via-fuchsia-600 to-cyan-500 text-white shadow-xl"
+      className="relative mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-violet-700 via-fuchsia-600 to-cyan-500 text-white shadow-xl"
     >
+      {/* F6.14: Reacciones flotantes del docente */}
+      <AnimatePresence>
+        {recentReactions.map(r => (
+          <motion.span
+            key={r.id}
+            initial={{ opacity: 1, y: 0, scale: 1 }}
+            animate={{ opacity: 0, y: -60, scale: 1.4 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.6, ease: 'easeOut' }}
+            className="pointer-events-none absolute bottom-4 text-3xl select-none z-20"
+            style={{ left: `${10 + Math.random() * 80}%` }}
+          >
+            {r.emoji}
+          </motion.span>
+        ))}
+      </AnimatePresence>
       <div className="border-b border-white/10 px-6 py-4 backdrop-blur-sm bg-black/10">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -153,6 +303,20 @@ export default function LiveQuizPlayer({
                 </div>
                 <p className="mt-2 text-xs text-violet-100">Los participantes entran en <strong>edusyn.co/join</strong></p>
               </div>
+
+              {/* F6.23: QR code */}
+              {liveSession.joinCode && (
+                <div className="flex justify-center">
+                  <div className="rounded-2xl bg-white p-3 shadow-lg">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`${window.location.origin}/join/${liveSession.joinCode}`)}`}
+                      alt="QR de acceso"
+                      className="w-40 h-40 rounded-xl"
+                    />
+                    <p className="text-center text-xs text-gray-500 mt-1">edusyn.co/join/{liveSession.joinCode}</p>
+                  </div>
+                </div>
+              )}
 
               <div className="grid gap-4 md:grid-cols-[1fr_auto]">
                 <div className="rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
@@ -207,9 +371,9 @@ export default function LiveQuizPlayer({
                   <h3 className="max-w-3xl text-2xl font-black leading-tight">
                     {currentQuestion?.text || 'Esperando pregunta...'}
                   </h3>
-                  <div className="mt-3 flex items-center gap-3 text-sm text-violet-50/90">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-violet-50/90">
                     <span className="inline-flex items-center gap-1 rounded-full bg-black/15 px-3 py-1">
-                      <Clock className="h-4 w-4" /> {timeLimit}s
+                      <Clock className="h-4 w-4" /> {timeLeft}s / {timeLimit}s
                     </span>
                     <span className="rounded-full bg-black/15 px-3 py-1">
                       {currentQuestion?.points || 0} pts
@@ -217,6 +381,11 @@ export default function LiveQuizPlayer({
                     <span className="rounded-full bg-black/15 px-3 py-1">
                       {currentQuestion?.type || 'QUIZ'}
                     </span>
+                    {questionClosed && (
+                      <span className="rounded-full bg-rose-400/80 px-3 py-1 font-bold animate-pulse">
+                        ⏹ Pregunta cerrada
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex justify-center lg:justify-end">
@@ -233,9 +402,39 @@ export default function LiveQuizPlayer({
                 />
               </div>
 
+              {/* F6.24: X/Y respondieron */}
+              {answerStats && answerStats.totalGuests > 0 && (
+                <div className="rounded-xl bg-white/10 px-4 py-3">
+                  <div className="flex items-center justify-between mb-1 text-sm font-semibold">
+                    <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5" />{answerStats.answeredCount} / {answerStats.totalGuests} respondieron</span>
+                    <span>{answerStats.percent}%</span>
+                  </div>
+                  <div className="w-full bg-white/20 rounded-full h-2">
+                    <div className="bg-white rounded-full h-2 transition-all duration-500" style={{ width: `${answerStats.percent}%` }} />
+                  </div>
+                </div>
+              )}
+
+              {/* F6.28: Presenter button */}
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setPresenterMode(true)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white/15 px-4 py-2 text-sm font-semibold hover:bg-white/25 transition"
+                >
+                  <Maximize2 className="w-4 h-4" /> Presentar
+                </button>
+              </div>
+
               <div className="grid gap-4 lg:grid-cols-[1.4fr_0.9fr]">
                 <div className="rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
                   <p className="mb-3 text-sm font-semibold text-violet-100">Vista previa</p>
+                  {(currentQuestion as any)?.imageUrl && (
+                    <img
+                      src={(currentQuestion as any).imageUrl}
+                      alt=""
+                      className="mb-3 w-full max-h-36 rounded-xl object-cover border border-white/10"
+                    />
+                  )}
                   {Array.isArray(currentQuestion?.options) && currentQuestion.options.length > 0 ? (
                     <div className="grid gap-2 md:grid-cols-2">
                       {currentQuestion.options.map((option: any, index: number) => (
@@ -282,7 +481,11 @@ export default function LiveQuizPlayer({
               <div className="flex flex-col gap-3 sm:flex-row">
                 <button
                   onClick={onNextQuestion}
-                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3 font-black text-violet-700 transition hover:bg-violet-50"
+                  className={`flex-1 inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3 font-black transition ${
+                    questionClosed
+                      ? 'bg-yellow-300 text-violet-900 shadow-lg shadow-yellow-300/40 hover:bg-yellow-200 animate-pulse'
+                      : 'bg-white text-violet-700 hover:bg-violet-50'
+                  }`}
                 >
                   <SkipForward className="h-4 w-4" />
                   {currentQuestionNumber >= totalQuestions ? 'Finalizar' : 'Siguiente pregunta'}
@@ -359,5 +562,6 @@ export default function LiveQuizPlayer({
         </AnimatePresence>
       </div>
     </motion.div>
+    </>
   )
 }

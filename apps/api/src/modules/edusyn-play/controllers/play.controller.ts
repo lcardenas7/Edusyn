@@ -48,6 +48,18 @@ export class PlayController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Patch('quizzes/:id')
+  async updateQuiz(@Request() req: any, @Param('id') id: string, @Body() body: { title?: string; description?: string }) {
+    return this.playService.updateQuiz(req.user.id, id, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('quizzes/:id/questions/reorder')
+  async reorderQuestions(@Request() req: any, @Param('id') id: string, @Body() body: { order: string[] }) {
+    return this.playService.reorderQuestions(req.user.id, id, body.order);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Delete('quizzes/:id')
   async deleteQuiz(@Request() req: any, @Param('id') id: string) {
     return this.playService.deleteQuiz(req.user.id, id);
@@ -72,7 +84,7 @@ export class PlayController {
   @UseGuards(JwtAuthGuard)
   @Put('questions/:questionId')
   async updateQuestion(@Request() req: any, @Param('questionId') questionId: string, @Body() body: {
-    text?: string; options?: any; correctAnswer?: string;
+    type?: string; text?: string; options?: any; correctAnswer?: string;
     points?: number; explanation?: string; imageUrl?: string; timeLimitSeconds?: number;
   }) {
     return this.playService.updateQuestion(questionId, req.user.id, body);
