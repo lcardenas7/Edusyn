@@ -1,7 +1,8 @@
 import {
   Body, Controller, Delete, Get, MessageEvent,
-  Param, Patch, Post, Put, Query, Request, Sse, UnauthorizedException, UseGuards,
+  Param, Patch, Post, Put, Query, Request, Res, Sse, UnauthorizedException, UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { Observable, map, concat, of, from, EMPTY, switchMap } from 'rxjs';
 import * as jwt from 'jsonwebtoken';
@@ -220,6 +221,15 @@ export class PlayController {
   @Get('live/:sessionId/question-stats')
   async getQuestionStats(@Request() req: any, @Param('sessionId') sessionId: string) {
     return this.playService.getQuestionStats(req.user.id, sessionId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('live/:sessionId/export-csv')
+  async exportCsv(@Request() req: any, @Param('sessionId') sessionId: string, @Res() res: Response) {
+    const csv = await this.playService.exportSessionCsv(req.user.id, sessionId);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="session-${sessionId}.csv"`);
+    res.send('\uFEFF' + csv);
   }
 
   // ── Sessions ─────────────────────────────────────────

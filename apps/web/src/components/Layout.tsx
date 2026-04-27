@@ -52,6 +52,8 @@ import {
   LayoutGrid,
   MonitorPlay,
   Sparkles,
+  Gamepad2,
+  ExternalLink,
 } from 'lucide-react'
 
 type Role = 'SUPER_ADMIN' | 'SUPERADMIN' | 'ADMIN_INSTITUTIONAL' | 'COORDINADOR' | 'DOCENTE' | 'ACUDIENTE' | 'ESTUDIANTE' | 'SECRETARIA' | 'RECTOR' | 'PSICOLOGA' | 'AUXILIAR_CONTABLE' | 'ORIENTADOR' | 'BIBLIOTECARIO' | 'AUXILIAR'
@@ -63,6 +65,7 @@ interface NavItem {
   roles: Role[]
   module?: string  // Módulo requerido para mostrar este item
   requiresDimensions?: boolean  // Solo mostrar si el usuario tiene grupos con estructura DIMENSIONS
+  external?: boolean  // Abrir en nueva pestaña
   children?: NavItem[]
 }
 
@@ -251,6 +254,9 @@ const institutionalNavigation: NavItem[] = [
   // Aula Virtual
   { name: 'Aula Virtual', href: '/classroom', icon: MonitorPlay, roles: ['DOCENTE', 'COORDINADOR'], module: 'VIRTUAL_CLASSROOM' },
   { name: 'Mis Clases', href: '/my-classes', icon: MonitorPlay, roles: ['ESTUDIANTE', 'ACUDIENTE'], module: 'VIRTUAL_CLASSROOM' },
+
+  // Edusyn Play
+  { name: 'Edusyn Play', href: '/play', icon: Gamepad2, roles: ['DOCENTE', 'COORDINADOR', 'ADMIN_INSTITUTIONAL'], external: true },
 
   // Documentos y Gestión
   { name: 'Documentos', href: '/institutional-documents', icon: FolderOpen, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'SECRETARIA'] },
@@ -579,6 +585,22 @@ export default function Layout({ children }: { children: ReactNode }) {
             }
 
             // Ítem simple sin submenú
+            if (item.external) {
+              return (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={handleNavClick}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-violet-600 hover:bg-violet-50 hover:text-violet-700"
+                >
+                  <item.icon className="w-5 h-5" />
+                  {item.name}
+                  <ExternalLink className="w-3.5 h-3.5 ml-auto opacity-60" />
+                </a>
+              )
+            }
             return (
               <Link
                 key={item.name}

@@ -10,7 +10,10 @@ import {
   Clock,
   MapPin,
   X,
-  ZoomIn
+  ZoomIn,
+  Gamepad2,
+  ExternalLink,
+  Zap,
 } from 'lucide-react'
 import { dashboardApi } from '../lib/api'
 
@@ -104,6 +107,11 @@ export default function Dashboard() {
     )
   }
 
+  const isTeacherOrAdmin = user?.roles?.some((r: any) => {
+    const name = typeof r === 'string' ? r : r?.name
+    return ['DOCENTE', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'].includes(name)
+  })
+
   return (
     <div>
       <div className="mb-8">
@@ -114,6 +122,35 @@ export default function Dashboard() {
           Aquí tienes las novedades de la institución
         </p>
       </div>
+
+      {/* F0.1: Tarjeta Edusyn Play para docentes */}
+      {isTeacherOrAdmin && (
+        <div className="mb-6 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 p-5 text-white shadow-lg flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="rounded-xl bg-white/20 p-3">
+              <Gamepad2 className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-lg font-black tracking-tight">edusyn<span className="text-yellow-300">play</span></span>
+                <span className="rounded-full bg-yellow-300/30 px-2 py-0.5 text-xs font-bold text-yellow-200">NUEVO</span>
+              </div>
+              <p className="text-sm text-violet-100">Quizzes y lecciones interactivas en vivo — tipo Kahoot</p>
+            </div>
+          </div>
+          <div className="flex gap-2 flex-shrink-0">
+            <a
+              href="/play"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 rounded-xl bg-white text-violet-700 px-4 py-2 text-sm font-black transition hover:bg-violet-50"
+            >
+              <Zap className="w-4 h-4" /> Ir a Play
+              <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+            </a>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Anuncios - Columna principal */}

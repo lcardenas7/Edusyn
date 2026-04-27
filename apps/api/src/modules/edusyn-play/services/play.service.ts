@@ -954,6 +954,50 @@ export class PlayService {
     this.stream.emit(sessionId, { type: 'ANSWER_STATS', data });
   }
 
+  // F5.3: Exportar resultados de sesión como CSV
+  async exportSessionCsv(userId: string, sessionId: string): Promise<string> {
+    const classroomId = await this.resolveClassroom(userId);
+    const session = await this.prisma.liveSession.findFirst({
+      where: { id: sessionId, classroomId, teacherId: userId },
+      include: {
+        activity: { include: { questions: { orderBy: { sortOrder: 'asc' }, select: { id: true, text: true } } } },
+      },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+
+    const guests = await this.prisma.liveSessionGuest.findMany({
+      where: { sessionId },
+      orderBy: [{ score: 'desc' }],
+      include: { answers: { select: { questionId: true, isCorrect: true, pointsAwarded: true, timeTakenMs: true, selectedOption: true, answerText: true } } },
+    });
+
+    const questions = (session as any).activity?.questions ?? [];
+
+    const headerRow = ['#', 'Nickname', 'Puntuación', 'Correctas', 'Total respuestas', 'Porcentaje',
+      ...questions.map((q, i) => `P${i + 1}: ${q.text.substring(0, 30)}`),
+    ].join(',');
+
+    const rows = guests.map((g, idx) => {
+      const answerMap = new Map(g.answers.map(a => [a.questionId, a]));
+      const qCols = questions.map(q => {
+        const a = answerMap.get(q.id);
+        if (!a) return '';
+        return a.isCorrect ? `+${a.pointsAwarded}` : 'X';
+      });
+      return [
+        idx + 1,
+        `"${g.nickname.replace(/"/g, '""')}"`,
+        g.score,
+        g.correctAnswers,
+        g.totalAnswers,
+        `${Math.round(g.percent ?? 0)}%`,
+        ...qCols,
+      ].join(',');
+    });
+
+    return [headerRow, ...rows].join('\n');
+  }
+
   // F6.37: Métricas de calidad por pregunta
   async getQuestionStats(userId: string, sessionId: string) {
     const classroomId = await this.resolveClassroom(userId);

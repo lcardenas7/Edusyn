@@ -11,6 +11,7 @@ import {
   Sparkles,
   BarChart3,
   ExternalLink,
+  Download,
 } from 'lucide-react'
 
 interface Session {
@@ -40,6 +41,19 @@ export default function PlaySessions() {
     navigator.clipboard.writeText(code)
     setCopiedCode(code)
     setTimeout(() => setCopiedCode(null), 2000)
+  }
+
+  const downloadCsv = async (sessionId: string, name: string) => {
+    try {
+      const res = await playPanelApi.exportSessionCsv(sessionId)
+      const blob = new Blob([res.data as string], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${name.replace(/[^a-z0-9]/gi, '_')}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {}
   }
 
   const filtered = sessions.filter(s => {
@@ -168,6 +182,15 @@ export default function PlaySessions() {
                         <button className="p-1.5 rounded-lg hover:bg-violet-50 text-gray-400 hover:text-violet-600 transition" title="Ver resultados">
                           <BarChart3 className="w-4 h-4" />
                         </button>
+                        {session.status === 'FINISHED' && (
+                          <button
+                            onClick={() => downloadCsv(session.id, session.activity?.name || session.lesson?.title || 'sesion')}
+                            className="p-1.5 rounded-lg hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition"
+                            title="Exportar CSV"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                        )}
                         {(session.status === 'ACTIVE' || session.status === 'WAITING') && (
                           <button className="p-1.5 rounded-lg hover:bg-green-50 text-gray-400 hover:text-green-600 transition" title="Abrir sesión">
                             <ExternalLink className="w-4 h-4" />

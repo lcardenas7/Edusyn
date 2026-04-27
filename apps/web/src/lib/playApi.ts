@@ -126,6 +126,7 @@ export const playPanelApi = {
   replaySession: (sessionId: string, opts?: { shuffle?: boolean; keepGuests?: boolean }) =>
     playAxios.post(`/play/live/${sessionId}/replay`, opts ?? {}),
   getQuestionStats: (sessionId: string) => playAxios.get(`/play/live/${sessionId}/question-stats`),
+  exportSessionCsv: (sessionId: string) => playAxios.get(`/play/live/${sessionId}/export-csv`, { responseType: 'text' }),
   // Sessions
   listSessions: () => playAxios.get('/play/sessions'),
 }
