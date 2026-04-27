@@ -38,6 +38,13 @@ export default function PlayProjector() {
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [refreshSession])
 
+  const doStart = async () => {
+    if (!sessionId || actioning) return
+    setActioning(true)
+    try { await playPanelApi.startLiveQuiz(sessionId) } catch {}
+    finally { setActioning(false) }
+  }
+
   const doNext = async () => {
     if (!sessionId || actioning) return
     setActioning(true)
@@ -167,7 +174,7 @@ export default function PlayProjector() {
             </button>
           )}
           {session.status === 'WAITING' && (
-            <button onClick={doNext} disabled={actioning}
+            <button onClick={doStart} disabled={actioning}
               className="flex items-center gap-1.5 rounded-xl bg-green-500/30 hover:bg-green-500/50 px-4 py-2 text-sm font-black text-green-200 transition disabled:opacity-50">
               {actioning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} Iniciar Quiz
             </button>

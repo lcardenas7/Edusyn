@@ -482,12 +482,14 @@ export default function JoinPage() {
         revealed: false,
       })
       setTotalScore(prev => prev + points)
-    } catch (err) {
-      setAnswerFeedback({
-        questionId,
-        sent: true,
-        error: 'No se pudo enviar la respuesta. Intenta de nuevo.',
-      })
+    } catch (err: any) {
+      const status = err?.response?.status
+      const msg = status === 429
+        ? 'Demasiados intentos. Espera un momento e intenta de nuevo.'
+        : status === 401
+        ? 'Sesión expirada. Recarga la página para reconectarte.'
+        : 'No se pudo enviar la respuesta. Intenta de nuevo.'
+      setAnswerFeedback({ questionId, sent: true, error: msg })
     }
   }
 
