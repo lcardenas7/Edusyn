@@ -709,6 +709,36 @@ export class PlayService {
     return { finished: true };
   }
 
+  /**
+   * Cierra todas las sesiones WAITING/ACTIVE del docente.
+   * Útil para limpiar sesiones huérfanas (testing, abandonos, etc.)
+   */
+  async finishAllPendingSessions(userId: string) {
+    const classroomId = await this.resolveClassroom(userId);
+    const pending = await this.prisma.liveSession.findMany({
+      where: { classroomId, teacherId: userId, status: { in: ['WAITING', 'ACTIVE'] } },
+      select: { id: true },
+    });
+
+    if (pending.length === 0) return { closed: 0 };
+
+    const result = await this.prisma.liveSession.updateMany({
+      where: { id: { in: pending.map(s => s.id) } },
+      data: { status: 'FINISHED', finishedAt: new Date() },
+    });
+
+    // Limpiar streams y timers en memoria
+    for (const s of pending) {
+      this.stream.emit(s.id, { type: 'SESSION_FINISHED', data: { ranking: [] } });
+      this.stream.finishStream(s.id);
+      this.guestTokenService.revokeSession(s.id);
+      this.cancelQuestionClose(s.id);
+      this.questionOpenedAt.delete(s.id);
+    }
+
+    return { closed: result.count };
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // SERVER-DRIVEN TIMER
   // ═══════════════════════════════════════════════════════════════════════════

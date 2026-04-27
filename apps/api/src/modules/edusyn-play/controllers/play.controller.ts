@@ -200,6 +200,12 @@ export class PlayController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('live/finish-pending')
+  async finishAllPending(@Request() req: any) {
+    return this.playService.finishAllPendingSessions(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('live/:sessionId/pause')
   async pauseSession(@Request() req: any, @Param('sessionId') sessionId: string) {
     return this.playService.pauseSession(req.user.id, sessionId);

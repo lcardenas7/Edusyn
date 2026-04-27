@@ -163,14 +163,32 @@ export default function PlayDashboard() {
       {/* Recent Sessions */}
       {(data?.recentSessions?.length ?? 0) > 0 && (
         <div className="bg-white rounded-xl border border-gray-200">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
             <h2 className="font-semibold text-gray-900 flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-violet-500" />
               Sesiones recientes
             </h2>
-            <Link to="/play/sessions" className="text-sm text-violet-600 hover:text-violet-700 font-medium">
-              Ver todas
-            </Link>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={async () => {
+                  if (!confirm('Cerrar todas las sesiones pendientes (en lobby o en curso)?')) return
+                  try {
+                    const res = await playPanelApi.finishAllPending()
+                    alert(`${res.data.closed} sesión(es) cerrada(s)`)
+                    const refreshed = await playPanelApi.dashboard()
+                    setData(refreshed.data)
+                  } catch {
+                    alert('Error al cerrar sesiones pendientes')
+                  }
+                }}
+                className="text-sm text-amber-700 hover:text-amber-800 font-medium"
+              >
+                Cerrar pendientes
+              </button>
+              <Link to="/play/sessions" className="text-sm text-violet-600 hover:text-violet-700 font-medium">
+                Ver todas
+              </Link>
+            </div>
           </div>
           <div className="divide-y divide-gray-50">
             {data?.recentSessions.map((session) => (

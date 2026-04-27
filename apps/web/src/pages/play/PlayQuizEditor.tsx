@@ -477,9 +477,14 @@ export default function PlayQuizEditor() {
   const handleStartGame = async () => {
     if (!liveSession) return
     try {
+      // Optimistic update — no esperamos al SSE para evitar doble-click
+      setLiveSession((prev: any) => prev ? { ...prev, status: 'ACTIVE' } : prev)
       await playPanelApi.startLiveQuiz(liveSession.id)
-      // El SSE enviará QUESTION_OPENED actualizando el estado; no hacemos poll
+      // Poll inmediato como fallback al SSE
+      setTimeout(() => handleFallbackPoll(), 500)
     } catch (err: any) {
+      // Revertir si falló
+      setLiveSession((prev: any) => prev ? { ...prev, status: 'WAITING' } : prev)
       setError(err.response?.data?.message || 'Error al iniciar')
     }
   }
@@ -488,7 +493,8 @@ export default function PlayQuizEditor() {
     if (!liveSession) return
     try {
       await playPanelApi.nextQuestionLive(liveSession.id)
-      // El SSE enviará QUESTION_OPENED o SESSION_FINISHED actualizando el estado
+      // Poll inmediato como fallback al SSE
+      setTimeout(() => handleFallbackPoll(), 500)
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error')
     }

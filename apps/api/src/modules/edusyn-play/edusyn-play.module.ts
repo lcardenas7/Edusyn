@@ -13,6 +13,7 @@ import { PlayStreamService } from './services/play-stream.service';
 import { GuestService } from './services/guest.service';
 import { LiveLessonService } from './services/live-lesson.service';
 import { ConversionService } from './services/conversion.service';
+import { PlayCronService } from './play.cron';
 
 // Guards
 import { GuestGuard } from './guards/guest.guard';
@@ -55,6 +56,7 @@ import { ConversionController } from './controllers/conversion.controller';
     LiveLessonService,
     ConversionService,
     GuestGuard,
+    PlayCronService,
   ],
   exports: [PlayWorkspaceService, GuestTokenService, GuestService, PlayStreamService],
 })
