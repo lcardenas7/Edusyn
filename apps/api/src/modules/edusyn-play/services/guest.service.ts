@@ -353,6 +353,19 @@ export class GuestService {
           totalGuests,
           percent: totalGuests > 0 ? Math.round((answeredCount / totalGuests) * 100) : 0,
         });
+
+        // Auto-close when every guest has answered — gives instant feedback without waiting for timer
+        if (totalGuests > 0 && answeredCount >= totalGuests) {
+          const session = await this.prisma.liveSession.findUnique({
+            where: { id: guest.sessionId },
+            select: { currentQuestionIdx: true, status: true },
+          });
+          if (session?.status === 'ACTIVE') {
+            this.playService.cancelQuestionClose(guest.sessionId);
+            // emitQuestionClosed is idempotent — safe even if timer already fired
+            this.playService.emitQuestionClosed(guest.sessionId, session.currentQuestionIdx).catch(() => {});
+          }
+        }
       }
     }
 

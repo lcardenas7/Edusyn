@@ -544,6 +544,8 @@ export class PlayService {
     const firstQuestion = session.activity?.questions?.[0];
     if (firstQuestion) {
       const openedAt = Date.now();
+      // Clear idempotency guard for the first question
+      this.lastClosedQuestionIdx.delete(sessionId);
       this.stream.emit(sessionId, {
         type: 'QUESTION_OPENED',
         data: {
@@ -636,6 +638,8 @@ export class PlayService {
         },
       },
     });
+    // Clear idempotency guard for the new question
+    this.lastClosedQuestionIdx.delete(sessionId);
     // Schedule server-driven auto-close
     this.scheduleQuestionClose(sessionId, question.id, nextIdx, totalQuestions, (question as any).timeLimitSeconds ?? null, openedAt);
     return {
@@ -747,6 +751,8 @@ export class PlayService {
   private readonly questionTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** questionOpenedAt timestamp per session for speed-factor scoring */
   readonly questionOpenedAt = new Map<string, number>();
+  /** Idempotency guard: tracks last closed questionIdx per session to prevent double-emit */
+  private readonly lastClosedQuestionIdx = new Map<string, number>();
 
   private scheduleQuestionClose(
     sessionId: string,
@@ -770,16 +776,37 @@ export class PlayService {
     this.questionTimers.set(sessionId, timer);
   }
 
-  cancelQuestionClose(sessionId: string) {
+  cancelQuestionClose(sessionId: string): boolean {
     const existing = this.questionTimers.get(sessionId);
     if (existing) {
       clearTimeout(existing);
       this.questionTimers.delete(sessionId);
+      return true;
     }
+    return false;
   }
 
-  /** Emits QUESTION_CLOSED with answer stats and top ranking. */
+  /**
+   * Cierra la pregunta actual sin avanzar a la siguiente.
+   * Útil para que el docente cierre manualmente antes de que acabe el tiempo.
+   */
+  async closeCurrentQuestion(userId: string, sessionId: string) {
+    const session = await this.prisma.liveSession.findFirst({
+      where: { id: sessionId, teacherId: userId },
+      select: { currentQuestionIdx: true, status: true },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+    if (session.status !== 'ACTIVE') throw new BadRequestException('La sesión no está activa');
+    this.cancelQuestionClose(sessionId);
+    await this.emitQuestionClosed(sessionId, session.currentQuestionIdx);
+    return { closed: true };
+  }
+
+  /** Emits QUESTION_CLOSED with answer stats and top ranking. Idempotent per question. */
   async emitQuestionClosed(sessionId: string, questionIdx: number) {
+    // Idempotency: don't emit twice for the same question
+    if (this.lastClosedQuestionIdx.get(sessionId) === questionIdx) return;
+    this.lastClosedQuestionIdx.set(sessionId, questionIdx);
     // Get answer stats for this question index
     const session = await this.prisma.liveSession.findUnique({
       where: { id: sessionId },

@@ -120,6 +120,7 @@ export const playPanelApi = {
   getLiveQuizStatus: (sessionId: string) => playAxios.get(`/play/live/${sessionId}`),
   startLiveQuiz: (sessionId: string) => playAxios.post(`/play/live/${sessionId}/start`),
   nextQuestionLive: (sessionId: string) => playAxios.post(`/play/live/${sessionId}/next`),
+  closeQuestion: (sessionId: string) => playAxios.post(`/play/live/${sessionId}/close-question`),
   finishLiveQuiz: (sessionId: string) => playAxios.post(`/play/live/${sessionId}/finish`),
   finishAllPending: () => playAxios.post('/play/live/finish-pending'),
   pauseSession: (sessionId: string) => playAxios.post(`/play/live/${sessionId}/pause`),

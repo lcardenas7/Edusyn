@@ -20,6 +20,8 @@ import {
   CheckCircle2,
   XCircle,
   Clock as ClockIcon,
+  Loader2,
+  AlarmClock,
 } from 'lucide-react'
 import { Podium, CircularTimer } from '../AnimalAvatars'
 import { fireConfetti, playSound } from '../../lib/play-effects'
@@ -85,6 +87,7 @@ interface LiveQuizPlayerProps {
   onCopyJoinCode: () => void
   onStartGame: () => void
   onNextQuestion: () => void
+  onCloseQuestion?: () => void
   onFinishGame: () => void
   onClose: () => void
   onPauseToggle?: () => void
@@ -102,6 +105,7 @@ export default function LiveQuizPlayer({
   onCopyJoinCode,
   onStartGame,
   onNextQuestion,
+  onCloseQuestion,
   onFinishGame,
   onClose,
   onPauseToggle,
@@ -113,6 +117,8 @@ export default function LiveQuizPlayer({
   const [presenterMode, setPresenterMode] = useState(false)
   const [questionStats, setQuestionStats] = useState<any[] | null>(null)
   const [showStats, setShowStats] = useState(false)
+  const [showTimeUp, setShowTimeUp] = useState(false)
+  const [closingQuestion, setClosingQuestion] = useState(false)
 
   const loadQuestionStats = useCallback(async () => {
     if (!liveSession.id) return
@@ -163,6 +169,8 @@ export default function LiveQuizPlayer({
         if (prev <= 1) {
           clearInterval(interval)
           setQuestionClosed(true)
+          setShowTimeUp(true)
+          setTimeout(() => setShowTimeUp(false), 4000)
           return 0
         }
         return prev - 1
@@ -170,6 +178,11 @@ export default function LiveQuizPlayer({
     }, 1000)
     return () => clearInterval(interval)
   }, [liveSession.status, currentQuestion?.id, liveSession.questionOpenedAt, timeLimit])
+
+  // Reset closingQuestion state when question changes or closes
+  useEffect(() => {
+    setClosingQuestion(false)
+  }, [currentQuestion?.id, liveSession.questionClosed])
 
   const podiumEntries = useMemo(() => {
     return (liveSession.guests || []).slice(0, 3).map((guest, index) => ({
@@ -188,6 +201,21 @@ export default function LiveQuizPlayer({
 
   return (
     <>
+    {/* Tiempo agotado — fixed toast */}
+    <AnimatePresence>
+      {showTimeUp && (
+        <motion.div
+          initial={{ opacity: 0, y: -20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -10 }}
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 rounded-2xl bg-orange-500 px-6 py-3 text-base font-black text-white shadow-2xl"
+        >
+          <AlarmClock className="h-5 w-5 animate-bounce" />
+          ¡Tiempo agotado!
+        </motion.div>
+      )}
+    </AnimatePresence>
+
     {/* F6.28: Presenter overlay */}
     {presenterMode && (
       <div className="fixed inset-0 z-50 bg-gradient-to-br from-violet-900 via-fuchsia-800 to-cyan-700 text-white flex flex-col">
@@ -441,15 +469,25 @@ export default function LiveQuizPlayer({
                 />
               </div>
 
-              {/* F6.24: X/Y respondieron */}
+              {/* F6.24: X/Y respondieron + ¡todos respondieron! banner */}
               {answerStats && answerStats.totalGuests > 0 && (
-                <div className="rounded-xl bg-white/10 px-4 py-3">
+                <div className={`rounded-xl px-4 py-3 transition-all ${
+                  answerStats.percent >= 100 && !questionClosed
+                    ? 'bg-emerald-500/30 ring-1 ring-emerald-300/50'
+                    : 'bg-white/10'
+                }`}>
                   <div className="flex items-center justify-between mb-1 text-sm font-semibold">
-                    <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5" />{answerStats.answeredCount} / {answerStats.totalGuests} respondieron</span>
+                    <span className="flex items-center gap-1.5">
+                      {answerStats.percent >= 100
+                        ? <span className="text-emerald-200">✅ ¡Todos respondieron!</span>
+                        : <><Zap className="w-3.5 h-3.5" />{answerStats.answeredCount} / {answerStats.totalGuests} respondieron</>}
+                    </span>
                     <span>{answerStats.percent}%</span>
                   </div>
                   <div className="w-full bg-white/20 rounded-full h-2">
-                    <div className="bg-white rounded-full h-2 transition-all duration-500" style={{ width: `${answerStats.percent}%` }} />
+                    <div className={`rounded-full h-2 transition-all duration-500 ${
+                      answerStats.percent >= 100 ? 'bg-emerald-300' : 'bg-white'
+                    }`} style={{ width: `${answerStats.percent}%` }} />
                   </div>
                 </div>
               )}
@@ -518,6 +556,21 @@ export default function LiveQuizPlayer({
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
+                {!questionClosed && onCloseQuestion && (
+                  <button
+                    onClick={async () => {
+                      setClosingQuestion(true)
+                      try { await onCloseQuestion() } catch {}
+                      finally { setClosingQuestion(false) }
+                    }}
+                    disabled={closingQuestion}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/20 px-5 py-3 font-bold text-white transition hover:bg-white/30 disabled:opacity-50"
+                  >
+                    {closingQuestion
+                      ? <><Loader2 className="h-4 w-4 animate-spin" /> Cerrando...</>
+                      : <><Square className="h-4 w-4" /> Cerrar pregunta</>}
+                  </button>
+                )}
                 <button
                   onClick={onNextQuestion}
                   className={`flex-1 inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3 font-black transition ${
@@ -531,7 +584,7 @@ export default function LiveQuizPlayer({
                 </button>
                 <button
                   onClick={onFinishGame}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-500/90 px-6 py-3 font-bold text-white transition hover:bg-rose-500"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-500/90 px-5 py-3 font-bold text-white transition hover:bg-rose-500"
                 >
                   <Square className="h-4 w-4" />
                   Terminar

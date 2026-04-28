@@ -500,6 +500,15 @@ export default function PlayQuizEditor() {
     }
   }
 
+  const handleCloseQuestion = async () => {
+    if (!liveSession) return
+    try {
+      await playPanelApi.closeQuestion(liveSession.id)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al cerrar pregunta')
+    }
+  }
+
   const handleFinishGame = async () => {
     if (!liveSession) return
     try {
@@ -629,6 +638,7 @@ export default function PlayQuizEditor() {
           onCopyJoinCode={copyJoinCode}
           onStartGame={handleStartGame}
           onNextQuestion={handleNextQuestion}
+          onCloseQuestion={handleCloseQuestion}
           onFinishGame={handleFinishGame}
           onClose={handleCloseLive}
           onPauseToggle={handlePauseToggle}

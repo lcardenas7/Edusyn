@@ -194,6 +194,12 @@ export class PlayController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('live/:sessionId/close-question')
+  async closeCurrentQuestion(@Request() req: any, @Param('sessionId') sessionId: string) {
+    return this.playService.closeCurrentQuestion(req.user.id, sessionId);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('live/:sessionId/finish')
   async finishLiveQuiz(@Request() req: any, @Param('sessionId') sessionId: string) {
     return this.playService.finishLiveQuiz(req.user.id, sessionId);
