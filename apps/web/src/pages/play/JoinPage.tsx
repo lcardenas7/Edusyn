@@ -125,6 +125,9 @@ export default function JoinPage() {
   const [lobbyGuests, setLobbyGuests] = useState<LobbyGuest[]>([])
   const [streak, setStreak] = useState(0)
   const [answerStats, setAnswerStats] = useState<AnswerStats | null>(null)
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
+  const [livePoints, setLivePoints] = useState<number | null>(null)
+  const [finalRanking, setFinalRanking] = useState<Array<{ id: string; nickname: string; avatarEmoji: string; score: number; correctAnswers: number; totalAnswers?: number }> | null>(null)
 
   const questionStartRef = useRef<number>(0)
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -289,6 +292,8 @@ export default function JoinPage() {
               currentQuestion: event.data.question,
             }
       )
+      setLivePoints(Number(event.data.question?.points) || 1000)
+      setSelectedAnswer(null)
       setAnswerFeedback(null)
       setStep('active')
       return
@@ -333,6 +338,7 @@ export default function JoinPage() {
       if (interludeTimerRef.current) clearTimeout(interludeTimerRef.current)
       if (soundEnabledRef.current) playSound('winner')
       fireConfetti('celebration')
+      if (event.data?.ranking) setFinalRanking(event.data.ranking)
       setSessionStatus((prev) => (prev ? { ...prev, status: 'FINISHED' } : prev))
       setStep('finished')
       return
@@ -354,7 +360,7 @@ export default function JoinPage() {
     if (step !== 'lobby' && step !== 'active') return
     const interval = setInterval(() => {
       handleFallbackPoll().catch(() => {})
-    }, 4000)
+    }, 2000)
     return () => clearInterval(interval)
   }, [sseSessionId, guestToken, step, handleFallbackPoll])
 
@@ -362,10 +368,22 @@ export default function JoinPage() {
   // SSE setea questionStartRef en QUESTION_OPENED; polling lo inicializa aquí si SSE no llegó
   useEffect(() => {
     setAnswerFeedback(null)
-    // Siempre marcar inicio de pregunta. SSE puede haberlo seteado antes con mayor precisión,
-    // pero la diferencia de ~50ms en timeTakenMs es irrelevante para scoring.
+    setSelectedAnswer(null)
     questionStartRef.current = Date.now()
   }, [sessionStatus?.currentQuestion?.id])
+
+  // Live points ticker — mirrors backend speedFactor formula so the display matches awarded points
+  useEffect(() => {
+    const q = sessionStatus?.currentQuestion
+    if (!q) { setLivePoints(null); return }
+    const basePoints = Number(q.points) || 1000
+    if (!q.timeLimitSeconds || q.timeLimitSeconds <= 0 || timeLeft === null) {
+      setLivePoints(basePoints); return
+    }
+    const elapsed = q.timeLimitSeconds - timeLeft
+    const speedFactor = Math.max(0.5, 1 - 0.5 * (Math.max(0, elapsed) / q.timeLimitSeconds))
+    setLivePoints(Math.round(basePoints * speedFactor))
+  }, [timeLeft, sessionStatus?.currentQuestion])
 
   const lookupCode = async (joinCode: string) => {
     setLookingUp(true)
@@ -460,6 +478,9 @@ export default function JoinPage() {
     setLobbyGuests([])
     setStreak(0)
     setAnswerStats(null)
+    setSelectedAnswer(null)
+    setLivePoints(null)
+    setFinalRanking(null)
     setStep('code')
     setCode('')
   }
@@ -481,8 +502,11 @@ export default function JoinPage() {
   const handleAnswer = async (questionId: string, selectedOption?: string, answerText?: string) => {
     if (!session?.sessionId) return
     if (answerFeedback?.questionId === questionId && !answerFeedback.error) return
+    if (selectedAnswer !== null) return
 
     const timeTakenMs = Date.now() - questionStartRef.current
+    const optKey = selectedOption ?? answerText ?? ''
+    setSelectedAnswer(optKey)
     setAnswerFeedback({ questionId, sent: true })
 
     if ('vibrate' in navigator) navigator.vibrate(40)
@@ -535,7 +559,7 @@ export default function JoinPage() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-violet-400/5 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 w-full max-w-sm">
+      <div className={`relative z-10 w-full ${step === 'active' || step === 'interlude' || step === 'finished' ? 'max-w-md' : 'max-w-sm'}`}>
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2">
@@ -772,25 +796,44 @@ export default function JoinPage() {
             </div>
             <div className="p-4 sm:p-6">
 
-            {/* Timer bar (F6.7) */}
-            {timeLeft !== null && sessionStatus.currentQuestion.timeLimitSeconds && (
-              <div className="mb-3">
-                <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
-                  <span><Clock className="w-3 h-3 inline mr-0.5" />{timeLeft}s</span>
-                  <span className={timeLeft <= 5 ? 'text-red-500 font-semibold animate-pulse' : ''}>
-                    {timeLeft <= 5 ? '¡Rápido!' : ''}
-                  </span>
+            {/* Timer bar + Live Points */}
+            {timeLeft !== null && sessionStatus.currentQuestion.timeLimitSeconds ? (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className={`flex items-center gap-1.5 font-bold text-xl ${
+                    timeLeft <= 5 ? 'text-red-500 animate-pulse' : timeLeft <= 10 ? 'text-amber-500' : 'text-violet-700'
+                  }`}>
+                    <Clock className="w-5 h-5" />
+                    <span>{timeLeft}s</span>
+                  </div>
+                  {livePoints !== null && !answerFeedback?.sent && (
+                    <div className={`flex items-center gap-1 text-sm font-bold px-3 py-1.5 rounded-full transition-all ${
+                      livePoints <= Math.round((Number(sessionStatus.currentQuestion.points) || 1000) * 0.6)
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-violet-100 text-violet-700'
+                    }`}>
+                      <Zap className="w-3.5 h-3.5" />
+                      {livePoints} pts
+                    </div>
+                  )}
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                   <div
-                    className={`rounded-full h-2.5 transition-all duration-1000 ${
-                      timeLeft <= 5 ? 'bg-red-500' : timeLeft <= 10 ? 'bg-amber-500' : 'bg-violet-600'
+                    className={`h-3 rounded-full transition-all duration-1000 ${
+                      timeLeft <= 5 ? 'bg-red-500' : timeLeft <= 10 ? 'bg-amber-400' : 'bg-gradient-to-r from-violet-500 to-fuchsia-500'
                     }`}
                     style={{ width: `${(timeLeft / (sessionStatus.currentQuestion.timeLimitSeconds ?? 30)) * 100}%` }}
                   />
                 </div>
               </div>
-            )}
+            ) : livePoints !== null && !answerFeedback?.sent ? (
+              <div className="flex justify-end mb-3">
+                <div className="flex items-center gap-1 text-sm font-bold px-3 py-1.5 rounded-full bg-violet-100 text-violet-700">
+                  <Zap className="w-3.5 h-3.5" />
+                  {livePoints} pts disponibles
+                </div>
+              </div>
+            ) : null}
 
             {/* Progress bar */}
             <div className="w-full bg-gray-200 rounded-full h-1.5 mb-5">
@@ -832,13 +875,17 @@ export default function JoinPage() {
                             key={opt.id || idx}
                             onClick={() => handleAnswer(sessionStatus.currentQuestion!.id, opt.id || opt.text || '')}
                             disabled={answered}
-                            className={`relative flex flex-col items-center justify-center gap-1 p-4 rounded-2xl font-semibold text-sm min-h-[80px] transition-all ${
+                            className={`relative flex flex-col items-center justify-center gap-1 p-4 rounded-2xl font-semibold text-sm min-h-[88px] transition-all ${
                               answered
-                                ? 'opacity-60 cursor-not-allowed saturate-50 ' + style.bg
-                                : style.bg + ' ' + style.active + ' active:scale-95 shadow-md'
+                                ? selectedAnswer === (opt.id || opt.text || '')
+                                  ? style.bg + ' ring-4 ring-white scale-105 shadow-xl'
+                                  : 'opacity-25 cursor-not-allowed saturate-0 ' + style.bg
+                                : style.bg + ' ' + style.active + ' active:scale-95 shadow-md hover:shadow-lg'
                             } ${style.text}`}
                           >
-                            <span className="text-2xl leading-none">{style.shape}</span>
+                            <span className="text-2xl leading-none">
+                              {answered && selectedAnswer === (opt.id || opt.text || '') ? '✓' : style.shape}
+                            </span>
                             <span className="text-center leading-tight">{opt.text}</span>
                           </button>
                         )
@@ -858,12 +905,15 @@ export default function JoinPage() {
                         <button key={o.val}
                           onClick={() => handleAnswer(sessionStatus.currentQuestion!.id, o.val)}
                           disabled={answered}
-                          className={`flex flex-col items-center justify-center gap-1 p-4 rounded-2xl font-semibold min-h-[80px] transition-all ${
-                            answered ? 'opacity-60 cursor-not-allowed saturate-50 ' + o.style.bg
-                              : o.style.bg + ' ' + o.style.active + ' active:scale-95 shadow-md'
+                          className={`flex flex-col items-center justify-center gap-1 p-4 rounded-2xl font-semibold min-h-[88px] transition-all ${
+                            answered
+                              ? selectedAnswer === o.val
+                                ? o.style.bg + ' ring-4 ring-white scale-105 shadow-xl'
+                                : 'opacity-25 cursor-not-allowed saturate-0 ' + o.style.bg
+                              : o.style.bg + ' ' + o.style.active + ' active:scale-95 shadow-md hover:shadow-lg'
                           } ${o.style.text}`}
                         >
-                          <span className="text-2xl">{o.shape}</span>
+                          <span className="text-2xl">{answered && selectedAnswer === o.val ? '✓' : o.shape}</span>
                           <span>{o.label}</span>
                         </button>
                       ))}
@@ -904,26 +954,46 @@ export default function JoinPage() {
                 </div>
               )}
 
-              {/* F6.2: Feedback — "Esperando..." until QUESTION_CLOSED reveals result */}
-              {answerFeedback?.questionId === sessionStatus.currentQuestion.id && (
-                <div className={`mt-4 p-3 rounded-lg border text-sm font-medium ${
-                  answerFeedback.error
-                    ? 'bg-red-50 border-red-200 text-red-700'
-                    : !answerFeedback.revealed
-                      ? 'bg-blue-50 border-blue-200 text-blue-700'
-                      : answerFeedback.isCorrect
-                        ? 'bg-green-50 border-green-200 text-green-700'
-                        : 'bg-amber-50 border-amber-200 text-amber-700'
-                }`}>
-                  {answerFeedback.error
-                    ? answerFeedback.error
-                    : !answerFeedback.revealed
-                      ? '✓ Respuesta enviada — Esperando a los demás…'
-                      : answerFeedback.isCorrect
-                        ? `✅ ¡Correcta! +${answerFeedback.pointsAwarded ?? 0} pts`
-                        : `❌ Incorrecta`}
-                </div>
-              )}
+              {/* Feedback — enviado / revelado */}
+              <AnimatePresence>
+                {answerFeedback?.questionId === sessionStatus.currentQuestion.id && (
+                  <motion.div
+                    key="feedback"
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    className={`mt-4 rounded-2xl p-4 text-center font-semibold ${
+                      answerFeedback.error
+                        ? 'bg-red-50 border border-red-200 text-red-700'
+                        : !answerFeedback.revealed
+                          ? 'bg-indigo-50 border border-indigo-200 text-indigo-700'
+                          : answerFeedback.isCorrect
+                            ? 'bg-green-50 border-2 border-green-400 text-green-800'
+                            : 'bg-red-50 border-2 border-red-300 text-red-800'
+                    }`}
+                  >
+                    {answerFeedback.error ? (
+                      <p className="text-sm">{answerFeedback.error}</p>
+                    ) : !answerFeedback.revealed ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="text-sm">¡Enviado! Esperando resultados...</span>
+                      </div>
+                    ) : answerFeedback.isCorrect ? (
+                      <div>
+                        <div className="text-4xl mb-1">🎉</div>
+                        <p className="font-bold text-lg">¡Correcto!</p>
+                        <p className="text-3xl font-black text-green-700">+{answerFeedback.pointsAwarded ?? 0} pts</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="text-4xl mb-1">😔</div>
+                        <p className="font-bold">Incorrecto</p>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Barra de reacciones — F6.14 */}
@@ -953,98 +1023,168 @@ export default function JoinPage() {
         )}
 
         {/* ═══ STEP 4.5: Interlude (ranking entre preguntas) — F6.15 ═══ */}
-        {step === 'interlude' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-2xl p-6 text-center"
-          >
-            {/* Resultado de la pregunta */}
-            {answerFeedback?.revealed && (
-              <div className={`text-5xl mb-2 ${
-                answerFeedback.isCorrect ? 'animate-bounce' : ''
+        {step === 'interlude' && (() => {
+          const myPos = interludeData?.ranking.findIndex(r => r.id === guestId) ?? -1
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-2xl shadow-2xl overflow-hidden"
+            >
+              {/* Colored result header */}
+              <div className={`px-6 py-7 text-center ${
+                answerFeedback?.revealed
+                  ? answerFeedback.isCorrect
+                    ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white'
+                    : 'bg-gradient-to-br from-red-500 to-rose-600 text-white'
+                  : 'bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white'
               }`}>
-                {answerFeedback.isCorrect ? '🎉' : '😔'}
-              </div>
-            )}
-            <h2 className="text-lg font-bold text-gray-900 mb-1">
-              {answerFeedback?.revealed
-                ? answerFeedback.isCorrect
-                  ? `¡Correcto! +${answerFeedback.pointsAwarded ?? 0} pts`
-                  : 'Incorrecto'
-                : 'Pregunta cerrada'}
-            </h2>
-            <div className="inline-flex items-center gap-1 text-sm font-bold text-violet-700 bg-violet-50 rounded-full px-4 py-1 mb-2">
-              <Zap className="w-4 h-4" /> {totalScore} pts
-            </div>
-            {streak >= 2 && (
-              <div className="inline-flex items-center gap-1 text-xs font-bold text-orange-700 bg-orange-50 rounded-full px-3 py-1 mb-4">
-                🔥 Racha de {streak}
-              </div>
-            )}
-
-            {/* Mini ranking top-5 */}
-            {interludeData && interludeData.ranking.length > 0 && (
-              <div className="bg-gray-50 rounded-2xl p-4 text-left">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Top jugadores</p>
-                <div className="space-y-2">
-                  {interludeData.ranking.slice(0, 5).map((p, i) => {
-                    const isMe = p.id === guestId
-                    return (
-                      <div key={p.id} className={`flex items-center gap-2 rounded-xl px-3 py-2 ${
-                        isMe ? 'bg-violet-100 ring-1 ring-violet-400' : 'bg-white'
-                      }`}>
-                        <span className="text-base font-bold text-gray-400 w-5">{i + 1}</span>
-                        <span className="text-lg">{p.avatarEmoji || '😎'}</span>
-                        <span className={`flex-1 text-sm font-semibold truncate ${
-                          isMe ? 'text-violet-800' : 'text-gray-800'
-                        }`}>{p.nickname}{isMe ? ' (tú)' : ''}</span>
-                        <span className="text-sm font-bold text-gray-700">{p.score} pts</span>
-                      </div>
-                    )
-                  })}
+                <div className="text-5xl mb-2">
+                  {answerFeedback?.revealed
+                    ? answerFeedback.isCorrect ? '🎉' : '😔'
+                    : '⏱️'}
                 </div>
-                <p className="text-xs text-gray-400 text-center mt-3">
-                  {interludeData.answeredCount} de {interludeData.totalGuests} respondieron
-                </p>
+                <h2 className="text-xl font-black mb-1">
+                  {answerFeedback?.revealed
+                    ? answerFeedback.isCorrect ? '¡Correcto!' : 'Incorrecto'
+                    : 'Pregunta cerrada'}
+                </h2>
+                {answerFeedback?.revealed && answerFeedback.isCorrect && (
+                  <p className="text-4xl font-black">+{answerFeedback.pointsAwarded ?? 0} pts</p>
+                )}
+                <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
+                  <span className="bg-white/20 backdrop-blur rounded-full px-3 py-1 text-sm font-bold">
+                    <Zap className="w-3.5 h-3.5 inline mr-1" />{totalScore} pts total
+                  </span>
+                  {streak >= 2 && (
+                    <span className="bg-orange-400/80 rounded-full px-3 py-1 text-sm font-bold">
+                      🔥 Racha {streak}
+                    </span>
+                  )}
+                </div>
+                {myPos >= 0 && (
+                  <p className="mt-2 text-sm font-semibold text-white/80">Posición #{myPos + 1}</p>
+                )}
               </div>
-            )}
 
-            <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-400">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Esperando siguiente pregunta...
-            </div>
-          </motion.div>
-        )}
+              <div className="p-4">
+                {interludeData && interludeData.ranking.length > 0 && (
+                  <div className="bg-gray-50 rounded-2xl p-3 mb-3">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 text-center">Clasificación</p>
+                    <div className="space-y-1.5">
+                      {interludeData.ranking.slice(0, 5).map((p, i) => {
+                        const isMe = p.id === guestId
+                        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`
+                        return (
+                          <div key={p.id} className={`flex items-center gap-2 rounded-xl px-3 py-2 ${
+                            isMe ? 'bg-violet-100 ring-1 ring-violet-400' : 'bg-white'
+                          }`}>
+                            <span className="text-sm font-bold w-6 text-center">{medal}</span>
+                            <span className="text-base">{p.avatarEmoji || '😎'}</span>
+                            <span className={`flex-1 text-sm font-semibold truncate ${
+                              isMe ? 'text-violet-800' : 'text-gray-800'
+                            }`}>{p.nickname}{isMe ? ' (tú)' : ''}</span>
+                            <span className="text-sm font-bold text-gray-600">{p.score}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <p className="text-xs text-gray-400 text-center mt-2">
+                      {interludeData.answeredCount}/{interludeData.totalGuests} respondieron
+                    </p>
+                  </div>
+                )}
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Esperando siguiente pregunta...
+                </div>
+              </div>
+            </motion.div>
+          )
+        })()}
 
         {/* ═══ STEP 5: Finished ═══ */}
-        {step === 'finished' && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl shadow-2xl p-8 text-center"
-          >
-            <div className="text-6xl mb-4">🏆</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Juego Terminado!</h2>
-            <p className="text-gray-500 mb-6">Gracias por participar, {nickname}</p>
-
-            <div className="bg-gray-50 rounded-xl p-4 mb-4">
-              <p className="font-medium text-gray-900">{session?.title}</p>
-              <p className="text-xs text-gray-400 mt-1">por {session?.teacherName}</p>
-            </div>
-
-            <div className="bg-violet-50 rounded-xl p-5 mb-6">
-              <p className="text-xs text-violet-600 font-semibold uppercase tracking-wide mb-1">Tu puntaje final</p>
-              <p className="text-4xl font-black text-violet-900">{totalScore}</p>
-              <p className="text-sm text-violet-600">puntos</p>
-            </div>
-
-            <button
-              onClick={handleExit}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold hover:from-violet-700 hover:to-fuchsia-700 transition"
+        {step === 'finished' && (() => {
+          const myPos = finalRanking ? finalRanking.findIndex(r => r.id === guestId) + 1 : 0
+          const myData = finalRanking?.find(r => r.id === guestId)
+          const accuracy = myData && (myData.totalAnswers ?? 0) > 0
+            ? Math.round((myData.correctAnswers / myData.totalAnswers!) * 100)
+            : null
+          const medal = myPos === 1 ? '🥇' : myPos === 2 ? '🥈' : myPos === 3 ? '🥉' : '🏆'
+          return (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-2xl shadow-2xl overflow-hidden"
             >
-              Volver al inicio
-            </button>
-          </motion.div>
-        )}
+              {/* Gradient header */}
+              <div className="bg-gradient-to-br from-violet-600 via-fuchsia-600 to-purple-700 px-6 py-8 text-center text-white">
+                <div className="text-6xl mb-2">{medal}</div>
+                <h2 className="text-2xl font-black mb-1">¡Juego Terminado!</h2>
+                <p className="text-violet-200 text-sm">{nickname} · {session?.title}</p>
+                {myPos > 0 && finalRanking && (
+                  <div className="mt-3 inline-block bg-white/20 backdrop-blur rounded-full px-4 py-1.5 text-sm font-bold">
+                    Posición #{myPos} de {finalRanking.length}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-5">
+                {/* Score + Accuracy */}
+                <div className="grid grid-cols-2 gap-3 mb-5">
+                  <div className="bg-violet-50 rounded-2xl p-4 text-center">
+                    <p className="text-xs text-violet-500 font-bold uppercase tracking-wide mb-1">Puntaje</p>
+                    <p className="text-3xl font-black text-violet-900">{totalScore}</p>
+                    <p className="text-xs text-violet-400">pts</p>
+                  </div>
+                  {accuracy !== null ? (
+                    <div className="bg-fuchsia-50 rounded-2xl p-4 text-center">
+                      <p className="text-xs text-fuchsia-500 font-bold uppercase tracking-wide mb-1">Precisión</p>
+                      <p className="text-3xl font-black text-fuchsia-900">{accuracy}%</p>
+                      <p className="text-xs text-fuchsia-400">{myData?.correctAnswers}/{myData?.totalAnswers} correctas</p>
+                    </div>
+                  ) : (
+                    <div className="bg-orange-50 rounded-2xl p-4 text-center">
+                      <p className="text-xs text-orange-500 font-bold uppercase tracking-wide mb-1">Racha máx.</p>
+                      <p className="text-3xl font-black text-orange-700">{streak > 0 ? `🔥${streak}` : '—'}</p>
+                      <p className="text-xs text-orange-400">seguidas</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Final ranking */}
+                {finalRanking && finalRanking.length > 0 && (
+                  <div className="bg-gray-50 rounded-2xl p-3 mb-5">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 text-center">Clasificación final</p>
+                    <div className="space-y-1.5">
+                      {finalRanking.slice(0, 5).map((p, i) => {
+                        const isMe = p.id === guestId
+                        const rankMedal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`
+                        return (
+                          <div key={p.id} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${
+                            isMe ? 'bg-violet-100 ring-2 ring-violet-400' : 'bg-white'
+                          }`}>
+                            <span className="text-base font-bold w-6 text-center">{rankMedal}</span>
+                            <span className="text-lg">{p.avatarEmoji || '😎'}</span>
+                            <span className={`flex-1 text-sm font-semibold truncate ${
+                              isMe ? 'text-violet-800' : 'text-gray-800'
+                            }`}>{p.nickname}{isMe ? ' (tú)' : ''}</span>
+                            <span className="text-sm font-bold text-gray-600">{p.score}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleExit}
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold hover:from-violet-700 hover:to-fuchsia-700 transition text-base"
+                >
+                  Volver al inicio
+                </button>
+              </div>
+            </motion.div>
+          )
+        })()}
 
         {/* Footer */}
         <p className="text-center text-xs text-white/40 mt-6">edusyn.co/join</p>
