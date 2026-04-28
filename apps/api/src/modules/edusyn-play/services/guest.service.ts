@@ -301,6 +301,12 @@ export class GuestService {
       return { accepted: true, isCorrect: false, pointsAwarded: 0 };
     }
 
+    // Cap timeTakenMs: si el cliente envía un timestamp unix en lugar de duración, overflow Int de Postgres
+    const MAX_ANSWER_MS = 600_000; // 10 minutos máximo
+    const safeTakenMs = params.timeTakenMs != null
+      ? Math.min(Math.max(0, Math.round(params.timeTakenMs)), MAX_ANSWER_MS)
+      : null;
+
     await this.prisma.liveSessionGuestAnswer.create({
       data: {
         guestId: params.guestId,
@@ -310,7 +316,7 @@ export class GuestService {
         answerText: params.answerText || null,
         isCorrect,
         pointsAwarded,
-        timeTakenMs: params.timeTakenMs ?? null,
+        timeTakenMs: safeTakenMs,
       },
     });
 

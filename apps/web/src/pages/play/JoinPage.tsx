@@ -358,9 +358,13 @@ export default function JoinPage() {
     return () => clearInterval(interval)
   }, [sseSessionId, guestToken, step, handleFallbackPoll])
 
-  // Clear per-question feedback when question changes
+  // Cuando cambia la pregunta: limpiar feedback y asegurar que questionStartRef tiene timestamp válido
+  // SSE setea questionStartRef en QUESTION_OPENED; polling lo inicializa aquí si SSE no llegó
   useEffect(() => {
     setAnswerFeedback(null)
+    // Siempre marcar inicio de pregunta. SSE puede haberlo seteado antes con mayor precisión,
+    // pero la diferencia de ~50ms en timeTakenMs es irrelevante para scoring.
+    questionStartRef.current = Date.now()
   }, [sessionStatus?.currentQuestion?.id])
 
   const lookupCode = async (joinCode: string) => {
