@@ -135,6 +135,7 @@ export default function JoinPage() {
   const soundEnabledRef = useRef(soundEnabled)
   const streakRef = useRef(streak)
   const codeInputRef = useRef<HTMLInputElement>(null)
+  const currentQuestionIdRef = useRef<string>('')
 
   useEffect(() => { streakRef.current = streak }, [streak])
 
@@ -256,6 +257,7 @@ export default function JoinPage() {
       setAnswerStats(null)
       const now = Date.now()
       questionStartRef.current = event.data.questionOpenedAt ?? now
+      currentQuestionIdRef.current = event.data.question?.id ?? ''
       // Start client timer
       const limit = event.data.question?.timeLimitSeconds ?? null
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
@@ -309,7 +311,10 @@ export default function JoinPage() {
         totalGuests: event.data.totalGuests ?? 0,
       })
       setAnswerFeedback(prev => {
-        if (!prev) return prev
+        if (!prev) {
+          // Student didn't answer before question closed — mark as missed
+          return { questionId: currentQuestionIdRef.current, sent: false, isCorrect: false, pointsAwarded: 0, revealed: true }
+        }
         // Efectos de sonido + háptica + confetti al revelar
         requestAnimationFrame(() => {
           if (prev.isCorrect) {
@@ -529,6 +534,7 @@ export default function JoinPage() {
       })
       setTotalScore(prev => prev + points)
     } catch (err: any) {
+      setSelectedAnswer(null)
       const status = err?.response?.status
       const msg = status === 429
         ? 'Demasiados intentos. Espera un momento e intenta de nuevo.'
@@ -683,344 +689,393 @@ export default function JoinPage() {
 
         {/* ═══ STEP 3: Lobby (waiting) ═══ */}
         {step === 'lobby' && (
-          <div className="bg-white rounded-2xl shadow-2xl p-8 text-center">
-            <div className="flex items-center justify-between mb-4">
-              <button onClick={toggleSound} title="Sonido" className="p-1.5 rounded-lg hover:bg-gray-100 transition">
-                {soundEnabled ? <Volume2 className="w-4 h-4 text-violet-500" /> : <VolumeX className="w-4 h-4 text-gray-400" />}
-              </button>
+          <motion.div
+            initial={{ opacity: 0, y: 12, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl overflow-hidden"
+          >
+            {/* Gradient player-card header */}
+            <div className="bg-gradient-to-br from-violet-600 to-fuchsia-600 px-6 py-8 text-white text-center">
               <AnimalAvatar avatarId={avatarId} name={nickname} size="xl" />
-              <button onClick={handleExit} title="Salir" className="p-1.5 rounded-lg hover:bg-gray-100 transition">
-                <LogOut className="w-4 h-4 text-gray-400 hover:text-gray-600" />
-              </button>
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-1">{nickname}</h2>
-            <p className="text-sm text-gray-500 mb-6">Estás conectado. Esperando al profesor...</p>
-
-            <div className="flex items-center justify-center gap-2 mb-6">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-fuchsia-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-              </div>
-              <span className="text-sm text-gray-400">Esperando que inicie la sesión</span>
+              <h2 className="text-xl font-black mt-3 mb-0.5 tracking-tight">{nickname}</h2>
+              {session && (
+                <div className="mt-1.5">
+                  <p className="text-sm font-semibold text-violet-100">{session.title}</p>
+                  <p className="text-xs text-violet-300 mt-0.5">por {session.teacherName}</p>
+                </div>
+              )}
             </div>
 
-            {sseFallback && (
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-yellow-50 border border-yellow-200 px-3 py-1 text-xs text-yellow-700">
-                Conexión degradada
+            <div className="p-5">
+              {/* Waiting animation + player count */}
+              <div className="text-center mb-4">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <div className="flex gap-1">
+                    <span className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-2 h-2 bg-fuchsia-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                  <span className="text-sm text-gray-500">Esperando al profesor...</span>
+                </div>
+                {sseFallback && (
+                  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-yellow-50 border border-yellow-200 px-3 py-1 text-xs text-yellow-700">
+                    Conexión degradada
+                  </div>
+                )}
+                <div className="inline-flex items-center gap-2 bg-violet-50 rounded-2xl px-5 py-2.5">
+                  <Users className="w-5 h-5 text-violet-600" />
+                  <span className="text-2xl font-black text-violet-900">{sessionStatus?.guestsCount || session?.guestsCount || 0}</span>
+                  <span className="text-sm text-violet-600 font-medium">jugadores</span>
+                </div>
               </div>
-            )}
 
-            <div className="bg-violet-50 rounded-xl p-4 mb-4">
-              <div className="flex items-center justify-center gap-2">
-                <Users className="w-5 h-5 text-violet-600" />
-                <span className="text-lg font-bold text-violet-900">{sessionStatus?.guestsCount || session?.guestsCount || 0}</span>
-                <span className="text-sm text-violet-600">conectados</span>
-              </div>
-            </div>
+              {/* Avatar grid */}
+              {lobbyGuests.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs text-gray-400 text-center mb-2">{lobbyGuests.length} conectado{lobbyGuests.length !== 1 ? 's' : ''}</p>
+                  <div className="flex flex-wrap justify-center gap-3 max-h-28 overflow-hidden">
+                    {lobbyGuests.map((g, i) => (
+                      <motion.div
+                        key={g.id}
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: i * 0.04, type: 'spring', stiffness: 300 }}
+                        className="flex flex-col items-center gap-0.5"
+                      >
+                        <span className="text-2xl">{g.avatarEmoji || '😎'}</span>
+                        <span className="text-[10px] text-gray-500 truncate max-w-[48px]">{g.nickname}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            {session && (
-              <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-600">
-                <p className="font-medium text-gray-900">{session.title}</p>
-                <p className="text-xs text-gray-400 mt-1">por {session.teacherName}</p>
-              </div>
-            )}
-
-            {/* F6.6: Grilla de avatares conectados */}
-            {lobbyGuests.length > 0 && (
-              <div className="mt-4">
-                <p className="text-xs text-gray-500 mb-2">{lobbyGuests.length} conectado{lobbyGuests.length !== 1 ? 's' : ''}</p>
-                <div className="flex flex-wrap justify-center gap-2 max-h-36 overflow-hidden">
-                  {lobbyGuests.map((g, i) => (
-                    <motion.div
-                      key={g.id}
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ delay: i * 0.03, type: 'spring', stiffness: 300 }}
-                      className="flex flex-col items-center gap-0.5"
-                    >
-                      <span className="text-2xl">{g.avatarEmoji || '😎'}</span>
-                      <span className="text-[10px] text-gray-500 truncate max-w-[48px] leading-tight">{g.nickname}</span>
-                    </motion.div>
+              {/* Reactions */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-xs text-gray-400 text-center mb-2">Reacciona mientras esperas</p>
+                <div className="flex justify-center gap-2">
+                  {REACTIONS.map(r => (
+                    <button key={r} onClick={() => handleReaction(r)}
+                      className={`text-xl p-2 rounded-xl transition-all ${reactionCooldown ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100 active:scale-125'}`}
+                    >{r}</button>
                   ))}
                 </div>
               </div>
-            )}
 
-            {/* Reacciones en espera — F6.14 */}
-            <div className="mt-4">
-              <p className="text-xs text-gray-400 mb-2">Reacciona mientras esperas</p>
-              <div className="flex justify-center gap-2">
-                {REACTIONS.map(r => (
-                  <button key={r} onClick={() => handleReaction(r)}
-                    className={`text-xl p-2 rounded-xl transition-all ${
-                      reactionCooldown ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100 active:scale-125'
-                    }`}>{r}</button>
-                ))}
+              {/* Bottom bar: sound + exit */}
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+                <button onClick={toggleSound} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition">
+                  {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                  {soundEnabled ? 'Sonido activo' : 'Silencio'}
+                </button>
+                <button onClick={handleExit} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition">
+                  <LogOut className="w-3.5 h-3.5" /> Salir
+                </button>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* ═══ STEP 4: Active Question ═══ */}
-        {step === 'active' && sessionStatus?.currentQuestion && (
-          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-            {/* F6.29: Sticky header */}
-            <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 py-3">
-              <div className="flex items-center justify-between">
+        {step === 'active' && sessionStatus?.currentQuestion && (() => {
+          const q = sessionStatus.currentQuestion
+          const hasAnswered = selectedAnswer !== null
+          const isRevealed = answerFeedback?.revealed === true
+          const isCorrect = answerFeedback?.isCorrect === true
+          const didAnswer = answerFeedback?.sent === true
+          const options = getQuestionOptions(q.options)
+
+          const HEADER_GRADIENTS = [
+            'from-violet-600 to-fuchsia-600',
+            'from-blue-600 to-cyan-500',
+            'from-orange-500 to-amber-500',
+            'from-emerald-600 to-teal-500',
+            'from-rose-600 to-pink-500',
+          ]
+          const baseGrad = HEADER_GRADIENTS[sessionStatus.currentQuestionIdx % HEADER_GRADIENTS.length]
+          const headerGrad = isRevealed && didAnswer
+            ? isCorrect ? 'from-green-500 to-emerald-600' : 'from-red-500 to-rose-600'
+            : baseGrad
+
+          return (
+          <motion.div
+            key={q.id}
+            initial={{ opacity: 0, y: 16, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+            className="bg-white rounded-2xl shadow-2xl overflow-hidden"
+          >
+            {/* ── Colored header ── */}
+            <div className={`bg-gradient-to-br ${headerGrad} px-4 pt-3 pb-4 text-white transition-colors duration-500`}>
+              {/* Top row */}
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <AnimalAvatar avatarId={avatarId} name={nickname} size="sm" />
                   <div>
-                    <p className="text-xs font-semibold text-gray-900 leading-none">{nickname}</p>
-                    <p className="text-[11px] text-gray-400">{sessionStatus.currentQuestionIdx + 1}/{sessionStatus.totalQuestions}</p>
+                    <p className="text-xs font-bold text-white leading-none truncate max-w-[90px]">{nickname}</p>
+                    <p className="text-[10px] text-white/60">P. {sessionStatus.currentQuestionIdx + 1}/{sessionStatus.totalQuestions}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {/* F6.16: Streak badge */}
+                <div className="flex items-center gap-1.5">
                   {streak >= 2 && (
-                    <div className="flex items-center gap-0.5 bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs font-bold">
-                      🔥 {streak}
-                    </div>
+                    <span className="text-xs font-bold bg-orange-400/80 rounded-full px-2 py-0.5">🔥 {streak}</span>
                   )}
-                  <div className="flex items-center gap-1 text-xs font-bold text-violet-700">
+                  <span className="flex items-center gap-0.5 text-xs font-bold bg-white/20 rounded-full px-2 py-0.5">
                     <Zap className="w-3 h-3" /> {totalScore}
-                  </div>
-                  <button onClick={toggleSound} className="p-1 rounded-lg hover:bg-gray-100">
-                    {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-violet-400" /> : <VolumeX className="w-3.5 h-3.5 text-gray-300" />}
+                  </span>
+                  <button onClick={toggleSound} className="p-1 rounded-lg bg-white/10 hover:bg-white/20 transition">
+                    {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
                   </button>
-                  <button onClick={handleExit} title="Salir" className="p-1 rounded-lg hover:bg-gray-100">
-                    <LogOut className="w-3.5 h-3.5 text-gray-400" />
+                  <button onClick={handleExit} className="p-1 rounded-lg bg-white/10 hover:bg-white/20 transition">
+                    <LogOut className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
-            </div>
-            <div className="p-4 sm:p-6">
 
-            {/* Timer bar + Live Points */}
-            {timeLeft !== null && sessionStatus.currentQuestion.timeLimitSeconds ? (
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className={`flex items-center gap-1.5 font-bold text-xl ${
-                    timeLeft <= 5 ? 'text-red-500 animate-pulse' : timeLeft <= 10 ? 'text-amber-500' : 'text-violet-700'
-                  }`}>
-                    <Clock className="w-5 h-5" />
-                    <span>{timeLeft}s</span>
-                  </div>
-                  {livePoints !== null && !answerFeedback?.sent && (
-                    <div className={`flex items-center gap-1 text-sm font-bold px-3 py-1.5 rounded-full transition-all ${
-                      livePoints <= Math.round((Number(sessionStatus.currentQuestion.points) || 1000) * 0.6)
-                        ? 'bg-amber-100 text-amber-700'
-                        : 'bg-violet-100 text-violet-700'
-                    }`}>
-                      <Zap className="w-3.5 h-3.5" />
-                      {livePoints} pts
-                    </div>
-                  )}
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                  <div
-                    className={`h-3 rounded-full transition-all duration-1000 ${
-                      timeLeft <= 5 ? 'bg-red-500' : timeLeft <= 10 ? 'bg-amber-400' : 'bg-gradient-to-r from-violet-500 to-fuchsia-500'
-                    }`}
-                    style={{ width: `${(timeLeft / (sessionStatus.currentQuestion.timeLimitSeconds ?? 30)) * 100}%` }}
-                  />
-                </div>
-              </div>
-            ) : livePoints !== null && !answerFeedback?.sent ? (
-              <div className="flex justify-end mb-3">
-                <div className="flex items-center gap-1 text-sm font-bold px-3 py-1.5 rounded-full bg-violet-100 text-violet-700">
-                  <Zap className="w-3.5 h-3.5" />
-                  {livePoints} pts disponibles
-                </div>
-              </div>
-            ) : null}
-
-            {/* Progress bar */}
-            <div className="w-full bg-gray-200 rounded-full h-1.5 mb-5">
-              <div
-                className="bg-fuchsia-400 rounded-full h-1.5 transition-all"
-                style={{ width: `${((sessionStatus.currentQuestionIdx + 1) / sessionStatus.totalQuestions) * 100}%` }}
-              />
-            </div>
-
-            {/* Question */}
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">{sessionStatus.currentQuestion.text}</h2>
-
-              {/* Image (F6.7) */}
-              {sessionStatus.currentQuestion.imageUrl && (
-                <img
-                  src={sessionStatus.currentQuestion.imageUrl}
-                  alt=""
-                  className="w-full rounded-xl object-cover max-h-48 mb-4 border border-gray-100"
-                />
-              )}
-              
-              {/* Multiple Choice — F6.8: colores Kahoot 2×2 */}
-              {sessionStatus.currentQuestion.type === 'MULTIPLE_CHOICE' && sessionStatus.currentQuestion.options && (
-                (() => {
-                  const options = getQuestionOptions(sessionStatus.currentQuestion.options)
-                  if (!options.length) return (
-                    <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-sm text-yellow-700">
-                      Esta pregunta no tiene opciones válidas.
-                    </div>
-                  )
-                  const answered = answerFeedback?.questionId === sessionStatus.currentQuestion!.id && !answerFeedback?.error
-                  return (
-                    <div className="grid grid-cols-2 gap-3">
-                      {options.map((opt, idx) => {
-                        const style = KAHOOT_OPTS[idx % KAHOOT_OPTS.length]
-                        return (
-                          <button
-                            key={opt.id || idx}
-                            onClick={() => handleAnswer(sessionStatus.currentQuestion!.id, opt.id || opt.text || '')}
-                            disabled={answered}
-                            className={`relative flex flex-col items-center justify-center gap-1 p-4 rounded-2xl font-semibold text-sm min-h-[88px] transition-all ${
-                              answered
-                                ? selectedAnswer === (opt.id || opt.text || '')
-                                  ? style.bg + ' ring-4 ring-white scale-105 shadow-xl'
-                                  : 'opacity-25 cursor-not-allowed saturate-0 ' + style.bg
-                                : style.bg + ' ' + style.active + ' active:scale-95 shadow-md hover:shadow-lg'
-                            } ${style.text}`}
-                          >
-                            <span className="text-2xl leading-none">
-                              {answered && selectedAnswer === (opt.id || opt.text || '') ? '✓' : style.shape}
-                            </span>
-                            <span className="text-center leading-tight">{opt.text}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )
-                })()
-              )}
-
-              {/* True/False — colores Kahoot verde/rojo */}
-              {sessionStatus.currentQuestion.type === 'TRUE_FALSE' && (
-                (() => {
-                  const answered = answerFeedback?.questionId === sessionStatus.currentQuestion!.id && !answerFeedback?.error
-                  return (
-                    <div className="grid grid-cols-2 gap-3">
-                      {[{ val: 'true', label: 'Verdadero', shape: '✔', style: KAHOOT_OPTS[3] }, { val: 'false', label: 'Falso', shape: '✖', style: KAHOOT_OPTS[0] }].map(o => (
-                        <button key={o.val}
-                          onClick={() => handleAnswer(sessionStatus.currentQuestion!.id, o.val)}
-                          disabled={answered}
-                          className={`flex flex-col items-center justify-center gap-1 p-4 rounded-2xl font-semibold min-h-[88px] transition-all ${
-                            answered
-                              ? selectedAnswer === o.val
-                                ? o.style.bg + ' ring-4 ring-white scale-105 shadow-xl'
-                                : 'opacity-25 cursor-not-allowed saturate-0 ' + o.style.bg
-                              : o.style.bg + ' ' + o.style.active + ' active:scale-95 shadow-md hover:shadow-lg'
-                          } ${o.style.text}`}
-                        >
-                          <span className="text-2xl">{answered && selectedAnswer === o.val ? '✓' : o.shape}</span>
-                          <span>{o.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )
-                })()
-              )}
-
-              {/* Short Answer */}
-              {sessionStatus.currentQuestion.type === 'SHORT_ANSWER' && (
-                <div>
-                  <textarea
-                    placeholder="Escribe tu respuesta..."
-                    className="w-full p-4 border border-gray-200 rounded-xl resize-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
-                    rows={3}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && e.ctrlKey) {
-                        const text = (e.target as HTMLTextAreaElement).value.trim()
-                        if (text) handleAnswer(sessionStatus.currentQuestion!.id, undefined, text)
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={(e) => {
-                      const textarea = e.currentTarget.parentElement?.querySelector('textarea')
-                      const text = textarea?.value.trim()
-                      if (text) handleAnswer(sessionStatus.currentQuestion!.id, undefined, text)
-                    }}
-                    disabled={answerFeedback?.questionId === sessionStatus.currentQuestion!.id && !answerFeedback?.error}
-                    className={`mt-3 w-full py-3 rounded-xl font-medium transition-colors ${
-                      answerFeedback?.questionId === sessionStatus.currentQuestion!.id && !answerFeedback?.error
-                        ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                        : 'bg-violet-600 text-white hover:bg-violet-700'
-                    }`}
+              {/* Question text OR revealed result */}
+              <AnimatePresence mode="wait">
+                {!isRevealed ? (
+                  <motion.h2
+                    key="qtext"
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    className="text-base sm:text-lg font-bold text-white leading-snug mb-3"
                   >
-                    Enviar respuesta
-                  </button>
-                </div>
-              )}
-
-              {/* Feedback — enviado / revelado */}
-              <AnimatePresence>
-                {answerFeedback?.questionId === sessionStatus.currentQuestion.id && (
+                    {q.text}
+                  </motion.h2>
+                ) : (
                   <motion.div
-                    key="feedback"
-                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    className={`mt-4 rounded-2xl p-4 text-center font-semibold ${
-                      answerFeedback.error
-                        ? 'bg-red-50 border border-red-200 text-red-700'
-                        : !answerFeedback.revealed
-                          ? 'bg-indigo-50 border border-indigo-200 text-indigo-700'
-                          : answerFeedback.isCorrect
-                            ? 'bg-green-50 border-2 border-green-400 text-green-800'
-                            : 'bg-red-50 border-2 border-red-300 text-red-800'
-                    }`}
+                    key="result"
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+                    className="text-center py-1 mb-2"
                   >
-                    {answerFeedback.error ? (
-                      <p className="text-sm">{answerFeedback.error}</p>
-                    ) : !answerFeedback.revealed ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="text-sm">¡Enviado! Esperando resultados...</span>
-                      </div>
-                    ) : answerFeedback.isCorrect ? (
-                      <div>
-                        <div className="text-4xl mb-1">🎉</div>
-                        <p className="font-bold text-lg">¡Correcto!</p>
-                        <p className="text-3xl font-black text-green-700">+{answerFeedback.pointsAwarded ?? 0} pts</p>
-                      </div>
+                    {didAnswer ? (
+                      <>
+                        <div className="text-5xl mb-1">{isCorrect ? '🎉' : '😔'}</div>
+                        <p className="text-xl font-black">{isCorrect ? '¡Correcto!' : 'Incorrecto'}</p>
+                        {isCorrect && (
+                          <motion.p
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.15 }}
+                            className="text-3xl font-black mt-1"
+                          >
+                            +{answerFeedback?.pointsAwarded ?? 0} pts
+                          </motion.p>
+                        )}
+                      </>
                     ) : (
-                      <div>
-                        <div className="text-4xl mb-1">😔</div>
-                        <p className="font-bold">Incorrecto</p>
-                      </div>
+                      <>
+                        <div className="text-3xl mb-1">⏰</div>
+                        <p className="font-bold text-lg">Sin respuesta</p>
+                        <p className="text-sm text-white/75">No respondiste a tiempo</p>
+                      </>
                     )}
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* Timer bar */}
+              {!isRevealed && timeLeft !== null && q.timeLimitSeconds && (
+                <div>
+                  <div className="flex items-center justify-between text-xs text-white/80 mb-1">
+                    <span className={`font-bold flex items-center gap-1 ${timeLeft <= 5 ? 'animate-pulse' : ''}`}>
+                      <Clock className="w-3 h-3" />{timeLeft}s
+                    </span>
+                    {livePoints !== null && !hasAnswered && (
+                      <span className="font-semibold">{livePoints} pts disponibles</span>
+                    )}
+                  </div>
+                  <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-1000 ${timeLeft <= 5 ? 'bg-red-300' : 'bg-white'}`}
+                      style={{ width: `${(timeLeft / q.timeLimitSeconds) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Barra de reacciones — F6.14 */}
-            <div className="border-t border-gray-100 mt-4 pt-3 flex justify-center gap-2">
-              {REACTIONS.map(r => (
-                <button key={r} onClick={() => handleReaction(r)}
-                  className={`text-lg p-1.5 rounded-xl transition-all ${
-                    reactionCooldown ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-100 active:scale-125'
-                  }`}>{r}</button>
-              ))}
-            </div>
+            {/* ── Content area ── */}
+            <div className="p-4">
 
-            {/* F6.24: X/Y respondieron */}
-            {answerStats && answerStats.totalGuests > 0 && (
-              <div className="mt-3 px-1">
-                <div className="flex justify-between text-[11px] text-gray-400 mb-0.5">
-                  <span>{answerStats.answeredCount} de {answerStats.totalGuests} respondieron</span>
-                  <span>{answerStats.percent}%</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-1.5">
-                  <div className="bg-fuchsia-500 rounded-full h-1.5 transition-all duration-500" style={{ width: `${answerStats.percent}%` }} />
-                </div>
+              {/* Image */}
+              {q.imageUrl && !hasAnswered && !isRevealed && (
+                <img src={q.imageUrl} alt="" className="w-full rounded-xl object-cover max-h-40 mb-4 border border-gray-100" />
+              )}
+
+              <AnimatePresence mode="wait">
+                {/* STATE A: Not answered + not revealed → show options */}
+                {!hasAnswered && !isRevealed && (
+                  <motion.div key="options" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }}>
+                    {q.type === 'MULTIPLE_CHOICE' && options.length > 0 && (
+                      <div className="grid grid-cols-2 gap-3">
+                        {options.map((opt, idx) => {
+                          const style = KAHOOT_OPTS[idx % KAHOOT_OPTS.length]
+                          return (
+                            <button
+                              key={opt.id || idx}
+                              onClick={() => handleAnswer(q.id, opt.id || opt.text || '')}
+                              className={`flex flex-col items-center justify-center gap-1.5 p-4 rounded-2xl font-semibold text-sm min-h-[80px] transition-all active:scale-95 shadow-md hover:shadow-lg ${style.bg} ${style.active} ${style.text}`}
+                            >
+                              <span className="text-xl">{style.shape}</span>
+                              <span className="text-center leading-tight">{opt.text}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                    {q.type === 'MULTIPLE_CHOICE' && options.length === 0 && (
+                      <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-sm text-yellow-700">
+                        Esta pregunta no tiene opciones válidas.
+                      </div>
+                    )}
+                    {q.type === 'TRUE_FALSE' && (
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { val: 'true',  label: 'Verdadero', shape: '✔', style: KAHOOT_OPTS[3] },
+                          { val: 'false', label: 'Falso',     shape: '✖', style: KAHOOT_OPTS[0] },
+                        ].map(o => (
+                          <button key={o.val} onClick={() => handleAnswer(q.id, o.val)}
+                            className={`flex flex-col items-center justify-center gap-1.5 p-4 rounded-2xl font-semibold min-h-[80px] transition-all active:scale-95 shadow-md ${o.style.bg} ${o.style.active} ${o.style.text}`}
+                          >
+                            <span className="text-2xl">{o.shape}</span>
+                            <span>{o.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {q.type === 'SHORT_ANSWER' && (
+                      <div>
+                        <textarea
+                          id="short-answer-input"
+                          placeholder="Escribe tu respuesta..."
+                          className="w-full p-4 border border-gray-200 rounded-xl resize-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+                          rows={3}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' && e.ctrlKey) {
+                              const text = (e.target as HTMLTextAreaElement).value.trim()
+                              if (text) handleAnswer(q.id, undefined, text)
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            const input = document.getElementById('short-answer-input') as HTMLTextAreaElement
+                            const text = input?.value.trim()
+                            if (text) handleAnswer(q.id, undefined, text)
+                          }}
+                          className="mt-3 w-full py-3 rounded-xl font-semibold bg-violet-600 text-white hover:bg-violet-700 transition"
+                        >
+                          Enviar respuesta
+                        </button>
+                      </div>
+                    )}
+                    {answerFeedback?.error && (
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        className="mt-3 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm text-center"
+                      >
+                        {answerFeedback.error}
+                      </motion.div>
+                    )}
+                  </motion.div>
+                )}
+
+                {/* STATE B: Answered, waiting for reveal */}
+                {hasAnswered && !isRevealed && (
+                  <motion.div
+                    key="waiting"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="py-8 text-center"
+                  >
+                    {(() => {
+                      let selText = ''
+                      let selBg = 'bg-violet-600'
+                      let selTextColor = 'text-white'
+                      if (q.type === 'MULTIPLE_CHOICE' && options.length > 0) {
+                        const idx = options.findIndex(o => (o.id || o.text || '') === selectedAnswer)
+                        if (idx >= 0) {
+                          selText = options[idx].text ?? ''
+                          selBg = KAHOOT_OPTS[idx % 4].bg
+                          selTextColor = KAHOOT_OPTS[idx % 4].text
+                        }
+                      } else if (q.type === 'TRUE_FALSE') {
+                        selText = selectedAnswer === 'true' ? 'Verdadero' : 'Falso'
+                        selBg = selectedAnswer === 'true' ? KAHOOT_OPTS[3].bg : KAHOOT_OPTS[0].bg
+                        selTextColor = selectedAnswer === 'true' ? KAHOOT_OPTS[3].text : KAHOOT_OPTS[0].text
+                      } else {
+                        selText = 'Respuesta enviada'
+                      }
+                      return selText ? (
+                        <motion.div
+                          initial={{ scale: 0.9, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm mb-5 shadow-md ${selBg} ${selTextColor}`}
+                        >
+                          <span>✓</span>
+                          <span className="max-w-[180px] truncate">{selText}</span>
+                        </motion.div>
+                      ) : null
+                    })()}
+                    <p className="text-sm font-semibold text-gray-500">¡Respuesta enviada!</p>
+                    <div className="flex items-center justify-center gap-2 text-gray-400 text-xs mt-2">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Esperando resultados...
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* STATE C: Revealed */}
+                {isRevealed && (
+                  <motion.div
+                    key="revealed-summary"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="py-4 text-center"
+                  >
+                    <p className="text-sm text-gray-600">
+                      Puntaje total: <strong className="text-violet-700 text-base">{totalScore} pts</strong>
+                    </p>
+                    {streak >= 2 && didAnswer && isCorrect && (
+                      <p className="text-xs font-bold text-orange-500 mt-1">🔥 Racha de {streak} seguidas</p>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Reactions bar */}
+              <div className="border-t border-gray-100 mt-4 pt-3 flex justify-center gap-2">
+                {REACTIONS.map(r => (
+                  <button key={r} onClick={() => handleReaction(r)}
+                    className={`text-lg p-1.5 rounded-xl transition-all ${
+                      reactionCooldown ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-100 active:scale-125'
+                    }`}
+                  >{r}</button>
+                ))}
               </div>
-            )}
-            </div>{/* closes p-4 sm:p-6 */}
-          </div>
-        )}
+
+              {/* Answer stats */}
+              {answerStats && answerStats.totalGuests > 0 && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-[11px] text-gray-400 mb-0.5">
+                    <span>{answerStats.answeredCount} de {answerStats.totalGuests} respondieron</span>
+                    <span>{answerStats.percent}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-1.5">
+                    <div className="bg-fuchsia-500 rounded-full h-1.5 transition-all duration-500" style={{ width: `${answerStats.percent}%` }} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+          )
+        })()}
 
         {/* ═══ STEP 4.5: Interlude (ranking entre preguntas) — F6.15 ═══ */}
         {step === 'interlude' && (() => {
