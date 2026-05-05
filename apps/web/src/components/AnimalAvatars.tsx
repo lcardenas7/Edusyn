@@ -123,6 +123,7 @@ export function AvatarSelector({ selected, onSelect }: AvatarSelectorProps) {
       {ANIMAL_AVATARS.map(avatar => (
         <motion.button
           key={avatar.id}
+          type="button"
           onClick={() => onSelect(avatar.id)}
           className={`p-2 rounded-xl transition-all ${
             selected === avatar.id 

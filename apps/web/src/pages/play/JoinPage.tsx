@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { guestApi } from '../../lib/playApi'
 import { usePlaySSE, PlaySSEEvent } from '../../lib/play-sse'
 import { playSound, fireConfetti } from '../../lib/play-effects'
-import { ANIMAL_AVATARS, getAvatar, AnimalAvatar, AvatarSelector } from '../../components/AnimalAvatars'
+import { ANIMAL_AVATARS, getAvatar, AnimalAvatar, AvatarSelector, Podium } from '../../components/AnimalAvatars'
 import {
   Sparkles,
   Hash,
@@ -27,7 +27,14 @@ const KAHOOT_OPTS = [
   { bg: 'bg-green-600',  active: 'hover:bg-green-700',  shape: '■', text: 'text-white' },
 ]
 
-const REACTIONS = ['�', '🤔', '❤️', '�', '🔥', '�']
+const REACTIONS = [
+  { emoji: '💡', label: 'Entendí' },
+  { emoji: '🤔', label: 'Duda' },
+  { emoji: '👏', label: 'Genial' },
+  { emoji: '🔥', label: 'Excelente' },
+  { emoji: '👍', label: 'De acuerdo' },
+  { emoji: '❤️', label: 'Me gusta' },
+]
 
 interface SessionInfo {
   sessionId: string
@@ -41,7 +48,7 @@ interface SessionInfo {
 type Step = 'code' | 'nickname' | 'lobby' | 'active' | 'interlude' | 'finished' | 'error'
 
 interface InterludeData {
-  ranking: Array<{ id: string; nickname: string; avatarEmoji: string; score: number; correctAnswers: number }>
+  ranking: Array<{ id: string; nickname: string; avatarEmoji: string | null; score: number; correctAnswers: number; totalAnswers?: number }>
   answeredCount: number
   totalGuests: number
 }
@@ -74,7 +81,13 @@ interface SessionStatus {
     points: number
     imageUrl?: string | null
     timeLimitSeconds?: number | null
+    correctAnswer?: string | null
   }
+  questionPhase?: string | null
+  questionOpenedAt?: number | null
+  questionClosesAt?: number | null
+  questionClosedAt?: number | null
+  ranking?: Array<{ guestId?: string; id?: string; nickname: string; avatarEmoji: string | null; score: number; correctAnswers: number; totalAnswers?: number }>
 }
 
 interface AnswerFeedback {
@@ -127,7 +140,7 @@ export default function JoinPage() {
   const [answerStats, setAnswerStats] = useState<AnswerStats | null>(null)
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [livePoints, setLivePoints] = useState<number | null>(null)
-  const [finalRanking, setFinalRanking] = useState<Array<{ id: string; nickname: string; avatarEmoji: string; score: number; correctAnswers: number; totalAnswers?: number }> | null>(null)
+  const [finalRanking, setFinalRanking] = useState<Array<{ id: string; nickname: string; avatarEmoji: string | null; score: number; correctAnswers: number; totalAnswers?: number }> | null>(null)
 
   const questionStartRef = useRef<number>(0)
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -136,6 +149,23 @@ export default function JoinPage() {
   const streakRef = useRef(streak)
   const codeInputRef = useRef<HTMLInputElement>(null)
   const currentQuestionIdRef = useRef<string>('')
+
+  const normalizeRanking = (ranking: Array<any> | undefined | null) =>
+    (ranking ?? []).map(r => ({
+      id: r.id ?? r.guestId,
+      nickname: r.nickname,
+      avatarEmoji: r.avatarEmoji ?? null,
+      score: Number(r.score || 0),
+      correctAnswers: Number(r.correctAnswers || 0),
+      totalAnswers: r.totalAnswers,
+    })).filter(r => r.id)
+
+  const loadFinalRanking = useCallback(async (sessionId: string) => {
+    try {
+      const res = await guestApi.ranking(sessionId)
+      setFinalRanking(normalizeRanking(res.data))
+    } catch {}
+  }, [])
 
   useEffect(() => { streakRef.current = streak }, [streak])
 
@@ -213,10 +243,31 @@ export default function JoinPage() {
       const res = await guestApi.getSessionStatus(sseSessionId)
       const status = res.data
       setSessionStatus(status)
+      if (status.questionPhase === 'REVEAL') {
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
+        setTimeLeft(0)
+        setAnswerFeedback(prev => prev?.revealed
+          ? prev
+          : prev
+            ? { ...prev, revealed: true }
+            : { questionId: status.currentQuestion?.id ?? currentQuestionIdRef.current, sent: false, isCorrect: false, pointsAwarded: 0, revealed: true })
+        setInterludeData({
+          ranking: normalizeRanking(status.ranking),
+          answeredCount: 0,
+          totalGuests: status.guestsCount ?? 0,
+        })
+        if (interludeTimerRef.current) clearTimeout(interludeTimerRef.current)
+        interludeTimerRef.current = setTimeout(() => setStep('interlude'), 1800)
+        return
+      }
       if (status.status === 'ACTIVE') setStep('active')
-      if (status.status === 'FINISHED') setStep('finished')
+      if (status.status === 'FINISHED') {
+        setFinalRanking(normalizeRanking(status.ranking))
+        loadFinalRanking(sseSessionId)
+        setStep('finished')
+      }
     } catch {}
-  }, [sseSessionId])
+  }, [sseSessionId, loadFinalRanking])
 
   const handleSSEEvent = useCallback((event: PlaySSEEvent) => {
     if (event.type === 'PING') return
@@ -229,7 +280,11 @@ export default function JoinPage() {
       setSseFallback(false)
       setSessionStatus((prev) => (prev ? { ...prev, ...event.data } : event.data))
       if (event.data?.status === 'ACTIVE') setStep('active')
-      if (event.data?.status === 'FINISHED') setStep('finished')
+      if (event.data?.status === 'FINISHED') {
+        if (event.data?.ranking) setFinalRanking(normalizeRanking(event.data.ranking))
+        loadFinalRanking(sseSessionId)
+        setStep('finished')
+      }
       return
     }
 
@@ -305,8 +360,15 @@ export default function JoinPage() {
     if (event.type === 'QUESTION_CLOSED') {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
       setTimeLeft(0)
+      if (event.data?.correctAnswer) {
+        setSessionStatus(prev => prev?.currentQuestion
+          ? { ...prev, currentQuestion: { ...prev.currentQuestion, correctAnswer: event.data.correctAnswer }, questionPhase: 'REVEAL' }
+          : prev)
+      } else {
+        setSessionStatus(prev => prev ? { ...prev, questionPhase: 'REVEAL' } : prev)
+      }
       setInterludeData({
-        ranking: event.data.ranking ?? [],
+        ranking: normalizeRanking(event.data.ranking),
         answeredCount: event.data.answeredCount ?? 0,
         totalGuests: event.data.totalGuests ?? 0,
       })
@@ -343,12 +405,13 @@ export default function JoinPage() {
       if (interludeTimerRef.current) clearTimeout(interludeTimerRef.current)
       if (soundEnabledRef.current) playSound('winner')
       fireConfetti('celebration')
-      if (event.data?.ranking) setFinalRanking(event.data.ranking)
+      if (event.data?.ranking) setFinalRanking(normalizeRanking(event.data.ranking))
+      else loadFinalRanking(sseSessionId)
       setSessionStatus((prev) => (prev ? { ...prev, status: 'FINISHED' } : prev))
       setStep('finished')
       return
     }
-  }, [session?.guestsCount, session?.title, sseSessionId])
+  }, [session?.guestsCount, session?.title, sseSessionId, loadFinalRanking])
 
   usePlaySSE({
     sessionId: sseSessionId,
@@ -755,9 +818,12 @@ export default function JoinPage() {
                 <p className="text-xs text-gray-400 text-center mb-2">Reacciona mientras esperas</p>
                 <div className="flex justify-center gap-2">
                   {REACTIONS.map(r => (
-                    <button key={r} onClick={() => handleReaction(r)}
-                      className={`text-xl p-2 rounded-xl transition-all ${reactionCooldown ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100 active:scale-125'}`}
-                    >{r}</button>
+                    <button key={r.emoji} type="button" title={r.label} aria-label={r.label} onClick={() => handleReaction(r.emoji)}
+                      className={`flex flex-col items-center gap-0.5 text-xl px-2 py-1.5 rounded-xl transition-all ${reactionCooldown ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100 active:scale-125'}`}
+                    >
+                      <span>{r.emoji}</span>
+                      <span className="text-[9px] text-gray-400 leading-none">{r.label}</span>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -877,6 +943,11 @@ export default function JoinPage() {
                   </motion.div>
                 )}
               </AnimatePresence>
+              {isRevealed && q.correctAnswer && (
+                <div className="mt-3 rounded-xl bg-white/15 px-3 py-2 text-center text-xs font-semibold text-white">
+                  Respuesta correcta: {q.correctAnswer}
+                </div>
+              )}
 
               {/* Timer bar */}
               {!isRevealed && timeLeft !== null && q.timeLimitSeconds && (
@@ -1052,11 +1123,11 @@ export default function JoinPage() {
               {/* Reactions bar */}
               <div className="border-t border-gray-100 mt-4 pt-3 flex justify-center gap-2">
                 {REACTIONS.map(r => (
-                  <button key={r} onClick={() => handleReaction(r)}
+                  <button key={r.emoji} type="button" title={r.label} aria-label={r.label} onClick={() => handleReaction(r.emoji)}
                     className={`text-lg p-1.5 rounded-xl transition-all ${
                       reactionCooldown ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-100 active:scale-125'
                     }`}
-                  >{r}</button>
+                  >{r.emoji}</button>
                 ))}
               </div>
 
@@ -1161,6 +1232,7 @@ export default function JoinPage() {
         {step === 'finished' && (() => {
           const myPos = finalRanking ? finalRanking.findIndex(r => r.id === guestId) + 1 : 0
           const myData = finalRanking?.find(r => r.id === guestId)
+          const displayScore = myData?.score ?? totalScore
           const accuracy = myData && (myData.totalAnswers ?? 0) > 0
             ? Math.round((myData.correctAnswers / myData.totalAnswers!) * 100)
             : null
@@ -1183,11 +1255,22 @@ export default function JoinPage() {
               </div>
 
               <div className="p-5">
+                {finalRanking && finalRanking.length > 0 && (
+                  <div className="rounded-2xl bg-gradient-to-br from-violet-700 via-fuchsia-600 to-purple-700 px-2 pt-2 mb-5 overflow-hidden">
+                    <p className="text-center text-xs font-black uppercase tracking-wide text-white/80 mt-2">Podio final</p>
+                    <Podium entries={finalRanking.slice(0, 3).map((p, i) => ({
+                      name: p.nickname,
+                      score: p.score,
+                      rank: i + 1,
+                    }))} />
+                  </div>
+                )}
+
                 {/* Score + Accuracy */}
                 <div className="grid grid-cols-2 gap-3 mb-5">
                   <div className="bg-violet-50 rounded-2xl p-4 text-center">
                     <p className="text-xs text-violet-500 font-bold uppercase tracking-wide mb-1">Puntaje</p>
-                    <p className="text-3xl font-black text-violet-900">{totalScore}</p>
+                    <p className="text-3xl font-black text-violet-900">{displayScore}</p>
                     <p className="text-xs text-violet-400">pts</p>
                   </div>
                   {accuracy !== null ? (

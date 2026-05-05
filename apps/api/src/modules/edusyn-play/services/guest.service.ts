@@ -374,7 +374,7 @@ export class GuestService {
 
   /** Registra una reacción en vivo (💡 🤔 ❤ 👏) */
   async submitReaction(guestId: string, sessionId: string, emoji: string, slideIndex?: number) {
-    const allowed = ['💡', '🤔', '❤', '👏', '🔥', '👍'];
+    const allowed = ['💡', '🤔', '❤', '❤️', '👏', '🔥', '👍', '😮'];
     if (!allowed.includes(emoji)) {
       throw new BadRequestException('Emoji no permitido');
     }
@@ -423,6 +423,7 @@ export class GuestService {
 
   /** Estado público de la sesión para que los invitados hagan polling. */
   async getQuizSessionStatus(sessionId: string) {
+    await this.playService.ensureQuestionClosedIfExpired(sessionId);
     const session = await this.prisma.liveSession.findUnique({
       where: { id: sessionId },
       select: {
@@ -445,6 +446,7 @@ export class GuestService {
                 sortOrder: true,
                 imageUrl: true,
                 timeLimitSeconds: true,
+                correctAnswer: true,
               },
             },
           },
@@ -464,6 +466,8 @@ export class GuestService {
     // Apply questionOrder from config if shuffled
     let questions = session.activity.questions;
     const config = session.config as any;
+    const questionPhase = config?.questionPhase ?? null;
+    const isReveal = questionPhase === 'REVEAL' || questionPhase === 'FINISHED';
     if (config?.questionOrder && Array.isArray(config.questionOrder)) {
       const orderedIds = config.questionOrder as string[];
       questions = orderedIds
@@ -481,6 +485,7 @@ export class GuestService {
       sortOrder: number;
       imageUrl: string | null;
       timeLimitSeconds: number | null;
+      correctAnswer?: string | null;
     } | null = null;
     if (session.status === 'ACTIVE' && session.currentQuestionIdx >= 0 && session.currentQuestionIdx < questions.length) {
       const q = questions[session.currentQuestionIdx];
@@ -493,8 +498,11 @@ export class GuestService {
         sortOrder: q.sortOrder,
         imageUrl: (q as any).imageUrl ?? null,
         timeLimitSeconds: (q as any).timeLimitSeconds ?? null,
+        ...(isReveal && { correctAnswer: (q as any).correctAnswer ?? null }),
       };
     }
+
+    const ranking = await this.ranking(sessionId);
 
     return {
       id: session.id,
@@ -505,6 +513,12 @@ export class GuestService {
       totalQuestions: questions.length,
       currentQuestion,
       guests: lobbyGuests,
+      questionPhase,
+      questionOpenedAt: config?.questionOpenedAt ?? null,
+      questionClosesAt: config?.questionClosesAt ?? null,
+      questionClosedAt: config?.questionClosedAt ?? null,
+      closedQuestionIdx: config?.closedQuestionIdx ?? null,
+      ranking,
     };
   }
 }

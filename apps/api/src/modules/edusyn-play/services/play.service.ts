@@ -26,6 +26,33 @@ export class PlayService {
     return ws.classroomId;
   }
 
+  private getConfigObject(config: unknown): Record<string, any> {
+    return config && typeof config === 'object' && !Array.isArray(config) ? { ...(config as Record<string, any>) } : {};
+  }
+
+  private getQuestionPhaseConfig(config: unknown) {
+    const cfg = this.getConfigObject(config);
+    return {
+      questionPhase: cfg.questionPhase ?? null,
+      questionOpenedAt: cfg.questionOpenedAt ?? null,
+      questionClosesAt: cfg.questionClosesAt ?? null,
+      questionClosedAt: cfg.questionClosedAt ?? null,
+      closedQuestionIdx: cfg.closedQuestionIdx ?? null,
+    };
+  }
+
+  private async updateSessionConfig(sessionId: string, patch: Record<string, any>) {
+    const session = await this.prisma.liveSession.findUnique({
+      where: { id: sessionId },
+      select: { config: true },
+    });
+    const config = this.getConfigObject(session?.config);
+    await this.prisma.liveSession.update({
+      where: { id: sessionId },
+      data: { config: { ...config, ...patch } },
+    });
+  }
+
   async dashboard(userId: string) {
     const classroomId = await this.resolveClassroom(userId);
     const now = new Date();
@@ -508,7 +535,7 @@ export class PlayService {
         joinCode,
         guestMode: 'GUESTS_ONLY',
         guestsCount: 0,
-        config: { questionOrder },
+        config: { questionOrder, questionPhase: 'LOBBY' },
       },
     });
 
@@ -535,15 +562,28 @@ export class PlayService {
     if (session.status !== 'WAITING') throw new BadRequestException('La sesión ya fue iniciada');
 
     const now = new Date();
+    const firstQuestion = session.activity?.questions?.[0];
+    const openedAt = Date.now();
+    const firstTimeLimit = firstQuestion?.timeLimitSeconds && firstQuestion.timeLimitSeconds > 0 ? firstQuestion.timeLimitSeconds : 30;
     const updated = await this.prisma.liveSession.update({
       where: { id: sessionId },
-      data: { status: 'ACTIVE', startedAt: now, currentQuestionIdx: 0 },
+      data: {
+        status: 'ACTIVE',
+        startedAt: now,
+        currentQuestionIdx: 0,
+        config: {
+          ...this.getConfigObject(session.config),
+          questionPhase: 'ANSWERING',
+          questionOpenedAt: openedAt,
+          questionClosesAt: openedAt + firstTimeLimit * 1000,
+          questionClosedAt: null,
+          closedQuestionIdx: null,
+        },
+      },
     });
 
     // Emitir primera pregunta al iniciar
-    const firstQuestion = session.activity?.questions?.[0];
     if (firstQuestion) {
-      const openedAt = Date.now();
       // Clear idempotency guard for the first question
       this.lastClosedQuestionIdx.delete(sessionId);
       this.stream.emit(sessionId, {
@@ -559,7 +599,7 @@ export class PlayService {
             options: firstQuestion.options,
             points: firstQuestion.points,
             imageUrl: (firstQuestion as any).imageUrl ?? null,
-            timeLimitSeconds: firstQuestion.timeLimitSeconds ?? null,
+            timeLimitSeconds: firstQuestion.timeLimitSeconds ?? 30,
           },
         },
       });
@@ -594,7 +634,11 @@ export class PlayService {
       // Finish
       await this.prisma.liveSession.update({
         where: { id: sessionId },
-        data: { status: 'FINISHED', finishedAt: new Date() },
+        data: {
+          status: 'FINISHED',
+          finishedAt: new Date(),
+          config: { ...this.getConfigObject(session.config), questionPhase: 'FINISHED' },
+        },
       });
 
       // Calcular ranking final de invitados
@@ -614,13 +658,25 @@ export class PlayService {
       return { finished: true, currentQuestionIdx: nextIdx, totalQuestions };
     }
 
-    await this.prisma.liveSession.update({
-      where: { id: sessionId },
-      data: { currentQuestionIdx: nextIdx },
-    });
-
     const question = session.activity.questions[nextIdx];
     const openedAt = Date.now();
+    const timeLimit = (question as any).timeLimitSeconds && (question as any).timeLimitSeconds > 0 ? (question as any).timeLimitSeconds : 30;
+
+    await this.prisma.liveSession.update({
+      where: { id: sessionId },
+      data: {
+        currentQuestionIdx: nextIdx,
+        config: {
+          ...this.getConfigObject(session.config),
+          questionPhase: 'ANSWERING',
+          questionOpenedAt: openedAt,
+          questionClosesAt: openedAt + timeLimit * 1000,
+          questionClosedAt: null,
+          closedQuestionIdx: null,
+        },
+      },
+    });
+
     this.stream.emit(sessionId, {
       type: 'QUESTION_OPENED',
       data: {
@@ -634,7 +690,7 @@ export class PlayService {
           options: question.options,
           points: question.points,
           imageUrl: (question as any).imageUrl ?? null,
-          timeLimitSeconds: (question as any).timeLimitSeconds ?? null,
+          timeLimitSeconds: (question as any).timeLimitSeconds ?? 30,
         },
       },
     });
@@ -657,6 +713,7 @@ export class PlayService {
   }
 
   async getLiveQuizStatus(userId: string, sessionId: string) {
+    await this.ensureQuestionClosedIfExpired(sessionId);
     const classroomId = await this.resolveClassroom(userId);
     const session = await this.prisma.liveSession.findFirst({
       where: { id: sessionId, classroomId, teacherId: userId },
@@ -664,7 +721,7 @@ export class PlayService {
         activity: {
           select: {
             title: true,
-            questions: { orderBy: { sortOrder: 'asc' }, select: { id: true, type: true, text: true, options: true, points: true } },
+            questions: { orderBy: { sortOrder: 'asc' }, select: { id: true, type: true, text: true, options: true, points: true, timeLimitSeconds: true, imageUrl: true } },
           },
         },
       },
@@ -687,6 +744,7 @@ export class PlayService {
       totalQuestions: session.activity.questions.length,
       questions: session.activity.questions,
       guests,
+      ...this.getQuestionPhaseConfig(session.config),
     };
   }
 
@@ -698,7 +756,11 @@ export class PlayService {
     if (!session) throw new NotFoundException('Sesión no encontrada');
     await this.prisma.liveSession.update({
       where: { id: sessionId },
-      data: { status: 'FINISHED', finishedAt: new Date() },
+      data: {
+        status: 'FINISHED',
+        finishedAt: new Date(),
+        config: { ...this.getConfigObject(session.config), questionPhase: 'FINISHED' },
+      },
     });
     const guests = await this.prisma.liveSessionGuest.findMany({
       where: { sessionId },
@@ -721,18 +783,20 @@ export class PlayService {
     const classroomId = await this.resolveClassroom(userId);
     const pending = await this.prisma.liveSession.findMany({
       where: { classroomId, teacherId: userId, status: { in: ['WAITING', 'ACTIVE'] } },
-      select: { id: true },
+      select: { id: true, config: true },
     });
 
     if (pending.length === 0) return { closed: 0 };
 
-    const result = await this.prisma.liveSession.updateMany({
-      where: { id: { in: pending.map(s => s.id) } },
-      data: { status: 'FINISHED', finishedAt: new Date() },
-    });
-
-    // Limpiar streams y timers en memoria
     for (const s of pending) {
+      await this.prisma.liveSession.update({
+        where: { id: s.id },
+        data: {
+          status: 'FINISHED',
+          finishedAt: new Date(),
+          config: { ...this.getConfigObject(s.config), questionPhase: 'FINISHED' },
+        },
+      });
       this.stream.emit(s.id, { type: 'SESSION_FINISHED', data: { ranking: [] } });
       this.stream.finishStream(s.id);
       this.guestTokenService.revokeSession(s.id);
@@ -740,7 +804,7 @@ export class PlayService {
       this.questionOpenedAt.delete(s.id);
     }
 
-    return { closed: result.count };
+    return { closed: pending.length };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -786,6 +850,23 @@ export class PlayService {
     return false;
   }
 
+  async ensureQuestionClosedIfExpired(sessionId: string): Promise<void> {
+    const session = await this.prisma.liveSession.findUnique({
+      where: { id: sessionId },
+      select: { status: true, currentQuestionIdx: true, config: true },
+    });
+    const config = this.getConfigObject(session?.config);
+    if (
+      session?.status === 'ACTIVE' &&
+      config.questionPhase === 'ANSWERING' &&
+      typeof config.questionClosesAt === 'number' &&
+      Date.now() >= config.questionClosesAt
+    ) {
+      this.cancelQuestionClose(sessionId);
+      await this.emitQuestionClosed(sessionId, session.currentQuestionIdx);
+    }
+  }
+
   /**
    * Cierra la pregunta actual sin avanzar a la siguiente.
    * Útil para que el docente cierre manualmente antes de que acabe el tiempo.
@@ -810,13 +891,44 @@ export class PlayService {
     // Get answer stats for this question index
     const session = await this.prisma.liveSession.findUnique({
       where: { id: sessionId },
-      select: { guestsCount: true, config: true },
+      select: {
+        guestsCount: true,
+        config: true,
+        activity: {
+          select: {
+            questions: {
+              orderBy: { sortOrder: 'asc' },
+              select: { id: true, correctAnswer: true, options: true },
+            },
+          },
+        },
+      },
     });
+    const config = this.getConfigObject(session?.config);
+    let questions = session?.activity?.questions ?? [];
+    if (config.questionOrder && Array.isArray(config.questionOrder)) {
+      questions = config.questionOrder
+        .map((id: string) => questions.find(q => q.id === id))
+        .filter(Boolean) as typeof questions;
+    }
+    const question = questions[questionIdx];
     const answeredCount = await this.prisma.liveSessionGuestAnswer.count({
       where: {
+        ...(question?.id ? { questionId: question.id } : {}),
         guest: { sessionId },
       },
     });
+    const answers = question?.id
+      ? await this.prisma.liveSessionGuestAnswer.groupBy({
+          by: ['selectedOption'],
+          where: { questionId: question.id, guest: { sessionId } },
+          _count: { _all: true },
+        })
+      : [];
+    const optionStats = answers.map(a => ({
+      selectedOption: a.selectedOption,
+      count: a._count._all,
+    }));
     // Top-5 ranking for reveal
     const ranking = await this.prisma.liveSessionGuest.findMany({
       where: { sessionId },
@@ -824,12 +936,20 @@ export class PlayService {
       take: 5,
       select: { id: true, nickname: true, avatarEmoji: true, score: true, correctAnswers: true, totalAnswers: true },
     });
+    await this.updateSessionConfig(sessionId, {
+      questionPhase: 'REVEAL',
+      questionClosedAt: Date.now(),
+      closedQuestionIdx: questionIdx,
+    });
     this.stream.emit(sessionId, {
       type: 'QUESTION_CLOSED',
       data: {
         questionIdx,
+        questionId: question?.id ?? null,
         answeredCount,
         totalGuests: session?.guestsCount ?? 0,
+        correctAnswer: question?.correctAnswer ?? null,
+        optionStats,
         ranking,
       },
     });
@@ -841,6 +961,7 @@ export class PlayService {
    * Retorna null si la sesión no existe o ya terminó.
    */
   async getSessionStateForSSE(sessionId: string): Promise<any | null> {
+    await this.ensureQuestionClosedIfExpired(sessionId);
     const session = await this.prisma.liveSession.findUnique({
       where: { id: sessionId },
       select: {
@@ -879,6 +1000,7 @@ export class PlayService {
       currentQuestionIdx: currentIdx,
       activityTitle: session.activity?.title,
       currentQuestion,
+      ...this.getQuestionPhaseConfig(session.config),
     };
   }
 

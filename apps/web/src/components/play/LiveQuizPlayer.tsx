@@ -56,6 +56,9 @@ interface LiveSessionState {
   guests?: LiveGuest[]
   currentQuestion?: LiveQuestion | null
   questionOpenedAt?: number | null
+  questionPhase?: string | null
+  questionClosesAt?: number | null
+  questionClosedAt?: number | null
   questionClosed?: boolean
 }
 
@@ -154,6 +157,11 @@ export default function LiveQuizPlayer({
   // F6.4: Server-driven timer using questionOpenedAt
   useEffect(() => {
     if (liveSession.status !== 'ACTIVE') return
+    if (liveSession.questionPhase === 'REVEAL' || liveSession.questionClosed) {
+      setQuestionClosed(true)
+      setTimeLeft(0)
+      return
+    }
     setQuestionClosed(false)
     const openedAt = liveSession.questionOpenedAt ?? Date.now()
     const totalMs = timeLimit * 1000
@@ -177,12 +185,16 @@ export default function LiveQuizPlayer({
       })
     }, 1000)
     return () => clearInterval(interval)
-  }, [liveSession.status, currentQuestion?.id, liveSession.questionOpenedAt, timeLimit])
+  }, [liveSession.status, currentQuestion?.id, liveSession.questionOpenedAt, liveSession.questionPhase, liveSession.questionClosed, timeLimit])
 
   // Reset closingQuestion state when question changes or closes
   useEffect(() => {
     setClosingQuestion(false)
   }, [currentQuestion?.id, liveSession.questionClosed])
+
+  useEffect(() => {
+    if (liveSession.questionPhase === 'REVEAL' || liveSession.questionClosed) setQuestionClosed(true)
+  }, [liveSession.questionPhase, liveSession.questionClosed])
 
   const podiumEntries = useMemo(() => {
     return (liveSession.guests || []).slice(0, 3).map((guest, index) => ({

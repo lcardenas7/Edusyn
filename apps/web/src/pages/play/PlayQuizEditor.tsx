@@ -396,12 +396,14 @@ export default function PlayQuizEditor() {
               totalQuestions: event.data.totalQuestions,
               currentQuestion: event.data.question,
               questionOpenedAt: event.data.questionOpenedAt ?? Date.now(),
+              questionPhase: 'ANSWERING',
+              questionClosed: false,
             }
           : prev
       )
     } else if (event.type === 'QUESTION_CLOSED') {
       setLiveSession((prev: any) =>
-        prev ? { ...prev, questionClosed: true } : prev
+        prev ? { ...prev, questionClosed: true, questionPhase: 'REVEAL' } : prev
       )
     } else if (event.type === 'ANSWER_STATS') {
       setAnswerStats(event.data)
