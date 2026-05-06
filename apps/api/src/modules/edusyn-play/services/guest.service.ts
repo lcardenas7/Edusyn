@@ -362,8 +362,7 @@ export class GuestService {
           });
           if (session?.status === 'ACTIVE') {
             this.playService.cancelQuestionClose(guest.sessionId);
-            // emitQuestionClosed is idempotent — safe even if timer already fired
-            this.playService.emitQuestionClosed(guest.sessionId, session.currentQuestionIdx).catch(() => {});
+            await this.playService.emitQuestionClosed(guest.sessionId, session.currentQuestionIdx);
           }
         }
       }

@@ -413,11 +413,6 @@ export default function PlayQuizEditor() {
       )
     } else if (event.type === 'ANSWER_STATS') {
       setAnswerStats(event.data)
-      if (event.data?.totalGuests > 0 && event.data?.answeredCount >= event.data.totalGuests) {
-        setLiveSession((prev: any) =>
-          prev ? { ...prev, questionClosed: true, questionPhase: 'REVEAL', questionClosedAt: Date.now() } : prev
-        )
-      }
     } else if (event.type === 'SESSION_PAUSED') {
       setIsPaused(true)
     } else if (event.type === 'SESSION_RESUMED') {
