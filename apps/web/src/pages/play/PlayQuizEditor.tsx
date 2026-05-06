@@ -402,11 +402,22 @@ export default function PlayQuizEditor() {
           : prev
       )
     } else if (event.type === 'QUESTION_CLOSED') {
+      setAnswerStats((prev: any) => prev ? {
+        ...prev,
+        answeredCount: event.data?.answeredCount ?? prev.answeredCount,
+        totalGuests: event.data?.totalGuests ?? prev.totalGuests,
+        percent: event.data?.totalGuests ? Math.round(((event.data?.answeredCount ?? 0) / event.data.totalGuests) * 100) : prev.percent,
+      } : prev)
       setLiveSession((prev: any) =>
-        prev ? { ...prev, questionClosed: true, questionPhase: 'REVEAL' } : prev
+        prev ? { ...prev, questionClosed: true, questionPhase: 'REVEAL', questionClosedAt: Date.now(), guests: event.data?.ranking ?? prev.guests } : prev
       )
     } else if (event.type === 'ANSWER_STATS') {
       setAnswerStats(event.data)
+      if (event.data?.totalGuests > 0 && event.data?.answeredCount >= event.data.totalGuests) {
+        setLiveSession((prev: any) =>
+          prev ? { ...prev, questionClosed: true, questionPhase: 'REVEAL', questionClosedAt: Date.now() } : prev
+        )
+      }
     } else if (event.type === 'SESSION_PAUSED') {
       setIsPaused(true)
     } else if (event.type === 'SESSION_RESUMED') {
@@ -429,7 +440,7 @@ export default function PlayQuizEditor() {
     if (!sseSessionId) return
     try {
       const status = await playPanelApi.getLiveQuizStatus(sseSessionId)
-      setLiveSession(status.data)
+      setLiveSession((prev: any) => prev ? { ...prev, ...status.data } : status.data)
     } catch {}
   }, [sseSessionId])
 
@@ -455,6 +466,18 @@ export default function PlayQuizEditor() {
     }, 8000)
     return () => clearInterval(interval)
   }, [liveSession?.id, liveSession?.status])
+
+  useEffect(() => {
+    const sessionId = liveSession?.id
+    if (!sessionId || liveSession?.status !== 'ACTIVE' || liveSession?.questionPhase === 'REVEAL' || liveSession?.questionClosed) return
+    const interval = setInterval(async () => {
+      try {
+        const res = await playPanelApi.getLiveQuizStatus(sessionId)
+        setLiveSession((prev: any) => prev ? { ...prev, ...res.data } : res.data)
+      } catch {}
+    }, 1500)
+    return () => clearInterval(interval)
+  }, [liveSession?.id, liveSession?.status, liveSession?.questionPhase, liveSession?.questionClosed])
 
   const handleLaunchLive = async () => {
     if (!quizId) return
@@ -506,6 +529,7 @@ export default function PlayQuizEditor() {
     if (!liveSession) return
     try {
       await playPanelApi.closeQuestion(liveSession.id)
+      setTimeout(() => handleFallbackPoll(), 300)
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al cerrar pregunta')
     }

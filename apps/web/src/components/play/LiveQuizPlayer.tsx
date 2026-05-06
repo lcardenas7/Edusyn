@@ -143,6 +143,7 @@ export default function LiveQuizPlayer({
   const timeLimit = currentQuestion?.timeLimitSeconds ?? 30
   const [timeLeft, setTimeLeft] = useState(timeLimit)
   const [questionClosed, setQuestionClosed] = useState(false)
+  const allAnswered = Boolean(answerStats?.totalGuests && answerStats.answeredCount >= answerStats.totalGuests)
 
   // F6.12 + F6.37: Confetti + sound + cargar stats al terminar
   useEffect(() => {
@@ -157,7 +158,7 @@ export default function LiveQuizPlayer({
   // F6.4: Server-driven timer using questionOpenedAt
   useEffect(() => {
     if (liveSession.status !== 'ACTIVE') return
-    if (liveSession.questionPhase === 'REVEAL' || liveSession.questionClosed) {
+    if (liveSession.questionPhase === 'REVEAL' || liveSession.questionClosed || allAnswered) {
       setQuestionClosed(true)
       setTimeLeft(0)
       return
@@ -185,7 +186,7 @@ export default function LiveQuizPlayer({
       })
     }, 1000)
     return () => clearInterval(interval)
-  }, [liveSession.status, currentQuestion?.id, liveSession.questionOpenedAt, liveSession.questionPhase, liveSession.questionClosed, timeLimit])
+  }, [liveSession.status, currentQuestion?.id, liveSession.questionOpenedAt, liveSession.questionPhase, liveSession.questionClosed, allAnswered, timeLimit])
 
   // Reset closingQuestion state when question changes or closes
   useEffect(() => {
@@ -193,8 +194,11 @@ export default function LiveQuizPlayer({
   }, [currentQuestion?.id, liveSession.questionClosed])
 
   useEffect(() => {
-    if (liveSession.questionPhase === 'REVEAL' || liveSession.questionClosed) setQuestionClosed(true)
-  }, [liveSession.questionPhase, liveSession.questionClosed])
+    if (liveSession.questionPhase === 'REVEAL' || liveSession.questionClosed || allAnswered) {
+      setQuestionClosed(true)
+      setTimeLeft(0)
+    }
+  }, [liveSession.questionPhase, liveSession.questionClosed, allAnswered])
 
   const podiumEntries = useMemo(() => {
     return (liveSession.guests || []).slice(0, 3).map((guest, index) => ({
@@ -460,9 +464,9 @@ export default function LiveQuizPlayer({
                     <span className="rounded-full bg-black/15 px-3 py-1">
                       {currentQuestion?.type || 'QUIZ'}
                     </span>
-                    {questionClosed && (
-                      <span className="rounded-full bg-rose-400/80 px-3 py-1 font-bold animate-pulse">
-                        ⏹ Pregunta cerrada
+                    {(questionClosed || allAnswered) && (
+                      <span className="rounded-full bg-emerald-400/90 px-3 py-1 font-bold text-emerald-950 animate-pulse">
+                        ✅ {allAnswered ? 'Todos respondieron' : 'Pregunta cerrada'}
                       </span>
                     )}
                   </div>
@@ -484,7 +488,7 @@ export default function LiveQuizPlayer({
               {/* F6.24: X/Y respondieron + ¡todos respondieron! banner */}
               {answerStats && answerStats.totalGuests > 0 && (
                 <div className={`rounded-xl px-4 py-3 transition-all ${
-                  answerStats.percent >= 100 && !questionClosed
+                  answerStats.percent >= 100
                     ? 'bg-emerald-500/30 ring-1 ring-emerald-300/50'
                     : 'bg-white/10'
                 }`}>
@@ -502,6 +506,21 @@ export default function LiveQuizPlayer({
                     }`} style={{ width: `${answerStats.percent}%` }} />
                   </div>
                 </div>
+              )}
+
+              {(questionClosed || liveSession.questionPhase === 'REVEAL') && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-2xl border border-emerald-200/40 bg-emerald-400/20 px-5 py-4 text-center shadow-lg"
+                >
+                  <p className="text-xl font-black text-white">
+                    {allAnswered ? '✅ Todos respondieron' : '⏹ Pregunta cerrada'}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-emerald-50">
+                    Revisa los resultados y cuando estés listo continúa con la siguiente pregunta.
+                  </p>
+                </motion.div>
               )}
 
               {/* F6.28: Presenter button */}
