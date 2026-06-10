@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { tenantContext } from './tenant-context';
 
@@ -19,8 +19,45 @@ const NON_DELEGATABLE = new Set([
   'then',    // Prevent Proxy from being treated as a thenable
 ]);
 
+/**
+ * Construye la URL de conexión asegurando un connection_limit/pool_timeout sanos.
+ *
+ * Sin esto, Prisma usa el default `num_cpus * 2 + 1`, que en los contenedores de
+ * Railway (≈5 CPUs) da un pool de SOLO 11 conexiones. Como cada request autenticado
+ * abre una transacción interactiva (TenantContextInterceptor) que retiene 1 conexión
+ * durante todo el request, cuando un curso entero responde un "Quiz en Casa" al mismo
+ * tiempo, el request #12 espera por una conexión libre y falla con P2024 → "solo 11
+ * podían responder". Aquí elevamos el pool (configurable) para soportar cursos completos.
+ */
+function buildDatabaseUrl(): string | undefined {
+  const raw = process.env.DATABASE_URL;
+  if (!raw) return undefined;
+
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    // Si la URL no es parseable, devolvemos la original sin tocar
+    return raw;
+  }
+
+  const connectionLimit = process.env.DB_CONNECTION_LIMIT || '20';
+  const poolTimeout = process.env.DB_POOL_TIMEOUT || '20';
+
+  if (!url.searchParams.has('connection_limit')) {
+    url.searchParams.set('connection_limit', connectionLimit);
+  }
+  if (!url.searchParams.has('pool_timeout')) {
+    url.searchParams.set('pool_timeout', poolTimeout);
+  }
+
+  return url.toString();
+}
+
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
+  private static readonly logger = new Logger(PrismaService.name);
+
   /**
    * Access the raw PrismaClient, bypassing tenant context.
    * Used by TenantContextInterceptor to open the outer transaction.
@@ -29,7 +66,19 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
   declare readonly $raw: PrismaClient;
 
   constructor() {
-    super();
+    const datasourceUrl = buildDatabaseUrl();
+    super(datasourceUrl ? { datasourceUrl } : undefined);
+
+    if (datasourceUrl) {
+      try {
+        const parsed = new URL(datasourceUrl);
+        PrismaService.logger.log(
+          `Prisma pool configurado: connection_limit=${parsed.searchParams.get('connection_limit') ?? 'default'}, pool_timeout=${parsed.searchParams.get('pool_timeout') ?? 'default'}`,
+        );
+      } catch {
+        /* noop */
+      }
+    }
 
     const rawClient = this;
 
