@@ -1904,6 +1904,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
+  const [activityTypeFilter, setActivityTypeFilter] = useState<string>('ALL')
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [submissionsLoading, setSubmissionsLoading] = useState(false)
 
@@ -2190,6 +2191,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   useEffect(() => { loadActivities() }, [loadActivities])
+  useEffect(() => { setActivityTypeFilter('ALL') }, [classroom.id])
 
   // Check for active live session (student AND teacher for async home)
   useEffect(() => {
@@ -4947,6 +4949,10 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   // ── ACTIVITIES LIST VIEW ──
+  const filteredActivities = activityTypeFilter === 'ALL'
+    ? activities
+    : activities.filter(a => a.type === activityTypeFilter)
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -4962,6 +4968,45 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           </div>
         )}
       </div>
+
+      {/* Activity type filter */}
+      {activities.length > 0 && (
+        <div className="flex gap-2 flex-wrap">
+          {([
+            { value: 'ALL', label: 'Todas', count: activities.length, color: 'slate' },
+            { value: 'TASK', label: 'Tareas', count: activities.filter(a => a.type === 'TASK').length, color: 'blue' },
+            { value: 'QUIZ', label: 'Quiz', count: activities.filter(a => a.type === 'QUIZ').length, color: 'purple' },
+            { value: 'EXAM', label: 'Examen', count: activities.filter(a => a.type === 'EXAM').length, color: 'red' },
+            { value: 'LIVE_QUIZ', label: 'En Línea', count: activities.filter(a => a.type === 'LIVE_QUIZ').length, color: 'violet' },
+            { value: 'HOME_QUIZ', label: 'En Casa', count: activities.filter(a => a.type === 'HOME_QUIZ').length, color: 'pink' },
+            { value: 'ICFES_SIMULATOR', label: 'ICFES', count: activities.filter(a => a.type === 'ICFES_SIMULATOR').length, color: 'emerald' },
+            { value: 'LESSON', label: 'Lecciones', count: activities.filter(a => a.type === 'LESSON').length, color: 'violet' },
+          ] as { value: string; label: string; count: number; color: string }[])
+            .filter(t => t.value === 'ALL' || t.count > 0)
+            .map(tab => {
+              const isActive = activityTypeFilter === tab.value
+              const colorStyles: Record<string, string> = {
+                slate: isActive ? 'border-slate-600 bg-slate-600 text-white' : 'border-slate-200 text-slate-500 hover:border-slate-400',
+                blue: isActive ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 text-slate-500 hover:border-blue-300',
+                purple: isActive ? 'border-purple-600 bg-purple-600 text-white' : 'border-slate-200 text-slate-500 hover:border-purple-300',
+                red: isActive ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200 text-slate-500 hover:border-red-300',
+                violet: isActive ? 'border-violet-600 bg-violet-600 text-white' : 'border-slate-200 text-slate-500 hover:border-violet-300',
+                pink: isActive ? 'border-pink-600 bg-pink-600 text-white' : 'border-slate-200 text-slate-500 hover:border-pink-300',
+                emerald: isActive ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 text-slate-500 hover:border-emerald-300',
+              }
+              return (
+                <button
+                  key={tab.value}
+                  onClick={() => setActivityTypeFilter(tab.value)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all ${colorStyles[tab.color] || colorStyles.slate}`}
+                >
+                  {tab.label}
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>{tab.count}</span>
+                </button>
+              )
+            })}
+        </div>
+      )}
 
       {showValeriaModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowValeriaModal(false)}>
@@ -5330,9 +5375,15 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           <p className="text-lg font-medium text-slate-500">{isTeacher ? 'No has creado actividades aún' : 'No hay actividades publicadas'}</p>
           {isTeacher && <p className="text-base mt-1 text-slate-400">Crea tu primera tarea para que los estudiantes puedan entregar</p>}
         </div>
+      ) : filteredActivities.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
+          <ClipboardList className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+          <p className="text-base font-medium text-slate-500">Sin actividades de este tipo</p>
+          <button onClick={() => setActivityTypeFilter('ALL')} className="mt-2 text-sm text-blue-600 hover:underline">Ver todas</button>
+        </div>
       ) : (
         <div className="space-y-3">
-          {activities.map(act => {
+          {filteredActivities.map(act => {
             const statusInfo = act.isPublished ? { bg: 'bg-green-50', text: 'text-green-600', label: 'Publicada' } : { bg: 'bg-slate-100', text: 'text-slate-500', label: 'Borrador' }
             const duePast = isDuePast(act.dueDate)
             const studentSub = act.submissions?.[0]
@@ -5340,13 +5391,19 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             return (
               <button key={act.id} onClick={() => openActivity(act)} className="w-full text-left bg-white rounded-2xl border-2 border-slate-200 hover:border-blue-300 p-5 transition-all hover:shadow-sm group">
                 <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                    {isLesson(act.type) ? <BookOpen className="w-6 h-6 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-6 h-6 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : act.type === 'LIVE_QUIZ' ? 'bg-violet-100' : act.type === 'HOME_QUIZ' ? 'bg-pink-50' : act.type === 'EXAM' ? 'bg-red-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                    {isLesson(act.type) ? <BookOpen className="w-6 h-6 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-6 h-6 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : act.type === 'LIVE_QUIZ' ? <Zap className="w-6 h-6 text-violet-700" /> : act.type === 'HOME_QUIZ' ? <Home className="w-6 h-6 text-pink-600" /> : act.type === 'EXAM' ? <Award className="w-6 h-6 text-red-500" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <h3 className="text-base font-bold text-slate-800 group-hover:text-blue-700">{act.title}</h3>
                       <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>
+                      {act.type === 'TASK' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700">Tarea</span>}
+                      {act.type === 'QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-purple-50 text-purple-700">Quiz</span>}
+                      {act.type === 'EXAM' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-red-50 text-red-700">Examen</span>}
+                      {act.type === 'LIVE_QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-violet-100 text-violet-800">⚡ Live Quiz</span>}
+                      {act.type === 'HOME_QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-pink-50 text-pink-700">🏠 En Casa</span>}
+                      {isIcfes(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700">ICFES</span>}
                       {isLesson(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-violet-50 text-violet-700">Lección</span>}
                       {isSelfAssessment(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-teal-50 text-teal-700">Autoevaluación</span>}
                       {studentStatus && (
