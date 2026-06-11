@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AcademicYearStatus, EnrollmentStatus, EnrollmentEventType, GradeStage } from '@prisma/client';
+import { AcademicYearStatus, EnrollmentStatus, EnrollmentEventType, GradeStage, RecoveryStatus } from '@prisma/client';
 import { InstitutionContextService } from '../institution-context/institution-context.service';
 import { AttendanceService } from '../attendance/attendance.service';
 import { StudentGradesService } from '../evaluation/student-grades.service';
@@ -348,8 +348,47 @@ export class AcademicYearLifecycleService {
   async validateYearForClosure(yearId: string): Promise<string[]> {
     const errors: string[] = [];
 
-    // Verificar que no haya matrículas sin resolver (ACTIVE sin notas)
-    // Esto es una validación opcional que puede ser más estricta según necesidades
+    // REGLA: No se puede cerrar el año si hay recuperaciones FINALES sin decidir.
+    // Cada plan de apoyo final (FinalRecoveryPlan) debe quedar resuelto:
+    //   - APPROVED      → aprobado
+    //   - NOT_APPROVED  → reprobado / pérdida de año
+    //   - CANCELLED     → anulado (también se considera resuelto)
+    // Cualquier otro estado está PENDIENTE y bloquea el cierre del año, porque
+    // determina la promoción/repitencia del estudiante.
+    const PENDING_FINAL_RECOVERY_STATUSES: RecoveryStatus[] = [
+      'PENDING',
+      'ASSIGNED',
+      'IN_PROGRESS',
+      'COMPLETED',
+      'REVIEW_PENDING',
+    ];
+
+    const pendingPlans = await this.prisma.finalRecoveryPlan.findMany({
+      where: {
+        academicYearId: yearId,
+        status: { in: PENDING_FINAL_RECOVERY_STATUSES },
+      },
+      include: {
+        studentEnrollment: { include: { student: true } },
+      },
+    });
+
+    if (pendingPlans.length > 0) {
+      const names = Array.from(
+        new Set(
+          pendingPlans.map(
+            (p) => `${p.studentEnrollment.student.firstName} ${p.studentEnrollment.student.lastName}`,
+          ),
+        ),
+      );
+      const preview = names.slice(0, 5).join(', ');
+      const extra = names.length > 5 ? ` y ${names.length - 5} más` : '';
+      errors.push(
+        `Hay ${pendingPlans.length} recuperación(es) final(es) sin decidir. ` +
+          `Cada plan de apoyo final debe quedar Aprobado o Reprobado antes de cerrar el año. ` +
+          `Estudiantes con recuperaciones pendientes: ${preview}${extra}.`,
+      );
+    }
 
     return errors;
   }
