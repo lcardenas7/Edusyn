@@ -206,7 +206,7 @@ export class AuthService {
   // validar en JwtStrategy.validate() que jti no esté revocado.
 
   private async signTokenForInstitution(
-    user: { id: string; email: string; firstName: string; lastName: string },
+    user: { id: string; email: string; firstName: string; lastName: string; mustChangePassword?: boolean },
     iu: {
       id: string;
       institutionId: string;
@@ -246,7 +246,7 @@ export class AuthService {
 
     return {
       access_token: accessToken,
-      mustChangePassword: false,
+      mustChangePassword: user.mustChangePassword === true,
       user: {
         id: user.id,
         email: user.email,

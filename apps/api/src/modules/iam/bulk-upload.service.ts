@@ -400,10 +400,15 @@ export class BulkUploadService {
           continue;
         }
 
-        // Generar username con regla consistente y contraseña = documento
+        // El documento es la contraseña inicial (onboarding) y el usuario debe
+        // cambiarla en el primer ingreso. Si no hay documento, no creamos una
+        // cuenta con contraseña compartida/débil: se rechaza la fila.
+        if (!row.documentNumber) {
+          result.errors.push({ row: rowNum, message: 'Número de documento requerido para generar credenciales', data: row });
+          continue;
+        }
         const username = await this.generateUsernameWithRole(row.firstName, row.lastName, row.documentNumber, 'DOCENTE');
-        const initialPassword = row.documentNumber || 'temporal123';
-        const passwordHash = await bcrypt.hash(initialPassword, 10);
+        const passwordHash = await bcrypt.hash(row.documentNumber, 10);
 
         // Crear usuario + dual-write en transacción
         const user = await this.prisma.$transaction(async (tx) => {
@@ -625,10 +630,14 @@ export class BulkUploadService {
           }
         }
 
-        // Generar username y contraseña para el usuario
+        // El documento es la contraseña inicial (onboarding) y el usuario debe
+        // cambiarla en el primer ingreso. Si no hay documento, se rechaza la fila.
+        if (!row.documentNumber) {
+          result.errors.push({ row: rowNum, message: 'Número de documento requerido para generar credenciales', data: row });
+          continue;
+        }
         const username = await this.generateUsernameWithRole(row.firstName, row.lastName, row.documentNumber, 'ESTUDIANTE');
-        const initialPassword = row.documentNumber;
-        const passwordHash = await bcrypt.hash(initialPassword, 10);
+        const passwordHash = await bcrypt.hash(row.documentNumber, 10);
         
         // Generar email si no tiene (requerido para User)
         const email = row.email || `${username}@estudiante.local`;
@@ -822,10 +831,15 @@ export class BulkUploadService {
           });
         }
 
-        // Generar username con regla consistente y contraseña = documento
+        // El documento es la contraseña inicial (onboarding) y el usuario debe
+        // cambiarla en el primer ingreso. Si no hay documento, no creamos una
+        // cuenta con contraseña compartida/débil: se rechaza la fila.
+        if (!row.documentNumber) {
+          result.errors.push({ row: rowNum, message: 'Número de documento requerido para generar credenciales', data: row });
+          continue;
+        }
         const username = await this.generateUsernameWithRole(row.firstName, row.lastName, row.documentNumber, row.role);
-        const initialPassword = row.documentNumber || 'temporal123';
-        const passwordHash = await bcrypt.hash(initialPassword, 10);
+        const passwordHash = await bcrypt.hash(row.documentNumber, 10);
 
         // Crear usuario + dual-write en transacción
         const user = await this.prisma.$transaction(async (tx) => {
