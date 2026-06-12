@@ -2319,18 +2319,19 @@ export class ClassroomService {
     // Resolve scale from Institution.academicLevelsConfig JSON
     const scaleInfo = await this.resolveScale(classroom.institutionId, grade.stage, grade.name);
 
-    // Only OPEN terms are valid sync targets. CLOSED/FINALIZED are excluded.
+    // Include OPEN and CLOSED terms so the user has full visibility; only OPEN is selectable.
+    // FINALIZED is excluded (the academic year is locked).
     const allTerms = await this.prisma.academicTerm.findMany({
       where: {
         academicYearId: ta.academicYearId,
-        status: 'OPEN',
+        status: { in: ['OPEN', 'CLOSED'] },
       },
       orderBy: { order: 'asc' },
       select: { id: true, name: true, status: true, order: true },
     });
 
-    // Default active term: most recent OPEN (highest order)
-    const activeTerm = allTerms.length > 0 ? allTerms[allTerms.length - 1] : null;
+    // Default active term: most recent OPEN (no fallback to CLOSED — CLOSED is not selectable for sync)
+    const activeTerm = [...allTerms].reverse().find(t => t.status === 'OPEN') ?? null;
 
     // Get existing PartialGrades grouped by term so the frontend can switch periods instantly
     const allTermIds = allTerms.map(t => t.id);

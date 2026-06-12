@@ -4701,12 +4701,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               <div className="p-5 space-y-4">
                 {!gradebookConfig?.academicTermId && (
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
-                    ⚠️ No hay períodos académicos abiertos. Solo se permite vincular y sincronizar a períodos en estado <strong>Abierto</strong>. Reabra un período o cree uno nuevo para continuar.
+                    ⚠️ No hay períodos académicos abiertos. Solo se permite sincronizar a períodos en estado <strong>Abierto</strong>. Reabra un período cerrado o cree uno nuevo para continuar.
                   </div>
                 )}
                 {gradebookConfig?.availableTerms?.length > 0 && (
                   <>
-                    {/* Period selector — always visible when terms exist */}
+                    {/* Period selector — shows all terms; CLOSED are disabled */}
                     <div className="space-y-2">
                       <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide">Período destino</label>
                       <select
@@ -4715,10 +4715,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                       >
                         {(gradebookConfig.availableTerms || []).map((t: any) => (
-                          <option key={t.id} value={t.id}>{t.name} — Activo</option>
+                          <option key={t.id} value={t.id} disabled={t.status !== 'OPEN'}>
+                            {t.name} {t.status === 'OPEN' ? '— Activo' : '— Cerrado (no disponible)'}
+                          </option>
                         ))}
                       </select>
-                      <p className="text-xs text-slate-500">Solo se muestran períodos abiertos. Los cerrados o finalizados no admiten sincronización.</p>
+                      <p className="text-xs text-slate-500">Solo los períodos <strong>Activos</strong> son sincronizables. Los cerrados aparecen para referencia.</p>
                     </div>
                     <div className="text-xs text-slate-500">Escala: {gradebookConfig.scale.min} – {gradebookConfig.scale.max}</div>
                     <label className="flex items-center gap-3">
@@ -4755,7 +4757,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               </div>
               <div className="p-5 border-t border-slate-200 flex justify-end gap-3">
                 <button onClick={() => setShowGradebookLink(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
-                <button onClick={handleSaveGradebookLink} disabled={savingLink || !gradebookConfig?.availableTerms?.length || (gradebookLinkForm.syncToGradebook && !gradebookLinkForm.gradebookComponent)} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+                <button onClick={handleSaveGradebookLink} disabled={savingLink || !gradebookConfig?.academicTermId || (gradebookLinkForm.syncToGradebook && !gradebookLinkForm.gradebookComponent)} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
                   {savingLink && <Loader2 className="w-4 h-4 animate-spin" />} Guardar
                 </button>
               </div>
@@ -4779,7 +4781,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                         className="text-xs px-2 py-1 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400"
                       >
                         {(gradebookConfig.availableTerms || []).map((t: any) => (
-                          <option key={t.id} value={t.id}>{t.name} (Activo)</option>
+                          <option key={t.id} value={t.id} disabled={t.status !== 'OPEN'}>
+                            {t.name} {t.status === 'OPEN' ? '(Activo)' : '(Cerrado)'}
+                          </option>
                         ))}
                       </select>
                     </div>
