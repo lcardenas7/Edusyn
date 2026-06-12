@@ -1874,7 +1874,7 @@ interface Activity {
   id: string; sectionId: string; classroomId: string; type: string;
   title: string; description?: string; maxScore?: number;
   dueDate?: string; openDate?: string; allowLateSubmit: boolean;
-  isVisible: boolean; isPublished: boolean; scheduledPublishAt?: string | null; metadata?: any;
+  isVisible: boolean; isPublished: boolean; scheduledPublishAt?: string | null; publishedAt?: string | null; metadata?: any;
   syncToGradebook?: boolean; gradebookComponent?: string; gradebookIndex?: number;
   createdAt: string; updatedAt: string;
   section?: { id: string; title: string };
@@ -2006,6 +2006,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [syncing, setSyncing] = useState(false)
   const [syncIncludeConflicts, setSyncIncludeConflicts] = useState(false)
   const [syncIncludeNoSubmission, setSyncIncludeNoSubmission] = useState(false)
+  const [selectedTermId, setSelectedTermId] = useState<string | null>(null)
+  const [previousVisitAt, setPreviousVisitAt] = useState<Date | null>(null)
 
   const sections: Section[] = classroom.sections || []
 
@@ -2193,6 +2195,15 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   useEffect(() => { loadActivities() }, [loadActivities])
   useEffect(() => { setActivityTypeFilter('ALL') }, [classroom.id])
 
+  // Track last visit per classroom to highlight NEW activities for students
+  useEffect(() => {
+    if (!isStudent) return
+    const key = `classroom_visited_${classroom.id}`
+    const stored = localStorage.getItem(key)
+    setPreviousVisitAt(stored ? new Date(stored) : null)
+    localStorage.setItem(key, new Date().toISOString())
+  }, [classroom.id, isStudent])
+
   // Check for active live session (student AND teacher for async home)
   useEffect(() => {
     liveSessionApi.getActive(classroom.id).then(({ data }) => {
@@ -2318,6 +2329,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     try {
       const { data } = await classroomApi.getGradebookConfig(classroom.id)
       setGradebookConfig(data)
+      if (data.academicTermId) setSelectedTermId(data.academicTermId)
     } catch {}
   }
 
@@ -2351,7 +2363,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     setSyncIncludeConflicts(false)
     setSyncIncludeNoSubmission(false)
     try {
-      const { data } = await classroomApi.previewGradebookSync(selectedActivity.id)
+      const { data } = await classroomApi.previewGradebookSync(selectedActivity.id, selectedTermId || undefined)
       setSyncPreview(data)
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al cargar preview')
@@ -2366,6 +2378,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       const { data } = await classroomApi.syncToGradebook(selectedActivity.id, {
         includeConflicts: syncIncludeConflicts,
         includeNoSubmission: syncIncludeNoSubmission,
+        academicTermId: selectedTermId || undefined,
       })
       setShowSyncPreview(false)
       alert(`✅ Sincronización completada:\n• ${data.synced} notas escritas\n• ${data.skipped} omitidas\n${data.errors?.length ? '• ' + data.errors.length + ' errores' : ''}`)
@@ -4689,11 +4702,34 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 {!gradebookConfig?.academicTermId && (
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">No hay período académico activo. Configure los períodos primero.</div>
                 )}
-                {gradebookConfig?.academicTermId && (
+                {(gradebookConfig?.availableTerms?.length > 0 || gradebookConfig?.academicTermId) && (
                   <>
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
-                      Período: <strong>{gradebookConfig.academicTermName}</strong> · Escala: {gradebookConfig.scale.min} - {gradebookConfig.scale.max}
+                    {/* Period selector */}
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide">Período destino</label>
+                      {gradebookConfig.availableTerms?.length > 1 ? (
+                        <select
+                          value={selectedTermId || ''}
+                          onChange={e => setSelectedTermId(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        >
+                          {(gradebookConfig.availableTerms || []).map((t: any) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name}{t.status === 'OPEN' ? ' — Activo' : ' — Cerrado'}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                          {gradebookConfig.academicTermName}
+                          <span className="ml-2 text-xs font-medium text-blue-500">{gradebookConfig.academicTermStatus === 'OPEN' ? '(Activo)' : '(Cerrado)'}</span>
+                        </div>
+                      )}
+                      {selectedTermId && gradebookConfig.availableTerms?.find((t: any) => t.id === selectedTermId)?.status === 'CLOSED' && (
+                        <p className="text-xs text-amber-600">⚠️ Período cerrado — las notas se registrarán pero el período no puede reabrirse fácilmente.</p>
+                      )}
                     </div>
+                    <div className="text-xs text-slate-500">Escala: {gradebookConfig.scale.min} – {gradebookConfig.scale.max}</div>
                     <label className="flex items-center gap-3">
                       <input type="checkbox" checked={gradebookLinkForm.syncToGradebook} onChange={e => setGradebookLinkForm(f => ({ ...f, syncToGradebook: e.target.checked }))} className="w-4 h-4 rounded text-blue-600" />
                       <span className="text-sm font-medium text-slate-700">Sincronizar con planilla</span>
@@ -4736,9 +4772,26 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         {showSyncPreview && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowSyncPreview(false)}>
             <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-              <div className="p-5 border-b border-slate-200 flex items-center justify-between shrink-0">
-                <h3 className="font-bold text-slate-800">Preview de sincronización</h3>
-                <button onClick={() => setShowSyncPreview(false)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button>
+              <div className="p-5 border-b border-slate-200 flex items-center justify-between shrink-0 gap-4">
+                <div>
+                  <h3 className="font-bold text-slate-800">Preview de sincronización</h3>
+                  {gradebookConfig?.availableTerms?.length > 1 && (
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="text-xs text-slate-500">Período:</span>
+                      <select
+                        value={selectedTermId || ''}
+                        onChange={e => { setSelectedTermId(e.target.value); setSyncPreview(null) }}
+                        className="text-xs px-2 py-1 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      >
+                        {(gradebookConfig.availableTerms || []).map((t: any) => (
+                          <option key={t.id} value={t.id}>{t.name}{t.status === 'OPEN' ? ' (Activo)' : ' (Cerrado)'}</option>
+                        ))}
+                      </select>
+                      {syncPreview === null && <span className="text-xs text-amber-600">Recarga el preview después de cambiar el período.</span>}
+                    </div>
+                  )}
+                </div>
+                <button onClick={() => setShowSyncPreview(false)} className="p-1 hover:bg-slate-100 rounded-lg shrink-0"><X className="w-5 h-5 text-slate-400" /></button>
               </div>
               <div className="p-5 overflow-y-auto flex-1">
                 {syncPreviewLoading ? (
@@ -4952,6 +5005,55 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const filteredActivities = activityTypeFilter === 'ALL'
     ? activities
     : activities.filter(a => a.type === activityTypeFilter)
+
+  // Helper: true if activity was published after the student's last visit
+  const isNewActivity = (act: Activity) => {
+    if (!isStudent || !previousVisitAt || !act.publishedAt) return false
+    return new Date(act.publishedAt) > previousVisitAt
+  }
+
+  // Helper: richer student status derived from submission state + due date
+  const getStudentTaskStatus = (act: Activity) => {
+    const sub = act.submissions?.[0]
+    const now = new Date()
+    const dueDate = act.dueDate ? new Date(act.dueDate) : null
+    if (sub?.status === 'GRADED' || sub?.status === 'AUTO_GRADED') {
+      return { bg: 'bg-green-100', text: 'text-green-700', label: '✅ Calificada' }
+    }
+    if (sub?.status === 'RETURNED') {
+      return { bg: 'bg-orange-100', text: 'text-orange-700', label: '🔁 Para revisar' }
+    }
+    if (sub?.status === 'SUBMITTED' || sub?.status === 'LATE') {
+      return { bg: 'bg-blue-100', text: 'text-blue-700', label: '📤 Entregada' }
+    }
+    if (sub?.status === 'DRAFT') {
+      return { bg: 'bg-slate-100', text: 'text-slate-600', label: '✏️ En borrador' }
+    }
+    if (dueDate && now > dueDate) {
+      return { bg: 'bg-red-100', text: 'text-red-700', label: '⚠️ Vencida' }
+    }
+    if (dueDate) {
+      return { bg: 'bg-amber-50', text: 'text-amber-700', label: '⏳ Pendiente' }
+    }
+    return null
+  }
+
+  // Student stats summary across filtered activities
+  const studentStats = isStudent && filteredActivities.length > 0 ? (() => {
+    let done = 0, pending = 0, overdue = 0, review = 0
+    const now = new Date()
+    filteredActivities.forEach(act => {
+      const sub = act.submissions?.[0]
+      const dueDate = act.dueDate ? new Date(act.dueDate) : null
+      if (sub?.status === 'GRADED' || sub?.status === 'AUTO_GRADED' || sub?.status === 'SUBMITTED' || sub?.status === 'LATE') done++
+      else if (sub?.status === 'RETURNED') review++
+      else if (dueDate && now > dueDate) overdue++
+      else pending++
+    })
+    return { done, pending, overdue, review }
+  })() : null
+
+  const newActivityCount = isStudent ? filteredActivities.filter(isNewActivity).length : 0
 
   return (
     <div className="space-y-5">
@@ -5383,13 +5485,41 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         </div>
       ) : (
         <div className="space-y-3">
+          {/* Student summary bar */}
+          {studentStats && (
+            <div className="flex flex-wrap gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+              {newActivityCount > 0 && (
+                <span className="flex items-center gap-1 text-xs px-2.5 py-1 bg-yellow-100 text-yellow-800 rounded-full font-medium">
+                  🆕 {newActivityCount} nueva{newActivityCount !== 1 ? 's' : ''}
+                </span>
+              )}
+              <span className="flex items-center gap-1 text-xs px-2.5 py-1 bg-green-100 text-green-700 rounded-full">
+                ✅ {studentStats.done} realizada{studentStats.done !== 1 ? 's' : ''}
+              </span>
+              {studentStats.review > 0 && (
+                <span className="flex items-center gap-1 text-xs px-2.5 py-1 bg-orange-100 text-orange-700 rounded-full">
+                  🔁 {studentStats.review} para revisar
+                </span>
+              )}
+              {studentStats.overdue > 0 && (
+                <span className="flex items-center gap-1 text-xs px-2.5 py-1 bg-red-100 text-red-700 rounded-full">
+                  ⚠️ {studentStats.overdue} vencida{studentStats.overdue !== 1 ? 's' : ''}
+                </span>
+              )}
+              {studentStats.pending > 0 && (
+                <span className="flex items-center gap-1 text-xs px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full">
+                  ⏳ {studentStats.pending} pendiente{studentStats.pending !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+          )}
           {filteredActivities.map(act => {
+            const isNew = isNewActivity(act)
             const statusInfo = act.isPublished ? { bg: 'bg-green-50', text: 'text-green-600', label: 'Publicada' } : { bg: 'bg-slate-100', text: 'text-slate-500', label: 'Borrador' }
             const duePast = isDuePast(act.dueDate)
-            const studentSub = act.submissions?.[0]
-            const studentStatus = studentSub ? STATUS_COLORS[studentSub.status] : null
+            const studentStatus = isStudent ? getStudentTaskStatus(act) : null
             return (
-              <button key={act.id} onClick={() => openActivity(act)} className="w-full text-left bg-white rounded-2xl border-2 border-slate-200 hover:border-blue-300 p-5 transition-all hover:shadow-sm group">
+              <button key={act.id} onClick={() => openActivity(act)} className={`w-full text-left bg-white rounded-2xl border-2 p-5 transition-all hover:shadow-sm group ${isNew ? 'border-yellow-300 hover:border-yellow-400' : 'border-slate-200 hover:border-blue-300'}`}>
                 <div className="flex items-start gap-4">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : act.type === 'LIVE_QUIZ' ? 'bg-violet-100' : act.type === 'HOME_QUIZ' ? 'bg-pink-50' : act.type === 'EXAM' ? 'bg-red-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
                     {isLesson(act.type) ? <BookOpen className="w-6 h-6 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-6 h-6 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : act.type === 'LIVE_QUIZ' ? <Zap className="w-6 h-6 text-violet-700" /> : act.type === 'HOME_QUIZ' ? <Home className="w-6 h-6 text-pink-600" /> : act.type === 'EXAM' ? <Award className="w-6 h-6 text-red-500" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
@@ -5397,7 +5527,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <h3 className="text-base font-bold text-slate-800 group-hover:text-blue-700">{act.title}</h3>
-                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>
+                      {isNew && <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-yellow-100 text-yellow-800 border border-yellow-300">NUEVO</span>}
+                      {!isStudent && <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>}
                       {act.type === 'TASK' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700">Tarea</span>}
                       {act.type === 'QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-purple-50 text-purple-700">Quiz</span>}
                       {act.type === 'EXAM' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-red-50 text-red-700">Examen</span>}

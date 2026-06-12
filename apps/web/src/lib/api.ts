@@ -2056,9 +2056,9 @@ export const classroomApi = {
     api.get(`/classrooms/${classroomId}/gradebook-config`),
   updateGradebookLink: (activityId: string, data: { syncToGradebook: boolean; gradebookComponent?: string; gradebookIndex?: number }) =>
     api.put(`/classrooms/activities/${activityId}/gradebook-link`, data),
-  previewGradebookSync: (activityId: string) =>
-    api.get(`/classrooms/activities/${activityId}/sync-preview`),
-  syncToGradebook: (activityId: string, data: { studentEnrollmentIds?: string[]; includeConflicts?: boolean; includeNoSubmission?: boolean }) =>
+  previewGradebookSync: (activityId: string, academicTermId?: string) =>
+    api.get(`/classrooms/activities/${activityId}/sync-preview`, { params: academicTermId ? { academicTermId } : undefined }),
+  syncToGradebook: (activityId: string, data: { studentEnrollmentIds?: string[]; includeConflicts?: boolean; includeNoSubmission?: boolean; academicTermId?: string }) =>
     api.post(`/classrooms/activities/${activityId}/sync-gradebook`, data),
 
   // ═══════════════════════════════════════════════════════════════════════════

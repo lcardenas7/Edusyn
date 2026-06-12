@@ -629,9 +629,13 @@ export class ClassroomController {
 
   @Get('activities/:activityId/sync-preview')
   @Roles('DOCENTE', 'COORDINADOR')
-  async previewGradebookSync(@Param('activityId') activityId: string, @Request() req: any) {
+  async previewGradebookSync(
+    @Param('activityId') activityId: string,
+    @Request() req: any,
+    @Query('academicTermId') academicTermId?: string,
+  ) {
     const { userId } = await this.resolveCtx(req);
-    return this.service.previewGradebookSync(activityId, userId);
+    return this.service.previewGradebookSync(activityId, userId, academicTermId);
   }
 
   @Post('activities/:activityId/sync-gradebook')
@@ -640,6 +644,7 @@ export class ClassroomController {
     studentEnrollmentIds?: string[];
     includeConflicts?: boolean;
     includeNoSubmission?: boolean;
+    academicTermId?: string;
   }) {
     const { userId } = await this.resolveCtx(req);
     return this.service.syncToGradebook(activityId, userId, body);

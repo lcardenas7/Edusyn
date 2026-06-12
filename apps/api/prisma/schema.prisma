@@ -5120,6 +5120,7 @@ model ClassroomActivity {
   isVisible          Boolean   @default(true)
   isPublished        Boolean   @default(false)
   scheduledPublishAt DateTime?
+  publishedAt        DateTime?
   sortOrder          Int       @default(0)
   metadata           Json?
   createdAt          DateTime  @default(now())

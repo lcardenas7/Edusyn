@@ -543,7 +543,7 @@ export class ClassroomService {
       });
     }
 
-    // Students see only published activities
+    // Students see only published activities — ordered by publication date (newest first)
     return this.prisma.classroomActivity.findMany({
       where: { classroomId, isPublished: true, isVisible: true },
       include: {
@@ -559,7 +559,7 @@ export class ClassroomService {
           take: 1,
         },
       },
-      orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
+      orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
     });
   }
 
@@ -650,7 +650,7 @@ export class ClassroomService {
     // Publicar inmediatamente y limpiar cualquier programación previa
     return this.prisma.classroomActivity.update({
       where: { id: activityId },
-      data: { isPublished: true, isVisible: true, scheduledPublishAt: null },
+      data: { isPublished: true, isVisible: true, scheduledPublishAt: null, publishedAt: new Date() },
     });
   }
 
@@ -677,6 +677,7 @@ export class ClassroomService {
         isPublished: true,
         isVisible: true,
         scheduledPublishAt: null,
+        publishedAt: now,
       },
     });
     return result.count;
@@ -2318,15 +2319,21 @@ export class ClassroomService {
     // Resolve scale from Institution.academicLevelsConfig JSON
     const scaleInfo = await this.resolveScale(classroom.institutionId, grade.stage, grade.name);
 
-    // Get active academic term
-    const activeTerm = await this.prisma.academicTerm.findFirst({
+    // Get all non-finalized terms for selector (OPEN preferred over CLOSED)
+    const allTerms = await this.prisma.academicTerm.findMany({
       where: {
         academicYearId: ta.academicYearId,
         status: { in: ['OPEN', 'CLOSED'] },
       },
-      orderBy: { startDate: 'asc' },
-      select: { id: true, name: true, status: true },
+      orderBy: { order: 'asc' },
+      select: { id: true, name: true, status: true, order: true },
     });
+
+    // Default active term: prefer the most recent OPEN, fallback to most recent CLOSED
+    const activeTerm =
+      [...allTerms].reverse().find(t => t.status === 'OPEN') ??
+      [...allTerms].reverse().find(t => t.status === 'CLOSED') ??
+      null;
 
     // Get existing PartialGrades for this assignment+term to know which slots are taken
     const existingGrades = activeTerm ? await this.prisma.partialGrade.findMany({
@@ -2357,6 +2364,7 @@ export class ClassroomService {
       academicTermId: activeTerm?.id || null,
       academicTermName: activeTerm?.name || null,
       academicTermStatus: activeTerm?.status || null,
+      availableTerms: allTerms,
       scale: { min: scaleInfo.min, max: scaleInfo.max, passing: scaleInfo.passing },
       processes,
       existingSlots: existingGrades,
@@ -2388,7 +2396,7 @@ export class ClassroomService {
   /**
    * Preview sync: shows what would happen without writing anything.
    */
-  async previewGradebookSync(activityId: string, teacherId: string) {
+  async previewGradebookSync(activityId: string, teacherId: string, academicTermId?: string) {
     const activity = await this.prisma.classroomActivity.findUnique({
       where: { id: activityId },
       include: {
@@ -2418,12 +2426,27 @@ export class ClassroomService {
     const scaleMin = scaleInfo.min;
     const scaleMax = scaleInfo.max;
 
-    // Get active term
-    const activeTerm = await this.prisma.academicTerm.findFirst({
-      where: { academicYearId: ta.academicYearId, status: { in: ['OPEN', 'CLOSED'] } },
-      orderBy: { startDate: 'asc' },
-      select: { id: true, name: true, status: true },
-    });
+    // Get target term: use explicit termId if provided, otherwise prefer most-recent OPEN → CLOSED
+    let activeTerm: { id: string; name: string; status: string } | null = null;
+    if (academicTermId) {
+      activeTerm = await this.prisma.academicTerm.findUnique({
+        where: { id: academicTermId },
+        select: { id: true, name: true, status: true },
+      });
+      if (!activeTerm) throw new BadRequestException('Período académico no encontrado');
+    } else {
+      activeTerm =
+        await this.prisma.academicTerm.findFirst({
+          where: { academicYearId: ta.academicYearId, status: 'OPEN' },
+          orderBy: { order: 'desc' },
+          select: { id: true, name: true, status: true },
+        }) ??
+        await this.prisma.academicTerm.findFirst({
+          where: { academicYearId: ta.academicYearId, status: 'CLOSED' },
+          orderBy: { order: 'desc' },
+          select: { id: true, name: true, status: true },
+        });
+    }
     if (!activeTerm) throw new BadRequestException('No hay período académico activo');
     if (activeTerm.status === 'FINALIZED') throw new ForbiddenException('El período está finalizado');
 
@@ -2538,6 +2561,7 @@ export class ClassroomService {
     studentEnrollmentIds?: string[]; // If empty, sync all eligible
     includeConflicts?: boolean; // Force overwrite planilla edits
     includeNoSubmission?: boolean; // Write minGrade for students without submissions
+    academicTermId?: string; // Explicit target period (defaults to most-recent OPEN/CLOSED)
   }) {
     const activity = await this.prisma.classroomActivity.findUnique({
       where: { id: activityId },
@@ -2568,12 +2592,27 @@ export class ClassroomService {
     const scaleMin = scaleInfo2.min;
     const scaleMax = scaleInfo2.max;
 
-    // Get active term + guard
-    const activeTerm = await this.prisma.academicTerm.findFirst({
-      where: { academicYearId: ta.academicYearId, status: { in: ['OPEN', 'CLOSED'] } },
-      orderBy: { startDate: 'asc' },
-      select: { id: true, status: true },
-    });
+    // Get target term: explicit termId if provided, otherwise prefer most-recent OPEN → CLOSED
+    let activeTerm: { id: string; status: string } | null = null;
+    if (dto.academicTermId) {
+      activeTerm = await this.prisma.academicTerm.findUnique({
+        where: { id: dto.academicTermId },
+        select: { id: true, status: true },
+      });
+      if (!activeTerm) throw new BadRequestException('Período académico no encontrado');
+    } else {
+      activeTerm =
+        await this.prisma.academicTerm.findFirst({
+          where: { academicYearId: ta.academicYearId, status: 'OPEN' },
+          orderBy: { order: 'desc' },
+          select: { id: true, status: true },
+        }) ??
+        await this.prisma.academicTerm.findFirst({
+          where: { academicYearId: ta.academicYearId, status: 'CLOSED' },
+          orderBy: { order: 'desc' },
+          select: { id: true, status: true },
+        });
+    }
     if (!activeTerm) throw new BadRequestException('No hay período académico activo');
     if (activeTerm.status === 'FINALIZED') throw new ForbiddenException('El período está finalizado');
 
