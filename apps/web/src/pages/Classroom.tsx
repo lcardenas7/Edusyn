@@ -5512,6 +5512,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             const statusInfo = act.isPublished ? { bg: 'bg-green-50', text: 'text-green-600', label: 'Publicada' } : { bg: 'bg-slate-100', text: 'text-slate-500', label: 'Borrador' }
             const duePast = isDuePast(act.dueDate)
             const studentStatus = isStudent ? getStudentTaskStatus(act) : null
+            const studentSub = isStudent ? act.submissions?.[0] : null
             return (
               <button key={act.id} onClick={() => openActivity(act)} className={`w-full text-left bg-white rounded-2xl border-2 p-5 transition-all hover:shadow-sm group ${isNew ? 'border-yellow-300 hover:border-yellow-400' : 'border-slate-200 hover:border-blue-300'}`}>
                 <div className="flex items-start gap-4">
