@@ -2319,31 +2319,45 @@ export class ClassroomService {
     // Resolve scale from Institution.academicLevelsConfig JSON
     const scaleInfo = await this.resolveScale(classroom.institutionId, grade.stage, grade.name);
 
-    // Get all non-finalized terms for selector (OPEN preferred over CLOSED)
+    // Only OPEN terms are valid sync targets. CLOSED/FINALIZED are excluded.
     const allTerms = await this.prisma.academicTerm.findMany({
       where: {
         academicYearId: ta.academicYearId,
-        status: { in: ['OPEN', 'CLOSED'] },
+        status: 'OPEN',
       },
       orderBy: { order: 'asc' },
       select: { id: true, name: true, status: true, order: true },
     });
 
-    // Default active term: prefer the most recent OPEN, fallback to most recent CLOSED
-    const activeTerm =
-      [...allTerms].reverse().find(t => t.status === 'OPEN') ??
-      [...allTerms].reverse().find(t => t.status === 'CLOSED') ??
-      null;
+    // Default active term: most recent OPEN (highest order)
+    const activeTerm = allTerms.length > 0 ? allTerms[allTerms.length - 1] : null;
 
-    // Get existing PartialGrades for this assignment+term to know which slots are taken
-    const existingGrades = activeTerm ? await this.prisma.partialGrade.findMany({
+    // Get existing PartialGrades grouped by term so the frontend can switch periods instantly
+    const allTermIds = allTerms.map(t => t.id);
+    const allExistingGrades = allTermIds.length > 0 ? await this.prisma.partialGrade.findMany({
       where: {
         teacherAssignmentId: ta.id,
-        academicTermId: activeTerm.id,
+        academicTermId: { in: allTermIds },
       },
-      select: { componentType: true, activityIndex: true, activityName: true },
-      distinct: ['componentType', 'activityIndex'],
+      select: { academicTermId: true, componentType: true, activityIndex: true, activityName: true },
     }) : [];
+
+    // Group by termId, distinct by (componentType, activityIndex)
+    const existingSlotsByTerm: Record<string, Array<{ componentType: string; activityIndex: number; activityName: string | null }>> = {};
+    for (const t of allTerms) existingSlotsByTerm[t.id] = [];
+    const seen = new Set<string>();
+    for (const g of allExistingGrades) {
+      const key = `${g.academicTermId}:${g.componentType}:${g.activityIndex}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      existingSlotsByTerm[g.academicTermId].push({
+        componentType: g.componentType,
+        activityIndex: g.activityIndex,
+        activityName: g.activityName,
+      });
+    }
+    // Backwards-compat flat list for the default term
+    const existingGrades = activeTerm ? existingSlotsByTerm[activeTerm.id] : [];
 
     // Get activities already linked to gradebook
     const linkedActivities = await this.prisma.classroomActivity.findMany({
@@ -2368,6 +2382,7 @@ export class ClassroomService {
       scale: { min: scaleInfo.min, max: scaleInfo.max, passing: scaleInfo.passing },
       processes,
       existingSlots: existingGrades,
+      existingSlotsByTerm,
       linkedActivities,
     };
   }
@@ -2426,7 +2441,7 @@ export class ClassroomService {
     const scaleMin = scaleInfo.min;
     const scaleMax = scaleInfo.max;
 
-    // Get target term: use explicit termId if provided, otherwise prefer most-recent OPEN → CLOSED
+    // Get target term: must be OPEN. Use explicit termId if provided, otherwise the most-recent OPEN.
     let activeTerm: { id: string; name: string; status: string } | null = null;
     if (academicTermId) {
       activeTerm = await this.prisma.academicTerm.findUnique({
@@ -2435,19 +2450,14 @@ export class ClassroomService {
       });
       if (!activeTerm) throw new BadRequestException('Período académico no encontrado');
     } else {
-      activeTerm =
-        await this.prisma.academicTerm.findFirst({
-          where: { academicYearId: ta.academicYearId, status: 'OPEN' },
-          orderBy: { order: 'desc' },
-          select: { id: true, name: true, status: true },
-        }) ??
-        await this.prisma.academicTerm.findFirst({
-          where: { academicYearId: ta.academicYearId, status: 'CLOSED' },
-          orderBy: { order: 'desc' },
-          select: { id: true, name: true, status: true },
-        });
+      activeTerm = await this.prisma.academicTerm.findFirst({
+        where: { academicYearId: ta.academicYearId, status: 'OPEN' },
+        orderBy: { order: 'desc' },
+        select: { id: true, name: true, status: true },
+      });
     }
-    if (!activeTerm) throw new BadRequestException('No hay período académico activo');
+    if (!activeTerm) throw new BadRequestException('No hay período académico abierto');
+    if (activeTerm.status === 'CLOSED') throw new ForbiddenException('El período está cerrado — no se permite sincronizar a períodos cerrados');
     if (activeTerm.status === 'FINALIZED') throw new ForbiddenException('El período está finalizado');
 
     // Get all enrolled students
@@ -2592,7 +2602,7 @@ export class ClassroomService {
     const scaleMin = scaleInfo2.min;
     const scaleMax = scaleInfo2.max;
 
-    // Get target term: explicit termId if provided, otherwise prefer most-recent OPEN → CLOSED
+    // Get target term: must be OPEN. Use explicit termId if provided, otherwise the most-recent OPEN.
     let activeTerm: { id: string; status: string } | null = null;
     if (dto.academicTermId) {
       activeTerm = await this.prisma.academicTerm.findUnique({
@@ -2601,19 +2611,14 @@ export class ClassroomService {
       });
       if (!activeTerm) throw new BadRequestException('Período académico no encontrado');
     } else {
-      activeTerm =
-        await this.prisma.academicTerm.findFirst({
-          where: { academicYearId: ta.academicYearId, status: 'OPEN' },
-          orderBy: { order: 'desc' },
-          select: { id: true, status: true },
-        }) ??
-        await this.prisma.academicTerm.findFirst({
-          where: { academicYearId: ta.academicYearId, status: 'CLOSED' },
-          orderBy: { order: 'desc' },
-          select: { id: true, status: true },
-        });
+      activeTerm = await this.prisma.academicTerm.findFirst({
+        where: { academicYearId: ta.academicYearId, status: 'OPEN' },
+        orderBy: { order: 'desc' },
+        select: { id: true, status: true },
+      });
     }
-    if (!activeTerm) throw new BadRequestException('No hay período académico activo');
+    if (!activeTerm) throw new BadRequestException('No hay período académico abierto');
+    if (activeTerm.status === 'CLOSED') throw new ForbiddenException('El período está cerrado — no se permite sincronizar a períodos cerrados');
     if (activeTerm.status === 'FINALIZED') throw new ForbiddenException('El período está finalizado');
 
     // Get enrollments

@@ -4700,34 +4700,25 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               </div>
               <div className="p-5 space-y-4">
                 {!gradebookConfig?.academicTermId && (
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">No hay período académico activo. Configure los períodos primero.</div>
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+                    ⚠️ No hay períodos académicos abiertos. Solo se permite vincular y sincronizar a períodos en estado <strong>Abierto</strong>. Reabra un período o cree uno nuevo para continuar.
+                  </div>
                 )}
-                {(gradebookConfig?.availableTerms?.length > 0 || gradebookConfig?.academicTermId) && (
+                {gradebookConfig?.availableTerms?.length > 0 && (
                   <>
-                    {/* Period selector */}
+                    {/* Period selector — always visible when terms exist */}
                     <div className="space-y-2">
                       <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide">Período destino</label>
-                      {gradebookConfig.availableTerms?.length > 1 ? (
-                        <select
-                          value={selectedTermId || ''}
-                          onChange={e => setSelectedTermId(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        >
-                          {(gradebookConfig.availableTerms || []).map((t: any) => (
-                            <option key={t.id} value={t.id}>
-                              {t.name}{t.status === 'OPEN' ? ' — Activo' : ' — Cerrado'}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
-                          {gradebookConfig.academicTermName}
-                          <span className="ml-2 text-xs font-medium text-blue-500">{gradebookConfig.academicTermStatus === 'OPEN' ? '(Activo)' : '(Cerrado)'}</span>
-                        </div>
-                      )}
-                      {selectedTermId && gradebookConfig.availableTerms?.find((t: any) => t.id === selectedTermId)?.status === 'CLOSED' && (
-                        <p className="text-xs text-amber-600">⚠️ Período cerrado — las notas se registrarán pero el período no puede reabrirse fácilmente.</p>
-                      )}
+                      <select
+                        value={selectedTermId || ''}
+                        onChange={e => setSelectedTermId(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      >
+                        {(gradebookConfig.availableTerms || []).map((t: any) => (
+                          <option key={t.id} value={t.id}>{t.name} — Activo</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-slate-500">Solo se muestran períodos abiertos. Los cerrados o finalizados no admiten sincronización.</p>
                     </div>
                     <div className="text-xs text-slate-500">Escala: {gradebookConfig.scale.min} – {gradebookConfig.scale.max}</div>
                     <label className="flex items-center gap-3">
@@ -4749,9 +4740,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                           <label className="block text-sm font-medium text-slate-700 mb-1">Índice de actividad</label>
                           <input type="number" min={1} max={20} value={gradebookLinkForm.gradebookIndex} onChange={e => setGradebookLinkForm(f => ({ ...f, gradebookIndex: parseInt(e.target.value) || 1 }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
                           <p className="text-xs text-slate-400 mt-1">Columna en la planilla (1, 2, 3...)</p>
-                          {gradebookConfig.existingSlots?.filter((s: any) => s.componentType === gradebookLinkForm.gradebookComponent && s.activityIndex === gradebookLinkForm.gradebookIndex).length > 0 && (
-                            <p className="text-xs text-amber-600 mt-1">⚠️ Este slot ya tiene notas: "{gradebookConfig.existingSlots.find((s: any) => s.componentType === gradebookLinkForm.gradebookComponent && s.activityIndex === gradebookLinkForm.gradebookIndex)?.activityName}"</p>
-                          )}
+                          {(() => {
+                            const slotsForTerm = (selectedTermId && gradebookConfig.existingSlotsByTerm?.[selectedTermId]) || gradebookConfig.existingSlots || []
+                            const conflict = slotsForTerm.find((s: any) => s.componentType === gradebookLinkForm.gradebookComponent && s.activityIndex === gradebookLinkForm.gradebookIndex)
+                            return conflict ? (
+                              <p className="text-xs text-amber-600 mt-1">⚠️ Este slot ya tiene notas en el período seleccionado: "{conflict.activityName}"</p>
+                            ) : null
+                          })()}
                         </div>
                       </>
                     )}
@@ -4760,7 +4755,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               </div>
               <div className="p-5 border-t border-slate-200 flex justify-end gap-3">
                 <button onClick={() => setShowGradebookLink(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
-                <button onClick={handleSaveGradebookLink} disabled={savingLink || (gradebookLinkForm.syncToGradebook && !gradebookLinkForm.gradebookComponent)} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+                <button onClick={handleSaveGradebookLink} disabled={savingLink || !gradebookConfig?.availableTerms?.length || (gradebookLinkForm.syncToGradebook && !gradebookLinkForm.gradebookComponent)} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
                   {savingLink && <Loader2 className="w-4 h-4 animate-spin" />} Guardar
                 </button>
               </div>
@@ -4780,14 +4775,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                       <span className="text-xs text-slate-500">Período:</span>
                       <select
                         value={selectedTermId || ''}
-                        onChange={e => { setSelectedTermId(e.target.value); setSyncPreview(null) }}
+                        onChange={async e => { setSelectedTermId(e.target.value); setSyncPreview(null); setSyncPreviewLoading(true); try { const { data } = await classroomApi.previewGradebookSync(selectedActivity!.id, e.target.value); setSyncPreview(data) } catch (err: any) { setError(err.response?.data?.message || 'Error') } finally { setSyncPreviewLoading(false) } }}
                         className="text-xs px-2 py-1 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400"
                       >
                         {(gradebookConfig.availableTerms || []).map((t: any) => (
-                          <option key={t.id} value={t.id}>{t.name}{t.status === 'OPEN' ? ' (Activo)' : ' (Cerrado)'}</option>
+                          <option key={t.id} value={t.id}>{t.name} (Activo)</option>
                         ))}
                       </select>
-                      {syncPreview === null && <span className="text-xs text-amber-600">Recarga el preview después de cambiar el período.</span>}
                     </div>
                   )}
                 </div>
