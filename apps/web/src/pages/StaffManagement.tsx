@@ -8,6 +8,8 @@ import { bulkUploadApi, staffApi, teachersApi } from '../lib/api'
 import api from '../lib/api'
 import { exportToExcel } from '../utils/excelImport'
 import { useAuth } from '../contexts/AuthContext'
+import { HelpDrawer, HelpButton } from '../components/HelpDrawer'
+import { importStudentsHelp, importTeachersHelp, importStaffHelp } from '../help/importGuides'
 
 type TabType = 'staff' | 'bulk-upload' | 'credentials' | 'delegated-permissions'
 
@@ -71,6 +73,7 @@ export default function StaffManagement() {
   
   // Bulk upload states
   const [uploadType, setUploadType] = useState<'teachers' | 'students' | 'staff'>('staff')
+  const [helpOpen, setHelpOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -787,6 +790,9 @@ export default function StaffManagement() {
                   <FileSpreadsheet className="w-5 h-5" />
                   Descargar Plantilla de {uploadType === 'teachers' ? 'Docentes' : uploadType === 'students' ? 'Estudiantes' : 'Personal'}
                 </button>
+                <div className="mt-3 flex justify-center">
+                  <HelpButton onClick={() => setHelpOpen(true)} label="Ver instrucciones de la plantilla" variant="subtle" />
+                </div>
               </div>
 
               <div className="bg-white rounded-xl border border-slate-200 p-6">
@@ -1628,6 +1634,11 @@ export default function StaffManagement() {
           </div>
         )}
       </div>
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        content={uploadType === 'students' ? importStudentsHelp : uploadType === 'teachers' ? importTeachersHelp : importStaffHelp}
+      />
     </div>
   )
 }

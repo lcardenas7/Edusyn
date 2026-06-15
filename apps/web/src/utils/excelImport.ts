@@ -57,8 +57,9 @@ export interface ImportResult {
   validRows: number
 }
 
-// Generar plantilla Excel para descargar
-export function generateTemplate(type: 'students' | 'teachers'): void {
+// @deprecated — Las plantillas ahora se generan en el backend (bulkUploadApi).
+// Esta función se mantiene solo por compatibilidad y no se debe usar en código nuevo.
+function _legacyGenerateTemplate(type: 'students' | 'teachers'): void {
   const columns = type === 'students' ? studentTemplateColumns : teacherTemplateColumns
   
   // Crear hoja de datos con encabezados y ejemplo

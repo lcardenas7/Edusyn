@@ -2,6 +2,13 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import * as ExcelJS from 'exceljs';
 import * as bcrypt from 'bcryptjs';
+import {
+  buildInicioSheet,
+  buildDataSheet,
+  buildCatalogosSheet,
+  buildInstruccionesSheet,
+  ColumnDef,
+} from './bulk-upload-template.helper';
 
 interface TeacherRow {
   firstName: string;
@@ -48,219 +55,374 @@ export class BulkUploadService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Genera plantilla Excel para docentes
+   * Genera plantilla Excel para docentes (4 hojas: Inicio, Docentes, Catálogos, Instrucciones)
    */
-  async generateTeacherTemplate(): Promise<ExcelJS.Workbook> {
+  async generateTeacherTemplate(institutionId?: string): Promise<ExcelJS.Workbook> {
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Edusyn';
     workbook.created = new Date();
 
-    const sheet = workbook.addWorksheet('Docentes');
+    const theme = { primary: '4F46E5', entityName: 'Docentes', entitySingular: 'docente' };
 
-    // Definir columnas
-    sheet.columns = [
-      { header: 'Nombres *', key: 'firstName', width: 25 },
-      { header: 'Apellidos *', key: 'lastName', width: 25 },
-      { header: 'Correo Electrónico *', key: 'email', width: 35 },
-      { header: 'Tipo Documento', key: 'documentType', width: 15 },
-      { header: 'Número Documento', key: 'documentNumber', width: 20 },
-      { header: 'Teléfono', key: 'phone', width: 15 },
+    let institutionName: string | undefined;
+    if (institutionId) {
+      const inst = await this.prisma.institution.findUnique({ where: { id: institutionId }, select: { name: true } });
+      institutionName = inst?.name;
+    }
+
+    // Hoja 1: Inicio
+    buildInicioSheet(workbook, {
+      theme,
+      institutionName,
+      description:
+        'Esta plantilla te permite crear varios docentes a la vez. Cada docente recibirá sus credenciales automáticamente: el usuario se genera con su nombre y la contraseña inicial es su número de documento. En el primer ingreso se les pedirá cambiarla.',
+      quickSteps: [
+        'Ve a la hoja "Docentes" y completa los datos. Las columnas con encabezado rojo son obligatorias.',
+        'Usa la hoja "Catálogos" como referencia para tipos de documento y formato de correos.',
+        'Borra las filas de ejemplo (en gris cursiva) antes de subir el archivo.',
+        'Guarda el archivo en formato .xlsx y súbelo desde Edusyn → Docentes → Importar.',
+        'Revisa el reporte de importación: corrige los errores y vuelve a subir solo las filas con problemas.',
+      ],
+    });
+
+    // Catálogos
+    const catalogos = buildCatalogosSheet(workbook, {
+      theme,
+      blocks: [
+        {
+          title: 'Tipos de documento',
+          headers: ['Código', 'Descripción'],
+          rows: [
+            ['CC', 'Cédula de Ciudadanía'],
+            ['TI', 'Tarjeta de Identidad'],
+            ['CE', 'Cédula de Extranjería'],
+            ['PASAPORTE', 'Pasaporte'],
+            ['NIT', 'NIT (personas jurídicas)'],
+            ['OTRO', 'Otro tipo de documento'],
+          ],
+          rangeKey: 'documentType',
+        },
+      ],
+    });
+
+    // Hoja Datos
+    const columns: ColumnDef[] = [
+      { header: 'Nombres', key: 'firstName', width: 25, required: true, comment: 'Primer y segundo nombre. Ej: "Juan Carlos"' },
+      { header: 'Apellidos', key: 'lastName', width: 25, required: true, comment: 'Primer y segundo apellido. Ej: "Pérez García"' },
+      { header: 'Correo electrónico', key: 'email', width: 35, required: true, format: 'usuario@dominio.com', comment: 'Debe ser único en el sistema' },
+      { header: 'Tipo documento', key: 'documentType', width: 16, options: ['CC', 'TI', 'CE', 'PASAPORTE', 'NIT', 'OTRO'] },
+      { header: 'Número documento', key: 'documentNumber', width: 20, comment: 'Sin puntos ni espacios. Se usa como contraseña inicial.' },
+      { header: 'Teléfono', key: 'phone', width: 16 },
     ];
 
-    // Estilo del encabezado
-    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    sheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FF4F46E5' }, // Indigo
-    };
-    sheet.getRow(1).alignment = { horizontal: 'center' };
-
-    // Agregar filas de ejemplo
-    sheet.addRow({
-      firstName: 'Juan Carlos',
-      lastName: 'Pérez García',
-      email: 'jperez@ejemplo.com',
-      documentType: 'CC',
-      documentNumber: '12345678',
-      phone: '3001234567',
-    });
-    sheet.addRow({
-      firstName: 'María',
-      lastName: 'López Rodríguez',
-      email: 'mlopez@ejemplo.com',
-      documentType: 'CC',
-      documentNumber: '87654321',
-      phone: '3009876543',
+    buildDataSheet(workbook, {
+      sheetName: 'Docentes',
+      theme,
+      columns,
+      examples: [
+        { firstName: 'Juan Carlos', lastName: 'Pérez García', email: 'jperez@ejemplo.com', documentType: 'CC', documentNumber: '12345678', phone: '3001234567' },
+        { firstName: 'María Fernanda', lastName: 'López Rodríguez', email: 'mlopez@ejemplo.com', documentType: 'CC', documentNumber: '87654321', phone: '3009876543' },
+      ],
+      validationRefs: catalogos.ranges,
     });
 
-    // Agregar nota
-    sheet.addRow([]);
-    sheet.addRow(['* Campos obligatorios']);
-    sheet.addRow(['Tipos de documento válidos: CC, TI, CE, PASAPORTE, NIT, OTRO']);
+    // Reordenar para que Inicio quede primero, luego Docentes, etc.
+    const order = ['Inicio', 'Docentes', 'Catálogos'];
+    workbook.worksheets.sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
+
+    // Instrucciones
+    buildInstruccionesSheet(workbook, {
+      theme,
+      sections: [
+        {
+          title: '1. Antes de empezar',
+          items: [
+            'Verifica que cada docente tenga al menos: nombres, apellidos y correo electrónico.',
+            { type: 'tip', text: 'Si no conoces el documento del docente, igual puedes cargarlo: el sistema le pedirá completarlo en el primer ingreso.' },
+            { type: 'warning', text: 'Si un correo ya está registrado en el sistema, esa fila será rechazada.' },
+          ],
+        },
+        {
+          title: '2. Generación automática de credenciales',
+          items: [
+            'Usuario: se genera con la fórmula nombre.apellido (ej: jperez) y se valida que sea único.',
+            'Contraseña inicial: el número de documento del docente.',
+            { type: 'success', text: 'En el primer ingreso, Edusyn obliga al docente a establecer una contraseña personal segura.' },
+          ],
+        },
+        {
+          title: '3. Después de cargar',
+          items: [
+            'Edusyn te muestra un reporte: cuántos docentes se crearon y cuáles filas tuvieron error.',
+            'Para cada error verifica el correo, el documento y el formato de la fila correspondiente.',
+            'Una vez creados, asigna a los docentes a las materias en el módulo "Carga académica".',
+          ],
+        },
+      ],
+      commonErrors: [
+        { error: 'Correo inválido', cause: 'El correo no tiene formato usuario@dominio.com', fix: 'Verifica que tenga @ y un dominio válido' },
+        { error: 'El correo X ya está registrado', cause: 'Otro usuario ya usa ese correo', fix: 'Cambia el correo o elimina la cuenta antigua antes de re-importar' },
+        { error: 'Número de documento requerido', cause: 'La fila no tiene documento', fix: 'Completa la columna "Número documento" para esa fila' },
+        { error: 'Tipo de documento inválido', cause: 'El valor no está en la lista permitida', fix: 'Usa solo CC, TI, CE, PASAPORTE, NIT u OTRO' },
+      ],
+    });
 
     return workbook;
   }
 
   /**
-   * Genera plantilla Excel para estudiantes
+   * Genera plantilla Excel para estudiantes (4 hojas: Inicio, Estudiantes, Catálogos, Instrucciones)
    */
   async generateStudentTemplate(institutionId: string): Promise<ExcelJS.Workbook> {
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Edusyn';
     workbook.created = new Date();
 
-    const sheet = workbook.addWorksheet('Estudiantes');
+    const theme = { primary: '059669', entityName: 'Estudiantes', entitySingular: 'estudiante' };
 
-    // Definir columnas (4 columnas de nombre para compatibilidad con archivos MEN/SIMAT)
-    sheet.columns = [
-      { header: 'Primer Nombre *', key: 'firstName', width: 20 },
-      { header: 'Segundo Nombre', key: 'secondName', width: 20 },
-      { header: 'Primer Apellido *', key: 'lastName', width: 20 },
-      { header: 'Segundo Apellido', key: 'secondLastName', width: 20 },
-      { header: 'Tipo Documento *', key: 'documentType', width: 15 },
-      { header: 'Número Documento *', key: 'documentNumber', width: 20 },
-      { header: 'Fecha Nacimiento', key: 'birthDate', width: 15 },
-      { header: 'Género', key: 'gender', width: 12 },
-      { header: 'Correo', key: 'email', width: 30 },
-      { header: 'Teléfono', key: 'phone', width: 15 },
-      { header: 'Dirección', key: 'address', width: 35 },
-      { header: 'Código Grupo', key: 'groupCode', width: 15 },
-    ];
+    const inst = await this.prisma.institution.findUnique({ where: { id: institutionId }, select: { name: true } });
+    const institutionName = inst?.name;
 
-    // Estilo del encabezado
-    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    sheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FF059669' }, // Emerald
-    };
-    sheet.getRow(1).alignment = { horizontal: 'center' };
-
-    // Agregar filas de ejemplo
-    sheet.addRow({
-      firstName: 'Pedro',
-      secondName: 'Andrés',
-      lastName: 'Martínez',
-      secondLastName: 'Silva',
-      documentType: 'TI',
-      documentNumber: '1234567890',
-      birthDate: '2010-05-15',
-      gender: 'M',
-      email: 'pmartinez@ejemplo.com',
-      phone: '3001112233',
-      address: 'Calle 123 # 45-67',
-      groupCode: '6A',
-    });
-    sheet.addRow({
-      firstName: 'Ana',
-      secondName: 'María',
-      lastName: 'González',
-      secondLastName: 'Ruiz',
-      documentType: 'TI',
-      documentNumber: '0987654321',
-      birthDate: '2011-08-22',
-      gender: 'F',
-      email: '',
-      phone: '',
-      address: 'Carrera 89 # 12-34',
-      groupCode: '6B',
-    });
-
-    // Obtener grupos disponibles para referencia
+    // Cargar grupos para catálogo de referencia
     const groups = await this.prisma.group.findMany({
-      where: {
-        campus: { institutionId },
-      },
-      include: {
-        grade: true,
-      },
+      where: { campus: { institutionId } },
+      include: { grade: true },
       orderBy: [{ grade: { stage: 'asc' } }, { grade: { number: 'asc' } }, { name: 'asc' }],
     });
 
-    // Agregar hoja de referencia con grupos
-    const refSheet = workbook.addWorksheet('Grupos Disponibles');
-    refSheet.columns = [
-      { header: 'Código', key: 'code', width: 15 },
-      { header: 'Nombre', key: 'name', width: 25 },
-      { header: 'Grado', key: 'grade', width: 20 },
-    ];
-    refSheet.getRow(1).font = { bold: true };
-
-    groups.forEach((g) => {
-      refSheet.addRow({
-        code: g.code || g.name,
-        name: g.name,
-        grade: g.grade.name,
-      });
+    // Hoja Inicio
+    buildInicioSheet(workbook, {
+      theme,
+      institutionName,
+      description:
+        'Esta plantilla te permite registrar varios estudiantes a la vez y matricularlos en sus grupos. Cada estudiante tendrá acceso a Edusyn con un usuario y contraseña iniciales (su documento) que deberá cambiar al primer ingreso.',
+      quickSteps: [
+        'Verifica primero que tu institución tenga creados los grupos del año lectivo (módulo Académico).',
+        'Ve a la hoja "Estudiantes" y completa los datos. Los campos con encabezado rojo son obligatorios.',
+        'En "Código Grupo" usa exactamente el código que aparece en la hoja "Catálogos" (ej: 6A, 11-1).',
+        'Borra las filas de ejemplo (en gris cursiva) antes de subir el archivo.',
+        'Sube el archivo desde Edusyn → Estudiantes → Importar y revisa el reporte de resultados.',
+      ],
     });
 
-    // Notas en la hoja principal
-    sheet.addRow([]);
-    sheet.addRow(['* Campos obligatorios']);
-    sheet.addRow(['Tipos de documento: TI (Tarjeta Identidad), RC (Registro Civil), CC, CE, PASAPORTE']);
-    sheet.addRow(['Género: M (Masculino), F (Femenino), O (Otro)']);
-    sheet.addRow(['Fecha formato: YYYY-MM-DD (ej: 2010-05-15)']);
-    sheet.addRow(['Ver hoja "Grupos Disponibles" para códigos de grupo válidos']);
+    // Catálogos
+    const catalogos = buildCatalogosSheet(workbook, {
+      theme,
+      blocks: [
+        {
+          title: 'Tipos de documento',
+          headers: ['Código', 'Descripción'],
+          rows: [
+            ['TI', 'Tarjeta de Identidad'],
+            ['RC', 'Registro Civil'],
+            ['CC', 'Cédula de Ciudadanía'],
+            ['CE', 'Cédula de Extranjería'],
+            ['PASAPORTE', 'Pasaporte'],
+          ],
+          rangeKey: 'documentType',
+        },
+        {
+          title: 'Género',
+          headers: ['Código', 'Descripción'],
+          rows: [
+            ['M', 'Masculino'],
+            ['F', 'Femenino'],
+            ['O', 'Otro'],
+          ],
+          rangeKey: 'gender',
+        },
+        {
+          title: 'Grupos disponibles en tu institución',
+          headers: ['Código', 'Nombre', 'Grado'],
+          rows: groups.length > 0
+            ? groups.map(g => [g.code || g.name, g.name, g.grade.name])
+            : [['(sin grupos)', 'Crea los grupos primero en Módulo Académico', '—']],
+          rangeKey: 'groupCode',
+        },
+      ],
+    });
+
+    const columns: ColumnDef[] = [
+      { header: 'Primer nombre', key: 'firstName', width: 18, required: true },
+      { header: 'Segundo nombre', key: 'secondName', width: 18 },
+      { header: 'Primer apellido', key: 'lastName', width: 18, required: true },
+      { header: 'Segundo apellido', key: 'secondLastName', width: 18 },
+      { header: 'Tipo documento', key: 'documentType', width: 15, required: true, options: ['TI', 'RC', 'CC', 'CE', 'PASAPORTE'] },
+      { header: 'Número documento', key: 'documentNumber', width: 20, required: true, comment: 'Se usa como contraseña inicial.' },
+      { header: 'Fecha nacimiento', key: 'birthDate', width: 16, format: 'YYYY-MM-DD', comment: 'Ej: 2010-05-15' },
+      { header: 'Género', key: 'gender', width: 10, options: ['M', 'F', 'O'] },
+      { header: 'Correo', key: 'email', width: 28 },
+      { header: 'Teléfono', key: 'phone', width: 14 },
+      { header: 'Dirección', key: 'address', width: 32 },
+      { header: 'Código grupo', key: 'groupCode', width: 14, hint: 'Ver hoja Catálogos' },
+    ];
+
+    buildDataSheet(workbook, {
+      sheetName: 'Estudiantes',
+      theme,
+      columns,
+      examples: [
+        { firstName: 'Pedro', secondName: 'Andrés', lastName: 'Martínez', secondLastName: 'Silva', documentType: 'TI', documentNumber: '1234567890', birthDate: '2010-05-15', gender: 'M', email: 'pmartinez@ejemplo.com', phone: '3001112233', address: 'Calle 123 # 45-67', groupCode: groups[0]?.code || groups[0]?.name || '6A' },
+        { firstName: 'Ana', secondName: 'María', lastName: 'González', secondLastName: 'Ruiz', documentType: 'TI', documentNumber: '0987654321', birthDate: '2011-08-22', gender: 'F', email: '', phone: '', address: 'Carrera 89 # 12-34', groupCode: groups[0]?.code || groups[0]?.name || '6A' },
+      ],
+      validationRefs: catalogos.ranges,
+    });
+
+    const order = ['Inicio', 'Estudiantes', 'Catálogos'];
+    workbook.worksheets.sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
+
+    buildInstruccionesSheet(workbook, {
+      theme,
+      sections: [
+        {
+          title: '1. Requisitos previos',
+          items: [
+            'La institución debe tener un año académico activo (Módulo Académico → Años).',
+            'Los grupos donde matricularás a los estudiantes deben existir antes de cargar.',
+            { type: 'tip', text: 'Si no defines "Código grupo" el estudiante se crea pero queda sin matricular. Podás asignarlo después manualmente.' },
+          ],
+        },
+        {
+          title: '2. Identidad y credenciales',
+          items: [
+            'El número de documento es la contraseña inicial del estudiante.',
+            'Si el estudiante no tiene correo, Edusyn genera uno automáticamente (formato usuario@estudiante.local).',
+            { type: 'warning', text: 'No se puede crear dos estudiantes con el mismo documento en la misma institución.' },
+          ],
+        },
+        {
+          title: '3. Formato de las celdas',
+          items: [
+            'Fecha de nacimiento: usa formato YYYY-MM-DD. Ej: 2010-05-15.',
+            'No agregues puntos ni espacios al número de documento.',
+            'Teléfonos: solo números, sin guiones ni espacios.',
+          ],
+        },
+      ],
+      commonErrors: [
+        { error: 'Estudiante con documento X ya existe', cause: 'Ya hay un estudiante con ese documento en la institución', fix: 'Verifica si está duplicado o usa otro documento' },
+        { error: 'Código de grupo no encontrado', cause: 'El código no coincide con ningún grupo activo', fix: 'Revisa la hoja "Catálogos" y copia el código exacto' },
+        { error: 'Fecha de nacimiento inválida', cause: 'El formato no es YYYY-MM-DD', fix: 'Reformatea como 2010-05-15 (año-mes-día)' },
+        { error: 'Correo ya registrado', cause: 'Otro usuario tiene ese correo', fix: 'Deja la celda vacía para auto-generar uno o usa otro correo' },
+      ],
+    });
 
     return workbook;
   }
 
   /**
-   * Genera plantilla Excel para otros usuarios (staff)
+   * Genera plantilla Excel para otros usuarios / staff (4 hojas)
    */
-  async generateStaffTemplate(): Promise<ExcelJS.Workbook> {
+  async generateStaffTemplate(institutionId?: string): Promise<ExcelJS.Workbook> {
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Edusyn';
     workbook.created = new Date();
 
-    const sheet = workbook.addWorksheet('Personal');
+    const theme = { primary: '7C3AED', entityName: 'Personal administrativo', entitySingular: 'usuario' };
 
-    // Definir columnas
-    sheet.columns = [
-      { header: 'Nombres *', key: 'firstName', width: 25 },
-      { header: 'Apellidos *', key: 'lastName', width: 25 },
-      { header: 'Correo Electrónico *', key: 'email', width: 35 },
-      { header: 'Rol *', key: 'role', width: 20 },
-      { header: 'Tipo Documento', key: 'documentType', width: 15 },
-      { header: 'Número Documento', key: 'documentNumber', width: 20 },
-      { header: 'Teléfono', key: 'phone', width: 15 },
+    let institutionName: string | undefined;
+    if (institutionId) {
+      const inst = await this.prisma.institution.findUnique({ where: { id: institutionId }, select: { name: true } });
+      institutionName = inst?.name;
+    }
+
+    buildInicioSheet(workbook, {
+      theme,
+      institutionName,
+      description:
+        'Usa esta plantilla para crear coordinadores, secretarias, orientadores y otro personal administrativo. Cada usuario recibe credenciales automáticas (usuario y contraseña basada en su documento) y deberá cambiarlas en su primer ingreso.',
+      quickSteps: [
+        'Completa la hoja "Personal" con los datos del personal administrativo.',
+        'En la columna "Rol" usa solo los valores listados (COORDINADOR, SECRETARIA, ORIENTADOR, etc.).',
+        'Borra las filas de ejemplo antes de subir el archivo.',
+        'Sube desde Edusyn → Otros Usuarios → Importar masivamente.',
+        'Revisa el reporte: corrige y vuelve a subir solo las filas con error si las hay.',
+      ],
+    });
+
+    const catalogos = buildCatalogosSheet(workbook, {
+      theme,
+      blocks: [
+        {
+          title: 'Roles válidos',
+          headers: ['Código', 'Función principal'],
+          rows: [
+            ['COORDINADOR', 'Coordinación académica o de convivencia'],
+            ['SECRETARIA', 'Secretaría académica'],
+            ['ORIENTADOR', 'Orientación / Psicología escolar'],
+            ['BIBLIOTECARIO', 'Biblioteca'],
+            ['AUXILIAR', 'Auxiliar administrativo'],
+          ],
+          rangeKey: 'role',
+        },
+        {
+          title: 'Tipos de documento',
+          headers: ['Código', 'Descripción'],
+          rows: [
+            ['CC', 'Cédula de Ciudadanía'],
+            ['TI', 'Tarjeta de Identidad'],
+            ['CE', 'Cédula de Extranjería'],
+            ['PASAPORTE', 'Pasaporte'],
+            ['NIT', 'NIT'],
+            ['OTRO', 'Otro'],
+          ],
+          rangeKey: 'documentType',
+        },
+      ],
+    });
+
+    const columns: ColumnDef[] = [
+      { header: 'Nombres', key: 'firstName', width: 25, required: true },
+      { header: 'Apellidos', key: 'lastName', width: 25, required: true },
+      { header: 'Correo electrónico', key: 'email', width: 32, required: true, format: 'usuario@dominio.com' },
+      { header: 'Rol', key: 'role', width: 20, required: true, options: ['COORDINADOR', 'SECRETARIA', 'ORIENTADOR', 'BIBLIOTECARIO', 'AUXILIAR'] },
+      { header: 'Tipo documento', key: 'documentType', width: 16, options: ['CC', 'TI', 'CE', 'PASAPORTE', 'NIT', 'OTRO'] },
+      { header: 'Número documento', key: 'documentNumber', width: 20, comment: 'Se usa como contraseña inicial.' },
+      { header: 'Teléfono', key: 'phone', width: 16 },
     ];
 
-    // Estilo del encabezado
-    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    sheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FF7C3AED' }, // Violet
-    };
-    sheet.getRow(1).alignment = { horizontal: 'center' };
-
-    // Agregar filas de ejemplo
-    sheet.addRow({
-      firstName: 'Laura',
-      lastName: 'Sánchez Mora',
-      email: 'lsanchez@ejemplo.com',
-      role: 'COORDINADOR',
-      documentType: 'CC',
-      documentNumber: '11223344',
-      phone: '3005556677',
-    });
-    sheet.addRow({
-      firstName: 'Carmen',
-      lastName: 'Díaz Torres',
-      email: 'cdiaz@ejemplo.com',
-      role: 'SECRETARIA',
-      documentType: 'CC',
-      documentNumber: '55667788',
-      phone: '3008889900',
+    buildDataSheet(workbook, {
+      sheetName: 'Personal',
+      theme,
+      columns,
+      examples: [
+        { firstName: 'Laura', lastName: 'Sánchez Mora', email: 'lsanchez@ejemplo.com', role: 'COORDINADOR', documentType: 'CC', documentNumber: '11223344', phone: '3005556677' },
+        { firstName: 'Carmen', lastName: 'Díaz Torres', email: 'cdiaz@ejemplo.com', role: 'SECRETARIA', documentType: 'CC', documentNumber: '55667788', phone: '3008889900' },
+      ],
+      validationRefs: catalogos.ranges,
     });
 
-    // Agregar notas
-    sheet.addRow([]);
-    sheet.addRow(['* Campos obligatorios']);
-    sheet.addRow(['Roles válidos: COORDINADOR, SECRETARIA, ORIENTADOR, BIBLIOTECARIO, AUXILIAR']);
-    sheet.addRow(['Tipos de documento: CC, TI, CE, PASAPORTE, NIT, OTRO']);
+    const order = ['Inicio', 'Personal', 'Catálogos'];
+    workbook.worksheets.sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
+
+    buildInstruccionesSheet(workbook, {
+      theme,
+      sections: [
+        {
+          title: '1. Roles disponibles',
+          items: [
+            'Coordinador: gestiona académicos, asistencia, observaciones y reportes.',
+            'Secretaria: gestiona matrículas, certificados y datos básicos.',
+            'Orientador: maneja seguimiento socioemocional y observador del estudiante.',
+            'Bibliotecario y Auxiliar: roles operativos según necesidad de la institución.',
+            { type: 'tip', text: 'Cada rol da acceso solo a los módulos y acciones que corresponden a su función.' },
+          ],
+        },
+        {
+          title: '2. Credenciales automáticas',
+          items: [
+            'Usuario: nombre.apellido (validado para que sea único).',
+            'Contraseña inicial: el número de documento.',
+            { type: 'success', text: 'En el primer ingreso el sistema obliga a cambiar la contraseña por una segura.' },
+          ],
+        },
+      ],
+      commonErrors: [
+        { error: 'Rol inválido', cause: 'El valor en la columna Rol no está en la lista permitida', fix: 'Usa solo los códigos de la hoja "Catálogos"' },
+        { error: 'Correo ya registrado', cause: 'Otro usuario usa ese correo', fix: 'Verifica si el usuario ya existe o usa otro correo' },
+        { error: 'Número de documento requerido', cause: 'No se proporcionó documento', fix: 'Completa el campo — se usa como contraseña inicial' },
+      ],
+    });
 
     return workbook;
   }

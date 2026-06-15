@@ -45,8 +45,9 @@ export class BulkUploadController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Get('template/teachers')
-  async downloadTeacherTemplate(@Res() res: Response) {
-    const workbook = await this.bulkUploadService.generateTeacherTemplate();
+  async downloadTeacherTemplate(@Request() req: any, @Res() res: Response) {
+    const institutionId = await this.getInstitutionId(req.user.id);
+    const workbook = await this.bulkUploadService.generateTeacherTemplate(institutionId);
 
     res.setHeader(
       'Content-Type',
@@ -80,8 +81,9 @@ export class BulkUploadController {
   }
 
   @Get('template/staff')
-  async downloadStaffTemplate(@Res() res: Response) {
-    const workbook = await this.bulkUploadService.generateStaffTemplate();
+  async downloadStaffTemplate(@Request() req: any, @Res() res: Response) {
+    const institutionId = await this.getInstitutionId(req.user.id);
+    const workbook = await this.bulkUploadService.generateStaffTemplate(institutionId);
 
     res.setHeader(
       'Content-Type',

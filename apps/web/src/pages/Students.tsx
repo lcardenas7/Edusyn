@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, GraduationCap, FileText, AlertTriangle, Phone, Mail, MapPin, Users, CheckCircle2, XCircle, FileSpreadsheet, Heart, UserPlus, Loader2, Key, Shield, Printer, RefreshCw, EyeOff, Lock, Unlock } from 'lucide-react'
 import * as XLSX from 'xlsx'
-import { generateTemplate, parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
-import api, { studentsApi, guardiansApi, academicYearLifecycleApi, groupsApi, enrollmentsApi, observerApi, staffApi, apdApi } from '../lib/api'
+import { parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
+import api, { studentsApi, guardiansApi, academicYearLifecycleApi, groupsApi, enrollmentsApi, observerApi, staffApi, apdApi, bulkUploadApi } from '../lib/api'
+import { HelpDrawer, HelpButton } from '../components/HelpDrawer'
+import { importStudentsHelp } from '../help/importGuides'
 import { useAuth } from '../contexts/AuthContext'
 import { compareStudents, compareFullNames } from '../utils/sortStudents'
 import { DiagnosisBadge } from '../components/StudentBadges'
@@ -125,6 +127,7 @@ export default function Students() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
   const [editingStudent, setEditingStudent] = useState<Student | null>(null)
   const [editingRawStudent, setEditingRawStudent] = useState<any>(null)
   const [detailTab, setDetailTab] = useState<'info' | 'academic' | 'observer' | 'guardians'>('info')
@@ -966,8 +969,22 @@ export default function Students() {
     return age
   }
 
-  const handleDownloadTemplate = () => {
-    generateTemplate('students')
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await bulkUploadApi.downloadStudentTemplate()
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'plantilla_estudiantes.xlsx'
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Error descargando plantilla:', err)
+      alert('No se pudo descargar la plantilla. Intenta de nuevo.')
+    }
   }
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2818,7 +2835,10 @@ export default function Students() {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold flex items-center gap-2"><FileSpreadsheet className="w-5 h-5 text-green-600" />Importar Estudiantes</h3>
-              <button onClick={closeImportModal} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+              <div className="flex items-center gap-2">
+                <HelpButton onClick={() => setHelpOpen(true)} />
+                <button onClick={closeImportModal} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+              </div>
             </div>
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
               {!importResult ? (
@@ -3409,6 +3429,7 @@ export default function Students() {
           </div>
         </div>
       )}
+      <HelpDrawer open={helpOpen} onClose={() => setHelpOpen(false)} content={importStudentsHelp} />
     </div>
   )
 }
