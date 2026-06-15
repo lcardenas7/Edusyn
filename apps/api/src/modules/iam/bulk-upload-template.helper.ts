@@ -69,32 +69,35 @@ export function buildInicioSheet(
     { width: 4 },
   ];
 
-  // Banda superior con color
-  sheet.mergeCells('A1:C4');
-  sheet.getCell('A1').fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FF' + opts.theme.primary },
-  };
+  const headerFill: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + opts.theme.primary } };
 
-  // Título principal
+  // Fila 1 — banda superior
+  sheet.getRow(1).height = 18;
+  sheet.mergeCells('A1:C1');
+  sheet.getCell('A1').fill = headerFill;
+
+  // Fila 2 — título principal
+  sheet.getRow(2).height = 36;
   sheet.mergeCells('A2:C2');
   const titleCell = sheet.getCell('A2');
   titleCell.value = `Plantilla de Carga · ${opts.theme.entityName}`;
   titleCell.font = { name: 'Calibri', size: 22, bold: true, color: { argb: COLOR.white } };
   titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  titleCell.fill = headerFill;
 
-  // Subtítulo
+  // Fila 3 — subtítulo
+  sheet.getRow(3).height = 22;
   sheet.mergeCells('A3:C3');
   const subCell = sheet.getCell('A3');
   subCell.value = opts.institutionName ? `${opts.institutionName} · Edusyn` : 'Edusyn — Plataforma de Gestión Escolar';
   subCell.font = { name: 'Calibri', size: 11, italic: true, color: { argb: COLOR.white } };
   subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  subCell.fill = headerFill;
 
-  sheet.getRow(1).height = 18;
-  sheet.getRow(2).height = 36;
-  sheet.getRow(3).height = 22;
+  // Fila 4 — banda inferior del header
   sheet.getRow(4).height = 12;
+  sheet.mergeCells('A4:C4');
+  sheet.getCell('A4').fill = headerFill;
 
   // Descripción
   sheet.getRow(6).height = 8;
@@ -204,10 +207,7 @@ export function buildDataSheet(
     if (col.hint) commentLines.push(col.hint);
     if (col.comment) commentLines.push(col.comment);
     if (commentLines.length > 0) {
-      cell.note = {
-        texts: [{ text: commentLines.join('\n') }],
-        margins: { insetmode: 'custom', inset: [0.13, 0.13, 0.13, 0.13] },
-      };
+      cell.note = commentLines.join('\n');
     }
   });
 
