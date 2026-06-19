@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, Phone, Mail, MapPin, Users, Briefcase, AlertTriangle, CheckCircle2, XCircle, FileSpreadsheet } from 'lucide-react'
 import { parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
+import ImportPreviewTable from '../components/ImportPreviewTable'
 import { teachersApi, bulkUploadApi } from '../lib/api'
 import { toast, TOAST } from '../lib/toast'
 import { HelpDrawer, HelpButton } from '../components/HelpDrawer'
@@ -791,56 +792,18 @@ export default function Teachers() {
                   </div>
                 </>
               ) : (
-                <>
-                  <div className={`p-4 rounded-lg mb-4 ${importResult.success ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}`}>
-                    <div className="flex items-center gap-3">
-                      {importResult.success ? <CheckCircle2 className="w-8 h-8 text-green-600" /> : <AlertTriangle className="w-8 h-8 text-amber-600" />}
-                      <div>
-                        <p className="font-semibold text-slate-900">{importResult.success ? 'Archivo procesado correctamente' : 'Archivo procesado con errores'}</p>
-                        <p className="text-sm text-slate-600">Total filas: {importResult.totalRows} | Validas: {importResult.validRows} | Errores: {importResult.errors.length}</p>
-                      </div>
-                    </div>
-                  </div>
-                  {importResult.errors.length > 0 && (
-                    <div className="mb-4">
-                      <p className="font-medium text-slate-900 mb-2">Errores encontrados:</p>
-                      <div className="max-h-40 overflow-y-auto bg-red-50 rounded-lg p-3 space-y-1">
-                        {importResult.errors.slice(0, 20).map((err, i) => (
-                          <p key={i} className="text-sm text-red-700 flex items-start gap-2"><XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" /><span>Fila {err.row}: {err.message}</span></p>
-                        ))}
-                        {importResult.errors.length > 20 && <p className="text-sm text-red-600 font-medium">... y {importResult.errors.length - 20} errores mas</p>}
-                      </div>
-                    </div>
-                  )}
-                  {importResult.validRows > 0 && (
-                    <div className="bg-slate-50 rounded-lg p-4">
-                      <p className="font-medium text-slate-900 mb-2">Vista previa ({importResult.validRows} registros validos):</p>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead className="bg-slate-100">
-                            <tr>
-                              <th className="px-2 py-1 text-left">Documento</th>
-                              <th className="px-2 py-1 text-left">Nombre</th>
-                              <th className="px-2 py-1 text-left">Celular</th>
-                              <th className="px-2 py-1 text-left">Contrato</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {importResult.data.slice(0, 5).map((row, i) => (
-                              <tr key={i} className="border-t border-slate-200">
-                                <td className="px-2 py-1">{row.documentNumber}</td>
-                                <td className="px-2 py-1">{row.firstName} {row.firstLastName}</td>
-                                <td className="px-2 py-1">{row.mobile}</td>
-                                <td className="px-2 py-1">{row.contractType}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                        {importResult.data.length > 5 && <p className="text-xs text-slate-500 mt-2">... y {importResult.data.length - 5} registros mas</p>}
-                      </div>
-                    </div>
-                  )}
-                </>
+                <ImportPreviewTable
+                  result={importResult}
+                  entityLabel="docentes"
+                  columns={[
+                    { header: 'Documento', key: 'documentNumber' },
+                    { header: 'Nombres', key: 'firstName' },
+                    { header: 'Apellidos', key: 'firstLastName' },
+                    { header: 'Celular', key: 'mobile' },
+                    { header: 'Email', key: 'email' },
+                    { header: 'Contrato', key: 'contractType' },
+                  ]}
+                />
               )}
             </div>
             <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
