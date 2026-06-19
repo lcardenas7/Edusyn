@@ -4,6 +4,9 @@ import * as XLSX from 'xlsx'
 import { useAuth } from '../contexts/AuthContext'
 import { useAcademic, type AcademicLevel, type QualitativeLevel } from '../contexts/AcademicContext'
 import { teacherAssignmentsApi, academicStudentsApi, gradingPeriodConfigApi, partialGradesApi, achievementsApi, achievementConfigApi, achievementBankApi, finalComponentsApi, finalComponentGradesApi } from '../lib/api'
+import { toast, TOAST } from '../lib/toast'
+import { useSaveStatus } from '../hooks/useSaveStatus'
+import SaveStatusPill from '../components/SaveStatusPill'
 import { buildQualitativeMaps, toPerformanceLevel, toQualitativeCode } from '../utils/qualitativePerformanceMapper'
 import { DiagnosisBadge } from '../components/StudentBadges'
 import QualitativeGradesPanel from '../components/grades/QualitativeGradesPanel'
@@ -220,7 +223,7 @@ export default function Grades() {
   const [currentPeriodOpen, setCurrentPeriodOpen] = useState(true)
   const [periodClosedMessage, setPeriodClosedMessage] = useState('')
   const [saving, setSaving] = useState(false)
-  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const { status: saveStatus, withSave } = useSaveStatus()
   const [academicTermId, setAcademicTermId] = useState<string | null>(null)
 
   // Fuentes de nota unificadas (períodos + componentes finales)
@@ -880,8 +883,7 @@ export default function Grades() {
         }
 
         if (subHeaderRowIdx === -1 || dataStartIdx === -1) {
-          setSaveMessage({ type: 'error', text: 'No se pudo detectar el formato de la planilla. Use la plantilla descargada.' })
-          setTimeout(() => setSaveMessage(null), 5000)
+          toast.warning('No se pudo detectar el formato de la planilla. Use la plantilla descargada.')
           return
         }
 
@@ -929,12 +931,10 @@ export default function Grades() {
         }
 
         setGrades(updatedGrades)
-        setSaveMessage({ type: 'success', text: `${imported} notas importadas desde Excel. Revise y presione Guardar.` })
-        setTimeout(() => setSaveMessage(null), 5000)
+        toast.success(`${imported} notas importadas desde Excel`, 'Revisa los valores y presiona Guardar.')
       } catch (err) {
         console.error('Error importing Excel:', err)
-        setSaveMessage({ type: 'error', text: 'Error al leer el archivo Excel' })
-        setTimeout(() => setSaveMessage(null), 5000)
+        toast.error('Error al leer el archivo Excel')
       }
     }
     reader.readAsArrayBuffer(file)
@@ -945,18 +945,15 @@ export default function Grades() {
   const saveQualitativeGrades = async () => {
     if (!isQualitative) return
     if (!selectedAssignment?.id || !academicTermId) {
-      setSaveMessage({ type: 'error', text: 'No se puede guardar: falta información del período o dimensión' })
-      setTimeout(() => setSaveMessage(null), 3000)
+      toast.warning('No se puede guardar: falta información del período o dimensión')
       return
     }
 
     setSaving(true)
-    setSaveMessage(null)
 
     try {
       if (achievements.length === 0) {
-        setSaveMessage({ type: 'error', text: 'No hay logros creados para esta dimensión en este período. Cree logros primero desde el módulo de Logros.' })
-        setTimeout(() => setSaveMessage(null), 5000)
+        toast.warning('No hay logros creados para esta dimensión en este período. Cree logros primero desde el módulo de Logros.')
         return
       }
 
@@ -991,14 +988,13 @@ export default function Grades() {
       }
 
       const msg = skipped > 0
-        ? `Evaluación guardada (${saved} estudiantes, ${skipped} omitidos por nivel no mapeado)`
-        : `Evaluación cualitativa guardada (${saved} estudiantes)`
-      setSaveMessage({ type: 'success', text: msg })
-      setTimeout(() => setSaveMessage(null), 3000)
+        ? `Evaluación guardada · ${saved} estudiantes · ${skipped} omitidos`
+        : `Evaluación cualitativa guardada · ${saved} estudiantes`
+      TOAST.grades.saved(selectedAssignment?.subject?.name, selectedAssignment?.group?.name)
+      toast.info(msg)
     } catch (err: any) {
       console.error('Error saving qualitative grades:', err)
-      setSaveMessage({ type: 'error', text: err.response?.data?.message || 'Error al guardar la evaluación cualitativa' })
-      setTimeout(() => setSaveMessage(null), 5000)
+      TOAST.grades.error(err)
     } finally {
       setSaving(false)
     }
@@ -1006,8 +1002,7 @@ export default function Grades() {
 
   const handleCreateQualitativeAchievement = async (baseDescription: string) => {
     if (!selectedAssignment?.id || !academicTermId) {
-      setSaveMessage({ type: 'error', text: 'No se puede crear el indicador: falta información del período o dimensión' })
-      setTimeout(() => setSaveMessage(null), 3000)
+      toast.warning('No se puede crear el indicador: falta información del período o dimensión')
       return
     }
 
@@ -1029,25 +1024,21 @@ export default function Grades() {
         [created.id]: prev[created.id] || {},
       }))
       setSelectedQualitativeAchievementId(created.id)
-      setSaveMessage({ type: 'success', text: 'Indicador creado correctamente' })
-      setTimeout(() => setSaveMessage(null), 3000)
+      toast.success('Indicador creado correctamente')
     } catch (err: any) {
       console.error('Error creating qualitative achievement:', err)
-      setSaveMessage({ type: 'error', text: err.response?.data?.message || 'Error al crear el indicador' })
-      setTimeout(() => setSaveMessage(null), 5000)
+      toast.error(err)
     }
   }
 
   // Guardar notas
   const saveGrades = async () => {
     if (!selectedAssignment?.id || !academicTermId) {
-      setSaveMessage({ type: 'error', text: 'No se puede guardar: falta información del período o asignatura' })
-      setTimeout(() => setSaveMessage(null), 3000)
+      toast.warning('No se puede guardar: falta información del período o asignatura')
       return
     }
 
     setSaving(true)
-    setSaveMessage(null)
 
     try {
       const partialGradesToSave: Array<{
@@ -1086,16 +1077,15 @@ export default function Grades() {
         })
       })
 
-      await partialGradesApi.bulkUpsert(partialGradesToSave)
+      await withSave(() => partialGradesApi.bulkUpsert(partialGradesToSave))
       // PeriodFinalGrade se recalcula automáticamente en el backend
       
       const notasConValor = partialGradesToSave.filter(g => g.score > 0).length
-      setSaveMessage({ type: 'success', text: `Calificaciones actualizadas correctamente (${notasConValor} notas guardadas)` })
-      setTimeout(() => setSaveMessage(null), 3000)
+      TOAST.grades.saved(selectedAssignment?.subject?.name, selectedAssignment?.group?.name)
+      if (notasConValor > 0) toast.info(`${notasConValor} notas guardadas`)
     } catch (err: any) {
       console.error('Error saving grades:', err)
-      setSaveMessage({ type: 'error', text: err.response?.data?.message || 'Error al guardar las calificaciones' })
-      setTimeout(() => setSaveMessage(null), 5000)
+      TOAST.grades.error(err)
     } finally {
       setSaving(false)
     }
@@ -1104,13 +1094,11 @@ export default function Grades() {
   // Guardar notas de componente final (planilla simplificada)
   const saveFinalComponentGrades = async () => {
     if (!selectedAssignment?.id || !selectedFinalComponentId) {
-      setSaveMessage({ type: 'error', text: 'No se puede guardar: falta información del componente' })
-      setTimeout(() => setSaveMessage(null), 3000)
+      toast.warning('No se puede guardar: falta información del componente')
       return
     }
 
     setSavingFc(true)
-    setSaveMessage(null)
 
     try {
       const gradesToSave = students.map(student => ({
@@ -1120,15 +1108,14 @@ export default function Grades() {
         grade: fcGrades[student.id] || 0,
       }))
 
-      await finalComponentGradesApi.bulkUpsert(gradesToSave)
+      await withSave(() => finalComponentGradesApi.bulkUpsert(gradesToSave))
 
       const notasConValor = gradesToSave.filter(g => g.grade > 0).length
-      setSaveMessage({ type: 'success', text: `Notas del componente actualizadas (${notasConValor} notas guardadas)` })
-      setTimeout(() => setSaveMessage(null), 3000)
+      TOAST.grades.saved(selectedAssignment?.subject?.name, selectedAssignment?.group?.name)
+      if (notasConValor > 0) toast.info(`${notasConValor} notas del componente guardadas`)
     } catch (err: any) {
       console.error('Error saving final component grades:', err)
-      setSaveMessage({ type: 'error', text: err.response?.data?.message || 'Error al guardar' })
-      setTimeout(() => setSaveMessage(null), 5000)
+      TOAST.grades.error(err)
     } finally {
       setSavingFc(false)
     }
@@ -1237,8 +1224,7 @@ export default function Grades() {
               <button
                 onClick={() => {
                   if (students.length === 0) {
-                    setSaveMessage({ type: 'error', text: 'No hay estudiantes cargados aún. Selecciona una asignatura y grupo.' })
-                    setTimeout(() => setSaveMessage(null), 3000)
+                    toast.warning('No hay estudiantes cargados. Selecciona una asignatura y grupo primero.')
                     return
                   }
                   setShowDownloadMenu(!showDownloadMenu)
@@ -1301,11 +1287,9 @@ export default function Grades() {
         </div>
       </div>
 
-      {saveMessage && (
-        <div className={`mb-4 p-4 rounded-lg ${saveMessage.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
-          {saveMessage.text}
-        </div>
-      )}
+      <div className="mb-4 flex justify-end">
+        <SaveStatusPill status={saveStatus} />
+      </div>
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
@@ -1912,8 +1896,7 @@ export default function Grades() {
                           onClick={() => {
                             navigator.clipboard.writeText(item.description)
                             achievementBankApi.markUsed(item.id).catch(() => {})
-                            setSaveMessage({ type: 'success', text: 'Logro copiado al portapapeles' })
-                            setTimeout(() => setSaveMessage(null), 2000)
+                            toast.success('Logro copiado al portapapeles')
                           }}
                           className="flex-shrink-0 p-2 rounded-lg hover:bg-indigo-100 text-slate-400 hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100"
                           title="Copiar texto del logro"
