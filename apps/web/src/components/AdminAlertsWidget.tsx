@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, Users, GraduationCap, BookOpen, ChevronRight, Loader2, CheckCircle2 } from 'lucide-react'
-import { groupsApi, teacherAssignmentsApi, studentsApi, teachersApi } from '../lib/api'
-import { useAcademic } from '../contexts/AcademicContext'
+import { groupsApi, teacherAssignmentsApi, studentsApi, teachersApi, academicYearsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
 interface Stats {
@@ -17,18 +16,21 @@ interface Stats {
 export default function AdminAlertsWidget() {
   const navigate = useNavigate()
   const { institution } = useAuth()
-  const { currentAcademicYear } = useAcademic()
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!currentAcademicYear?.id) return
-
     const load = async () => {
       try {
+        // Resolver año académico activo
+        const yearsRes = await academicYearsApi.getAll(institution?.id)
+        const activeYear = (yearsRes.data || []).find((y: any) => y.isActive) || (yearsRes.data || [])[0]
+
         const [groupsRes, assignmentsRes, studentsRes, teachersRes] = await Promise.all([
           groupsApi.getAll({ institutionId: institution?.id }),
-          teacherAssignmentsApi.getAll({ academicYearId: currentAcademicYear.id, activeOnly: true }),
+          activeYear?.id
+            ? teacherAssignmentsApi.getAll({ academicYearId: activeYear.id, activeOnly: true })
+            : Promise.resolve({ data: [] }),
           studentsApi.getAll({ institutionId: institution?.id }),
           teachersApi.getAll({ isActive: true }),
         ])
@@ -60,7 +62,7 @@ export default function AdminAlertsWidget() {
     }
 
     load()
-  }, [currentAcademicYear?.id, institution?.id])
+  }, [institution?.id])
 
   if (loading) {
     return (

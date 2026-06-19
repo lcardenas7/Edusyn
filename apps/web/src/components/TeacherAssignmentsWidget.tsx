@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BookOpen, ClipboardList, BarChart2, ChevronRight, Loader2 } from 'lucide-react'
 import { teacherAssignmentsApi } from '../lib/api'
-import { useAcademic } from '../contexts/AcademicContext'
 
 interface Assignment {
   id: string
@@ -15,18 +14,18 @@ interface Assignment {
 /** Widget mostrado en Dashboard solo para DOCENTE: lista de asignaturas del año activo */
 export default function TeacherAssignmentsWidget() {
   const navigate = useNavigate()
-  const { currentAcademicYear } = useAcademic()
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!currentAcademicYear?.id) return
     teacherAssignmentsApi
-      .getAll({ academicYearId: currentAcademicYear.id, activeOnly: true })
+      .getAll({ activeOnly: true })
       .then(res => setAssignments(res.data || []))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [currentAcademicYear?.id])
+  }, [])
+
+  const activeYear = assignments[0]?.academicYear?.year
 
   if (loading) {
     return (
@@ -60,9 +59,11 @@ export default function TeacherAssignmentsWidget() {
         <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
           <BookOpen className="w-4 h-4 text-blue-600" />
           Mis Asignaturas
-          <span className="text-xs font-normal text-slate-400 ml-1">
-            {currentAcademicYear?.year}
-          </span>
+          {activeYear && (
+            <span className="text-xs font-normal text-slate-400 ml-1">
+              {activeYear}
+            </span>
+          )}
         </h2>
         <span className="text-xs text-slate-400">{assignments.length} asignación{assignments.length !== 1 ? 'es' : ''}</span>
       </div>
