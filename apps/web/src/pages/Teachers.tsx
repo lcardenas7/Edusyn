@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Search, Plus, User, X, Edit2, Eye, Trash2, Upload, Download, Phone, Mail, MapPin, Users, Briefcase, AlertTriangle, CheckCircle2, XCircle, FileSpreadsheet } from 'lucide-react'
 import { parseExcelFile, exportToExcel, ImportResult } from '../utils/excelImport'
 import { teachersApi, bulkUploadApi } from '../lib/api'
+import { toast, TOAST } from '../lib/toast'
 import { HelpDrawer, HelpButton } from '../components/HelpDrawer'
 import { importTeachersHelp } from '../help/importGuides'
 
@@ -235,7 +236,7 @@ export default function Teachers() {
       setDeleteConfirm(null)
     } catch (err: any) {
       console.error('Error deleting teacher:', err)
-      alert(err.response?.data?.message || 'Error al eliminar el docente')
+      toast.error(err)
       setDeleteConfirm(null)
     }
   }
@@ -270,7 +271,7 @@ export default function Teachers() {
       window.URL.revokeObjectURL(url)
     } catch (err) {
       console.error('Error descargando plantilla:', err)
-      alert('No se pudo descargar la plantilla. Intenta de nuevo.')
+      TOAST.template.error(err)
     }
   }
 
@@ -323,9 +324,13 @@ export default function Teachers() {
         }))
         setTeachers(apiTeachers)
         
-        alert(`Importación exitosa: ${result.success} docentes creados${result.errors?.length > 0 ? `, ${result.errors.length} errores` : ''}`)
+        if (result.errors?.length > 0) {
+          TOAST.import.partial('docentes', result.success, result.errors.length)
+        } else {
+          TOAST.import.success('docentes', result.success)
+        }
       } else {
-        alert(`Error en importación: ${result.errors?.map((e: any) => e.message).join(', ') || 'Error desconocido'}`)
+        toast.error('Error en importación: ' + (result.errors?.map((e: any) => e.message).join(', ') || 'Error desconocido'))
       }
       
       setShowImportModal(false)
@@ -334,7 +339,7 @@ export default function Teachers() {
       if (fileInputRef.current) fileInputRef.current.value = ''
     } catch (err: any) {
       console.error('Error importing teachers:', err)
-      alert(err.response?.data?.message || 'Error al importar docentes')
+      TOAST.import.error(err)
     } finally {
       setImporting(false)
     }

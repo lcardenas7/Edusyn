@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { InstitutionProvider } from './contexts/InstitutionContext'
 import { AcademicProvider } from './contexts/AcademicContext'
@@ -198,6 +199,15 @@ function PlayRoutes() {
 function App() {
   return (
     <AuthProvider>
+      <Toaster
+        position="top-right"
+        richColors
+        closeButton
+        duration={4500}
+        toastOptions={{
+          style: { fontFamily: 'inherit' },
+        }}
+      />
       <InstitutionProvider>
       <AcademicProvider>
       <Routes>

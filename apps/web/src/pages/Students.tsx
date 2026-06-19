@@ -6,6 +6,7 @@ import api, { studentsApi, guardiansApi, academicYearLifecycleApi, groupsApi, en
 import { HelpDrawer, HelpButton } from '../components/HelpDrawer'
 import { importStudentsHelp } from '../help/importGuides'
 import { useAuth } from '../contexts/AuthContext'
+import { toast, TOAST } from '../lib/toast'
 import { compareStudents, compareFullNames } from '../utils/sortStudents'
 import { DiagnosisBadge } from '../components/StudentBadges'
 
@@ -612,7 +613,7 @@ export default function Students() {
         setStudents(students.filter(s => s.id !== id))
       } catch (err: any) {
         console.error('Error deleting student:', err)
-        alert(err.response?.data?.message || 'Error al eliminar el estudiante')
+        toast.error(err)
       }
     }
   }
@@ -621,7 +622,7 @@ export default function Students() {
   const handleBulkCreateAccess = async () => {
     const studentIds = filteredStudents.map(s => s.id)
     if (studentIds.length === 0) {
-      alert('No hay estudiantes para crear acceso')
+      toast.warning('No hay estudiantes para crear acceso')
       return
     }
     
@@ -632,11 +633,15 @@ export default function Students() {
     try {
       const response = await studentsApi.bulkActivateAccess(studentIds)
       const result = response.data
-      alert(`✅ Acceso creado para ${result.activated} estudiantes${result.errors?.length > 0 ? `\n⚠️ ${result.errors.length} errores` : ''}`)
+      if (result.errors?.length > 0) {
+        toast.warning(`Acceso creado para ${result.activated} estudiantes · ${result.errors.length} errores`)
+      } else {
+        toast.success(`Acceso creado para ${result.activated} estudiantes`)
+      }
       setShowAccessModal(false)
     } catch (err: any) {
       console.error('Error creating access:', err)
-      alert(err.response?.data?.message || 'Error al crear acceso')
+      toast.error(err)
     } finally {
       setCreatingAccess(false)
     }
@@ -668,7 +673,7 @@ export default function Students() {
       setCredentialStudents(mapped)
     } catch (err: any) {
       console.error('Error loading credential students:', err)
-      alert('Error al cargar datos de credenciales')
+      toast.error('Error al cargar datos de credenciales')
     } finally {
       setLoadingCredentials(false)
     }
@@ -689,7 +694,7 @@ export default function Students() {
       await studentsApi.activateAccess(studentId)
       await loadCredentialStudents()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al activar acceso')
+      toast.error(err)
     } finally {
       setProcessingCredentials(false)
     }
@@ -702,7 +707,7 @@ export default function Students() {
       await studentsApi.deactivateAccess(studentId)
       await loadCredentialStudents()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al desactivar acceso')
+      toast.error(err)
     } finally {
       setProcessingCredentials(false)
     }
@@ -714,9 +719,9 @@ export default function Students() {
       setProcessingCredentials(true)
       await studentsApi.resetPassword(studentId)
       await loadCredentialStudents()
-      alert('Contraseña reseteada correctamente')
+      toast.success('Contraseña reseteada correctamente')
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al resetear contraseña')
+      toast.error(err)
     } finally {
       setProcessingCredentials(false)
     }
@@ -735,7 +740,7 @@ export default function Students() {
   const handleBulkActivateFiltered = async () => {
     const studentsWithoutAccess = filteredCredentialStudents.filter(s => !s.hasAccess)
     if (studentsWithoutAccess.length === 0) {
-      alert('Todos los estudiantes filtrados ya tienen acceso')
+      toast.info('Todos los estudiantes filtrados ya tienen acceso')
       return
     }
     const msg = `¿Crear acceso al sistema para ${studentsWithoutAccess.length} estudiantes?\n\n` +
@@ -745,10 +750,10 @@ export default function Students() {
     setProcessingCredentials(true)
     try {
       const result = await studentsApi.bulkActivateAccess(studentsWithoutAccess.map(s => s.id))
-      alert(`Acceso creado para ${result.data.activated} estudiantes${result.data.errors?.length > 0 ? `\n${result.data.errors.length} errores` : ''}`)
+      toast.success(`Acceso creado para ${result.data.activated} estudiantes`)
       await loadCredentialStudents()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al crear acceso masivo')
+      toast.error(err)
     } finally {
       setProcessingCredentials(false)
     }
@@ -757,7 +762,7 @@ export default function Students() {
   const handleBulkResetFiltered = async () => {
     const studentsWithAccess = filteredCredentialStudents.filter(s => s.hasAccess)
     if (studentsWithAccess.length === 0) {
-      alert('No hay estudiantes con acceso para resetear')
+      toast.info('No hay estudiantes con acceso para resetear')
       return
     }
     if (!confirm(`¿Resetear contraseña a ${studentsWithAccess.length} estudiantes?\nLa contraseña será su número de documento.`)) return
@@ -765,10 +770,10 @@ export default function Students() {
     setProcessingCredentials(true)
     try {
       const result = await studentsApi.bulkResetPassword(studentsWithAccess.map(s => s.id))
-      alert(`Contraseñas reseteadas: ${result.data.reset}${result.data.errors?.length > 0 ? `\n${result.data.errors.length} errores` : ''}`)
+      toast.success(`Contraseñas reseteadas: ${result.data.reset}`)
       await loadCredentialStudents()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al resetear contraseñas')
+      toast.error(err)
     } finally {
       setProcessingCredentials(false)
     }
@@ -777,7 +782,7 @@ export default function Students() {
   const handleBulkRegenerateCredentials = async () => {
     const studentsToRegenerate = filteredCredentialStudents.filter(s => s.hasAccess && s.mustChangePassword)
     if (studentsToRegenerate.length === 0) {
-      alert('No hay estudiantes elegibles para regenerar.\nSolo se pueden regenerar credenciales de estudiantes que nunca han iniciado sesión.')
+      toast.info('No hay estudiantes elegibles. Solo aplica para quienes nunca han iniciado sesión.')
       return
     }
     if (!confirm(`¿Regenerar usuario y contraseña para ${studentsToRegenerate.length} estudiantes?\n\nEsto actualizará el username basándose en el documento actual.\nSolo afecta estudiantes que nunca han iniciado sesión.`)) return
@@ -785,10 +790,10 @@ export default function Students() {
     setProcessingCredentials(true)
     try {
       const result = await studentsApi.bulkRegenerateCredentials(studentsToRegenerate.map(s => s.id))
-      alert(`Credenciales regeneradas: ${result.data.regenerated}\nOmitidos (ya tienen acceso activo): ${result.data.skipped}${result.data.errors?.length > 0 ? `\nErrores: ${result.data.errors.length}` : ''}`)
+      toast.success(`Credenciales regeneradas: ${result.data.regenerated} · Omitidos: ${result.data.skipped}`)
       await loadCredentialStudents()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al regenerar credenciales')
+      toast.error(err)
     } finally {
       setProcessingCredentials(false)
     }
@@ -797,7 +802,7 @@ export default function Students() {
   const handleExportCredentials = () => {
     const studentsWithAccess = filteredCredentialStudents.filter(s => s.hasAccess)
     if (studentsWithAccess.length === 0) {
-      alert('No hay estudiantes con credenciales para exportar')
+      toast.info('No hay estudiantes con credenciales para exportar')
       return
     }
     const columns = [
@@ -822,7 +827,7 @@ export default function Students() {
   const handlePrintCredentials = () => {
     const studentsWithAccess = filteredCredentialStudents.filter(s => s.hasAccess)
     if (studentsWithAccess.length === 0) {
-      alert('No hay estudiantes con credenciales para imprimir')
+      toast.info('No hay estudiantes con credenciales para imprimir')
       return
     }
     const printContent = `
@@ -898,7 +903,7 @@ export default function Students() {
     try {
       const response = await studentsApi.bulkDeleteWithoutRecords(institution.id)
       const result = response.data
-      alert(`✅ Eliminados ${result.deleted} estudiantes sin registros`)
+      toast.success(`${result.deleted} estudiantes sin registros eliminados`)
       // Recargar lista
       const studentsRes = await studentsApi.getAll({ institutionId: institution.id })
       const apiStudents = (studentsRes.data || []).map((s: any) => ({
@@ -921,7 +926,7 @@ export default function Students() {
       setStudents(apiStudents)
     } catch (err: any) {
       console.error('Error deleting students:', err)
-      alert(err.response?.data?.message || 'Error al eliminar estudiantes')
+      toast.error(err)
     }
   }
 
@@ -983,7 +988,7 @@ export default function Students() {
       window.URL.revokeObjectURL(url)
     } catch (err) {
       console.error('Error descargando plantilla:', err)
-      alert('No se pudo descargar la plantilla. Intenta de nuevo.')
+      TOAST.template.error(err)
     }
   }
 
@@ -1013,7 +1018,7 @@ export default function Students() {
   const handleConfirmImport = async () => {
     if (!importResult || importResult.data.length === 0) return
     if (!institution?.id || !currentAcademicYear?.id) {
-      alert('No hay año académico activo. Configure un año académico antes de importar.')
+      toast.warning('No hay año académico activo. Configure un año académico antes de importar.')
       return
     }
 
@@ -1324,7 +1329,7 @@ export default function Students() {
         .filter(s => s.documentNumber && s.firstName && s.groupId)
 
       if (studentsToImport.length === 0) {
-        alert('No hay estudiantes válidos para importar. Verifique que los grupos existan en el sistema.')
+        toast.warning('No hay estudiantes válidos. Verifique que los grupos existan en el sistema.')
         setImporting(false)
         return
       }
@@ -1336,7 +1341,11 @@ export default function Students() {
       })
 
       const { created, updated, errors } = result.data
-      alert(`Importación completada:\n- Creados: ${created}\n- Actualizados: ${updated}\n- Errores: ${errors?.length || 0}`)
+      if (errors?.length > 0) {
+        TOAST.import.partial('estudiantes', created + updated, errors.length)
+      } else {
+        TOAST.import.success('estudiantes', created + updated)
+      }
 
       // Recargar estudiantes
       const response = await studentsApi.getAll({ institutionId: institution.id })
@@ -1370,7 +1379,7 @@ export default function Students() {
       if (fileInputRef.current) fileInputRef.current.value = ''
     } catch (err: any) {
       console.error('Error importing students:', err)
-      alert('Error al importar estudiantes: ' + (err.response?.data?.message || err.message))
+      TOAST.import.error(err)
     } finally {
       setImporting(false)
     }
@@ -1673,7 +1682,7 @@ export default function Students() {
       }
       const { data } = await studentsApi.exportForBulkUpdate(params)
       if (!data || data.length === 0) {
-        alert('No hay estudiantes para exportar con los filtros seleccionados')
+        toast.info('No hay estudiantes para exportar con los filtros seleccionados')
         return
       }
       // Generar Excel con columnas
@@ -1685,7 +1694,7 @@ export default function Students() {
         : 'Todos'
       XLSX.writeFile(wb, `Estudiantes_Actualizar_${groupName}_${new Date().toISOString().split('T')[0]}.xlsx`)
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al exportar estudiantes')
+      toast.error(err)
     }
   }
 
@@ -1711,7 +1720,7 @@ export default function Students() {
       setBulkUpdatePreview(preview)
       setBulkUpdateStep('preview')
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al procesar archivo')
+      toast.error(err)
     } finally {
       setBulkUpdateLoading(false)
     }
@@ -1764,7 +1773,7 @@ export default function Students() {
       }))
       setStudents(apiStudents)
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al ejecutar actualización')
+      toast.error(err)
     } finally {
       setBulkUpdateLoading(false)
     }
@@ -2710,14 +2719,14 @@ export default function Students() {
                                   onKeyDown={e => {
                                     if (e.key === 'Enter') {
                                       (async () => {
-                                        if (!editingUsernameValue || editingUsernameValue.length < 3) { alert('El usuario debe tener al menos 3 caracteres'); return }
+                                        if (!editingUsernameValue || editingUsernameValue.length < 3) { toast.warning('El usuario debe tener al menos 3 caracteres'); return }
                                         try {
                                           setProcessingCredentials(true)
                                           await staffApi.updateUsername(student.userId!, editingUsernameValue)
                                           setCredentialStudents(prev => prev.map(s => s.id === student.id ? { ...s, username: editingUsernameValue } : s))
                                           setEditingUsernameId(null)
                                         } catch (err: any) {
-                                          alert(err.response?.data?.message || 'Error al actualizar usuario')
+                                          toast.error(err)
                                         } finally { setProcessingCredentials(false) }
                                       })()
                                     }
@@ -2726,14 +2735,14 @@ export default function Students() {
                                 />
                                 <button
                                   onClick={async () => {
-                                    if (!editingUsernameValue || editingUsernameValue.length < 3) { alert('El usuario debe tener al menos 3 caracteres'); return }
+                                    if (!editingUsernameValue || editingUsernameValue.length < 3) { toast.warning('El usuario debe tener al menos 3 caracteres'); return }
                                     try {
                                       setProcessingCredentials(true)
                                       await staffApi.updateUsername(student.userId!, editingUsernameValue)
                                       setCredentialStudents(prev => prev.map(s => s.id === student.id ? { ...s, username: editingUsernameValue } : s))
                                       setEditingUsernameId(null)
                                     } catch (err: any) {
-                                      alert(err.response?.data?.message || 'Error al actualizar usuario')
+                                      toast.error(err)
                                     } finally { setProcessingCredentials(false) }
                                   }}
                                   disabled={processingCredentials}

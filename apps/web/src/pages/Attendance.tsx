@@ -4,6 +4,9 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { DiagnosisBadge } from '../components/StudentBadges'
 import { teacherAssignmentsApi, academicStudentsApi, attendanceApi, tutoringAttendanceApi, academicYearsApi, storageApi } from '../lib/api'
+import { toast, TOAST } from '../lib/toast'
+import { useSaveStatus } from '../hooks/useSaveStatus'
+import SaveStatusPill from '../components/SaveStatusPill'
 
 interface TeacherAssignment {
   id: string
@@ -38,7 +41,6 @@ export default function Attendance() {
   const [tutoringStudents, setTutoringStudents] = useState<Array<{ id: string; name: string; enrollmentId: string; status: string; hasDiagnosis?: boolean; diagnosisType?: string }>>([])
   const [loadingTutoringStudents, setLoadingTutoringStudents] = useState(false)
   const [savingTutoring, setSavingTutoring] = useState(false)
-  const [tutoringMessage, setTutoringMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [togglingTutoring, setTogglingTutoring] = useState(false)
   const [mySignatureUrl, setMySignatureUrl] = useState<string | null>(null)
   const [uploadingSignature, setUploadingSignature] = useState(false)
@@ -166,7 +168,6 @@ export default function Attendance() {
   const saveTutoringAttendance = async () => {
     if (!selectedTutoringGroupId) return
     setSavingTutoring(true)
-    setTutoringMessage(null)
     try {
       await tutoringAttendanceApi.record({
         groupId: selectedTutoringGroupId,
@@ -176,11 +177,9 @@ export default function Attendance() {
           status: s.status,
         })),
       })
-      setTutoringMessage({ type: 'success', text: 'Asistencia de tutoría guardada correctamente' })
-      setTimeout(() => setTutoringMessage(null), 3000)
+      TOAST.attendance.saved(tutoringStudents.length, 'Tutoría')
     } catch (err: any) {
-      setTutoringMessage({ type: 'error', text: err.response?.data?.message || 'Error al guardar la asistencia de tutoría' })
-      setTimeout(() => setTutoringMessage(null), 5000)
+      TOAST.attendance.error(err)
     } finally {
       setSavingTutoring(false)
     }
@@ -259,7 +258,7 @@ export default function Attendance() {
   }, [selectedAssignment?.group?.id, selectedAssignment?.academicYear?.id])
 
   const [saving, setSaving] = useState(false)
-  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const { status: saveStatus, withSave } = useSaveStatus()
 
   const updateStatus = (studentId: string, status: string) => {
     setStudents(students.map(s => s.id === studentId ? { ...s, status } : s))
@@ -267,13 +266,11 @@ export default function Attendance() {
 
   const saveAttendance = async () => {
     if (!selectedAssignment?.id) {
-      setSaveMessage({ type: 'error', text: 'Selecciona una asignatura y grupo primero' })
-      setTimeout(() => setSaveMessage(null), 3000)
+      toast.warning('Selecciona una asignatura y grupo primero')
       return
     }
 
     setSaving(true)
-    setSaveMessage(null)
 
     try {
       const records = students.map(s => ({
@@ -287,12 +284,13 @@ export default function Attendance() {
         records,
       })
 
-      setSaveMessage({ type: 'success', text: 'Asistencia guardada correctamente' })
-      setTimeout(() => setSaveMessage(null), 3000)
+      TOAST.attendance.saved(
+        students.length,
+        `${selectedAssignment.subject?.name} · ${selectedAssignment.group?.name}`,
+      )
     } catch (err: any) {
       console.error('Error saving attendance:', err)
-      setSaveMessage({ type: 'error', text: err.response?.data?.message || 'Error al guardar la asistencia' })
-      setTimeout(() => setSaveMessage(null), 5000)
+      TOAST.attendance.error(err)
     } finally {
       setSaving(false)
     }
@@ -374,7 +372,7 @@ export default function Attendance() {
                 setDirectedGroups(res.data.directedGroups || [])
                 if (res.data.directedGroups?.length > 0) setSelectedTutoringGroupId(res.data.directedGroups[0].id)
               } catch (err: any) {
-                alert(err.response?.data?.message || 'Error al habilitar')
+                toast.error(err)
               } finally {
                 setTogglingTutoring(false)
               }
@@ -404,7 +402,7 @@ export default function Attendance() {
                 setDirectedGroups([])
                 setActiveTab('subject')
               } catch (err: any) {
-                alert(err.response?.data?.message || 'Error al deshabilitar')
+                toast.error(err)
               } finally {
                 setTogglingTutoring(false)
               }
@@ -449,10 +447,10 @@ export default function Attendance() {
         </div>
       )}
 
-      {/* Mensaje de guardado */}
-      {(activeTab === 'subject' ? saveMessage : tutoringMessage) && (
-        <div className={`mb-4 p-4 rounded-lg ${(activeTab === 'subject' ? saveMessage : tutoringMessage)?.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
-          {(activeTab === 'subject' ? saveMessage : tutoringMessage)?.text}
+      {/* Status de guardado */}
+      {activeTab === 'subject' && (
+        <div className="mb-4 flex justify-end">
+          <SaveStatusPill status={saveStatus} />
         </div>
       )}
 
@@ -574,7 +572,7 @@ export default function Attendance() {
                       const url = res.data?.data?.url || res.data?.data?.path || ''
                       if (url) setMySignatureUrl(url)
                     } catch (err: any) {
-                      alert(err?.response?.data?.message || 'Error al subir la firma')
+                      toast.error(err)
                     } finally {
                       setUploadingSignature(false)
                       e.target.value = ''

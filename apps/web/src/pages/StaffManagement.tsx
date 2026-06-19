@@ -5,6 +5,7 @@ import {
   Key, Eye, EyeOff, FileText, Printer, RefreshCw, Lock, Loader2
 } from 'lucide-react'
 import { bulkUploadApi, staffApi, teachersApi } from '../lib/api'
+import { toast, TOAST } from '../lib/toast'
 import api from '../lib/api'
 import { exportToExcel } from '../utils/excelImport'
 import { useAuth } from '../contexts/AuthContext'
@@ -147,7 +148,7 @@ export default function StaffManagement() {
       await staffApi.toggleStudentPasswordChange(newValue)
       setAllowStudentPwdChange(newValue)
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al cambiar configuración')
+      toast.error(err)
     } finally {
       setTogglingPwdSetting(false)
     }
@@ -248,7 +249,7 @@ export default function StaffManagement() {
       await staffApi.toggleCredentialsPermission(userId, allow)
       await loadDelegatedPermissions()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al cambiar permiso')
+      toast.error(err)
     } finally {
       setTogglingPermission(null)
     }
@@ -260,7 +261,7 @@ export default function StaffManagement() {
       await staffApi.toggleStudentsPermission(userId, allow)
       await loadDelegatedPermissions()
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al cambiar permiso')
+      toast.error(err)
     } finally {
       setTogglingStudentsPermission(null)
     }
@@ -312,7 +313,7 @@ export default function StaffManagement() {
       const res = await staffApi.resetPassword(resetPasswordUser.id, opts)
       setResetResult({ password: res.data.newPassword, username: res.data.username || resetPasswordUser.username })
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al resetear contraseña')
+      toast.error(error)
     } finally {
       setResetting(false)
     }
@@ -435,7 +436,7 @@ export default function StaffManagement() {
       setShowModal(false)
       loadUsers()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al guardar')
+      toast.error(error)
     } finally {
       setSaving(false)
     }
@@ -447,7 +448,7 @@ export default function StaffManagement() {
       setDeleteConfirm(null)
       loadUsers()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al eliminar')
+      toast.error(error)
     }
   }
 
@@ -483,7 +484,7 @@ export default function StaffManagement() {
       window.URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Error downloading template:', error)
-      alert('Error al descargar la plantilla')
+      TOAST.template.error(error)
     }
   }
 
@@ -1044,7 +1045,7 @@ export default function StaffManagement() {
                                         setAllUsers(prev => prev.map(u => u.id === user.id ? { ...u, username: editingUsernameValue.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '') } : u))
                                         setEditingUsernameId(null)
                                       } catch (err: any) {
-                                        alert(err.response?.data?.message || 'Error al actualizar username')
+                                        toast.error(err)
                                       } finally {
                                         setSavingUsername(false)
                                       }
@@ -1062,7 +1063,7 @@ export default function StaffManagement() {
                                     setAllUsers(prev => prev.map(u => u.id === user.id ? { ...u, username: editingUsernameValue.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '') } : u))
                                     setEditingUsernameId(null)
                                   } catch (err: any) {
-                                    alert(err.response?.data?.message || 'Error al actualizar username')
+                                    toast.error(err)
                                   } finally {
                                     setSavingUsername(false)
                                   }
