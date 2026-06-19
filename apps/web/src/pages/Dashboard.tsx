@@ -16,6 +16,8 @@ import {
   Zap,
 } from 'lucide-react'
 import { dashboardApi } from '../lib/api'
+import TeacherAssignmentsWidget from '../components/TeacherAssignmentsWidget'
+import AdminAlertsWidget from '../components/AdminAlertsWidget'
 
 interface Announcement {
   id: string
@@ -112,6 +114,16 @@ export default function Dashboard() {
     return ['DOCENTE', 'ADMIN_INSTITUTIONAL', 'COORDINADOR'].includes(name)
   })
 
+  const isTeacher = user?.roles?.some((r: any) => {
+    const name = typeof r === 'string' ? r : r?.name
+    return name === 'DOCENTE'
+  })
+
+  const isAdmin = user?.roles?.some((r: any) => {
+    const name = typeof r === 'string' ? r : r?.name
+    return ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR'].includes(name)
+  })
+
   return (
     <div>
       <div className="mb-8">
@@ -149,6 +161,14 @@ export default function Dashboard() {
               <ExternalLink className="w-3.5 h-3.5 opacity-60" />
             </a>
           </div>
+        </div>
+      )}
+
+      {/* Widgets de rol — debajo del banner de Play */}
+      {(isTeacher || isAdmin) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          {isTeacher && <TeacherAssignmentsWidget />}
+          {isAdmin && <AdminAlertsWidget />}
         </div>
       )}
 

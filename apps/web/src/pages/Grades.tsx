@@ -754,6 +754,17 @@ export default function Grades() {
     return cols
   }, [processConfigs, additionalActivities])
 
+  // ── Semáforo de completitud de notas ──────────────────────────────────────
+  const completeness = useMemo(() => {
+    if (students.length === 0 || allActivityColumns.length === 0) return null
+    const withAnyGrade = students.filter(s => {
+      const sg = grades[s.id] || {}
+      return allActivityColumns.some(actId => (sg[actId] || 0) > 0)
+    })
+    const pct = Math.round((withAnyGrade.length / students.length) * 100)
+    return { count: withAnyGrade.length, total: students.length, pct }
+  }, [students, grades, allActivityColumns])
+
   // ============================================
   // DESCARGAR PLANILLA DE CALIFICACIONES
   // ============================================
@@ -1287,7 +1298,32 @@ export default function Grades() {
         </div>
       </div>
 
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        {/* Semáforo de completitud */}
+        {completeness && !isQualitative && (
+          <div className="flex items-center gap-2 text-sm">
+            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+              completeness.pct >= 80 ? 'bg-green-500' :
+              completeness.pct >= 30 ? 'bg-amber-400' : 'bg-red-500'
+            }`} />
+            <span className={`font-medium ${
+              completeness.pct >= 80 ? 'text-green-700' :
+              completeness.pct >= 30 ? 'text-amber-700' : 'text-red-600'
+            }`}>
+              {completeness.count}/{completeness.total} estudiantes con notas
+            </span>
+            <div className="w-24 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  completeness.pct >= 80 ? 'bg-green-500' :
+                  completeness.pct >= 30 ? 'bg-amber-400' : 'bg-red-500'
+                }`}
+                style={{ width: `${completeness.pct}%` }}
+              />
+            </div>
+            <span className="text-slate-400 text-xs">{completeness.pct}%</span>
+          </div>
+        )}
         <SaveStatusPill status={saveStatus} />
       </div>
 
