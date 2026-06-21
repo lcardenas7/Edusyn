@@ -7,6 +7,7 @@ import { teacherAssignmentsApi, academicStudentsApi, attendanceApi, tutoringAtte
 import { toast, TOAST } from '../lib/toast'
 import { useSaveStatus } from '../hooks/useSaveStatus'
 import SaveStatusPill from '../components/SaveStatusPill'
+import TodayClassesWidget from '../components/TodayClassesWidget'
 
 interface TeacherAssignment {
   id: string
@@ -445,6 +446,19 @@ export default function Attendance() {
           <AlertTriangle className="w-5 h-5" />
           <span>No tienes permisos para modificar la asistencia de este grupo.</span>
         </div>
+      )}
+
+      {/* Widget: Tus clases de hoy (solo para docentes) */}
+      {activeTab === 'subject' && isTeacher && !loading && assignments.length > 0 && (
+        <TodayClassesWidget
+          assignments={assignments}
+          selectedId={selectedAssignment?.id}
+          date={date}
+          onSelect={(a) => {
+            setSelectedSubjectId(a.subject.id)
+            setSelectedGroupId(a.group.id)
+          }}
+        />
       )}
 
       {/* Status de guardado */}

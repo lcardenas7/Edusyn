@@ -50,6 +50,7 @@ export const institutionsApi = {
   getAll: () => api.get('/institutions'),
   getById: (id: string) => api.get(`/institutions/${id}`),
   create: (data: { name: string; daneCode?: string; nit?: string }) => api.post('/institutions', data),
+  getSetupStatus: () => api.get('/institutions/setup-status'),
 }
 
 // Institution Config (configuración completa institucional)

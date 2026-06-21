@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Users, GraduationCap, BookOpen, ChevronRight, Loader2, CheckCircle2 } from 'lucide-react'
-import { groupsApi, teacherAssignmentsApi, studentsApi, teachersApi, academicYearsApi } from '../lib/api'
+import { AlertTriangle, Users, GraduationCap, BookOpen, ChevronRight, Loader2, CheckCircle2, Sparkles, Calendar } from 'lucide-react'
+import { groupsApi, teacherAssignmentsApi, studentsApi, teachersApi, academicYearsApi, institutionsApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
 interface Stats {
@@ -10,6 +10,17 @@ interface Stats {
   totalStudents: number
   totalTeachers: number
   groupsWithoutAssignment: number
+  activeYear?: number
+}
+
+interface SetupStatus {
+  currentStep: string
+  currentStepLabel: string
+  nextPath: string | null
+  progress: number
+  completedCount: number
+  totalSteps: number
+  steps: Array<{ key: string; label: string; complete: boolean; path: string }>
 }
 
 /** Panel de alertas para ADMIN_INSTITUTIONAL, COORDINADOR, RECTOR */
@@ -17,14 +28,20 @@ export default function AdminAlertsWidget() {
   const navigate = useNavigate()
   const { institution } = useAuth()
   const [stats, setStats] = useState<Stats | null>(null)
+  const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const load = async () => {
       try {
-        // Resolver año académico activo
-        const yearsRes = await academicYearsApi.getAll(institution?.id)
+        // Resolver año académico activo + setup status en paralelo
+        const [yearsRes, setupRes] = await Promise.all([
+          academicYearsApi.getAll(institution?.id),
+          institutionsApi.getSetupStatus().catch(() => null),
+        ])
         const activeYear = (yearsRes.data || []).find((y: any) => y.isActive) || (yearsRes.data || [])[0]
+
+        if (setupRes?.data) setSetupStatus(setupRes.data as SetupStatus)
 
         const [groupsRes, assignmentsRes, studentsRes, teachersRes] = await Promise.all([
           groupsApi.getAll({ institutionId: institution?.id }),
@@ -53,6 +70,7 @@ export default function AdminAlertsWidget() {
           totalStudents: students.length,
           totalTeachers: teachers.length,
           groupsWithoutAssignment,
+          activeYear: activeYear?.year,
         })
       } catch {
         // silently ignore — dashboard should not crash on partial failure
@@ -92,13 +110,58 @@ export default function AdminAlertsWidget() {
     }] : []),
   ]
 
+  const setupIncomplete = setupStatus && setupStatus.progress < 100
+
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-      <div className="px-5 py-3.5 border-b border-slate-200">
-        <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-500" />
-          Resumen Institucional
-        </h2>
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* HERO: estado de la institución */}
+      <div className="px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <h2 className="text-base font-semibold text-slate-900 truncate">
+              {institution?.name || 'Institución'}
+            </h2>
+            {stats?.activeYear && (
+              <span className="inline-flex items-center gap-1 text-xs text-slate-500 shrink-0">
+                <Calendar className="w-3 h-3" />
+                {stats.activeYear}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {setupStatus && (
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="text-slate-600">
+                  Configuración: <span className="font-medium text-slate-900">{setupStatus.completedCount}/{setupStatus.totalSteps} pasos</span>
+                </span>
+                <span className={`font-semibold ${setupIncomplete ? 'text-amber-600' : 'text-green-600'}`}>
+                  {setupStatus.progress}%
+                </span>
+              </div>
+              <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    setupStatus.progress >= 100 ? 'bg-green-500' :
+                    setupStatus.progress >= 60 ? 'bg-blue-500' : 'bg-amber-500'
+                  }`}
+                  style={{ width: `${setupStatus.progress}%` }}
+                />
+              </div>
+            </div>
+            {setupIncomplete && (
+              <button
+                onClick={() => navigate('/setup')}
+                className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Continuar setup
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Métricas */}
@@ -118,6 +181,25 @@ export default function AdminAlertsWidget() {
           </div>
         ))}
       </div>
+
+      {/* Procesos pendientes (paso de setup actual) */}
+      {setupIncomplete && setupStatus.nextPath && (
+        <button
+          onClick={() => navigate('/setup')}
+          className="w-full px-5 py-3 flex items-center gap-3 bg-blue-50/50 border-b border-slate-100 hover:bg-blue-50 transition-colors text-left"
+        >
+          <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-slate-700">
+              Siguiente paso: <span className="font-medium text-slate-900">{setupStatus.currentStepLabel}</span>
+            </p>
+          </div>
+          <span className="text-xs text-blue-600 font-medium flex items-center gap-1 shrink-0">
+            Ir al wizard
+            <ChevronRight className="w-3.5 h-3.5" />
+          </span>
+        </button>
+      )}
 
       {/* Alertas */}
       {alerts.length === 0 ? (

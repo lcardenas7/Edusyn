@@ -5,6 +5,7 @@ import { InstitutionProvider } from './contexts/InstitutionContext'
 import { AcademicProvider } from './contexts/AcademicContext'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import Setup from './pages/Setup'
 import Students from './pages/Students'
 import Grades from './pages/Grades'
 import Attendance from './pages/Attendance'
@@ -288,6 +289,7 @@ function App() {
               <Layout>
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/setup" element={<Setup />} />
                   <Route path="/institution" element={<InstitutionHub />} />
                   <Route path="/students" element={<Students />} />
                   <Route path="/grades" element={<Grades />} />
