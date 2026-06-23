@@ -26,6 +26,7 @@ import {
 import { Podium, CircularTimer } from '../AnimalAvatars'
 import { fireConfetti, playSound } from '../../lib/play-effects'
 import { playPanelApi } from '../../lib/playApi'
+import { getPlayOptions, getPlayThemeDef } from '../../lib/play-identity'
 
 interface LiveGuest {
   id: string
@@ -74,12 +75,10 @@ interface AnswerStatsData {
   percent: number
 }
 
-const PRESENTER_COLORS = [
-  { bg: 'bg-red-500',   shape: '▲', text: 'text-white' },
-  { bg: 'bg-blue-500',  shape: '◆', text: 'text-white' },
-  { bg: 'bg-amber-400', shape: '●', text: 'text-amber-900' },
-  { bg: 'bg-green-600', shape: '■', text: 'text-white' },
-]
+// PRESENTER_COLORS — derivado del tema activo de EduSyn Play (ver play-identity.ts)
+// Cero copia de Kahoot: usa Hexágono / Átomo / Circuito / Cohete / etc.
+const PRESENTER_OPTIONS = getPlayOptions()
+const PRESENTER_THEME = getPlayThemeDef()
 
 interface LiveQuizPlayerProps {
   liveSession: LiveSessionState
@@ -236,7 +235,7 @@ export default function LiveQuizPlayer({
 
     {/* F6.28: Presenter overlay */}
     {presenterMode && (
-      <div className="fixed inset-0 z-50 bg-gradient-to-br from-violet-900 via-fuchsia-800 to-cyan-700 text-white flex flex-col">
+      <div className={`fixed inset-0 z-50 bg-gradient-to-br ${PRESENTER_THEME.gradient} text-white flex flex-col`}>
         {/* Header */}
         <div className="flex items-center justify-between px-8 py-4 bg-black/20">
           <div className="flex items-center gap-3">
@@ -268,11 +267,12 @@ export default function LiveQuizPlayer({
           {presenterOptions.length > 0 && (
             <div className="grid grid-cols-2 gap-4 w-full max-w-3xl">
               {presenterOptions.map((opt: any, idx: number) => {
-                const s = PRESENTER_COLORS[idx % PRESENTER_COLORS.length]
+                const s = PRESENTER_OPTIONS[idx % PRESENTER_OPTIONS.length]
+                const SIcon = s.Icon
                 return (
-                  <div key={opt.id || idx} className={`${s.bg} ${s.text} rounded-2xl p-5 flex items-center gap-3 shadow-lg text-xl font-bold`}>
-                    <span className="text-3xl">{s.shape}</span>
-                    <span>{opt.text}</span>
+                  <div key={opt.id || idx} className={`${s.bg} ${s.text} rounded-2xl p-5 flex items-center gap-4 shadow-lg text-xl font-bold ring-2 ring-white/10`}>
+                    <SIcon className="w-9 h-9 shrink-0 drop-shadow" strokeWidth={2.5} />
+                    <span className="leading-tight">{opt.text}</span>
                   </div>
                 )
               })}

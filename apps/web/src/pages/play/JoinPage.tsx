@@ -5,6 +5,7 @@ import { guestApi } from '../../lib/playApi'
 import { usePlaySSE, PlaySSEEvent } from '../../lib/play-sse'
 import { playSound, fireConfetti } from '../../lib/play-effects'
 import { ANIMAL_AVATARS, getAvatar, AnimalAvatar, AvatarSelector, Podium } from '../../components/AnimalAvatars'
+import { getPlayOptions, type PlayOptionStyle } from '../../lib/play-identity'
 import {
   Sparkles,
   Hash,
@@ -22,12 +23,9 @@ import {
   Zap,
 } from 'lucide-react'
 
-const KAHOOT_OPTS = [
-  { bg: 'bg-red-500',    active: 'hover:bg-red-600',    shape: '▲', text: 'text-white' },
-  { bg: 'bg-blue-500',   active: 'hover:bg-blue-600',   shape: '◆', text: 'text-white' },
-  { bg: 'bg-amber-400',  active: 'hover:bg-amber-500',  shape: '●', text: 'text-amber-900' },
-  { bg: 'bg-green-600',  active: 'hover:bg-green-700',  shape: '■', text: 'text-white' },
-]
+// PLAY_OPTS — identidad visual propia de EduSyn Play (no Kahoot).
+// Ver `lib/play-identity.ts` para definición de temas (STEM/Space/Tech).
+const PLAY_OPTS: PlayOptionStyle[] = getPlayOptions()
 
 const REACTIONS = [
   { emoji: '💡', label: 'Entendí' },
@@ -1083,14 +1081,16 @@ export default function JoinPage() {
                     {q.type === 'MULTIPLE_CHOICE' && options.length > 0 && (
                       <div className="grid grid-cols-2 gap-3">
                         {options.map((opt, idx) => {
-                          const style = KAHOOT_OPTS[idx % KAHOOT_OPTS.length]
+                          const style = PLAY_OPTS[idx % PLAY_OPTS.length]
+                          const OptIcon = style.Icon
                           return (
                             <button
                               key={opt.id || idx}
                               onClick={() => handleAnswer(q.id, opt.id || opt.text || '')}
-                              className={`flex flex-col items-center justify-center gap-1.5 p-4 rounded-2xl font-semibold text-sm min-h-[80px] transition-all active:scale-95 shadow-md hover:shadow-lg ${style.bg} ${style.active} ${style.text}`}
+                              aria-label={`${style.label}: ${opt.text}`}
+                              className={`flex flex-col items-center justify-center gap-1.5 p-4 rounded-2xl font-semibold text-sm min-h-[88px] transition-all active:scale-95 shadow-md hover:shadow-lg ${style.bg} ${style.hover} ${style.active} ${style.text}`}
                             >
-                              <span className="text-xl">{style.shape}</span>
+                              <OptIcon className="w-7 h-7 drop-shadow" strokeWidth={2.5} />
                               <span className="text-center leading-tight">{opt.text}</span>
                             </button>
                           )
@@ -1105,13 +1105,14 @@ export default function JoinPage() {
                     {q.type === 'TRUE_FALSE' && (
                       <div className="grid grid-cols-2 gap-3">
                         {[
-                          { val: 'true',  label: 'Verdadero', shape: '✔', style: KAHOOT_OPTS[3] },
-                          { val: 'false', label: 'Falso',     shape: '✖', style: KAHOOT_OPTS[0] },
+                          { val: 'true',  label: 'Verdadero', mark: '✓', style: PLAY_OPTS[0] }, // hexágono / planeta / chip
+                          { val: 'false', label: 'Falso',     mark: '✗', style: PLAY_OPTS[2] }, // circuito / estrella / robot
                         ].map(o => (
                           <button key={o.val} onClick={() => handleAnswer(q.id, o.val)}
-                            className={`flex flex-col items-center justify-center gap-1.5 p-4 rounded-2xl font-semibold min-h-[80px] transition-all active:scale-95 shadow-md ${o.style.bg} ${o.style.active} ${o.style.text}`}
+                            aria-label={o.label}
+                            className={`flex flex-col items-center justify-center gap-1.5 p-4 rounded-2xl font-semibold min-h-[88px] transition-all active:scale-95 shadow-md ${o.style.bg} ${o.style.hover} ${o.style.active} ${o.style.text}`}
                           >
-                            <span className="text-2xl">{o.shape}</span>
+                            <span className="text-3xl font-black">{o.mark}</span>
                             <span>{o.label}</span>
                           </button>
                         ))}
@@ -1170,13 +1171,13 @@ export default function JoinPage() {
                         const idx = options.findIndex(o => (o.id || o.text || '') === selectedAnswer)
                         if (idx >= 0) {
                           selText = options[idx].text ?? ''
-                          selBg = KAHOOT_OPTS[idx % 4].bg
-                          selTextColor = KAHOOT_OPTS[idx % 4].text
+                          selBg = PLAY_OPTS[idx % PLAY_OPTS.length].bg
+                          selTextColor = PLAY_OPTS[idx % PLAY_OPTS.length].text
                         }
                       } else if (q.type === 'TRUE_FALSE') {
                         selText = selectedAnswer === 'true' ? 'Verdadero' : 'Falso'
-                        selBg = selectedAnswer === 'true' ? KAHOOT_OPTS[3].bg : KAHOOT_OPTS[0].bg
-                        selTextColor = selectedAnswer === 'true' ? KAHOOT_OPTS[3].text : KAHOOT_OPTS[0].text
+                        selBg = selectedAnswer === 'true' ? PLAY_OPTS[0].bg : PLAY_OPTS[2].bg
+                        selTextColor = selectedAnswer === 'true' ? PLAY_OPTS[0].text : PLAY_OPTS[2].text
                       } else {
                         selText = 'Respuesta enviada'
                       }
