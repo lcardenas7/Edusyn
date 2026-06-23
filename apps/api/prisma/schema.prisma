@@ -5104,7 +5104,7 @@ model ClassroomActivity {
   title       String
   description String?               @db.Text
 
-  maxScore         Decimal?  @db.Decimal(5, 2)
+  maxScore         Decimal?  @db.Decimal(7, 2)
   dueDate          DateTime?
   openDate         DateTime?
   timeLimitMinutes Int?
@@ -5192,7 +5192,7 @@ model ActivityQuestion {
   imageUrl          String?
   options           Json?
   correctAnswer     String?      @db.Text
-  points            Decimal      @default(1.0) @db.Decimal(5, 2)
+  points            Decimal      @default(1.0) @db.Decimal(7, 2)
   explanation       String?      @db.Text
   wrongExplanations Json?
   subjectArea       String?
@@ -5221,7 +5221,7 @@ model ActivitySubmission {
   content String? @db.Text
   fileUrl String?
 
-  score      Decimal?  @db.Decimal(5, 2)
+  score      Decimal?  @db.Decimal(7, 2)
   feedback   String?   @db.Text
   gradedAt   DateTime?
   gradedById String?
@@ -5253,7 +5253,7 @@ model QuestionAnswer {
   answer          String?  @db.Text
   selectedOptions Json?
   isCorrect       Boolean?
-  pointsEarned    Decimal? @db.Decimal(5, 2)
+  pointsEarned    Decimal? @db.Decimal(7, 2)
 
   submission ActivitySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   question   ActivityQuestion   @relation(fields: [questionId], references: [id], onDelete: Cascade)

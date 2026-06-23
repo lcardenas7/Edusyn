@@ -219,8 +219,7 @@ export class PlayService {
 
   /**
    * R9: Genera preguntas con IA y las anexa al quiz.
-   * Reutiliza ApdAiService (Valeria) que ya soporta múltiples providers (OpenRouter/Gemini/Groq/xAI).
-   * No bloquea si AI está deshabilitado: lanza 503 con mensaje claro.
+   * Usa el método dedicado `apdAi.generateQuizQuestions` (sin fallback silencioso).
    */
   async aiGenerateQuestions(userId: string, quizId: string, opts: {
     topic: string;
@@ -249,104 +248,114 @@ export class PlayService {
     if (!topic) throw new BadRequestException('Indica un tema para generar preguntas');
     if (topic.length > 500) throw new BadRequestException('El tema es demasiado largo (máx 500 caracteres)');
 
-    const wantsTrueFalse = opts.types?.includes('TRUE_FALSE') ?? false;
-    const onlyTrueFalse = opts.types?.length === 1 && opts.types[0] === 'TRUE_FALSE';
+    const requestedTypes = (opts.types?.length ? opts.types : ['MULTIPLE_CHOICE', 'TRUE_FALSE']) as Array<'MULTIPLE_CHOICE' | 'TRUE_FALSE'>;
 
-    // Construye la solicitud a Valeria con el formato que ya entiende.
-    const questionPhrase = onlyTrueFalse
-      ? `Genera ${count} preguntas tipo verdadero/falso sobre el tema de ${topic}`
-      : wantsTrueFalse
-        ? `Genera un quiz de ${count} preguntas sobre el tema de ${topic}, mezcla opción múltiple y verdadero/falso`
-        : `Genera un quiz de ${count} preguntas de opción múltiple sobre el tema de ${topic}`;
-
-    const aiResp = await this.apdAi.answerTeacherQuestion({
-      type: 'ASK_VALERIA',
-      question: questionPhrase + (opts.gradeName ? ` para ${opts.gradeName}` : '') + '. Las opciones deben ser plausibles y la respuesta correcta debe variar de posición.',
-      context: {
-        pageName: 'Edusyn Play - Editor de Quiz',
-        pageSummary: 'El docente está creando preguntas para un quiz en vivo tipo Kahoot',
+    // Llamada directa al LLM con prompt JSON-only. Lanza si falla (no devuelve placeholders).
+    let drafts: ApdAiQuestionDraft[];
+    try {
+      drafts = await this.apdAi.generateQuizQuestions({
+        topic,
+        count,
+        types: requestedTypes,
         gradeName: opts.gradeName,
         subjectName: opts.subjectName,
-        topic,
-        activityType: 'QUIZ',
-      },
-    });
-
-    const drafts: ApdAiQuestionDraft[] = aiResp?.activityDraft?.questions ?? [];
-    if (!drafts.length) {
-      throw new ServiceUnavailableException('La IA no devolvió preguntas válidas. Intenta de nuevo o ajusta el tema.');
+      });
+    } catch (err: any) {
+      throw new ServiceUnavailableException(
+        err?.message || 'La IA no pudo generar preguntas. Reintenta o ajusta el tema.',
+      );
     }
 
-    // Filtra a los tipos solicitados si vinieron
-    const allowedTypes = new Set(opts.types ?? ['MULTIPLE_CHOICE', 'TRUE_FALSE']);
-    const filtered = drafts.filter(d => allowedTypes.has((d.type as any) ?? 'MULTIPLE_CHOICE')).slice(0, count);
+    if (!drafts.length) {
+      throw new ServiceUnavailableException('La IA no devolvió preguntas válidas. Intenta con otro tema.');
+    }
 
-    // Obtén sortOrder inicial
+    // sortOrder inicial
     const maxSort = await this.prisma.activityQuestion.aggregate({
       where: { activityId: quizId },
       _max: { sortOrder: true },
     });
     let nextOrder = (maxSort._max.sortOrder ?? -1) + 1;
 
-    const pointsPerQuestion = Math.min(Math.max(opts.pointsPerQuestion ?? 1000, 1), 1000);
+    // points: la columna es DECIMAL(7,2) (max 99999.99). Default Kahoot-style = 1000.
+    const pointsPerQuestion = Math.min(Math.max(opts.pointsPerQuestion ?? 1000, 1), 9999);
     const timeLimitSeconds = opts.timeLimitSeconds && opts.timeLimitSeconds >= 5 && opts.timeLimitSeconds <= 120
       ? opts.timeLimitSeconds : 20;
 
-    // Convierte cada draft a la forma que persiste activityQuestion
-    const created: any[] = [];
-    for (const d of filtered) {
-      const type = (d.type ?? 'MULTIPLE_CHOICE') as 'MULTIPLE_CHOICE' | 'TRUE_FALSE';
-      const rawOptions = Array.isArray(d.options) ? d.options.filter(o => typeof o === 'string' && o.trim()) : [];
+    // Construye payloads en memoria (sin tocar DB) para validar TODO antes de persistir
+    const payloads: Array<{
+      type: 'MULTIPLE_CHOICE' | 'TRUE_FALSE';
+      text: string;
+      options: any;
+      correctAnswer: string;
+      explanation?: string;
+    }> = [];
 
-      let optionsField: any = undefined;
-      let correctAnswerField: string | undefined;
+    for (const d of drafts) {
+      const text = (d.text || '').trim();
+      if (!text) continue;
+      const type = (d.type === 'TRUE_FALSE' ? 'TRUE_FALSE' : 'MULTIPLE_CHOICE');
+      const rawOptions = Array.isArray(d.options)
+        ? d.options.filter((o: any) => typeof o === 'string' && o.trim()).map((o: string) => o.trim())
+        : [];
 
       if (type === 'TRUE_FALSE') {
-        const isTrue = (d.correctAnswer ?? '').toLowerCase().startsWith('v');
-        optionsField = [
-          { id: 'true',  text: 'Verdadero', isCorrect: isTrue },
-          { id: 'false', text: 'Falso',     isCorrect: !isTrue },
-        ];
-        correctAnswerField = isTrue ? 'true' : 'false';
-      } else {
-        // MULTIPLE_CHOICE: construye opciones con id auto y marca la correcta por coincidencia de texto
-        if (rawOptions.length < 2) continue; // skip malformed
-        const correctText = (d.correctAnswer ?? '').trim();
-        const opts = rawOptions.slice(0, 6).map((text, i) => ({
-          id: `o${i + 1}`,
-          text: text.trim(),
-          isCorrect: text.trim() === correctText,
-        }));
-        // Si ninguna marcó correcta (texto no coincidió), marca la primera por defecto
-        if (!opts.some(o => o.isCorrect) && opts.length) opts[0].isCorrect = true;
-        optionsField = opts;
-        correctAnswerField = opts.find(o => o.isCorrect)?.id;
-      }
-
-      const persisted = await this.prisma.activityQuestion.create({
-        data: {
-          activityId: quizId,
-          type: type as any,
-          text: d.text.trim(),
-          options: optionsField,
-          correctAnswer: correctAnswerField,
-          points: pointsPerQuestion,
+        const isTrue = (d.correctAnswer ?? '').toLowerCase().startsWith('v') || (d.correctAnswer ?? '').toLowerCase() === 'true';
+        payloads.push({
+          type,
+          text,
+          options: [
+            { id: 'true',  text: 'Verdadero', isCorrect: isTrue },
+            { id: 'false', text: 'Falso',     isCorrect: !isTrue },
+          ],
+          correctAnswer: isTrue ? 'true' : 'false',
           explanation: d.explanation?.trim() || undefined,
-          timeLimitSeconds,
-          sortOrder: nextOrder++,
-        },
-      });
-      created.push(persisted);
+        });
+      } else {
+        if (rawOptions.length < 2) continue; // descarta malformada
+        const correctText = (d.correctAnswer ?? '').trim();
+        const optsArr = rawOptions.slice(0, 6).map((t, i) => ({
+          id: `o${i + 1}`,
+          text: t,
+          isCorrect: t === correctText,
+        }));
+        if (!optsArr.some(o => o.isCorrect)) optsArr[0].isCorrect = true;
+        payloads.push({
+          type,
+          text,
+          options: optsArr,
+          correctAnswer: optsArr.find(o => o.isCorrect)!.id,
+          explanation: d.explanation?.trim() || undefined,
+        });
+      }
     }
 
-    if (!created.length) {
-      throw new ServiceUnavailableException('La IA devolvió preguntas pero ninguna válida para guardar. Intenta con otro tema.');
+    if (!payloads.length) {
+      throw new ServiceUnavailableException('Ninguna de las preguntas generadas era válida para guardar.');
     }
+
+    // Persistir en transacción para evitar quedar a medias
+    const created = await this.prisma.$transaction(
+      payloads.map((p) =>
+        this.prisma.activityQuestion.create({
+          data: {
+            activityId: quizId,
+            type: p.type as any,
+            text: p.text,
+            options: p.options,
+            correctAnswer: p.correctAnswer,
+            points: pointsPerQuestion,
+            explanation: p.explanation,
+            timeLimitSeconds,
+            sortOrder: nextOrder++,
+          },
+        }),
+      ),
+    );
 
     return {
       created: created.length,
       questions: created,
-      confidence: aiResp?.confidence ?? null,
     };
   }
 

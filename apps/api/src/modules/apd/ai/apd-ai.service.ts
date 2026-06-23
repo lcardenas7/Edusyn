@@ -1421,6 +1421,123 @@ export class ApdAiService implements IApdAiService {
     }
   }
 
+  /**
+   * Generación dedicada de preguntas tipo Kahoot para Edusyn Play.
+   * - Llama directamente al LLM con un prompt JSON-only enfocado en el tema.
+   * - NO hace fallback silencioso: si falla, lanza Error para que el caller decida.
+   * - Valida estructura básica antes de retornar.
+   */
+  async generateQuizQuestions(params: {
+    topic: string;
+    count: number;
+    types: Array<'MULTIPLE_CHOICE' | 'TRUE_FALSE'>;
+    gradeName?: string;
+    subjectName?: string;
+    language?: string;
+  }): Promise<ApdAiQuestionDraft[]> {
+    if (!this.isEnabled()) {
+      throw new Error('La generación con IA no está habilitada (APD_AI_API_KEY ausente).');
+    }
+    const topic = (params.topic || '').trim();
+    if (!topic) throw new Error('Tema requerido');
+    const count = Math.min(Math.max(params.count || 5, 1), 15);
+    const allowed = params.types?.length ? params.types : ['MULTIPLE_CHOICE', 'TRUE_FALSE'];
+    const onlyTF = allowed.length === 1 && allowed[0] === 'TRUE_FALSE';
+    const onlyMC = allowed.length === 1 && allowed[0] === 'MULTIPLE_CHOICE';
+    const lang = params.language || 'español';
+
+    const typeDirective = onlyTF
+      ? `Todas las preguntas DEBEN ser de tipo "TRUE_FALSE".`
+      : onlyMC
+        ? `Todas las preguntas DEBEN ser de tipo "MULTIPLE_CHOICE" con EXACTAMENTE 4 opciones.`
+        : `Usa una mezcla equilibrada de "MULTIPLE_CHOICE" (4 opciones) y "TRUE_FALSE".`;
+
+    const systemInstruction = [
+      'Eres un asistente experto en diseño de evaluaciones educativas tipo Kahoot/Quizizz.',
+      `Generas preguntas precisas, pedagógicamente válidas, en ${lang}.`,
+      'Responde EXCLUSIVAMENTE con un JSON válido, sin texto adicional, sin markdown, sin backticks.',
+      'NUNCA inventes contenido genérico tipo "describe mejor qué es X". Las preguntas deben ser específicas y verificables.',
+      'Para MULTIPLE_CHOICE: 4 opciones plausibles, una sola correcta, distractores creíbles del mismo dominio temático.',
+      'Para TRUE_FALSE: la afirmación debe ser claramente verdadera o falsa según conocimiento estándar.',
+      'La respuesta correcta debe variar de posición entre preguntas; no la pongas siempre primero.',
+      '',
+      'Esquema JSON exacto a producir:',
+      '{',
+      '  "questions": [',
+      '    {',
+      '      "type": "MULTIPLE_CHOICE" | "TRUE_FALSE",',
+      '      "text": "Enunciado claro y específico de la pregunta",',
+      '      "options": ["Opción A", "Opción B", "Opción C", "Opción D"],',
+      '      "correctAnswer": "Texto EXACTO de la opción correcta (o \\"Verdadero\\"/\\"Falso\\")",',
+      '      "explanation": "Explicación breve (1-2 frases) del porqué es correcta"',
+      '    }',
+      '  ]',
+      '}',
+      '',
+      `Genera EXACTAMENTE ${count} preguntas. ${typeDirective}`,
+      params.gradeName ? `Nivel educativo objetivo: ${params.gradeName}.` : '',
+      params.subjectName ? `Asignatura: ${params.subjectName}.` : '',
+    ].filter(Boolean).join('\n');
+
+    const userPrompt = `Tema: ${topic}\n\nGenera ${count} preguntas siguiendo el esquema JSON indicado.`;
+
+    let raw: any;
+    try {
+      raw = await this.callLlmJson<{ questions: any[] }>(systemInstruction, userPrompt);
+    } catch (err: any) {
+      this.logger.error(`generateQuizQuestions LLM error (${this.config.provider}): ${err?.message || err}`);
+      throw new Error(`El proveedor de IA (${this.config.provider}) no respondió: ${err?.message || 'error desconocido'}`);
+    }
+
+    const list: any[] = Array.isArray(raw?.questions) ? raw.questions : [];
+    if (!list.length) {
+      throw new Error('La IA respondió sin preguntas válidas. Intenta con otro tema o reformula.');
+    }
+
+    const drafts: ApdAiQuestionDraft[] = [];
+    for (const q of list) {
+      const text = typeof q?.text === 'string' ? q.text.trim() : '';
+      if (!text) continue;
+      const rawType = (typeof q?.type === 'string' ? q.type : 'MULTIPLE_CHOICE').toUpperCase();
+      const type: 'MULTIPLE_CHOICE' | 'TRUE_FALSE' =
+        rawType === 'TRUE_FALSE' || rawType === 'TRUEFALSE' ? 'TRUE_FALSE' : 'MULTIPLE_CHOICE';
+      if (!allowed.includes(type)) continue;
+
+      const correct = typeof q?.correctAnswer === 'string' ? q.correctAnswer.trim() : '';
+      const explanation = typeof q?.explanation === 'string' ? q.explanation.trim() : undefined;
+
+      if (type === 'TRUE_FALSE') {
+        // Aceptar "Verdadero"/"Falso", "true"/"false", "V"/"F"
+        const norm = correct.toLowerCase();
+        const isTrue = norm.startsWith('v') || norm === 'true' || norm === '1';
+        drafts.push({
+          type,
+          text,
+          options: ['Verdadero', 'Falso'],
+          correctAnswer: isTrue ? 'Verdadero' : 'Falso',
+          explanation,
+        });
+      } else {
+        const options = Array.isArray(q?.options)
+          ? q.options.filter((o: any) => typeof o === 'string' && o.trim()).map((o: string) => o.trim()).slice(0, 6)
+          : [];
+        if (options.length < 2) continue; // descarta malformadas
+        drafts.push({
+          type,
+          text,
+          options,
+          correctAnswer: correct || options[0],
+          explanation,
+        });
+      }
+    }
+
+    if (!drafts.length) {
+      throw new Error('La IA respondió pero todas las preguntas estaban malformadas.');
+    }
+    return drafts.slice(0, count);
+  }
+
   private placeholderTeacherQuestion(
     request: ApdAiTeacherQuestionRequest,
   ): ApdAiTeacherQuestionResponse {
