@@ -1,5 +1,6 @@
 import * as crypto from 'crypto';
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 
 import { PrismaService } from '../../../prisma/prisma.service';
 import { GuestTokenService } from './guest-token.service';
@@ -38,7 +39,32 @@ export class GuestService {
     private readonly prisma: PrismaService,
     private readonly tokens: GuestTokenService,
     private readonly playService: PlayService,
+    private readonly jwtService: JwtService,
   ) {}
+
+  /**
+   * R11: Decodifica el JWT de un usuario Play autenticado (opcional).
+   * Devuelve userId si el token es válido y NO es un guest token.
+   * Si no hay header o no es válido, devuelve null sin lanzar errores
+   * (un guest no autenticado puede unirse sin problemas).
+   */
+  async tryDecodePlayUser(authHeader?: string): Promise<string | null> {
+    if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) return null;
+    const token = authHeader.slice(7).trim();
+    if (!token) return null;
+    try {
+      const decoded: any = await this.jwtService.verifyAsync(token);
+      // Diferencia un Play user token de un guest token: el guest tiene `type: 'guest'`.
+      if (decoded?.type === 'guest' || decoded?.type === 'sse') return null;
+      // Un Play user token tiene `sub` (userId) y `email`
+      if (typeof decoded?.sub === 'string' && typeof decoded?.email === 'string') {
+        return decoded.sub;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
 
   /** Genera un joinCode único (6 dígitos). Reintenta si colisiona. */
   async generateUniqueJoinCode(kind: SessionKind): Promise<string> {
@@ -132,6 +158,8 @@ export class GuestService {
     ip?: string;
     userAgent?: string;
     fingerprint?: string;
+    /** R11: si viene, el guest queda inmediatamente vinculado a esa cuenta Play */
+    userId?: string;
   }): Promise<{
     guestToken: string;
     guestId: string;
@@ -139,6 +167,7 @@ export class GuestService {
     sessionKind: SessionKind;
     title: string;
     nickname: string;
+    claimed: boolean;
   }> {
     const info = await this.lookupByCode(params.code);
     if (!info.allowJoin) {
@@ -156,6 +185,25 @@ export class GuestService {
     });
     if (taken) throw new BadRequestException('Ese apodo ya está en uso, elige otro');
 
+    // R11: si viene un userId autenticado, validar que el usuario existe y no haya jugado ya este quiz
+    let validatedUserId: string | null = null;
+    if (params.userId) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: params.userId },
+        select: { id: true, isActive: true },
+      });
+      if (user?.isActive) {
+        // Una cuenta no puede unirse 2 veces a la misma sesión
+        const already = await this.prisma.liveSessionGuest.findFirst({
+          where: { sessionId: info.sessionId, claimedByUserId: params.userId },
+        });
+        if (already) {
+          throw new BadRequestException('Ya estás participando en esta sesión con tu cuenta');
+        }
+        validatedUserId = user.id;
+      }
+    }
+
     // Crear guest (con token temporal; se reemplazará)
     const tempToken = `tmp-${Date.now()}-${Math.random()}`;
     const guest = await this.prisma.liveSessionGuest.create({
@@ -168,6 +216,8 @@ export class GuestService {
         ipHash: this.hashIp(params.ip),
         userAgent: params.userAgent?.slice(0, 500),
         fingerprint: params.fingerprint?.slice(0, 200),
+        claimedByUserId: validatedUserId ?? undefined,
+        claimedAt: validatedUserId ? new Date() : undefined,
       },
     });
 
@@ -214,6 +264,7 @@ export class GuestService {
       sessionKind: info.sessionKind,
       title: info.title,
       nickname,
+      claimed: !!validatedUserId,
     };
   }
 

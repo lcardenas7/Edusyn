@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { PrismaModule } from '../../prisma/prisma.module';
+import { ApdModule } from '../apd/apd.module';
 
 // Services
 import { PlayWorkspaceService } from './services/play-workspace.service';
@@ -28,6 +29,7 @@ import { ConversionController } from './controllers/conversion.controller';
 @Module({
   imports: [
     PrismaModule,
+    ApdModule,
     ConfigModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

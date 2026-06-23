@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Zap,
   Home,
+  Copy,
 } from 'lucide-react'
 
 interface Quiz {
@@ -85,6 +86,20 @@ export default function PlayQuizzes() {
       setQuizzes(prev => prev.filter(q => q.id !== id))
     } catch {
       alert('Error al eliminar quiz')
+    }
+  }
+
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null)
+  const handleDuplicate = async (id: string) => {
+    if (duplicatingId) return
+    setDuplicatingId(id)
+    try {
+      const res = await playPanelApi.duplicateQuiz(id)
+      setQuizzes(prev => [res.data, ...prev])
+    } catch {
+      alert('No se pudo duplicar el quiz')
+    } finally {
+      setDuplicatingId(null)
     }
   }
 
@@ -187,13 +202,25 @@ export default function PlayQuizzes() {
                   <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center">
                     <FileQuestion className="w-5 h-5 text-violet-600" />
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(quiz.id, quiz.title) }}
-                    className="p-1.5 rounded-lg hover:bg-red-50 opacity-0 group-hover:opacity-100 transition"
-                    title="Eliminar quiz"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-400 hover:text-red-600" />
-                  </button>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDuplicate(quiz.id) }}
+                      disabled={duplicatingId === quiz.id}
+                      className="p-1.5 rounded-lg hover:bg-violet-50 disabled:opacity-50"
+                      title="Duplicar quiz"
+                    >
+                      {duplicatingId === quiz.id
+                        ? <Loader2 className="w-4 h-4 text-violet-500 animate-spin" />
+                        : <Copy className="w-4 h-4 text-gray-400 hover:text-violet-600" />}
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(quiz.id, quiz.title) }}
+                      className="p-1.5 rounded-lg hover:bg-red-50"
+                      title="Eliminar quiz"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-400 hover:text-red-600" />
+                    </button>
+                  </div>
                 </div>
                 <h3 className="font-semibold text-gray-900 truncate mb-1">{quiz.title}</h3>
                 {quiz.description && (

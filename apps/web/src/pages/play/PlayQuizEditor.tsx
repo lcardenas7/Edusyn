@@ -28,6 +28,8 @@ import {
   ToggleLeft,
   Save,
   Image as ImageIcon,
+  Sparkles,
+  Wand2,
 } from 'lucide-react'
 
 interface Option {
@@ -114,6 +116,26 @@ export default function PlayQuizEditor() {
   const [newTimeLimitSeconds, setNewTimeLimitSeconds] = useState('15')
   const [uploadingImage, setUploadingImage] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [draftRestored, setDraftRestored] = useState(false)
+
+  // R9: AI generator state
+  const [aiEnabled, setAiEnabled] = useState(false)
+  const [showAiModal, setShowAiModal] = useState(false)
+  const [aiTopic, setAiTopic] = useState('')
+  const [aiCount, setAiCount] = useState(5)
+  const [aiGrade, setAiGrade] = useState('')
+  const [aiTypes, setAiTypes] = useState<Array<'MULTIPLE_CHOICE' | 'TRUE_FALSE'>>(['MULTIPLE_CHOICE', 'TRUE_FALSE'])
+  const [aiGenerating, setAiGenerating] = useState(false)
+  const [aiError, setAiError] = useState('')
+
+  // R6: Persist 'new question' form to localStorage so accidental tab close doesn't lose work.
+  // Only active when adding a new question (not editing an existing one).
+  const draftKey = quizId ? `play_question_draft_${quizId}` : null
+  const draftHydratedRef = useRef(false)
+  const clearDraft = () => {
+    if (draftKey) localStorage.removeItem(draftKey)
+    setDraftRestored(false)
+  }
 
   useEffect(() => {
     if (!quizId) return
@@ -125,6 +147,69 @@ export default function PlayQuizEditor() {
       .catch(() => setError('Error al cargar preguntas'))
       .finally(() => setLoading(false))
   }, [quizId])
+
+  // R9: detect AI availability once
+  useEffect(() => {
+    playPanelApi.aiStatus()
+      .then(res => setAiEnabled(!!res.data?.enabled))
+      .catch(() => setAiEnabled(false))
+  }, [])
+
+  const toggleAiType = (t: 'MULTIPLE_CHOICE' | 'TRUE_FALSE') => {
+    setAiTypes(prev => prev.includes(t)
+      ? (prev.length > 1 ? prev.filter(x => x !== t) : prev)  // can't deselect last
+      : [...prev, t])
+  }
+
+  const handleAiGenerate = async () => {
+    if (!quizId) return
+    const topic = aiTopic.trim()
+    if (!topic) { setAiError('Indica un tema'); return }
+    setAiGenerating(true)
+    setAiError('')
+    try {
+      const res = await playPanelApi.aiGenerateQuestions(quizId, {
+        topic,
+        count: aiCount,
+        gradeName: aiGrade.trim() || undefined,
+        types: aiTypes,
+      })
+      const created = res.data?.questions || []
+      setQuestions(prev => [...prev, ...created])
+      setShowAiModal(false)
+      setAiTopic('')
+      setSuccess(`✨ ${created.length} pregunta${created.length === 1 ? '' : 's'} generada${created.length === 1 ? '' : 's'} con IA`)
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err: any) {
+      setAiError(err?.response?.data?.message || 'Error generando preguntas. Intenta de nuevo.')
+    } finally {
+      setAiGenerating(false)
+    }
+  }
+
+  // R6: Persist new-question draft (debounced) whenever the form is open for ADDING.
+  useEffect(() => {
+    if (!draftKey || !showAddForm || editingId) return
+    if (!draftHydratedRef.current) return  // wait until hydration completes to avoid overwriting with empty initial
+    const isEmpty = !newText.trim() && !newExplanation.trim() && !newImageUrl.trim() &&
+      newOptions.every(o => !o.text.trim()) && newType === 'MULTIPLE_CHOICE'
+    if (isEmpty) {
+      localStorage.removeItem(draftKey)
+      return
+    }
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(draftKey, JSON.stringify({
+          type: newType, text: newText, options: newOptions,
+          correctAnswer: newCorrectAnswer, points: newPoints,
+          explanation: newExplanation, imageUrl: newImageUrl,
+          timeLimitSeconds: newTimeLimitSeconds,
+          savedAt: Date.now(),
+        }))
+      } catch { /* quota or disabled */ }
+    }, 600)
+    return () => clearTimeout(t)
+  }, [draftKey, showAddForm, editingId, newType, newText, newOptions, newCorrectAnswer, newPoints, newExplanation, newImageUrl, newTimeLimitSeconds])
 
   // F6.21: Auto-save quiz title
   const handleTitleChange = (val: string) => {
@@ -331,6 +416,7 @@ export default function PlayQuizEditor() {
       })
       setQuestions(prev => [...prev, res.data])
       resetForm()
+      clearDraft()
       setShowAddForm(false)
       setSuccess('Pregunta agregada')
       setTimeout(() => setSuccess(''), 2000)
@@ -355,6 +441,29 @@ export default function PlayQuizEditor() {
     resetForm()
     setEditingId(null)
     setShowAddForm(true)
+    draftHydratedRef.current = false
+    // R6: restore draft if present
+    if (draftKey) {
+      try {
+        const raw = localStorage.getItem(draftKey)
+        if (raw) {
+          const d = JSON.parse(raw)
+          if (d && typeof d === 'object') {
+            if (d.type) setNewType(d.type)
+            if (typeof d.text === 'string') setNewText(d.text)
+            if (Array.isArray(d.options) && d.options.length) setNewOptions(d.options)
+            if (typeof d.correctAnswer === 'string') setNewCorrectAnswer(d.correctAnswer)
+            if (typeof d.points === 'number') setNewPoints(d.points)
+            if (typeof d.explanation === 'string') setNewExplanation(d.explanation)
+            if (typeof d.imageUrl === 'string') setNewImageUrl(d.imageUrl)
+            if (typeof d.timeLimitSeconds === 'string') setNewTimeLimitSeconds(d.timeLimitSeconds)
+            setDraftRestored(true)
+          }
+        }
+      } catch { /* corrupt draft, ignore */ }
+    }
+    // mark hydrated on next tick so the persistence effect won't overwrite the freshly restored state
+    setTimeout(() => { draftHydratedRef.current = true }, 0)
   }
 
   // ── Live Quiz Session ──────────────────────────────────
@@ -617,6 +726,15 @@ export default function PlayQuizEditor() {
             {launchingLive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
             Jugar en Vivo
           </button>
+          {aiEnabled && (
+            <button
+              onClick={() => { setAiError(''); setShowAiModal(true) }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white rounded-lg hover:from-fuchsia-700 hover:to-violet-700 font-medium transition text-sm shadow-sm"
+              title="Generar preguntas con IA (Valeria)"
+            >
+              <Sparkles className="w-4 h-4" /> Generar con IA
+            </button>
+          )}
           <button
             onClick={openAddForm}
             className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium transition text-sm"
@@ -678,12 +796,22 @@ export default function PlayQuizEditor() {
           <p className="text-gray-500 max-w-sm mx-auto mb-6">
             Agrega preguntas de opción múltiple, verdadero/falso o respuesta corta.
           </p>
-          <button
-            onClick={openAddForm}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium transition"
-          >
-            <Plus className="w-4 h-4" /> Agregar Pregunta
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            {aiEnabled && (
+              <button
+                onClick={() => { setAiError(''); setShowAiModal(true) }}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white rounded-lg hover:from-fuchsia-700 hover:to-violet-700 font-medium transition shadow-sm"
+              >
+                <Sparkles className="w-4 h-4" /> Generar con IA
+              </button>
+            )}
+            <button
+              onClick={openAddForm}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium transition"
+            >
+              <Plus className="w-4 h-4" /> Agregar Pregunta
+            </button>
+          </div>
         </div>
       )}
 
@@ -786,8 +914,13 @@ export default function PlayQuizEditor() {
           editingId ? 'border-blue-400' : 'border-violet-300'
         }`}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-gray-900">
+            <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
               {editingId ? '✏️ Editando pregunta' : 'Nueva Pregunta'}
+              {!editingId && draftRestored && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
+                  Borrador recuperado
+                </span>
+              )}
             </h3>
             {editingId && (
               <button onClick={cancelEdit} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
@@ -1065,7 +1198,16 @@ export default function PlayQuizEditor() {
           {/* Actions */}
           <div className="flex gap-3">
             <button
-              onClick={() => { setShowAddForm(false); if (editingId) cancelEdit() }}
+              onClick={() => {
+                if (!editingId) {
+                  // Adding: check if there's content worth confirming
+                  const hasContent = newText.trim() || newOptions.some(o => o.text.trim()) || newImageUrl.trim() || newExplanation.trim()
+                  if (hasContent && !confirm('¿Descartar la pregunta en borrador? Se perderá lo escrito.')) return
+                  clearDraft()
+                }
+                setShowAddForm(false)
+                if (editingId) cancelEdit()
+              }}
               className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition text-sm"
             >
               Cancelar
@@ -1147,6 +1289,147 @@ export default function PlayQuizEditor() {
             {previewQuestion.explanation && (
               <p className="mt-4 text-xs italic text-gray-500">💡 {previewQuestion.explanation}</p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* R9: AI Question Generator Modal */}
+      {showAiModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+          onClick={() => { if (!aiGenerating) setShowAiModal(false) }}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-fuchsia-500 to-violet-600 flex items-center justify-center shadow-sm">
+                  <Wand2 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Generar con IA</h3>
+                  <p className="text-xs text-gray-500">Valeria creará preguntas y las añadirá al final del quiz</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { if (!aiGenerating) setShowAiModal(false) }}
+                disabled={aiGenerating}
+                className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+              >
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              {aiError && (
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                  <span className="text-sm text-red-700">{aiError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tema o instrucción</label>
+                <textarea
+                  value={aiTopic}
+                  onChange={e => setAiTopic(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  disabled={aiGenerating}
+                  placeholder="Ej: Fotosíntesis y respiración celular para grado séptimo"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-500 disabled:opacity-50 resize-none"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">{aiTopic.length}/500</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Cantidad ({aiCount})</label>
+                  <input
+                    type="range"
+                    min={1}
+                    max={15}
+                    value={aiCount}
+                    onChange={e => setAiCount(parseInt(e.target.value, 10))}
+                    disabled={aiGenerating}
+                    className="w-full accent-fuchsia-600"
+                  />
+                  <div className="flex justify-between text-[10px] text-gray-400 mt-0.5"><span>1</span><span>15</span></div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Grado (opcional)</label>
+                  <input
+                    type="text"
+                    value={aiGrade}
+                    onChange={e => setAiGrade(e.target.value)}
+                    disabled={aiGenerating}
+                    placeholder="Ej: 5° primaria"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-500 disabled:opacity-50"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tipos de pregunta</label>
+                <div className="flex gap-2">
+                  {([
+                    { v: 'MULTIPLE_CHOICE', label: 'Opción múltiple' },
+                    { v: 'TRUE_FALSE', label: 'Verdadero/Falso' },
+                  ] as const).map(t => {
+                    const checked = aiTypes.includes(t.v)
+                    return (
+                      <button
+                        key={t.v}
+                        type="button"
+                        onClick={() => toggleAiType(t.v)}
+                        disabled={aiGenerating}
+                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition ${
+                          checked
+                            ? 'bg-fuchsia-50 border-fuchsia-300 text-fuchsia-700'
+                            : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                        } disabled:opacity-50`}
+                      >
+                        {checked && <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" />}
+                        {t.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-violet-50/70 border border-violet-100">
+                <p className="text-xs text-violet-900 flex items-start gap-2">
+                  <Sparkles className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                  <span>
+                    Las preguntas generadas son un <strong>borrador</strong>. Revísalas y edítalas antes de lanzar la sesión —
+                    la IA puede equivocarse o mezclar contextos.
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-3 sticky bottom-0 bg-white">
+              <button
+                onClick={() => setShowAiModal(false)}
+                disabled={aiGenerating}
+                className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition text-sm disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAiGenerate}
+                disabled={aiGenerating || !aiTopic.trim()}
+                className="flex-1 py-2.5 bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-700 hover:to-violet-700 text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+              >
+                {aiGenerating ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Generando…</>
+                ) : (
+                  <><Sparkles className="w-4 h-4" /> Generar {aiCount} pregunta{aiCount === 1 ? '' : 's'}</>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

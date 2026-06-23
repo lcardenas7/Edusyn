@@ -1,8 +1,10 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { PlayWorkspaceService } from './play-workspace.service';
 import { PlayStreamService } from './play-stream.service';
 import { GuestTokenService } from './guest-token.service';
+import { ApdAiService } from '../../apd/ai/apd-ai.service';
+import type { ApdAiQuestionDraft } from '../../apd/ai/apd-ai.interfaces';
 
 /**
  * Servicio del panel /play del docente personal.
@@ -19,6 +21,7 @@ export class PlayService {
     private readonly workspace: PlayWorkspaceService,
     private readonly stream: PlayStreamService,
     private readonly guestTokenService: GuestTokenService,
+    private readonly apdAi: ApdAiService,
   ) {}
 
   private async resolveClassroom(userId: string): Promise<string> {
@@ -143,6 +146,208 @@ export class PlayService {
     if (!activity) throw new NotFoundException('Quiz no encontrado');
     await this.prisma.classroomActivity.delete({ where: { id: quizId } });
     return { deleted: true };
+  }
+
+  /**
+   * Duplica un quiz: copia la actividad y todas sus preguntas con nuevos IDs.
+   * El duplicado nace en estado borrador (isPublished=false) y mantiene sectionId y type del original.
+   */
+  async duplicateQuiz(userId: string, quizId: string) {
+    const classroomId = await this.resolveClassroom(userId);
+    const original = await this.prisma.classroomActivity.findFirst({
+      where: { id: quizId, classroomId },
+      include: { questions: { orderBy: { sortOrder: 'asc' } } },
+    });
+    if (!original) throw new NotFoundException('Quiz no encontrado');
+
+    // Construir título único agregando " (copia)" o "(copia N)" si ya existe
+    const baseTitle = `${original.title} (copia)`;
+    let newTitle = baseTitle;
+    let suffix = 2;
+    while (await this.prisma.classroomActivity.findFirst({
+      where: { classroomId, title: newTitle, type: original.type },
+      select: { id: true },
+    })) {
+      newTitle = `${original.title} (copia ${suffix++})`;
+      if (suffix > 99) break;
+    }
+
+    const copy = await this.prisma.classroomActivity.create({
+      data: {
+        classroomId,
+        sectionId: original.sectionId,
+        title: newTitle,
+        description: original.description,
+        type: original.type,
+        isPublished: false,
+        isVisible: true,
+        maxScore: original.maxScore,
+        questions: {
+          create: original.questions.map((q) => ({
+            type: q.type,
+            text: q.text,
+            options: (q.options ?? undefined) as any,
+            correctAnswer: q.correctAnswer,
+            points: q.points,
+            explanation: q.explanation,
+            imageUrl: (q as any).imageUrl ?? undefined,
+            timeLimitSeconds: (q as any).timeLimitSeconds ?? undefined,
+            sortOrder: q.sortOrder,
+          })),
+        },
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        type: true,
+        isPublished: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return copy;
+  }
+
+  /**
+   * R9: Indica si el servicio de IA está habilitado en este servidor.
+   */
+  isAiEnabled(): boolean {
+    return this.apdAi.isEnabled();
+  }
+
+  /**
+   * R9: Genera preguntas con IA y las anexa al quiz.
+   * Reutiliza ApdAiService (Valeria) que ya soporta múltiples providers (OpenRouter/Gemini/Groq/xAI).
+   * No bloquea si AI está deshabilitado: lanza 503 con mensaje claro.
+   */
+  async aiGenerateQuestions(userId: string, quizId: string, opts: {
+    topic: string;
+    count?: number;
+    gradeName?: string;
+    subjectName?: string;
+    types?: Array<'MULTIPLE_CHOICE' | 'TRUE_FALSE'>;
+    pointsPerQuestion?: number;
+    timeLimitSeconds?: number;
+  }) {
+    const classroomId = await this.resolveClassroom(userId);
+    const quiz = await this.prisma.classroomActivity.findFirst({
+      where: { id: quizId, classroomId },
+      select: { id: true, type: true },
+    });
+    if (!quiz) throw new NotFoundException('Quiz no encontrado');
+
+    if (!this.apdAi.isEnabled()) {
+      throw new ServiceUnavailableException(
+        'La generación con IA no está habilitada en este servidor. Configura APD_AI_API_KEY para activarla.',
+      );
+    }
+
+    const count = Math.min(Math.max(opts.count ?? 5, 1), 15);
+    const topic = (opts.topic || '').trim();
+    if (!topic) throw new BadRequestException('Indica un tema para generar preguntas');
+    if (topic.length > 500) throw new BadRequestException('El tema es demasiado largo (máx 500 caracteres)');
+
+    const wantsTrueFalse = opts.types?.includes('TRUE_FALSE') ?? false;
+    const onlyTrueFalse = opts.types?.length === 1 && opts.types[0] === 'TRUE_FALSE';
+
+    // Construye la solicitud a Valeria con el formato que ya entiende.
+    const questionPhrase = onlyTrueFalse
+      ? `Genera ${count} preguntas tipo verdadero/falso sobre el tema de ${topic}`
+      : wantsTrueFalse
+        ? `Genera un quiz de ${count} preguntas sobre el tema de ${topic}, mezcla opción múltiple y verdadero/falso`
+        : `Genera un quiz de ${count} preguntas de opción múltiple sobre el tema de ${topic}`;
+
+    const aiResp = await this.apdAi.answerTeacherQuestion({
+      type: 'ASK_VALERIA',
+      question: questionPhrase + (opts.gradeName ? ` para ${opts.gradeName}` : '') + '. Las opciones deben ser plausibles y la respuesta correcta debe variar de posición.',
+      context: {
+        pageName: 'Edusyn Play - Editor de Quiz',
+        pageSummary: 'El docente está creando preguntas para un quiz en vivo tipo Kahoot',
+        gradeName: opts.gradeName,
+        subjectName: opts.subjectName,
+        topic,
+        activityType: 'QUIZ',
+      },
+    });
+
+    const drafts: ApdAiQuestionDraft[] = aiResp?.activityDraft?.questions ?? [];
+    if (!drafts.length) {
+      throw new ServiceUnavailableException('La IA no devolvió preguntas válidas. Intenta de nuevo o ajusta el tema.');
+    }
+
+    // Filtra a los tipos solicitados si vinieron
+    const allowedTypes = new Set(opts.types ?? ['MULTIPLE_CHOICE', 'TRUE_FALSE']);
+    const filtered = drafts.filter(d => allowedTypes.has((d.type as any) ?? 'MULTIPLE_CHOICE')).slice(0, count);
+
+    // Obtén sortOrder inicial
+    const maxSort = await this.prisma.activityQuestion.aggregate({
+      where: { activityId: quizId },
+      _max: { sortOrder: true },
+    });
+    let nextOrder = (maxSort._max.sortOrder ?? -1) + 1;
+
+    const pointsPerQuestion = Math.min(Math.max(opts.pointsPerQuestion ?? 1000, 1), 1000);
+    const timeLimitSeconds = opts.timeLimitSeconds && opts.timeLimitSeconds >= 5 && opts.timeLimitSeconds <= 120
+      ? opts.timeLimitSeconds : 20;
+
+    // Convierte cada draft a la forma que persiste activityQuestion
+    const created: any[] = [];
+    for (const d of filtered) {
+      const type = (d.type ?? 'MULTIPLE_CHOICE') as 'MULTIPLE_CHOICE' | 'TRUE_FALSE';
+      const rawOptions = Array.isArray(d.options) ? d.options.filter(o => typeof o === 'string' && o.trim()) : [];
+
+      let optionsField: any = undefined;
+      let correctAnswerField: string | undefined;
+
+      if (type === 'TRUE_FALSE') {
+        const isTrue = (d.correctAnswer ?? '').toLowerCase().startsWith('v');
+        optionsField = [
+          { id: 'true',  text: 'Verdadero', isCorrect: isTrue },
+          { id: 'false', text: 'Falso',     isCorrect: !isTrue },
+        ];
+        correctAnswerField = isTrue ? 'true' : 'false';
+      } else {
+        // MULTIPLE_CHOICE: construye opciones con id auto y marca la correcta por coincidencia de texto
+        if (rawOptions.length < 2) continue; // skip malformed
+        const correctText = (d.correctAnswer ?? '').trim();
+        const opts = rawOptions.slice(0, 6).map((text, i) => ({
+          id: `o${i + 1}`,
+          text: text.trim(),
+          isCorrect: text.trim() === correctText,
+        }));
+        // Si ninguna marcó correcta (texto no coincidió), marca la primera por defecto
+        if (!opts.some(o => o.isCorrect) && opts.length) opts[0].isCorrect = true;
+        optionsField = opts;
+        correctAnswerField = opts.find(o => o.isCorrect)?.id;
+      }
+
+      const persisted = await this.prisma.activityQuestion.create({
+        data: {
+          activityId: quizId,
+          type: type as any,
+          text: d.text.trim(),
+          options: optionsField,
+          correctAnswer: correctAnswerField,
+          points: pointsPerQuestion,
+          explanation: d.explanation?.trim() || undefined,
+          timeLimitSeconds,
+          sortOrder: nextOrder++,
+        },
+      });
+      created.push(persisted);
+    }
+
+    if (!created.length) {
+      throw new ServiceUnavailableException('La IA devolvió preguntas pero ninguna válida para guardar. Intenta con otro tema.');
+    }
+
+    return {
+      created: created.length,
+      questions: created,
+      confidence: aiResp?.confidence ?? null,
+    };
   }
 
   async listQuizzes(userId: string) {
@@ -1287,6 +1492,109 @@ export class PlayService {
     }
     await this.prisma.classroomActivity.delete({ where: { id: activityId } });
     return { deleted: true };
+  }
+
+  // ── Claim retroactivo (R11) ─────────────────────────────
+  /**
+   * Reclama un guest pasado (anónimo) y lo vincula a la cuenta del usuario logueado.
+   * Solo permite reclamar si:
+   *  - el guestToken es válido y existe
+   *  - el guest aún no fue reclamado (o ya fue reclamado por ESTE mismo userId — idempotente)
+   *  - no hay otro guest reclamado por ese userId en la misma sesión (evita duplicar progreso)
+   */
+  async claimGuestSession(userId: string, guestToken: string) {
+    if (!guestToken || typeof guestToken !== 'string') {
+      throw new BadRequestException('guestToken requerido');
+    }
+    const guest = await this.prisma.liveSessionGuest.findUnique({
+      where: { guestToken },
+      select: { id: true, sessionId: true, claimedByUserId: true, nickname: true },
+    });
+    if (!guest) throw new NotFoundException('Sesión de invitado no encontrada');
+    if (guest.claimedByUserId && guest.claimedByUserId !== userId) {
+      throw new ForbiddenException('Esta sesión ya está reclamada por otra cuenta');
+    }
+    if (guest.claimedByUserId === userId) {
+      return { ok: true, alreadyClaimed: true, guestId: guest.id };
+    }
+    // Evitar duplicados: que el usuario no tenga ya otro guest reclamado en la misma sesión
+    const collision = await this.prisma.liveSessionGuest.findFirst({
+      where: { sessionId: guest.sessionId, claimedByUserId: userId },
+      select: { id: true },
+    });
+    if (collision) {
+      throw new ForbiddenException('Ya tienes otro participante reclamado en esta sesión');
+    }
+    await this.prisma.liveSessionGuest.update({
+      where: { id: guest.id },
+      data: { claimedByUserId: userId, claimedAt: new Date() },
+    });
+    return { ok: true, alreadyClaimed: false, guestId: guest.id, nickname: guest.nickname };
+  }
+
+  // ── Player History (R11) ────────────────────────────────
+  /** Devuelve el historial de sesiones donde el usuario participó como guest vinculado. */
+  async getPlayerHistory(userId: string) {
+    const guests = await this.prisma.liveSessionGuest.findMany({
+      where: { claimedByUserId: userId },
+      orderBy: { joinedAt: 'desc' },
+      take: 50,
+      select: {
+        id: true,
+        sessionId: true,
+        sessionKind: true,
+        nickname: true,
+        avatarEmoji: true,
+        score: true,
+        correctAnswers: true,
+        totalAnswers: true,
+        finalRank: true,
+        percent: true,
+        joinedAt: true,
+        finishedAt: true,
+        claimedAt: true,
+      },
+    });
+
+    // Resolver títulos de las sesiones (quiz o lesson)
+    const quizSessionIds = guests.filter(g => g.sessionKind === 'QUIZ').map(g => g.sessionId);
+    const lessonSessionIds = guests.filter(g => g.sessionKind === 'LESSON').map(g => g.sessionId);
+
+    const [quizSessions, lessonSessions] = await Promise.all([
+      quizSessionIds.length > 0
+        ? this.prisma.liveSession.findMany({
+            where: { id: { in: quizSessionIds } },
+            select: { id: true, activity: { select: { title: true } } },
+          })
+        : [],
+      lessonSessionIds.length > 0
+        ? this.prisma.liveLessonSession.findMany({
+            where: { id: { in: lessonSessionIds } },
+            select: { id: true, lesson: { select: { title: true } } },
+          })
+        : [],
+    ]);
+
+    const titleMap = new Map<string, string>();
+    for (const s of quizSessions) titleMap.set(s.id, s.activity?.title ?? 'Quiz');
+    for (const s of lessonSessions) titleMap.set(s.id, s.lesson?.title ?? 'Lección');
+
+    return guests.map(g => ({
+      guestId: g.id,
+      sessionId: g.sessionId,
+      sessionKind: g.sessionKind,
+      sessionTitle: titleMap.get(g.sessionId) ?? 'Sesión',
+      nickname: g.nickname,
+      avatarEmoji: g.avatarEmoji,
+      score: g.score,
+      correctAnswers: g.correctAnswers,
+      totalAnswers: g.totalAnswers,
+      finalRank: g.finalRank,
+      percent: g.percent,
+      joinedAt: g.joinedAt,
+      finishedAt: g.finishedAt,
+      claimedAt: g.claimedAt,
+    }));
   }
 
 }

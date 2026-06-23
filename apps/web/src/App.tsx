@@ -61,6 +61,7 @@ import {
   JoinPage,
   PlayProjector,
   PlayLanding,
+  PlayMe,
 } from './pages/play'
 
 // Nuevas páginas por dominio (Refactor UX)
@@ -191,6 +192,7 @@ function PlayRoutes() {
         <Route path="/lessons" element={<PlayProtectedRoute><PlayLayout><PlayLessons /></PlayLayout></PlayProtectedRoute>} />
         <Route path="/lessons/:lessonId/edit" element={<PlayProtectedRoute><PlayLayout><PlayLessonEditor /></PlayLayout></PlayProtectedRoute>} />
         <Route path="/sessions" element={<PlayProtectedRoute><PlayLayout><PlaySessions /></PlayLayout></PlayProtectedRoute>} />
+        <Route path="/me" element={<PlayProtectedRoute><PlayLayout><PlayMe /></PlayLayout></PlayProtectedRoute>} />
         <Route path="/projector/:sessionId" element={<PlayProtectedRoute><PlayProjector /></PlayProtectedRoute>} />
       </Routes>
     </PlayAuthProvider>

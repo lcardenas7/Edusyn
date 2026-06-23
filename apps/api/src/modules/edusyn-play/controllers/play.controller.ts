@@ -66,6 +66,37 @@ export class PlayController {
     return this.playService.deleteQuiz(req.user.id, id);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Post('quizzes/:id/duplicate')
+  async duplicateQuiz(@Request() req: any, @Param('id') id: string) {
+    return this.playService.duplicateQuiz(req.user.id, id);
+  }
+
+  // ── AI Question Generator (Valeria) ────────────────────
+  @UseGuards(JwtAuthGuard)
+  @Get('ai/status')
+  async aiStatus() {
+    return { enabled: this.playService.isAiEnabled() };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('quizzes/:id/ai-generate')
+  async aiGenerateQuestions(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() body: {
+      topic: string;
+      count?: number;
+      gradeName?: string;
+      subjectName?: string;
+      types?: Array<'MULTIPLE_CHOICE' | 'TRUE_FALSE'>;
+      pointsPerQuestion?: number;
+      timeLimitSeconds?: number;
+    },
+  ) {
+    return this.playService.aiGenerateQuestions(req.user.id, id, body);
+  }
+
   // ── Questions ────────────────────────────────────────
   @UseGuards(JwtAuthGuard)
   @Get('quizzes/:activityId/questions')
@@ -242,6 +273,19 @@ export class PlayController {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="session-${sessionId}.csv"`);
     res.send('\uFEFF' + csv);
+  }
+
+  // ── Player History (R11) ──────────────────────────────
+  @UseGuards(JwtAuthGuard)
+  @Get('me/history')
+  async getPlayerHistory(@Request() req: any) {
+    return this.playService.getPlayerHistory(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('me/claim-guest')
+  async claimGuestSession(@Request() req: any, @Body() body: { guestToken: string }) {
+    return this.playService.claimGuestSession(req.user.id, body?.guestToken);
   }
 
   // ── Sessions ─────────────────────────────────────────

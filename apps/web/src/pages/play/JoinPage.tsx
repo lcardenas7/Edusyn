@@ -15,6 +15,8 @@ import {
   Trophy,
   Clock,
   LogOut,
+  LogIn,
+  UserCheck,
   Volume2,
   VolumeX,
   Zap,
@@ -142,6 +144,26 @@ export default function JoinPage() {
   const [livePoints, setLivePoints] = useState<number | null>(null)
   const [finalRanking, setFinalRanking] = useState<Array<{ id: string; nickname: string; avatarEmoji: string | null; score: number; correctAnswers: number; totalAnswers?: number }> | null>(null)
 
+  // R11: Detectar usuario Play autenticado para vincular progreso a su cuenta.
+  const [playUser, setPlayUser] = useState<{ id: string; email: string; firstName?: string; lastName?: string } | null>(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('play_user') : null
+      const token = typeof window !== 'undefined' ? localStorage.getItem('play_token') : null
+      if (!raw || !token) return null
+      return JSON.parse(raw)
+    } catch { return null }
+  })
+  const [claimed, setClaimed] = useState<boolean>(false)
+
+  // R11: pre-rellenar nickname con el nombre del usuario Play si está logueado y aún no escribió nada.
+  useEffect(() => {
+    if (step === 'nickname' && playUser && !nickname) {
+      const candidate = (playUser.firstName || playUser.email.split('@')[0] || '').slice(0, 20).replace(/[^\p{L}\p{N}_\-\.]/gu, '')
+      if (candidate) setNickname(candidate)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, playUser])
+
   const questionStartRef = useRef<number>(0)
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const interludeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -242,7 +264,38 @@ export default function JoinPage() {
     try {
       const res = await guestApi.getSessionStatus(sseSessionId)
       const status = res.data
+      const incomingQuestionId = status.currentQuestion?.id ?? ''
+      const isNewQuestion = status.status === 'ACTIVE' && incomingQuestionId && incomingQuestionId !== currentQuestionIdRef.current
       setSessionStatus(status)
+      if (isNewQuestion) {
+        if (interludeTimerRef.current) clearTimeout(interludeTimerRef.current)
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
+        currentQuestionIdRef.current = incomingQuestionId
+        questionStartRef.current = status.questionOpenedAt ?? Date.now()
+        setInterludeData(null)
+        setAnswerStats(null)
+        setAnswerFeedback(null)
+        setSelectedAnswer(null)
+        const limit = status.currentQuestion?.timeLimitSeconds ?? null
+        if (limit && limit > 0) {
+          const elapsed = status.questionOpenedAt ? Math.floor((Date.now() - status.questionOpenedAt) / 1000) : 0
+          setTimeLeft(Math.max(0, limit - elapsed))
+          timerIntervalRef.current = setInterval(() => {
+            setTimeLeft(prev => {
+              if (prev === null || prev <= 1) {
+                if (timerIntervalRef.current) clearInterval(timerIntervalRef.current!)
+                return 0
+              }
+              return prev - 1
+            })
+          }, 1000)
+        } else {
+          setTimeLeft(null)
+        }
+        setLivePoints(Number(status.currentQuestion?.points) || 1000)
+        setStep('active')
+        return
+      }
       if (status.questionPhase === 'REVEAL') {
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
         setTimeLeft(0)
@@ -418,14 +471,14 @@ export default function JoinPage() {
     guestToken,
     onEvent: handleSSEEvent,
     onFallback: handleFallbackPoll,
-    enabled: !!sseSessionId && !!guestToken && (step === 'lobby' || step === 'active'),
+    enabled: !!sseSessionId && !!guestToken && (step === 'lobby' || step === 'active' || step === 'interlude'),
   })
 
   // Safety net: polling explícito cada 4s en lobby/active
   // Esto garantiza que si el SSE falla, el estudiante igual recibe actualizaciones
   useEffect(() => {
     if (!sseSessionId || !guestToken) return
-    if (step !== 'lobby' && step !== 'active') return
+    if (step !== 'lobby' && step !== 'active' && step !== 'interlude') return
     const interval = setInterval(() => {
       handleFallbackPoll().catch(() => {})
     }, 2000)
@@ -516,6 +569,7 @@ export default function JoinPage() {
       }))
       setGuestToken(res.data.guestToken)
       setGuestId(res.data.guestId ?? null)
+      setClaimed(!!res.data.claimed)
       setTotalScore(0)
       setAnswerFeedback(null)
       setInterludeData(null)
@@ -701,6 +755,44 @@ export default function JoinPage() {
             <h2 className="text-lg font-bold text-gray-900 mb-1 text-center">¿Cómo te llamas?</h2>
             <p className="text-sm text-gray-500 mb-5 text-center">Elige un nombre y un avatar</p>
 
+            {/* R11: Banner de cuenta Play (vinculación de progreso) */}
+            {playUser ? (
+              <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <UserCheck className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-emerald-800">Jugando con tu cuenta</p>
+                  <p className="text-xs text-emerald-700 truncate">{playUser.email}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem('play_token')
+                    localStorage.removeItem('play_user')
+                    setPlayUser(null)
+                  }}
+                  className="text-[10px] text-emerald-700 hover:text-emerald-900 underline flex-shrink-0"
+                  title="Salir de la cuenta y jugar como invitado"
+                >
+                  Salir
+                </button>
+              </div>
+            ) : (
+              <div className="mb-4 p-3 rounded-xl bg-violet-50 border border-violet-200">
+                <p className="text-xs text-violet-800 leading-relaxed">
+                  💡 <span className="font-semibold">¿Quieres guardar tu progreso?</span>{' '}
+                  <a
+                    href={`/login-play?next=${encodeURIComponent(window.location.pathname)}`}
+                    className="text-violet-700 hover:text-violet-900 underline font-semibold inline-flex items-center gap-0.5"
+                  >
+                    Inicia sesión <LogIn className="w-3 h-3" />
+                  </a>{' '}
+                  para acumular XP, insignias y ver tu historial. (Opcional)
+                </p>
+              </div>
+            )}
+
             {error && (
               <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
@@ -761,6 +853,12 @@ export default function JoinPage() {
             <div className="bg-gradient-to-br from-violet-600 to-fuchsia-600 px-6 py-8 text-white text-center">
               <AnimalAvatar avatarId={avatarId} name={nickname} size="xl" />
               <h2 className="text-xl font-black mt-3 mb-0.5 tracking-tight">{nickname}</h2>
+              {claimed && playUser && (
+                <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-300/40 text-[10px] font-semibold text-emerald-50">
+                  <UserCheck className="w-3 h-3" />
+                  <span className="truncate max-w-[140px]">Cuenta vinculada</span>
+                </div>
+              )}
               {session && (
                 <div className="mt-1.5">
                   <p className="text-sm font-semibold text-violet-100">{session.title}</p>

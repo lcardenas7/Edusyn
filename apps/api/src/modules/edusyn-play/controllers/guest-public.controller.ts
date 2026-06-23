@@ -32,6 +32,9 @@ export class GuestPublicController {
   ) {
     const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip;
     const userAgent = req.headers['user-agent'] as string | undefined;
+    // R11: si viene un Bearer token de un Play user autenticado, vinculamos el guest a su cuenta.
+    const authHeader = req.headers['authorization'] as string | undefined;
+    const userId = (await this.guestService.tryDecodePlayUser(authHeader)) || undefined;
     return this.guestService.joinSession({
       code,
       nickname: body.nickname,
@@ -39,6 +42,7 @@ export class GuestPublicController {
       ip,
       userAgent,
       fingerprint: body.fingerprint,
+      userId,
     });
   }
 

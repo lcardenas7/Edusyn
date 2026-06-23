@@ -72,6 +72,21 @@ export const playPanelApi = {
   updateQuiz: (id: string, data: { title?: string; description?: string }) => playAxios.patch(`/play/quizzes/${id}`, data),
   reorderQuestions: (id: string, order: string[]) => playAxios.patch(`/play/quizzes/${id}/questions/reorder`, { order }),
   deleteQuiz: (id: string) => playAxios.delete(`/play/quizzes/${id}`),
+  duplicateQuiz: (id: string) => playAxios.post(`/play/quizzes/${id}/duplicate`),
+  // R11: historial del jugador (sesiones donde participó como guest vinculado)
+  playerHistory: () => playAxios.get('/play/me/history'),
+  claimGuestSession: (guestToken: string) =>
+    playAxios.post('/play/me/claim-guest', { guestToken }),
+  aiStatus: () => playAxios.get('/play/ai/status'),
+  aiGenerateQuestions: (id: string, data: {
+    topic: string;
+    count?: number;
+    gradeName?: string;
+    subjectName?: string;
+    types?: Array<'MULTIPLE_CHOICE' | 'TRUE_FALSE'>;
+    pointsPerQuestion?: number;
+    timeLimitSeconds?: number;
+  }) => playAxios.post(`/play/quizzes/${id}/ai-generate`, data),
   // Questions
   listQuestions: (activityId: string) => playAxios.get(`/play/quizzes/${activityId}/questions`),
   addQuestion: (activityId: string, data: {
@@ -166,8 +181,13 @@ export const conversionApi = {
 // ═══════════════════════════════════════════════════════════════════════════
 export const guestApi = {
   lookup: (code: string) => guestAxios.get(`/public/join/${code}`),
-  join: (code: string, data: { nickname: string; avatarEmoji?: string; fingerprint?: string }) =>
-    guestAxios.post(`/public/join/${code}`, data),
+  join: (code: string, data: { nickname: string; avatarEmoji?: string; fingerprint?: string }) => {
+    // R11: si hay un Play user logueado, enviamos su token para vincular el guest a su cuenta.
+    const playToken = typeof window !== 'undefined' ? localStorage.getItem('play_token') : null
+    const headers: Record<string, string> = {}
+    if (playToken) headers['Authorization'] = `Bearer ${playToken}`
+    return guestAxios.post(`/public/join/${code}`, data, { headers })
+  },
   getSessionStatus: (sessionId: string) => guestAxios.get(`/public/session/${sessionId}/status`),
   ranking: (sessionId: string) => guestAxios.get(`/public/session/${sessionId}/ranking`),
   submitAnswer: (sessionId: string, data: {

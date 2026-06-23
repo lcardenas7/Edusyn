@@ -122,6 +122,7 @@ export default function LiveQuizPlayer({
   const [showStats, setShowStats] = useState(false)
   const [showTimeUp, setShowTimeUp] = useState(false)
   const [closingQuestion, setClosingQuestion] = useState(false)
+  const [showRevealRanking, setShowRevealRanking] = useState(false)
 
   const loadQuestionStats = useCallback(async () => {
     if (!liveSession.id) return
@@ -191,7 +192,8 @@ export default function LiveQuizPlayer({
   // Reset closingQuestion state when question changes or closes
   useEffect(() => {
     setClosingQuestion(false)
-  }, [currentQuestion?.id, liveSession.questionClosed])
+    setShowRevealRanking(false)
+  }, [currentQuestion?.id])
 
   useEffect(() => {
     if (liveSession.questionPhase === 'REVEAL' || liveSession.questionClosed || allAnswered) {
@@ -520,6 +522,41 @@ export default function LiveQuizPlayer({
                   <p className="mt-1 text-sm font-semibold text-emerald-50">
                     Revisa los resultados y cuando estés listo continúa con la siguiente pregunta.
                   </p>
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setShowRevealRanking(v => !v)}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-black text-emerald-700 transition hover:bg-emerald-50"
+                    >
+                      <Trophy className="h-4 w-4" />
+                      {showRevealRanking ? 'Ocultar ranking' : 'Mostrar ranking'}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+              {showRevealRanking && liveSession.guests && liveSession.guests.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-3xl bg-black/20 p-4 backdrop-blur-sm"
+                >
+                  <p className="mb-3 text-center text-sm font-black uppercase tracking-wide text-violet-100">
+                    Ranking de la ronda
+                  </p>
+                  <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+                    <Podium entries={podiumEntries} />
+                    <div className="space-y-2">
+                      {liveSession.guests.slice(0, 8).map((guest, index) => (
+                        <div key={guest.id} className="flex items-center gap-3 rounded-xl bg-white/10 px-3 py-2">
+                          <span className="w-6 text-center font-black text-yellow-200">{index + 1}</span>
+                          <span className="text-lg">{guest.avatarEmoji || '👤'}</span>
+                          <span className="flex-1 truncate font-semibold">{guest.nickname}</span>
+                          <span className="font-black">{guest.score || 0}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </motion.div>
               )}
 

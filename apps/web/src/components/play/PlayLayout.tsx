@@ -12,6 +12,7 @@ import {
   X,
   ChevronRight,
   User,
+  History,
 } from 'lucide-react'
 
 interface NavItem {
@@ -25,6 +26,7 @@ const navigation: NavItem[] = [
   { name: 'Mis Quizzes', href: '/play/quizzes', icon: FileQuestion },
   { name: 'Mis Lecciones', href: '/play/lessons', icon: BookOpen },
   { name: 'Sesiones', href: '/play/sessions', icon: Radio },
+  { name: 'Mi historial', href: '/play/me', icon: History },
 ]
 
 export default function PlayLayout({ children }: { children: ReactNode }) {

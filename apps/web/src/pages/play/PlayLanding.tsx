@@ -21,59 +21,49 @@ import {
   QrCode,
 } from 'lucide-react'
 
-const tools = [
+const availableTools = [
   {
     icon: Zap,
     name: 'Quiz Live',
-    tag: 'Disponible',
-    tagColor: 'bg-green-100 text-green-700',
     color: 'from-violet-500 to-purple-600',
-    desc: 'Preguntas en tiempo real tipo Kahoot. Timer servidor, scoring por velocidad, podio animado, reacciones y modo proyector.',
-    features: ['Timer server-driven', 'Podio animado', 'Modo proyector', 'QR de acceso'],
+    desc: 'Preguntas en tiempo real tipo Kahoot. Timer servidor, scoring por velocidad, podío animado, reacciones y modo proyector.',
+    features: ['Timer server-driven', 'Podío animado', 'Modo proyector', 'QR de acceso'],
   },
   {
     icon: BookOpen,
     name: 'Lecciones Live',
-    tag: 'Disponible',
-    tagColor: 'bg-green-100 text-green-700',
     color: 'from-fuchsia-500 to-pink-600',
     desc: 'Slides interactivos al estilo Nearpod. El docente avanza los slides para todos en tiempo real. Embeds de actividades y checkpoints.',
     features: ['Slides sincronizados', 'Actividades embebidas', 'Reacciones en vivo', 'Auto-ritmo opcional'],
   },
+]
+
+const roadmapTools = [
   {
     icon: LayoutGrid,
     name: 'Mural Colaborativo',
-    tag: 'Próximamente',
-    tagColor: 'bg-amber-100 text-amber-700',
     color: 'from-amber-500 to-orange-600',
-    desc: 'Tipo Padlet. Los invitados pegan notas de colores que aparecen en la pantalla del docente en tiempo real. Drag para agrupar ideas.',
-    features: ['Notas en tiempo real', 'Colores personalizados', 'Agrupación por docente', 'Export PNG'],
+    desc: 'Tipo Padlet. Los invitados pegan notas de colores que aparecen en la pantalla del docente en tiempo real.',
   },
   {
     icon: MessageSquare,
     name: 'Nube de Palabras',
-    tag: 'Próximamente',
-    tagColor: 'bg-amber-100 text-amber-700',
     color: 'from-cyan-500 to-teal-600',
-    desc: 'Tipo Mentimeter. Pregunta abierta, los invitados envían palabras y se forma una word cloud en vivo donde la frecuencia define el tamaño.',
-    features: ['Word cloud en vivo', 'Normalización automática', 'Stop-words ES', 'Captura de pantalla'],
+    desc: 'Tipo Mentimeter. Pregunta abierta, los invitados envían palabras y se forma una word cloud en vivo.',
   },
   {
     icon: BarChart2,
     name: 'Encuesta Relámpago',
-    tag: 'Próximamente',
-    tagColor: 'bg-amber-100 text-amber-700',
     color: 'from-emerald-500 to-green-600',
-    desc: 'Multipregunta tipo Likert o emojis. Sin respuesta correcta. Resultados con barras animadas en porcentaje en tiempo real.',
-    features: ['Likert 1-5 o emojis', 'Sin respuesta correcta', 'Barras en tiempo real', 'Exportar resultados'],
+    desc: 'Multipregunta tipo Likert o emojis. Resultados con barras animadas en tiempo real.',
   },
 ]
 
 const stats = [
-  { icon: Users, value: '∞', label: 'Invitados por sesión', sub: 'Sin cuenta requerida' },
-  { icon: Clock, value: '<500ms', label: 'Latencia SSE', sub: 'Actualización en tiempo real' },
-  { icon: Smartphone, value: '100%', label: 'Optimizado móvil', sub: 'Tap-targets grandes' },
-  { icon: Trophy, value: '5★', label: 'Experiencia tipo Kahoot', sub: 'Podio, sonidos, confeti' },
+  { icon: Users, value: '50', label: 'Invitados por sesión', sub: 'Sin cuenta requerida' },
+  { icon: Clock, value: 'Tiempo real', label: 'Conexión SSE', sub: 'Sin recargar la página' },
+  { icon: Smartphone, value: 'Móvil', label: 'Diseñado para celular', sub: 'Tap-targets grandes' },
+  { icon: Trophy, value: 'Kahoot-style', label: 'Podio, racha, confeti', sub: 'MC, V/F, orden y abierta' },
 ]
 
 const steps = [
@@ -152,7 +142,7 @@ export default function PlayLanding() {
           </h1>
 
           <p className="text-lg sm:text-xl text-white/60 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Quizzes tipo Kahoot, lecciones al estilo Nearpod, murales colaborativos y más.
+            Quizzes en vivo tipo Kahoot y lecciones al estilo Nearpod.
             Sin cuentas para los estudiantes — solo un código de 6 dígitos.
           </p>
 
@@ -203,20 +193,20 @@ export default function PlayLanding() {
       <section id="herramientas" className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
-            <div className="inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-1.5 text-sm text-violet-300 mb-4">
-              <Zap className="w-3.5 h-3.5" />5 herramientas en una plataforma
+            <div className="inline-flex items-center gap-2 rounded-full border border-green-500/30 bg-green-500/10 px-4 py-1.5 text-sm text-green-300 mb-4">
+              <CheckCircle2 className="w-3.5 h-3.5" />Herramientas disponibles hoy
             </div>
             <h2 className="text-3xl sm:text-4xl font-black text-white mb-3">
-              Más que un quiz
+              Lo que puedes lanzar ya mismo
             </h2>
             <p className="text-white/50 max-w-xl mx-auto">
-              Cada herramienta está diseñada para un momento diferente de tu clase.
-              Desde evaluar hasta idear en colectivo.
+              Estas son las herramientas listas y funcionando en producción.
+              Sin asteriscos, sin “beta cerrada”.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {tools.map((tool) => {
+            {availableTools.map((tool) => {
               const Icon = tool.icon
               return (
                 <div
@@ -228,8 +218,8 @@ export default function PlayLanding() {
                   </div>
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <h3 className="text-lg font-black text-white">{tool.name}</h3>
-                    <span className={`flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded-full ${tool.tagColor}`}>
-                      {tool.tag}
+                    <span className="flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                      Disponible
                     </span>
                   </div>
                   <p className="text-sm text-white/50 mb-4 leading-relaxed">{tool.desc}</p>
@@ -262,6 +252,35 @@ export default function PlayLanding() {
               >
                 Crear cuenta gratis <ArrowRight className="w-4 h-4" />
               </Link>
+            </div>
+          </div>
+
+          {/* Roadmap section — honestly labeled */}
+          <div className="mt-20">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-xs uppercase tracking-wide font-bold text-amber-300 mb-3">
+                Roadmap · En diseño
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-white mb-2">Lo que viene</h3>
+              <p className="text-white/40 text-sm max-w-lg mx-auto">
+                Estas herramientas todavía no están liberadas. Las publicamos aquí para que sepas qué esperar, no para venderlas como si existieran.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {roadmapTools.map(tool => {
+                const Icon = tool.icon
+                return (
+                  <div key={tool.name} className="flex items-start gap-3 bg-white/[0.02] border border-white/5 rounded-xl p-4">
+                    <div className={`flex-shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg bg-gradient-to-br ${tool.color} opacity-60`}>
+                      <Icon className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white/80">{tool.name}</p>
+                      <p className="text-xs text-white/40 leading-relaxed mt-0.5">{tool.desc}</p>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
