@@ -243,7 +243,7 @@ export class PlayService {
       );
     }
 
-    const count = Math.min(Math.max(opts.count ?? 5, 1), 15);
+    const count = Math.min(Math.max(opts.count ?? 5, 1), 50);
     const topic = (opts.topic || '').trim();
     if (!topic) throw new BadRequestException('Indica un tema para generar preguntas');
     if (topic.length > 500) throw new BadRequestException('El tema es demasiado largo (máx 500 caracteres)');

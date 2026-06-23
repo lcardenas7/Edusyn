@@ -1440,6 +1440,91 @@ export class ApdAiService implements IApdAiService {
     }
     const topic = (params.topic || '').trim();
     if (!topic) throw new Error('Tema requerido');
+
+    // Cap total a 50 (UX) y chunking de 10 para no exceder max_tokens del LLM (default 2000-4000).
+    const totalCount = Math.min(Math.max(params.count || 5, 1), 50);
+    const CHUNK_SIZE = 10;
+
+    // Si cabe en una sola llamada, ruta directa.
+    if (totalCount <= CHUNK_SIZE) {
+      return this.generateQuizQuestionsChunk({ ...params, count: totalCount, avoidQuestions: [] });
+    }
+
+    // Chunking secuencial con dedup por texto normalizado.
+    const allDrafts: ApdAiQuestionDraft[] = [];
+    const seenKeys = new Set<string>();
+    const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').replace(/[¿?¡!.,;:]/g, '').trim();
+
+    let chunkIndex = 0;
+    const maxChunks = Math.ceil(totalCount / CHUNK_SIZE) + 2; // margen por dedup
+    let lastError: any = null;
+
+    while (allDrafts.length < totalCount && chunkIndex < maxChunks) {
+      const remaining = totalCount - allDrafts.length;
+      const requestSize = Math.min(remaining + 2, CHUNK_SIZE); // pedir 2 extra para compensar duplicados
+      // pasamos los textos de las últimas preguntas generadas para que el LLM no las repita
+      const avoidQuestions = allDrafts.slice(-15).map(d => d.text);
+
+      let chunkDrafts: ApdAiQuestionDraft[] = [];
+      try {
+        chunkDrafts = await this.generateQuizQuestionsChunk({
+          ...params,
+          count: requestSize,
+          avoidQuestions,
+        });
+      } catch (err: any) {
+        lastError = err;
+        this.logger.warn(`generateQuizQuestions chunk ${chunkIndex} falló: ${err?.message || err}`);
+        if (allDrafts.length === 0 && chunkIndex === 0) {
+          // primer chunk falla -> propagar
+          throw err;
+        }
+        // chunks posteriores: cortar y devolver lo conseguido
+        break;
+      }
+
+      if (!chunkDrafts.length) {
+        // LLM dejó de producir; cortar para evitar bucle infinito
+        break;
+      }
+
+      let addedThisChunk = 0;
+      for (const d of chunkDrafts) {
+        const key = normalize(d.text);
+        if (!key || seenKeys.has(key)) continue;
+        seenKeys.add(key);
+        allDrafts.push(d);
+        addedThisChunk++;
+        if (allDrafts.length >= totalCount) break;
+      }
+
+      // si un chunk no aportó nada nuevo, evitar bucle
+      if (addedThisChunk === 0) break;
+
+      chunkIndex++;
+    }
+
+    if (!allDrafts.length) {
+      throw lastError || new Error('La IA no devolvió preguntas válidas.');
+    }
+
+    return allDrafts.slice(0, totalCount);
+  }
+
+  /**
+   * Genera un lote (chunk) de preguntas. Soporta hasta ~10-15 por llamada según max_tokens del proveedor.
+   * Acepta `avoidQuestions` para reducir duplicación entre chunks.
+   */
+  private async generateQuizQuestionsChunk(params: {
+    topic: string;
+    count: number;
+    types: Array<'MULTIPLE_CHOICE' | 'TRUE_FALSE'>;
+    gradeName?: string;
+    subjectName?: string;
+    language?: string;
+    avoidQuestions?: string[];
+  }): Promise<ApdAiQuestionDraft[]> {
+    const topic = (params.topic || '').trim();
     const count = Math.min(Math.max(params.count || 5, 1), 15);
     const allowed = params.types?.length ? params.types : ['MULTIPLE_CHOICE', 'TRUE_FALSE'];
     const onlyTF = allowed.length === 1 && allowed[0] === 'TRUE_FALSE';
@@ -1479,7 +1564,11 @@ export class ApdAiService implements IApdAiService {
       params.subjectName ? `Asignatura: ${params.subjectName}.` : '',
     ].filter(Boolean).join('\n');
 
-    const userPrompt = `Tema: ${topic}\n\nGenera ${count} preguntas siguiendo el esquema JSON indicado.`;
+    const avoidBlock = (params.avoidQuestions?.length)
+      ? `\n\nIMPORTANTE: NO repitas ni parafrasees ninguna de estas preguntas ya generadas:\n${params.avoidQuestions.map((t, i) => `${i + 1}. ${t}`).join('\n')}\n\nGenera preguntas COMPLETAMENTE distintas, cubriendo otros sub-temas, ángulos o niveles de dificultad.`
+      : '';
+
+    const userPrompt = `Tema: ${topic}\n\nGenera ${count} preguntas siguiendo el esquema JSON indicado.${avoidBlock}`;
 
     let raw: any;
     try {

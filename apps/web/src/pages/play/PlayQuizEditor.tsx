@@ -1350,13 +1350,18 @@ export default function PlayQuizEditor() {
                   <input
                     type="range"
                     min={1}
-                    max={15}
+                    max={50}
                     value={aiCount}
                     onChange={e => setAiCount(parseInt(e.target.value, 10))}
                     disabled={aiGenerating}
                     className="w-full accent-fuchsia-600"
                   />
-                  <div className="flex justify-between text-[10px] text-gray-400 mt-0.5"><span>1</span><span>15</span></div>
+                  {aiCount > 15 && (
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Cantidades grandes (&gt;15) se generan en lotes — puede tardar varios segundos.
+                    </p>
+                  )}
+                  <div className="flex justify-between text-[10px] text-gray-400 mt-0.5"><span>1</span><span>50</span></div>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">Grado (opcional)</label>
