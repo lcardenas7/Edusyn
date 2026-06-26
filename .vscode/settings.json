@@ -1,0 +1,15 @@
+{
+  "files.encoding": "utf8",
+  "files.autoGuessEncoding": false,
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "[sql]": {
+    "files.encoding": "utf8",
+    "files.eol": "\n"
+  },
+  "[prisma]": {
+    "files.encoding": "utf8",
+    "files.eol": "\n"
+  }
+}

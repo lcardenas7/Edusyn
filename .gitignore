@@ -12,3 +12,29 @@ Thumbs.db
 
 # Archived Prisma migrations (pre-baseline)
 **/migrations_archived/
+
+# Database dumps and backups — NEVER commit
+*backup*.sql
+*backup*.sql.gz
+*_dump.sql
+*_dump.sql.gz
+prod_*.sql
+staging_*.sql
+local_*.sql
+*.dump
+*.bak
+
+# Workspace scratch files
+*.png
+*.xlsx
+!docs/**/*.png
+!docs/**/*.xlsx
+!apps/**/public/**/*.png
+!apps/**/src/**/*.png
+check_*.mjs
+inspect_*.mjs
+patch_*.mjs
+redesign_*.mjs
+render_*.mjs
+outputs/
+

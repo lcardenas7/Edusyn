@@ -1,4 +1,4 @@
-﻿-- CreateEnum
+-- CreateEnum
 CREATE TYPE "SchoolShift" AS ENUM ('MORNING', 'AFTERNOON', 'SINGLE', 'NIGHT');
 
 -- CreateEnum
