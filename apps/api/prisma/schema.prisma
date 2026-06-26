@@ -4896,6 +4896,19 @@ enum WorkspaceScopeType {
   MULTI_GROUP
 }
 
+// WORKSPACE_V2 — nuevo enum polimórfico para items
+enum WorkspaceItemKind {
+  NOTE
+  TASK
+  OBSERVATION
+  LOG
+  COLLECTION
+  IDEA
+  LIST
+  FILE
+  EVENT
+}
+
 model WorkspaceBoard {
   id             String              @id @default(cuid())
   teacherId      String
@@ -4918,6 +4931,16 @@ model WorkspaceBoard {
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
+  // WORKSPACE_V2 — campos de personalización visual y organización
+  emoji          String?             // Emoji/icono del espacio (📐, 🚀, etc.)
+  coverImage     String?             // URL de portada opcional
+  bannerColor    String?             // Color secundario para gradiente con `color`
+  isPinned       Boolean             @default(false) // Fijado en home del docente
+  isPersonal     Boolean             @default(false) // True para el "Espacio personal" (uno por docente)
+  linkedClassId  String?             // Vínculo con horario oficial (clase/materia)
+  hiddenSections String[]            @default([])    // Pestañas ocultas por desuso
+  lastAccessedAt DateTime?           // Para sort por reciente en home
+
   teacher      User              @relation("WorkspaceBoards", fields: [teacherId], references: [id], onDelete: Cascade)
   institution  Institution       @relation("RlsInstitutionWB", fields: [institutionId], references: [id], onDelete: Cascade)
   academicYear AcademicYear?     @relation(fields: [academicYearId], references: [id])
@@ -4931,6 +4954,8 @@ model WorkspaceBoard {
   @@index([institutionId, visibility])
   @@index([gradeId])
   @@index([startDate, endDate])
+  @@index([teacherId, isPinned])
+  @@index([teacherId, lastAccessedAt(sort: Desc)])
 }
 
 model WorkspaceColumn {
@@ -4962,6 +4987,13 @@ model WorkspaceItem {
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
 
+  // WORKSPACE_V2 — modelo polimórfico de elementos de organización
+  kind            WorkspaceItemKind?       // NOTE | TASK | OBSERVATION | LOG | COLLECTION | IDEA | LIST | FILE | EVENT
+  completedAt     DateTime?                // Cuando se cierra/marca como hecho
+  amount          Decimal?  @db.Decimal(12, 2) // Meta de recaudo (si kind=COLLECTION)
+  amountCollected Decimal?  @db.Decimal(12, 2) // Monto efectivamente recaudado
+  tags            String[]  @default([])   // Tags libres
+
   board   WorkspaceBoard   @relation(fields: [boardId], references: [id], onDelete: Cascade)
   column  WorkspaceColumn? @relation(fields: [columnId], references: [id], onDelete: SetNull)
   student User?            @relation("WorkspaceItemStudent", fields: [studentId], references: [id])
@@ -4971,6 +5003,7 @@ model WorkspaceItem {
   @@index([boardId, studentId])
   @@index([dueDate])
   @@index([eventDate])
+  @@index([boardId, kind])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
