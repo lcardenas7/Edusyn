@@ -1,9 +1,11 @@
 import axios from 'axios'
 
-// Detectar si estamos en producción por el hostname
-const isProduction = typeof window !== 'undefined' && 
-  (window.location.hostname.includes('railway.app') || window.location.hostname.includes('edusyn.co'))
-const API_BASE_URL = isProduction 
+// Detectar si estamos en producción por el hostname (staging excluido)
+const hostname = typeof window !== 'undefined' ? window.location.hostname : ''
+const isStaging = hostname.includes('staging')
+const isProduction = !isStaging &&
+  (hostname.includes('railway.app') || hostname.includes('edusyn.co'))
+const API_BASE_URL = isProduction
   ? 'https://api.edusyn.co/api'
   : (import.meta.env.VITE_API_URL || '/api')
 

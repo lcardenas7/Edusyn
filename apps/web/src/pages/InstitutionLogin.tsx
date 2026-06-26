@@ -13,12 +13,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Building2, Mail, Lock, ArrowRight, AlertCircle, CheckCircle, Search, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
-// Detectar URL de API según entorno
-const isProduction = typeof window !== 'undefined' && 
-  (window.location.hostname.includes('railway.app') || window.location.hostname.includes('edusyn.co'))
-const API_BASE = isProduction 
+// Detectar URL de API según entorno (staging excluido)
+const _hostname = typeof window !== 'undefined' ? window.location.hostname : ''
+const _isStaging = _hostname.includes('staging')
+const isProduction = !_isStaging &&
+  (_hostname.includes('railway.app') || _hostname.includes('edusyn.co'))
+const API_BASE = isProduction
   ? 'https://api.edusyn.co/api'
-  : '/api'
+  : (import.meta.env.VITE_API_URL || '/api')
 
 interface InstitutionInfo {
   id: string

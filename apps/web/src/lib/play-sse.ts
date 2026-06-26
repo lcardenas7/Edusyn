@@ -1,14 +1,14 @@
 import { useEffect, useRef, useCallback } from 'react'
 
-// Misma lógica de detección que playApi.ts — sin depender de VITE_PLAY_API_URL
-const _isProduction =
-  typeof window !== 'undefined' &&
-  (window.location.hostname.includes('railway.app') ||
-    window.location.hostname.includes('edusyn.co'))
+// Misma lógica de detección que playApi.ts (staging excluido)
+const _hostname = typeof window !== 'undefined' ? window.location.hostname : ''
+const _isStaging = _hostname.includes('staging')
+const _isProduction = !_isStaging &&
+  (_hostname.includes('railway.app') || _hostname.includes('edusyn.co'))
 
 const PLAY_API_URL = _isProduction
   ? 'https://api.edusyn.co/api'
-  : import.meta.env.VITE_PLAY_API_URL || 'http://localhost:3000'
+  : import.meta.env.VITE_API_URL || import.meta.env.VITE_PLAY_API_URL || 'http://localhost:3000'
 
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 3000
