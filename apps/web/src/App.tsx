@@ -46,6 +46,7 @@ import DifferentialSupport from './pages/DifferentialSupport'
 import GradesBulkImport from './pages/GradesBulkImport'
 import TeacherWorkspace from './pages/TeacherWorkspace'
 import WorkspaceV2Page from './pages/WorkspaceV2'
+import SpaceDetailPage from './pages/WorkspaceV2/SpaceDetail'
 import Classroom from './pages/Classroom'
 import Layout from './components/Layout'
 import PlayLayout from './components/play/PlayLayout'
@@ -407,6 +408,7 @@ function App() {
                   <Route path="/timetabling" element={<Timetabling />} />
                   <Route path="/my-workspace" element={<TeacherWorkspace />} />
                   <Route path="/my-workspace-v2" element={<WorkspaceV2Page />} />
+                  <Route path="/my-workspace-v2/:boardId" element={<SpaceDetailPage />} />
                   <Route path="/classroom" element={<Classroom />} />
                   <Route path="/my-classes" element={<Classroom />} />
                   <Route path="/capabilities-config" element={<CapabilitiesConfig />} />

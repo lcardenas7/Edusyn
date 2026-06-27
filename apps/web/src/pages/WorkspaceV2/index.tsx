@@ -99,11 +99,7 @@ export default function WorkspaceV2Page() {
         {!loading && !error && (
           <SpacesGrid
             boards={boards}
-            onOpenBoard={(id) => {
-              // Por ahora redirige a la UI vieja del board específico.
-              // Sprint 3 implementará la vista nueva de espacio de curso.
-              navigate(`/my-workspace?board=${id}`)
-            }}
+            onOpenBoard={(id) => navigate(`/my-workspace-v2/${id}`)}
             onCreateBoard={() => {
               // Por ahora redirige a la UI vieja que ya sabe crear.
               navigate('/my-workspace?create=true')
