@@ -52,16 +52,28 @@ const SECTION_BY_KIND: Record<string, SectionKey> = {
   // TASK: decide abajo según metadata.role
 }
 
+// Devuelve el "kind" efectivo de un item, mirando primero la columna nueva
+// y cayendo a metadata.kind (donde V2 escribe por ahora). De esta forma una
+// captura hecha desde la pestaña Observaciones queda como OBSERVATION, sin
+// importar que el tablero sea MICRO_COLLECT.
+export function resolveItemKind(item: SectionItem): string | null {
+  const fromColumn = item.kind?.toString().toUpperCase()
+  if (fromColumn) return fromColumn
+  const fromMeta = (item.metadata?.kind || item.metadata?.capturedKind)?.toString().toUpperCase()
+  return fromMeta || null
+}
+
 // Filtra los items relevantes para la pestaña activa.
 // Prioridad de decisión:
-//   1) Si item.kind está definido → va a la sección que mapea ese kind.
+//   1) Si el item tiene kind explícito (columna O metadata) → va a esa sección.
+//      La pestaña activa al capturar SIEMPRE manda sobre el tipo del tablero.
 //   2) Si no, y el tablero tiene una sección natural → va ahí.
 //   3) Si no, heurística por contenido (amount, student, metadata).
 export function filterForSection(items: SectionItem[], key: SectionKey, boardType?: string): SectionItem[] {
   const natural = boardType ? NATURAL_SECTION_BY_BOARD_TYPE[boardType] : undefined
 
   return items.filter((item) => {
-    const kind = item.kind?.toUpperCase()
+    const kind = resolveItemKind(item)
 
     // 1. Kind explícito decide
     if (kind) {

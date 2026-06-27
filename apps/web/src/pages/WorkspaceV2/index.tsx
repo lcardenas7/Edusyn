@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Loader2, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
@@ -6,6 +6,7 @@ import { teacherWorkspaceApi } from '../../lib/api'
 import { Greeting } from './components/Greeting'
 import { SpacesGrid } from './components/SpacesGrid'
 import type { SpaceCardBoard } from './components/SpaceCard'
+import { CreateSpaceModal } from './components/CreateSpaceModal'
 
 /**
  * WorkspaceV2 — Nueva pantalla principal de Mi Espacio Docente.
@@ -24,6 +25,36 @@ export default function WorkspaceV2Page() {
   const [boards, setBoards] = useState<SpaceCardBoard[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
+
+  const loadBoards = useCallback(() => {
+    setLoading(true)
+    return teacherWorkspaceApi
+      .listBoards({ isArchived: 'false' })
+      .then((res) => {
+        const raw: any[] = Array.isArray(res.data) ? res.data : res.data?.boards ?? []
+        const mapped: SpaceCardBoard[] = raw.map((b) => ({
+          id: b.id,
+          title: b.title,
+          description: b.description ?? null,
+          type: b.type,
+          emoji: b.emoji ?? null,
+          color: b.color ?? null,
+          coverImage: b.coverImage ?? null,
+          isPinned: Boolean(b.isPinned),
+          isPersonal: Boolean(b.isPersonal),
+          isArchived: Boolean(b.isArchived),
+          itemsCount: b._count?.items ?? b.items?.length ?? undefined,
+          updatedAt: b.updatedAt,
+        }))
+        setBoards(mapped)
+      })
+      .catch((e: any) => {
+        const msg = e?.response?.data?.message || e?.message || 'No se pudieron cargar tus espacios.'
+        setError(msg)
+      })
+      .finally(() => setLoading(false))
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -100,10 +131,7 @@ export default function WorkspaceV2Page() {
           <SpacesGrid
             boards={boards}
             onOpenBoard={(id) => navigate(`/my-workspace-v2/${id}`)}
-            onCreateBoard={() => {
-              // Por ahora redirige a la UI vieja que ya sabe crear.
-              navigate('/my-workspace?create=true')
-            }}
+            onCreateBoard={() => setCreateOpen(true)}
           />
         )}
 
@@ -112,6 +140,21 @@ export default function WorkspaceV2Page() {
           Mi Espacio Docente · vista previa v2
         </div>
       </div>
+
+      <CreateSpaceModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={async (boardId) => {
+          setCreateOpen(false)
+          if (boardId) {
+            // Refresca la grilla en background y abre el nuevo espacio
+            loadBoards()
+            navigate(`/my-workspace-v2/${boardId}`)
+          } else {
+            loadBoards()
+          }
+        }}
+      />
     </div>
   )
 }
