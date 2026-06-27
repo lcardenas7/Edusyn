@@ -96,6 +96,18 @@ export default function SpaceDetailPage() {
     return result
   }, [allItems, board?.type])
 
+  // Actualizar un item existente (usado por la pestaña Recaudo para fijar monto y registrar pagos).
+  // Después del PUT re-fetcheamos el board para reflejar el cambio en la lista.
+  const handleUpdateItem = useCallback(async (
+    itemId: string,
+    patch: { metadata?: any; title?: string; content?: string },
+  ): Promise<void> => {
+    if (!board) return
+    await teacherWorkspaceApi.updateItem(itemId, patch)
+    const fresh = await teacherWorkspaceApi.getBoard(board.id)
+    setBoard(fresh.data as BoardData)
+  }, [board])
+
   // Crear item desde la barra de captura
   const handleCapture = useCallback(async (text: string): Promise<void> => {
     if (!board) return
@@ -180,7 +192,13 @@ export default function SpaceDetailPage() {
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18 }}
           >
-            <Section sectionKey={activeSection} items={allItems} boardType={board?.type} loading={loading} />
+            <Section
+              sectionKey={activeSection}
+              items={allItems}
+              boardType={board?.type}
+              loading={loading}
+              onUpdateItem={handleUpdateItem}
+            />
           </motion.div>
         </AnimatePresence>
 

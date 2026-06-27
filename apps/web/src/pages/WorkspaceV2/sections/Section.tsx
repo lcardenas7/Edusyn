@@ -1,6 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { Inbox, CheckCircle2, Circle, Coins, Calendar } from 'lucide-react'
 import type { SectionKey } from './SectionTabs'
+import { CollectionRow, getAmountTarget, getAmountPaid } from './CollectionRow'
+import { CollectionSummary } from './CollectionSummary'
 
 export interface SectionItem {
   id: string
@@ -24,6 +26,7 @@ interface SectionProps {
   items: SectionItem[]
   boardType?: string
   loading?: boolean
+  onUpdateItem?: (itemId: string, patch: { metadata?: any; title?: string; content?: string }) => Promise<void>
 }
 
 // Sección natural por tipo de tablero. Cuando un item no tiene `kind` explícito,
@@ -86,13 +89,52 @@ export function filterForSection(items: SectionItem[], key: SectionKey, boardTyp
   })
 }
 
-export function Section({ sectionKey, items, boardType, loading }: SectionProps) {
+export function Section({ sectionKey, items, boardType, loading, onUpdateItem }: SectionProps) {
   const filtered = filterForSection(items, sectionKey, boardType)
 
   if (loading) {
     return (
       <div className="py-10 text-center text-sm text-slate-400 animate-pulse">
         Cargando…
+      </div>
+    )
+  }
+
+  // Vista especializada para Recaudo
+  if (sectionKey === 'collection') {
+    const totalTarget = filtered.reduce((acc, it) => acc + (getAmountTarget(it) ?? 0), 0)
+    const totalCollected = filtered.reduce((acc, it) => acc + getAmountPaid(it), 0)
+    const pendingCount = filtered.filter((it) => {
+      const t = getAmountTarget(it)
+      return t == null || getAmountPaid(it) < t
+    }).length
+
+    return (
+      <div>
+        <CollectionSummary
+          totalTarget={totalTarget}
+          totalCollected={totalCollected}
+          studentCount={filtered.length}
+          pendingCount={pendingCount}
+        />
+        {filtered.length === 0 ? (
+          <SectionEmpty sectionKey={sectionKey} />
+        ) : (
+          <div className="space-y-2">
+            <AnimatePresence initial={false}>
+              {filtered.map((item, idx) => (
+                <CollectionRow
+                  key={item.id}
+                  item={item}
+                  index={idx}
+                  onUpdate={async (id, patch) => {
+                    if (onUpdateItem) await onUpdateItem(id, patch)
+                  }}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
     )
   }
