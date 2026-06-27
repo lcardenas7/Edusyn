@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react'
 import { teacherWorkspaceApi } from '../../lib/api'
 import { SpaceHeader } from './sections/SpaceHeader'
 import { SectionTabs, type SectionKey, SECTION_TABS } from './sections/SectionTabs'
-import { Section, type SectionItem } from './sections/Section'
+import { Section, filterForSection, type SectionItem } from './sections/Section'
 import { CaptureBar } from './sections/CaptureBar'
 
 interface BoardData {
@@ -87,23 +87,14 @@ export default function SpaceDetailPage() {
     return [...free, ...fromColumns]
   }, [board])
 
+  // Usa la misma lógica que el render para que badges y listas coincidan siempre.
   const counts = useMemo(() => {
     const result: Partial<Record<SectionKey, number>> = {}
     for (const tab of SECTION_TABS) {
-      // Conteo aproximado (no aplica filtros complejos, solo kind/heurística simple).
-      // Es indicativo y suficiente para badges.
-      result[tab.key] = allItems.filter((i) => {
-        const kind = i.kind?.toUpperCase()
-        if (tab.key === 'log')          return kind === 'LOG' || kind === 'NOTE' || (!kind && !i.amount && !i.student)
-        if (tab.key === 'observations') return kind === 'OBSERVATION' || (!kind && !!i.student && !i.amount)
-        if (tab.key === 'collection')   return kind === 'COLLECTION' || (!kind && i.amount != null)
-        if (tab.key === 'roles')        return kind === 'TASK' && !!i.metadata?.role
-        if (tab.key === 'resources')    return kind === 'FILE' || kind === 'LIST' || !!i.metadata?.url
-        return false
-      }).length
+      result[tab.key] = filterForSection(allItems, tab.key, board?.type).length
     }
     return result
-  }, [allItems])
+  }, [allItems, board?.type])
 
   // Crear item desde la barra de captura
   const handleCapture = useCallback(async (text: string): Promise<void> => {
@@ -189,7 +180,7 @@ export default function SpaceDetailPage() {
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18 }}
           >
-            <Section sectionKey={activeSection} items={allItems} loading={loading} />
+            <Section sectionKey={activeSection} items={allItems} boardType={board?.type} loading={loading} />
           </motion.div>
         </AnimatePresence>
 

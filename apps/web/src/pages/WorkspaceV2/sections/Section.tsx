@@ -22,35 +22,72 @@ export interface SectionItem {
 interface SectionProps {
   sectionKey: SectionKey
   items: SectionItem[]
+  boardType?: string
   loading?: boolean
 }
 
+// Sección natural por tipo de tablero. Cuando un item no tiene `kind` explícito,
+// hereda la sección "dueña" del tablero. Ejemplo: en un MICRO_COLLECT todos los
+// items se consideran Recaudo, aunque todavía no tengan monto asignado.
+export const NATURAL_SECTION_BY_BOARD_TYPE: Record<string, SectionKey> = {
+  CLASS_LOG:       'log',
+  STUDENT_NOTES:   'observations',
+  MICRO_COLLECT:   'collection',
+  CLASSROOM_ROLES: 'roles',
+}
+
+// Sección destino cuando el item TIENE kind explícito.
+const SECTION_BY_KIND: Record<string, SectionKey> = {
+  LOG:         'log',
+  NOTE:        'log',
+  IDEA:        'log',
+  OBSERVATION: 'observations',
+  COLLECTION:  'collection',
+  FILE:        'resources',
+  LIST:        'resources',
+  EVENT:       'log',
+  // TASK: decide abajo según metadata.role
+}
+
 // Filtra los items relevantes para la pestaña activa.
-// Si el item tiene `kind` definido, se usa. Si no, se infiere por status/metadata o
-// se considera "genérico" (visible solo en Bitácora si no encaja en otra parte).
-function filterForSection(items: SectionItem[], key: SectionKey): SectionItem[] {
+// Prioridad de decisión:
+//   1) Si item.kind está definido → va a la sección que mapea ese kind.
+//   2) Si no, y el tablero tiene una sección natural → va ahí.
+//   3) Si no, heurística por contenido (amount, student, metadata).
+export function filterForSection(items: SectionItem[], key: SectionKey, boardType?: string): SectionItem[] {
+  const natural = boardType ? NATURAL_SECTION_BY_BOARD_TYPE[boardType] : undefined
+
   return items.filter((item) => {
     const kind = item.kind?.toUpperCase()
+
+    // 1. Kind explícito decide
+    if (kind) {
+      if (kind === 'TASK') {
+        const isRole = !!item.metadata?.role
+        return key === (isRole ? 'roles' : 'log')
+      }
+      const target = SECTION_BY_KIND[kind]
+      if (target) return target === key
+      // kind desconocido: cae a heurística
+    }
+
+    // 2. Tablero con sección natural
+    if (natural) return natural === key
+
+    // 3. Heurística por contenido
     switch (key) {
-      case 'log':
-        // Bitácora: LOG, NOTE, eventos sin kind específico
-        return kind === 'LOG' || kind === 'NOTE' || (!kind && !item.amount && !item.student)
-      case 'observations':
-        return kind === 'OBSERVATION' || (!kind && !!item.student && !item.amount)
-      case 'collection':
-        return kind === 'COLLECTION' || (!kind && (item.amount != null || item.amountCollected != null))
-      case 'roles':
-        return kind === 'TASK' && !!item.metadata?.role
-      case 'resources':
-        return kind === 'FILE' || kind === 'LIST' || (!!item.metadata?.url || !!item.metadata?.fileUrl)
-      default:
-        return false
+      case 'collection':   return item.amount != null || item.amountCollected != null
+      case 'observations': return !!item.student && item.amount == null
+      case 'roles':        return !!item.metadata?.role
+      case 'resources':    return !!item.metadata?.url || !!item.metadata?.fileUrl
+      case 'log':          return !item.amount && !item.student && !item.metadata?.role && !item.metadata?.url
+      default:             return false
     }
   })
 }
 
-export function Section({ sectionKey, items, loading }: SectionProps) {
-  const filtered = filterForSection(items, sectionKey)
+export function Section({ sectionKey, items, boardType, loading }: SectionProps) {
+  const filtered = filterForSection(items, sectionKey, boardType)
 
   if (loading) {
     return (
@@ -123,10 +160,14 @@ function SectionRow({ item, index, sectionKey }: { item: SectionItem; index: num
                 <Calendar className="w-3 h-3" /> {dateLabel}
               </span>
             )}
-            {sectionKey === 'collection' && item.amount != null && (
-              <span className="text-amber-600 font-medium">
-                {formatMoney(item.amountCollected)} / {formatMoney(item.amount)}
-              </span>
+            {sectionKey === 'collection' && (
+              item.amount != null ? (
+                <span className="text-amber-600 font-medium">
+                  {formatMoney(item.amountCollected)} / {formatMoney(item.amount)}
+                </span>
+              ) : (
+                <span className="text-slate-400 italic">sin monto fijado</span>
+              )
             )}
           </div>
         </div>
