@@ -292,6 +292,111 @@ export class TeacherWorkspaceService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // DASHBOARD — "Centro del día". Una sola tanda de queries indexadas (sin N+1).
+  // Responde: ¿qué hago hoy? ¿qué tengo pendiente? ¿qué curso necesita atención?
+  // ═══════════════════════════════════════════════════════════════════════════
+  async getToday(teacherId: string, institutionId: string) {
+    const boards = await this.prisma.workspaceBoard.findMany({
+      where: { teacherId, institutionId, isArchived: false },
+      include: {
+        group: { select: { name: true, grade: { select: { name: true } } } },
+        _count: { select: { items: { where: { isArchived: false } } } },
+      },
+      orderBy: [{ isPinned: 'desc' }, { lastAccessedAt: 'desc' }, { updatedAt: 'desc' }],
+    });
+    const boardIds = boards.map((b) => b.id);
+
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+    const STALE_DAYS = 14;
+    const staleCutoff = new Date(Date.now() - STALE_DAYS * 86400000);
+
+    const [pendingItems, events, followUps, collectionItems] = await Promise.all([
+      boardIds.length
+        ? this.prisma.workspaceItem.findMany({
+            where: {
+              boardId: { in: boardIds }, isArchived: false,
+              status: { not: 'DONE' },
+              OR: [{ dueDate: { lte: endOfToday } }, { eventDate: { lte: endOfToday } }],
+            },
+            include: { board: { select: { id: true, title: true, emoji: true } } },
+            orderBy: [{ dueDate: 'asc' }],
+            take: 25,
+          })
+        : Promise.resolve([]),
+      this.prisma.workspaceEvent.findMany({
+        where: { teacherId, done: false, isArchived: false, date: { lte: endOfToday } },
+        orderBy: { date: 'asc' }, take: 25,
+      }),
+      this.prisma.workspaceFollowUp.findMany({
+        where: { teacherId, status: { not: 'DONE' }, isArchived: false },
+        include: { board: { select: { id: true, title: true } } },
+        orderBy: [{ dueDate: 'asc' }], take: 25,
+      }),
+      boardIds.length
+        ? this.prisma.workspaceItem.findMany({
+            where: { boardId: { in: boardIds }, isArchived: false, kind: 'COLLECTION' },
+            select: { id: true, amount: true, amountCollected: true, metadata: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    // Recaudo: pendiente = recaudado < meta (mira columna y metadata legacy)
+    let recaudoPendingCount = 0;
+    let recaudoPendingAmount = 0;
+    for (const it of collectionItems as any[]) {
+      const meta = (it.metadata || {}) as any;
+      const target = it.amount != null ? Number(it.amount) : Number(meta.amountTarget ?? 0);
+      const paid = it.amountCollected != null ? Number(it.amountCollected) : Number(meta.amountPaid ?? 0);
+      if (target > 0 && paid < target) {
+        recaudoPendingCount++;
+        recaudoPendingAmount += target - paid;
+      }
+    }
+
+    // Inteligencia funcional (sin IA): espacios sin actividad reciente
+    const staleSpaces = boards
+      .filter((b) => b.updatedAt && b.updatedAt < staleCutoff && (b as any)._count.items > 0)
+      .slice(0, 5)
+      .map((b) => ({ id: b.id, title: b.title, emoji: b.emoji, lastActivity: b.updatedAt }));
+
+    return {
+      spaces: boards.map((b) => ({
+        id: b.id,
+        title: b.title,
+        emoji: b.emoji,
+        color: b.color,
+        type: b.type,
+        isPinned: b.isPinned,
+        isPersonal: b.isPersonal,
+        isCourseSpace: b.isCourseSpace,
+        enabledModules: b.enabledModules,
+        groupName: b.group?.name ?? null,
+        gradeName: b.group?.grade?.name ?? null,
+        itemsCount: (b as any)._count.items,
+        updatedAt: b.updatedAt,
+      })),
+      pendingItems: (pendingItems as any[]).map((i) => ({
+        id: i.id, title: i.title, dueDate: i.dueDate, eventDate: i.eventDate,
+        boardId: i.boardId, boardTitle: i.board?.title, boardEmoji: i.board?.emoji,
+      })),
+      events,
+      followUps,
+      recaudo: { pendingCount: recaudoPendingCount, pendingAmount: recaudoPendingAmount },
+      insights: {
+        staleSpaces,
+        tooManyFollowUps: followUps.length >= 8,
+      },
+      counts: {
+        spaces: boards.length,
+        pendingItems: (pendingItems as any[]).length,
+        events: (events as any[]).length,
+        followUps: (followUps as any[]).length,
+      },
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // COLUMNS
   // ═══════════════════════════════════════════════════════════════════════════
 

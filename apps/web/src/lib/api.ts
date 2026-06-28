@@ -1879,6 +1879,9 @@ export const apdApi = {
 
 // Teacher Workspace
 export const teacherWorkspaceApi = {
+  // Dashboard "Centro del día"
+  getToday: () => api.get('/teacher-workspace/today'),
+
   // Boards
   listBoards: (params?: { type?: string; groupId?: string; isArchived?: string }) =>
     api.get('/teacher-workspace/boards', { params }),

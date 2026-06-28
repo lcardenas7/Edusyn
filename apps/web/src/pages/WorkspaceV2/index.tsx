@@ -7,101 +7,58 @@ import { Greeting } from './components/Greeting'
 import { SpacesGrid } from './components/SpacesGrid'
 import type { SpaceCardBoard } from './components/SpaceCard'
 import { CreateSpaceModal } from './components/CreateSpaceModal'
+import { TodayPanel, type TodayData } from './components/TodayPanel'
 
 /**
- * WorkspaceV2 — Nueva pantalla principal de Mi Espacio Docente.
- *
- * Acceso: ruta /my-workspace-v2, gateada por flag de URL.
- *   - Si VITE_WORKSPACE_V2=true → siempre disponible (dev/staging).
- *   - En prod, solo entra quien conoce la URL hasta que el rollout abra.
- *
- * Reutiliza el endpoint /teacher-workspace/boards existente.
- * No reemplaza /my-workspace todavía.
+ * WorkspaceV2 — Dashboard "Centro del día" de Mi Espacio Docente.
+ * Usa el endpoint agregado /teacher-workspace/today (una sola tanda de queries).
  */
 export default function WorkspaceV2Page() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
   const [boards, setBoards] = useState<SpaceCardBoard[]>([])
+  const [today, setToday] = useState<TodayData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
 
-  const loadBoards = useCallback(() => {
+  const load = useCallback(() => {
     setLoading(true)
     return teacherWorkspaceApi
-      .listBoards({ isArchived: 'false' })
+      .getToday()
       .then((res) => {
-        const raw: any[] = Array.isArray(res.data) ? res.data : res.data?.boards ?? []
-        const mapped: SpaceCardBoard[] = raw.map((b) => ({
+        const data = res.data
+        const spaces: any[] = data?.spaces ?? []
+        setBoards(spaces.map((b) => ({
           id: b.id,
           title: b.title,
-          description: b.description ?? null,
+          description: null,
           type: b.type,
           emoji: b.emoji ?? null,
           color: b.color ?? null,
-          coverImage: b.coverImage ?? null,
+          coverImage: null,
           isPinned: Boolean(b.isPinned),
           isPersonal: Boolean(b.isPersonal),
-          isArchived: Boolean(b.isArchived),
-          itemsCount: b._count?.items ?? b.items?.length ?? undefined,
+          isArchived: false,
+          itemsCount: b.itemsCount,
           updatedAt: b.updatedAt,
-        }))
-        setBoards(mapped)
+        })))
+        setToday(data as TodayData)
       })
       .catch((e: any) => {
-        const msg = e?.response?.data?.message || e?.message || 'No se pudieron cargar tus espacios.'
-        setError(msg)
+        setError(e?.response?.data?.message || e?.message || 'No se pudo cargar tu espacio.')
       })
       .finally(() => setLoading(false))
   }, [])
 
-  useEffect(() => {
-    let mounted = true
-    setLoading(true)
-    teacherWorkspaceApi
-      .listBoards({ isArchived: 'false' })
-      .then((res) => {
-        if (!mounted) return
-        const raw: any[] = Array.isArray(res.data) ? res.data : res.data?.boards ?? []
-        const mapped: SpaceCardBoard[] = raw.map((b) => ({
-          id: b.id,
-          title: b.title,
-          description: b.description ?? null,
-          type: b.type,
-          emoji: b.emoji ?? null,
-          color: b.color ?? null,
-          coverImage: b.coverImage ?? null,
-          isPinned: Boolean(b.isPinned),
-          isPersonal: Boolean(b.isPersonal),
-          isArchived: Boolean(b.isArchived),
-          itemsCount: b._count?.items ?? b.items?.length ?? undefined,
-          updatedAt: b.updatedAt,
-        }))
-        setBoards(mapped)
-      })
-      .catch((e: any) => {
-        if (!mounted) return
-        const msg = e?.response?.data?.message || e?.message || 'No se pudieron cargar tus espacios.'
-        setError(msg)
-      })
-      .finally(() => {
-        if (mounted) setLoading(false)
-      })
-    return () => { mounted = false }
-  }, [])
+  useEffect(() => { load() }, [load])
 
   const teacherFirstName = (user as any)?.firstName || (user as any)?.fullName?.split(' ')?.[0] || null
 
   return (
-    <div
-      className="min-h-screen px-4 sm:px-8 py-8"
-      style={{
-        background: 'linear-gradient(180deg, #FAF8F3 0%, #F5F1E8 100%)',
-      }}
-    >
+    <div className="min-h-screen px-4 sm:px-8 py-8" style={{ background: 'linear-gradient(180deg, #FAF8F3 0%, #F5F1E8 100%)' }}>
       <div className="max-w-6xl mx-auto">
-        {/* Volver a la versión clásica */}
         <button
           type="button"
           onClick={() => navigate('/my-workspace')}
@@ -110,32 +67,30 @@ export default function WorkspaceV2Page() {
           <ArrowLeft className="w-3.5 h-3.5" /> Volver a la versión clásica
         </button>
 
-        {/* Header */}
         <Greeting name={teacherFirstName} spacesCount={boards.length} />
 
-        {/* Contenido */}
         {loading && (
           <div className="flex items-center justify-center py-16 text-slate-400">
             <Loader2 className="w-6 h-6 animate-spin mr-2" />
-            <span className="text-sm">Cargando tus espacios…</span>
+            <span className="text-sm">Preparando tu día…</span>
           </div>
         )}
 
         {error && !loading && (
-          <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
+          <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
         )}
 
         {!loading && !error && (
-          <SpacesGrid
-            boards={boards}
-            onOpenBoard={(id) => navigate(`/my-workspace-v2/${id}`)}
-            onCreateBoard={() => setCreateOpen(true)}
-          />
+          <>
+            {today && <TodayPanel data={today} onOpenSpace={(id) => navigate(`/my-workspace-v2/${id}`)} />}
+            <SpacesGrid
+              boards={boards}
+              onOpenBoard={(id) => navigate(`/my-workspace-v2/${id}`)}
+              onCreateBoard={() => setCreateOpen(true)}
+            />
+          </>
         )}
 
-        {/* Sello de versión */}
         <div className="mt-12 text-center text-[10px] text-slate-300 tracking-widest uppercase">
           Mi Espacio Docente · vista previa v2
         </div>
@@ -146,13 +101,8 @@ export default function WorkspaceV2Page() {
         onClose={() => setCreateOpen(false)}
         onCreated={async (boardId) => {
           setCreateOpen(false)
-          if (boardId) {
-            // Refresca la grilla en background y abre el nuevo espacio
-            loadBoards()
-            navigate(`/my-workspace-v2/${boardId}`)
-          } else {
-            loadBoards()
-          }
+          load()
+          if (boardId) navigate(`/my-workspace-v2/${boardId}`)
         }}
       />
     </div>

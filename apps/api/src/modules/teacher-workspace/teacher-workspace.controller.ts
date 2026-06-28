@@ -28,6 +28,12 @@ export class TeacherWorkspaceController {
   // BOARDS
   // ═══════════════════════════════════════════════════════════════════════════
 
+  @Get('today')
+  async getToday(@Request() req: any) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.getToday(teacherId, institutionId);
+  }
+
   @Get('boards')
   async listBoards(
     @Request() req: any,
