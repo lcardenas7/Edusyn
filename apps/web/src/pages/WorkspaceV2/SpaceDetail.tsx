@@ -102,7 +102,10 @@ export default function SpaceDetailPage() {
 
   const activeSection: SectionKey | null = openModule ? MODULES[openModule].sectionKey ?? null : null
 
-  const handleCapture = useCallback(async (text: string, opts?: { eventDate?: string }): Promise<void> => {
+  const handleCapture = useCallback(async (
+    text: string,
+    opts?: { eventDate?: string; followUp?: boolean; followUpDue?: string },
+  ): Promise<void> => {
     if (!board || !activeSection) return
     setSubmitError(null)
     try {
@@ -112,15 +115,25 @@ export default function SpaceDetailPage() {
         content: text.length > 200 ? text : undefined,
         metadata: { capturedFromV2: true, kind: KIND_BY_SECTION[activeSection] },
       })
-      // "Todo puede terminar en el calendario": si el docente programó una fecha,
-      // creamos un evento ligado a este registro.
+      const itemId = created?.data?.id
+      // Calendario: si el docente programó una fecha, evento ligado al registro.
       if (opts?.eventDate) {
         await teacherWorkspaceApi.createEvent({
+          title: text.slice(0, 120), date: opts.eventDate,
+          boardId: board.id, itemId, type: 'REMINDER',
+        })
+      }
+      // Seguimiento: cualquier módulo puede generarlo (observación → seguimiento).
+      if (opts?.followUp) {
+        const sourceBySection: Record<string, string> = {
+          log: 'BITACORA', observations: 'OBSERVATION', collection: 'COLLECTION', roles: 'TASK', resources: 'TASK',
+        }
+        await teacherWorkspaceApi.createFollowUp({
           title: text.slice(0, 120),
-          date: opts.eventDate,
           boardId: board.id,
-          itemId: created?.data?.id,
-          type: 'REMINDER',
+          sourceItemId: itemId,
+          sourceType: sourceBySection[activeSection] || 'MANUAL',
+          dueDate: opts.followUpDue,
         })
       }
       await refresh()

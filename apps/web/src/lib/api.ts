@@ -1890,6 +1890,15 @@ export const teacherWorkspaceApi = {
     api.patch(`/teacher-workspace/events/${id}`, data),
   deleteEvent: (id: string) => api.delete(`/teacher-workspace/events/${id}`),
 
+  // Seguimientos
+  listFollowUps: (params?: { status?: string; boardId?: string; includeResolved?: string }) =>
+    api.get('/teacher-workspace/follow-ups', { params }),
+  createFollowUp: (data: { title: string; notes?: string; dueDate?: string; boardId?: string; sourceType?: string; sourceItemId?: string; studentId?: string }) =>
+    api.post('/teacher-workspace/follow-ups', data),
+  updateFollowUp: (id: string, data: { title?: string; notes?: string; dueDate?: string | null; status?: string; isArchived?: boolean }) =>
+    api.patch(`/teacher-workspace/follow-ups/${id}`, data),
+  deleteFollowUp: (id: string) => api.delete(`/teacher-workspace/follow-ups/${id}`),
+
   // Boards
   listBoards: (params?: { type?: string; groupId?: string; isArchived?: string }) =>
     api.get('/teacher-workspace/boards', { params }),

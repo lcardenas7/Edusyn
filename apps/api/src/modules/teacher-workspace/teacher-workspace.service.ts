@@ -480,6 +480,76 @@ export class TeacherWorkspaceService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // SEGUIMIENTOS — WorkspaceFollowUp (transversal, motor del dashboard)
+  // Cualquier módulo puede generar uno. No toca el observador oficial.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async listFollowUps(teacherId: string, params: { status?: string; boardId?: string; includeResolved?: boolean }) {
+    return this.prisma.workspaceFollowUp.findMany({
+      where: {
+        teacherId,
+        isArchived: false,
+        ...(params.boardId && { boardId: params.boardId }),
+        ...(params.status
+          ? { status: params.status as any }
+          : params.includeResolved
+            ? {}
+            : { status: { not: 'DONE' } }),
+      },
+      include: { board: { select: { id: true, title: true, emoji: true } } },
+      orderBy: [{ status: 'asc' }, { dueDate: 'asc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  async createFollowUp(teacherId: string, institutionId: string, dto: {
+    title: string; notes?: string; dueDate?: string; boardId?: string;
+    sourceType?: string; sourceItemId?: string; studentId?: string;
+  }) {
+    if (!dto.title?.trim()) throw new BadRequestException('El seguimiento necesita un título');
+    if (dto.boardId) await this.validateBoardOwnership(dto.boardId, teacherId, institutionId);
+    return this.prisma.workspaceFollowUp.create({
+      data: {
+        institutionId,
+        teacherId,
+        boardId: dto.boardId || null,
+        sourceType: (dto.sourceType as any) || 'MANUAL',
+        sourceItemId: dto.sourceItemId || null,
+        studentId: dto.studentId || null,
+        title: dto.title.trim(),
+        notes: dto.notes || null,
+        dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+      },
+    });
+  }
+
+  async updateFollowUp(id: string, teacherId: string, dto: {
+    title?: string; notes?: string; dueDate?: string | null; status?: string; isArchived?: boolean;
+  }) {
+    const fu = await this.prisma.workspaceFollowUp.findUnique({ where: { id } });
+    if (!fu || fu.teacherId !== teacherId) throw new NotFoundException('Seguimiento no encontrado');
+    return this.prisma.workspaceFollowUp.update({
+      where: { id },
+      data: {
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.notes !== undefined && { notes: dto.notes }),
+        ...(dto.dueDate !== undefined && { dueDate: dto.dueDate ? new Date(dto.dueDate) : null }),
+        ...(dto.status !== undefined && {
+          status: dto.status as any,
+          resolvedAt: dto.status === 'DONE' ? new Date() : null,
+        }),
+        ...(dto.isArchived !== undefined && { isArchived: dto.isArchived }),
+      },
+    });
+  }
+
+  async deleteFollowUp(id: string, teacherId: string) {
+    const fu = await this.prisma.workspaceFollowUp.findUnique({ where: { id } });
+    if (!fu || fu.teacherId !== teacherId) throw new NotFoundException('Seguimiento no encontrado');
+    await this.prisma.workspaceFollowUp.delete({ where: { id } });
+    return { success: true };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // COLUMNS
   // ═══════════════════════════════════════════════════════════════════════════
 

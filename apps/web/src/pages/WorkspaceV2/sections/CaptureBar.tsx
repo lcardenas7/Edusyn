@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Sparkles, CalendarPlus } from 'lucide-react'
+import { Send, Sparkles, CalendarPlus, Pin } from 'lucide-react'
 import type { SectionKey } from './SectionTabs'
 
 interface CaptureBarProps {
   sectionKey: SectionKey
-  onSubmit: (text: string, opts?: { eventDate?: string }) => Promise<void>
+  onSubmit: (text: string, opts?: { eventDate?: string; followUp?: boolean; followUpDue?: string }) => Promise<void>
   disabled?: boolean
 }
 
@@ -29,11 +29,13 @@ export function CaptureBar({ sectionKey, onSubmit, disabled }: CaptureBarProps) 
   const [sending, setSending] = useState(false)
   const [scheduling, setScheduling] = useState(false)
   const [eventDate, setEventDate] = useState('')
+  const [followUp, setFollowUp] = useState(false)
+  const [followUpDue, setFollowUpDue] = useState('')
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   // Limpiar al cambiar de pestaña
   useEffect(() => {
-    setText(''); setScheduling(false); setEventDate('')
+    setText(''); setScheduling(false); setEventDate(''); setFollowUp(false); setFollowUpDue('')
   }, [sectionKey])
 
   // Auto-resize del textarea
@@ -48,8 +50,11 @@ export function CaptureBar({ sectionKey, onSubmit, disabled }: CaptureBarProps) 
     if (!value || sending) return
     setSending(true)
     try {
-      await onSubmit(value, scheduling && eventDate ? { eventDate } : undefined)
-      setText(''); setScheduling(false); setEventDate('')
+      await onSubmit(value, {
+        ...(scheduling && eventDate ? { eventDate } : {}),
+        ...(followUp ? { followUp: true, followUpDue: followUpDue || undefined } : {}),
+      })
+      setText(''); setScheduling(false); setEventDate(''); setFollowUp(false); setFollowUpDue('')
     } catch {
       // El padre maneja el error; mantenemos el texto para que el usuario lo recupere.
     } finally {
@@ -79,6 +84,14 @@ export function CaptureBar({ sectionKey, onSubmit, disabled }: CaptureBarProps) 
           aria-label={HINTS[sectionKey]}
         />
         <div className="absolute right-2 bottom-2 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setFollowUp((v) => !v)}
+            title="Crear seguimiento"
+            className={`p-1.5 rounded-lg transition ${followUp ? 'bg-violet-100 text-violet-700' : 'text-slate-400 hover:bg-slate-100'}`}
+          >
+            <Pin className="w-4 h-4" />
+          </button>
           <button
             type="button"
             onClick={() => setScheduling((v) => !v)}
@@ -114,6 +127,23 @@ export function CaptureBar({ sectionKey, onSubmit, disabled }: CaptureBarProps) 
             className="px-2 py-1 border border-slate-200 rounded-lg focus:border-violet-400 focus:outline-none"
           />
           {!eventDate && <span className="text-slate-400">elige una fecha</span>}
+        </div>
+      )}
+
+      {/* Crear seguimiento (opcional) */}
+      {followUp && (
+        <div className="mt-2 flex items-center gap-2 px-1 text-xs text-slate-600">
+          <Pin className="w-3.5 h-3.5 text-violet-500" />
+          <span>Crear seguimiento</span>
+          <span className="text-slate-400">·</span>
+          <span>vence</span>
+          <input
+            type="date"
+            value={followUpDue}
+            onChange={(e) => setFollowUpDue(e.target.value)}
+            className="px-2 py-1 border border-slate-200 rounded-lg focus:border-violet-400 focus:outline-none"
+          />
+          <span className="text-slate-400">(opcional)</span>
         </div>
       )}
     </div>

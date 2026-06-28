@@ -59,6 +59,31 @@ export class TeacherWorkspaceController {
     return this.service.deleteEvent(id, teacherId);
   }
 
+  // ── Seguimientos ──────────────────────────────────────────────────────────
+  @Get('follow-ups')
+  async listFollowUps(@Request() req: any, @Query('status') status?: string, @Query('boardId') boardId?: string, @Query('includeResolved') includeResolved?: string) {
+    const { teacherId } = await this.resolveCtx(req);
+    return this.service.listFollowUps(teacherId, { status, boardId, includeResolved: includeResolved === 'true' });
+  }
+
+  @Post('follow-ups')
+  async createFollowUp(@Request() req: any, @Body() dto: any) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.createFollowUp(teacherId, institutionId, dto);
+  }
+
+  @Patch('follow-ups/:id')
+  async updateFollowUp(@Request() req: any, @Param('id') id: string, @Body() dto: any) {
+    const { teacherId } = await this.resolveCtx(req);
+    return this.service.updateFollowUp(id, teacherId, dto);
+  }
+
+  @Delete('follow-ups/:id')
+  async deleteFollowUp(@Request() req: any, @Param('id') id: string) {
+    const { teacherId } = await this.resolveCtx(req);
+    return this.service.deleteFollowUp(id, teacherId);
+  }
+
   @Get('boards')
   async listBoards(
     @Request() req: any,
