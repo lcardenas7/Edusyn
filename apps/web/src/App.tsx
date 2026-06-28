@@ -86,6 +86,7 @@ import AttendanceReports from './pages/reports/AttendanceReports'
 import AlertsReports from './pages/reports/AlertsReports'
 import BulletinsReports from './pages/reports/BulletinsReports'
 import EvaluationReports from './pages/reports/EvaluationReports'
+import PreventiveCutReports from './pages/reports/PreventiveCutReports'
 import SystemConfig from './pages/admin/SystemConfig'
 import InstitutionalPortfolio from './pages/InstitutionalPortfolio'
 
@@ -309,6 +310,7 @@ function App() {
                   <Route path="/reports/commission" element={<CommissionReports />} />
                   <Route path="/reports/attendance" element={<AttendanceReports />} />
                   <Route path="/reports/alerts" element={<AlertsReports />} />
+                  <Route path="/reports/preventive-cut" element={<PreventiveCutReports />} />
                   <Route path="/reports/bulletins" element={<BulletinsReports />} />
                   <Route path="/reports/evaluation" element={<EvaluationReports />} />
                   <Route path="/admin/system" element={<SystemConfig />} />

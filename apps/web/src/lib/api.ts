@@ -388,10 +388,27 @@ export const observerApi = {
     api.get('/observer/commission-data', { params: { academicYearId, gradeId, actaTypes } }),
 }
 
-// Preventive Alerts
-export const preventiveAlertsApi = {
-  getAll: (params?: { academicTermId?: string; groupId?: string }) => api.get('/preventive-cuts/alerts', { params }),
-  generate: (academicTermId: string) => api.post(`/preventive-cuts/generate/${academicTermId}`),
+// Preventive Cuts (Corte Preventivo)
+export const preventiveCutsApi = {
+  // Configuración por período
+  getConfig: (academicTermId: string) =>
+    api.get('/preventive-cuts/config', { params: { academicTermId } }),
+  saveConfig: (data: { academicTermId: string; cutoffDate: string; riskThresholdScore: number }) =>
+    api.post('/preventive-cuts/config', data),
+
+  // Consolidado por grupo (solo lectura, no persiste)
+  groupView: (params: { academicTermId: string; groupId: string; cutoffDate?: string; threshold?: number }) =>
+    api.get('/preventive-cuts/group-view', { params }),
+
+  // Alertas persistidas (workflow de seguimiento)
+  listAlerts: (params?: { academicTermId?: string; teacherAssignmentId?: string; studentEnrollmentId?: string; status?: string }) =>
+    api.get('/preventive-cuts/alerts', { params }),
+
+  // Descargas PDF (blob con auth)
+  groupPdf: (params: { academicTermId: string; groupId: string; cutoffDate?: string; threshold?: number }) =>
+    api.get('/preventive-cuts/pdf/group', { params, responseType: 'blob' }),
+  studentPdf: (params: { academicTermId: string; groupId: string; studentEnrollmentId: string; cutoffDate?: string; threshold?: number }) =>
+    api.get('/preventive-cuts/pdf/student', { params, responseType: 'blob' }),
 }
 
 // Reports
