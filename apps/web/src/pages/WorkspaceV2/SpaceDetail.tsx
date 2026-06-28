@@ -10,6 +10,7 @@ import { CaptureBar } from './sections/CaptureBar'
 import { MODULES, activeModules, type ModuleKey } from './modules/moduleRegistry'
 import { ModuleGrid } from './modules/ModuleGrid'
 import { ActivateModuleSheet } from './modules/ActivateModuleSheet'
+import { BitacoraModule, type BitacoraItem } from './modules/BitacoraModule'
 
 interface BoardData {
   id: string
@@ -213,7 +214,26 @@ export default function SpaceDetailPage() {
                 <h2 className="text-lg font-bold text-slate-900">{openModuleDef!.label}</h2>
               </div>
 
-              {activeSection ? (
+              {openModule === 'bitacora' ? (
+                <BitacoraModule
+                  items={filterForSection(allItems, 'log', board.type) as BitacoraItem[]}
+                  onCreate={async (data) => {
+                    await teacherWorkspaceApi.createItem({
+                      boardId: board.id, title: data.title,
+                      entryType: data.entryType, isImportant: data.isImportant, tags: data.tags,
+                      metadata: { capturedFromV2: true, kind: 'LOG' },
+                    })
+                    await refresh()
+                  }}
+                  onToggleImportant={async (it) => { await teacherWorkspaceApi.updateItem(it.id, { isImportant: !it.isImportant }); await refresh() }}
+                  onToggleResolved={async (it) => {
+                    const resolved = it.status === 'DONE' || !!it.completedAt
+                    await teacherWorkspaceApi.updateItem(it.id, { status: resolved ? 'TODO' : 'DONE' })
+                    await refresh()
+                  }}
+                  onDelete={async (it) => { await teacherWorkspaceApi.deleteItem(it.id); await refresh() }}
+                />
+              ) : activeSection ? (
                 <>
                   <Section sectionKey={activeSection} items={allItems} boardType={board.type} onUpdateItem={handleUpdateItem} />
                   {submitError && <p className="mt-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{submitError}</p>}

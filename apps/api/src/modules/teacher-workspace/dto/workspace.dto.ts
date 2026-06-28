@@ -133,6 +133,16 @@ export class CreateItemDto {
 
   @IsOptional() @IsDateString()
   eventDate?: string;
+
+  // F5 — Bitácora
+  @IsOptional() @IsString()
+  entryType?: string;
+
+  @IsOptional() @IsBoolean()
+  isImportant?: boolean;
+
+  @IsOptional() @IsArray() @IsString({ each: true })
+  tags?: string[];
 }
 
 export class UpdateItemDto {
@@ -162,6 +172,16 @@ export class UpdateItemDto {
 
   @IsOptional() @IsBoolean()
   isArchived?: boolean;
+
+  // F5 — Bitácora
+  @IsOptional() @IsString()
+  entryType?: string;
+
+  @IsOptional() @IsBoolean()
+  isImportant?: boolean;
+
+  @IsOptional() @IsArray() @IsString({ each: true })
+  tags?: string[];
 }
 
 export class MoveItemDto {

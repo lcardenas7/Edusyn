@@ -607,6 +607,11 @@ export class TeacherWorkspaceService {
       _max: { sortOrder: true },
     });
 
+    // Escribir kind en la columna (no solo en metadata) — fuente única de verdad.
+    const KIND_VALUES = ['NOTE','TASK','OBSERVATION','LOG','COLLECTION','IDEA','LIST','FILE','EVENT'];
+    const metaKind = (dto.metadata?.kind || '').toString().toUpperCase();
+    const kind = KIND_VALUES.includes(metaKind) ? (metaKind as any) : undefined;
+
     return this.prisma.workspaceItem.create({
       data: {
         boardId: dto.boardId,
@@ -618,6 +623,10 @@ export class TeacherWorkspaceService {
         dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
         eventDate: dto.eventDate ? new Date(dto.eventDate) : undefined,
         sortOrder: (maxSort._max.sortOrder ?? 0) + 100,
+        ...(kind && { kind }),
+        ...(dto.entryType !== undefined && { entryType: dto.entryType }),
+        ...(dto.isImportant !== undefined && { isImportant: dto.isImportant }),
+        ...(dto.tags !== undefined && { tags: dto.tags }),
       },
       include: {
         student: { select: { id: true, firstName: true, lastName: true } },
@@ -640,6 +649,11 @@ export class TeacherWorkspaceService {
         ...(dto.eventDate !== undefined && { eventDate: dto.eventDate ? new Date(dto.eventDate) : null }),
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
         ...(dto.isArchived !== undefined && { isArchived: dto.isArchived }),
+        ...(dto.entryType !== undefined && { entryType: dto.entryType }),
+        ...(dto.isImportant !== undefined && { isImportant: dto.isImportant }),
+        ...(dto.tags !== undefined && { tags: dto.tags }),
+        // Estado "Resuelto" sincroniza completedAt
+        ...(dto.status === 'DONE' && { completedAt: new Date() }),
       },
       include: {
         student: { select: { id: true, firstName: true, lastName: true } },

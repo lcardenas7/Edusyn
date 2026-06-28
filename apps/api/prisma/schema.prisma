@@ -5000,6 +5000,9 @@ model WorkspaceItem {
   amount          Decimal?  @db.Decimal(12, 2) // Meta de recaudo (si kind=COLLECTION)
   amountCollected Decimal?  @db.Decimal(12, 2) // Monto efectivamente recaudado
   tags            String[]  @default([])   // Tags libres
+  // F5 — Bitácora: tipo de entrada y destacado
+  entryType       String?                  // clase|reunion|idea|llamada|incidente|otro
+  isImportant     Boolean   @default(false)
 
   board   WorkspaceBoard   @relation(fields: [boardId], references: [id], onDelete: Cascade)
   column  WorkspaceColumn? @relation(fields: [columnId], references: [id], onDelete: SetNull)

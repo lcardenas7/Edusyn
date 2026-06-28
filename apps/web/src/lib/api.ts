@@ -1932,9 +1932,9 @@ export const teacherWorkspaceApi = {
   deleteColumn: (id: string) => api.delete(`/teacher-workspace/columns/${id}`),
 
   // Items
-  createItem: (data: { boardId: string; columnId?: string; studentId?: string; title: string; content?: string; metadata?: any; dueDate?: string; eventDate?: string }) =>
+  createItem: (data: { boardId: string; columnId?: string; studentId?: string; title: string; content?: string; metadata?: any; dueDate?: string; eventDate?: string; entryType?: string; isImportant?: boolean; tags?: string[] }) =>
     api.post('/teacher-workspace/items', data),
-  updateItem: (id: string, data: { columnId?: string; title?: string; content?: string; metadata?: any; status?: string; dueDate?: string | null; eventDate?: string | null; sortOrder?: number; isArchived?: boolean }) =>
+  updateItem: (id: string, data: { columnId?: string; title?: string; content?: string; metadata?: any; status?: string; dueDate?: string | null; eventDate?: string | null; sortOrder?: number; isArchived?: boolean; entryType?: string; isImportant?: boolean; tags?: string[] }) =>
     api.put(`/teacher-workspace/items/${id}`, data),
   moveItem: (id: string, data: { columnId: string; sortOrder: number }) =>
     api.patch(`/teacher-workspace/items/${id}/move`, data),
