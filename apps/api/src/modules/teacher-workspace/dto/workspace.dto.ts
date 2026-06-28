@@ -61,6 +61,22 @@ export class UpdateBoardDto {
 
   @IsOptional() @IsInt() @Min(0)
   sortOrder?: number;
+
+  // WORKSPACE_V2 — personalización y módulos
+  @IsOptional() @IsString()
+  emoji?: string;
+
+  @IsOptional() @IsString()
+  bannerColor?: string;
+
+  @IsOptional() @IsString()
+  coverImage?: string;
+
+  @IsOptional() @IsBoolean()
+  isPinned?: boolean;
+
+  @IsOptional() @IsArray() @IsString({ each: true })
+  enabledModules?: string[];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

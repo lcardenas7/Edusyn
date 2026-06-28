@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ArrowLeft, Clock, LayoutGrid } from 'lucide-react'
 import { teacherWorkspaceApi } from '../../lib/api'
 import { SpaceHeader } from './sections/SpaceHeader'
-import { SectionTabs, type SectionKey, SECTION_TABS } from './sections/SectionTabs'
+import { type SectionKey } from './sections/SectionTabs'
 import { Section, filterForSection, type SectionItem } from './sections/Section'
 import { CaptureBar } from './sections/CaptureBar'
+import { MODULES, activeModules, type ModuleKey } from './modules/moduleRegistry'
+import { ModuleGrid } from './modules/ModuleGrid'
+import { ActivateModuleSheet } from './modules/ActivateModuleSheet'
 
 interface BoardData {
   id: string
@@ -18,30 +21,29 @@ interface BoardData {
   coverImage?: string | null
   isPinned?: boolean
   isPersonal?: boolean
+  enabledModules?: string[]
   group?: any
   columns?: Array<{ id: string; items: SectionItem[] }>
   items?: SectionItem[]
+  updatedAt?: string
 }
 
-// Mapeo: para los items capturados desde la barra inferior, el "kind" se infiere
-// de la pestaña activa. La UI vieja sigue funcionando porque ignora kind.
 const KIND_BY_SECTION: Record<SectionKey, string> = {
-  log:          'LOG',
-  observations: 'OBSERVATION',
-  collection:   'COLLECTION',
-  roles:        'TASK',
-  resources:    'FILE',
+  log: 'LOG', observations: 'OBSERVATION', collection: 'COLLECTION', roles: 'TASK', resources: 'FILE',
 }
 
-// Para boards de tipo específico, abrir directamente en la pestaña natural.
-const DEFAULT_SECTION_BY_BOARD_TYPE: Record<string, SectionKey> = {
-  CLASS_LOG:       'log',
-  STUDENT_NOTES:   'observations',
-  MICRO_COLLECT:   'collection',
-  CLASSROOM_ROLES: 'roles',
-  KANBAN:          'log',
-  CHECKLIST:       'log',
-  PROJECT:         'log',
+function timeAgo(dateStr?: string): string {
+  if (!dateStr) return '—'
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const min = Math.floor(diff / 60000)
+  if (min < 1) return 'ahora'
+  if (min < 60) return `hace ${min} min`
+  const h = Math.floor(min / 60)
+  if (h < 24) return `hace ${h} h`
+  const d = Math.floor(h / 24)
+  if (d === 1) return 'ayer'
+  if (d < 30) return `hace ${d} días`
+  return new Date(dateStr).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })
 }
 
 export default function SpaceDetailPage() {
@@ -51,66 +53,57 @@ export default function SpaceDetailPage() {
   const [board, setBoard] = useState<BoardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeSection, setActiveSection] = useState<SectionKey>('log')
+  const [openModule, setOpenModule] = useState<ModuleKey | null>(null)
+  const [activateOpen, setActivateOpen] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  // Cargar board
   useEffect(() => {
     if (!boardId) return
     let mounted = true
     setLoading(true)
-    teacherWorkspaceApi
-      .getBoard(boardId)
-      .then((res) => {
-        if (!mounted) return
-        setBoard(res.data as BoardData)
-        // Abrir en la pestaña natural según tipo del board
-        const defaultSection = DEFAULT_SECTION_BY_BOARD_TYPE[res.data?.type] || 'log'
-        setActiveSection(defaultSection)
-      })
-      .catch((e: any) => {
-        if (!mounted) return
-        const msg = e?.response?.data?.message || e?.message || 'No se pudo cargar el espacio.'
-        setError(msg)
-      })
-      .finally(() => {
-        if (mounted) setLoading(false)
-      })
+    teacherWorkspaceApi.getBoard(boardId)
+      .then((res) => { if (mounted) setBoard(res.data as BoardData) })
+      .catch((e: any) => { if (mounted) setError(e?.response?.data?.message || e?.message || 'No se pudo cargar el espacio.') })
+      .finally(() => { if (mounted) setLoading(false) })
     return () => { mounted = false }
   }, [boardId])
 
-  // Flatten de items (columnas + libres)
   const allItems: SectionItem[] = useMemo(() => {
     if (!board) return []
     const fromColumns = (board.columns ?? []).flatMap((c) => c.items ?? [])
-    const free = board.items ?? []
-    return [...free, ...fromColumns]
+    return [...(board.items ?? []), ...fromColumns]
   }, [board])
 
-  // Usa la misma lógica que el render para que badges y listas coincidan siempre.
-  const counts = useMemo(() => {
-    const result: Partial<Record<SectionKey, number>> = {}
-    for (const tab of SECTION_TABS) {
-      result[tab.key] = filterForSection(allItems, tab.key, board?.type).length
+  const moduleKeys = useMemo(
+    () => (board ? activeModules(board, allItems) : []),
+    [board, allItems],
+  )
+
+  // Conteo por módulo (reusa filterForSection para los módulos con sección)
+  const moduleCounts = useMemo(() => {
+    const result: Partial<Record<ModuleKey, number>> = {}
+    for (const key of moduleKeys) {
+      const sk = MODULES[key].sectionKey
+      result[key] = sk ? filterForSection(allItems, sk, board?.type).length : 0
     }
     return result
-  }, [allItems, board?.type])
+  }, [moduleKeys, allItems, board?.type])
 
-  // Actualizar un item existente (usado por la pestaña Recaudo para fijar monto y registrar pagos).
-  // Después del PUT re-fetcheamos el board para reflejar el cambio en la lista.
-  const handleUpdateItem = useCallback(async (
-    itemId: string,
-    patch: { metadata?: any; title?: string; content?: string },
-  ): Promise<void> => {
+  const refresh = useCallback(async () => {
     if (!board) return
-    await teacherWorkspaceApi.updateItem(itemId, patch)
     const fresh = await teacherWorkspaceApi.getBoard(board.id)
     setBoard(fresh.data as BoardData)
   }, [board])
 
-  // Crear item desde la barra de captura
+  const handleUpdateItem = useCallback(async (itemId: string, patch: { metadata?: any; title?: string; content?: string }) => {
+    await teacherWorkspaceApi.updateItem(itemId, patch)
+    await refresh()
+  }, [refresh])
+
+  const activeSection: SectionKey | null = openModule ? MODULES[openModule].sectionKey ?? null : null
+
   const handleCapture = useCallback(async (text: string): Promise<void> => {
-    if (!board) return
+    if (!board || !activeSection) return
     setSubmitError(null)
     try {
       await teacherWorkspaceApi.createItem({
@@ -119,26 +112,31 @@ export default function SpaceDetailPage() {
         content: text.length > 200 ? text : undefined,
         metadata: { capturedFromV2: true, kind: KIND_BY_SECTION[activeSection] },
       })
-      // Optimistic: re-fetch para reflejar el item nuevo
-      const fresh = await teacherWorkspaceApi.getBoard(board.id)
-      setBoard(fresh.data as BoardData)
+      await refresh()
     } catch (e: any) {
-      const msg = e?.response?.data?.message || 'No se pudo guardar. Intenta de nuevo.'
-      setSubmitError(msg)
+      setSubmitError(e?.response?.data?.message || 'No se pudo guardar. Intenta de nuevo.')
       throw e
     }
-  }, [board, activeSection])
+  }, [board, activeSection, refresh])
 
-  // Loading state
+  const handleActivateModule = useCallback(async (key: ModuleKey) => {
+    if (!board) return
+    const next = Array.from(new Set([...(board.enabledModules ?? []), key]))
+    setActivateOpen(false)
+    setBoard({ ...board, enabledModules: next })   // optimista
+    try {
+      await teacherWorkspaceApi.updateBoard(board.id, { enabledModules: next })
+      setOpenModule(key)
+    } catch {
+      await refresh()
+    }
+  }, [board, refresh])
+
   if (loading) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: 'linear-gradient(180deg, #FAF8F3 0%, #F5F1E8 100%)' }}
-      >
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(180deg, #FAF8F3 0%, #F5F1E8 100%)' }}>
         <div className="flex items-center gap-2 text-slate-400">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="text-sm">Cargando tu espacio…</span>
+          <Loader2 className="w-5 h-5 animate-spin" /> <span className="text-sm">Cargando tu espacio…</span>
         </div>
       </div>
     )
@@ -146,70 +144,82 @@ export default function SpaceDetailPage() {
 
   if (error || !board) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center px-4"
-        style={{ background: 'linear-gradient(180deg, #FAF8F3 0%, #F5F1E8 100%)' }}
-      >
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'linear-gradient(180deg, #FAF8F3 0%, #F5F1E8 100%)' }}>
         <div className="max-w-md text-center">
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
-            {error || 'No encontramos este espacio.'}
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate('/my-workspace-v2')}
-            className="text-sm text-violet-600 hover:text-violet-800"
-          >
-            ← Volver a Mi Espacio
-          </button>
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">{error || 'No encontramos este espacio.'}</p>
+          <button type="button" onClick={() => navigate('/my-workspace-v2')} className="text-sm text-violet-600 hover:text-violet-800">← Volver a Mi Espacio</button>
         </div>
       </div>
     )
   }
 
+  const openModuleDef = openModule ? MODULES[openModule] : null
+
   return (
-    <div
-      className="min-h-screen px-4 sm:px-8 py-8 pb-32"
-      style={{ background: 'linear-gradient(180deg, #FAF8F3 0%, #F5F1E8 100%)' }}
-    >
+    <div className="min-h-screen px-4 sm:px-8 py-8 pb-32" style={{ background: 'linear-gradient(180deg, #FAF8F3 0%, #F5F1E8 100%)' }}>
       <div className="max-w-4xl mx-auto">
-        <SpaceHeader
-          board={{ ...board, itemsCount: allItems.length }}
-          onBack={() => navigate('/my-workspace-v2')}
-        />
+        <SpaceHeader board={{ ...board, itemsCount: allItems.length }} onBack={() => navigate('/my-workspace-v2')} />
 
-        <SectionTabs
-          active={activeSection}
-          onChange={setActiveSection}
-          counts={counts}
-        />
+        {/* Mini-dashboard del curso */}
+        <div className="flex flex-wrap gap-3 mb-6 -mt-2">
+          <Metric label="Registros" value={String(allItems.length)} />
+          <Metric label="Módulos activos" value={String(moduleKeys.length)} icon={<LayoutGrid className="w-3.5 h-3.5" />} />
+          <Metric label="Última actividad" value={timeAgo(board.updatedAt)} icon={<Clock className="w-3.5 h-3.5" />} />
+        </div>
 
-        {/* Contenido de la pestaña activa con transición */}
         <AnimatePresence mode="wait">
-          <motion.div
-            key={activeSection}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.18 }}
-          >
-            <Section
-              sectionKey={activeSection}
-              items={allItems}
-              boardType={board?.type}
-              loading={loading}
-              onUpdateItem={handleUpdateItem}
-            />
-          </motion.div>
+          {!openModule ? (
+            // Vista de módulos del curso
+            <motion.div key="grid" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
+              <ModuleGrid
+                activeKeys={moduleKeys}
+                counts={moduleCounts}
+                onOpen={(k) => setOpenModule(k)}
+                onActivate={() => setActivateOpen(true)}
+              />
+            </motion.div>
+          ) : (
+            // Contenido de un módulo
+            <motion.div key={`mod-${openModule}`} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
+              <button type="button" onClick={() => setOpenModule(null)} className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 mb-3">
+                <ArrowLeft className="w-3.5 h-3.5" /> Módulos
+              </button>
+              <div className="flex items-center gap-2 mb-4">
+                <div className={`w-9 h-9 rounded-xl ${openModuleDef!.iconBg} flex items-center justify-center text-lg`}>{openModuleDef!.emoji}</div>
+                <h2 className="text-lg font-bold text-slate-900">{openModuleDef!.label}</h2>
+              </div>
+
+              {activeSection ? (
+                <>
+                  <Section sectionKey={activeSection} items={allItems} boardType={board.type} onUpdateItem={handleUpdateItem} />
+                  {submitError && <p className="mt-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{submitError}</p>}
+                  <CaptureBar sectionKey={activeSection} onSubmit={handleCapture} />
+                </>
+              ) : (
+                <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white/40 py-12 text-center">
+                  <p className="text-sm text-slate-500">El módulo <span className="font-semibold">{openModuleDef!.label}</span> llega en su fase. 🚧</p>
+                </div>
+              )}
+            </motion.div>
+          )}
         </AnimatePresence>
-
-        {submitError && (
-          <p className="mt-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            {submitError}
-          </p>
-        )}
-
-        <CaptureBar sectionKey={activeSection} onSubmit={handleCapture} />
       </div>
+
+      <ActivateModuleSheet
+        open={activateOpen}
+        activeKeys={moduleKeys}
+        onClose={() => setActivateOpen(false)}
+        onActivate={handleActivateModule}
+      />
+    </div>
+  )
+}
+
+function Metric({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
+  return (
+    <div className="bg-white/70 border border-slate-200 rounded-xl px-3 py-2 min-w-[100px]">
+      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold flex items-center gap-1">{icon}{label}</p>
+      <p className="text-sm font-bold text-slate-800 mt-0.5">{value}</p>
     </div>
   )
 }

@@ -275,6 +275,12 @@ export class TeacherWorkspaceService {
         ...(dto.metadata !== undefined && { metadata: dto.metadata }),
         ...(dto.isArchived !== undefined && { isArchived: dto.isArchived }),
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
+        // WORKSPACE_V2
+        ...(dto.emoji !== undefined && { emoji: dto.emoji }),
+        ...(dto.bannerColor !== undefined && { bannerColor: dto.bannerColor }),
+        ...(dto.coverImage !== undefined && { coverImage: dto.coverImage }),
+        ...(dto.isPinned !== undefined && { isPinned: dto.isPinned }),
+        ...(dto.enabledModules !== undefined && { enabledModules: dto.enabledModules }),
       },
     });
   }

@@ -1889,7 +1889,7 @@ export const teacherWorkspaceApi = {
     groupId?: string; gradeId?: string; groupIds?: string[];
     startDate?: string; endDate?: string;
   }) => api.post('/teacher-workspace/boards', data),
-  updateBoard: (id: string, data: { title?: string; description?: string; color?: string; metadata?: any; isArchived?: boolean; sortOrder?: number }) =>
+  updateBoard: (id: string, data: { title?: string; description?: string; color?: string; metadata?: any; isArchived?: boolean; sortOrder?: number; emoji?: string; bannerColor?: string; coverImage?: string; isPinned?: boolean; enabledModules?: string[] }) =>
     api.put(`/teacher-workspace/boards/${id}`, data),
   deleteBoard: (id: string) => api.delete(`/teacher-workspace/boards/${id}`),
 
