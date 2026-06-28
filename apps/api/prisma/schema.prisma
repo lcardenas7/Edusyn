@@ -4941,6 +4941,10 @@ model WorkspaceBoard {
   hiddenSections String[]            @default([])    // Pestañas ocultas por desuso
   lastAccessedAt DateTime?           // Para sort por reciente en home
 
+  // F0 — espacio como contenedor de curso con módulos bajo demanda
+  enabledModules String[]            @default([])    // módulos activados manualmente
+  isCourseSpace  Boolean             @default(false) // marca de espacio-curso (multi-módulo)
+
   teacher      User              @relation("WorkspaceBoards", fields: [teacherId], references: [id], onDelete: Cascade)
   institution  Institution       @relation("RlsInstitutionWB", fields: [institutionId], references: [id], onDelete: Cascade)
   academicYear AcademicYear?     @relation(fields: [academicYearId], references: [id])
@@ -4948,6 +4952,9 @@ model WorkspaceBoard {
   grade        Grade?            @relation("WorkspaceBoardGrade", fields: [gradeId], references: [id])
   columns      WorkspaceColumn[]
   items        WorkspaceItem[]
+  events       WorkspaceEvent[]
+  followUps    WorkspaceFollowUp[]
+  activities   WorkspaceActivity[]
 
   @@index([teacherId, institutionId])
   @@index([teacherId, type])
@@ -5004,6 +5011,132 @@ model WorkspaceItem {
   @@index([dueDate])
   @@index([eventDate])
   @@index([boardId, kind])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WORKSPACE V2 · F0 — Capas transversales (Calendario, Seguimientos,
+// Actividad, Favoritos, Dashboard configurable). Todo privado del docente,
+// no toca el core académico. Ver docs/MI_ESPACIO_DOCENTE_MASTER.md §24.
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum WorkspaceEventType {
+  REMINDER
+  MEETING
+  DEADLINE
+  ACTIVITY
+  OTHER
+}
+
+enum WorkspaceFollowUpStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+}
+
+enum WorkspaceFollowUpSource {
+  OBSERVATION
+  BITACORA
+  PROJECT
+  COLLECTION
+  TASK
+  MANUAL
+}
+
+enum WorkspaceFavoriteType {
+  BOARD
+  ITEM
+  PROJECT
+  RESOURCE
+  FOLLOWUP
+  COLLECTION
+}
+
+// Calendario — eventos opcionales que cualquier registro puede crear.
+model WorkspaceEvent {
+  id            String             @id @default(cuid())
+  institutionId String
+  teacherId     String
+  boardId       String?
+  itemId        String?            // referencia blanda al registro de origen
+  title         String
+  date          DateTime
+  allDay        Boolean            @default(true)
+  type          WorkspaceEventType @default(REMINDER)
+  done          Boolean            @default(false)
+  isArchived    Boolean            @default(false)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  board WorkspaceBoard? @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId, date])
+  @@index([boardId])
+  @@index([itemId])
+}
+
+// Seguimientos — motor del dashboard. Cualquier módulo puede generarlos.
+model WorkspaceFollowUp {
+  id            String                  @id @default(cuid())
+  institutionId String
+  teacherId     String
+  boardId       String?
+  sourceType    WorkspaceFollowUpSource @default(MANUAL)
+  sourceItemId  String?                 // referencia blanda al origen
+  studentId     String?
+  title         String
+  notes         String?
+  dueDate       DateTime?
+  status        WorkspaceFollowUpStatus @default(OPEN)
+  isArchived    Boolean                 @default(false)
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  resolvedAt    DateTime?
+
+  board WorkspaceBoard? @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId, status])
+  @@index([boardId])
+  @@index([dueDate])
+  @@index([sourceItemId])
+}
+
+// Actividad — columna vertebral de Timeline, Actividad reciente e Inteligencia.
+// Append-only e indexada (evita UNION sobre múltiples tablas).
+model WorkspaceActivity {
+  id            String   @id @default(cuid())
+  institutionId String
+  teacherId     String
+  boardId       String?
+  verb          String   // created | updated | completed | paid | assigned | archived
+  entityType    String   // ENTRY | TASK | EVENT | FOLLOWUP | COLLECTION | ROLE | RESOURCE | PROJECT | BOARD
+  entityId      String?
+  summary       String
+  createdAt     DateTime @default(now())
+
+  board WorkspaceBoard? @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId, createdAt])
+  @@index([boardId, createdAt])
+}
+
+// Favoritos — polimórfico. Acceso rápido a lo importante.
+model WorkspaceFavorite {
+  id         String                @id @default(cuid())
+  teacherId  String
+  entityType WorkspaceFavoriteType
+  entityId   String
+  createdAt  DateTime              @default(now())
+
+  @@unique([teacherId, entityType, entityId])
+  @@index([teacherId])
+}
+
+// Dashboard configurable por docente (widgets: visibilidad, orden, tamaño).
+model WorkspaceDashboardConfig {
+  id        String   @id @default(cuid())
+  teacherId String   @unique
+  widgets   Json     // [{ key, visible, order, size }]
+  updatedAt DateTime @updatedAt
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
