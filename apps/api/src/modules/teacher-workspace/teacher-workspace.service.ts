@@ -397,6 +397,89 @@ export class TeacherWorkspaceService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // CALENDARIO — WorkspaceEvent (privado del docente) + fechas oficiales (read-only)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async listEvents(teacherId: string, institutionId: string, from?: string, to?: string) {
+    const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1);
+    const toDate = to ? new Date(to) : new Date(new Date().getFullYear(), new Date().getMonth() + 2, 0);
+
+    const events = await this.prisma.workspaceEvent.findMany({
+      where: {
+        teacherId,
+        isArchived: false,
+        date: { gte: fromDate, lte: toDate },
+      },
+      include: { board: { select: { id: true, title: true, emoji: true } } },
+      orderBy: { date: 'asc' },
+    });
+
+    // Fechas oficiales del período (solo lectura — no editables por el docente)
+    const officialTerms = await this.prisma.academicTerm.findMany({
+      where: {
+        academicYear: { institutionId, status: 'ACTIVE' },
+        OR: [
+          { startDate: { gte: fromDate, lte: toDate } },
+          { endDate: { gte: fromDate, lte: toDate } },
+        ],
+      },
+      select: { id: true, name: true, startDate: true, endDate: true },
+    });
+    const officialDates = officialTerms.flatMap((t) => {
+      const out: Array<{ date: Date; label: string; kind: string }> = [];
+      if (t.startDate && t.startDate >= fromDate && t.startDate <= toDate) out.push({ date: t.startDate, label: `Inicia ${t.name}`, kind: 'TERM_START' });
+      if (t.endDate && t.endDate >= fromDate && t.endDate <= toDate) out.push({ date: t.endDate, label: `Cierra ${t.name}`, kind: 'TERM_END' });
+      return out;
+    });
+
+    return { events, officialDates };
+  }
+
+  async createEvent(teacherId: string, institutionId: string, dto: {
+    title: string; date: string; type?: string; boardId?: string; itemId?: string; allDay?: boolean;
+  }) {
+    if (!dto.title?.trim()) throw new BadRequestException('El evento necesita un título');
+    if (!dto.date) throw new BadRequestException('El evento necesita una fecha');
+    if (dto.boardId) await this.validateBoardOwnership(dto.boardId, teacherId, institutionId);
+    return this.prisma.workspaceEvent.create({
+      data: {
+        institutionId,
+        teacherId,
+        boardId: dto.boardId || null,
+        itemId: dto.itemId || null,
+        title: dto.title.trim(),
+        date: new Date(dto.date),
+        allDay: dto.allDay ?? true,
+        type: (dto.type as any) || 'REMINDER',
+      },
+    });
+  }
+
+  async updateEvent(eventId: string, teacherId: string, dto: {
+    title?: string; date?: string; type?: string; done?: boolean; isArchived?: boolean;
+  }) {
+    const ev = await this.prisma.workspaceEvent.findUnique({ where: { id: eventId } });
+    if (!ev || ev.teacherId !== teacherId) throw new NotFoundException('Evento no encontrado');
+    return this.prisma.workspaceEvent.update({
+      where: { id: eventId },
+      data: {
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.date !== undefined && { date: new Date(dto.date) }),
+        ...(dto.type !== undefined && { type: dto.type as any }),
+        ...(dto.done !== undefined && { done: dto.done }),
+        ...(dto.isArchived !== undefined && { isArchived: dto.isArchived }),
+      },
+    });
+  }
+
+  async deleteEvent(eventId: string, teacherId: string) {
+    const ev = await this.prisma.workspaceEvent.findUnique({ where: { id: eventId } });
+    if (!ev || ev.teacherId !== teacherId) throw new NotFoundException('Evento no encontrado');
+    await this.prisma.workspaceEvent.delete({ where: { id: eventId } });
+    return { success: true };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // COLUMNS
   // ═══════════════════════════════════════════════════════════════════════════
 

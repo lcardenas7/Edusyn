@@ -8,6 +8,7 @@ import { SpacesGrid } from './components/SpacesGrid'
 import type { SpaceCardBoard } from './components/SpaceCard'
 import { CreateSpaceModal } from './components/CreateSpaceModal'
 import { TodayPanel, type TodayData } from './components/TodayPanel'
+import { MiniCalendar } from './components/MiniCalendar'
 
 /**
  * WorkspaceV2 — Dashboard "Centro del día" de Mi Espacio Docente.
@@ -82,7 +83,14 @@ export default function WorkspaceV2Page() {
 
         {!loading && !error && (
           <>
-            {today && <TodayPanel data={today} onOpenSpace={(id) => navigate(`/my-workspace-v2/${id}`)} />}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start mb-6">
+              <div className="lg:col-span-2">
+                {today && <TodayPanel data={today} onOpenSpace={(id) => navigate(`/my-workspace-v2/${id}`)} />}
+              </div>
+              <div className="lg:col-span-1">
+                <MiniCalendar />
+              </div>
+            </div>
             <SpacesGrid
               boards={boards}
               onOpenBoard={(id) => navigate(`/my-workspace-v2/${id}`)}

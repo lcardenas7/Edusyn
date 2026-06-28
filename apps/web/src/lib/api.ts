@@ -1882,6 +1882,14 @@ export const teacherWorkspaceApi = {
   // Dashboard "Centro del día"
   getToday: () => api.get('/teacher-workspace/today'),
 
+  // Calendario
+  listEvents: (params?: { from?: string; to?: string }) => api.get('/teacher-workspace/events', { params }),
+  createEvent: (data: { title: string; date: string; type?: string; boardId?: string; itemId?: string; allDay?: boolean }) =>
+    api.post('/teacher-workspace/events', data),
+  updateEvent: (id: string, data: { title?: string; date?: string; type?: string; done?: boolean; isArchived?: boolean }) =>
+    api.patch(`/teacher-workspace/events/${id}`, data),
+  deleteEvent: (id: string) => api.delete(`/teacher-workspace/events/${id}`),
+
   // Boards
   listBoards: (params?: { type?: string; groupId?: string; isArchived?: string }) =>
     api.get('/teacher-workspace/boards', { params }),

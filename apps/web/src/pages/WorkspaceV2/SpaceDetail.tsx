@@ -102,16 +102,27 @@ export default function SpaceDetailPage() {
 
   const activeSection: SectionKey | null = openModule ? MODULES[openModule].sectionKey ?? null : null
 
-  const handleCapture = useCallback(async (text: string): Promise<void> => {
+  const handleCapture = useCallback(async (text: string, opts?: { eventDate?: string }): Promise<void> => {
     if (!board || !activeSection) return
     setSubmitError(null)
     try {
-      await teacherWorkspaceApi.createItem({
+      const created = await teacherWorkspaceApi.createItem({
         boardId: board.id,
         title: text.slice(0, 200),
         content: text.length > 200 ? text : undefined,
         metadata: { capturedFromV2: true, kind: KIND_BY_SECTION[activeSection] },
       })
+      // "Todo puede terminar en el calendario": si el docente programó una fecha,
+      // creamos un evento ligado a este registro.
+      if (opts?.eventDate) {
+        await teacherWorkspaceApi.createEvent({
+          title: text.slice(0, 120),
+          date: opts.eventDate,
+          boardId: board.id,
+          itemId: created?.data?.id,
+          type: 'REMINDER',
+        })
+      }
       await refresh()
     } catch (e: any) {
       setSubmitError(e?.response?.data?.message || 'No se pudo guardar. Intenta de nuevo.')

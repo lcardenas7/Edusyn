@@ -34,6 +34,31 @@ export class TeacherWorkspaceController {
     return this.service.getToday(teacherId, institutionId);
   }
 
+  // ── Calendario ──────────────────────────────────────────────────────────────
+  @Get('events')
+  async listEvents(@Request() req: any, @Query('from') from?: string, @Query('to') to?: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.listEvents(teacherId, institutionId, from, to);
+  }
+
+  @Post('events')
+  async createEvent(@Request() req: any, @Body() dto: any) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.createEvent(teacherId, institutionId, dto);
+  }
+
+  @Patch('events/:id')
+  async updateEvent(@Request() req: any, @Param('id') id: string, @Body() dto: any) {
+    const { teacherId } = await this.resolveCtx(req);
+    return this.service.updateEvent(id, teacherId, dto);
+  }
+
+  @Delete('events/:id')
+  async deleteEvent(@Request() req: any, @Param('id') id: string) {
+    const { teacherId } = await this.resolveCtx(req);
+    return this.service.deleteEvent(id, teacherId);
+  }
+
   @Get('boards')
   async listBoards(
     @Request() req: any,
