@@ -15,7 +15,7 @@ const ICON: Record<string, any> = {
 }
 const moduleIcon = (mod?: string | null) => ({ observaciones: Eye, lista: ListChecks, notas: StickyNote, tablero: ListChecks, recaudo: Coins, roles: UserCog, recursos: FolderOpen, proyecto: Rocket, bitacora: BookOpen } as any)[mod || ''] || BookOpen
 
-export function QuickSearch() {
+export function QuickSearch({ floating = true }: { floating?: boolean }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
@@ -64,13 +64,15 @@ export function QuickSearch() {
 
   return (
     <>
-      {/* Botón flotante / disparador */}
-      <button onClick={() => setOpen(true)} title="Buscar (Cmd/Ctrl + K)"
-        className="fixed bottom-5 right-5 z-30 inline-flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-white border border-slate-200 shadow-lg hover:shadow-xl text-slate-500 text-sm transition">
-        <Search className="w-4 h-4" />
-        <span className="hidden sm:inline">Buscar</span>
-        <kbd className="hidden sm:inline text-[10px] bg-slate-100 rounded px-1.5 py-0.5 text-slate-400">⌘K</kbd>
-      </button>
+      {/* Botón flotante / disparador (oculto donde estorbaría, ej. barra de captura) */}
+      {floating && (
+        <button onClick={() => setOpen(true)} title="Buscar (Cmd/Ctrl + K)"
+          className="fixed bottom-5 right-5 z-30 inline-flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-white border border-slate-200 shadow-lg hover:shadow-xl text-slate-500 text-sm transition">
+          <Search className="w-4 h-4" />
+          <span className="hidden sm:inline">Buscar</span>
+          <kbd className="hidden sm:inline text-[10px] bg-slate-100 rounded px-1.5 py-0.5 text-slate-400">⌘K</kbd>
+        </button>
+      )}
 
       <AnimatePresence>
         {open && (

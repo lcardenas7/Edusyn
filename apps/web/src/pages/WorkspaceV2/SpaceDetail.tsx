@@ -330,7 +330,7 @@ export default function SpaceDetailPage() {
         onActivate={handleActivateModule}
         isPersonal={board.isPersonal}
       />
-      <QuickSearch />
+      <QuickSearch floating={false} />
     </div>
   )
 }

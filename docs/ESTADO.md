@@ -27,13 +27,15 @@
 - ✅ **F9** Biblioteca (archivos/enlaces, carpetas, favoritos — usa módulo storage)
 - ✅ Pulidos: nombre de curso "Grado Grupo", calendario más visible, fix timezone, encabezado sin solापamiento, personalización de header (diseños), Actividad reciente.
 
+- ✅ **F10** Proyecto · **F11** Lista + Tablero (Kanban) · **F12** Espacio Personal
+- ✅ **F13a** Búsqueda global ⌘K (deep-link a módulo)
+- ✅ **F14** Plan de pruebas (`docs/PLAN_PRUEBAS.md`) + pulido responsive
+- ✅ Fix prod: `/login/admin` ya no pide institución (cherry-pick a main → prod)
+
 ## Siguiente
-- ⬜ **F10** Proyecto (entidad de primer nivel: objetivo, competencias, %, integrantes, checklist, evidencias, comentarios)
-- ⬜ **F11** Lista + Tablero libre (Kanban DnD)
-- ⬜ **F12** Espacio Personal (primitivas sin curso)
-- ⬜ **F13** Diferenciadores (⌘K, plantillas, ritual de día)
-- ⬜ **F14** Responsive completo + plan de pruebas
-- ⬜ **Producción**: aplicar migraciones + script de consolidación (con backup) tras validar todo.
+- ⬜ **F13b** (opcional) Plantillas + ritual de inicio/cierre de día.
+- ⬜ **Validación** completa con `docs/PLAN_PRUEBAS.md`.
+- ⬜ **Producción**: backup → migraciones → consolidación → flag gradual (ver PLAN_PRUEBAS §Despliegue).
 
 ---
 
