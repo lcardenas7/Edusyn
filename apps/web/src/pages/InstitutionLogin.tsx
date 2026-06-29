@@ -30,11 +30,23 @@ interface InstitutionInfo {
   status: string
 }
 
+// Slugs reservados que NO son instituciones → llevan al login de admin/superadmin
+const RESERVED_LOGIN_SLUGS = ['admin', 'superadmin', 'super-admin', 'auth']
+
 export default function InstitutionLogin() {
   const navigate = useNavigate()
   const { slug } = useParams<{ slug: string }>()
   const { login: authLogin, isAuthenticated } = useAuth()
-  
+
+  const isReservedSlug = !!slug && RESERVED_LOGIN_SLUGS.includes(slug.toLowerCase())
+
+  // /login/admin (o superadmin) → login de administrador, no es una institución
+  useEffect(() => {
+    if (isReservedSlug) {
+      navigate('/auth/login', { replace: true })
+    }
+  }, [isReservedSlug, navigate])
+
   // Si ya está autenticado, redirigir al dashboard
   useEffect(() => {
     if (isAuthenticated) {
@@ -60,11 +72,12 @@ export default function InstitutionLogin() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Si viene con slug en URL, verificar institución automáticamente
+  // (excepto slugs reservados, que redirigen al login de admin)
   useEffect(() => {
-    if (slug) {
+    if (slug && !isReservedSlug) {
       checkInstitution(slug)
     }
-  }, [slug])
+  }, [slug, isReservedSlug])
 
   const checkInstitution = async (slugToCheck: string) => {
     setCheckingInstitution(true)
