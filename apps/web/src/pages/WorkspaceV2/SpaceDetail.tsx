@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Loader2, ArrowLeft, Clock, LayoutGrid } from 'lucide-react'
 import { teacherWorkspaceApi } from '../../lib/api'
@@ -18,6 +18,7 @@ import { BibliotecaModule } from './modules/BibliotecaModule'
 import { ProyectoModule } from './modules/ProyectoModule'
 import { ListaModule, type ListaItem } from './modules/ListaModule'
 import { TableroModule } from './modules/TableroModule'
+import { QuickSearch } from './components/QuickSearch'
 
 interface BoardData {
   id: string
@@ -58,6 +59,7 @@ function timeAgo(dateStr?: string): string {
 export default function SpaceDetailPage() {
   const { boardId } = useParams<{ boardId: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const [board, setBoard] = useState<BoardData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -65,6 +67,12 @@ export default function SpaceDetailPage() {
   const [openModule, setOpenModule] = useState<ModuleKey | null>(null)
   const [activateOpen, setActivateOpen] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+
+  // Deep-link desde la búsqueda global: /my-workspace-v2/:id?module=recaudo
+  useEffect(() => {
+    const m = searchParams.get('module') as ModuleKey | null
+    if (m && MODULES[m]) setOpenModule(m)
+  }, [searchParams])
 
   useEffect(() => {
     if (!boardId) return
@@ -322,6 +330,7 @@ export default function SpaceDetailPage() {
         onActivate={handleActivateModule}
         isPersonal={board.isPersonal}
       />
+      <QuickSearch />
     </div>
   )
 }

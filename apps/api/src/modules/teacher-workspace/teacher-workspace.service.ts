@@ -295,6 +295,81 @@ export class TeacherWorkspaceService {
     return { success: true };
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BÚSQUEDA GLOBAL — transversal a todos los módulos del docente (privada).
+  // Un solo endpoint; ILIKE sobre columnas indexadas. Acotada a sus tableros.
+  // ═══════════════════════════════════════════════════════════════════════════
+  async globalSearch(teacherId: string, institutionId: string, q: string) {
+    const query = (q || '').trim();
+    if (query.length < 2) return { results: [], query };
+
+    const boards = await this.prisma.workspaceBoard.findMany({
+      where: { teacherId, institutionId, isArchived: false },
+      select: { id: true, title: true, emoji: true },
+    });
+    if (!boards.length) return { results: [], query };
+    const boardIds = boards.map((b) => b.id);
+    const boardMap = new Map(boards.map((b) => [b.id, b]));
+    const contains = { contains: query, mode: 'insensitive' as const };
+    const TAKE = 6;
+
+    const [items, collections, charges, roleAsgs, resources, followUps, projects] = await Promise.all([
+      this.prisma.workspaceItem.findMany({
+        where: { boardId: { in: boardIds }, isArchived: false, OR: [{ title: contains }, { content: contains }] },
+        select: { id: true, title: true, kind: true, boardId: true, metadata: true }, take: TAKE,
+      }),
+      this.prisma.workspaceCollection.findMany({
+        where: { boardId: { in: boardIds }, isArchived: false, name: contains },
+        select: { id: true, name: true, boardId: true }, take: TAKE,
+      }),
+      this.prisma.workspaceCollectionCharge.findMany({
+        where: { collection: { boardId: { in: boardIds } }, studentName: contains },
+        select: { id: true, studentName: true, collection: { select: { name: true, boardId: true } } }, take: TAKE,
+      }),
+      this.prisma.workspaceRoleAssignment.findMany({
+        where: { role: { boardId: { in: boardIds } }, removedAt: null, studentName: contains },
+        select: { id: true, studentName: true, role: { select: { name: true, boardId: true } } }, take: TAKE,
+      }),
+      this.prisma.workspaceResource.findMany({
+        where: { boardId: { in: boardIds }, isArchived: false, OR: [{ name: contains }, { tags: { has: query } }] },
+        select: { id: true, name: true, boardId: true }, take: TAKE,
+      }),
+      this.prisma.workspaceFollowUp.findMany({
+        where: { teacherId, isArchived: false, OR: [{ title: contains }, { notes: contains }] },
+        select: { id: true, title: true, boardId: true }, take: TAKE,
+      }),
+      this.prisma.workspaceProject.findMany({
+        where: { boardId: { in: boardIds }, isArchived: false, OR: [{ name: contains }, { objective: contains }] },
+        select: { id: true, name: true, boardId: true }, take: TAKE,
+      }),
+    ]);
+
+    const moduleFromKind = (kind?: string | null, meta?: any): string => {
+      const k = (kind || meta?.kind || '').toString().toUpperCase();
+      if (k === 'OBSERVATION') return 'observaciones';
+      if (k === 'LIST') return 'lista';
+      if (k === 'NOTE' || k === 'IDEA') return 'notas';
+      if (meta?.kanban) return 'tablero';
+      return 'bitacora';
+    };
+    const board = (id: string) => boardMap.get(id);
+
+    const results: any[] = [];
+    for (const i of items) {
+      const b = board(i.boardId); if (!b) continue;
+      const mod = moduleFromKind(i.kind, i.metadata);
+      results.push({ type: 'item', label: { observaciones: 'Observación', lista: 'Pendiente', notas: 'Nota', tablero: 'Tarjeta', bitacora: 'Bitácora' }[mod] || 'Registro', title: i.title, boardId: i.boardId, boardTitle: b.title, boardEmoji: b.emoji, module: mod });
+    }
+    for (const c of collections) { const b = board(c.boardId); if (b) results.push({ type: 'collection', label: 'Recaudo', title: c.name, boardId: c.boardId, boardTitle: b.title, boardEmoji: b.emoji, module: 'recaudo' }); }
+    for (const c of charges as any[]) { const b = board(c.collection.boardId); if (b) results.push({ type: 'charge', label: 'Recaudo · estudiante', title: `${c.studentName} — ${c.collection.name}`, boardId: c.collection.boardId, boardTitle: b.title, boardEmoji: b.emoji, module: 'recaudo' }); }
+    for (const r of roleAsgs as any[]) { const b = board(r.role.boardId); if (b) results.push({ type: 'role', label: 'Rol', title: `${r.studentName} — ${r.role.name}`, boardId: r.role.boardId, boardTitle: b.title, boardEmoji: b.emoji, module: 'roles' }); }
+    for (const r of resources) { const b = board(r.boardId); if (b) results.push({ type: 'resource', label: 'Recurso', title: r.name, boardId: r.boardId, boardTitle: b.title, boardEmoji: b.emoji, module: 'recursos' }); }
+    for (const f of followUps) { const b = f.boardId ? board(f.boardId) : null; results.push({ type: 'followup', label: 'Seguimiento', title: f.title, boardId: f.boardId, boardTitle: b?.title, boardEmoji: b?.emoji, module: null }); }
+    for (const p of projects) { const b = board(p.boardId); if (b) results.push({ type: 'project', label: 'Proyecto', title: p.name, boardId: p.boardId, boardTitle: b.title, boardEmoji: b.emoji, module: 'proyecto' }); }
+
+    return { results, query };
+  }
+
   // Espacio personal del docente (uno solo, sin curso). Se crea al primer acceso.
   async getOrCreatePersonalSpace(teacherId: string, institutionId: string) {
     let board = await this.prisma.workspaceBoard.findFirst({

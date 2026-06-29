@@ -11,6 +11,7 @@ import { TodayPanel, type TodayData } from './components/TodayPanel'
 import { MiniCalendar } from './components/MiniCalendar'
 import { FollowUpsPanel } from './components/FollowUpsPanel'
 import { RecentActivityPanel } from './components/RecentActivityPanel'
+import { QuickSearch } from './components/QuickSearch'
 
 /**
  * WorkspaceV2 — Dashboard "Centro del día" de Mi Espacio Docente.
@@ -123,6 +124,8 @@ export default function WorkspaceV2Page() {
           Mi Espacio Docente · vista previa v2
         </div>
       </div>
+
+      <QuickSearch />
 
       <CreateSpaceModal
         open={createOpen}

@@ -1882,6 +1882,7 @@ export const teacherWorkspaceApi = {
   // Dashboard "Centro del día"
   getToday: () => api.get('/teacher-workspace/today'),
   getPersonalSpace: () => api.get('/teacher-workspace/personal-space'),
+  globalSearch: (q: string) => api.get('/teacher-workspace/search', { params: { q } }),
 
   // Calendario
   listEvents: (params?: { from?: string; to?: string }) => api.get('/teacher-workspace/events', { params }),
