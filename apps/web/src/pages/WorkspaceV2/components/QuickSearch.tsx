@@ -53,7 +53,7 @@ export function QuickSearch({ floating = true }: { floating?: boolean }) {
 
   const go = useCallback((r: Result) => {
     setOpen(false)
-    if (r.boardId) navigate(`/my-workspace-v2/${r.boardId}${r.module ? `?module=${r.module}` : ''}`)
+    if (r.boardId) navigate(`/my-workspace/${r.boardId}${r.module ? `?module=${r.module}` : ''}`)
   }, [navigate])
 
   const onKeyDown = (e: React.KeyboardEvent) => {

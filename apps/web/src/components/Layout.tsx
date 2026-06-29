@@ -71,15 +71,6 @@ interface NavItem {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// FEATURE FLAGS — apuntan a vistas nuevas según entorno
-// ═══════════════════════════════════════════════════════════════════════════
-// WORKSPACE_V2_ENABLED: en staging (hostname incluye "staging") el menú
-// "Mi Espacio" lleva a la vista nueva /my-workspace-v2. En prod sigue al
-// clásico /my-workspace para no afectar a docentes reales hasta el rollout.
-const _hostname = typeof window !== 'undefined' ? window.location.hostname : ''
-const WORKSPACE_V2_ENABLED = _hostname.includes('staging')
-
-// ═══════════════════════════════════════════════════════════════════════════
 // MENÚ SUPERADMIN - Panel de control de la plataforma SaaS
 // El SuperAdmin es el arquitecto del sistema, NO el rector
 // ═══════════════════════════════════════════════════════════════════════════
@@ -258,8 +249,8 @@ const institutionalNavigation: NavItem[] = [
   // Horarios
   { name: 'Horarios', href: '/timetabling', icon: Clock, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'TIMETABLE' },
 
-  // Mi Espacio (Teacher Workspace) — en staging va a la vista nueva v2
-  { name: 'Mi Espacio', href: WORKSPACE_V2_ENABLED ? '/my-workspace-v2' : '/my-workspace', icon: LayoutGrid, roles: ['DOCENTE', 'COORDINADOR'], module: 'TEACHER_WORKSPACE' },
+  // Mi Espacio (Teacher Workspace) — vista V2 (la clásica vive en /my-workspace-classic)
+  { name: 'Mi Espacio', href: '/my-workspace', icon: LayoutGrid, roles: ['DOCENTE', 'COORDINADOR'], module: 'TEACHER_WORKSPACE' },
 
   // Aula Virtual
   { name: 'Aula Virtual', href: '/classroom', icon: MonitorPlay, roles: ['DOCENTE', 'COORDINADOR'], module: 'VIRTUAL_CLASSROOM' },

@@ -68,7 +68,7 @@ export default function SpaceDetailPage() {
   const [activateOpen, setActivateOpen] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  // Deep-link desde la búsqueda global: /my-workspace-v2/:id?module=recaudo
+  // Deep-link desde la búsqueda global: /my-workspace/:id?module=recaudo
   useEffect(() => {
     const m = searchParams.get('module') as ModuleKey | null
     if (m && MODULES[m]) setOpenModule(m)
@@ -188,7 +188,7 @@ export default function SpaceDetailPage() {
       <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'linear-gradient(180deg, #FAF8F3 0%, #F5F1E8 100%)' }}>
         <div className="max-w-md text-center">
           <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">{error || 'No encontramos este espacio.'}</p>
-          <button type="button" onClick={() => navigate('/my-workspace-v2')} className="text-sm text-violet-600 hover:text-violet-800">← Volver a Mi Espacio</button>
+          <button type="button" onClick={() => navigate('/my-workspace')} className="text-sm text-violet-600 hover:text-violet-800">← Volver a Mi Espacio</button>
         </div>
       </div>
     )
@@ -201,7 +201,7 @@ export default function SpaceDetailPage() {
       <div className="max-w-4xl mx-auto">
         <SpaceHeader
           board={{ ...board, itemsCount: allItems.length }}
-          onBack={() => navigate('/my-workspace-v2')}
+          onBack={() => navigate('/my-workspace')}
           onChangeTheme={async (themeKey) => {
             const nextMeta = { ...(board.metadata || {}), headerTheme: themeKey }
             setBoard({ ...board, metadata: nextMeta })   // optimista
