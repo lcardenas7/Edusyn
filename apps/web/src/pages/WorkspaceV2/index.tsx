@@ -10,6 +10,7 @@ import { CreateSpaceModal } from './components/CreateSpaceModal'
 import { TodayPanel, type TodayData } from './components/TodayPanel'
 import { MiniCalendar } from './components/MiniCalendar'
 import { FollowUpsPanel } from './components/FollowUpsPanel'
+import { RecentActivityPanel } from './components/RecentActivityPanel'
 
 /**
  * WorkspaceV2 — Dashboard "Centro del día" de Mi Espacio Docente.
@@ -85,8 +86,9 @@ export default function WorkspaceV2Page() {
         {!loading && !error && (
           <>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start mb-6">
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-2 space-y-5">
                 {today && <TodayPanel data={today} onOpenSpace={(id) => navigate(`/my-workspace-v2/${id}`)} />}
+                {today && <RecentActivityPanel items={today.recentActivity ?? []} onOpenSpace={(id) => navigate(`/my-workspace-v2/${id}`)} />}
               </div>
               <div className="lg:col-span-1 space-y-5">
                 <MiniCalendar />

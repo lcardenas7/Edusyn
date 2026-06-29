@@ -8,6 +8,7 @@ export interface TodayData {
   recaudo: { pendingCount: number; pendingAmount: number }
   insights: { staleSpaces: Array<{ id: string; title: string; emoji?: string | null; lastActivity?: string }>; tooManyFollowUps: boolean }
   counts: { spaces: number; pendingItems: number; events: number; followUps: number }
+  recentActivity?: Array<{ id: string; title: string; kind?: string | null; updatedAt: string; boardId: string; boardTitle?: string; boardEmoji?: string | null }>
 }
 
 function money(n: number) {

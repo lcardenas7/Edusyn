@@ -311,7 +311,7 @@ export class TeacherWorkspaceService {
     const STALE_DAYS = 14;
     const staleCutoff = new Date(Date.now() - STALE_DAYS * 86400000);
 
-    const [pendingItems, events, followUps, collectionItems] = await Promise.all([
+    const [pendingItems, events, followUps, collectionItems, recentItems] = await Promise.all([
       boardIds.length
         ? this.prisma.workspaceItem.findMany({
             where: {
@@ -337,6 +337,15 @@ export class TeacherWorkspaceService {
         ? this.prisma.workspaceItem.findMany({
             where: { boardId: { in: boardIds }, isArchived: false, kind: 'COLLECTION' },
             select: { id: true, amount: true, amountCollected: true, metadata: true },
+          })
+        : Promise.resolve([]),
+      // Actividad reciente — últimos elementos tocados (mira hacia atrás)
+      boardIds.length
+        ? this.prisma.workspaceItem.findMany({
+            where: { boardId: { in: boardIds }, isArchived: false },
+            include: { board: { select: { id: true, title: true, emoji: true } } },
+            orderBy: { updatedAt: 'desc' },
+            take: 8,
           })
         : Promise.resolve([]),
     ]);
@@ -382,6 +391,10 @@ export class TeacherWorkspaceService {
       })),
       events,
       followUps,
+      recentActivity: (recentItems as any[]).map((i) => ({
+        id: i.id, title: i.title, kind: i.kind, updatedAt: i.updatedAt,
+        boardId: i.boardId, boardTitle: i.board?.title, boardEmoji: i.board?.emoji,
+      })),
       recaudo: { pendingCount: recaudoPendingCount, pendingAmount: recaudoPendingAmount },
       insights: {
         staleSpaces,
