@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Coins, Plus, X, Loader2, ArrowLeft, Check, Users2, Calendar, Trash2, ChevronRight,
+  Coins, Plus, X, Loader2, ArrowLeft, Check, Users2, Calendar, Trash2, ChevronRight, Search,
 } from 'lucide-react'
 import { teacherWorkspaceApi } from '../../../lib/api'
 
@@ -173,6 +173,15 @@ function CollectionDetail({ collection, onBack, onChanged }: { collection: Colle
   const [payFor, setPayFor] = useState<string | null>(null)
   const [payAmount, setPayAmount] = useState('')
   const [saving, setSaving] = useState(false)
+  const [search, setSearch] = useState('')
+  const [onlyPending, setOnlyPending] = useState(false)
+
+  const q = search.toLowerCase().trim()
+  const visibleCharges = data.charges.filter((ch) => {
+    if (onlyPending && ch.status === 'PAID') return false
+    if (q && !ch.studentName.toLowerCase().includes(q)) return false
+    return true
+  })
 
   const refresh = async () => {
     const res = await teacherWorkspaceApi.getCollection(data.id)
@@ -213,9 +222,32 @@ function CollectionDetail({ collection, onBack, onChanged }: { collection: Colle
         </div>
       </div>
 
+      {/* Buscador de estudiantes — recibo dinero y lo busco rápido */}
+      {data.charges.length > 0 && (
+        <div className="flex items-center gap-2 mb-3">
+          <div className="relative flex-1">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search} onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar estudiante…"
+              className="w-full pl-8 pr-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:border-violet-400 focus:outline-none"
+            />
+          </div>
+          <button
+            onClick={() => setOnlyPending((v) => !v)}
+            className={`text-xs px-2.5 py-2 rounded-lg border transition ${onlyPending ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-slate-200 text-slate-500'}`}
+          >
+            Solo pendientes
+          </button>
+        </div>
+      )}
+
       {/* Cargos por estudiante */}
       <div className="space-y-2">
-        {data.charges.map((ch) => {
+        {q && visibleCharges.length === 0 && (
+          <p className="text-sm text-slate-400 text-center py-6">Ningún estudiante coincide con "{search}".</p>
+        )}
+        {visibleCharges.map((ch) => {
           const isPaid = ch.status === 'PAID'
           const remaining = Math.max(0, ch.unitValue - ch.collected)
           return (

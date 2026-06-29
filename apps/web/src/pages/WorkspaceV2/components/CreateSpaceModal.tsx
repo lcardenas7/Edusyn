@@ -29,7 +29,7 @@ const PRESETS: Preset[] = [
 
 interface GroupOption {
   id: string
-  name: string
+  name: string   // ya combinado: "Décimo C"
 }
 
 interface CreateSpaceModalProps {
@@ -68,7 +68,8 @@ export function CreateSpaceModal({ open, onClose, onCreated }: CreateSpaceModalP
       .then((res) => {
         const list: GroupOption[] = (res.data?.groups ?? res.data ?? []).map((g: any) => ({
           id: g.id,
-          name: g.name || g.code || '(sin nombre)',
+          // backend devuelve { id, name, gradeName } — combinamos "Grado Grupo"
+          name: [g.gradeName, g.name].filter(Boolean).join(' ') || g.code || '(sin nombre)',
         }))
         setGroups(list)
       })

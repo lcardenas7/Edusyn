@@ -25,8 +25,9 @@ export function SpaceHeader({ board, onBack }: SpaceHeaderProps) {
   const identity = resolveIdentity(board)
 
   const subtitle: string[] = []
-  if (board.group?.name) subtitle.push(board.group.name)
-  if (board.group?.grade?.name && board.group.grade.name !== board.group?.name) subtitle.push(board.group.grade.name)
+  // Curso completo: "Grado Grupo" (ej. "Décimo C")
+  const courseName = [board.group?.grade?.name, board.group?.name].filter(Boolean).join(' ')
+  if (courseName) subtitle.push(courseName)
   if (typeof board.itemsCount === 'number') subtitle.push(`${board.itemsCount} ${board.itemsCount === 1 ? 'elemento' : 'elementos'}`)
 
   return (
