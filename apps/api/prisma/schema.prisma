@@ -4960,6 +4960,7 @@ model WorkspaceBoard {
   resources    WorkspaceResource[]
   resourceFolders WorkspaceResourceFolder[]
   projects     WorkspaceProject[]
+  pedagogicalDesigns PedagogicalDesign[] @relation("BoardPedagogicalDesigns")
 
   @@index([teacherId, institutionId])
   @@index([teacherId, type])
@@ -5330,6 +5331,87 @@ model WorkspaceProjectMember {
   project WorkspaceProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DISEÑO PEDAGÓGICO IA ("Estudio") — Activo Pedagógico Vivo (APV)
+// E0: cimientos. El contenido vive como JSON versionado; el ADN va en `dna`.
+// docs/DISENO_PEDAGOGICO_IA.md
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum PedagogicalExperienceType {
+  LESSON_PLAN
+  SEQUENCE
+  PBL                 // Proyecto ABP
+  STEAM
+  FLIPPED             // Clase invertida
+  CHALLENGE           // Aprendizaje basado en retos
+  WORKSHOP            // Taller
+  LAB                 // Laboratorio
+  EVALUATION
+  INTERACTIVE_LESSON  // Lección interactiva
+  UNIT                // Unidad completa
+}
+
+enum PedagogicalDesignStatus {
+  DRAFT
+  IN_USE
+  EVALUATED
+  IMPROVABLE
+  ARCHIVED
+}
+
+enum PedagogicalVisibility {
+  PRIVATE
+  AREA
+  INSTITUTION
+}
+
+model PedagogicalDesign {
+  id             String   @id @default(cuid())
+  teacherId      String
+  institutionId  String
+  boardId        String?  // Curso (WorkspaceBoard) donde vive; null = personal
+  subjectId      String?
+  gradeId        String?
+  groupId        String?
+  experienceType PedagogicalExperienceType @default(LESSON_PLAN)
+  title          String
+  summary        String?  @db.Text
+  status         PedagogicalDesignStatus   @default(DRAFT)
+  visibility     PedagogicalVisibility     @default(PRIVATE)
+  dna            Json?    // ADN pedagógico (§24): tema, competencias, bloom, metodología…
+  sourceDesignId String?  // Linaje si fue clonado de otro diseño
+  aiProviderUsed String?  // Trazabilidad de costo de IA
+  aiModelUsed    String?
+  aiTokens       Int?
+  currentVersionNumber Int @default(1)
+  isArchived     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  board    WorkspaceBoard?            @relation("BoardPedagogicalDesigns", fields: [boardId], references: [id], onDelete: Cascade)
+  versions PedagogicalDesignVersion[]
+
+  @@index([teacherId, institutionId])
+  @@index([boardId])
+  @@index([institutionId, visibility])
+}
+
+model PedagogicalDesignVersion {
+  id               String   @id @default(cuid())
+  designId         String
+  versionNumber    Int
+  content          Json     // Objeto estructurado del APV (momentos, actividades, evaluación…)
+  changeNote       String?  @db.Text
+  createdByAi       Boolean  @default(false)
+  evidenceSnapshot Json?    // Señales que motivaron esta versión (ciclo de evidencia)
+  createdAt        DateTime @default(now())
+
+  design PedagogicalDesign @relation(fields: [designId], references: [id], onDelete: Cascade)
+
+  @@unique([designId, versionNumber])
+  @@index([designId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
