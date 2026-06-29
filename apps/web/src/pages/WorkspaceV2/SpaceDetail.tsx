@@ -16,6 +16,8 @@ import { RolesModule } from './modules/RolesModule'
 import { ObservacionesModule, type ObsItem } from './modules/ObservacionesModule'
 import { BibliotecaModule } from './modules/BibliotecaModule'
 import { ProyectoModule } from './modules/ProyectoModule'
+import { ListaModule, type ListaItem } from './modules/ListaModule'
+import { TableroModule } from './modules/TableroModule'
 
 interface BoardData {
   id: string
@@ -230,6 +232,25 @@ export default function SpaceDetailPage() {
 
               {openModule === 'recaudo' ? (
                 <RecaudoModule boardId={board.id} />
+              ) : openModule === 'tablero' ? (
+                <TableroModule boardId={board.id} />
+              ) : openModule === 'lista' ? (
+                <ListaModule
+                  items={allItems.filter((i: any) => i.kind === 'LIST' || i.metadata?.kind === 'LIST') as ListaItem[]}
+                  onCreate={async (data) => {
+                    await teacherWorkspaceApi.createItem({
+                      boardId: board.id, title: data.title, dueDate: data.dueDate,
+                      metadata: { capturedFromV2: true, kind: 'LIST', priority: data.priority, responsable: data.responsable },
+                    })
+                    await refresh()
+                  }}
+                  onToggle={async (it) => {
+                    const done = it.status === 'DONE' || !!it.completedAt
+                    await teacherWorkspaceApi.updateItem(it.id, { status: done ? 'TODO' : 'DONE' })
+                    await refresh()
+                  }}
+                  onDelete={async (it) => { await teacherWorkspaceApi.deleteItem(it.id); await refresh() }}
+                />
               ) : openModule === 'proyecto' ? (
                 <ProyectoModule boardId={board.id} />
               ) : openModule === 'recursos' ? (

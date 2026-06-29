@@ -73,6 +73,9 @@ export function filterForSection(items: SectionItem[], key: SectionKey, boardTyp
   const natural = boardType ? NATURAL_SECTION_BY_BOARD_TYPE[boardType] : undefined
 
   return items.filter((item) => {
+    // Las tarjetas del Tablero libre (Kanban) viven en su propio módulo.
+    if (item.metadata?.kanban) return false
+
     const kind = resolveItemKind(item)
 
     // 1. Kind explícito decide
