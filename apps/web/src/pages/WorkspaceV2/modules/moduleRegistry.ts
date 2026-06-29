@@ -120,7 +120,13 @@ export function activeModules(board: BoardLike, items: ItemLike[]): ModuleKey[] 
   return MODULE_ORDER.filter((k) => active.has(k))
 }
 
+// Módulos válidos en el Espacio Personal (sin curso → sin estudiantes).
+export const PERSONAL_MODULES: ModuleKey[] = ['bitacora', 'notas', 'lista', 'tablero', 'recursos', 'proyecto']
+
 // Módulos que el docente puede activar (los que aún no están activos).
-export function activatableModules(activeKeys: ModuleKey[]): ModuleDef[] {
-  return MODULE_ORDER.filter((k) => !activeKeys.includes(k)).map((k) => MODULES[k])
+// En el espacio personal se ofrecen solo los que no dependen de estudiantes.
+export function activatableModules(activeKeys: ModuleKey[], isPersonal?: boolean): ModuleDef[] {
+  let avail = MODULE_ORDER.filter((k) => !activeKeys.includes(k))
+  if (isPersonal) avail = avail.filter((k) => PERSONAL_MODULES.includes(k))
+  return avail.map((k) => MODULES[k])
 }

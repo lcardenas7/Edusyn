@@ -7,10 +7,11 @@ interface ActivateModuleSheetProps {
   activeKeys: ModuleKey[]
   onClose: () => void
   onActivate: (key: ModuleKey) => void
+  isPersonal?: boolean
 }
 
-export function ActivateModuleSheet({ open, activeKeys, onClose, onActivate }: ActivateModuleSheetProps) {
-  const options = activatableModules(activeKeys)
+export function ActivateModuleSheet({ open, activeKeys, onClose, onActivate, isPersonal }: ActivateModuleSheetProps) {
+  const options = activatableModules(activeKeys, isPersonal)
 
   return (
     <AnimatePresence>

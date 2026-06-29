@@ -33,7 +33,8 @@ export default function WorkspaceV2Page() {
       .then((res) => {
         const data = res.data
         const spaces: any[] = data?.spaces ?? []
-        setBoards(spaces.map((b) => ({
+        // El espacio personal se muestra como card aparte, no en el grid de cursos.
+        setBoards(spaces.filter((b) => !b.isPersonal).map((b) => ({
           id: b.id,
           title: b.title,
           description: null,
@@ -100,6 +101,21 @@ export default function WorkspaceV2Page() {
               onOpenBoard={(id) => navigate(`/my-workspace-v2/${id}`)}
               onCreateBoard={() => setCreateOpen(true)}
             />
+
+            {/* Espacio personal — sin curso, siempre disponible */}
+            <button
+              type="button"
+              onClick={async () => {
+                try { const r = await teacherWorkspaceApi.getPersonalSpace(); navigate(`/my-workspace-v2/${r.data.id}`) } catch { /* noop */ }
+              }}
+              className="mt-4 w-full sm:w-auto inline-flex items-center gap-3 rounded-2xl bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 border border-violet-200 hover:border-violet-300 hover:shadow-sm transition px-4 py-3 text-left"
+            >
+              <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-xl">⭐</div>
+              <div>
+                <p className="text-sm font-bold text-slate-800">Mi espacio personal</p>
+                <p className="text-xs text-slate-500">Notas, ideas, pendientes y archivos sin curso</p>
+              </div>
+            </button>
           </>
         )}
 

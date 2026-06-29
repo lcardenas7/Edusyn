@@ -295,6 +295,26 @@ export class TeacherWorkspaceService {
     return { success: true };
   }
 
+  // Espacio personal del docente (uno solo, sin curso). Se crea al primer acceso.
+  async getOrCreatePersonalSpace(teacherId: string, institutionId: string) {
+    let board = await this.prisma.workspaceBoard.findFirst({
+      where: { teacherId, institutionId, isPersonal: true, isArchived: false },
+    });
+    if (!board) {
+      board = await this.prisma.workspaceBoard.create({
+        data: {
+          teacherId, institutionId,
+          type: 'KANBAN',
+          title: 'Mi espacio personal',
+          isPersonal: true,
+          emoji: '⭐',
+          enabledModules: ['notas', 'lista'],
+        },
+      });
+    }
+    return board;
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // DASHBOARD — "Centro del día". Una sola tanda de queries indexadas (sin N+1).
   // Responde: ¿qué hago hoy? ¿qué tengo pendiente? ¿qué curso necesita atención?

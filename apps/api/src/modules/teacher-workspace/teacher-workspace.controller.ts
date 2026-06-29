@@ -35,6 +35,12 @@ export class TeacherWorkspaceController {
     return this.service.getToday(teacherId, institutionId);
   }
 
+  @Get('personal-space')
+  async getPersonalSpace(@Request() req: any) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.getOrCreatePersonalSpace(teacherId, institutionId);
+  }
+
   // ── Calendario ──────────────────────────────────────────────────────────────
   @Get('events')
   async listEvents(@Request() req: any, @Query('from') from?: string, @Query('to') to?: string) {

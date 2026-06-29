@@ -320,6 +320,7 @@ export default function SpaceDetailPage() {
         activeKeys={moduleKeys}
         onClose={() => setActivateOpen(false)}
         onActivate={handleActivateModule}
+        isPersonal={board.isPersonal}
       />
     </div>
   )

@@ -1881,6 +1881,7 @@ export const apdApi = {
 export const teacherWorkspaceApi = {
   // Dashboard "Centro del día"
   getToday: () => api.get('/teacher-workspace/today'),
+  getPersonalSpace: () => api.get('/teacher-workspace/personal-space'),
 
   // Calendario
   listEvents: (params?: { from?: string; to?: string }) => api.get('/teacher-workspace/events', { params }),
