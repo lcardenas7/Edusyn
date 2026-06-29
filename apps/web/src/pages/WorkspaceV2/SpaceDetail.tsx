@@ -13,6 +13,7 @@ import { ActivateModuleSheet } from './modules/ActivateModuleSheet'
 import { BitacoraModule, type BitacoraItem } from './modules/BitacoraModule'
 import { RecaudoModule } from './modules/RecaudoModule'
 import { RolesModule } from './modules/RolesModule'
+import { ObservacionesModule, type ObsItem } from './modules/ObservacionesModule'
 
 interface BoardData {
   id: string
@@ -229,6 +230,29 @@ export default function SpaceDetailPage() {
                 <RecaudoModule boardId={board.id} />
               ) : openModule === 'roles' ? (
                 <RolesModule boardId={board.id} />
+              ) : openModule === 'observaciones' ? (
+                <ObservacionesModule
+                  boardId={board.id}
+                  items={filterForSection(allItems, 'observations', board.type) as ObsItem[]}
+                  onCreate={async (data) => {
+                    const created = await teacherWorkspaceApi.createItem({
+                      boardId: board.id, title: data.text, tags: data.tags,
+                      metadata: {
+                        capturedFromV2: true, kind: 'OBSERVATION', scope: data.scope,
+                        ...(data.studentRecordId && { studentRecordId: data.studentRecordId, studentName: data.studentName }),
+                      },
+                    })
+                    if (data.followUp) {
+                      await teacherWorkspaceApi.createFollowUp({
+                        title: data.text.slice(0, 120), boardId: board.id,
+                        sourceItemId: created?.data?.id, sourceType: 'OBSERVATION',
+                        studentId: data.studentRecordId,
+                      })
+                    }
+                    await refresh()
+                  }}
+                  onDelete={async (it) => { await teacherWorkspaceApi.deleteItem(it.id); await refresh() }}
+                />
               ) : openModule === 'bitacora' ? (
                 <BitacoraModule
                   items={filterForSection(allItems, 'log', board.type) as BitacoraItem[]}
