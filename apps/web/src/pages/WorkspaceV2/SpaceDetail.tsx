@@ -25,6 +25,7 @@ interface BoardData {
   isPinned?: boolean
   isPersonal?: boolean
   enabledModules?: string[]
+  metadata?: any
   group?: any
   columns?: Array<{ id: string; items: SectionItem[] }>
   items?: SectionItem[]
@@ -185,7 +186,15 @@ export default function SpaceDetailPage() {
   return (
     <div className="min-h-screen px-4 sm:px-8 py-8 pb-32" style={{ background: 'linear-gradient(180deg, #FAF8F3 0%, #F5F1E8 100%)' }}>
       <div className="max-w-4xl mx-auto">
-        <SpaceHeader board={{ ...board, itemsCount: allItems.length }} onBack={() => navigate('/my-workspace-v2')} />
+        <SpaceHeader
+          board={{ ...board, itemsCount: allItems.length }}
+          onBack={() => navigate('/my-workspace-v2')}
+          onChangeTheme={async (themeKey) => {
+            const nextMeta = { ...(board.metadata || {}), headerTheme: themeKey }
+            setBoard({ ...board, metadata: nextMeta })   // optimista
+            try { await teacherWorkspaceApi.updateBoard(board.id, { metadata: nextMeta }) } catch { await refresh() }
+          }}
+        />
 
         {/* Mini-dashboard del curso */}
         <div className="flex flex-wrap gap-3 mb-6 -mt-2">

@@ -26,7 +26,13 @@ interface OfficialDate { date: string; label: string; kind: string }
 const DOW = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
-function ymd(d: Date) { return d.toISOString().split('T')[0] }
+// Fecha local YYYY-MM-DD (NO UTC) — evita que en la noche se marque el día siguiente.
+function ymd(d: Date) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 function sameDay(a: string, b: string) { return a.split('T')[0] === b.split('T')[0] }
 
 export function MiniCalendar() {
