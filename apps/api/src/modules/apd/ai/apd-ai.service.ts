@@ -98,6 +98,7 @@ export class ApdAiService implements IApdAiService {
   private async callOpenRouterJson<T>(
     systemInstruction: string,
     userPrompt: string,
+    maxTokens?: number,
   ): Promise<T> {
     if (!this.isOpenRouterEnabled()) {
       throw new Error('OpenRouter no está habilitado');
@@ -112,7 +113,7 @@ export class ApdAiService implements IApdAiService {
     for (const model of modelsToTry) {
       try {
         this.logger.log(`OpenRouter intentando modelo: ${model}`);
-        const result = await this.callOpenRouterWithModel<T>(model, systemInstruction, userPrompt);
+        const result = await this.callOpenRouterWithModel<T>(model, systemInstruction, userPrompt, maxTokens);
         this.logger.log(`OpenRouter modelo exitoso: ${model}`);
         return result;
       } catch (err: any) {
@@ -141,6 +142,7 @@ export class ApdAiService implements IApdAiService {
     model: string,
     systemInstruction: string,
     userPrompt: string,
+    maxTokens?: number,
   ): Promise<T> {
     const url = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -159,7 +161,7 @@ export class ApdAiService implements IApdAiService {
           { role: 'user', content: userPrompt },
         ],
         temperature: this.config.temperature ?? 0.7,
-        max_tokens: Math.max(this.config.maxTokens ?? 2000, 4000),
+        max_tokens: Math.max(maxTokens ?? this.config.maxTokens ?? 2000, 4000),
       }),
     });
 
@@ -189,6 +191,7 @@ export class ApdAiService implements IApdAiService {
   private async callGroqJson<T>(
     systemInstruction: string,
     userPrompt: string,
+    maxTokens?: number,
   ): Promise<T> {
     if (!this.isGroqEnabled()) {
       throw new Error('Groq no está habilitado');
@@ -210,7 +213,7 @@ export class ApdAiService implements IApdAiService {
           { role: 'user', content: userPrompt },
         ],
         temperature: this.config.temperature ?? 0.7,
-        max_tokens: this.config.maxTokens ?? 2000,
+        max_tokens: maxTokens ?? this.config.maxTokens ?? 2000,
       }),
     });
 
@@ -232,6 +235,7 @@ export class ApdAiService implements IApdAiService {
   private async callXaiJson<T>(
     systemInstruction: string,
     userPrompt: string,
+    maxTokens?: number,
   ): Promise<T> {
     if (!this.isXaiEnabled()) {
       throw new Error('xAI no está habilitado');
@@ -253,7 +257,7 @@ export class ApdAiService implements IApdAiService {
           { role: 'user', content: userPrompt },
         ],
         temperature: this.config.temperature ?? 0.7,
-        max_tokens: this.config.maxTokens ?? 2000,
+        max_tokens: maxTokens ?? this.config.maxTokens ?? 2000,
       }),
     });
 
@@ -275,18 +279,19 @@ export class ApdAiService implements IApdAiService {
   private async callLlmJson<T>(
     systemInstruction: string,
     userPrompt: string,
+    maxTokens?: number,
   ): Promise<T> {
     if (this.isOpenRouterEnabled()) {
-      return this.callOpenRouterJson<T>(systemInstruction, userPrompt);
+      return this.callOpenRouterJson<T>(systemInstruction, userPrompt, maxTokens);
     }
     if (this.isGroqEnabled()) {
-      return this.callGroqJson<T>(systemInstruction, userPrompt);
+      return this.callGroqJson<T>(systemInstruction, userPrompt, maxTokens);
     }
     if (this.isXaiEnabled()) {
-      return this.callXaiJson<T>(systemInstruction, userPrompt);
+      return this.callXaiJson<T>(systemInstruction, userPrompt, maxTokens);
     }
     if (this.isGeminiEnabled()) {
-      return this.callGeminiJson<T>(systemInstruction, userPrompt);
+      return this.callGeminiJson<T>(systemInstruction, userPrompt, maxTokens);
     }
     throw new Error('Ningún proveedor de IA está habilitado');
   }
@@ -319,6 +324,7 @@ export class ApdAiService implements IApdAiService {
   private async callGeminiJson<T>(
     systemInstruction: string,
     userPrompt: string,
+    maxTokens?: number,
   ): Promise<T> {
     if (!this.isGeminiEnabled()) {
       throw new Error('Gemini no está habilitado');
@@ -343,7 +349,7 @@ export class ApdAiService implements IApdAiService {
         ],
         generationConfig: {
           temperature: this.config.temperature,
-          maxOutputTokens: this.config.maxTokens,
+          maxOutputTokens: maxTokens ?? this.config.maxTokens,
           responseMimeType: 'application/json',
         },
       }),
@@ -1362,16 +1368,27 @@ export class ApdAiService implements IApdAiService {
     const user = this.buildDesignUserPrompt(input);
 
     if (!this.isEnabled()) {
-      return { content: this.placeholderDesign(input), dna: this.placeholderDesignDna(input), provider: 'DISABLED', model: 'none' };
+      return {
+        content: { ...this.placeholderDesign(input), _aiStatus: 'disabled', _aiError: 'IA no configurada en el servidor (falta APD_AI_API_KEY).' },
+        dna: this.placeholderDesignDna(input), provider: 'DISABLED', model: 'none',
+      };
     }
     try {
-      const raw = await this.callLlmJson<any>(system, user);
+      // El diseño es un JSON grande: damos margen amplio de tokens para no truncarlo.
+      const raw = await this.callLlmJson<any>(system, user, 8000);
       const content = raw?.content ?? raw;
       const dna = raw?.dna ?? this.placeholderDesignDna(input);
+      if (!content || typeof content !== 'object' || (!content.moments && !content.learning && !content.activities)) {
+        throw new Error('La IA devolvió un contenido incompleto o con formato inesperado.');
+      }
       return { content, dna, provider: this.config.provider, model: this.config.model || '' };
     } catch (e) {
-      this.logger.warn(`generatePedagogicalDesign falló, uso plantilla: ${String((e as any)?.message || e)}`);
-      return { content: this.placeholderDesign(input), dna: this.placeholderDesignDna(input), provider: 'FALLBACK', model: 'none' };
+      const msg = String((e as any)?.message || e).slice(0, 400);
+      this.logger.warn(`generatePedagogicalDesign falló (${this.config.provider}/${this.config.model}): ${msg}`);
+      return {
+        content: { ...this.placeholderDesign(input), _aiStatus: 'error', _aiError: msg },
+        dna: this.placeholderDesignDna(input), provider: 'FALLBACK', model: this.config.model || 'none',
+      };
     }
   }
 

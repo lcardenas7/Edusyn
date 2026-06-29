@@ -24,6 +24,8 @@ interface DesignContent {
   dua?: { barriers?: string[]; adjustments?: string[] }
   resources?: { name?: string; url?: string }[]
   _placeholder?: boolean
+  _aiStatus?: 'disabled' | 'error' | string
+  _aiError?: string
 }
 
 interface FullDesign extends DesignListItem {
@@ -222,9 +224,17 @@ function DesignDetail({ design, onBack, onDeleted }: { design: FullDesign; onBac
       )}
 
       {c._placeholder && !editing && (
-        <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 mb-3 inline-block">
-          Plantilla base (IA no disponible al generar) — edítala a tu gusto.
-        </p>
+        <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+          <p className="font-semibold">Plantilla base — la IA no generó el contenido.</p>
+          <p className="mt-0.5">
+            {c._aiStatus === 'disabled'
+              ? 'Motivo: la IA no está configurada en el servidor (falta la API key APD_AI_API_KEY en staging).'
+              : c._aiError
+                ? `Motivo: ${c._aiError}`
+                : 'Motivo desconocido.'}
+          </p>
+          <p className="mt-0.5 text-amber-600">Puedes editarla igual, o reintentar cuando la IA esté disponible.</p>
+        </div>
       )}
 
       {/* Identificación */}
