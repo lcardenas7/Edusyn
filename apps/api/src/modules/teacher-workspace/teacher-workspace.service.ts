@@ -289,7 +289,7 @@ export class TeacherWorkspaceService {
     });
   }
 
-  async deleteBoard(boardId: string, teacherId: string, institutionId: string) {
+  async deleteBoard(boardId: string, teacherId: string, institutionId: string, force = false) {
     await this.validateBoardOwnership(boardId, teacherId, institutionId);
 
     const board = await this.prisma.workspaceBoard.findUnique({
@@ -299,6 +299,12 @@ export class TeacherWorkspaceService {
     // El espacio personal es único por docente y no se elimina.
     if (board?.isPersonal) {
       throw new BadRequestException('El espacio personal no se puede eliminar.');
+    }
+
+    // force = borrado definitivo (desde la vista de archivados), sin importar contenido.
+    if (force) {
+      await this.prisma.workspaceBoard.delete({ where: { id: boardId } });
+      return { deleted: true, archived: false };
     }
 
     // ¿Tiene contenido? Si todo está vacío, se borra de verdad; si no, se archiva

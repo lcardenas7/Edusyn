@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Loader2, ArrowLeft } from 'lucide-react'
+import { Loader2, ArrowLeft, Archive } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { teacherWorkspaceApi } from '../../lib/api'
 import { Greeting } from './components/Greeting'
@@ -8,6 +8,7 @@ import { SpacesGrid } from './components/SpacesGrid'
 import type { SpaceCardBoard } from './components/SpaceCard'
 import { CreateSpaceModal } from './components/CreateSpaceModal'
 import { DeleteSpaceModal } from './components/DeleteSpaceModal'
+import { ArchivedSpacesModal } from './components/ArchivedSpacesModal'
 import { toast } from '../../lib/toast'
 import { TodayPanel, type TodayData } from './components/TodayPanel'
 import { MiniCalendar } from './components/MiniCalendar'
@@ -29,6 +30,7 @@ export default function WorkspaceV2Page() {
   const [error, setError] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [deletingBoard, setDeletingBoard] = useState<SpaceCardBoard | null>(null)
+  const [archivedOpen, setArchivedOpen] = useState(false)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -140,6 +142,17 @@ export default function WorkspaceV2Page() {
                 <p className="text-xs text-slate-500">Notas, ideas, pendientes y archivos sin curso</p>
               </div>
             </button>
+
+            {/* Acceso a espacios archivados */}
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => setArchivedOpen(true)}
+                className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition"
+              >
+                <Archive className="w-3.5 h-3.5" /> Espacios archivados
+              </button>
+            </div>
           </>
         )}
 
@@ -164,6 +177,12 @@ export default function WorkspaceV2Page() {
         board={deletingBoard}
         onClose={() => setDeletingBoard(null)}
         onConfirm={handleDeleteBoard}
+      />
+
+      <ArchivedSpacesModal
+        open={archivedOpen}
+        onClose={() => setArchivedOpen(false)}
+        onChanged={load}
       />
     </div>
   )
