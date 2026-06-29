@@ -6,9 +6,10 @@ interface SpacesGridProps {
   boards: SpaceCardBoard[]
   onOpenBoard: (id: string) => void
   onCreateBoard: () => void
+  onDeleteBoard?: (board: SpaceCardBoard) => void
 }
 
-export function SpacesGrid({ boards, onOpenBoard, onCreateBoard }: SpacesGridProps) {
+export function SpacesGrid({ boards, onOpenBoard, onCreateBoard, onDeleteBoard }: SpacesGridProps) {
   if (boards.length === 0) {
     return <EmptyState onCreateBoard={onCreateBoard} />
   }
@@ -43,6 +44,7 @@ export function SpacesGrid({ boards, onOpenBoard, onCreateBoard }: SpacesGridPro
             board={board}
             index={idx}
             onClick={() => onOpenBoard(board.id)}
+            onDelete={onDeleteBoard}
           />
         ))}
       </div>

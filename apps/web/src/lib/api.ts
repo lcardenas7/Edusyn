@@ -1913,7 +1913,8 @@ export const teacherWorkspaceApi = {
   }) => api.post('/teacher-workspace/boards', data),
   updateBoard: (id: string, data: { title?: string; description?: string; color?: string; metadata?: any; isArchived?: boolean; sortOrder?: number; emoji?: string; bannerColor?: string; coverImage?: string; isPinned?: boolean; enabledModules?: string[] }) =>
     api.put(`/teacher-workspace/boards/${id}`, data),
-  deleteBoard: (id: string) => api.delete(`/teacher-workspace/boards/${id}`),
+  deleteBoard: (id: string, force?: boolean) =>
+    api.delete(`/teacher-workspace/boards/${id}`, force ? { params: { force: 'true' } } : undefined),
 
   // Scope, Populate, Summary, Students
   getScopeOptions: () => api.get('/teacher-workspace/scope-options'),

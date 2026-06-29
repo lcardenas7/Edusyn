@@ -289,10 +289,46 @@ export class TeacherWorkspaceService {
     });
   }
 
-  async deleteBoard(boardId: string, teacherId: string, institutionId: string) {
+  async deleteBoard(boardId: string, teacherId: string, institutionId: string, force = false) {
     await this.validateBoardOwnership(boardId, teacherId, institutionId);
-    await this.prisma.workspaceBoard.delete({ where: { id: boardId } });
-    return { success: true };
+
+    const board = await this.prisma.workspaceBoard.findUnique({
+      where: { id: boardId },
+      select: { isPersonal: true },
+    });
+    // El espacio personal es único por docente y no se elimina.
+    if (board?.isPersonal) {
+      throw new BadRequestException('El espacio personal no se puede eliminar.');
+    }
+
+    // force = borrado definitivo (desde la vista de archivados), sin importar contenido.
+    if (force) {
+      await this.prisma.workspaceBoard.delete({ where: { id: boardId } });
+      return { deleted: true, archived: false };
+    }
+
+    // ¿Tiene contenido? Si todo está vacío, se borra de verdad; si no, se archiva
+    // (recuperable) para no perder datos por un clic equivocado.
+    const [items, collections, roles, resources, folders, projects] = await Promise.all([
+      this.prisma.workspaceItem.count({ where: { boardId } }),
+      this.prisma.workspaceCollection.count({ where: { boardId } }),
+      this.prisma.workspaceRole.count({ where: { boardId } }),
+      this.prisma.workspaceResource.count({ where: { boardId } }),
+      this.prisma.workspaceResourceFolder.count({ where: { boardId } }),
+      this.prisma.workspaceProject.count({ where: { boardId } }),
+    ]);
+    const isEmpty = items + collections + roles + resources + folders + projects === 0;
+
+    if (isEmpty) {
+      await this.prisma.workspaceBoard.delete({ where: { id: boardId } });
+      return { deleted: true, archived: false };
+    }
+
+    await this.prisma.workspaceBoard.update({
+      where: { id: boardId },
+      data: { isArchived: true },
+    });
+    return { deleted: false, archived: true };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

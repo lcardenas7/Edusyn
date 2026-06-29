@@ -336,9 +336,9 @@ export class TeacherWorkspaceController {
   }
 
   @Delete('boards/:id')
-  async deleteBoard(@Request() req: any, @Param('id') id: string) {
+  async deleteBoard(@Request() req: any, @Param('id') id: string, @Query('force') force?: string) {
     const { teacherId, institutionId } = await this.resolveCtx(req);
-    return this.service.deleteBoard(id, teacherId, institutionId);
+    return this.service.deleteBoard(id, teacherId, institutionId, force === 'true');
   }
 
   @Get('scope-options')

@@ -408,7 +408,12 @@ function App() {
                   {/* MÓDULO DE TIMETABLING (HORARIOS)                            */}
                   {/* ═══════════════════════════════════════════════════════════ */}
                   <Route path="/timetabling" element={<Timetabling />} />
-                  <Route path="/my-workspace" element={<TeacherWorkspace />} />
+                  {/* Mi Espacio V2 es ahora la versión principal en /my-workspace.
+                      La versión clásica queda escondida en /my-workspace-classic
+                      como respaldo. /my-workspace-v2 se mantiene como alias. */}
+                  <Route path="/my-workspace" element={<WorkspaceV2Page />} />
+                  <Route path="/my-workspace/:boardId" element={<SpaceDetailPage />} />
+                  <Route path="/my-workspace-classic" element={<TeacherWorkspace />} />
                   <Route path="/my-workspace-v2" element={<WorkspaceV2Page />} />
                   <Route path="/my-workspace-v2/:boardId" element={<SpaceDetailPage />} />
                   <Route path="/classroom" element={<Classroom />} />

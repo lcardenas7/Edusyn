@@ -1,8 +1,8 @@
 # Estado del Proyecto — Mi Espacio Docente (Workspace V2)
 
 > Documento vivo. Resumen de dónde vamos, qué falta y cómo retomar.
-> Trabajamos 100% en la rama `staging`. Producción intacta.
-> Última actualización: 2026-06-28
+> Trabajamos 100% en la rama `staging`.
+> Última actualización: 2026-06-29
 
 ---
 
@@ -31,11 +31,16 @@
 - ✅ **F13a** Búsqueda global ⌘K (deep-link a módulo)
 - ✅ **F14** Plan de pruebas (`docs/PLAN_PRUEBAS.md`) + pulido responsive
 - ✅ Fix prod: `/login/admin` ya no pide institución (cherry-pick a main → prod)
+- ✅ **Producción desplegada** (2026-06-29): backup 81MB, 7 migraciones aplicadas, 23 boards / 118 items intactos, V2 dormido, clásico sin cambios.
+- ✅ **Consolidación en producción** (2026-06-29, reversible, con backups en `Edusyn-Backups/`):
+  - Antonio Castellón: 15 tableros CLASS_LOG → 11 espacios de curso (1×curso), materia como etiqueta (SPEAKING/FUNDAMENTOS). 70 items intactos. Script `apps/api/scripts/consolidate-antonio.cjs`.
+  - Luis Cárdenas (grupo B): 4 tableros → 1 "Octavo B" con Recaudo (Libros 37 cargos + Observador 9) + Roles. Script `apps/api/scripts/consolidate-group-b.cjs`.
 
 ## Siguiente
 - ⬜ **F13b** (opcional) Plantillas + ritual de inicio/cierre de día.
 - ⬜ **Validación** completa con `docs/PLAN_PRUEBAS.md`.
-- ⬜ **Producción**: backup → migraciones → consolidación → flag gradual (ver PLAN_PRUEBAS §Despliegue).
+- ⬜ **Flag gradual**: cuando el piloto esté listo, activar `WORKSPACE_V2_ENABLED` en 1 institución → resto.
+- ⬜ **Consolidación prod**: adaptar `apps/api/scripts/consolidate-group-b.cjs` a grupos reales de prod (con backup previo).
 
 ---
 

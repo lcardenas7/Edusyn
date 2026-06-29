@@ -175,6 +175,17 @@ function CollectionDetail({ collection, onBack, onChanged }: { collection: Colle
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
   const [onlyPending, setOnlyPending] = useState(false)
+  const [confirmDel, setConfirmDel] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  const deleteCollection = async () => {
+    setDeleting(true)
+    try {
+      await teacherWorkspaceApi.deleteCollection(data.id)
+      onChanged()
+      onBack()
+    } catch { /* noop */ } finally { setDeleting(false) }
+  }
 
   const q = search.toLowerCase().trim()
   const visibleCharges = data.charges.filter((ch) => {
@@ -200,9 +211,24 @@ function CollectionDetail({ collection, onBack, onChanged }: { collection: Colle
 
   return (
     <div>
-      <button onClick={onBack} className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 mb-3">
-        <ArrowLeft className="w-3.5 h-3.5" /> Recaudos
-      </button>
+      <div className="flex items-center justify-between mb-3">
+        <button onClick={onBack} className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700">
+          <ArrowLeft className="w-3.5 h-3.5" /> Recaudos
+        </button>
+        {confirmDel ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-red-600">¿Eliminar este recaudo y su historial?</span>
+            <button onClick={deleteCollection} disabled={deleting} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-600 text-white text-xs font-semibold disabled:opacity-50">
+              {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />} Eliminar
+            </button>
+            <button onClick={() => setConfirmDel(false)} disabled={deleting} className="px-2 py-1 text-xs text-slate-400">Cancelar</button>
+          </div>
+        ) : (
+          <button onClick={() => setConfirmDel(true)} className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-red-600 transition" title="Eliminar recaudo">
+            <Trash2 className="w-3.5 h-3.5" /> Eliminar recaudo
+          </button>
+        )}
+      </div>
 
       {/* Resumen */}
       <div className="rounded-2xl bg-white border border-slate-200 p-4 mb-4">
