@@ -43,11 +43,13 @@ export default function Login() {
         await login(identifier, password)
         navigate('/superadmin')
       } else {
-        // Login normal de institución
+        // Login normal (incluye /auth/login). Si resulta ser SuperAdmin,
+        // lo llevamos a su panel; si no, al dashboard institucional.
         await login(identifier, password)
-        // Si debe cambiar contraseña, redirigir
         if (loginRes.data.mustChangePassword) {
           navigate('/change-password')
+        } else if (profileRes.data.isSuperAdmin) {
+          navigate('/superadmin')
         } else {
           navigate('/dashboard')
         }
