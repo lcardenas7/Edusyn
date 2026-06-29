@@ -229,6 +229,67 @@ export class TeacherWorkspaceController {
     return this.service.deleteResource(id, teacherId, institutionId);
   }
 
+  // ── Proyecto ────────────────────────────────────────────────────────────────
+  @Get('projects')
+  async listProjects(@Request() req: any, @Query('boardId') boardId: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.listProjects(boardId, teacherId, institutionId);
+  }
+
+  @Post('projects')
+  async createProject(@Request() req: any, @Body() dto: any) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.createProject(teacherId, institutionId, dto);
+  }
+
+  @Get('projects/:id')
+  async getProject(@Request() req: any, @Param('id') id: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.getProject(id, teacherId, institutionId);
+  }
+
+  @Put('projects/:id')
+  async updateProject(@Request() req: any, @Param('id') id: string, @Body() dto: any) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.updateProject(id, teacherId, institutionId, dto);
+  }
+
+  @Delete('projects/:id')
+  async deleteProject(@Request() req: any, @Param('id') id: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.deleteProject(id, teacherId, institutionId);
+  }
+
+  @Post('projects/:id/tasks')
+  async addProjectTask(@Request() req: any, @Param('id') id: string, @Body() dto: any) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.addProjectTask(id, teacherId, institutionId, dto);
+  }
+
+  @Patch('project-tasks/:id/toggle')
+  async toggleProjectTask(@Request() req: any, @Param('id') id: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.toggleProjectTask(id, teacherId, institutionId);
+  }
+
+  @Delete('project-tasks/:id')
+  async deleteProjectTask(@Request() req: any, @Param('id') id: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.deleteProjectTask(id, teacherId, institutionId);
+  }
+
+  @Post('projects/:id/members')
+  async addProjectMember(@Request() req: any, @Param('id') id: string, @Body() dto: any) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.addProjectMember(id, teacherId, institutionId, dto);
+  }
+
+  @Delete('project-members/:id')
+  async removeProjectMember(@Request() req: any, @Param('id') id: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.removeProjectMember(id, teacherId, institutionId);
+  }
+
   @Get('boards')
   async listBoards(
     @Request() req: any,

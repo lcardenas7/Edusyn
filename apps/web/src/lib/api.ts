@@ -1931,6 +1931,18 @@ export const teacherWorkspaceApi = {
     api.put(`/teacher-workspace/columns/${id}`, data),
   deleteColumn: (id: string) => api.delete(`/teacher-workspace/columns/${id}`),
 
+  // Proyecto (F10)
+  listProjects: (boardId: string) => api.get('/teacher-workspace/projects', { params: { boardId } }),
+  createProject: (data: { boardId: string; name: string; objective?: string; competencies?: string; startDate?: string; endDate?: string }) => api.post('/teacher-workspace/projects', data),
+  getProject: (id: string) => api.get(`/teacher-workspace/projects/${id}`),
+  updateProject: (id: string, data: any) => api.put(`/teacher-workspace/projects/${id}`, data),
+  deleteProject: (id: string) => api.delete(`/teacher-workspace/projects/${id}`),
+  addProjectTask: (id: string, data: { title: string; dueDate?: string }) => api.post(`/teacher-workspace/projects/${id}/tasks`, data),
+  toggleProjectTask: (id: string) => api.patch(`/teacher-workspace/project-tasks/${id}/toggle`),
+  deleteProjectTask: (id: string) => api.delete(`/teacher-workspace/project-tasks/${id}`),
+  addProjectMember: (id: string, studentId: string) => api.post(`/teacher-workspace/projects/${id}/members`, { studentId }),
+  removeProjectMember: (id: string) => api.delete(`/teacher-workspace/project-members/${id}`),
+
   // Biblioteca (F9)
   listResources: (boardId: string, folderId?: string) => api.get('/teacher-workspace/resources', { params: { boardId, folderId } }),
   createFolder: (data: { boardId: string; name: string }) => api.post('/teacher-workspace/resource-folders', data),

@@ -4959,6 +4959,7 @@ model WorkspaceBoard {
   roles        WorkspaceRole[]
   resources    WorkspaceResource[]
   resourceFolders WorkspaceResourceFolder[]
+  projects     WorkspaceProject[]
 
   @@index([teacherId, institutionId])
   @@index([teacherId, type])
@@ -5274,6 +5275,61 @@ model WorkspaceResource {
 
   @@index([boardId])
   @@index([folderId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WORKSPACE V2 · F10 — Proyecto (entidad de primer nivel, ver MASTER §22)
+// Contenedor con ciclo de vida propio. Tareas/comentarios/evidencias se
+// implementan reusando primitivas (tablas hijas mínimas).
+// ═══════════════════════════════════════════════════════════════════════════
+
+model WorkspaceProject {
+  id            String    @id @default(cuid())
+  boardId       String
+  institutionId String
+  name          String
+  objective     String?
+  competencies  String?
+  status        String    @default("PLANNING") // PLANNING | ACTIVE | DONE | ARCHIVED
+  progress      Int       @default(0)           // 0–100
+  startDate     DateTime?
+  endDate       DateTime?
+  isFavorite    Boolean   @default(false)
+  isArchived    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  board   WorkspaceBoard          @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks   WorkspaceProjectTask[]
+  members WorkspaceProjectMember[]
+
+  @@index([boardId])
+}
+
+model WorkspaceProjectTask {
+  id        String    @id @default(cuid())
+  projectId String
+  title     String
+  done      Boolean   @default(false)
+  dueDate   DateTime?
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  project WorkspaceProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model WorkspaceProjectMember {
+  id          String   @id @default(cuid())
+  projectId   String
+  studentId   String
+  studentName String
+  addedAt     DateTime @default(now())
+
+  project WorkspaceProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

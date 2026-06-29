@@ -75,8 +75,8 @@ export const MODULES: Record<ModuleKey, ModuleDef> = {
   },
   proyecto: {
     key: 'proyecto', label: 'Proyecto', emoji: '🚀', iconBg: 'bg-fuchsia-50',
-    description: 'Proyectos con objetivo y avance.',
-    kinds: [], boardTypes: ['PROJECT'], status: 'soon',
+    description: 'Proyectos con objetivo, avance e integrantes.',
+    kinds: [], boardTypes: ['PROJECT'], status: 'ready',
   },
 }
 

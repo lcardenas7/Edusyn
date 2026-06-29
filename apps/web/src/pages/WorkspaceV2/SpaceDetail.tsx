@@ -15,6 +15,7 @@ import { RecaudoModule } from './modules/RecaudoModule'
 import { RolesModule } from './modules/RolesModule'
 import { ObservacionesModule, type ObsItem } from './modules/ObservacionesModule'
 import { BibliotecaModule } from './modules/BibliotecaModule'
+import { ProyectoModule } from './modules/ProyectoModule'
 
 interface BoardData {
   id: string
@@ -229,6 +230,8 @@ export default function SpaceDetailPage() {
 
               {openModule === 'recaudo' ? (
                 <RecaudoModule boardId={board.id} />
+              ) : openModule === 'proyecto' ? (
+                <ProyectoModule boardId={board.id} />
               ) : openModule === 'recursos' ? (
                 <BibliotecaModule boardId={board.id} />
               ) : openModule === 'roles' ? (

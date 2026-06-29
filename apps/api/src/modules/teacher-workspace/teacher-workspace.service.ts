@@ -945,6 +945,141 @@ export class TeacherWorkspaceService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // PROYECTO — entidad de primer nivel (objetivo, %, integrantes, checklist)
+  // ═══════════════════════════════════════════════════════════════════════════
+  private summarizeProject(p: any) {
+    const tasks = p.tasks ?? [];
+    const doneTasks = tasks.filter((t: any) => t.done).length;
+    // Avance auto desde checklist (si hay tareas); si no, el manual.
+    const autoProgress = tasks.length ? Math.round((doneTasks / tasks.length) * 100) : p.progress;
+    return {
+      id: p.id, name: p.name, objective: p.objective, competencies: p.competencies,
+      status: p.status, progress: autoProgress, startDate: p.startDate, endDate: p.endDate,
+      isFavorite: p.isFavorite,
+      tasks: tasks.map((t: any) => ({ id: t.id, title: t.title, done: t.done, dueDate: t.dueDate })),
+      members: (p.members ?? []).map((m: any) => ({ id: m.id, studentId: m.studentId, studentName: m.studentName })),
+      tasksDone: doneTasks, tasksTotal: tasks.length,
+    };
+  }
+
+  async listProjects(boardId: string, teacherId: string, institutionId: string) {
+    await this.validateBoardOwnership(boardId, teacherId, institutionId);
+    const projects = await this.prisma.workspaceProject.findMany({
+      where: { boardId, isArchived: false },
+      include: { tasks: { orderBy: { sortOrder: 'asc' } }, members: true },
+      orderBy: [{ isFavorite: 'desc' }, { createdAt: 'desc' }],
+    });
+    return projects.map((p) => this.summarizeProject(p));
+  }
+
+  async createProject(teacherId: string, institutionId: string, dto: {
+    boardId: string; name: string; objective?: string; competencies?: string; startDate?: string; endDate?: string;
+  }) {
+    await this.validateBoardOwnership(dto.boardId, teacherId, institutionId);
+    if (!dto.name?.trim()) throw new BadRequestException('El proyecto necesita un nombre');
+    const p = await this.prisma.workspaceProject.create({
+      data: {
+        boardId: dto.boardId, institutionId, name: dto.name.trim(),
+        objective: dto.objective || null, competencies: dto.competencies || null,
+        startDate: dto.startDate ? new Date(dto.startDate) : null,
+        endDate: dto.endDate ? new Date(dto.endDate) : null,
+      },
+      include: { tasks: true, members: true },
+    });
+    return this.summarizeProject(p);
+  }
+
+  private async loadProjectOwned(id: string, teacherId: string, institutionId: string) {
+    const p = await this.prisma.workspaceProject.findUnique({ where: { id } });
+    if (!p) throw new NotFoundException('Proyecto no encontrado');
+    await this.validateBoardOwnership(p.boardId, teacherId, institutionId);
+    return p;
+  }
+
+  async updateProject(id: string, teacherId: string, institutionId: string, dto: {
+    name?: string; objective?: string; competencies?: string; status?: string; progress?: number;
+    startDate?: string | null; endDate?: string | null; isFavorite?: boolean; isArchived?: boolean;
+  }) {
+    await this.loadProjectOwned(id, teacherId, institutionId);
+    const p = await this.prisma.workspaceProject.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.objective !== undefined && { objective: dto.objective }),
+        ...(dto.competencies !== undefined && { competencies: dto.competencies }),
+        ...(dto.status !== undefined && { status: dto.status }),
+        ...(dto.progress !== undefined && { progress: dto.progress }),
+        ...(dto.startDate !== undefined && { startDate: dto.startDate ? new Date(dto.startDate) : null }),
+        ...(dto.endDate !== undefined && { endDate: dto.endDate ? new Date(dto.endDate) : null }),
+        ...(dto.isFavorite !== undefined && { isFavorite: dto.isFavorite }),
+        ...(dto.isArchived !== undefined && { isArchived: dto.isArchived }),
+      },
+      include: { tasks: { orderBy: { sortOrder: 'asc' } }, members: true },
+    });
+    return this.summarizeProject(p);
+  }
+
+  async deleteProject(id: string, teacherId: string, institutionId: string) {
+    await this.loadProjectOwned(id, teacherId, institutionId);
+    await this.prisma.workspaceProject.delete({ where: { id } });
+    return { success: true };
+  }
+
+  async addProjectTask(projectId: string, teacherId: string, institutionId: string, dto: { title: string; dueDate?: string }) {
+    const p = await this.loadProjectOwned(projectId, teacherId, institutionId);
+    if (!dto.title?.trim()) throw new BadRequestException('La tarea necesita un título');
+    const max = await this.prisma.workspaceProjectTask.aggregate({ where: { projectId }, _max: { sortOrder: true } });
+    await this.prisma.workspaceProjectTask.create({
+      data: { projectId, title: dto.title.trim(), dueDate: dto.dueDate ? new Date(dto.dueDate) : null, sortOrder: (max._max.sortOrder ?? 0) + 100 },
+    });
+    return this.getProject(p.id, teacherId, institutionId);
+  }
+
+  async toggleProjectTask(taskId: string, teacherId: string, institutionId: string) {
+    const t = await this.prisma.workspaceProjectTask.findUnique({ where: { id: taskId }, include: { project: true } });
+    if (!t) throw new NotFoundException('Tarea no encontrada');
+    await this.validateBoardOwnership(t.project.boardId, teacherId, institutionId);
+    await this.prisma.workspaceProjectTask.update({ where: { id: taskId }, data: { done: !t.done } });
+    return this.getProject(t.projectId, teacherId, institutionId);
+  }
+
+  async deleteProjectTask(taskId: string, teacherId: string, institutionId: string) {
+    const t = await this.prisma.workspaceProjectTask.findUnique({ where: { id: taskId }, include: { project: true } });
+    if (!t) throw new NotFoundException('Tarea no encontrada');
+    await this.validateBoardOwnership(t.project.boardId, teacherId, institutionId);
+    await this.prisma.workspaceProjectTask.delete({ where: { id: taskId } });
+    return this.getProject(t.projectId, teacherId, institutionId);
+  }
+
+  async addProjectMember(projectId: string, teacherId: string, institutionId: string, dto: { studentId: string }) {
+    const p = await this.loadProjectOwned(projectId, teacherId, institutionId);
+    const roster = await this.getBoardRoster(p.boardId, teacherId, institutionId);
+    const student = roster.find((s) => s.id === dto.studentId);
+    if (!student) throw new BadRequestException('Estudiante no pertenece al grupo');
+    const exists = await this.prisma.workspaceProjectMember.findFirst({ where: { projectId, studentId: dto.studentId } });
+    if (!exists) {
+      await this.prisma.workspaceProjectMember.create({ data: { projectId, studentId: student.id, studentName: student.name } });
+    }
+    return this.getProject(p.id, teacherId, institutionId);
+  }
+
+  async removeProjectMember(memberId: string, teacherId: string, institutionId: string) {
+    const m = await this.prisma.workspaceProjectMember.findUnique({ where: { id: memberId }, include: { project: true } });
+    if (!m) throw new NotFoundException('Integrante no encontrado');
+    await this.validateBoardOwnership(m.project.boardId, teacherId, institutionId);
+    await this.prisma.workspaceProjectMember.delete({ where: { id: memberId } });
+    return this.getProject(m.projectId, teacherId, institutionId);
+  }
+
+  async getProject(id: string, teacherId: string, institutionId: string) {
+    await this.loadProjectOwned(id, teacherId, institutionId);
+    const p = await this.prisma.workspaceProject.findUnique({
+      where: { id }, include: { tasks: { orderBy: { sortOrder: 'asc' } }, members: true },
+    });
+    return this.summarizeProject(p);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // COLUMNS
   // ═══════════════════════════════════════════════════════════════════════════
 
