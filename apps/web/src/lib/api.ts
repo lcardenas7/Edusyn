@@ -1931,6 +1931,14 @@ export const teacherWorkspaceApi = {
     api.put(`/teacher-workspace/columns/${id}`, data),
   deleteColumn: (id: string) => api.delete(`/teacher-workspace/columns/${id}`),
 
+  // Roster + Roles (F7)
+  getRoster: (boardId: string) => api.get(`/teacher-workspace/boards/${boardId}/roster`),
+  listRoles: (boardId: string) => api.get('/teacher-workspace/roles', { params: { boardId } }),
+  createRole: (data: { boardId: string; name: string; isCustom?: boolean }) => api.post('/teacher-workspace/roles', data),
+  deleteRole: (id: string) => api.delete(`/teacher-workspace/roles/${id}`),
+  assignRole: (roleId: string, studentId: string) => api.post(`/teacher-workspace/roles/${roleId}/assign`, { studentId }),
+  unassignRole: (assignmentId: string) => api.delete(`/teacher-workspace/assignments/${assignmentId}`),
+
   // Recaudo (F6)
   listCollections: (boardId: string) => api.get('/teacher-workspace/collections', { params: { boardId } }),
   createCollection: (data: { boardId: string; name: string; description?: string; unitValue: number; dueDate?: string; assign?: 'ALL' | string[] }) =>

@@ -4956,6 +4956,7 @@ model WorkspaceBoard {
   followUps    WorkspaceFollowUp[]
   activities   WorkspaceActivity[]
   collections  WorkspaceCollection[]
+  roles        WorkspaceRole[]
 
   @@index([teacherId, institutionId])
   @@index([teacherId, type])
@@ -5192,6 +5193,40 @@ model WorkspaceCollectionPayment {
   charge WorkspaceCollectionCharge @relation(fields: [chargeId], references: [id], onDelete: Cascade)
 
   @@index([chargeId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WORKSPACE V2 · F7 — Roles del salón (catálogo + asignaciones con historial)
+// Privado del docente. No toca convivencia oficial.
+// ═══════════════════════════════════════════════════════════════════════════
+
+model WorkspaceRole {
+  id            String   @id @default(cuid())
+  boardId       String
+  institutionId String
+  name          String
+  isCustom      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  board       WorkspaceBoard            @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  assignments WorkspaceRoleAssignment[]
+
+  @@index([boardId])
+}
+
+model WorkspaceRoleAssignment {
+  id           String    @id @default(cuid())
+  roleId       String
+  studentId    String
+  studentName  String
+  studentPhoto String?
+  assignedAt   DateTime  @default(now())
+  removedAt    DateTime? // null = activo; con valor = historial
+
+  role WorkspaceRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@index([roleId])
+  @@index([studentId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

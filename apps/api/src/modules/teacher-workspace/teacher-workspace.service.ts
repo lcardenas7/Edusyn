@@ -740,6 +740,89 @@ export class TeacherWorkspaceService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // ROSTER — estudiantes del grupo con foto (para selectores de Roles, etc.)
+  // ═══════════════════════════════════════════════════════════════════════════
+  async getBoardRoster(boardId: string, teacherId: string, institutionId: string) {
+    const board = await this.validateBoardOwnership(boardId, teacherId, institutionId);
+    const studentIds = await this.resolveStudentsByScope(board, institutionId);
+    if (!studentIds.length) return [];
+    const students = await this.prisma.student.findMany({
+      where: { id: { in: studentIds } },
+      select: { id: true, firstName: true, secondName: true, lastName: true, secondLastName: true, photo: true },
+      orderBy: { lastName: 'asc' },
+    });
+    return students.map((s) => ({
+      id: s.id,
+      name: [s.lastName, s.secondLastName, s.firstName, s.secondName].filter(Boolean).join(' ').toUpperCase(),
+      photo: s.photo,
+    }));
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ROLES — catálogo + asignaciones con historial
+  // ═══════════════════════════════════════════════════════════════════════════
+  async listRoles(boardId: string, teacherId: string, institutionId: string) {
+    await this.validateBoardOwnership(boardId, teacherId, institutionId);
+    const roles = await this.prisma.workspaceRole.findMany({
+      where: { boardId },
+      include: { assignments: { orderBy: { assignedAt: 'desc' } } },
+      orderBy: { createdAt: 'asc' },
+    });
+    return roles.map((r) => ({
+      id: r.id, name: r.name, isCustom: r.isCustom,
+      current: r.assignments.filter((a) => !a.removedAt).map((a) => ({
+        id: a.id, studentId: a.studentId, studentName: a.studentName, studentPhoto: a.studentPhoto, assignedAt: a.assignedAt,
+      })),
+      history: r.assignments.filter((a) => a.removedAt).map((a) => ({
+        id: a.id, studentName: a.studentName, assignedAt: a.assignedAt, removedAt: a.removedAt,
+      })),
+    }));
+  }
+
+  async createRole(teacherId: string, institutionId: string, dto: { boardId: string; name: string; isCustom?: boolean }) {
+    await this.validateBoardOwnership(dto.boardId, teacherId, institutionId);
+    if (!dto.name?.trim()) throw new BadRequestException('El rol necesita un nombre');
+    return this.prisma.workspaceRole.create({
+      data: { boardId: dto.boardId, institutionId, name: dto.name.trim(), isCustom: dto.isCustom ?? true },
+    });
+  }
+
+  private async loadRoleOwned(roleId: string, teacherId: string, institutionId: string) {
+    const role = await this.prisma.workspaceRole.findUnique({ where: { id: roleId } });
+    if (!role) throw new NotFoundException('Rol no encontrado');
+    await this.validateBoardOwnership(role.boardId, teacherId, institutionId);
+    return role;
+  }
+
+  async deleteRole(roleId: string, teacherId: string, institutionId: string) {
+    await this.loadRoleOwned(roleId, teacherId, institutionId);
+    await this.prisma.workspaceRole.delete({ where: { id: roleId } });
+    return { success: true };
+  }
+
+  async assignRole(roleId: string, teacherId: string, institutionId: string, dto: { studentId: string }) {
+    const role = await this.loadRoleOwned(roleId, teacherId, institutionId);
+    const roster = await this.getBoardRoster(role.boardId, teacherId, institutionId);
+    const student = roster.find((s) => s.id === dto.studentId);
+    if (!student) throw new BadRequestException('Estudiante no pertenece al grupo');
+    await this.prisma.workspaceRoleAssignment.create({
+      data: { roleId, studentId: student.id, studentName: student.name, studentPhoto: student.photo },
+    });
+    return this.listRoles(role.boardId, teacherId, institutionId);
+  }
+
+  async unassignRole(assignmentId: string, teacherId: string, institutionId: string) {
+    const a = await this.prisma.workspaceRoleAssignment.findUnique({
+      where: { id: assignmentId }, include: { role: true },
+    });
+    if (!a) throw new NotFoundException('Asignación no encontrada');
+    await this.validateBoardOwnership(a.role.boardId, teacherId, institutionId);
+    // Soft: marcar removedAt → queda en historial
+    await this.prisma.workspaceRoleAssignment.update({ where: { id: assignmentId }, data: { removedAt: new Date() } });
+    return this.listRoles(a.role.boardId, teacherId, institutionId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // COLUMNS
   // ═══════════════════════════════════════════════════════════════════════════
 

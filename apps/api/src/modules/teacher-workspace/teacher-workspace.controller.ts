@@ -133,6 +133,43 @@ export class TeacherWorkspaceController {
     return this.service.deletePayment(id, teacherId, institutionId);
   }
 
+  // ── Roster + Roles ──────────────────────────────────────────────────────────
+  @Get('boards/:id/roster')
+  async getRoster(@Request() req: any, @Param('id') id: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.getBoardRoster(id, teacherId, institutionId);
+  }
+
+  @Get('roles')
+  async listRoles(@Request() req: any, @Query('boardId') boardId: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.listRoles(boardId, teacherId, institutionId);
+  }
+
+  @Post('roles')
+  async createRole(@Request() req: any, @Body() dto: any) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.createRole(teacherId, institutionId, dto);
+  }
+
+  @Delete('roles/:id')
+  async deleteRole(@Request() req: any, @Param('id') id: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.deleteRole(id, teacherId, institutionId);
+  }
+
+  @Post('roles/:id/assign')
+  async assignRole(@Request() req: any, @Param('id') id: string, @Body() dto: any) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.assignRole(id, teacherId, institutionId, dto);
+  }
+
+  @Delete('assignments/:id')
+  async unassignRole(@Request() req: any, @Param('id') id: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.unassignRole(id, teacherId, institutionId);
+  }
+
   @Get('boards')
   async listBoards(
     @Request() req: any,

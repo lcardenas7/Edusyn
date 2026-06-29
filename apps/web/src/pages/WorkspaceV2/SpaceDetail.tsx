@@ -12,6 +12,7 @@ import { ModuleGrid } from './modules/ModuleGrid'
 import { ActivateModuleSheet } from './modules/ActivateModuleSheet'
 import { BitacoraModule, type BitacoraItem } from './modules/BitacoraModule'
 import { RecaudoModule } from './modules/RecaudoModule'
+import { RolesModule } from './modules/RolesModule'
 
 interface BoardData {
   id: string
@@ -217,6 +218,8 @@ export default function SpaceDetailPage() {
 
               {openModule === 'recaudo' ? (
                 <RecaudoModule boardId={board.id} />
+              ) : openModule === 'roles' ? (
+                <RolesModule boardId={board.id} />
               ) : openModule === 'bitacora' ? (
                 <BitacoraModule
                   items={filterForSection(allItems, 'log', board.type) as BitacoraItem[]}
