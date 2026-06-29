@@ -1987,6 +1987,19 @@ export const teacherWorkspaceApi = {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// DISEÑO PEDAGÓGICO IA ("Estudio")
+// ═══════════════════════════════════════════════════════════════════════════
+export const pedagogicalDesignApi = {
+  generate: (data: { prompt: string; experienceType?: string; boardId?: string; gradeName?: string; subjectName?: string; sessions?: number }) =>
+    api.post('/pedagogical-design/generate', data),
+  list: (boardId?: string) => api.get('/pedagogical-design', { params: boardId ? { boardId } : undefined }),
+  get: (id: string) => api.get(`/pedagogical-design/${id}`),
+  update: (id: string, data: { title?: string; summary?: string; experienceType?: string; dna?: any; content?: any; changeNote?: string }) =>
+    api.put(`/pedagogical-design/${id}`, data),
+  delete: (id: string) => api.delete(`/pedagogical-design/${id}`),
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // AULA VIRTUAL
 // ═══════════════════════════════════════════════════════════════════════════
 export const classroomApi = {

@@ -34,6 +34,7 @@ import { InstitutionContextModule } from './modules/institution-context/institut
 import { PedagogicalSupportModule } from './modules/pedagogical-support/pedagogical-support.module';
 import { ApdModule } from './modules/apd/apd.module';
 import { TeacherWorkspaceModule } from './modules/teacher-workspace/teacher-workspace.module';
+import { PedagogicalDesignModule } from './modules/pedagogical-design/pedagogical-design.module';
 import { ClassroomModule } from './modules/classroom/classroom.module';
 import { LiveSessionModule } from './modules/live-session/live-session.module';
 import { StaffLeaveModule } from './modules/staff-leave/staff-leave.module';
@@ -80,6 +81,7 @@ import { TenantGuard } from './modules/auth/guards/tenant.guard';
     PedagogicalSupportModule,
     ApdModule,
     TeacherWorkspaceModule,
+    PedagogicalDesignModule,
     ClassroomModule,
     LiveSessionModule,
     StaffLeaveModule,

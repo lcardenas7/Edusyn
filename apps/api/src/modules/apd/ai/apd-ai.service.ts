@@ -1345,6 +1345,113 @@ export class ApdAiService implements IApdAiService {
     };
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DISEÑO PEDAGÓGICO IA ("Estudio") — genera un Activo Pedagógico estructurado.
+  // Reutiliza el cliente LLM (callLlmJson). Si la IA no está habilitada o falla,
+  // devuelve una plantilla estructurada para que el módulo nunca quede vacío.
+  // ═══════════════════════════════════════════════════════════════════════════
+  async generatePedagogicalDesign(input: {
+    prompt: string;
+    experienceType?: string;
+    gradeName?: string;
+    subjectName?: string;
+    sessions?: number;
+    institutionName?: string;
+  }): Promise<{ content: any; dna: any; provider: string; model: string }> {
+    const system = this.buildDesignSystemPrompt(input);
+    const user = this.buildDesignUserPrompt(input);
+
+    if (!this.isEnabled()) {
+      return { content: this.placeholderDesign(input), dna: this.placeholderDesignDna(input), provider: 'DISABLED', model: 'none' };
+    }
+    try {
+      const raw = await this.callLlmJson<any>(system, user);
+      const content = raw?.content ?? raw;
+      const dna = raw?.dna ?? this.placeholderDesignDna(input);
+      return { content, dna, provider: this.config.provider, model: this.config.model || '' };
+    } catch (e) {
+      this.logger.warn(`generatePedagogicalDesign falló, uso plantilla: ${String((e as any)?.message || e)}`);
+      return { content: this.placeholderDesign(input), dna: this.placeholderDesignDna(input), provider: 'FALLBACK', model: 'none' };
+    }
+  }
+
+  private buildDesignSystemPrompt(input: { experienceType?: string }): string {
+    return [
+      'Eres Valeria, diseñadora pedagógica experta del sistema educativo colombiano (MEN).',
+      'Diseñas experiencias de aprendizaje completas, prácticas y aplicables en el aula.',
+      `Tipo de experiencia solicitada: ${input.experienceType || 'LESSON_PLAN'}.`,
+      '',
+      'Devuelve EXCLUSIVAMENTE un JSON válido con esta forma exacta:',
+      '{',
+      '  "content": {',
+      '    "identification": { "area": "", "subject": "", "grade": "", "sessions": 1, "totalMinutes": 0 },',
+      '    "framework": { "competencies": [""], "dba": [""], "standards": [""] },',
+      '    "learning": { "objectives": [""], "outcomes": [""], "bloomLevels": [""] },',
+      '    "moments": [ { "phase": "INICIO|DESARROLLO|CIERRE", "minutes": 0, "description": "", "activities": [""] } ],',
+      '    "activities": [ { "title": "", "description": "", "type": "TASK|QUIZ|FORUM|PROJECT|GAME|LESSON", "minutes": 0, "product": "" } ],',
+      '    "evaluation": { "type": "", "criteria": [""], "evidences": [""] },',
+      '    "rubric": { "criteria": [ { "name": "", "levels": [ { "label": "", "descriptor": "", "score": 0 } ] } ] },',
+      '    "dua": { "barriers": [""], "adjustments": [""] },',
+      '    "resources": [ { "name": "", "url": "" } ]',
+      '  },',
+      '  "dna": {',
+      '    "topic": "", "competencies": [""], "difficulty": "BAJA|MEDIA|ALTA",',
+      '    "bloomLevels": [""], "methodology": ["ABP|STEAM|FLIPPED|COOP|TRADICIONAL"],',
+      '    "evaluationType": "", "usesICT": false, "estimatedMinutes": 0,',
+      '    "work": { "individual": true, "collaborative": true }',
+      '  }',
+      '}',
+      '',
+      'Reglas: español claro; incluye los TRES momentos de la clase con tiempos; actividades concretas y realizables; evaluación formativa con evidencias; ajustes DUA reales. No incluyas texto fuera del JSON.',
+    ].join('\n');
+  }
+
+  private buildDesignUserPrompt(input: {
+    prompt: string; gradeName?: string; subjectName?: string; sessions?: number; institutionName?: string;
+  }): string {
+    return [
+      `Solicitud del docente: ${input.prompt}`,
+      input.gradeName ? `Grado: ${input.gradeName}` : '',
+      input.subjectName ? `Asignatura: ${input.subjectName}` : '',
+      input.sessions ? `Número de sesiones: ${input.sessions}` : '',
+      input.institutionName ? `Institución: ${input.institutionName}` : '',
+      '',
+      'Diseña la experiencia completa siguiendo la estructura JSON indicada.',
+    ].filter(Boolean).join('\n');
+  }
+
+  private placeholderDesignDna(input: { prompt: string }): any {
+    return {
+      topic: (input.prompt || '').slice(0, 80),
+      competencies: [], difficulty: 'MEDIA', bloomLevels: ['Comprender', 'Aplicar'],
+      methodology: ['TRADICIONAL'], evaluationType: 'Formativa', usesICT: false,
+      estimatedMinutes: 110, work: { individual: true, collaborative: true },
+    };
+  }
+
+  private placeholderDesign(input: { prompt: string; gradeName?: string; subjectName?: string; sessions?: number }): any {
+    const topic = (input.prompt || 'el tema').replace(/^necesito\s+(un|una)?\s*(plan|gu[ií]a)\s*(de\s*clase[s]?)?\s*(sobre|de|del)?\s*/i, '').trim() || input.prompt;
+    return {
+      identification: { area: input.subjectName || '', subject: input.subjectName || '', grade: input.gradeName || '', sessions: input.sessions || 1, totalMinutes: 110 },
+      framework: { competencies: [], dba: [], standards: [] },
+      learning: { objectives: [`Comprender los conceptos centrales de ${topic}.`], outcomes: [`El estudiante explica y aplica ${topic}.`], bloomLevels: ['Comprender', 'Aplicar'] },
+      moments: [
+        { phase: 'INICIO', minutes: 20, description: `Exploración de saberes previos sobre ${topic} con una pregunta motivadora.`, activities: ['Lluvia de ideas guiada'] },
+        { phase: 'DESARROLLO', minutes: 60, description: `Explicación, modelado y práctica guiada de ${topic}.`, activities: ['Explicación con ejemplos', 'Práctica en parejas'] },
+        { phase: 'CIERRE', minutes: 30, description: 'Síntesis, producto y evaluación formativa.', activities: ['Ticket de salida'] },
+      ],
+      activities: [
+        { title: `Actividad introductoria: ${topic}`, description: 'Actividad de apertura para activar saberes previos.', type: 'TASK', minutes: 20, product: 'Participación oral' },
+        { title: `Práctica guiada: ${topic}`, description: 'Ejercicio aplicado en parejas.', type: 'TASK', minutes: 40, product: 'Hoja de trabajo' },
+      ],
+      evaluation: { type: 'Formativa', criteria: ['Comprende los conceptos', 'Aplica lo aprendido'], evidences: ['Hoja de trabajo', 'Ticket de salida'] },
+      rubric: { criteria: [ { name: 'Comprensión', levels: [ { label: 'Superior', descriptor: 'Domina el concepto', score: 5 }, { label: 'Básico', descriptor: 'Comprende parcialmente', score: 3 } ] } ] },
+      dua: { barriers: ['Diferentes ritmos de aprendizaje'], adjustments: ['Material visual de apoyo', 'Tiempo adicional', 'Trabajo en parejas'] },
+      resources: [],
+      _placeholder: true,
+    };
+  }
+
   async answerTeacherQuestion(
     request: ApdAiTeacherQuestionRequest,
   ): Promise<ApdAiTeacherQuestionResponse> {

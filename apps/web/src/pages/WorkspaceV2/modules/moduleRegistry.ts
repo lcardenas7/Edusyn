@@ -10,6 +10,7 @@
 import type { SectionKey } from '../sections/SectionTabs'
 
 export type ModuleKey =
+  | 'estudio'
   | 'bitacora'
   | 'observaciones'
   | 'recaudo'
@@ -33,6 +34,11 @@ export interface ModuleDef {
 }
 
 export const MODULES: Record<ModuleKey, ModuleDef> = {
+  estudio: {
+    key: 'estudio', label: 'Estudio', emoji: '✨', iconBg: 'bg-fuchsia-50',
+    description: 'Diseña clases y guías con Valeria.',
+    kinds: [], boardTypes: [], status: 'ready',
+  },
   bitacora: {
     key: 'bitacora', label: 'Bitácora', emoji: '📖', iconBg: 'bg-blue-50',
     description: 'Diario de clase, reuniones, incidentes.',
@@ -81,7 +87,7 @@ export const MODULES: Record<ModuleKey, ModuleDef> = {
 }
 
 export const MODULE_ORDER: ModuleKey[] = [
-  'bitacora', 'observaciones', 'recaudo', 'roles', 'recursos', 'lista', 'notas', 'tablero', 'proyecto',
+  'estudio', 'bitacora', 'observaciones', 'recaudo', 'roles', 'recursos', 'lista', 'notas', 'tablero', 'proyecto',
 ]
 
 export interface BoardLike {
@@ -121,7 +127,7 @@ export function activeModules(board: BoardLike, items: ItemLike[]): ModuleKey[] 
 }
 
 // Módulos válidos en el Espacio Personal (sin curso → sin estudiantes).
-export const PERSONAL_MODULES: ModuleKey[] = ['bitacora', 'notas', 'lista', 'tablero', 'recursos', 'proyecto']
+export const PERSONAL_MODULES: ModuleKey[] = ['estudio', 'bitacora', 'notas', 'lista', 'tablero', 'recursos', 'proyecto']
 
 // Módulos que el docente puede activar (los que aún no están activos).
 // En el espacio personal se ofrecen solo los que no dependen de estudiantes.
