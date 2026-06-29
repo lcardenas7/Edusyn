@@ -7,6 +7,8 @@ import { Greeting } from './components/Greeting'
 import { SpacesGrid } from './components/SpacesGrid'
 import type { SpaceCardBoard } from './components/SpaceCard'
 import { CreateSpaceModal } from './components/CreateSpaceModal'
+import { DeleteSpaceModal } from './components/DeleteSpaceModal'
+import { toast } from '../../lib/toast'
 import { TodayPanel, type TodayData } from './components/TodayPanel'
 import { MiniCalendar } from './components/MiniCalendar'
 import { FollowUpsPanel } from './components/FollowUpsPanel'
@@ -26,6 +28,7 @@ export default function WorkspaceV2Page() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
+  const [deletingBoard, setDeletingBoard] = useState<SpaceCardBoard | null>(null)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -46,6 +49,8 @@ export default function WorkspaceV2Page() {
           isPinned: Boolean(b.isPinned),
           isPersonal: Boolean(b.isPersonal),
           isArchived: false,
+          isCourseSpace: Boolean(b.isCourseSpace),
+          enabledModules: b.enabledModules ?? [],
           itemsCount: b.itemsCount,
           updatedAt: b.updatedAt,
         })))
@@ -58,6 +63,23 @@ export default function WorkspaceV2Page() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  const handleDeleteBoard = async (board: SpaceCardBoard) => {
+    try {
+      const res = await teacherWorkspaceApi.deleteBoard(board.id)
+      const archived = res.data?.archived
+      // Quitar la tarjeta de inmediato (en ambos casos desaparece del grid)
+      setBoards((prev) => prev.filter((b) => b.id !== board.id))
+      setDeletingBoard(null)
+      if (archived) {
+        toast.success('Espacio archivado', `“${board.title}” se archivó. Sus datos están a salvo.`)
+      } else {
+        toast.success('Espacio eliminado', `“${board.title}” estaba vacío y se eliminó.`)
+      }
+    } catch (e: any) {
+      toast.error(e)
+    }
+  }
 
   const teacherFirstName = (user as any)?.firstName || (user as any)?.fullName?.split(' ')?.[0] || null
 
@@ -101,6 +123,7 @@ export default function WorkspaceV2Page() {
               boards={boards}
               onOpenBoard={(id) => navigate(`/my-workspace-v2/${id}`)}
               onCreateBoard={() => setCreateOpen(true)}
+              onDeleteBoard={(board) => setDeletingBoard(board)}
             />
 
             {/* Espacio personal — sin curso, siempre disponible */}
@@ -135,6 +158,12 @@ export default function WorkspaceV2Page() {
           load()
           if (boardId) navigate(`/my-workspace-v2/${boardId}`)
         }}
+      />
+
+      <DeleteSpaceModal
+        board={deletingBoard}
+        onClose={() => setDeletingBoard(null)}
+        onConfirm={handleDeleteBoard}
       />
     </div>
   )
