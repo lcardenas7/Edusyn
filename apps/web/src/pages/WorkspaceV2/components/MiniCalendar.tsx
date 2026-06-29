@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { ChevronLeft, ChevronRight, Plus, X, Loader2, Trash2, Check } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, X, Loader2, Trash2, Check, Bell, Users, Flag, Star } from 'lucide-react'
 import { teacherWorkspaceApi } from '../../../lib/api'
+
+// Identidad por tipo de evento (clases Tailwind literales para el purge)
+const EVENT_TYPE: Record<string, { label: string; icon: any; bar: string; text: string; soft: string }> = {
+  REMINDER: { label: 'Recordatorio', icon: Bell, bar: 'bg-violet-500', text: 'text-violet-600', soft: 'bg-violet-50' },
+  MEETING:  { label: 'Reunión', icon: Users, bar: 'bg-blue-500', text: 'text-blue-600', soft: 'bg-blue-50' },
+  DEADLINE: { label: 'Entrega', icon: Flag, bar: 'bg-red-500', text: 'text-red-600', soft: 'bg-red-50' },
+  ACTIVITY: { label: 'Actividad', icon: Star, bar: 'bg-emerald-500', text: 'text-emerald-600', soft: 'bg-emerald-50' },
+  OTHER:    { label: 'Evento', icon: Bell, bar: 'bg-slate-400', text: 'text-slate-500', soft: 'bg-slate-50' },
+}
+const evType = (t?: string) => EVENT_TYPE[(t || 'REMINDER').toUpperCase()] ?? EVENT_TYPE.OTHER
 
 interface WEvent {
   id: string
@@ -127,9 +137,9 @@ export function MiniCalendar() {
                 ${isSelected ? 'bg-violet-600 text-white font-bold' : isToday ? 'bg-violet-50 text-violet-700 font-semibold' : 'hover:bg-slate-100 text-slate-700'}`}
             >
               {d.getDate()}
-              <span className="absolute bottom-1 flex gap-0.5">
-                {hasEvents && <span className={`w-1 h-1 rounded-full ${isSelected ? 'bg-white' : 'bg-violet-500'}`} />}
-                {hasOfficial && <span className={`w-1 h-1 rounded-full ${isSelected ? 'bg-amber-200' : 'bg-amber-400'}`} />}
+              <span className="absolute bottom-1 flex items-center gap-0.5">
+                {hasEvents && <span className={`h-1 w-3 rounded-full ${isSelected ? 'bg-white' : 'bg-violet-500'} shadow-sm`} />}
+                {hasOfficial && <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-amber-200' : 'bg-amber-400'}`} />}
               </span>
             </button>
           )
@@ -161,26 +171,48 @@ export function MiniCalendar() {
           </div>
         )}
 
-        <div className="space-y-1 max-h-40 overflow-y-auto">
+        <div className="space-y-1.5 max-h-52 overflow-y-auto">
+          {/* Fechas oficiales del período (solo lectura) */}
           {selectedOfficial.map((o, idx) => (
-            <div key={`o${idx}`} className="flex items-center gap-2 text-xs px-1.5 py-1 text-amber-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
-              <span className="truncate">{o.label}</span>
-              <span className="text-[9px] text-amber-400 ml-auto">oficial</span>
+            <div key={`o${idx}`} className="flex items-stretch gap-2 rounded-xl bg-amber-50 border border-amber-100 overflow-hidden">
+              <span className="w-1 bg-amber-400 flex-shrink-0" />
+              <div className="flex items-center gap-2 flex-1 py-2 pr-2">
+                <Flag className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                <span className="text-xs font-medium text-amber-800 truncate flex-1">{o.label}</span>
+                <span className="text-[9px] text-amber-500 uppercase tracking-wide font-semibold">oficial</span>
+              </div>
             </div>
           ))}
-          {selectedEvents.map((e) => (
-            <motion.div key={e.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="group flex items-center gap-2 text-xs px-1.5 py-1 rounded hover:bg-slate-50">
-              <button onClick={() => toggleDone(e)} className="flex-shrink-0">
-                {e.done ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <span className="w-3 h-3 rounded-full border border-slate-300 inline-block" />}
-              </button>
-              <span className={`truncate flex-1 ${e.done ? 'line-through text-slate-400' : 'text-slate-700'}`}>{e.title}</span>
-              {e.board && <span className="text-[9px] text-slate-400">{e.board.emoji}</span>}
-              <button onClick={() => remove(e)} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition"><Trash2 className="w-3 h-3" /></button>
-            </motion.div>
-          ))}
+
+          {/* Eventos del docente — tarjeta con barra de color por tipo */}
+          {selectedEvents.map((e) => {
+            const t = evType(e.type)
+            const Icon = t.icon
+            return (
+              <motion.div key={e.id} initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }}
+                className={`group flex items-stretch gap-2 rounded-xl border border-slate-200 overflow-hidden ${e.done ? 'opacity-60' : ''}`}>
+                <span className={`w-1 flex-shrink-0 ${e.done ? 'bg-slate-300' : t.bar}`} />
+                <div className="flex items-center gap-2 flex-1 min-w-0 py-2 pr-2">
+                  <button onClick={() => toggleDone(e)} className="flex-shrink-0" title={e.done ? 'Reabrir' : 'Marcar hecho'}>
+                    {e.done
+                      ? <Check className="w-4 h-4 text-emerald-500" />
+                      : <span className={`w-4 h-4 rounded-md ${t.soft} ${t.text} inline-flex items-center justify-center`}><Icon className="w-2.5 h-2.5" /></span>}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-xs font-medium truncate ${e.done ? 'line-through text-slate-400' : 'text-slate-800'}`}>{e.title}</p>
+                    <p className="text-[10px] text-slate-400 truncate">
+                      <span className={t.text}>{t.label}</span>
+                      {e.board && <> · {e.board.emoji} {e.board.title}</>}
+                    </p>
+                  </div>
+                  <button onClick={() => remove(e)} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition flex-shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
+                </div>
+              </motion.div>
+            )
+          })}
+
           {selectedEvents.length === 0 && selectedOfficial.length === 0 && !adding && (
-            <p className="text-[11px] text-slate-400 px-1.5 py-2">Nada programado este día.</p>
+            <p className="text-[11px] text-slate-400 px-1.5 py-3 text-center">Nada programado este día.</p>
           )}
         </div>
       </div>
