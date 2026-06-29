@@ -14,6 +14,7 @@ import { BitacoraModule, type BitacoraItem } from './modules/BitacoraModule'
 import { RecaudoModule } from './modules/RecaudoModule'
 import { RolesModule } from './modules/RolesModule'
 import { ObservacionesModule, type ObsItem } from './modules/ObservacionesModule'
+import { BibliotecaModule } from './modules/BibliotecaModule'
 
 interface BoardData {
   id: string
@@ -228,6 +229,8 @@ export default function SpaceDetailPage() {
 
               {openModule === 'recaudo' ? (
                 <RecaudoModule boardId={board.id} />
+              ) : openModule === 'recursos' ? (
+                <BibliotecaModule boardId={board.id} />
               ) : openModule === 'roles' ? (
                 <RolesModule boardId={board.id} />
               ) : openModule === 'observaciones' ? (

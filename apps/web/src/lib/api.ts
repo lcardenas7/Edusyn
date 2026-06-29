@@ -1931,6 +1931,16 @@ export const teacherWorkspaceApi = {
     api.put(`/teacher-workspace/columns/${id}`, data),
   deleteColumn: (id: string) => api.delete(`/teacher-workspace/columns/${id}`),
 
+  // Biblioteca (F9)
+  listResources: (boardId: string, folderId?: string) => api.get('/teacher-workspace/resources', { params: { boardId, folderId } }),
+  createFolder: (data: { boardId: string; name: string }) => api.post('/teacher-workspace/resource-folders', data),
+  deleteFolder: (id: string) => api.delete(`/teacher-workspace/resource-folders/${id}`),
+  addResourceLink: (data: { boardId: string; name: string; url: string; folderId?: string; tags?: string[] }) => api.post('/teacher-workspace/resources/link', data),
+  uploadResource: (formData: FormData) => api.post('/teacher-workspace/resources/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  downloadResource: (id: string) => api.get(`/teacher-workspace/resources/${id}/download`),
+  updateResource: (id: string, data: { name?: string; folderId?: string | null; tags?: string[]; isFavorite?: boolean; isArchived?: boolean }) => api.patch(`/teacher-workspace/resources/${id}`, data),
+  deleteResource: (id: string) => api.delete(`/teacher-workspace/resources/${id}`),
+
   // Roster + Roles (F7)
   getRoster: (boardId: string) => api.get(`/teacher-workspace/boards/${boardId}/roster`),
   listRoles: (boardId: string) => api.get('/teacher-workspace/roles', { params: { boardId } }),

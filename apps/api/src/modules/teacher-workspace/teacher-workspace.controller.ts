@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Request, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -168,6 +169,64 @@ export class TeacherWorkspaceController {
   async unassignRole(@Request() req: any, @Param('id') id: string) {
     const { teacherId, institutionId } = await this.resolveCtx(req);
     return this.service.unassignRole(id, teacherId, institutionId);
+  }
+
+  // ── Biblioteca ──────────────────────────────────────────────────────────────
+  @Get('resources')
+  async listResources(@Request() req: any, @Query('boardId') boardId: string, @Query('folderId') folderId?: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.listResources(boardId, teacherId, institutionId, folderId);
+  }
+
+  @Post('resource-folders')
+  async createFolder(@Request() req: any, @Body() dto: any) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.createFolder(teacherId, institutionId, dto);
+  }
+
+  @Delete('resource-folders/:id')
+  async deleteFolder(@Request() req: any, @Param('id') id: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.deleteFolder(id, teacherId, institutionId);
+  }
+
+  @Post('resources/link')
+  async addLink(@Request() req: any, @Body() dto: any) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.addLinkResource(teacherId, institutionId, dto);
+  }
+
+  @Post('resources/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadResource(
+    @Request() req: any,
+    @UploadedFile() file: Express.Multer.File,
+    @Body('boardId') boardId: string,
+    @Body('folderId') folderId?: string,
+    @Body('name') name?: string,
+    @Body('tags') tags?: string,
+  ) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    const parsedTags = tags ? (typeof tags === 'string' ? tags.split(',').map((t) => t.trim()).filter(Boolean) : tags) : [];
+    return this.service.uploadResource(teacherId, institutionId, file, { boardId, folderId, name, tags: parsedTags });
+  }
+
+  @Get('resources/:id/download')
+  async downloadResource(@Request() req: any, @Param('id') id: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.getResourceDownloadUrl(id, teacherId, institutionId);
+  }
+
+  @Patch('resources/:id')
+  async updateResource(@Request() req: any, @Param('id') id: string, @Body() dto: any) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.updateResource(id, teacherId, institutionId, dto);
+  }
+
+  @Delete('resources/:id')
+  async deleteResource(@Request() req: any, @Param('id') id: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.deleteResource(id, teacherId, institutionId);
   }
 
   @Get('boards')

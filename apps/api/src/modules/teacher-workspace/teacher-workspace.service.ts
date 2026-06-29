@@ -2,10 +2,14 @@ import { Injectable, ForbiddenException, BadRequestException, NotFoundException 
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBoardDto, UpdateBoardDto, CreateColumnDto, UpdateColumnDto, CreateItemDto, UpdateItemDto, MoveItemDto } from './dto/workspace.dto';
 import { WorkspaceBoardType, WorkspaceScopeType } from '@prisma/client';
+import { StorageService } from '../storage/storage.service';
 
 @Injectable()
 export class TeacherWorkspaceService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private storage: StorageService,
+  ) {}
 
   private getSeatingNumber(row: number, col: number, rows: number, columns: number, rowSizes?: number[]) {
     const sizes = Array.isArray(rowSizes) && rowSizes.length === rows
@@ -820,6 +824,124 @@ export class TeacherWorkspaceService {
     // Soft: marcar removedAt → queda en historial
     await this.prisma.workspaceRoleAssignment.update({ where: { id: assignmentId }, data: { removedAt: new Date() } });
     return this.listRoles(a.role.boardId, teacherId, institutionId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BIBLIOTECA — recursos (archivos/enlaces) + carpetas. Usa el módulo storage.
+  // ═══════════════════════════════════════════════════════════════════════════
+  async listResources(boardId: string, teacherId: string, institutionId: string, folderId?: string) {
+    await this.validateBoardOwnership(boardId, teacherId, institutionId);
+    const [folders, resources] = await Promise.all([
+      this.prisma.workspaceResourceFolder.findMany({ where: { boardId }, orderBy: { name: 'asc' } }),
+      this.prisma.workspaceResource.findMany({
+        where: { boardId, isArchived: false, ...(folderId ? { folderId } : {}) },
+        orderBy: [{ isFavorite: 'desc' }, { createdAt: 'desc' }],
+      }),
+    ]);
+    // conteo por carpeta
+    const counts = await this.prisma.workspaceResource.groupBy({
+      by: ['folderId'], where: { boardId, isArchived: false }, _count: { _all: true },
+    });
+    const countMap = new Map(counts.map((c) => [c.folderId, c._count._all]));
+    return {
+      folders: folders.map((f) => ({ id: f.id, name: f.name, count: countMap.get(f.id) ?? 0 })),
+      resources,
+      rootCount: countMap.get(null) ?? 0,
+    };
+  }
+
+  async createFolder(teacherId: string, institutionId: string, dto: { boardId: string; name: string }) {
+    await this.validateBoardOwnership(dto.boardId, teacherId, institutionId);
+    if (!dto.name?.trim()) throw new BadRequestException('La carpeta necesita un nombre');
+    return this.prisma.workspaceResourceFolder.create({ data: { boardId: dto.boardId, name: dto.name.trim() } });
+  }
+
+  async deleteFolder(folderId: string, teacherId: string, institutionId: string) {
+    const f = await this.prisma.workspaceResourceFolder.findUnique({ where: { id: folderId } });
+    if (!f) throw new NotFoundException('Carpeta no encontrada');
+    await this.validateBoardOwnership(f.boardId, teacherId, institutionId);
+    await this.prisma.workspaceResourceFolder.delete({ where: { id: folderId } });
+    return { success: true };
+  }
+
+  async addLinkResource(teacherId: string, institutionId: string, dto: {
+    boardId: string; name: string; url: string; folderId?: string; tags?: string[];
+  }) {
+    await this.validateBoardOwnership(dto.boardId, teacherId, institutionId);
+    if (!dto.url?.trim()) throw new BadRequestException('El enlace necesita una URL');
+    const isVideo = /youtube\.com|youtu\.be|vimeo\.com/.test(dto.url);
+    return this.prisma.workspaceResource.create({
+      data: {
+        boardId: dto.boardId, institutionId, ownerId: teacherId,
+        folderId: dto.folderId || null,
+        name: dto.name?.trim() || dto.url,
+        type: isVideo ? 'VIDEO' : 'LINK',
+        url: dto.url.trim(), tags: dto.tags ?? [],
+      },
+    });
+  }
+
+  async uploadResource(teacherId: string, institutionId: string, file: Express.Multer.File, dto: {
+    boardId: string; folderId?: string; name?: string; tags?: string[];
+  }) {
+    await this.validateBoardOwnership(dto.boardId, teacherId, institutionId);
+    if (!file) throw new BadRequestException('No se recibió archivo');
+    if (!this.storage.isConfigured()) throw new BadRequestException('Almacenamiento no configurado');
+
+    const safe = (file.originalname || 'archivo').replace(/[^\w.\-]+/g, '_');
+    const key = `teacher-workspace/${institutionId}/${dto.boardId}/${Date.now()}_${safe}`;
+    const result = await this.storage.upload(key, file.buffer, file.mimetype || 'application/octet-stream');
+
+    return this.prisma.workspaceResource.create({
+      data: {
+        boardId: dto.boardId, institutionId, ownerId: teacherId,
+        folderId: dto.folderId || null,
+        name: dto.name?.trim() || file.originalname || 'archivo',
+        type: 'FILE',
+        url: result.url, storageKey: result.key,
+        mimeType: file.mimetype, sizeBytes: file.size,
+        tags: dto.tags ?? [],
+      },
+    });
+  }
+
+  private async loadResourceOwned(id: string, teacherId: string, institutionId: string) {
+    const r = await this.prisma.workspaceResource.findUnique({ where: { id } });
+    if (!r) throw new NotFoundException('Recurso no encontrado');
+    await this.validateBoardOwnership(r.boardId, teacherId, institutionId);
+    return r;
+  }
+
+  async updateResource(id: string, teacherId: string, institutionId: string, dto: {
+    name?: string; folderId?: string | null; tags?: string[]; isFavorite?: boolean; isArchived?: boolean;
+  }) {
+    await this.loadResourceOwned(id, teacherId, institutionId);
+    return this.prisma.workspaceResource.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.folderId !== undefined && { folderId: dto.folderId }),
+        ...(dto.tags !== undefined && { tags: dto.tags }),
+        ...(dto.isFavorite !== undefined && { isFavorite: dto.isFavorite }),
+        ...(dto.isArchived !== undefined && { isArchived: dto.isArchived }),
+      },
+    });
+  }
+
+  async deleteResource(id: string, teacherId: string, institutionId: string) {
+    const r = await this.loadResourceOwned(id, teacherId, institutionId);
+    if (r.storageKey && this.storage.isConfigured()) {
+      try { await this.storage.delete(r.storageKey); } catch { /* best effort */ }
+    }
+    await this.prisma.workspaceResource.delete({ where: { id } });
+    return { success: true };
+  }
+
+  async getResourceDownloadUrl(id: string, teacherId: string, institutionId: string) {
+    const r = await this.loadResourceOwned(id, teacherId, institutionId);
+    if (r.type !== 'FILE' || !r.storageKey) return { url: r.url };
+    const url = await this.storage.getSignedUrl(r.storageKey, 600);
+    return { url };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

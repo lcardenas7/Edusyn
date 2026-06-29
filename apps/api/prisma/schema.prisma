@@ -4957,6 +4957,8 @@ model WorkspaceBoard {
   activities   WorkspaceActivity[]
   collections  WorkspaceCollection[]
   roles        WorkspaceRole[]
+  resources    WorkspaceResource[]
+  resourceFolders WorkspaceResourceFolder[]
 
   @@index([teacherId, institutionId])
   @@index([teacherId, type])
@@ -5227,6 +5229,51 @@ model WorkspaceRoleAssignment {
 
   @@index([roleId])
   @@index([studentId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WORKSPACE V2 · F9 — Biblioteca (repositorio de recursos del docente)
+// Independiente de los adjuntos inline. Carpetas, etiquetas, favoritos,
+// versionado. Privado del docente.
+// ═══════════════════════════════════════════════════════════════════════════
+
+model WorkspaceResourceFolder {
+  id        String   @id @default(cuid())
+  boardId   String
+  name      String
+  parentId  String?
+  createdAt DateTime @default(now())
+
+  board     WorkspaceBoard      @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  resources WorkspaceResource[]
+
+  @@index([boardId])
+}
+
+model WorkspaceResource {
+  id            String   @id @default(cuid())
+  boardId       String
+  institutionId String
+  ownerId       String
+  folderId      String?
+  name          String
+  type          String   @default("FILE") // FILE | LINK | VIDEO
+  url           String
+  storageKey    String? // key en el bucket (para URL firmada / borrado)
+  mimeType      String?
+  sizeBytes     Int?
+  version       Int      @default(1)
+  tags          String[] @default([])
+  isFavorite    Boolean  @default(false)
+  isArchived    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  board  WorkspaceBoard           @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  folder WorkspaceResourceFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([boardId])
+  @@index([folderId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
