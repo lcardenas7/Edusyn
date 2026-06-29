@@ -40,6 +40,11 @@
   - Se eliminó el flag `WORKSPACE_V2_ENABLED` (ya no hay gating por hostname).
   - Funciones nuevas: borrar/archivar espacios, vista de archivados (restaurar/eliminar), eliminar recaudo, chips de módulos en tarjetas.
 
+## Estudio · Diseño Pedagógico IA (en staging)
+- ✅ **E0** Cimientos: modelos `PedagogicalDesign` + `PedagogicalDesignVersion` (migración `20260629120000_pedagogical_design_e0`, aplicada en staging). Doc `docs/DISENO_PEDAGOGICO_IA.md`.
+- ✅ **E1** Generar/ver/editar/guardar/eliminar: módulo "Estudio" (✨) activable en el curso; backend `pedagogical-design` reutiliza `ApdAiService.generatePedagogicalDesign` (callLlmJson) con plantilla de respaldo. **Solo staging**, pendiente prueba del usuario antes de prod.
+- ⬜ **E2** Versiones + PDF · **E3** Enviar al Aula Virtual (Composer) · resto del roadmap en el doc.
+
 ## Siguiente
 - ⬜ **F13b** (opcional) Plantillas + ritual de inicio/cierre de día.
 - ⬜ **Validación** completa con `docs/PLAN_PRUEBAS.md`.
