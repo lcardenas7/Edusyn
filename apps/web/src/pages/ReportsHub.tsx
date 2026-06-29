@@ -18,7 +18,8 @@ import {
   UserX,
   CheckCircle,
   TrendingDown,
-  Shield
+  Shield,
+  ShieldAlert
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -115,6 +116,13 @@ const CATEGORIES: ReportCategory[] = [
     ],
   },
   {
+    id: 'preventive', name: 'Corte Preventivo', description: 'Cómo va cada estudiante antes de cerrar el período',
+    icon: ShieldAlert, href: '/reports/preventive-cut', color: 'orange', reportCount: 1,
+    reports: [
+      { id: 'preventive-group', name: 'Corte por grupo (con PDF)', href: '/reports/preventive-cut', icon: ShieldAlert },
+    ],
+  },
+  {
     id: 'commission', name: 'Comisión de Evaluación', description: 'Genera el acta formal de comisión con datos académicos y convivenciales',
     icon: ClipboardList, href: '/reports/commission', color: 'teal', reportCount: 1,
     reports: [
@@ -132,6 +140,7 @@ const COLOR_MAP: Record<string, { bg: string; bgLight: string; border: string; t
   red:    { bg: 'bg-red-500',    bgLight: 'bg-red-50',    border: 'border-red-200',    text: 'text-red-600',    hover: 'hover:border-red-400',    ring: 'ring-red-200' },
   slate:  { bg: 'bg-slate-700',   bgLight: 'bg-slate-50',  border: 'border-slate-200',   text: 'text-slate-700',   hover: 'hover:border-slate-400',   ring: 'ring-slate-200' },
   teal:   { bg: 'bg-teal-600',   bgLight: 'bg-teal-50',   border: 'border-teal-200',   text: 'text-teal-600',   hover: 'hover:border-teal-400',   ring: 'ring-teal-200' },
+  orange: { bg: 'bg-orange-600', bgLight: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-600', hover: 'hover:border-orange-400', ring: 'ring-orange-200' },
 }
 
 export default function ReportsHub() {

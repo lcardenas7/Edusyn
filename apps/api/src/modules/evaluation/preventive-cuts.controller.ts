@@ -6,8 +6,10 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { PreventiveAlertStatus } from '@prisma/client';
 
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -61,5 +63,64 @@ export class PreventiveCutsController {
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
   async updateAlert(@Param('id') id: string, @Body() dto: UpdatePreventiveAlertDto) {
     return this.preventiveCutsService.updateAlert(id, dto);
+  }
+
+  // ── Corte preventivo consolidado por grupo (solo lectura) ──────────────────
+  @Get('group-view')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async groupView(
+    @Query('academicTermId') academicTermId: string,
+    @Query('groupId') groupId: string,
+    @Query('cutoffDate') cutoffDate?: string,
+    @Query('threshold') threshold?: string,
+  ) {
+    return this.preventiveCutsService.executeGroupView({
+      academicTermId,
+      groupId,
+      cutoffDate: cutoffDate ? new Date(cutoffDate) : undefined,
+      threshold: threshold ? Number(threshold) : undefined,
+    });
+  }
+
+  @Get('pdf/group')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async groupPdf(
+    @Res() res: Response,
+    @Query('academicTermId') academicTermId: string,
+    @Query('groupId') groupId: string,
+    @Query('cutoffDate') cutoffDate?: string,
+    @Query('threshold') threshold?: string,
+  ) {
+    const pdf = await this.preventiveCutsService.generateGroupPdf({
+      academicTermId,
+      groupId,
+      cutoffDate: cutoffDate ? new Date(cutoffDate) : undefined,
+      threshold: threshold ? Number(threshold) : undefined,
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="corte-preventivo-grupo.pdf"');
+    res.end(pdf);
+  }
+
+  @Get('pdf/student')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
+  async studentPdf(
+    @Res() res: Response,
+    @Query('academicTermId') academicTermId: string,
+    @Query('groupId') groupId: string,
+    @Query('studentEnrollmentId') studentEnrollmentId: string,
+    @Query('cutoffDate') cutoffDate?: string,
+    @Query('threshold') threshold?: string,
+  ) {
+    const pdf = await this.preventiveCutsService.generateStudentPdf({
+      academicTermId,
+      groupId,
+      studentEnrollmentId,
+      cutoffDate: cutoffDate ? new Date(cutoffDate) : undefined,
+      threshold: threshold ? Number(threshold) : undefined,
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="corte-preventivo-estudiante.pdf"');
+    res.end(pdf);
   }
 }

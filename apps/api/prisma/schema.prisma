@@ -4896,6 +4896,19 @@ enum WorkspaceScopeType {
   MULTI_GROUP
 }
 
+// WORKSPACE_V2 — nuevo enum polimórfico para items
+enum WorkspaceItemKind {
+  NOTE
+  TASK
+  OBSERVATION
+  LOG
+  COLLECTION
+  IDEA
+  LIST
+  FILE
+  EVENT
+}
+
 model WorkspaceBoard {
   id             String              @id @default(cuid())
   teacherId      String
@@ -4918,6 +4931,20 @@ model WorkspaceBoard {
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
+  // WORKSPACE_V2 — campos de personalización visual y organización
+  emoji          String?             // Emoji/icono del espacio (📐, 🚀, etc.)
+  coverImage     String?             // URL de portada opcional
+  bannerColor    String?             // Color secundario para gradiente con `color`
+  isPinned       Boolean             @default(false) // Fijado en home del docente
+  isPersonal     Boolean             @default(false) // True para el "Espacio personal" (uno por docente)
+  linkedClassId  String?             // Vínculo con horario oficial (clase/materia)
+  hiddenSections String[]            @default([])    // Pestañas ocultas por desuso
+  lastAccessedAt DateTime?           // Para sort por reciente en home
+
+  // F0 — espacio como contenedor de curso con módulos bajo demanda
+  enabledModules String[]            @default([])    // módulos activados manualmente
+  isCourseSpace  Boolean             @default(false) // marca de espacio-curso (multi-módulo)
+
   teacher      User              @relation("WorkspaceBoards", fields: [teacherId], references: [id], onDelete: Cascade)
   institution  Institution       @relation("RlsInstitutionWB", fields: [institutionId], references: [id], onDelete: Cascade)
   academicYear AcademicYear?     @relation(fields: [academicYearId], references: [id])
@@ -4925,12 +4952,22 @@ model WorkspaceBoard {
   grade        Grade?            @relation("WorkspaceBoardGrade", fields: [gradeId], references: [id])
   columns      WorkspaceColumn[]
   items        WorkspaceItem[]
+  events       WorkspaceEvent[]
+  followUps    WorkspaceFollowUp[]
+  activities   WorkspaceActivity[]
+  collections  WorkspaceCollection[]
+  roles        WorkspaceRole[]
+  resources    WorkspaceResource[]
+  resourceFolders WorkspaceResourceFolder[]
+  projects     WorkspaceProject[]
 
   @@index([teacherId, institutionId])
   @@index([teacherId, type])
   @@index([institutionId, visibility])
   @@index([gradeId])
   @@index([startDate, endDate])
+  @@index([teacherId, isPinned])
+  @@index([teacherId, lastAccessedAt(sort: Desc)])
 }
 
 model WorkspaceColumn {
@@ -4962,6 +4999,16 @@ model WorkspaceItem {
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
 
+  // WORKSPACE_V2 — modelo polimórfico de elementos de organización
+  kind            WorkspaceItemKind?       // NOTE | TASK | OBSERVATION | LOG | COLLECTION | IDEA | LIST | FILE | EVENT
+  completedAt     DateTime?                // Cuando se cierra/marca como hecho
+  amount          Decimal?  @db.Decimal(12, 2) // Meta de recaudo (si kind=COLLECTION)
+  amountCollected Decimal?  @db.Decimal(12, 2) // Monto efectivamente recaudado
+  tags            String[]  @default([])   // Tags libres
+  // F5 — Bitácora: tipo de entrada y destacado
+  entryType       String?                  // clase|reunion|idea|llamada|incidente|otro
+  isImportant     Boolean   @default(false)
+
   board   WorkspaceBoard   @relation(fields: [boardId], references: [id], onDelete: Cascade)
   column  WorkspaceColumn? @relation(fields: [columnId], references: [id], onDelete: SetNull)
   student User?            @relation("WorkspaceItemStudent", fields: [studentId], references: [id])
@@ -4971,6 +5018,318 @@ model WorkspaceItem {
   @@index([boardId, studentId])
   @@index([dueDate])
   @@index([eventDate])
+  @@index([boardId, kind])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WORKSPACE V2 · F0 — Capas transversales (Calendario, Seguimientos,
+// Actividad, Favoritos, Dashboard configurable). Todo privado del docente,
+// no toca el core académico. Ver docs/MI_ESPACIO_DOCENTE_MASTER.md §24.
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum WorkspaceEventType {
+  REMINDER
+  MEETING
+  DEADLINE
+  ACTIVITY
+  OTHER
+}
+
+enum WorkspaceFollowUpStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+}
+
+enum WorkspaceFollowUpSource {
+  OBSERVATION
+  BITACORA
+  PROJECT
+  COLLECTION
+  TASK
+  MANUAL
+}
+
+enum WorkspaceFavoriteType {
+  BOARD
+  ITEM
+  PROJECT
+  RESOURCE
+  FOLLOWUP
+  COLLECTION
+}
+
+// Calendario — eventos opcionales que cualquier registro puede crear.
+model WorkspaceEvent {
+  id            String             @id @default(cuid())
+  institutionId String
+  teacherId     String
+  boardId       String?
+  itemId        String?            // referencia blanda al registro de origen
+  title         String
+  date          DateTime
+  allDay        Boolean            @default(true)
+  type          WorkspaceEventType @default(REMINDER)
+  done          Boolean            @default(false)
+  isArchived    Boolean            @default(false)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  board WorkspaceBoard? @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId, date])
+  @@index([boardId])
+  @@index([itemId])
+}
+
+// Seguimientos — motor del dashboard. Cualquier módulo puede generarlos.
+model WorkspaceFollowUp {
+  id            String                  @id @default(cuid())
+  institutionId String
+  teacherId     String
+  boardId       String?
+  sourceType    WorkspaceFollowUpSource @default(MANUAL)
+  sourceItemId  String?                 // referencia blanda al origen
+  studentId     String?
+  title         String
+  notes         String?
+  dueDate       DateTime?
+  status        WorkspaceFollowUpStatus @default(OPEN)
+  isArchived    Boolean                 @default(false)
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  resolvedAt    DateTime?
+
+  board WorkspaceBoard? @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId, status])
+  @@index([boardId])
+  @@index([dueDate])
+  @@index([sourceItemId])
+}
+
+// Actividad — columna vertebral de Timeline, Actividad reciente e Inteligencia.
+// Append-only e indexada (evita UNION sobre múltiples tablas).
+model WorkspaceActivity {
+  id            String   @id @default(cuid())
+  institutionId String
+  teacherId     String
+  boardId       String?
+  verb          String   // created | updated | completed | paid | assigned | archived
+  entityType    String   // ENTRY | TASK | EVENT | FOLLOWUP | COLLECTION | ROLE | RESOURCE | PROJECT | BOARD
+  entityId      String?
+  summary       String
+  createdAt     DateTime @default(now())
+
+  board WorkspaceBoard? @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId, createdAt])
+  @@index([boardId, createdAt])
+}
+
+// Favoritos — polimórfico. Acceso rápido a lo importante.
+model WorkspaceFavorite {
+  id         String                @id @default(cuid())
+  teacherId  String
+  entityType WorkspaceFavoriteType
+  entityId   String
+  createdAt  DateTime              @default(now())
+
+  @@unique([teacherId, entityType, entityId])
+  @@index([teacherId])
+}
+
+// Dashboard configurable por docente (widgets: visibilidad, orden, tamaño).
+model WorkspaceDashboardConfig {
+  id        String   @id @default(cuid())
+  teacherId String   @unique
+  widgets   Json     // [{ key, visible, order, size }]
+  updatedAt DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WORKSPACE V2 · F6 — Recaudo (sub-dominio relacional)
+// Meta = unitValue × nº de cargos (calculada, nunca manual). Pagos parciales
+// e historial. Privado del docente, no toca finanzas oficiales.
+// ═══════════════════════════════════════════════════════════════════════════
+
+model WorkspaceCollection {
+  id            String    @id @default(cuid())
+  boardId       String
+  institutionId String
+  name          String
+  description   String?
+  unitValue     Decimal   @db.Decimal(12, 2)
+  dueDate       DateTime?
+  isArchived    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  board   WorkspaceBoard              @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  charges WorkspaceCollectionCharge[]
+
+  @@index([boardId])
+}
+
+model WorkspaceCollectionCharge {
+  id           String   @id @default(cuid())
+  collectionId String
+  studentId    String   // Student.id — sin FK forzada (workspace desacoplado), solo índice
+  studentName  String   // denormalizado para mostrar sin joins al core
+  status       String   @default("PENDING") // PENDING | PARTIAL | PAID (derivado, se persiste para consulta)
+  createdAt    DateTime @default(now())
+
+  collection WorkspaceCollection          @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  payments   WorkspaceCollectionPayment[]
+
+  @@index([collectionId])
+  @@index([studentId])
+}
+
+model WorkspaceCollectionPayment {
+  id       String   @id @default(cuid())
+  chargeId String
+  amount   Decimal  @db.Decimal(12, 2)
+  paidAt   DateTime @default(now())
+  note     String?
+
+  charge WorkspaceCollectionCharge @relation(fields: [chargeId], references: [id], onDelete: Cascade)
+
+  @@index([chargeId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WORKSPACE V2 · F7 — Roles del salón (catálogo + asignaciones con historial)
+// Privado del docente. No toca convivencia oficial.
+// ═══════════════════════════════════════════════════════════════════════════
+
+model WorkspaceRole {
+  id            String   @id @default(cuid())
+  boardId       String
+  institutionId String
+  name          String
+  isCustom      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  board       WorkspaceBoard            @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  assignments WorkspaceRoleAssignment[]
+
+  @@index([boardId])
+}
+
+model WorkspaceRoleAssignment {
+  id           String    @id @default(cuid())
+  roleId       String
+  studentId    String
+  studentName  String
+  studentPhoto String?
+  assignedAt   DateTime  @default(now())
+  removedAt    DateTime? // null = activo; con valor = historial
+
+  role WorkspaceRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@index([roleId])
+  @@index([studentId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WORKSPACE V2 · F9 — Biblioteca (repositorio de recursos del docente)
+// Independiente de los adjuntos inline. Carpetas, etiquetas, favoritos,
+// versionado. Privado del docente.
+// ═══════════════════════════════════════════════════════════════════════════
+
+model WorkspaceResourceFolder {
+  id        String   @id @default(cuid())
+  boardId   String
+  name      String
+  parentId  String?
+  createdAt DateTime @default(now())
+
+  board     WorkspaceBoard      @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  resources WorkspaceResource[]
+
+  @@index([boardId])
+}
+
+model WorkspaceResource {
+  id            String   @id @default(cuid())
+  boardId       String
+  institutionId String
+  ownerId       String
+  folderId      String?
+  name          String
+  type          String   @default("FILE") // FILE | LINK | VIDEO
+  url           String
+  storageKey    String? // key en el bucket (para URL firmada / borrado)
+  mimeType      String?
+  sizeBytes     Int?
+  version       Int      @default(1)
+  tags          String[] @default([])
+  isFavorite    Boolean  @default(false)
+  isArchived    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  board  WorkspaceBoard           @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  folder WorkspaceResourceFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([boardId])
+  @@index([folderId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WORKSPACE V2 · F10 — Proyecto (entidad de primer nivel, ver MASTER §22)
+// Contenedor con ciclo de vida propio. Tareas/comentarios/evidencias se
+// implementan reusando primitivas (tablas hijas mínimas).
+// ═══════════════════════════════════════════════════════════════════════════
+
+model WorkspaceProject {
+  id            String    @id @default(cuid())
+  boardId       String
+  institutionId String
+  name          String
+  objective     String?
+  competencies  String?
+  status        String    @default("PLANNING") // PLANNING | ACTIVE | DONE | ARCHIVED
+  progress      Int       @default(0)           // 0–100
+  startDate     DateTime?
+  endDate       DateTime?
+  isFavorite    Boolean   @default(false)
+  isArchived    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  board   WorkspaceBoard          @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks   WorkspaceProjectTask[]
+  members WorkspaceProjectMember[]
+
+  @@index([boardId])
+}
+
+model WorkspaceProjectTask {
+  id        String    @id @default(cuid())
+  projectId String
+  title     String
+  done      Boolean   @default(false)
+  dueDate   DateTime?
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  project WorkspaceProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model WorkspaceProjectMember {
+  id          String   @id @default(cuid())
+  projectId   String
+  studentId   String
+  studentName String
+  addedAt     DateTime @default(now())
+
+  project WorkspaceProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

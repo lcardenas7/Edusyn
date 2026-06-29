@@ -2,10 +2,14 @@ import { Injectable, ForbiddenException, BadRequestException, NotFoundException 
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBoardDto, UpdateBoardDto, CreateColumnDto, UpdateColumnDto, CreateItemDto, UpdateItemDto, MoveItemDto } from './dto/workspace.dto';
 import { WorkspaceBoardType, WorkspaceScopeType } from '@prisma/client';
+import { StorageService } from '../storage/storage.service';
 
 @Injectable()
 export class TeacherWorkspaceService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private storage: StorageService,
+  ) {}
 
   private getSeatingNumber(row: number, col: number, rows: number, columns: number, rowSizes?: number[]) {
     const sizes = Array.isArray(rowSizes) && rowSizes.length === rows
@@ -275,6 +279,12 @@ export class TeacherWorkspaceService {
         ...(dto.metadata !== undefined && { metadata: dto.metadata }),
         ...(dto.isArchived !== undefined && { isArchived: dto.isArchived }),
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
+        // WORKSPACE_V2
+        ...(dto.emoji !== undefined && { emoji: dto.emoji }),
+        ...(dto.bannerColor !== undefined && { bannerColor: dto.bannerColor }),
+        ...(dto.coverImage !== undefined && { coverImage: dto.coverImage }),
+        ...(dto.isPinned !== undefined && { isPinned: dto.isPinned }),
+        ...(dto.enabledModules !== undefined && { enabledModules: dto.enabledModules }),
       },
     });
   }
@@ -283,6 +293,885 @@ export class TeacherWorkspaceService {
     await this.validateBoardOwnership(boardId, teacherId, institutionId);
     await this.prisma.workspaceBoard.delete({ where: { id: boardId } });
     return { success: true };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BÚSQUEDA GLOBAL — transversal a todos los módulos del docente (privada).
+  // Un solo endpoint; ILIKE sobre columnas indexadas. Acotada a sus tableros.
+  // ═══════════════════════════════════════════════════════════════════════════
+  async globalSearch(teacherId: string, institutionId: string, q: string) {
+    const query = (q || '').trim();
+    if (query.length < 2) return { results: [], query };
+
+    const boards = await this.prisma.workspaceBoard.findMany({
+      where: { teacherId, institutionId, isArchived: false },
+      select: { id: true, title: true, emoji: true },
+    });
+    if (!boards.length) return { results: [], query };
+    const boardIds = boards.map((b) => b.id);
+    const boardMap = new Map(boards.map((b) => [b.id, b]));
+    const contains = { contains: query, mode: 'insensitive' as const };
+    const TAKE = 6;
+
+    const [items, collections, charges, roleAsgs, resources, followUps, projects] = await Promise.all([
+      this.prisma.workspaceItem.findMany({
+        where: { boardId: { in: boardIds }, isArchived: false, OR: [{ title: contains }, { content: contains }] },
+        select: { id: true, title: true, kind: true, boardId: true, metadata: true }, take: TAKE,
+      }),
+      this.prisma.workspaceCollection.findMany({
+        where: { boardId: { in: boardIds }, isArchived: false, name: contains },
+        select: { id: true, name: true, boardId: true }, take: TAKE,
+      }),
+      this.prisma.workspaceCollectionCharge.findMany({
+        where: { collection: { boardId: { in: boardIds } }, studentName: contains },
+        select: { id: true, studentName: true, collection: { select: { name: true, boardId: true } } }, take: TAKE,
+      }),
+      this.prisma.workspaceRoleAssignment.findMany({
+        where: { role: { boardId: { in: boardIds } }, removedAt: null, studentName: contains },
+        select: { id: true, studentName: true, role: { select: { name: true, boardId: true } } }, take: TAKE,
+      }),
+      this.prisma.workspaceResource.findMany({
+        where: { boardId: { in: boardIds }, isArchived: false, OR: [{ name: contains }, { tags: { has: query } }] },
+        select: { id: true, name: true, boardId: true }, take: TAKE,
+      }),
+      this.prisma.workspaceFollowUp.findMany({
+        where: { teacherId, isArchived: false, OR: [{ title: contains }, { notes: contains }] },
+        select: { id: true, title: true, boardId: true }, take: TAKE,
+      }),
+      this.prisma.workspaceProject.findMany({
+        where: { boardId: { in: boardIds }, isArchived: false, OR: [{ name: contains }, { objective: contains }] },
+        select: { id: true, name: true, boardId: true }, take: TAKE,
+      }),
+    ]);
+
+    const moduleFromKind = (kind?: string | null, meta?: any): string => {
+      const k = (kind || meta?.kind || '').toString().toUpperCase();
+      if (k === 'OBSERVATION') return 'observaciones';
+      if (k === 'LIST') return 'lista';
+      if (k === 'NOTE' || k === 'IDEA') return 'notas';
+      if (meta?.kanban) return 'tablero';
+      return 'bitacora';
+    };
+    const board = (id: string) => boardMap.get(id);
+
+    const results: any[] = [];
+    for (const i of items) {
+      const b = board(i.boardId); if (!b) continue;
+      const mod = moduleFromKind(i.kind, i.metadata);
+      results.push({ type: 'item', label: { observaciones: 'Observación', lista: 'Pendiente', notas: 'Nota', tablero: 'Tarjeta', bitacora: 'Bitácora' }[mod] || 'Registro', title: i.title, boardId: i.boardId, boardTitle: b.title, boardEmoji: b.emoji, module: mod });
+    }
+    for (const c of collections) { const b = board(c.boardId); if (b) results.push({ type: 'collection', label: 'Recaudo', title: c.name, boardId: c.boardId, boardTitle: b.title, boardEmoji: b.emoji, module: 'recaudo' }); }
+    for (const c of charges as any[]) { const b = board(c.collection.boardId); if (b) results.push({ type: 'charge', label: 'Recaudo · estudiante', title: `${c.studentName} — ${c.collection.name}`, boardId: c.collection.boardId, boardTitle: b.title, boardEmoji: b.emoji, module: 'recaudo' }); }
+    for (const r of roleAsgs as any[]) { const b = board(r.role.boardId); if (b) results.push({ type: 'role', label: 'Rol', title: `${r.studentName} — ${r.role.name}`, boardId: r.role.boardId, boardTitle: b.title, boardEmoji: b.emoji, module: 'roles' }); }
+    for (const r of resources) { const b = board(r.boardId); if (b) results.push({ type: 'resource', label: 'Recurso', title: r.name, boardId: r.boardId, boardTitle: b.title, boardEmoji: b.emoji, module: 'recursos' }); }
+    for (const f of followUps) { const b = f.boardId ? board(f.boardId) : null; results.push({ type: 'followup', label: 'Seguimiento', title: f.title, boardId: f.boardId, boardTitle: b?.title, boardEmoji: b?.emoji, module: null }); }
+    for (const p of projects) { const b = board(p.boardId); if (b) results.push({ type: 'project', label: 'Proyecto', title: p.name, boardId: p.boardId, boardTitle: b.title, boardEmoji: b.emoji, module: 'proyecto' }); }
+
+    return { results, query };
+  }
+
+  // Espacio personal del docente (uno solo, sin curso). Se crea al primer acceso.
+  async getOrCreatePersonalSpace(teacherId: string, institutionId: string) {
+    let board = await this.prisma.workspaceBoard.findFirst({
+      where: { teacherId, institutionId, isPersonal: true, isArchived: false },
+    });
+    if (!board) {
+      board = await this.prisma.workspaceBoard.create({
+        data: {
+          teacherId, institutionId,
+          type: 'KANBAN',
+          title: 'Mi espacio personal',
+          isPersonal: true,
+          emoji: '⭐',
+          enabledModules: ['notas', 'lista'],
+        },
+      });
+    }
+    return board;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DASHBOARD — "Centro del día". Una sola tanda de queries indexadas (sin N+1).
+  // Responde: ¿qué hago hoy? ¿qué tengo pendiente? ¿qué curso necesita atención?
+  // ═══════════════════════════════════════════════════════════════════════════
+  async getToday(teacherId: string, institutionId: string) {
+    const boards = await this.prisma.workspaceBoard.findMany({
+      where: { teacherId, institutionId, isArchived: false },
+      include: {
+        group: { select: { name: true, grade: { select: { name: true } } } },
+        _count: { select: { items: { where: { isArchived: false } } } },
+      },
+      orderBy: [{ isPinned: 'desc' }, { lastAccessedAt: 'desc' }, { updatedAt: 'desc' }],
+    });
+    const boardIds = boards.map((b) => b.id);
+
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+    const STALE_DAYS = 14;
+    const staleCutoff = new Date(Date.now() - STALE_DAYS * 86400000);
+
+    const [pendingItems, events, followUps, collectionItems, recentItems] = await Promise.all([
+      boardIds.length
+        ? this.prisma.workspaceItem.findMany({
+            where: {
+              boardId: { in: boardIds }, isArchived: false,
+              status: { not: 'DONE' },
+              OR: [{ dueDate: { lte: endOfToday } }, { eventDate: { lte: endOfToday } }],
+            },
+            include: { board: { select: { id: true, title: true, emoji: true } } },
+            orderBy: [{ dueDate: 'asc' }],
+            take: 25,
+          })
+        : Promise.resolve([]),
+      this.prisma.workspaceEvent.findMany({
+        where: { teacherId, done: false, isArchived: false, date: { lte: endOfToday } },
+        orderBy: { date: 'asc' }, take: 25,
+      }),
+      this.prisma.workspaceFollowUp.findMany({
+        where: { teacherId, status: { not: 'DONE' }, isArchived: false },
+        include: { board: { select: { id: true, title: true } } },
+        orderBy: [{ dueDate: 'asc' }], take: 25,
+      }),
+      boardIds.length
+        ? this.prisma.workspaceItem.findMany({
+            where: { boardId: { in: boardIds }, isArchived: false, kind: 'COLLECTION' },
+            select: { id: true, amount: true, amountCollected: true, metadata: true },
+          })
+        : Promise.resolve([]),
+      // Actividad reciente — últimos elementos tocados (mira hacia atrás)
+      boardIds.length
+        ? this.prisma.workspaceItem.findMany({
+            where: { boardId: { in: boardIds }, isArchived: false },
+            include: { board: { select: { id: true, title: true, emoji: true } } },
+            orderBy: { updatedAt: 'desc' },
+            take: 8,
+          })
+        : Promise.resolve([]),
+    ]);
+
+    // Recaudo: pendiente = recaudado < meta (mira columna y metadata legacy)
+    let recaudoPendingCount = 0;
+    let recaudoPendingAmount = 0;
+    for (const it of collectionItems as any[]) {
+      const meta = (it.metadata || {}) as any;
+      const target = it.amount != null ? Number(it.amount) : Number(meta.amountTarget ?? 0);
+      const paid = it.amountCollected != null ? Number(it.amountCollected) : Number(meta.amountPaid ?? 0);
+      if (target > 0 && paid < target) {
+        recaudoPendingCount++;
+        recaudoPendingAmount += target - paid;
+      }
+    }
+
+    // Inteligencia funcional (sin IA): espacios sin actividad reciente
+    const staleSpaces = boards
+      .filter((b) => b.updatedAt && b.updatedAt < staleCutoff && (b as any)._count.items > 0)
+      .slice(0, 5)
+      .map((b) => ({ id: b.id, title: b.title, emoji: b.emoji, lastActivity: b.updatedAt }));
+
+    return {
+      spaces: boards.map((b) => ({
+        id: b.id,
+        title: b.title,
+        emoji: b.emoji,
+        color: b.color,
+        type: b.type,
+        isPinned: b.isPinned,
+        isPersonal: b.isPersonal,
+        isCourseSpace: b.isCourseSpace,
+        enabledModules: b.enabledModules,
+        groupName: b.group?.name ?? null,
+        gradeName: b.group?.grade?.name ?? null,
+        itemsCount: (b as any)._count.items,
+        updatedAt: b.updatedAt,
+      })),
+      pendingItems: (pendingItems as any[]).map((i) => ({
+        id: i.id, title: i.title, dueDate: i.dueDate, eventDate: i.eventDate,
+        boardId: i.boardId, boardTitle: i.board?.title, boardEmoji: i.board?.emoji,
+      })),
+      events,
+      followUps,
+      recentActivity: (recentItems as any[]).map((i) => ({
+        id: i.id, title: i.title, kind: i.kind, updatedAt: i.updatedAt,
+        boardId: i.boardId, boardTitle: i.board?.title, boardEmoji: i.board?.emoji,
+      })),
+      recaudo: { pendingCount: recaudoPendingCount, pendingAmount: recaudoPendingAmount },
+      insights: {
+        staleSpaces,
+        tooManyFollowUps: followUps.length >= 8,
+      },
+      counts: {
+        spaces: boards.length,
+        pendingItems: (pendingItems as any[]).length,
+        events: (events as any[]).length,
+        followUps: (followUps as any[]).length,
+      },
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CALENDARIO — WorkspaceEvent (privado del docente) + fechas oficiales (read-only)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async listEvents(teacherId: string, institutionId: string, from?: string, to?: string) {
+    const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1);
+    const toDate = to ? new Date(to) : new Date(new Date().getFullYear(), new Date().getMonth() + 2, 0);
+
+    const events = await this.prisma.workspaceEvent.findMany({
+      where: {
+        teacherId,
+        isArchived: false,
+        date: { gte: fromDate, lte: toDate },
+      },
+      include: { board: { select: { id: true, title: true, emoji: true } } },
+      orderBy: { date: 'asc' },
+    });
+
+    // Fechas oficiales del período (solo lectura — no editables por el docente)
+    const officialTerms = await this.prisma.academicTerm.findMany({
+      where: {
+        academicYear: { institutionId, status: 'ACTIVE' },
+        OR: [
+          { startDate: { gte: fromDate, lte: toDate } },
+          { endDate: { gte: fromDate, lte: toDate } },
+        ],
+      },
+      select: { id: true, name: true, startDate: true, endDate: true },
+    });
+    const officialDates = officialTerms.flatMap((t) => {
+      const out: Array<{ date: Date; label: string; kind: string }> = [];
+      if (t.startDate && t.startDate >= fromDate && t.startDate <= toDate) out.push({ date: t.startDate, label: `Inicia ${t.name}`, kind: 'TERM_START' });
+      if (t.endDate && t.endDate >= fromDate && t.endDate <= toDate) out.push({ date: t.endDate, label: `Cierra ${t.name}`, kind: 'TERM_END' });
+      return out;
+    });
+
+    return { events, officialDates };
+  }
+
+  async createEvent(teacherId: string, institutionId: string, dto: {
+    title: string; date: string; type?: string; boardId?: string; itemId?: string; allDay?: boolean;
+  }) {
+    if (!dto.title?.trim()) throw new BadRequestException('El evento necesita un título');
+    if (!dto.date) throw new BadRequestException('El evento necesita una fecha');
+    if (dto.boardId) await this.validateBoardOwnership(dto.boardId, teacherId, institutionId);
+    return this.prisma.workspaceEvent.create({
+      data: {
+        institutionId,
+        teacherId,
+        boardId: dto.boardId || null,
+        itemId: dto.itemId || null,
+        title: dto.title.trim(),
+        date: new Date(dto.date),
+        allDay: dto.allDay ?? true,
+        type: (dto.type as any) || 'REMINDER',
+      },
+    });
+  }
+
+  async updateEvent(eventId: string, teacherId: string, dto: {
+    title?: string; date?: string; type?: string; done?: boolean; isArchived?: boolean;
+  }) {
+    const ev = await this.prisma.workspaceEvent.findUnique({ where: { id: eventId } });
+    if (!ev || ev.teacherId !== teacherId) throw new NotFoundException('Evento no encontrado');
+    return this.prisma.workspaceEvent.update({
+      where: { id: eventId },
+      data: {
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.date !== undefined && { date: new Date(dto.date) }),
+        ...(dto.type !== undefined && { type: dto.type as any }),
+        ...(dto.done !== undefined && { done: dto.done }),
+        ...(dto.isArchived !== undefined && { isArchived: dto.isArchived }),
+      },
+    });
+  }
+
+  async deleteEvent(eventId: string, teacherId: string) {
+    const ev = await this.prisma.workspaceEvent.findUnique({ where: { id: eventId } });
+    if (!ev || ev.teacherId !== teacherId) throw new NotFoundException('Evento no encontrado');
+    await this.prisma.workspaceEvent.delete({ where: { id: eventId } });
+    return { success: true };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SEGUIMIENTOS — WorkspaceFollowUp (transversal, motor del dashboard)
+  // Cualquier módulo puede generar uno. No toca el observador oficial.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async listFollowUps(teacherId: string, params: { status?: string; boardId?: string; includeResolved?: boolean }) {
+    return this.prisma.workspaceFollowUp.findMany({
+      where: {
+        teacherId,
+        isArchived: false,
+        ...(params.boardId && { boardId: params.boardId }),
+        ...(params.status
+          ? { status: params.status as any }
+          : params.includeResolved
+            ? {}
+            : { status: { not: 'DONE' } }),
+      },
+      include: { board: { select: { id: true, title: true, emoji: true } } },
+      orderBy: [{ status: 'asc' }, { dueDate: 'asc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  async createFollowUp(teacherId: string, institutionId: string, dto: {
+    title: string; notes?: string; dueDate?: string; boardId?: string;
+    sourceType?: string; sourceItemId?: string; studentId?: string;
+  }) {
+    if (!dto.title?.trim()) throw new BadRequestException('El seguimiento necesita un título');
+    if (dto.boardId) await this.validateBoardOwnership(dto.boardId, teacherId, institutionId);
+    return this.prisma.workspaceFollowUp.create({
+      data: {
+        institutionId,
+        teacherId,
+        boardId: dto.boardId || null,
+        sourceType: (dto.sourceType as any) || 'MANUAL',
+        sourceItemId: dto.sourceItemId || null,
+        studentId: dto.studentId || null,
+        title: dto.title.trim(),
+        notes: dto.notes || null,
+        dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+      },
+    });
+  }
+
+  async updateFollowUp(id: string, teacherId: string, dto: {
+    title?: string; notes?: string; dueDate?: string | null; status?: string; isArchived?: boolean;
+  }) {
+    const fu = await this.prisma.workspaceFollowUp.findUnique({ where: { id } });
+    if (!fu || fu.teacherId !== teacherId) throw new NotFoundException('Seguimiento no encontrado');
+    return this.prisma.workspaceFollowUp.update({
+      where: { id },
+      data: {
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.notes !== undefined && { notes: dto.notes }),
+        ...(dto.dueDate !== undefined && { dueDate: dto.dueDate ? new Date(dto.dueDate) : null }),
+        ...(dto.status !== undefined && {
+          status: dto.status as any,
+          resolvedAt: dto.status === 'DONE' ? new Date() : null,
+        }),
+        ...(dto.isArchived !== undefined && { isArchived: dto.isArchived }),
+      },
+    });
+  }
+
+  async deleteFollowUp(id: string, teacherId: string) {
+    const fu = await this.prisma.workspaceFollowUp.findUnique({ where: { id } });
+    if (!fu || fu.teacherId !== teacherId) throw new NotFoundException('Seguimiento no encontrado');
+    await this.prisma.workspaceFollowUp.delete({ where: { id } });
+    return { success: true };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RECAUDO — sub-dominio relacional. Meta = unitValue × nº cargos (automática).
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  private chargeStatus(collected: number, unit: number): string {
+    if (unit <= 0) return 'PENDING';
+    if (collected >= unit) return 'PAID';
+    if (collected > 0) return 'PARTIAL';
+    return 'PENDING';
+  }
+
+  private async fetchStudentNames(studentIds: string[]): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    if (!studentIds.length) return map;
+    const students = await this.prisma.student.findMany({
+      where: { id: { in: studentIds } },
+      select: { id: true, firstName: true, secondName: true, lastName: true, secondLastName: true },
+    });
+    for (const s of students) {
+      const name = [s.lastName, s.secondLastName, s.firstName, s.secondName].filter(Boolean).join(' ');
+      map.set(s.id, name.toUpperCase() || 'Estudiante');
+    }
+    return map;
+  }
+
+  private summarizeCollection(c: any) {
+    const unit = Number(c.unitValue);
+    let totalCollected = 0;
+    let paidCount = 0;
+    const charges = (c.charges ?? []).map((ch: any) => {
+      const collected = (ch.payments ?? []).reduce((acc: number, p: any) => acc + Number(p.amount), 0);
+      totalCollected += collected;
+      const status = this.chargeStatus(collected, unit);
+      if (status === 'PAID') paidCount++;
+      return {
+        id: ch.id, studentId: ch.studentId, studentName: ch.studentName,
+        collected, unitValue: unit, status,
+        payments: (ch.payments ?? []).map((p: any) => ({ id: p.id, amount: Number(p.amount), paidAt: p.paidAt, note: p.note })),
+      };
+    });
+    const meta = unit * charges.length;
+    return {
+      id: c.id, boardId: c.boardId, name: c.name, description: c.description,
+      unitValue: unit, dueDate: c.dueDate, isArchived: c.isArchived,
+      chargesCount: charges.length, meta, totalCollected, paidCount,
+      progress: meta > 0 ? Math.min(100, Math.round((totalCollected / meta) * 100)) : 0,
+      charges,
+    };
+  }
+
+  async listCollections(boardId: string, teacherId: string, institutionId: string) {
+    await this.validateBoardOwnership(boardId, teacherId, institutionId);
+    const collections = await this.prisma.workspaceCollection.findMany({
+      where: { boardId, isArchived: false },
+      include: { charges: { include: { payments: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return collections.map((c) => this.summarizeCollection(c));
+  }
+
+  async createCollection(teacherId: string, institutionId: string, dto: {
+    boardId: string; name: string; description?: string; unitValue: number; dueDate?: string;
+    assign?: 'ALL' | string[];
+  }) {
+    const board = await this.validateBoardOwnership(dto.boardId, teacherId, institutionId);
+    if (!dto.name?.trim()) throw new BadRequestException('El recaudo necesita un nombre');
+    if (!dto.unitValue || dto.unitValue <= 0) throw new BadRequestException('El valor individual debe ser mayor a 0');
+
+    let studentIds: string[] = [];
+    if (dto.assign === 'ALL') {
+      studentIds = await this.resolveStudentsByScope(board, institutionId);
+    } else if (Array.isArray(dto.assign)) {
+      studentIds = dto.assign;
+    }
+    const names = await this.fetchStudentNames(studentIds);
+
+    const collection = await this.prisma.workspaceCollection.create({
+      data: {
+        boardId: dto.boardId,
+        institutionId,
+        name: dto.name.trim(),
+        description: dto.description || null,
+        unitValue: dto.unitValue,
+        dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+        charges: {
+          create: studentIds.map((sid) => ({ studentId: sid, studentName: names.get(sid) ?? 'Estudiante' })),
+        },
+      },
+      include: { charges: { include: { payments: true } } },
+    });
+    return this.summarizeCollection(collection);
+  }
+
+  private async loadCollectionOwned(collectionId: string, teacherId: string, institutionId: string) {
+    const c = await this.prisma.workspaceCollection.findUnique({
+      where: { id: collectionId },
+      include: { charges: { include: { payments: true } } },
+    });
+    if (!c) throw new NotFoundException('Recaudo no encontrado');
+    await this.validateBoardOwnership(c.boardId, teacherId, institutionId);
+    return c;
+  }
+
+  async getCollection(id: string, teacherId: string, institutionId: string) {
+    const c = await this.loadCollectionOwned(id, teacherId, institutionId);
+    return this.summarizeCollection(c);
+  }
+
+  async updateCollection(id: string, teacherId: string, institutionId: string, dto: {
+    name?: string; description?: string; unitValue?: number; dueDate?: string | null; isArchived?: boolean;
+  }) {
+    await this.loadCollectionOwned(id, teacherId, institutionId);
+    const updated = await this.prisma.workspaceCollection.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.unitValue !== undefined && { unitValue: dto.unitValue }),
+        ...(dto.dueDate !== undefined && { dueDate: dto.dueDate ? new Date(dto.dueDate) : null }),
+        ...(dto.isArchived !== undefined && { isArchived: dto.isArchived }),
+      },
+      include: { charges: { include: { payments: true } } },
+    });
+    return this.summarizeCollection(updated);
+  }
+
+  async deleteCollection(id: string, teacherId: string, institutionId: string) {
+    await this.loadCollectionOwned(id, teacherId, institutionId);
+    await this.prisma.workspaceCollection.delete({ where: { id } });
+    return { success: true };
+  }
+
+  async addStudentsToCollection(id: string, teacherId: string, institutionId: string, studentIds: string[]) {
+    const c = await this.loadCollectionOwned(id, teacherId, institutionId);
+    const existing = new Set(c.charges.map((ch) => ch.studentId));
+    const toAdd = studentIds.filter((s) => !existing.has(s));
+    const names = await this.fetchStudentNames(toAdd);
+    await this.prisma.workspaceCollectionCharge.createMany({
+      data: toAdd.map((sid) => ({ collectionId: id, studentId: sid, studentName: names.get(sid) ?? 'Estudiante' })),
+    });
+    return this.getCollection(id, teacherId, institutionId);
+  }
+
+  async addPayment(chargeId: string, teacherId: string, institutionId: string, dto: { amount: number; note?: string }) {
+    const charge = await this.prisma.workspaceCollectionCharge.findUnique({
+      where: { id: chargeId },
+      include: { collection: true, payments: true },
+    });
+    if (!charge) throw new NotFoundException('Cargo no encontrado');
+    await this.validateBoardOwnership(charge.collection.boardId, teacherId, institutionId);
+    if (!dto.amount || dto.amount <= 0) throw new BadRequestException('El pago debe ser mayor a 0');
+
+    await this.prisma.workspaceCollectionPayment.create({
+      data: { chargeId, amount: dto.amount, note: dto.note || null },
+    });
+    // Recalcular estado
+    const collected = charge.payments.reduce((acc, p) => acc + Number(p.amount), 0) + dto.amount;
+    const status = this.chargeStatus(collected, Number(charge.collection.unitValue));
+    await this.prisma.workspaceCollectionCharge.update({ where: { id: chargeId }, data: { status } });
+
+    return this.getCollection(charge.collectionId, teacherId, institutionId);
+  }
+
+  async deletePayment(paymentId: string, teacherId: string, institutionId: string) {
+    const payment = await this.prisma.workspaceCollectionPayment.findUnique({
+      where: { id: paymentId },
+      include: { charge: { include: { collection: true, payments: true } } },
+    });
+    if (!payment) throw new NotFoundException('Pago no encontrado');
+    await this.validateBoardOwnership(payment.charge.collection.boardId, teacherId, institutionId);
+    await this.prisma.workspaceCollectionPayment.delete({ where: { id: paymentId } });
+    const collected = payment.charge.payments.filter((p) => p.id !== paymentId).reduce((acc, p) => acc + Number(p.amount), 0);
+    const status = this.chargeStatus(collected, Number(payment.charge.collection.unitValue));
+    await this.prisma.workspaceCollectionCharge.update({ where: { id: payment.chargeId }, data: { status } });
+    return this.getCollection(payment.charge.collectionId, teacherId, institutionId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ROSTER — estudiantes del grupo con foto (para selectores de Roles, etc.)
+  // ═══════════════════════════════════════════════════════════════════════════
+  async getBoardRoster(boardId: string, teacherId: string, institutionId: string) {
+    const board = await this.validateBoardOwnership(boardId, teacherId, institutionId);
+    const studentIds = await this.resolveStudentsByScope(board, institutionId);
+    if (!studentIds.length) return [];
+    const students = await this.prisma.student.findMany({
+      where: { id: { in: studentIds } },
+      select: { id: true, firstName: true, secondName: true, lastName: true, secondLastName: true, photo: true },
+      orderBy: { lastName: 'asc' },
+    });
+    return students.map((s) => ({
+      id: s.id,
+      name: [s.lastName, s.secondLastName, s.firstName, s.secondName].filter(Boolean).join(' ').toUpperCase(),
+      photo: s.photo,
+    }));
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ROLES — catálogo + asignaciones con historial
+  // ═══════════════════════════════════════════════════════════════════════════
+  async listRoles(boardId: string, teacherId: string, institutionId: string) {
+    await this.validateBoardOwnership(boardId, teacherId, institutionId);
+    const roles = await this.prisma.workspaceRole.findMany({
+      where: { boardId },
+      include: { assignments: { orderBy: { assignedAt: 'desc' } } },
+      orderBy: { createdAt: 'asc' },
+    });
+    return roles.map((r) => ({
+      id: r.id, name: r.name, isCustom: r.isCustom,
+      current: r.assignments.filter((a) => !a.removedAt).map((a) => ({
+        id: a.id, studentId: a.studentId, studentName: a.studentName, studentPhoto: a.studentPhoto, assignedAt: a.assignedAt,
+      })),
+      history: r.assignments.filter((a) => a.removedAt).map((a) => ({
+        id: a.id, studentName: a.studentName, assignedAt: a.assignedAt, removedAt: a.removedAt,
+      })),
+    }));
+  }
+
+  async createRole(teacherId: string, institutionId: string, dto: { boardId: string; name: string; isCustom?: boolean }) {
+    await this.validateBoardOwnership(dto.boardId, teacherId, institutionId);
+    if (!dto.name?.trim()) throw new BadRequestException('El rol necesita un nombre');
+    return this.prisma.workspaceRole.create({
+      data: { boardId: dto.boardId, institutionId, name: dto.name.trim(), isCustom: dto.isCustom ?? true },
+    });
+  }
+
+  private async loadRoleOwned(roleId: string, teacherId: string, institutionId: string) {
+    const role = await this.prisma.workspaceRole.findUnique({ where: { id: roleId } });
+    if (!role) throw new NotFoundException('Rol no encontrado');
+    await this.validateBoardOwnership(role.boardId, teacherId, institutionId);
+    return role;
+  }
+
+  async deleteRole(roleId: string, teacherId: string, institutionId: string) {
+    await this.loadRoleOwned(roleId, teacherId, institutionId);
+    await this.prisma.workspaceRole.delete({ where: { id: roleId } });
+    return { success: true };
+  }
+
+  async assignRole(roleId: string, teacherId: string, institutionId: string, dto: { studentId: string }) {
+    const role = await this.loadRoleOwned(roleId, teacherId, institutionId);
+    const roster = await this.getBoardRoster(role.boardId, teacherId, institutionId);
+    const student = roster.find((s) => s.id === dto.studentId);
+    if (!student) throw new BadRequestException('Estudiante no pertenece al grupo');
+    await this.prisma.workspaceRoleAssignment.create({
+      data: { roleId, studentId: student.id, studentName: student.name, studentPhoto: student.photo },
+    });
+    return this.listRoles(role.boardId, teacherId, institutionId);
+  }
+
+  async unassignRole(assignmentId: string, teacherId: string, institutionId: string) {
+    const a = await this.prisma.workspaceRoleAssignment.findUnique({
+      where: { id: assignmentId }, include: { role: true },
+    });
+    if (!a) throw new NotFoundException('Asignación no encontrada');
+    await this.validateBoardOwnership(a.role.boardId, teacherId, institutionId);
+    // Soft: marcar removedAt → queda en historial
+    await this.prisma.workspaceRoleAssignment.update({ where: { id: assignmentId }, data: { removedAt: new Date() } });
+    return this.listRoles(a.role.boardId, teacherId, institutionId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BIBLIOTECA — recursos (archivos/enlaces) + carpetas. Usa el módulo storage.
+  // ═══════════════════════════════════════════════════════════════════════════
+  async listResources(boardId: string, teacherId: string, institutionId: string, folderId?: string) {
+    await this.validateBoardOwnership(boardId, teacherId, institutionId);
+    const [folders, resources] = await Promise.all([
+      this.prisma.workspaceResourceFolder.findMany({ where: { boardId }, orderBy: { name: 'asc' } }),
+      this.prisma.workspaceResource.findMany({
+        where: { boardId, isArchived: false, ...(folderId ? { folderId } : {}) },
+        orderBy: [{ isFavorite: 'desc' }, { createdAt: 'desc' }],
+      }),
+    ]);
+    // conteo por carpeta
+    const counts = await this.prisma.workspaceResource.groupBy({
+      by: ['folderId'], where: { boardId, isArchived: false }, _count: { _all: true },
+    });
+    const countMap = new Map(counts.map((c) => [c.folderId, c._count._all]));
+    return {
+      folders: folders.map((f) => ({ id: f.id, name: f.name, count: countMap.get(f.id) ?? 0 })),
+      resources,
+      rootCount: countMap.get(null) ?? 0,
+    };
+  }
+
+  async createFolder(teacherId: string, institutionId: string, dto: { boardId: string; name: string }) {
+    await this.validateBoardOwnership(dto.boardId, teacherId, institutionId);
+    if (!dto.name?.trim()) throw new BadRequestException('La carpeta necesita un nombre');
+    return this.prisma.workspaceResourceFolder.create({ data: { boardId: dto.boardId, name: dto.name.trim() } });
+  }
+
+  async deleteFolder(folderId: string, teacherId: string, institutionId: string) {
+    const f = await this.prisma.workspaceResourceFolder.findUnique({ where: { id: folderId } });
+    if (!f) throw new NotFoundException('Carpeta no encontrada');
+    await this.validateBoardOwnership(f.boardId, teacherId, institutionId);
+    await this.prisma.workspaceResourceFolder.delete({ where: { id: folderId } });
+    return { success: true };
+  }
+
+  async addLinkResource(teacherId: string, institutionId: string, dto: {
+    boardId: string; name: string; url: string; folderId?: string; tags?: string[];
+  }) {
+    await this.validateBoardOwnership(dto.boardId, teacherId, institutionId);
+    if (!dto.url?.trim()) throw new BadRequestException('El enlace necesita una URL');
+    const isVideo = /youtube\.com|youtu\.be|vimeo\.com/.test(dto.url);
+    return this.prisma.workspaceResource.create({
+      data: {
+        boardId: dto.boardId, institutionId, ownerId: teacherId,
+        folderId: dto.folderId || null,
+        name: dto.name?.trim() || dto.url,
+        type: isVideo ? 'VIDEO' : 'LINK',
+        url: dto.url.trim(), tags: dto.tags ?? [],
+      },
+    });
+  }
+
+  async uploadResource(teacherId: string, institutionId: string, file: Express.Multer.File, dto: {
+    boardId: string; folderId?: string; name?: string; tags?: string[];
+  }) {
+    await this.validateBoardOwnership(dto.boardId, teacherId, institutionId);
+    if (!file) throw new BadRequestException('No se recibió archivo');
+    if (!this.storage.isConfigured()) throw new BadRequestException('Almacenamiento no configurado');
+
+    const safe = (file.originalname || 'archivo').replace(/[^\w.\-]+/g, '_');
+    const key = `teacher-workspace/${institutionId}/${dto.boardId}/${Date.now()}_${safe}`;
+    const result = await this.storage.upload(key, file.buffer, file.mimetype || 'application/octet-stream');
+
+    return this.prisma.workspaceResource.create({
+      data: {
+        boardId: dto.boardId, institutionId, ownerId: teacherId,
+        folderId: dto.folderId || null,
+        name: dto.name?.trim() || file.originalname || 'archivo',
+        type: 'FILE',
+        url: result.url, storageKey: result.key,
+        mimeType: file.mimetype, sizeBytes: file.size,
+        tags: dto.tags ?? [],
+      },
+    });
+  }
+
+  private async loadResourceOwned(id: string, teacherId: string, institutionId: string) {
+    const r = await this.prisma.workspaceResource.findUnique({ where: { id } });
+    if (!r) throw new NotFoundException('Recurso no encontrado');
+    await this.validateBoardOwnership(r.boardId, teacherId, institutionId);
+    return r;
+  }
+
+  async updateResource(id: string, teacherId: string, institutionId: string, dto: {
+    name?: string; folderId?: string | null; tags?: string[]; isFavorite?: boolean; isArchived?: boolean;
+  }) {
+    await this.loadResourceOwned(id, teacherId, institutionId);
+    return this.prisma.workspaceResource.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.folderId !== undefined && { folderId: dto.folderId }),
+        ...(dto.tags !== undefined && { tags: dto.tags }),
+        ...(dto.isFavorite !== undefined && { isFavorite: dto.isFavorite }),
+        ...(dto.isArchived !== undefined && { isArchived: dto.isArchived }),
+      },
+    });
+  }
+
+  async deleteResource(id: string, teacherId: string, institutionId: string) {
+    const r = await this.loadResourceOwned(id, teacherId, institutionId);
+    if (r.storageKey && this.storage.isConfigured()) {
+      try { await this.storage.delete(r.storageKey); } catch { /* best effort */ }
+    }
+    await this.prisma.workspaceResource.delete({ where: { id } });
+    return { success: true };
+  }
+
+  async getResourceDownloadUrl(id: string, teacherId: string, institutionId: string) {
+    const r = await this.loadResourceOwned(id, teacherId, institutionId);
+    if (r.type !== 'FILE' || !r.storageKey) return { url: r.url };
+    const url = await this.storage.getSignedUrl(r.storageKey, 600);
+    return { url };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PROYECTO — entidad de primer nivel (objetivo, %, integrantes, checklist)
+  // ═══════════════════════════════════════════════════════════════════════════
+  private summarizeProject(p: any) {
+    const tasks = p.tasks ?? [];
+    const doneTasks = tasks.filter((t: any) => t.done).length;
+    // Avance auto desde checklist (si hay tareas); si no, el manual.
+    const autoProgress = tasks.length ? Math.round((doneTasks / tasks.length) * 100) : p.progress;
+    return {
+      id: p.id, name: p.name, objective: p.objective, competencies: p.competencies,
+      status: p.status, progress: autoProgress, startDate: p.startDate, endDate: p.endDate,
+      isFavorite: p.isFavorite,
+      tasks: tasks.map((t: any) => ({ id: t.id, title: t.title, done: t.done, dueDate: t.dueDate })),
+      members: (p.members ?? []).map((m: any) => ({ id: m.id, studentId: m.studentId, studentName: m.studentName })),
+      tasksDone: doneTasks, tasksTotal: tasks.length,
+    };
+  }
+
+  async listProjects(boardId: string, teacherId: string, institutionId: string) {
+    await this.validateBoardOwnership(boardId, teacherId, institutionId);
+    const projects = await this.prisma.workspaceProject.findMany({
+      where: { boardId, isArchived: false },
+      include: { tasks: { orderBy: { sortOrder: 'asc' } }, members: true },
+      orderBy: [{ isFavorite: 'desc' }, { createdAt: 'desc' }],
+    });
+    return projects.map((p) => this.summarizeProject(p));
+  }
+
+  async createProject(teacherId: string, institutionId: string, dto: {
+    boardId: string; name: string; objective?: string; competencies?: string; startDate?: string; endDate?: string;
+  }) {
+    await this.validateBoardOwnership(dto.boardId, teacherId, institutionId);
+    if (!dto.name?.trim()) throw new BadRequestException('El proyecto necesita un nombre');
+    const p = await this.prisma.workspaceProject.create({
+      data: {
+        boardId: dto.boardId, institutionId, name: dto.name.trim(),
+        objective: dto.objective || null, competencies: dto.competencies || null,
+        startDate: dto.startDate ? new Date(dto.startDate) : null,
+        endDate: dto.endDate ? new Date(dto.endDate) : null,
+      },
+      include: { tasks: true, members: true },
+    });
+    return this.summarizeProject(p);
+  }
+
+  private async loadProjectOwned(id: string, teacherId: string, institutionId: string) {
+    const p = await this.prisma.workspaceProject.findUnique({ where: { id } });
+    if (!p) throw new NotFoundException('Proyecto no encontrado');
+    await this.validateBoardOwnership(p.boardId, teacherId, institutionId);
+    return p;
+  }
+
+  async updateProject(id: string, teacherId: string, institutionId: string, dto: {
+    name?: string; objective?: string; competencies?: string; status?: string; progress?: number;
+    startDate?: string | null; endDate?: string | null; isFavorite?: boolean; isArchived?: boolean;
+  }) {
+    await this.loadProjectOwned(id, teacherId, institutionId);
+    const p = await this.prisma.workspaceProject.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.objective !== undefined && { objective: dto.objective }),
+        ...(dto.competencies !== undefined && { competencies: dto.competencies }),
+        ...(dto.status !== undefined && { status: dto.status }),
+        ...(dto.progress !== undefined && { progress: dto.progress }),
+        ...(dto.startDate !== undefined && { startDate: dto.startDate ? new Date(dto.startDate) : null }),
+        ...(dto.endDate !== undefined && { endDate: dto.endDate ? new Date(dto.endDate) : null }),
+        ...(dto.isFavorite !== undefined && { isFavorite: dto.isFavorite }),
+        ...(dto.isArchived !== undefined && { isArchived: dto.isArchived }),
+      },
+      include: { tasks: { orderBy: { sortOrder: 'asc' } }, members: true },
+    });
+    return this.summarizeProject(p);
+  }
+
+  async deleteProject(id: string, teacherId: string, institutionId: string) {
+    await this.loadProjectOwned(id, teacherId, institutionId);
+    await this.prisma.workspaceProject.delete({ where: { id } });
+    return { success: true };
+  }
+
+  async addProjectTask(projectId: string, teacherId: string, institutionId: string, dto: { title: string; dueDate?: string }) {
+    const p = await this.loadProjectOwned(projectId, teacherId, institutionId);
+    if (!dto.title?.trim()) throw new BadRequestException('La tarea necesita un título');
+    const max = await this.prisma.workspaceProjectTask.aggregate({ where: { projectId }, _max: { sortOrder: true } });
+    await this.prisma.workspaceProjectTask.create({
+      data: { projectId, title: dto.title.trim(), dueDate: dto.dueDate ? new Date(dto.dueDate) : null, sortOrder: (max._max.sortOrder ?? 0) + 100 },
+    });
+    return this.getProject(p.id, teacherId, institutionId);
+  }
+
+  async toggleProjectTask(taskId: string, teacherId: string, institutionId: string) {
+    const t = await this.prisma.workspaceProjectTask.findUnique({ where: { id: taskId }, include: { project: true } });
+    if (!t) throw new NotFoundException('Tarea no encontrada');
+    await this.validateBoardOwnership(t.project.boardId, teacherId, institutionId);
+    await this.prisma.workspaceProjectTask.update({ where: { id: taskId }, data: { done: !t.done } });
+    return this.getProject(t.projectId, teacherId, institutionId);
+  }
+
+  async deleteProjectTask(taskId: string, teacherId: string, institutionId: string) {
+    const t = await this.prisma.workspaceProjectTask.findUnique({ where: { id: taskId }, include: { project: true } });
+    if (!t) throw new NotFoundException('Tarea no encontrada');
+    await this.validateBoardOwnership(t.project.boardId, teacherId, institutionId);
+    await this.prisma.workspaceProjectTask.delete({ where: { id: taskId } });
+    return this.getProject(t.projectId, teacherId, institutionId);
+  }
+
+  async addProjectMember(projectId: string, teacherId: string, institutionId: string, dto: { studentId: string }) {
+    const p = await this.loadProjectOwned(projectId, teacherId, institutionId);
+    const roster = await this.getBoardRoster(p.boardId, teacherId, institutionId);
+    const student = roster.find((s) => s.id === dto.studentId);
+    if (!student) throw new BadRequestException('Estudiante no pertenece al grupo');
+    const exists = await this.prisma.workspaceProjectMember.findFirst({ where: { projectId, studentId: dto.studentId } });
+    if (!exists) {
+      await this.prisma.workspaceProjectMember.create({ data: { projectId, studentId: student.id, studentName: student.name } });
+    }
+    return this.getProject(p.id, teacherId, institutionId);
+  }
+
+  async removeProjectMember(memberId: string, teacherId: string, institutionId: string) {
+    const m = await this.prisma.workspaceProjectMember.findUnique({ where: { id: memberId }, include: { project: true } });
+    if (!m) throw new NotFoundException('Integrante no encontrado');
+    await this.validateBoardOwnership(m.project.boardId, teacherId, institutionId);
+    await this.prisma.workspaceProjectMember.delete({ where: { id: memberId } });
+    return this.getProject(m.projectId, teacherId, institutionId);
+  }
+
+  async getProject(id: string, teacherId: string, institutionId: string) {
+    await this.loadProjectOwned(id, teacherId, institutionId);
+    const p = await this.prisma.workspaceProject.findUnique({
+      where: { id }, include: { tasks: { orderBy: { sortOrder: 'asc' } }, members: true },
+    });
+    return this.summarizeProject(p);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -343,6 +1232,11 @@ export class TeacherWorkspaceService {
       _max: { sortOrder: true },
     });
 
+    // Escribir kind en la columna (no solo en metadata) — fuente única de verdad.
+    const KIND_VALUES = ['NOTE','TASK','OBSERVATION','LOG','COLLECTION','IDEA','LIST','FILE','EVENT'];
+    const metaKind = (dto.metadata?.kind || '').toString().toUpperCase();
+    const kind = KIND_VALUES.includes(metaKind) ? (metaKind as any) : undefined;
+
     return this.prisma.workspaceItem.create({
       data: {
         boardId: dto.boardId,
@@ -354,6 +1248,10 @@ export class TeacherWorkspaceService {
         dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
         eventDate: dto.eventDate ? new Date(dto.eventDate) : undefined,
         sortOrder: (maxSort._max.sortOrder ?? 0) + 100,
+        ...(kind && { kind }),
+        ...(dto.entryType !== undefined && { entryType: dto.entryType }),
+        ...(dto.isImportant !== undefined && { isImportant: dto.isImportant }),
+        ...(dto.tags !== undefined && { tags: dto.tags }),
       },
       include: {
         student: { select: { id: true, firstName: true, lastName: true } },
@@ -376,6 +1274,11 @@ export class TeacherWorkspaceService {
         ...(dto.eventDate !== undefined && { eventDate: dto.eventDate ? new Date(dto.eventDate) : null }),
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
         ...(dto.isArchived !== undefined && { isArchived: dto.isArchived }),
+        ...(dto.entryType !== undefined && { entryType: dto.entryType }),
+        ...(dto.isImportant !== undefined && { isImportant: dto.isImportant }),
+        ...(dto.tags !== undefined && { tags: dto.tags }),
+        // Estado "Resuelto" sincroniza completedAt
+        ...(dto.status === 'DONE' && { completedAt: new Date() }),
       },
       include: {
         student: { select: { id: true, firstName: true, lastName: true } },

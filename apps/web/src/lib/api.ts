@@ -388,10 +388,27 @@ export const observerApi = {
     api.get('/observer/commission-data', { params: { academicYearId, gradeId, actaTypes } }),
 }
 
-// Preventive Alerts
-export const preventiveAlertsApi = {
-  getAll: (params?: { academicTermId?: string; groupId?: string }) => api.get('/preventive-cuts/alerts', { params }),
-  generate: (academicTermId: string) => api.post(`/preventive-cuts/generate/${academicTermId}`),
+// Preventive Cuts (Corte Preventivo)
+export const preventiveCutsApi = {
+  // Configuración por período
+  getConfig: (academicTermId: string) =>
+    api.get('/preventive-cuts/config', { params: { academicTermId } }),
+  saveConfig: (data: { academicTermId: string; cutoffDate: string; riskThresholdScore: number }) =>
+    api.post('/preventive-cuts/config', data),
+
+  // Consolidado por grupo (solo lectura, no persiste)
+  groupView: (params: { academicTermId: string; groupId: string; cutoffDate?: string; threshold?: number }) =>
+    api.get('/preventive-cuts/group-view', { params }),
+
+  // Alertas persistidas (workflow de seguimiento)
+  listAlerts: (params?: { academicTermId?: string; teacherAssignmentId?: string; studentEnrollmentId?: string; status?: string }) =>
+    api.get('/preventive-cuts/alerts', { params }),
+
+  // Descargas PDF (blob con auth)
+  groupPdf: (params: { academicTermId: string; groupId: string; cutoffDate?: string; threshold?: number }) =>
+    api.get('/preventive-cuts/pdf/group', { params, responseType: 'blob' }),
+  studentPdf: (params: { academicTermId: string; groupId: string; studentEnrollmentId: string; cutoffDate?: string; threshold?: number }) =>
+    api.get('/preventive-cuts/pdf/student', { params, responseType: 'blob' }),
 }
 
 // Reports
@@ -1862,6 +1879,28 @@ export const apdApi = {
 
 // Teacher Workspace
 export const teacherWorkspaceApi = {
+  // Dashboard "Centro del día"
+  getToday: () => api.get('/teacher-workspace/today'),
+  getPersonalSpace: () => api.get('/teacher-workspace/personal-space'),
+  globalSearch: (q: string) => api.get('/teacher-workspace/search', { params: { q } }),
+
+  // Calendario
+  listEvents: (params?: { from?: string; to?: string }) => api.get('/teacher-workspace/events', { params }),
+  createEvent: (data: { title: string; date: string; type?: string; boardId?: string; itemId?: string; allDay?: boolean }) =>
+    api.post('/teacher-workspace/events', data),
+  updateEvent: (id: string, data: { title?: string; date?: string; type?: string; done?: boolean; isArchived?: boolean }) =>
+    api.patch(`/teacher-workspace/events/${id}`, data),
+  deleteEvent: (id: string) => api.delete(`/teacher-workspace/events/${id}`),
+
+  // Seguimientos
+  listFollowUps: (params?: { status?: string; boardId?: string; includeResolved?: string }) =>
+    api.get('/teacher-workspace/follow-ups', { params }),
+  createFollowUp: (data: { title: string; notes?: string; dueDate?: string; boardId?: string; sourceType?: string; sourceItemId?: string; studentId?: string }) =>
+    api.post('/teacher-workspace/follow-ups', data),
+  updateFollowUp: (id: string, data: { title?: string; notes?: string; dueDate?: string | null; status?: string; isArchived?: boolean }) =>
+    api.patch(`/teacher-workspace/follow-ups/${id}`, data),
+  deleteFollowUp: (id: string) => api.delete(`/teacher-workspace/follow-ups/${id}`),
+
   // Boards
   listBoards: (params?: { type?: string; groupId?: string; isArchived?: string }) =>
     api.get('/teacher-workspace/boards', { params }),
@@ -1872,7 +1911,7 @@ export const teacherWorkspaceApi = {
     groupId?: string; gradeId?: string; groupIds?: string[];
     startDate?: string; endDate?: string;
   }) => api.post('/teacher-workspace/boards', data),
-  updateBoard: (id: string, data: { title?: string; description?: string; color?: string; metadata?: any; isArchived?: boolean; sortOrder?: number }) =>
+  updateBoard: (id: string, data: { title?: string; description?: string; color?: string; metadata?: any; isArchived?: boolean; sortOrder?: number; emoji?: string; bannerColor?: string; coverImage?: string; isPinned?: boolean; enabledModules?: string[] }) =>
     api.put(`/teacher-workspace/boards/${id}`, data),
   deleteBoard: (id: string) => api.delete(`/teacher-workspace/boards/${id}`),
 
@@ -1894,10 +1933,52 @@ export const teacherWorkspaceApi = {
     api.put(`/teacher-workspace/columns/${id}`, data),
   deleteColumn: (id: string) => api.delete(`/teacher-workspace/columns/${id}`),
 
+  // Proyecto (F10)
+  listProjects: (boardId: string) => api.get('/teacher-workspace/projects', { params: { boardId } }),
+  createProject: (data: { boardId: string; name: string; objective?: string; competencies?: string; startDate?: string; endDate?: string }) => api.post('/teacher-workspace/projects', data),
+  getProject: (id: string) => api.get(`/teacher-workspace/projects/${id}`),
+  updateProject: (id: string, data: any) => api.put(`/teacher-workspace/projects/${id}`, data),
+  deleteProject: (id: string) => api.delete(`/teacher-workspace/projects/${id}`),
+  addProjectTask: (id: string, data: { title: string; dueDate?: string }) => api.post(`/teacher-workspace/projects/${id}/tasks`, data),
+  toggleProjectTask: (id: string) => api.patch(`/teacher-workspace/project-tasks/${id}/toggle`),
+  deleteProjectTask: (id: string) => api.delete(`/teacher-workspace/project-tasks/${id}`),
+  addProjectMember: (id: string, studentId: string) => api.post(`/teacher-workspace/projects/${id}/members`, { studentId }),
+  removeProjectMember: (id: string) => api.delete(`/teacher-workspace/project-members/${id}`),
+
+  // Biblioteca (F9)
+  listResources: (boardId: string, folderId?: string) => api.get('/teacher-workspace/resources', { params: { boardId, folderId } }),
+  createFolder: (data: { boardId: string; name: string }) => api.post('/teacher-workspace/resource-folders', data),
+  deleteFolder: (id: string) => api.delete(`/teacher-workspace/resource-folders/${id}`),
+  addResourceLink: (data: { boardId: string; name: string; url: string; folderId?: string; tags?: string[] }) => api.post('/teacher-workspace/resources/link', data),
+  uploadResource: (formData: FormData) => api.post('/teacher-workspace/resources/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  downloadResource: (id: string) => api.get(`/teacher-workspace/resources/${id}/download`),
+  updateResource: (id: string, data: { name?: string; folderId?: string | null; tags?: string[]; isFavorite?: boolean; isArchived?: boolean }) => api.patch(`/teacher-workspace/resources/${id}`, data),
+  deleteResource: (id: string) => api.delete(`/teacher-workspace/resources/${id}`),
+
+  // Roster + Roles (F7)
+  getRoster: (boardId: string) => api.get(`/teacher-workspace/boards/${boardId}/roster`),
+  listRoles: (boardId: string) => api.get('/teacher-workspace/roles', { params: { boardId } }),
+  createRole: (data: { boardId: string; name: string; isCustom?: boolean }) => api.post('/teacher-workspace/roles', data),
+  deleteRole: (id: string) => api.delete(`/teacher-workspace/roles/${id}`),
+  assignRole: (roleId: string, studentId: string) => api.post(`/teacher-workspace/roles/${roleId}/assign`, { studentId }),
+  unassignRole: (assignmentId: string) => api.delete(`/teacher-workspace/assignments/${assignmentId}`),
+
+  // Recaudo (F6)
+  listCollections: (boardId: string) => api.get('/teacher-workspace/collections', { params: { boardId } }),
+  createCollection: (data: { boardId: string; name: string; description?: string; unitValue: number; dueDate?: string; assign?: 'ALL' | string[] }) =>
+    api.post('/teacher-workspace/collections', data),
+  getCollection: (id: string) => api.get(`/teacher-workspace/collections/${id}`),
+  updateCollection: (id: string, data: { name?: string; description?: string; unitValue?: number; dueDate?: string | null; isArchived?: boolean }) =>
+    api.put(`/teacher-workspace/collections/${id}`, data),
+  deleteCollection: (id: string) => api.delete(`/teacher-workspace/collections/${id}`),
+  addStudentsToCollection: (id: string, studentIds: string[]) => api.post(`/teacher-workspace/collections/${id}/students`, { studentIds }),
+  addPayment: (chargeId: string, data: { amount: number; note?: string }) => api.post(`/teacher-workspace/charges/${chargeId}/payments`, data),
+  deletePayment: (paymentId: string) => api.delete(`/teacher-workspace/payments/${paymentId}`),
+
   // Items
-  createItem: (data: { boardId: string; columnId?: string; studentId?: string; title: string; content?: string; metadata?: any; dueDate?: string; eventDate?: string }) =>
+  createItem: (data: { boardId: string; columnId?: string; studentId?: string; title: string; content?: string; metadata?: any; dueDate?: string; eventDate?: string; entryType?: string; isImportant?: boolean; tags?: string[] }) =>
     api.post('/teacher-workspace/items', data),
-  updateItem: (id: string, data: { columnId?: string; title?: string; content?: string; metadata?: any; status?: string; dueDate?: string | null; eventDate?: string | null; sortOrder?: number; isArchived?: boolean }) =>
+  updateItem: (id: string, data: { columnId?: string; title?: string; content?: string; metadata?: any; status?: string; dueDate?: string | null; eventDate?: string | null; sortOrder?: number; isArchived?: boolean; entryType?: string; isImportant?: boolean; tags?: string[] }) =>
     api.put(`/teacher-workspace/items/${id}`, data),
   moveItem: (id: string, data: { columnId: string; sortOrder: number }) =>
     api.patch(`/teacher-workspace/items/${id}/move`, data),

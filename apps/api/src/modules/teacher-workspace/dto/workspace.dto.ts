@@ -61,6 +61,22 @@ export class UpdateBoardDto {
 
   @IsOptional() @IsInt() @Min(0)
   sortOrder?: number;
+
+  // WORKSPACE_V2 — personalización y módulos
+  @IsOptional() @IsString()
+  emoji?: string;
+
+  @IsOptional() @IsString()
+  bannerColor?: string;
+
+  @IsOptional() @IsString()
+  coverImage?: string;
+
+  @IsOptional() @IsBoolean()
+  isPinned?: boolean;
+
+  @IsOptional() @IsArray() @IsString({ each: true })
+  enabledModules?: string[];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -117,6 +133,16 @@ export class CreateItemDto {
 
   @IsOptional() @IsDateString()
   eventDate?: string;
+
+  // F5 — Bitácora
+  @IsOptional() @IsString()
+  entryType?: string;
+
+  @IsOptional() @IsBoolean()
+  isImportant?: boolean;
+
+  @IsOptional() @IsArray() @IsString({ each: true })
+  tags?: string[];
 }
 
 export class UpdateItemDto {
@@ -146,6 +172,16 @@ export class UpdateItemDto {
 
   @IsOptional() @IsBoolean()
   isArchived?: boolean;
+
+  // F5 — Bitácora
+  @IsOptional() @IsString()
+  entryType?: string;
+
+  @IsOptional() @IsBoolean()
+  isImportant?: boolean;
+
+  @IsOptional() @IsArray() @IsString({ each: true })
+  tags?: string[];
 }
 
 export class MoveItemDto {
