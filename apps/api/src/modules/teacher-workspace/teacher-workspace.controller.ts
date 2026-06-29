@@ -84,6 +84,55 @@ export class TeacherWorkspaceController {
     return this.service.deleteFollowUp(id, teacherId);
   }
 
+  // ── Recaudo ────────────────────────────────────────────────────────────────
+  @Get('collections')
+  async listCollections(@Request() req: any, @Query('boardId') boardId: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.listCollections(boardId, teacherId, institutionId);
+  }
+
+  @Post('collections')
+  async createCollection(@Request() req: any, @Body() dto: any) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.createCollection(teacherId, institutionId, dto);
+  }
+
+  @Get('collections/:id')
+  async getCollection(@Request() req: any, @Param('id') id: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.getCollection(id, teacherId, institutionId);
+  }
+
+  @Put('collections/:id')
+  async updateCollection(@Request() req: any, @Param('id') id: string, @Body() dto: any) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.updateCollection(id, teacherId, institutionId, dto);
+  }
+
+  @Delete('collections/:id')
+  async deleteCollection(@Request() req: any, @Param('id') id: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.deleteCollection(id, teacherId, institutionId);
+  }
+
+  @Post('collections/:id/students')
+  async addStudentsToCollection(@Request() req: any, @Param('id') id: string, @Body() body: { studentIds: string[] }) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.addStudentsToCollection(id, teacherId, institutionId, body.studentIds || []);
+  }
+
+  @Post('charges/:id/payments')
+  async addPayment(@Request() req: any, @Param('id') id: string, @Body() dto: any) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.addPayment(id, teacherId, institutionId, dto);
+  }
+
+  @Delete('payments/:id')
+  async deletePayment(@Request() req: any, @Param('id') id: string) {
+    const { teacherId, institutionId } = await this.resolveCtx(req);
+    return this.service.deletePayment(id, teacherId, institutionId);
+  }
+
   @Get('boards')
   async listBoards(
     @Request() req: any,

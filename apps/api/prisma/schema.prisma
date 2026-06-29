@@ -4955,6 +4955,7 @@ model WorkspaceBoard {
   events       WorkspaceEvent[]
   followUps    WorkspaceFollowUp[]
   activities   WorkspaceActivity[]
+  collections  WorkspaceCollection[]
 
   @@index([teacherId, institutionId])
   @@index([teacherId, type])
@@ -5140,6 +5141,57 @@ model WorkspaceDashboardConfig {
   teacherId String   @unique
   widgets   Json     // [{ key, visible, order, size }]
   updatedAt DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WORKSPACE V2 · F6 — Recaudo (sub-dominio relacional)
+// Meta = unitValue × nº de cargos (calculada, nunca manual). Pagos parciales
+// e historial. Privado del docente, no toca finanzas oficiales.
+// ═══════════════════════════════════════════════════════════════════════════
+
+model WorkspaceCollection {
+  id            String    @id @default(cuid())
+  boardId       String
+  institutionId String
+  name          String
+  description   String?
+  unitValue     Decimal   @db.Decimal(12, 2)
+  dueDate       DateTime?
+  isArchived    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  board   WorkspaceBoard              @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  charges WorkspaceCollectionCharge[]
+
+  @@index([boardId])
+}
+
+model WorkspaceCollectionCharge {
+  id           String   @id @default(cuid())
+  collectionId String
+  studentId    String   // Student.id — sin FK forzada (workspace desacoplado), solo índice
+  studentName  String   // denormalizado para mostrar sin joins al core
+  status       String   @default("PENDING") // PENDING | PARTIAL | PAID (derivado, se persiste para consulta)
+  createdAt    DateTime @default(now())
+
+  collection WorkspaceCollection          @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  payments   WorkspaceCollectionPayment[]
+
+  @@index([collectionId])
+  @@index([studentId])
+}
+
+model WorkspaceCollectionPayment {
+  id       String   @id @default(cuid())
+  chargeId String
+  amount   Decimal  @db.Decimal(12, 2)
+  paidAt   DateTime @default(now())
+  note     String?
+
+  charge WorkspaceCollectionCharge @relation(fields: [chargeId], references: [id], onDelete: Cascade)
+
+  @@index([chargeId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -11,6 +11,7 @@ import { MODULES, activeModules, type ModuleKey } from './modules/moduleRegistry
 import { ModuleGrid } from './modules/ModuleGrid'
 import { ActivateModuleSheet } from './modules/ActivateModuleSheet'
 import { BitacoraModule, type BitacoraItem } from './modules/BitacoraModule'
+import { RecaudoModule } from './modules/RecaudoModule'
 
 interface BoardData {
   id: string
@@ -214,7 +215,9 @@ export default function SpaceDetailPage() {
                 <h2 className="text-lg font-bold text-slate-900">{openModuleDef!.label}</h2>
               </div>
 
-              {openModule === 'bitacora' ? (
+              {openModule === 'recaudo' ? (
+                <RecaudoModule boardId={board.id} />
+              ) : openModule === 'bitacora' ? (
                 <BitacoraModule
                   items={filterForSection(allItems, 'log', board.type) as BitacoraItem[]}
                   onCreate={async (data) => {

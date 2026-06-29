@@ -1931,6 +1931,18 @@ export const teacherWorkspaceApi = {
     api.put(`/teacher-workspace/columns/${id}`, data),
   deleteColumn: (id: string) => api.delete(`/teacher-workspace/columns/${id}`),
 
+  // Recaudo (F6)
+  listCollections: (boardId: string) => api.get('/teacher-workspace/collections', { params: { boardId } }),
+  createCollection: (data: { boardId: string; name: string; description?: string; unitValue: number; dueDate?: string; assign?: 'ALL' | string[] }) =>
+    api.post('/teacher-workspace/collections', data),
+  getCollection: (id: string) => api.get(`/teacher-workspace/collections/${id}`),
+  updateCollection: (id: string, data: { name?: string; description?: string; unitValue?: number; dueDate?: string | null; isArchived?: boolean }) =>
+    api.put(`/teacher-workspace/collections/${id}`, data),
+  deleteCollection: (id: string) => api.delete(`/teacher-workspace/collections/${id}`),
+  addStudentsToCollection: (id: string, studentIds: string[]) => api.post(`/teacher-workspace/collections/${id}/students`, { studentIds }),
+  addPayment: (chargeId: string, data: { amount: number; note?: string }) => api.post(`/teacher-workspace/charges/${chargeId}/payments`, data),
+  deletePayment: (paymentId: string) => api.delete(`/teacher-workspace/payments/${paymentId}`),
+
   // Items
   createItem: (data: { boardId: string; columnId?: string; studentId?: string; title: string; content?: string; metadata?: any; dueDate?: string; eventDate?: string; entryType?: string; isImportant?: boolean; tags?: string[] }) =>
     api.post('/teacher-workspace/items', data),

@@ -550,6 +550,183 @@ export class TeacherWorkspaceService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // RECAUDO — sub-dominio relacional. Meta = unitValue × nº cargos (automática).
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  private chargeStatus(collected: number, unit: number): string {
+    if (unit <= 0) return 'PENDING';
+    if (collected >= unit) return 'PAID';
+    if (collected > 0) return 'PARTIAL';
+    return 'PENDING';
+  }
+
+  private async fetchStudentNames(studentIds: string[]): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    if (!studentIds.length) return map;
+    const students = await this.prisma.student.findMany({
+      where: { id: { in: studentIds } },
+      select: { id: true, firstName: true, secondName: true, lastName: true, secondLastName: true },
+    });
+    for (const s of students) {
+      const name = [s.lastName, s.secondLastName, s.firstName, s.secondName].filter(Boolean).join(' ');
+      map.set(s.id, name.toUpperCase() || 'Estudiante');
+    }
+    return map;
+  }
+
+  private summarizeCollection(c: any) {
+    const unit = Number(c.unitValue);
+    let totalCollected = 0;
+    let paidCount = 0;
+    const charges = (c.charges ?? []).map((ch: any) => {
+      const collected = (ch.payments ?? []).reduce((acc: number, p: any) => acc + Number(p.amount), 0);
+      totalCollected += collected;
+      const status = this.chargeStatus(collected, unit);
+      if (status === 'PAID') paidCount++;
+      return {
+        id: ch.id, studentId: ch.studentId, studentName: ch.studentName,
+        collected, unitValue: unit, status,
+        payments: (ch.payments ?? []).map((p: any) => ({ id: p.id, amount: Number(p.amount), paidAt: p.paidAt, note: p.note })),
+      };
+    });
+    const meta = unit * charges.length;
+    return {
+      id: c.id, boardId: c.boardId, name: c.name, description: c.description,
+      unitValue: unit, dueDate: c.dueDate, isArchived: c.isArchived,
+      chargesCount: charges.length, meta, totalCollected, paidCount,
+      progress: meta > 0 ? Math.min(100, Math.round((totalCollected / meta) * 100)) : 0,
+      charges,
+    };
+  }
+
+  async listCollections(boardId: string, teacherId: string, institutionId: string) {
+    await this.validateBoardOwnership(boardId, teacherId, institutionId);
+    const collections = await this.prisma.workspaceCollection.findMany({
+      where: { boardId, isArchived: false },
+      include: { charges: { include: { payments: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return collections.map((c) => this.summarizeCollection(c));
+  }
+
+  async createCollection(teacherId: string, institutionId: string, dto: {
+    boardId: string; name: string; description?: string; unitValue: number; dueDate?: string;
+    assign?: 'ALL' | string[];
+  }) {
+    const board = await this.validateBoardOwnership(dto.boardId, teacherId, institutionId);
+    if (!dto.name?.trim()) throw new BadRequestException('El recaudo necesita un nombre');
+    if (!dto.unitValue || dto.unitValue <= 0) throw new BadRequestException('El valor individual debe ser mayor a 0');
+
+    let studentIds: string[] = [];
+    if (dto.assign === 'ALL') {
+      studentIds = await this.resolveStudentsByScope(board, institutionId);
+    } else if (Array.isArray(dto.assign)) {
+      studentIds = dto.assign;
+    }
+    const names = await this.fetchStudentNames(studentIds);
+
+    const collection = await this.prisma.workspaceCollection.create({
+      data: {
+        boardId: dto.boardId,
+        institutionId,
+        name: dto.name.trim(),
+        description: dto.description || null,
+        unitValue: dto.unitValue,
+        dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+        charges: {
+          create: studentIds.map((sid) => ({ studentId: sid, studentName: names.get(sid) ?? 'Estudiante' })),
+        },
+      },
+      include: { charges: { include: { payments: true } } },
+    });
+    return this.summarizeCollection(collection);
+  }
+
+  private async loadCollectionOwned(collectionId: string, teacherId: string, institutionId: string) {
+    const c = await this.prisma.workspaceCollection.findUnique({
+      where: { id: collectionId },
+      include: { charges: { include: { payments: true } } },
+    });
+    if (!c) throw new NotFoundException('Recaudo no encontrado');
+    await this.validateBoardOwnership(c.boardId, teacherId, institutionId);
+    return c;
+  }
+
+  async getCollection(id: string, teacherId: string, institutionId: string) {
+    const c = await this.loadCollectionOwned(id, teacherId, institutionId);
+    return this.summarizeCollection(c);
+  }
+
+  async updateCollection(id: string, teacherId: string, institutionId: string, dto: {
+    name?: string; description?: string; unitValue?: number; dueDate?: string | null; isArchived?: boolean;
+  }) {
+    await this.loadCollectionOwned(id, teacherId, institutionId);
+    const updated = await this.prisma.workspaceCollection.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.unitValue !== undefined && { unitValue: dto.unitValue }),
+        ...(dto.dueDate !== undefined && { dueDate: dto.dueDate ? new Date(dto.dueDate) : null }),
+        ...(dto.isArchived !== undefined && { isArchived: dto.isArchived }),
+      },
+      include: { charges: { include: { payments: true } } },
+    });
+    return this.summarizeCollection(updated);
+  }
+
+  async deleteCollection(id: string, teacherId: string, institutionId: string) {
+    await this.loadCollectionOwned(id, teacherId, institutionId);
+    await this.prisma.workspaceCollection.delete({ where: { id } });
+    return { success: true };
+  }
+
+  async addStudentsToCollection(id: string, teacherId: string, institutionId: string, studentIds: string[]) {
+    const c = await this.loadCollectionOwned(id, teacherId, institutionId);
+    const existing = new Set(c.charges.map((ch) => ch.studentId));
+    const toAdd = studentIds.filter((s) => !existing.has(s));
+    const names = await this.fetchStudentNames(toAdd);
+    await this.prisma.workspaceCollectionCharge.createMany({
+      data: toAdd.map((sid) => ({ collectionId: id, studentId: sid, studentName: names.get(sid) ?? 'Estudiante' })),
+    });
+    return this.getCollection(id, teacherId, institutionId);
+  }
+
+  async addPayment(chargeId: string, teacherId: string, institutionId: string, dto: { amount: number; note?: string }) {
+    const charge = await this.prisma.workspaceCollectionCharge.findUnique({
+      where: { id: chargeId },
+      include: { collection: true, payments: true },
+    });
+    if (!charge) throw new NotFoundException('Cargo no encontrado');
+    await this.validateBoardOwnership(charge.collection.boardId, teacherId, institutionId);
+    if (!dto.amount || dto.amount <= 0) throw new BadRequestException('El pago debe ser mayor a 0');
+
+    await this.prisma.workspaceCollectionPayment.create({
+      data: { chargeId, amount: dto.amount, note: dto.note || null },
+    });
+    // Recalcular estado
+    const collected = charge.payments.reduce((acc, p) => acc + Number(p.amount), 0) + dto.amount;
+    const status = this.chargeStatus(collected, Number(charge.collection.unitValue));
+    await this.prisma.workspaceCollectionCharge.update({ where: { id: chargeId }, data: { status } });
+
+    return this.getCollection(charge.collectionId, teacherId, institutionId);
+  }
+
+  async deletePayment(paymentId: string, teacherId: string, institutionId: string) {
+    const payment = await this.prisma.workspaceCollectionPayment.findUnique({
+      where: { id: paymentId },
+      include: { charge: { include: { collection: true, payments: true } } },
+    });
+    if (!payment) throw new NotFoundException('Pago no encontrado');
+    await this.validateBoardOwnership(payment.charge.collection.boardId, teacherId, institutionId);
+    await this.prisma.workspaceCollectionPayment.delete({ where: { id: paymentId } });
+    const collected = payment.charge.payments.filter((p) => p.id !== paymentId).reduce((acc, p) => acc + Number(p.amount), 0);
+    const status = this.chargeStatus(collected, Number(payment.charge.collection.unitValue));
+    await this.prisma.workspaceCollectionCharge.update({ where: { id: payment.chargeId }, data: { status } });
+    return this.getCollection(payment.charge.collectionId, teacherId, institutionId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // COLUMNS
   // ═══════════════════════════════════════════════════════════════════════════
 
