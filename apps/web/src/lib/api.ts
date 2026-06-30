@@ -1130,6 +1130,13 @@ export const superadminApi = {
     adminUsername?: string;
     adminPassword?: string;
     modules?: string[];
+    rectorSameAsAdmin?: boolean;
+    rectorFirstName?: string;
+    rectorLastName?: string;
+    rectorEmail?: string;
+    rectorUsername?: string;
+    rectorPassword?: string;
+    rectorHasLogin?: boolean;
   }) => api.post('/superadmin/institutions', data),
   updateInstitution: (id: string, data: {
     name?: string;

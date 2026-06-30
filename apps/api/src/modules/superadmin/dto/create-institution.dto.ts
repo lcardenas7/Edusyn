@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEmail, IsArray, IsEnum, MinLength } from 'class-validator';
+import { IsString, IsOptional, IsEmail, IsArray, IsEnum, IsBoolean, MinLength } from 'class-validator';
 
 // Enum local - debe coincidir con el de Prisma después de la migración
 export enum SystemModule {
@@ -72,6 +72,45 @@ export class CreateInstitutionDto {
   @IsOptional()
   @IsString()
   adminPhone?: string;
+
+  // ── Rector (figura académica) — separado del administrador de plataforma ──
+  // Si rectorSameAsAdmin = true (u omitido), el administrador también recibe el rol RECTOR
+  // (misma persona, mismas credenciales). Si es false, se crean los datos del rector aparte.
+  @IsOptional()
+  @IsBoolean()
+  rectorSameAsAdmin?: boolean;
+
+  @IsOptional()
+  @IsString()
+  rectorFirstName?: string;
+
+  @IsOptional()
+  @IsString()
+  rectorLastName?: string;
+
+  @IsOptional()
+  @IsEmail()
+  rectorEmail?: string;
+
+  @IsOptional()
+  @IsString()
+  rectorPhone?: string;
+
+  // Si el rector tendrá acceso (login) propio a la plataforma.
+  // false (u omitido) = solo figura institucional (firmas/boletines), sin inicio de sesión.
+  @IsOptional()
+  @IsBoolean()
+  rectorHasLogin?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  rectorUsername?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
+  rectorPassword?: string;
 }
 
 export class UpdateInstitutionDto {

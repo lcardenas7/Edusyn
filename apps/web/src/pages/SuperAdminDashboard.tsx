@@ -995,11 +995,19 @@ function CreateInstitutionModal({
     adminUsername: '',
     adminPassword: '',
     sendEmailNotification: false,
+    // Rector (figura académica) — separado del administrador de plataforma
+    rectorSameAsAdmin: true,
+    rectorFirstName: '',
+    rectorLastName: '',
+    rectorEmail: '',
+    rectorUsername: '',
+    rectorPassword: '',
+    rectorHasLogin: false,
     modules: ['DASHBOARD', 'ACADEMIC', 'CONFIG', 'USERS', 'ENROLLMENTS', 'ATTENDANCE', 'EVALUATION', 'RECOVERY', 'REPORTS', 'COMMUNICATIONS', 'OBSERVER', 'PERFORMANCE'] as string[],
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showCredentialsModal, setShowCredentialsModal] = useState(false)
-  const [createdCredentials, setCreatedCredentials] = useState<{email: string, username: string, password: string, name: string} | null>(null)
+  const [createdCredentials, setCreatedCredentials] = useState<{email: string, username: string, password: string, name: string, rector?: { name: string, email: string, password: string } | null} | null>(null)
   
   // Generar contraseña temporal automática
   const generateTempPassword = () => {
@@ -1028,6 +1036,15 @@ function CreateInstitutionModal({
         adminUsername: formData.adminUsername,
         adminPassword: formData.adminPassword,
         modules: formData.modules,
+        rectorSameAsAdmin: formData.rectorSameAsAdmin,
+        ...(formData.rectorSameAsAdmin ? {} : {
+          rectorFirstName: formData.rectorFirstName,
+          rectorLastName: formData.rectorLastName,
+          rectorEmail: formData.rectorEmail,
+          rectorUsername: formData.rectorUsername || undefined,
+          rectorHasLogin: formData.rectorHasLogin,
+          rectorPassword: formData.rectorHasLogin ? (formData.rectorPassword || undefined) : undefined,
+        }),
       })
 
       const newInst: Institution = {
@@ -1048,11 +1065,15 @@ function CreateInstitutionModal({
 
       // Si no se envía por correo, mostrar las credenciales
       if (!formData.sendEmailNotification) {
+        const rectorResp = response.data?.rector
         setCreatedCredentials({
           email: formData.adminEmail,
           username: formData.adminUsername,
           password: response.data?.admin?.tempPassword || formData.adminPassword,
           name: `${formData.adminFirstName} ${formData.adminLastName}`,
+          rector: (rectorResp && rectorResp.sameAsAdmin === false && rectorResp.hasLogin)
+            ? { name: `${rectorResp.firstName} ${rectorResp.lastName}`, email: rectorResp.email, password: rectorResp.tempPassword }
+            : null,
         })
         setShowCredentialsModal(true)
       }
@@ -1127,7 +1148,8 @@ function CreateInstitutionModal({
 
           {/* Datos del Admin */}
           <div>
-            <h3 className="text-sm font-medium text-slate-700 mb-3">Administrador / Rector(a)</h3>
+            <h3 className="text-sm font-medium text-slate-700 mb-1">Administrador de la plataforma</h3>
+            <p className="text-xs text-slate-400 mb-3">Gestiona la configuración y los usuarios de la institución.</p>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-slate-600 mb-1">Nombre *</label>
@@ -1236,6 +1258,104 @@ function CreateInstitutionModal({
             </div>
           </div>
 
+          {/* Rector(a) — figura académica, separada del administrador */}
+          <div>
+            <h3 className="text-sm font-medium text-slate-700 mb-1">Rector(a)</h3>
+            <p className="text-xs text-slate-400 mb-3">Figura académica (aprobaciones, firmas de boletines). Puede ser la misma persona que el administrador o alguien distinto.</p>
+
+            <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-slate-300 cursor-pointer mb-3">
+              <input
+                type="checkbox"
+                checked={formData.rectorSameAsAdmin}
+                onChange={(e) => setFormData({ ...formData, rectorSameAsAdmin: e.target.checked })}
+                className="w-4 h-4 text-blue-600 rounded"
+              />
+              <div>
+                <div className="text-sm font-medium text-slate-900">El rector es el mismo administrador</div>
+                <div className="text-xs text-slate-500">Usa la misma persona y credenciales. Desmárcalo si el rector es otra persona.</div>
+              </div>
+            </label>
+
+            {!formData.rectorSameAsAdmin && (
+              <div className="grid grid-cols-2 gap-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <div>
+                  <label className="block text-sm text-slate-600 mb-1">Nombre *</label>
+                  <input
+                    type="text"
+                    value={formData.rectorFirstName}
+                    onChange={(e) => setFormData({ ...formData, rectorFirstName: e.target.value })}
+                    placeholder="Carlos"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    required={!formData.rectorSameAsAdmin}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-600 mb-1">Apellido *</label>
+                  <input
+                    type="text"
+                    value={formData.rectorLastName}
+                    onChange={(e) => setFormData({ ...formData, rectorLastName: e.target.value })}
+                    placeholder="Pérez"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    required={!formData.rectorSameAsAdmin}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm text-slate-600 mb-1">Correo electrónico *</label>
+                  <input
+                    type="email"
+                    value={formData.rectorEmail}
+                    onChange={(e) => setFormData({ ...formData, rectorEmail: e.target.value })}
+                    placeholder="rector@colegio.edu.co"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    required={!formData.rectorSameAsAdmin}
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-white hover:border-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.rectorHasLogin}
+                      onChange={(e) => setFormData({ ...formData, rectorHasLogin: e.target.checked })}
+                      className="w-4 h-4 text-blue-600 rounded"
+                    />
+                    <div>
+                      <div className="text-sm font-medium text-slate-900">El rector tendrá acceso (login) a la plataforma</div>
+                      <div className="text-xs text-slate-500">Si lo dejas sin marcar, queda solo como figura institucional (sin inicio de sesión).</div>
+                    </div>
+                  </label>
+                </div>
+
+                {formData.rectorHasLogin && (
+                  <>
+                    <div>
+                      <label className="block text-sm text-slate-600 mb-1">Usuario</label>
+                      <input
+                        type="text"
+                        value={formData.rectorUsername}
+                        onChange={(e) => setFormData({ ...formData, rectorUsername: e.target.value.toLowerCase().replace(/\s+/g, '') })}
+                        placeholder="rector.perez (opcional)"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-slate-600 mb-1">Contraseña temporal</label>
+                      <input
+                        type="text"
+                        value={formData.rectorPassword}
+                        onChange={(e) => setFormData({ ...formData, rectorPassword: e.target.value })}
+                        placeholder="Se genera si la dejas vacía"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        minLength={8}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Módulos */}
           <div>
             <h3 className="text-sm font-medium text-slate-700 mb-3">Módulos Habilitados</h3>
@@ -1330,6 +1450,36 @@ function CreateInstitutionModal({
                   </div>
                 </div>
               </div>
+
+              {createdCredentials.rector && (
+                <div className="bg-violet-50 rounded-xl p-4 space-y-3 mt-3 border border-violet-100">
+                  <div>
+                    <label className="text-xs text-violet-600 uppercase tracking-wider">Rector(a) — con acceso</label>
+                    <p className="text-sm font-medium text-slate-900">{createdCredentials.rector.name}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase tracking-wider">Email</label>
+                    <p className="text-sm font-medium text-slate-900 font-mono">{createdCredentials.rector.email}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase tracking-wider">Contraseña</label>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-slate-900 font-mono bg-amber-100 px-2 py-1 rounded">
+                        {createdCredentials.rector.password}
+                      </p>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(createdCredentials.rector!.password)
+                          alert('Contraseña del rector copiada')
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-800"
+                      >
+                        Copiar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <p className="text-xs text-amber-600 mt-4 text-center">
                 ⚠️ El admin deberá cambiar esta contraseña en su primer inicio de sesión
