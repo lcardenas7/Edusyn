@@ -1425,11 +1425,30 @@ export class ApdAiService implements IApdAiService {
     }
   }
 
+  private static readonly DESIGN_TYPE_GUIDANCE: Record<string, string> = {
+    LESSON_PLAN: 'PLAN DE CLASE: UNA sola sesión. EXACTAMENTE 3 momentos: INICIO, DESARROLLO, CIERRE. 2-3 actividades. identification.sessions = 1.',
+    SEQUENCE: 'SECUENCIA DIDÁCTICA: VARIAS sesiones encadenadas (usa 4-6). Aquí cada elemento de "moments" representa una SESIÓN COMPLETA con su propio propósito (NO los 3 momentos de una clase). Progresión de menor a mayor complejidad. identification.sessions = número de sesiones.',
+    UNIT: 'UNIDAD COMPLETA: abarca varias semanas (6-10 sesiones). MÁS objetivos y resultados de aprendizaje, evaluación formativa Y sumativa, varios productos. "moments" lista las SESIONES o etapas de la unidad. identification.sessions alto.',
+    PBL: 'PROYECTO ABP: DEBE incluir una PREGUNTA ORIENTADORA como primer objetivo y un PRODUCTO FINAL auténtico. "moments" son las FASES del proyecto (lanzamiento, investigación, construcción, presentación), no momentos de clase. Evaluación por proceso + producto.',
+    STEAM: 'CLASE STEAM: integra AL MENOS 2 áreas (ciencia/tecnología/ingeniería/arte/matemáticas) en torno a un RETO de diseño. Las actividades incluyen diseñar, construir y probar.',
+    FLIPPED: 'CLASE INVERTIDA: el contenido se estudia ANTES en casa (descríbelo y ponlo en resources); el primer momento es ese trabajo previo y la sesión presencial es práctica activa y resolución de dudas.',
+    CHALLENGE: 'APRENDIZAJE BASADO EN RETOS: un reto auténtico del contexto del estudiante. Fases: comprometer, investigar, actuar. Solución real e iteración.',
+    WORKSHOP: 'TALLER: foco en práctica guiada PASO A PASO para producir algo concreto. Actividades detalladas con tiempos y producto tangible.',
+    LAB: 'LABORATORIO: práctica experimental con objetivo, materiales, procedimiento, registro de datos, conclusiones y normas de seguridad.',
+    EVALUATION: 'EVALUACIÓN: el foco es el INSTRUMENTO. Prioriza "evaluation" y "rubric" MUY detallados (criterios con niveles y descriptores claros); "moments" puede ser breve.',
+    INTERACTIVE_LESSON: 'LECCIÓN INTERACTIVA: secuencia de pantallas/slides con micro-actividades y chequeos de comprensión frecuentes. "moments" = bloques de la lección.',
+  };
+
   private buildDesignSystemPrompt(input: { experienceType?: string }): string {
+    const type = (input.experienceType || 'LESSON_PLAN').toUpperCase();
+    const guidance = ApdAiService.DESIGN_TYPE_GUIDANCE[type] || ApdAiService.DESIGN_TYPE_GUIDANCE.LESSON_PLAN;
     return [
       'Eres Valeria, diseñadora pedagógica experta del sistema educativo colombiano (MEN).',
       'Diseñas experiencias de aprendizaje completas, prácticas y aplicables en el aula.',
-      `Tipo de experiencia solicitada: ${input.experienceType || 'LESSON_PLAN'}.`,
+      '',
+      `=== TIPO DE EXPERIENCIA: ${type} ===`,
+      guidance,
+      'La ESTRUCTURA, el alcance y el número de momentos/actividades DEBEN reflejar este tipo. No entregues un plan de clase genérico para todos los tipos.',
       '',
       'Devuelve EXCLUSIVAMENTE un JSON válido con esta forma exacta:',
       '{',
@@ -1437,7 +1456,7 @@ export class ApdAiService implements IApdAiService {
       '    "identification": { "area": "", "subject": "", "grade": "", "sessions": 1, "totalMinutes": 0 },',
       '    "framework": { "competencies": [""], "dba": [""], "standards": [""] },',
       '    "learning": { "objectives": [""], "outcomes": [""], "bloomLevels": [""] },',
-      '    "moments": [ { "phase": "INICIO|DESARROLLO|CIERRE", "minutes": 0, "description": "", "activities": [""] } ],',
+      '    "moments": [ { "phase": "nombre del momento, sesión o fase según el tipo", "minutes": 0, "description": "", "activities": [""] } ],',
       '    "activities": [ { "title": "", "description": "", "type": "TASK|QUIZ|FORUM|PROJECT|GAME|LESSON", "minutes": 0, "product": "" } ],',
       '    "evaluation": { "type": "", "criteria": [""], "evidences": [""] },',
       '    "rubric": { "criteria": [ { "name": "", "levels": [ { "label": "", "descriptor": "", "score": 0 } ] } ] },',
@@ -1452,7 +1471,7 @@ export class ApdAiService implements IApdAiService {
       '  }',
       '}',
       '',
-      'Reglas: español claro; incluye los TRES momentos de la clase con tiempos; actividades concretas y realizables; evaluación formativa con evidencias; ajustes DUA reales. No incluyas texto fuera del JSON.',
+      'Reglas: español claro; los "moments" y su cantidad deben corresponder al TIPO de experiencia (no siempre 3); actividades concretas y realizables con tiempos; evaluación con evidencias; ajustes DUA reales. No incluyas texto fuera del JSON.',
     ].join('\n');
   }
 
