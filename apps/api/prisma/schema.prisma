@@ -532,6 +532,7 @@ model Institution {
   rlsStudentEnrollments      StudentEnrollment[]      @relation("RlsInstitutionSE")
   rlsTeacherAssignments      TeacherAssignment[]      @relation("RlsInstitutionTA")
   rlsPartialGrades           PartialGrade[]           @relation("RlsInstitutionPG")
+  rlsGradeAuditEvents        GradeAuditEvent[]        @relation("RlsInstitutionGAE")
   rlsPeriodFinalGrades       PeriodFinalGrade[]       @relation("RlsInstitutionPFG")
   rlsFinalComponentGrades    FinalComponentGrade[]    @relation("RlsInstitutionFCG")
   rlsStudentGrades           StudentGrade[]           @relation("RlsInstitutionSG")
@@ -1829,6 +1830,54 @@ model PartialGrade {
   @@unique([studentEnrollmentId, teacherAssignmentId, academicTermId, componentType, activityIndex])
   @@index([teacherAssignmentId, academicTermId])
   @@index([studentEnrollmentId, academicTermId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AUDITORÍA FORENSE DE NOTAS (append-only)
+// Registra quién creó/cambió/borró una nota, cuándo y con qué valores.
+// Hacia adelante: solo captura desde que se instrumenta (no recupera el pasado).
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum GradeAuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model GradeAuditEvent {
+  id            String           @id @default(cuid())
+  institutionId String
+  source        String           @default("PARTIAL_GRADE") // origen del cambio (futuro: STUDENT_GRADE, etc.)
+  action        GradeAuditAction
+
+  // Quién y cuándo (snapshot del actor por si luego se desactiva o elimina)
+  actorUserId String?
+  actorName   String?
+  actorRole   String?
+
+  // Contexto del registro afectado
+  partialGradeId      String? // id del registro (null tras DELETE)
+  studentEnrollmentId String?
+  teacherAssignmentId String?
+  academicTermId      String?
+  componentType       String?
+  activityIndex       Int?
+  activityName        String?
+
+  // Valores (lo forense): nota anterior y nueva
+  previousScore Decimal? @db.Decimal(5, 2)
+  newScore      Decimal? @db.Decimal(5, 2)
+  previousValue Json?
+  newValue      Json?
+
+  performedAt DateTime @default(now())
+
+  institution Institution @relation("RlsInstitutionGAE", fields: [institutionId], references: [id])
+
+  @@index([institutionId, performedAt])
+  @@index([studentEnrollmentId])
+  @@index([teacherAssignmentId, academicTermId])
+  @@index([actorUserId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

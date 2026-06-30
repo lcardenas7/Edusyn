@@ -1,9 +1,13 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { GradeAuditService, GradeAuditActor } from './grade-audit.service';
 
 @Injectable()
 export class PartialGradesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly gradeAudit: GradeAuditService,
+  ) {}
 
   /**
    * Valida que el período NO esté FINALIZED.
@@ -32,10 +36,25 @@ export class PartialGradesService {
     activityType?: string;
     score: number;
     observations?: string;
-  }) {
+  }, actor?: GradeAuditActor) {
     await this.guardTermNotFinalized(data.academicTermId);
     const ta = await this.prisma.teacherAssignment.findUnique({ where: { id: data.teacherAssignmentId }, select: { institutionId: true } });
-    return this.prisma.partialGrade.upsert({
+
+    // Estado previo (para auditoría forense: nota anterior vs nueva)
+    const prev = await this.prisma.partialGrade.findUnique({
+      where: {
+        studentEnrollmentId_teacherAssignmentId_academicTermId_componentType_activityIndex: {
+          studentEnrollmentId: data.studentEnrollmentId,
+          teacherAssignmentId: data.teacherAssignmentId,
+          academicTermId: data.academicTermId,
+          componentType: data.componentType,
+          activityIndex: data.activityIndex,
+        },
+      },
+      select: { id: true, score: true },
+    });
+
+    const result = await this.prisma.partialGrade.upsert({
       where: {
         studentEnrollmentId_teacherAssignmentId_academicTermId_componentType_activityIndex: {
           studentEnrollmentId: data.studentEnrollmentId,
@@ -53,6 +72,28 @@ export class PartialGradesService {
       },
       create: { ...data, institutionId: ta!.institutionId },
     });
+
+    // Auditoría: CREATE si no existía; UPDATE solo si la nota cambió
+    const prevScore = prev ? Number(prev.score) : null;
+    if (!prev) {
+      await this.gradeAudit.record({
+        institutionId: ta!.institutionId, action: 'CREATE', partialGradeId: result.id,
+        studentEnrollmentId: data.studentEnrollmentId, teacherAssignmentId: data.teacherAssignmentId,
+        academicTermId: data.academicTermId, componentType: data.componentType,
+        activityIndex: data.activityIndex, activityName: data.activityName,
+        previousScore: null, newScore: data.score,
+      }, actor);
+    } else if (prevScore !== data.score) {
+      await this.gradeAudit.record({
+        institutionId: ta!.institutionId, action: 'UPDATE', partialGradeId: result.id,
+        studentEnrollmentId: data.studentEnrollmentId, teacherAssignmentId: data.teacherAssignmentId,
+        academicTermId: data.academicTermId, componentType: data.componentType,
+        activityIndex: data.activityIndex, activityName: data.activityName,
+        previousScore: prevScore, newScore: data.score,
+      }, actor);
+    }
+
+    return result;
   }
 
   async bulkUpsert(grades: Array<{
@@ -65,7 +106,7 @@ export class PartialGradesService {
     activityType?: string;
     score: number;
     observations?: string;
-  }>) {
+  }>, actor?: GradeAuditActor) {
     // Validar que ningún período esté FINALIZED
     const termIds = [...new Set(grades.map(g => g.academicTermId))];
     for (const termId of termIds) {
@@ -148,10 +189,21 @@ export class PartialGradesService {
     const results: any[] = [];
     for (const grade of grades) {
       if (grade.score > 0) {
-        const result = await this.upsert(grade);
+        const result = await this.upsert(grade, actor);
         results.push({ action: 'upsert', ...result });
       } else {
         try {
+          // Capturar lo que se va a borrar para la auditoría forense
+          const toDelete = await this.prisma.partialGrade.findMany({
+            where: {
+              studentEnrollmentId: grade.studentEnrollmentId,
+              teacherAssignmentId: grade.teacherAssignmentId,
+              academicTermId: grade.academicTermId,
+              componentType: grade.componentType,
+              activityIndex: grade.activityIndex,
+            },
+            select: { id: true, institutionId: true, score: true, activityName: true },
+          });
           await this.prisma.partialGrade.deleteMany({
             where: {
               studentEnrollmentId: grade.studentEnrollmentId,
@@ -161,6 +213,15 @@ export class PartialGradesService {
               activityIndex: grade.activityIndex,
             },
           });
+          if (toDelete.length > 0) {
+            await this.gradeAudit.recordMany(toDelete.map((d) => ({
+              institutionId: d.institutionId, action: 'DELETE' as const, partialGradeId: d.id,
+              studentEnrollmentId: grade.studentEnrollmentId, teacherAssignmentId: grade.teacherAssignmentId,
+              academicTermId: grade.academicTermId, componentType: grade.componentType,
+              activityIndex: grade.activityIndex, activityName: d.activityName,
+              previousScore: Number(d.score), newScore: null,
+            })), actor);
+          }
           results.push({ action: 'delete', ...grade });
         } catch (e) {
           // Ignorar si no existe
@@ -411,15 +472,29 @@ export class PartialGradesService {
     });
   }
 
-  async delete(id: string) {
+  async delete(id: string, actor?: GradeAuditActor) {
     const grade = await this.prisma.partialGrade.findUnique({
       where: { id },
-      select: { academicTermId: true },
+      select: {
+        academicTermId: true, institutionId: true, score: true,
+        studentEnrollmentId: true, teacherAssignmentId: true, componentType: true,
+        activityIndex: true, activityName: true,
+      },
     });
     if (grade) {
       await this.guardTermNotFinalized(grade.academicTermId);
     }
-    return this.prisma.partialGrade.delete({ where: { id } });
+    const result = await this.prisma.partialGrade.delete({ where: { id } });
+    if (grade) {
+      await this.gradeAudit.record({
+        institutionId: grade.institutionId, action: 'DELETE', partialGradeId: id,
+        studentEnrollmentId: grade.studentEnrollmentId, teacherAssignmentId: grade.teacherAssignmentId,
+        academicTermId: grade.academicTermId, componentType: grade.componentType,
+        activityIndex: grade.activityIndex, activityName: grade.activityName,
+        previousScore: Number(grade.score), newScore: null,
+      }, actor);
+    }
+    return result;
   }
 
   /**
@@ -529,15 +604,25 @@ export class PartialGradesService {
     academicTermId: string,
     componentType: string,
     activityIndex: number,
+    actor?: GradeAuditActor,
   ) {
     await this.guardTermNotFinalized(academicTermId);
-    return this.prisma.partialGrade.deleteMany({
-      where: {
-        teacherAssignmentId,
-        academicTermId,
-        componentType,
-        activityIndex,
-      },
+    // Capturar lo que se va a borrar para la auditoría forense
+    const toDelete = await this.prisma.partialGrade.findMany({
+      where: { teacherAssignmentId, academicTermId, componentType, activityIndex },
+      select: { id: true, institutionId: true, score: true, studentEnrollmentId: true, activityName: true },
     });
+    const result = await this.prisma.partialGrade.deleteMany({
+      where: { teacherAssignmentId, academicTermId, componentType, activityIndex },
+    });
+    if (toDelete.length > 0) {
+      await this.gradeAudit.recordMany(toDelete.map((d) => ({
+        institutionId: d.institutionId, action: 'DELETE' as const, partialGradeId: d.id,
+        studentEnrollmentId: d.studentEnrollmentId, teacherAssignmentId,
+        academicTermId, componentType, activityIndex, activityName: d.activityName,
+        previousScore: Number(d.score), newScore: null,
+      })), actor);
+    }
+    return result;
   }
 }
