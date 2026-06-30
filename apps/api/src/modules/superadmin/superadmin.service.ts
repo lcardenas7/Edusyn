@@ -119,9 +119,31 @@ export class SuperadminService {
       throw new ConflictException(`El email "${dto.adminEmail}" ya está registrado`);
     }
 
+    // ── Rector: validar solo si es una persona distinta del administrador ──
+    const rectorSeparate = dto.rectorSameAsAdmin === false;
+    if (rectorSeparate) {
+      if (!dto.rectorFirstName || !dto.rectorLastName || !dto.rectorEmail) {
+        throw new ConflictException('Datos del rector incompletos (nombre, apellido y email son requeridos).');
+      }
+      if (dto.rectorEmail.toLowerCase() === dto.adminEmail.toLowerCase()) {
+        throw new ConflictException('El email del rector no puede ser igual al del administrador. Si es la misma persona, marca "El rector es el mismo administrador".');
+      }
+      const existingRectorEmail = await this.prisma.user.findUnique({ where: { email: dto.rectorEmail } });
+      if (existingRectorEmail) {
+        throw new ConflictException(`El email del rector "${dto.rectorEmail}" ya está registrado`);
+      }
+    }
+
     // Usar contraseña proporcionada o generar una temporal
     const tempPassword = dto.adminPassword || this.generateTempPassword();
     const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+    // Contraseña del rector (solo si es persona distinta y tendrá login propio)
+    const rectorWithLogin = rectorSeparate && dto.rectorHasLogin === true;
+    const rectorTempPassword = rectorWithLogin ? (dto.rectorPassword || this.generateTempPassword()) : null;
+    const rectorPasswordHash = rectorTempPassword
+      ? await bcrypt.hash(rectorTempPassword, 10)
+      : await bcrypt.hash(this.generateTempPassword(), 10); // hash inutilizable si no tiene login
 
     // Crear institución, admin y módulos en una transacción
     const result = await this.prisma.$transaction(async (tx) => {
@@ -200,6 +222,54 @@ export class SuperadminService {
         },
       });
 
+      // 8. Rector (figura académica) — separado del administrador de plataforma
+      let rectorRole = await tx.role.findUnique({ where: { name: 'RECTOR' } });
+      if (!rectorRole) {
+        rectorRole = await tx.role.create({ data: { name: 'RECTOR' } });
+      }
+
+      let rector: any;
+      if (!rectorSeparate) {
+        // Misma persona: el administrador también obtiene el rol RECTOR (mismas credenciales)
+        await tx.userRole.create({ data: { userId: adminUser.id, roleId: rectorRole.id } });
+        await tx.institutionUserRole.create({ data: { institutionUserId: adminInstitutionUser.id, roleId: rectorRole.id } });
+        rector = {
+          sameAsAdmin: true,
+          id: adminUser.id,
+          email: adminUser.email,
+          firstName: adminUser.firstName,
+          lastName: adminUser.lastName,
+        };
+      } else {
+        // Persona distinta: se crea el usuario rector (con o sin login propio)
+        const rectorUser = await tx.user.create({
+          data: {
+            email: dto.rectorEmail!,
+            username: dto.rectorUsername || dto.rectorEmail!.split('@')[0],
+            firstName: dto.rectorFirstName!,
+            lastName: dto.rectorLastName!,
+            phone: dto.rectorPhone,
+            passwordHash: rectorPasswordHash,
+            isActive: rectorWithLogin, // sin login => inactivo (no inicia sesión, solo figura)
+            mustChangePassword: rectorWithLogin,
+          },
+        });
+        await tx.userRole.create({ data: { userId: rectorUser.id, roleId: rectorRole.id } });
+        const rectorInstitutionUser = await tx.institutionUser.create({
+          data: { userId: rectorUser.id, institutionId: institution.id, isAdmin: false },
+        });
+        await tx.institutionUserRole.create({ data: { institutionUserId: rectorInstitutionUser.id, roleId: rectorRole.id } });
+        rector = {
+          sameAsAdmin: false,
+          id: rectorUser.id,
+          email: rectorUser.email,
+          firstName: rectorUser.firstName,
+          lastName: rectorUser.lastName,
+          hasLogin: rectorWithLogin,
+          tempPassword: rectorTempPassword, // null si no tiene login
+        };
+      }
+
       return {
         institution,
         admin: {
@@ -209,6 +279,7 @@ export class SuperadminService {
           lastName: adminUser.lastName,
           tempPassword, // Solo se muestra una vez
         },
+        rector,
       };
     });
 
