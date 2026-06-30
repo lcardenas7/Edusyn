@@ -533,7 +533,7 @@ export class ClassroomService {
   async listActivities(classroomId: string, userId: string, role: 'teacher' | 'student') {
     if (role === 'teacher') {
       // Teachers see all activities
-      return this.prisma.classroomActivity.findMany({
+      const activities = await this.prisma.classroomActivity.findMany({
         where: { classroomId },
         include: {
           section: { select: { id: true, title: true } },
@@ -541,6 +541,17 @@ export class ClassroomService {
         },
         orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
       });
+
+      // Conteo de entregas pendientes por calificar (SUBMITTED/LATE) por actividad.
+      // Aditivo: alimenta el centro de control del docente ("Por calificar (n)") sin migración.
+      const pendingGroups = await this.prisma.activitySubmission.groupBy({
+        by: ['activityId'],
+        where: { activity: { classroomId }, status: { in: ['SUBMITTED', 'LATE'] } },
+        _count: { _all: true },
+      });
+      const pendingMap = new Map(pendingGroups.map((g) => [g.activityId, g._count._all]));
+
+      return activities.map((a) => ({ ...a, gradingPending: pendingMap.get(a.id) || 0 }));
     }
 
     // Students see only published activities — ordered by publication date (newest first)
