@@ -1407,8 +1407,8 @@ export class ApdAiService implements IApdAiService {
       };
     }
     try {
-      // El diseño es un JSON grande: damos margen amplio de tokens para no truncarlo.
-      const raw = await this.callLlmJson<any>(system, user, 8000, route);
+      // El diseño es un JSON grande y detallado: margen amplio para no truncarlo.
+      const raw = await this.callLlmJson<any>(system, user, 10000, route);
       const content = raw?.content ?? raw;
       const dna = raw?.dna ?? this.placeholderDesignDna(input);
       if (!content || typeof content !== 'object' || (!content.moments && !content.learning && !content.activities)) {
@@ -1456,8 +1456,9 @@ export class ApdAiService implements IApdAiService {
       '    "identification": { "area": "", "subject": "", "grade": "", "sessions": 1, "totalMinutes": 0 },',
       '    "framework": { "competencies": [""], "dba": [""], "standards": [""] },',
       '    "learning": { "objectives": [""], "outcomes": [""], "bloomLevels": [""] },',
-      '    "moments": [ { "phase": "nombre del momento, sesión o fase según el tipo", "minutes": 0, "description": "", "activities": [""] } ],',
-      '    "activities": [ { "title": "", "description": "", "type": "TASK|QUIZ|FORUM|PROJECT|GAME|LESSON", "minutes": 0, "product": "" } ],',
+      '    "contentSummary": "2 a 4 párrafos que EXPLICAN el contenido conceptual del tema con sustancia, definiciones y ejemplos concretos (el saber que el docente enseña, no un resumen vago)",',
+      '    "moments": [ { "phase": "nombre del momento, sesión o fase según el tipo", "minutes": 0, "description": "párrafo detallado de QUÉ ocurre y CÓMO", "teacherActions": ["lo que el docente hace y dice, concreto"], "studentActions": ["lo que hacen los estudiantes"] } ],',
+      '    "activities": [ { "title": "", "type": "TASK|QUIZ|FORUM|PROJECT|GAME|LESSON", "minutes": 0, "instructions": "instrucciones detalladas paso a paso para realizarla", "content": "el desarrollo/contenido REAL de la actividad con ejemplos concretos del tema", "example": "un ejemplo trabajado y resuelto", "product": "" } ],',
       '    "evaluation": { "type": "", "criteria": [""], "evidences": [""] },',
       '    "rubric": { "criteria": [ { "name": "", "levels": [ { "label": "", "descriptor": "", "score": 0 } ] } ] },',
       '    "dua": { "barriers": [""], "adjustments": [""] },',
@@ -1470,6 +1471,9 @@ export class ApdAiService implements IApdAiService {
       '    "work": { "individual": true, "collaborative": true }',
       '  }',
       '}',
+      '',
+      '=== PROFUNDIDAD (lo más importante) ===',
+      'Sé EXTENSO y EXPLICATIVO. "contentSummary", cada "description", "instructions" y "content" deben tener VARIAS oraciones con sustancia real, el contenido del tema y ejemplos concretos — NUNCA títulos sueltos ni generalidades como "explicación del tema". Un docente debe poder dar la clase leyendo esto, sin buscar nada más. Escribe como un experto que prepara material listo para usar.',
       '',
       'Reglas: español claro; los "moments" y su cantidad deben corresponder al TIPO de experiencia (no siempre 3); actividades concretas y realizables con tiempos; evaluación con evidencias; ajustes DUA reales. No incluyas texto fuera del JSON.',
     ].join('\n');

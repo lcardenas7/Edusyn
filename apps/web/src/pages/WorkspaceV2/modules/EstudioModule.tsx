@@ -17,8 +17,9 @@ interface DesignContent {
   identification?: { area?: string; subject?: string; grade?: string; sessions?: number; totalMinutes?: number }
   framework?: { competencies?: string[]; dba?: string[]; standards?: string[] }
   learning?: { objectives?: string[]; outcomes?: string[]; bloomLevels?: string[] }
-  moments?: { phase?: string; minutes?: number; description?: string; activities?: string[] }[]
-  activities?: { title?: string; description?: string; type?: string; minutes?: number; product?: string }[]
+  contentSummary?: string
+  moments?: { phase?: string; minutes?: number; description?: string; activities?: string[]; teacherActions?: string[]; studentActions?: string[] }[]
+  activities?: { title?: string; description?: string; type?: string; minutes?: number; product?: string; instructions?: string; content?: string; example?: string }[]
   evaluation?: { type?: string; criteria?: string[]; evidences?: string[] }
   rubric?: { criteria?: { name?: string; levels?: { label?: string; descriptor?: string; score?: number }[] }[] }
   dua?: { barriers?: string[]; adjustments?: string[] }
@@ -259,6 +260,17 @@ function DesignDetail({ design, onBack, onDeleted }: { design: FullDesign; onBac
         ) : null}
       </Block>
 
+      {/* Contenido del tema */}
+      {(c.contentSummary || editing) && (
+        <Block icon={<FileText className="w-4 h-4 text-indigo-500" />} title="Contenido del tema">
+          {editing ? (
+            <Editable value={c.contentSummary || ''} onChange={(v) => setContent((p) => ({ ...p, contentSummary: v }))} rows={6} />
+          ) : (
+            <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{c.contentSummary}</p>
+          )}
+        </Block>
+      )}
+
       {/* Momentos */}
       <Block icon={<Clock className="w-4 h-4 text-blue-500" />} title="Momentos de la clase">
         <div className="space-y-3">
@@ -276,8 +288,14 @@ function DesignDetail({ design, onBack, onDeleted }: { design: FullDesign; onBac
                 </>
               ) : (
                 <>
-                  <p className="text-sm text-slate-700 whitespace-pre-wrap">{m.description}</p>
-                  <Bullets items={m.activities} small />
+                  <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{m.description}</p>
+                  {m.teacherActions?.length ? (
+                    <div className="mt-2"><p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">El docente</p><Bullets items={m.teacherActions} small /></div>
+                  ) : null}
+                  {m.studentActions?.length ? (
+                    <div className="mt-1.5"><p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Los estudiantes</p><Bullets items={m.studentActions} small /></div>
+                  ) : null}
+                  {m.activities?.length ? <Bullets items={m.activities} small /> : null}
                 </>
               )}
             </div>
@@ -292,9 +310,21 @@ function DesignDetail({ design, onBack, onDeleted }: { design: FullDesign; onBac
           <div className="space-y-2">
             {c.activities.map((a, i) => (
               <div key={i} className="rounded-xl border border-slate-150 p-3">
-                <p className="text-sm font-medium text-slate-800">{a.title}</p>
+                <p className="text-sm font-semibold text-slate-800">{a.title}</p>
                 {a.description && <p className="text-xs text-slate-500 mt-0.5">{a.description}</p>}
-                <div className="flex flex-wrap gap-2 mt-1 text-[10px] text-slate-400">
+                {a.instructions && (
+                  <div className="mt-1.5"><p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Instrucciones</p>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{a.instructions}</p></div>
+                )}
+                {a.content && (
+                  <div className="mt-1.5"><p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Desarrollo</p>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{a.content}</p></div>
+                )}
+                {a.example && (
+                  <div className="mt-1.5 rounded-lg bg-slate-50 border border-slate-150 p-2"><p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Ejemplo</p>
+                    <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{a.example}</p></div>
+                )}
+                <div className="flex flex-wrap gap-2 mt-2 text-[10px] text-slate-400">
                   {a.type && <Chip>{a.type}</Chip>}
                   {a.minutes != null && <Chip>{a.minutes} min</Chip>}
                   {a.product && <Chip>Producto: {a.product}</Chip>}
