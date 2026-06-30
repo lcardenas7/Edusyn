@@ -5415,6 +5415,32 @@ model PedagogicalDesignVersion {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// ORQUESTADOR DE IA — plan por institución (free/premium), cuota y consumo.
+// docs/DISENO_PEDAGOGICO_IA.md §21
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum AiTier {
+  FREE      // modelos gratis (OpenRouter cascade) — validación / plan básico
+  PREMIUM   // modelo de pago (ej. Gemini Flash) — instituciones que pagan
+  BYOK      // la institución trae su propia API key
+}
+
+model InstitutionAiPlan {
+  id                  String   @id @default(cuid())
+  institutionId       String   @unique
+  tier                AiTier   @default(FREE)
+  modelOverride       String?            // forzar un modelo concreto (opcional)
+  monthlyTokenQuota   Int      @default(2000000) // tope mensual de tokens
+  tokensUsedThisMonth Int      @default(0)
+  periodResetAt       DateTime @default(now())   // inicio del período de cuota
+  byokApiKeyRef       String?            // referencia a key propia (futuro)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([institutionId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // AULA VIRTUAL — Módulo de clases virtuales por asignatura
 // ═══════════════════════════════════════════════════════════════════════════
 

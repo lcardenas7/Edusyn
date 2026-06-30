@@ -32,11 +32,20 @@ import {
 export class ApdAiService implements IApdAiService {
   private readonly logger = new Logger(ApdAiService.name);
   private readonly config: ApdAiServiceConfig;
+  // Multi-key: claves por proveedor para que coexistan free (OpenRouter) y
+  // premium (Gemini) según el plan de la institución (orquestador §21).
+  private readonly providerKeys: Record<string, string | undefined>;
 
   constructor() {
     const providerEnv = process.env.APD_AI_PROVIDER?.trim().toUpperCase();
     const apiKey = process.env.APD_AI_API_KEY;
     const detectedProvider = this.detectProvider(apiKey);
+    this.providerKeys = {
+      OPENROUTER: process.env.OPENROUTER_API_KEY || (detectedProvider === 'OPENROUTER' ? apiKey : undefined),
+      GEMINI: process.env.GEMINI_API_KEY || (detectedProvider === 'GEMINI' ? apiKey : undefined),
+      GROQ: process.env.GROQ_API_KEY || (detectedProvider === 'GROQ' ? apiKey : undefined),
+      XAI: process.env.XAI_API_KEY || (detectedProvider === 'XAI' ? apiKey : undefined),
+    };
     this.config = {
       provider: (providerEnv as any) || detectedProvider,
       model: process.env.APD_AI_MODEL || this.getDefaultModel(detectedProvider),
@@ -55,7 +64,9 @@ export class ApdAiService implements IApdAiService {
   }
 
   isEnabled(): boolean {
-    return this.config.provider !== 'DISABLED' && !!this.config.apiKey;
+    if (this.config.provider !== 'DISABLED' && !!this.config.apiKey) return true;
+    // También habilitado si hay alguna key por proveedor (multi-key del orquestador).
+    return Object.values(this.providerKeys).some(Boolean);
   }
 
   private isGeminiEnabled(): boolean {
@@ -101,13 +112,14 @@ export class ApdAiService implements IApdAiService {
     systemInstruction: string,
     userPrompt: string,
     maxTokens?: number,
+    creds?: { apiKey?: string; model?: string },
   ): Promise<T> {
-    if (!this.isOpenRouterEnabled()) {
-      throw new Error('OpenRouter no está habilitado');
-    }
+    const apiKey = creds?.apiKey ?? this.providerKeys.OPENROUTER ?? this.config.apiKey;
+    if (!apiKey) throw new Error('OpenRouter no está habilitado');
 
-    const modelsToTry = this.config.model && !ApdAiService.OPENROUTER_MODEL_CASCADE.includes(this.config.model)
-      ? [this.config.model, ...ApdAiService.OPENROUTER_MODEL_CASCADE]
+    const preferred = creds?.model || this.config.model;
+    const modelsToTry = preferred && !ApdAiService.OPENROUTER_MODEL_CASCADE.includes(preferred)
+      ? [preferred, ...ApdAiService.OPENROUTER_MODEL_CASCADE]
       : ApdAiService.OPENROUTER_MODEL_CASCADE;
 
     let lastError: Error | null = null;
@@ -115,7 +127,7 @@ export class ApdAiService implements IApdAiService {
     for (const model of modelsToTry) {
       try {
         this.logger.log(`OpenRouter intentando modelo: ${model}`);
-        const result = await this.callOpenRouterWithModel<T>(model, systemInstruction, userPrompt, maxTokens);
+        const result = await this.callOpenRouterWithModel<T>(model, systemInstruction, userPrompt, maxTokens, apiKey);
         this.logger.log(`OpenRouter modelo exitoso: ${model}`);
         return result;
       } catch (err: any) {
@@ -154,6 +166,7 @@ export class ApdAiService implements IApdAiService {
     systemInstruction: string,
     userPrompt: string,
     maxTokens?: number,
+    apiKey?: string,
   ): Promise<T> {
     const url = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -161,7 +174,7 @@ export class ApdAiService implements IApdAiService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.apiKey}`,
+        'Authorization': `Bearer ${apiKey ?? this.config.apiKey}`,
         'HTTP-Referer': 'https://edusyn.co',
         'X-Title': 'Edusyn - Valeria AI',
       },
@@ -203,19 +216,19 @@ export class ApdAiService implements IApdAiService {
     systemInstruction: string,
     userPrompt: string,
     maxTokens?: number,
+    creds?: { apiKey?: string; model?: string },
   ): Promise<T> {
-    if (!this.isGroqEnabled()) {
-      throw new Error('Groq no está habilitado');
-    }
+    const apiKey = creds?.apiKey ?? this.providerKeys.GROQ ?? this.config.apiKey;
+    if (!apiKey) throw new Error('Groq no está habilitado');
 
-    const model = this.config.model || 'llama-3.1-8b-instant';
+    const model = creds?.model || this.config.model || 'llama-3.1-8b-instant';
     const url = 'https://api.groq.com/openai/v1/chat/completions';
 
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.apiKey}`,
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model,
@@ -247,19 +260,19 @@ export class ApdAiService implements IApdAiService {
     systemInstruction: string,
     userPrompt: string,
     maxTokens?: number,
+    creds?: { apiKey?: string; model?: string },
   ): Promise<T> {
-    if (!this.isXaiEnabled()) {
-      throw new Error('xAI no está habilitado');
-    }
+    const apiKey = creds?.apiKey ?? this.providerKeys.XAI ?? this.config.apiKey;
+    if (!apiKey) throw new Error('xAI no está habilitado');
 
-    const model = this.config.model || 'grok-3-mini';
+    const model = creds?.model || this.config.model || 'grok-3-mini';
     const url = 'https://api.x.ai/v1/chat/completions';
 
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.apiKey}`,
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model,
@@ -291,20 +304,25 @@ export class ApdAiService implements IApdAiService {
     systemInstruction: string,
     userPrompt: string,
     maxTokens?: number,
+    route?: { provider?: string; model?: string },
   ): Promise<T> {
-    if (this.isOpenRouterEnabled()) {
-      return this.callOpenRouterJson<T>(systemInstruction, userPrompt, maxTokens);
+    // Proveedor efectivo: el del route (orquestador) o el de la config por defecto.
+    const provider = (route?.provider || this.config.provider || '').toUpperCase();
+    const apiKey = this.providerKeys[provider] || this.config.apiKey;
+    if (!apiKey) throw new Error(`Sin API key para el proveedor ${provider || 'IA'}`);
+    const creds = { apiKey, model: route?.model };
+    switch (provider) {
+      case 'OPENROUTER': return this.callOpenRouterJson<T>(systemInstruction, userPrompt, maxTokens, creds);
+      case 'GROQ': return this.callGroqJson<T>(systemInstruction, userPrompt, maxTokens, creds);
+      case 'XAI': return this.callXaiJson<T>(systemInstruction, userPrompt, maxTokens, creds);
+      case 'GEMINI': return this.callGeminiJson<T>(systemInstruction, userPrompt, maxTokens, creds);
+      default: throw new Error('Ningún proveedor de IA está habilitado');
     }
-    if (this.isGroqEnabled()) {
-      return this.callGroqJson<T>(systemInstruction, userPrompt, maxTokens);
-    }
-    if (this.isXaiEnabled()) {
-      return this.callXaiJson<T>(systemInstruction, userPrompt, maxTokens);
-    }
-    if (this.isGeminiEnabled()) {
-      return this.callGeminiJson<T>(systemInstruction, userPrompt, maxTokens);
-    }
-    throw new Error('Ningún proveedor de IA está habilitado');
+  }
+
+  /** ¿Hay API key disponible para este proveedor? (para el orquestador). */
+  providerAvailable(provider: string): boolean {
+    return !!this.providerKeys[(provider || '').toUpperCase()];
   }
 
   private sanitizeVisualSvg(svg?: string): string | undefined {
@@ -336,13 +354,13 @@ export class ApdAiService implements IApdAiService {
     systemInstruction: string,
     userPrompt: string,
     maxTokens?: number,
+    creds?: { apiKey?: string; model?: string },
   ): Promise<T> {
-    if (!this.isGeminiEnabled()) {
-      throw new Error('Gemini no está habilitado');
-    }
+    const apiKey = creds?.apiKey ?? this.providerKeys.GEMINI ?? this.config.apiKey;
+    if (!apiKey) throw new Error('Gemini no está habilitado');
 
-    const model = this.config.model || 'gemini-2.0-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${this.config.apiKey}`;
+    const model = creds?.model || this.config.model || 'gemini-2.0-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -1374,31 +1392,35 @@ export class ApdAiService implements IApdAiService {
     subjectName?: string;
     sessions?: number;
     institutionName?: string;
-  }): Promise<{ content: any; dna: any; provider: string; model: string }> {
+  }, route?: { provider?: string; model?: string }): Promise<{ content: any; dna: any; provider: string; model: string }> {
     const system = this.buildDesignSystemPrompt(input);
     const user = this.buildDesignUserPrompt(input);
 
-    if (!this.isEnabled()) {
+    const provider = (route?.provider || this.config.provider || '').toUpperCase();
+    const model = route?.model || this.config.model || '';
+    const available = this.providerAvailable(provider) || (this.isEnabled() && !route?.provider);
+
+    if (!available) {
       return {
-        content: { ...this.placeholderDesign(input), _aiStatus: 'disabled', _aiError: 'IA no configurada en el servidor (falta APD_AI_API_KEY).' },
+        content: { ...this.placeholderDesign(input), _aiStatus: 'disabled', _aiError: `IA no configurada para el proveedor ${provider || 'IA'} en el servidor.` },
         dna: this.placeholderDesignDna(input), provider: 'DISABLED', model: 'none',
       };
     }
     try {
       // El diseño es un JSON grande: damos margen amplio de tokens para no truncarlo.
-      const raw = await this.callLlmJson<any>(system, user, 8000);
+      const raw = await this.callLlmJson<any>(system, user, 8000, route);
       const content = raw?.content ?? raw;
       const dna = raw?.dna ?? this.placeholderDesignDna(input);
       if (!content || typeof content !== 'object' || (!content.moments && !content.learning && !content.activities)) {
         throw new Error('La IA devolvió un contenido incompleto o con formato inesperado.');
       }
-      return { content, dna, provider: this.config.provider, model: this.config.model || '' };
+      return { content, dna, provider, model };
     } catch (e) {
       const msg = String((e as any)?.message || e).slice(0, 400);
-      this.logger.warn(`generatePedagogicalDesign falló (${this.config.provider}/${this.config.model}): ${msg}`);
+      this.logger.warn(`generatePedagogicalDesign falló (${provider}/${model}): ${msg}`);
       return {
         content: { ...this.placeholderDesign(input), _aiStatus: 'error', _aiError: msg },
-        dna: this.placeholderDesignDna(input), provider: 'FALLBACK', model: this.config.model || 'none',
+        dna: this.placeholderDesignDna(input), provider: 'FALLBACK', model: model || 'none',
       };
     }
   }

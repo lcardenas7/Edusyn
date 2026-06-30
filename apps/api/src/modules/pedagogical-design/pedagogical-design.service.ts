@@ -1,6 +1,7 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ApdAiService } from '../apd/ai/apd-ai.service';
+import { AiOrchestratorService } from '../apd/ai/ai-orchestrator.service';
 import { GenerateDesignDto, UpdateDesignDto } from './dto/pedagogical-design.dto';
 import { PedagogicalExperienceType, Prisma } from '@prisma/client';
 
@@ -20,6 +21,7 @@ export class PedagogicalDesignService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ai: ApdAiService,
+    private readonly orchestrator: AiOrchestratorService,
   ) {}
 
   private coerceType(t?: string): PedagogicalExperienceType {
@@ -52,13 +54,31 @@ export class PedagogicalDesignService {
       }
     }
 
-    const ai = await this.ai.generatePedagogicalDesign({
+    // Orquestador de IA (§21): cuota → ruta por tier → caché → medición.
+    if (!(await this.orchestrator.withinQuota(institutionId))) {
+      throw new BadRequestException('Se agotó la cuota de IA de la institución este mes.');
+    }
+    const plan = await this.orchestrator.getPlan(institutionId);
+    const route = this.orchestrator.chooseRoute(plan);
+    const aiInput = {
       prompt: dto.prompt,
       experienceType: this.coerceType(dto.experienceType),
       gradeName,
       subjectName,
       sessions: dto.sessions,
-    });
+    };
+    const cacheKey = `${institutionId}|${route.provider}|${aiInput.experienceType}|${(gradeName || '').toLowerCase()}|${dto.prompt.trim().toLowerCase()}`;
+
+    let ai = this.orchestrator.getCached(cacheKey);
+    if (!ai) {
+      ai = await this.ai.generatePedagogicalDesign(aiInput, route);
+      // Solo cachear y medir si la IA respondió de verdad (no la plantilla de respaldo).
+      if (!ai.content?._placeholder) {
+        this.orchestrator.setCached(cacheKey, ai);
+        const tokens = this.orchestrator.estimateTokens(dto.prompt, JSON.stringify(ai.content));
+        await this.orchestrator.recordUsage(institutionId, tokens);
+      }
+    }
 
     const title = this.deriveTitle(dto.prompt, { ...ai.content, dna: ai.dna });
 
