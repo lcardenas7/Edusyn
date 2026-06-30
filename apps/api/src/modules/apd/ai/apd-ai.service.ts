@@ -71,14 +71,16 @@ export class ApdAiService implements IApdAiService {
     return 'GEMINI'; // fallback
   }
 
-  // Modelos de OpenRouter en orden de prioridad para cascada de reintentos
+  // Modelos de OpenRouter en orden de prioridad para cascada de reintentos.
+  // Si un modelo ya no existe / dejó de ser gratis (404), se cae al siguiente.
   private static readonly OPENROUTER_MODEL_CASCADE = [
-    'google/gemma-4-31b-it:free',
-    'z-ai/glm-4.5-air:free',
     'meta-llama/llama-3.3-70b-instruct:free',
-    'google/gemma-4-26b-a4b-it:free',
-    'openai/gpt-oss-20b:free',
+    'z-ai/glm-4.5-air:free',
+    'deepseek/deepseek-chat-v3-0324:free',
+    'qwen/qwen-2.5-72b-instruct:free',
     'nvidia/nemotron-nano-9b-v2:free',
+    'openai/gpt-oss-20b:free',
+    'mistralai/mistral-7b-instruct:free',
   ];
 
   private getDefaultModel(provider: string): string {
@@ -119,15 +121,24 @@ export class ApdAiService implements IApdAiService {
       } catch (err: any) {
         lastError = err;
         const errMessage = String(err?.message || err || '');
-        const is429 = errMessage.includes('429') || errMessage.toLowerCase().includes('rate-limit');
+        const lower = errMessage.toLowerCase();
+        const is429 = errMessage.includes('429') || lower.includes('rate-limit');
         const isRetryableProviderError =
           /OpenRouter HTTP (5\d\d)/i.test(errMessage) ||
-          errMessage.includes('no healthy upstream') ||
-          errMessage.toLowerCase().includes('provider returned error') ||
-          errMessage.toLowerCase().includes('temporarily unavailable');
+          lower.includes('no healthy upstream') ||
+          lower.includes('provider returned error') ||
+          lower.includes('temporarily unavailable');
+        // Modelo inexistente / ya no gratis (404): cae al siguiente de la cascada.
+        const isModelUnavailable =
+          /OpenRouter HTTP 404/i.test(errMessage) ||
+          lower.includes('unavailable') ||
+          lower.includes('use this slug instead') ||
+          lower.includes('not a valid model') ||
+          lower.includes('no endpoints found') ||
+          lower.includes('no allowed providers');
 
-        if (is429 || isRetryableProviderError) {
-          this.logger.warn(`OpenRouter modelo ${model} falló con error recuperable (${errMessage}), probando siguiente...`);
+        if (is429 || isRetryableProviderError || isModelUnavailable) {
+          this.logger.warn(`OpenRouter modelo ${model} no usable (${errMessage}), probando siguiente...`);
           continue;
         }
         // Para otros errores, no reintentar con otro modelo
