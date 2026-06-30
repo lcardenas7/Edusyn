@@ -7,6 +7,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -41,6 +42,38 @@ export class SuperadminController {
   @Get('institutions/:id')
   getInstitutionById(@Request() req, @Param('id') id: string) {
     return this.superadminService.getInstitutionById(req.user.id, id);
+  }
+
+  /**
+   * Estadísticas de uso de una institución (observabilidad)
+   */
+  @Get('institutions/:id/usage')
+  getInstitutionUsage(@Request() req, @Param('id') id: string) {
+    return this.superadminService.getInstitutionUsage(req.user.id, id);
+  }
+
+  /**
+   * Registro forense de cambios de notas.
+   * Vista general (todas las instituciones) o por institución vía ?institutionId=
+   */
+  @Get('grade-audit')
+  getGradeAuditLog(
+    @Request() req,
+    @Query('institutionId') institutionId?: string,
+    @Query('action') action?: 'CREATE' | 'UPDATE' | 'DELETE',
+    @Query('studentEnrollmentId') studentEnrollmentId?: string,
+    @Query('actorUserId') actorUserId?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.superadminService.getGradeAuditLog(req.user.id, {
+      institutionId,
+      action,
+      studentEnrollmentId,
+      actorUserId,
+      limit: limit ? parseInt(limit) : undefined,
+      offset: offset ? parseInt(offset) : undefined,
+    });
   }
 
   /**

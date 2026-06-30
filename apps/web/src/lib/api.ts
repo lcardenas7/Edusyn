@@ -1155,8 +1155,15 @@ export const superadminApi = {
   suspendInstitution: (id: string) => api.patch(`/superadmin/institutions/${id}/suspend`),
   
   // Eliminar institución (requiere confirmación)
-  deleteInstitution: (id: string, confirmationName: string) => 
+  deleteInstitution: (id: string, confirmationName: string) =>
     api.delete(`/superadmin/institutions/${id}`, { data: { confirmationName } }),
+
+  // Observabilidad: estadísticas de uso por institución
+  getInstitutionUsage: (id: string) => api.get(`/superadmin/institutions/${id}/usage`),
+
+  // Observabilidad: registro forense de cambios de notas (general o por institución)
+  getGradeAuditLog: (params?: { institutionId?: string; action?: string; studentEnrollmentId?: string; actorUserId?: string; limit?: number; offset?: number }) =>
+    api.get('/superadmin/grade-audit', { params }),
 }
 
 // Documentos Institucionales
