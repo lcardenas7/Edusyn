@@ -39,12 +39,14 @@ CREATE INDEX "GradeAuditEvent_actorUserId_idx" ON "GradeAuditEvent"("actorUserId
 ALTER TABLE "GradeAuditEvent" ADD CONSTRAINT "GradeAuditEvent_institutionId_fkey" FOREIGN KEY ("institutionId") REFERENCES "Institution"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- RLS multi-tenant (aislamiento por institución) — mismo patrón que el resto de tablas tenant-scoped.
-ALTER TABLE "GradeAuditEvent" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "GradeAuditEvent" FORCE ROW LEVEL SECURITY;
+-- Defensivo: solo se aplica si la función current_institution_id() existe (entornos con RLS configurada).
+-- En entornos sin RLS (p.ej. staging), se omite sin fallar y el aislamiento queda a nivel de aplicación.
 DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='GradeAuditEvent' AND policyname='tenant_isolation') THEN
-    CREATE POLICY "tenant_isolation" ON "GradeAuditEvent" FOR ALL
-      USING ("institutionId" = current_institution_id())
-      WITH CHECK ("institutionId" = current_institution_id());
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'current_institution_id') THEN
+    EXECUTE 'ALTER TABLE "GradeAuditEvent" ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'ALTER TABLE "GradeAuditEvent" FORCE ROW LEVEL SECURITY';
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'GradeAuditEvent' AND policyname = 'tenant_isolation') THEN
+      EXECUTE 'CREATE POLICY "tenant_isolation" ON "GradeAuditEvent" FOR ALL USING ("institutionId" = current_institution_id()) WITH CHECK ("institutionId" = current_institution_id())';
+    END IF;
   END IF;
 END $$;
