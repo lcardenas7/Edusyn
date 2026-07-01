@@ -1794,6 +1794,8 @@ model PeriodFinalGrade {
   finalScore          Decimal  @db.Decimal(5, 2)
   observations        String?
   enteredById         String
+  // C-1: nota final fijada manualmente. Si true, el recálculo desde parciales NO la sobreescribe.
+  isManualOverride    Boolean  @default(false)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

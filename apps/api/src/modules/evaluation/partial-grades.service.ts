@@ -293,6 +293,20 @@ export class PartialGradesService {
     });
     if (!assignment) return;
 
+    // C-1: si la nota final fue fijada MANUALMENTE, el recálculo automático la respeta
+    // (no la sobreescribe ni la borra). Solo un cambio manual explícito puede modificarla.
+    const existingFinal = await this.prisma.periodFinalGrade.findUnique({
+      where: {
+        studentEnrollmentId_academicTermId_subjectId: {
+          studentEnrollmentId,
+          academicTermId,
+          subjectId: assignment.subjectId,
+        },
+      },
+      select: { isManualOverride: true },
+    });
+    if (existingFinal?.isManualOverride) return;
+
     // 2. Obtener TODOS los PartialGrades restantes de este estudiante/asignatura/período
     const partials = await this.prisma.partialGrade.findMany({
       where: { studentEnrollmentId, teacherAssignmentId, academicTermId },
@@ -405,7 +419,7 @@ export class PartialGradesService {
           subjectId: assignment.subjectId,
         },
       },
-      update: { finalScore },
+      update: { finalScore, isManualOverride: false },
       create: {
         institutionId: assignment.institutionId,
         studentEnrollmentId,
@@ -413,6 +427,7 @@ export class PartialGradesService {
         subjectId: assignment.subjectId,
         finalScore,
         enteredById: assignment.teacherId,
+        isManualOverride: false,
       },
     });
   }
