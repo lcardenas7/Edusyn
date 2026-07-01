@@ -7,11 +7,12 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react'
-import { 
-  academicYearsApi, 
-  groupsApi, 
+import {
+  academicYearsApi,
+  groupsApi,
   academicStudentsApi,
-  periodFinalGradesApi 
+  periodFinalGradesApi,
+  teacherAssignmentsApi
 } from '../lib/api'
 
 interface AcademicTerm {
@@ -124,17 +125,20 @@ export default function PeriodFinalGrades() {
       })
       setStudents(studentsList)
 
-      // Obtener asignaturas del grupo (desde las asignaciones de docentes)
-      const group = groups.find(g => g.id === selectedGroupId)
-      if (group?.grade?.areas) {
-        const allSubjects: Subject[] = []
-        group.grade.areas.forEach((area: any) => {
-          area.subjects?.forEach((subject: any) => {
-            allSubjects.push({ id: subject.id, name: subject.name })
-          })
-        })
-        setSubjects(allSubjects)
+      // Obtener asignaturas del grupo desde las asignaciones de docentes (fuente confiable,
+      // la misma que usa la planilla). El endpoint de grupos no trae grade.areas.subjects,
+      // por lo que antes el selector quedaba vacío/deshabilitado.
+      const taRes = await teacherAssignmentsApi.getAll({ groupId: selectedGroupId, academicYearId: selectedYearId })
+      const seen = new Set<string>()
+      const allSubjects: Subject[] = []
+      for (const a of (taRes.data || [])) {
+        if (a.subject?.id && !seen.has(a.subject.id)) {
+          seen.add(a.subject.id)
+          allSubjects.push({ id: a.subject.id, name: a.subject.name })
+        }
       }
+      allSubjects.sort((s1, s2) => s1.name.localeCompare(s2.name))
+      setSubjects(allSubjects)
     } catch (err) {
       console.error('Error loading students/subjects:', err)
     }
