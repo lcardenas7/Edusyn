@@ -494,6 +494,12 @@ export default function Grades() {
   // ============================================
   
   const [grades, setGrades] = useState<Record<string, Record<string, number | null>>>({})
+  // Concurrencia: snapshot de lo cargado del servidor (última vez que se leyó/guardó).
+  // Al guardar, solo se envían las celdas que difieren de este snapshot — así dos personas
+  // editando celdas distintas de la misma planilla no se pisan (guardado por diferencias).
+  const [gradesBaseline, setGradesBaseline] = useState<Record<string, Record<string, number | null>>>({})
+  // Nombres de actividad tal como estaban en el snapshot (para incluir renombres en el diff).
+  const [baselineActivityNames, setBaselineActivityNames] = useState<Record<string, string>>({})
   // C-1 (UX): notas finales fijadas manualmente por coordinación (enrollmentId → nota).
   // Sirven para avisar al docente que su cambio de parcial NO moverá ese final.
   const [finalOverrides, setFinalOverrides] = useState<Record<string, number>>({})
@@ -521,6 +527,8 @@ export default function Grades() {
           initGrades[student.id] = createEmptyGrades()
         })
         setGrades(initGrades)
+        setGradesBaseline(JSON.parse(JSON.stringify(initGrades)))
+        setBaselineActivityNames({})
         return
       }
       
@@ -554,7 +562,9 @@ export default function Grades() {
         
         // Reemplazar nombres personalizados (no mezclar con los del grupo anterior)
         setCustomActivityNames(savedNames)
+        setBaselineActivityNames(savedNames)
         setGrades(initGrades)
+        setGradesBaseline(JSON.parse(JSON.stringify(initGrades)))
       } catch (err) {
         console.error('Error loading saved grades:', err)
         const initGrades: Record<string, Record<string, number | null>> = {}
@@ -562,6 +572,7 @@ export default function Grades() {
           initGrades[student.id] = createEmptyGrades()
         })
         setGrades(initGrades)
+        setGradesBaseline(JSON.parse(JSON.stringify(initGrades)))
       }
     }
     
@@ -1108,13 +1119,26 @@ export default function Grades() {
             // C-2: null = sin nota (el backend borra la celda); un número (incl. 0) se guarda.
             const raw = studentGrades[activity.id]
             const score = (raw === null || raw === undefined || Number.isNaN(raw)) ? null : raw
+            const activityName = customActivityNames[activity.id] || activity.name
+
+            // Concurrencia (guardado por diferencias): solo se envía la celda si su nota
+            // cambió respecto al snapshot cargado, o si cambió el nombre de una actividad
+            // que ya tiene nota (el nombre solo se persiste si hay una fila que lo cargue).
+            // Así, dos personas editando celdas distintas de la misma planilla no se pisan.
+            const baseScoreRaw = gradesBaseline[student.id]?.[activity.id]
+            const baseScore = (baseScoreRaw === null || baseScoreRaw === undefined || Number.isNaN(baseScoreRaw)) ? null : baseScoreRaw
+            const baseName = baselineActivityNames[activity.id] || activity.name
+            const scoreChanged = score !== baseScore
+            const nameChanged = score !== null && activityName !== baseName
+            if (!scoreChanged && !nameChanged) return
+
             partialGradesToSave.push({
               studentEnrollmentId: student.enrollmentId,
               teacherAssignmentId: selectedAssignment.id,
               academicTermId: academicTermId!,
               componentType: process.code,
               activityIndex: idx + 1,
-              activityName: customActivityNames[activity.id] || activity.name,
+              activityName,
               activityType: activity.type,
               score,
             })
@@ -1122,12 +1146,37 @@ export default function Grades() {
         })
       })
 
+      if (partialGradesToSave.length === 0) {
+        toast.info('No hay cambios por guardar')
+        return
+      }
+
       await withSave(() => partialGradesApi.bulkUpsert(partialGradesToSave))
       // PeriodFinalGrade se recalcula automáticamente en el backend
-      
+
+      // Actualizar el snapshot base con lo recién guardado (para que el próximo diff
+      // sea contra el estado ya persistido, no contra el original de hace rato).
+      setGradesBaseline(prev => {
+        const next = JSON.parse(JSON.stringify(prev))
+        partialGradesToSave.forEach(g => {
+          const student = students.find(s => s.enrollmentId === g.studentEnrollmentId)
+          const process = processConfigs.find(p => p.code === g.componentType)
+          const allProcessActivities = process
+            ? [...process.activities, ...(additionalActivities[process.code] || [])]
+            : []
+          const activity = allProcessActivities[g.activityIndex - 1]
+          if (student && activity) {
+            if (!next[student.id]) next[student.id] = {}
+            next[student.id][activity.id] = g.score
+          }
+        })
+        return next
+      })
+      setBaselineActivityNames(prev => ({ ...prev, ...customActivityNames }))
+
       const notasConValor = partialGradesToSave.filter(g => g.score !== null && g.score !== undefined).length
       TOAST.grades.saved(selectedAssignment?.subject?.name, selectedAssignment?.group?.name)
-      if (notasConValor > 0) toast.info(`${notasConValor} notas guardadas`)
+      if (notasConValor > 0) toast.info(`${notasConValor} nota(s) guardada(s)`)
     } catch (err: any) {
       console.error('Error saving grades:', err)
       TOAST.grades.error(err)
