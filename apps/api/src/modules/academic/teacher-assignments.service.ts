@@ -524,15 +524,18 @@ export class TeacherAssignmentsService {
       throw new NotFoundException('Asignación no encontrada');
     }
 
-    // Verificar si tiene datos asociados que impidan el borrado
-    const [partialGrades, scheduleEntries] = await Promise.all([
+    // Verificar si tiene datos asociados que impidan el borrado.
+    // C-5: la asignación cascada a PartialGrade Y AttendanceRecord; hay que revisar AMBOS
+    // (antes solo se revisaban notas → la asistencia se borraba en silencio).
+    const [partialGrades, attendanceRecords, scheduleEntries] = await Promise.all([
       this.prisma.partialGrade.count({ where: { teacherAssignmentId: assignmentId } }),
+      this.prisma.attendanceRecord.count({ where: { teacherAssignmentId: assignmentId } }),
       this.prisma.scheduleEntry.count({ where: { teacherAssignmentId: assignmentId } }),
     ]);
 
-    if (partialGrades > 0) {
+    if (partialGrades > 0 || attendanceRecords > 0) {
       throw new BadRequestException(
-        `No se puede eliminar: la asignación tiene ${partialGrades} nota(s) registrada(s). Use "Finalizar" en su lugar.`
+        `No se puede eliminar: la asignación tiene ${partialGrades} nota(s) y ${attendanceRecords} registro(s) de asistencia. Use "Finalizar" en su lugar para conservar la historia.`
       );
     }
 
@@ -561,11 +564,22 @@ export class TeacherAssignmentsService {
     });
     
     const yearIds = years.map(y => y.id);
-    
+
     if (yearIds.length === 0) {
       return { deleted: 0, message: 'No se encontraron años académicos' };
     }
-    
+
+    // C-5: borrar carga académica cascada a notas Y asistencia. Nunca destruir historia en masa.
+    const [gradeCount, attendanceCount] = await Promise.all([
+      this.prisma.partialGrade.count({ where: { teacherAssignment: { academicYearId: { in: yearIds } } } }),
+      this.prisma.attendanceRecord.count({ where: { teacherAssignment: { academicYearId: { in: yearIds } } } }),
+    ]);
+    if (gradeCount > 0 || attendanceCount > 0) {
+      throw new BadRequestException(
+        `No se puede eliminar la carga académica: existen ${gradeCount} nota(s) y ${attendanceCount} registro(s) de asistencia que se perderían en cascada. Finalice las asignaciones en lugar de eliminarlas.`
+      );
+    }
+
     const result = await this.prisma.teacherAssignment.deleteMany({
       where: { academicYearId: { in: yearIds } },
     });
