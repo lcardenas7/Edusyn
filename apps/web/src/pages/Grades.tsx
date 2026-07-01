@@ -500,6 +500,9 @@ export default function Grades() {
   const [gradesBaseline, setGradesBaseline] = useState<Record<string, Record<string, number | null>>>({})
   // Nombres de actividad tal como estaban en el snapshot (para incluir renombres en el diff).
   const [baselineActivityNames, setBaselineActivityNames] = useState<Record<string, string>>({})
+  // Concurrencia: updatedAt de cada celda tal como está en el servidor (null = la celda no
+  // existe en el servidor). Se envía al guardar para detectar si alguien más la cambió.
+  const [gradesServerUpdatedAt, setGradesServerUpdatedAt] = useState<Record<string, Record<string, string | null>>>({})
   // C-1 (UX): notas finales fijadas manualmente por coordinación (enrollmentId → nota).
   // Sirven para avisar al docente que su cambio de parcial NO moverá ese final.
   const [finalOverrides, setFinalOverrides] = useState<Record<string, number>>({})
@@ -529,6 +532,7 @@ export default function Grades() {
         setGrades(initGrades)
         setGradesBaseline(JSON.parse(JSON.stringify(initGrades)))
         setBaselineActivityNames({})
+        setGradesServerUpdatedAt({})
         return
       }
       
@@ -537,10 +541,12 @@ export default function Grades() {
         const savedGrades = response.data || []
         
         const initGrades: Record<string, Record<string, number | null>> = {}
+        const initUpdatedAt: Record<string, Record<string, string | null>> = {}
         students.forEach(student => {
           initGrades[student.id] = createEmptyGrades()
+          initUpdatedAt[student.id] = {}
         })
-        
+
         // Mapear notas guardadas y extraer nombres personalizados
         const savedNames: Record<string, string> = {}
         savedGrades.forEach((grade: any) => {
@@ -551,6 +557,7 @@ export default function Grades() {
               const activity = process.activities[grade.activityIndex - 1]
               if (activity) {
                 initGrades[student.id][activity.id] = Number(grade.score)
+                initUpdatedAt[student.id][activity.id] = grade.updatedAt || null
                 // Guardar nombre personalizado si difiere del generado
                 if (grade.activityName && grade.activityName !== activity.name) {
                   savedNames[activity.id] = grade.activityName
@@ -559,12 +566,13 @@ export default function Grades() {
             }
           }
         })
-        
+
         // Reemplazar nombres personalizados (no mezclar con los del grupo anterior)
         setCustomActivityNames(savedNames)
         setBaselineActivityNames(savedNames)
         setGrades(initGrades)
         setGradesBaseline(JSON.parse(JSON.stringify(initGrades)))
+        setGradesServerUpdatedAt(initUpdatedAt)
       } catch (err) {
         console.error('Error loading saved grades:', err)
         const initGrades: Record<string, Record<string, number | null>> = {}
@@ -573,9 +581,10 @@ export default function Grades() {
         })
         setGrades(initGrades)
         setGradesBaseline(JSON.parse(JSON.stringify(initGrades)))
+        setGradesServerUpdatedAt({})
       }
     }
-    
+
     loadSavedGrades()
   }, [selectedAssignment?.id, academicTermId, students, createEmptyGrades, processConfigs])
 
@@ -1104,6 +1113,7 @@ export default function Grades() {
         activityName: string;
         activityType?: string;
         score: number | null;
+        expectedUpdatedAt?: string | null;
       }> = []
 
       students.forEach(student => {
@@ -1141,6 +1151,9 @@ export default function Grades() {
               activityName,
               activityType: activity.type,
               score,
+              // Lo que el cliente vio la última vez para ESTA celda puntual — permite al
+              // backend detectar si alguien más la cambió mientras tanto (misma celda).
+              expectedUpdatedAt: gradesServerUpdatedAt[student.id]?.[activity.id] ?? null,
             })
           })
         })
@@ -1151,31 +1164,97 @@ export default function Grades() {
         return
       }
 
-      await withSave(() => partialGradesApi.bulkUpsert(partialGradesToSave))
+      const saveResponse = await withSave(() => partialGradesApi.bulkUpsert(partialGradesToSave))
       // PeriodFinalGrade se recalcula automáticamente en el backend
+      const conflicts: any[] = saveResponse?.data?.conflicts || []
+      const results: any[] = saveResponse?.data?.results || []
+      const conflictKey = (c: { studentEnrollmentId: string; componentType: string; activityIndex: number }) =>
+        `${c.studentEnrollmentId}|${c.componentType}|${c.activityIndex}`
+      const conflictSet = new Set(conflicts.map(conflictKey))
 
-      // Actualizar el snapshot base con lo recién guardado (para que el próximo diff
-      // sea contra el estado ya persistido, no contra el original de hace rato).
+      // Resolver, por cada item enviado, a qué estudiante/actividad corresponde (una sola vez).
+      const resolveCell = (g: { studentEnrollmentId: string; componentType: string; activityIndex: number }) => {
+        const student = students.find(s => s.enrollmentId === g.studentEnrollmentId)
+        const process = processConfigs.find(p => p.code === g.componentType)
+        const allProcessActivities = process
+          ? [...process.activities, ...(additionalActivities[process.code] || [])]
+          : []
+        const activity = allProcessActivities[g.activityIndex - 1]
+        return student && activity ? { studentId: student.id, activityId: activity.id } : null
+      }
+
+      // Actualizar el snapshot base SOLO con lo que realmente se guardó (no lo que tuvo conflicto),
+      // para que el próximo diff sea contra el estado ya persistido.
       setGradesBaseline(prev => {
         const next = JSON.parse(JSON.stringify(prev))
         partialGradesToSave.forEach(g => {
-          const student = students.find(s => s.enrollmentId === g.studentEnrollmentId)
-          const process = processConfigs.find(p => p.code === g.componentType)
-          const allProcessActivities = process
-            ? [...process.activities, ...(additionalActivities[process.code] || [])]
-            : []
-          const activity = allProcessActivities[g.activityIndex - 1]
-          if (student && activity) {
-            if (!next[student.id]) next[student.id] = {}
-            next[student.id][activity.id] = g.score
+          if (conflictSet.has(conflictKey(g))) return // no se guardó: no tocar el baseline
+          const cell = resolveCell(g)
+          if (cell) {
+            if (!next[cell.studentId]) next[cell.studentId] = {}
+            next[cell.studentId][cell.activityId] = g.score
           }
         })
         return next
       })
       setBaselineActivityNames(prev => ({ ...prev, ...customActivityNames }))
 
-      const notasConValor = partialGradesToSave.filter(g => g.score !== null && g.score !== undefined).length
-      TOAST.grades.saved(selectedAssignment?.subject?.name, selectedAssignment?.group?.name)
+      // updatedAt: para lo guardado, tomar el updatedAt real que devolvió el servidor
+      // (evita otro falso-conflicto en el siguiente guardado). Para lo borrado, null.
+      setGradesServerUpdatedAt(prev => {
+        const next = JSON.parse(JSON.stringify(prev))
+        results.forEach((r: any) => {
+          const cell = resolveCell(r)
+          if (!cell) return
+          if (!next[cell.studentId]) next[cell.studentId] = {}
+          next[cell.studentId][cell.activityId] = r.action === 'delete' ? null : (r.updatedAt || null)
+        })
+        return next
+      })
+
+      // Conflictos: alguien más cambió esa MISMA celda mientras editabas. No se sobrescribió
+      // su valor — se refleja el valor actual del servidor para que decidas si reintentar.
+      if (conflicts.length > 0) {
+        setGrades(prev => {
+          const next = JSON.parse(JSON.stringify(prev))
+          conflicts.forEach((c: any) => {
+            const cell = resolveCell(c)
+            if (cell) {
+              if (!next[cell.studentId]) next[cell.studentId] = {}
+              next[cell.studentId][cell.activityId] = c.serverScore
+            }
+          })
+          return next
+        })
+        setGradesBaseline(prev => {
+          const next = JSON.parse(JSON.stringify(prev))
+          conflicts.forEach((c: any) => {
+            const cell = resolveCell(c)
+            if (cell) {
+              if (!next[cell.studentId]) next[cell.studentId] = {}
+              next[cell.studentId][cell.activityId] = c.serverScore
+            }
+          })
+          return next
+        })
+        setGradesServerUpdatedAt(prev => {
+          const next = JSON.parse(JSON.stringify(prev))
+          conflicts.forEach((c: any) => {
+            const cell = resolveCell(c)
+            if (cell) {
+              if (!next[cell.studentId]) next[cell.studentId] = {}
+              next[cell.studentId][cell.activityId] = c.serverUpdatedAt || null
+            }
+          })
+          return next
+        })
+        toast.warning(`⚠️ ${conflicts.length} nota(s) NO se guardaron: alguien más las cambió mientras editabas. Se muestra el valor actual — revísalas y vuelve a guardar si aún quieres tu valor.`)
+      }
+
+      const notasConValor = results.filter((g: any) => g.action !== 'delete').length
+      if (conflicts.length === 0 || results.length > 0) {
+        TOAST.grades.saved(selectedAssignment?.subject?.name, selectedAssignment?.group?.name)
+      }
       if (notasConValor > 0) toast.info(`${notasConValor} nota(s) guardada(s)`)
     } catch (err: any) {
       console.error('Error saving grades:', err)

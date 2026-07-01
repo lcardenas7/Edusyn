@@ -36,11 +36,14 @@ export class PartialGradesService {
     activityType?: string;
     score: number;
     observations?: string;
-  }, actor?: GradeAuditActor) {
+    // Concurrencia: string ISO = "creo que la fila tiene este updatedAt"; null = "creo que no existe fila";
+    // undefined = no verificar conflicto (comportamiento anterior).
+    expectedUpdatedAt?: string | null;
+  }, actor?: GradeAuditActor): Promise<any> {
     await this.guardTermNotFinalized(data.academicTermId);
     const ta = await this.prisma.teacherAssignment.findUnique({ where: { id: data.teacherAssignmentId }, select: { institutionId: true } });
 
-    // Estado previo (para auditoría forense: nota anterior vs nueva)
+    // Estado previo (para auditoría forense: nota anterior vs nueva, y para detectar conflicto)
     const prev = await this.prisma.partialGrade.findUnique({
       where: {
         studentEnrollmentId_teacherAssignmentId_academicTermId_componentType_activityIndex: {
@@ -51,8 +54,27 @@ export class PartialGradesService {
           activityIndex: data.activityIndex,
         },
       },
-      select: { id: true, score: true },
+      select: { id: true, score: true, updatedAt: true },
     });
+
+    // Concurrencia: si el cliente indicó qué esperaba ver y no coincide con lo que hay
+    // ahora en la BD, alguien más cambió esta MISMA celda entre que el cliente cargó
+    // y guardó. No se sobreescribe: se reporta el conflicto para que el cliente decida.
+    if (data.expectedUpdatedAt !== undefined) {
+      const conflict = data.expectedUpdatedAt === null
+        ? !!prev
+        : (!prev || prev.updatedAt.toISOString() !== data.expectedUpdatedAt);
+      if (conflict) {
+        return {
+          conflict: true,
+          studentEnrollmentId: data.studentEnrollmentId,
+          componentType: data.componentType,
+          activityIndex: data.activityIndex,
+          serverScore: prev ? Number(prev.score) : null,
+          serverUpdatedAt: prev?.updatedAt ?? null,
+        };
+      }
+    }
 
     const result = await this.prisma.partialGrade.upsert({
       where: {
@@ -93,7 +115,7 @@ export class PartialGradesService {
       }, actor);
     }
 
-    return result;
+    return { conflict: false, ...result };
   }
 
   async bulkUpsert(grades: Array<{
@@ -106,6 +128,7 @@ export class PartialGradesService {
     activityType?: string;
     score: number | null; // null/undefined = "sin nota" (borrar la celda); 0 = cero real (C-2)
     observations?: string;
+    expectedUpdatedAt?: string | null; // concurrencia: ver upsert()
   }>, actor?: GradeAuditActor) {
     // Validar que ningún período esté FINALIZED
     const termIds = [...new Set(grades.map(g => g.academicTermId))];
@@ -206,11 +229,16 @@ export class PartialGradesService {
     }
 
     const results: any[] = [];
+    const conflicts: any[] = [];
     for (const grade of grades) {
       // C-2: null/undefined = borrar la celda; cualquier número (incluido 0) = guardar.
       if (grade.score !== null && grade.score !== undefined) {
         const result = await this.upsert({ ...grade, score: grade.score }, actor);
-        results.push({ action: 'upsert', ...result });
+        if (result.conflict) {
+          conflicts.push(result);
+        } else {
+          results.push({ action: 'upsert', ...result });
+        }
       } else {
         try {
           // Capturar lo que se va a borrar para la auditoría forense
@@ -222,8 +250,29 @@ export class PartialGradesService {
               componentType: grade.componentType,
               activityIndex: grade.activityIndex,
             },
-            select: { id: true, institutionId: true, score: true, activityName: true },
+            select: { id: true, institutionId: true, score: true, activityName: true, updatedAt: true },
           });
+
+          // Concurrencia: si el cliente indicó qué esperaba ver y no coincide, alguien más
+          // cambió esta celda mientras tanto — no borrar en silencio, reportar conflicto.
+          if (grade.expectedUpdatedAt !== undefined) {
+            const current = toDelete[0];
+            const isConflict = grade.expectedUpdatedAt === null
+              ? !!current
+              : (!current || current.updatedAt.toISOString() !== grade.expectedUpdatedAt);
+            if (isConflict) {
+              conflicts.push({
+                conflict: true,
+                studentEnrollmentId: grade.studentEnrollmentId,
+                componentType: grade.componentType,
+                activityIndex: grade.activityIndex,
+                serverScore: current ? Number(current.score) : null,
+                serverUpdatedAt: current?.updatedAt ?? null,
+              });
+              continue;
+            }
+          }
+
           await this.prisma.partialGrade.deleteMany({
             where: {
               studentEnrollmentId: grade.studentEnrollmentId,
@@ -272,7 +321,9 @@ export class PartialGradesService {
       }
     }
 
-    return results;
+    // `conflicts`: celdas que NO se guardaron porque alguien más las cambió mientras
+    // tanto (concurrencia — ver upsert()). El cliente debe mostrarlas y no asumir éxito.
+    return { results, conflicts };
   }
 
   // ═══════════════════════════════════════════════════════════════════════

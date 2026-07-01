@@ -301,6 +301,7 @@ export const partialGradesApi = {
     activityType?: string;
     score: number | null; // null = sin nota (borra la celda); número (incl. 0) = guardar (C-2)
     observations?: string;
+    expectedUpdatedAt?: string | null; // concurrencia: detecta si alguien más cambió esta celda
   }>) => api.post('/partial-grades/bulk', { grades }),
   getByAssignment: (teacherAssignmentId: string, academicTermId: string) =>
     api.get('/partial-grades/by-assignment', { params: { teacherAssignmentId, academicTermId } }),
