@@ -3,7 +3,7 @@ import { BookOpen, ChevronDown, Save, Plus, Trash2, X, AlertTriangle, Lock, Down
 import * as XLSX from 'xlsx'
 import { useAuth } from '../contexts/AuthContext'
 import { useAcademic, type AcademicLevel, type QualitativeLevel } from '../contexts/AcademicContext'
-import { teacherAssignmentsApi, academicStudentsApi, gradingPeriodConfigApi, partialGradesApi, achievementsApi, achievementConfigApi, achievementBankApi, finalComponentsApi, finalComponentGradesApi } from '../lib/api'
+import { teacherAssignmentsApi, academicStudentsApi, gradingPeriodConfigApi, partialGradesApi, achievementsApi, achievementConfigApi, achievementBankApi, finalComponentsApi, finalComponentGradesApi, periodFinalGradesApi } from '../lib/api'
 import { toast, TOAST } from '../lib/toast'
 import { useSaveStatus } from '../hooks/useSaveStatus'
 import SaveStatusPill from '../components/SaveStatusPill'
@@ -494,6 +494,9 @@ export default function Grades() {
   // ============================================
   
   const [grades, setGrades] = useState<Record<string, Record<string, number | null>>>({})
+  // C-1 (UX): notas finales fijadas manualmente por coordinación (enrollmentId → nota).
+  // Sirven para avisar al docente que su cambio de parcial NO moverá ese final.
+  const [finalOverrides, setFinalOverrides] = useState<Record<string, number>>({})
 
   // Crear objeto de notas vacío
   // C-2: celda sin nota = null (distinto de un 0 real). No se inicializa en 0.
@@ -564,6 +567,28 @@ export default function Grades() {
     
     loadSavedGrades()
   }, [selectedAssignment?.id, academicTermId, students, createEmptyGrades, processConfigs])
+
+  // C-1 (UX): cargar las notas finales fijadas manualmente para el grupo+período+asignatura.
+  useEffect(() => {
+    const groupId = selectedAssignment?.group?.id
+    const subjectId = selectedAssignment?.subject?.id
+    if (!groupId || !subjectId || !academicTermId) { setFinalOverrides({}); return }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await periodFinalGradesApi.getByGroup(groupId, academicTermId)
+        if (cancelled) return
+        const map: Record<string, number> = {}
+        for (const g of (res.data || [])) {
+          if (g.subjectId === subjectId && g.isManualOverride) {
+            map[g.studentEnrollmentId] = Number(g.finalScore)
+          }
+        }
+        setFinalOverrides(map)
+      } catch { if (!cancelled) setFinalOverrides({}) }
+    })()
+    return () => { cancelled = true }
+  }, [selectedAssignment?.group?.id, selectedAssignment?.subject?.id, academicTermId])
 
   const [newActivity, setNewActivity] = useState({ name: '', type: activityTypes[0] })
 
@@ -1724,8 +1749,9 @@ export default function Grades() {
                   </tr>
                 ) : students.map((student, idx) => {
                   const finalGrade = calculateFinalGrade(student.id)
-                  const performance = getPerformanceLevel(finalGrade)
-                  
+                  const override = finalOverrides[student.enrollmentId]
+                  const performance = getPerformanceLevel(override ?? finalGrade)
+
                   return (
                     <tr key={student.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-2 py-2 text-center text-sm font-medium text-slate-500">{idx + 1}</td>
@@ -1769,10 +1795,17 @@ export default function Grades() {
                       })}
                       
                       <td className="px-2 py-1 text-center font-bold text-slate-900 bg-slate-100">
-                        {finalGrade > 0 ? finalGrade.toFixed(1) : '-'}
+                        {override !== undefined ? (
+                          <span
+                            className="inline-flex items-center gap-1 text-violet-700"
+                            title={`Nota final fijada manualmente por coordinación (${override.toFixed(1)}). Tus cambios de parciales NO la modifican.`}
+                          >
+                            <Lock className="w-3 h-3" /> {override.toFixed(1)}
+                          </span>
+                        ) : (finalGrade > 0 ? finalGrade.toFixed(1) : '-')}
                       </td>
                       <td className="px-2 py-1 text-center">
-                        {finalGrade > 0 && (
+                        {(override ?? finalGrade) > 0 && (
                           <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${performance.color}`}>
                             {performance.label}
                           </span>

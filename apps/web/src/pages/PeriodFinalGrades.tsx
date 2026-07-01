@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { compareFullNames } from '../utils/sortStudents'
 import { useAuth } from '../contexts/AuthContext'
-import { 
+import {
   Save,
   Search,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Lock
 } from 'lucide-react'
 import {
   academicYearsApi,
@@ -41,6 +42,7 @@ interface GradeEntry {
   finalScore: number | null
   observations: string
   saved: boolean
+  isManualOverride?: boolean
 }
 
 export default function PeriodFinalGrades() {
@@ -162,6 +164,7 @@ export default function PeriodFinalGrades() {
           finalScore: existing?.finalScore ? parseFloat(existing.finalScore) : null,
           observations: existing?.observations || '',
           saved: !!existing,
+          isManualOverride: existing?.isManualOverride ?? false,
         }
       })
 
@@ -369,6 +372,14 @@ export default function PeriodFinalGrades() {
                     <td className="px-2 py-4 text-center text-sm font-medium text-slate-500">{idx + 1}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="font-medium text-slate-900">{grade.studentName}</span>
+                      {grade.isManualOverride && (
+                        <span
+                          className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-100 text-violet-700 align-middle"
+                          title="Nota final fijada manualmente. El recálculo desde parciales NO la modifica."
+                        >
+                          <Lock className="w-3 h-3" /> Fijada
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <input
