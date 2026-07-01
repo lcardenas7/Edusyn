@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { type ValeriaActivityDraft, type ValeriaQuestionDraft, valeriaAssistantBridge } from '../contexts/ValeriaContext'
 import { classroomApi, storageApi, liveSessionApi, apdApi, lessonApi } from '../lib/api'
+import { compareStudents } from '../utils/sortStudents'
 import LiveQuiz from '../components/LiveQuiz'
 import { CreateSelfAssessmentForm, StudentSelfAssessment, SelfAssessmentResults } from '../components/SelfAssessmentUI'
 const RichTextEditor = lazy(() => import('../components/RichTextEditor'))
@@ -6295,11 +6296,14 @@ function StudentsTab({ classroomId }: { classroomId: string }) {
     return { firstName, lastName, secondLastName, email, photo }
   }
 
-  const filtered = students.filter((s: any) => {
-    if (!search.trim()) return true
-    const { firstName, lastName } = getStudentName(s)
-    return `${firstName} ${lastName}`.toLowerCase().includes(search.toLowerCase())
-  })
+  const filtered = students
+    .filter((s: any) => {
+      if (!search.trim()) return true
+      const { firstName, lastName } = getStudentName(s)
+      return `${firstName} ${lastName}`.toLowerCase().includes(search.toLowerCase())
+    })
+    // Mismo orden canónico que la planilla/notas (apellido1 + apellido2 + nombre)
+    .sort((a: any, b: any) => compareStudents(getStudentName(a), getStudentName(b)))
 
   return (
     <div className="space-y-5">
@@ -6331,8 +6335,9 @@ function StudentsTab({ classroomId }: { classroomId: string }) {
           )}
           {filtered.map((s: any, i: number) => {
             const { firstName, lastName, secondLastName, email, photo } = getStudentName(s)
+            // Mismo formato que la planilla/notas: "Apellido1 Apellido2 Nombre" (apellido primero)
             const displayName = lastName && firstName
-              ? `${lastName}${secondLastName ? ' ' + secondLastName : ''}, ${firstName}`
+              ? `${lastName}${secondLastName ? ' ' + secondLastName : ''} ${firstName}`
               : lastName || firstName || 'Sin nombre'
             const initials = `${firstName[0] || ''}${lastName[0] || ''}`
 

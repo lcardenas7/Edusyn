@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { compareFullNames } from '../utils/sortStudents'
 import { useAuth } from '../contexts/AuthContext'
 import {
   Save,
@@ -29,8 +28,7 @@ interface Subject {
 
 interface Student {
   id: string
-  firstName: string
-  lastName: string
+  name: string // nombre completo canónico del backend ("Apellidos Nombres"), ya ordenado
   enrollmentId: string
 }
 
@@ -115,16 +113,13 @@ export default function PeriodFinalGrades() {
     try {
       // Usar academicStudentsApi para mantener separación de dominios
       const studentsRes = await academicStudentsApi.getByGroup({ groupId: selectedGroupId, academicYearId: selectedYearId })
-      // El endpoint académico retorna { id, name, enrollmentId }, adaptar al formato esperado
-      const studentsList = (studentsRes.data || []).map((s: any) => {
-        const [firstName, ...lastParts] = s.name.split(' ')
-        return {
-          id: s.id,
-          firstName,
-          lastName: lastParts.join(' '),
-          enrollmentId: s.enrollmentId,
-        }
-      })
+      // El endpoint académico ya devuelve { id, name, enrollmentId } con el nombre canónico
+      // ("Apellidos Nombres") y ordenado. Se usa tal cual para coincidir con la planilla.
+      const studentsList: Student[] = (studentsRes.data || []).map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        enrollmentId: s.enrollmentId,
+      }))
       setStudents(studentsList)
 
       // Obtener asignaturas del grupo desde las asignaciones de docentes (fuente confiable,
@@ -158,7 +153,7 @@ export default function PeriodFinalGrades() {
         )
         return {
           studentEnrollmentId: student.enrollmentId,
-          studentName: `${student.lastName}, ${student.firstName}`,
+          studentName: student.name,
           subjectId: selectedSubjectId,
           subjectName: subjects.find(s => s.id === selectedSubjectId)?.name || '',
           finalScore: existing?.finalScore ? parseFloat(existing.finalScore) : null,
@@ -168,7 +163,9 @@ export default function PeriodFinalGrades() {
         }
       })
 
-      setGrades(gradeEntries.sort((a, b) => compareFullNames(a.studentName, b.studentName)))
+      // El backend ya entrega los estudiantes ordenados canónicamente; se respeta ese orden
+      // para que coincida exactamente con la planilla (no se re-ordena).
+      setGrades(gradeEntries)
     } catch (err) {
       console.error('Error loading existing grades:', err)
     }
