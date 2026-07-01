@@ -60,6 +60,15 @@ export interface CloseYearResult {
   withdrawnCount: number;
 }
 
+/** Escritura pendiente de promoción/repitencia, calculada en la fase de solo lectura (G-2). */
+interface PromotionWrite {
+  enrollmentId: string;
+  institutionId: string;
+  newStatus: EnrollmentStatus;
+  eventType: EnrollmentEventType;
+  reason: string;
+}
+
 export interface PromotionResult {
   success: boolean;
   enrollmentsCreated: number;
@@ -309,27 +318,55 @@ export class AcademicYearLifecycleService {
       });
     }
 
-    // Calcular promociones si se solicita
+    // FASE 1 — CÁLCULO (solo lectura, fuera de cualquier transacción).
+    // Puede tardar bastante en instituciones grandes (promedio anual por materia y
+    // estudiante); no debe retener una transacción abierta ni bloquear filas mientras calcula.
+    let promotionWrites: PromotionWrite[] = [];
     let promotedCount = 0;
     let repeatedCount = 0;
     let withdrawnCount = 0;
 
     if (dto.calculatePromotions) {
-      const result = await this.calculateAndApplyPromotions(dto.yearId, dto.userId);
-      promotedCount = result.promotedCount;
-      repeatedCount = result.repeatedCount;
-      withdrawnCount = result.withdrawnCount;
+      const computed = await this.computePromotions(dto.yearId);
+      promotionWrites = computed.writes;
+      promotedCount = computed.promotedCount;
+      repeatedCount = computed.repeatedCount;
+      withdrawnCount = computed.withdrawnCount;
     }
 
-    // Cerrar el año
-    await this.prisma.academicYear.update({
-      where: { id: dto.yearId },
-      data: {
-        status: 'CLOSED',
-        closedAt: new Date(),
-        closedById: dto.userId,
-      },
-    });
+    // FASE 2 — ESCRITURA (todo o nada, en una sola transacción explícita).
+    // G-2: si algo falla a mitad de camino (timeout, caída), NINGÚN estudiante queda
+    // promovido/repitiendo a medias y el año sigue ACTIVE (reintentable con seguridad).
+    // Se abre explícitamente (no se depende solo de la transacción implícita por-request
+    // del TenantContextInterceptor) para proteger también las llamadas de SUPERADMIN,
+    // que no tienen institutionId en el JWT y por lo tanto no quedan envueltas por esa
+    // transacción global.
+    await this.prisma.$transaction(async (tx) => {
+      for (const w of promotionWrites) {
+        await tx.studentEnrollment.update({
+          where: { id: w.enrollmentId },
+          data: { status: w.newStatus },
+        });
+        await tx.enrollmentEvent.create({
+          data: {
+            institutionId: w.institutionId,
+            enrollmentId: w.enrollmentId,
+            type: w.eventType,
+            reason: w.reason,
+            performedById: dto.userId,
+          },
+        });
+      }
+
+      await tx.academicYear.update({
+        where: { id: dto.yearId },
+        data: {
+          status: 'CLOSED',
+          closedAt: new Date(),
+          closedById: dto.userId,
+        },
+      });
+    }, { timeout: 120000, maxWait: 10000 });
 
     return {
       success: true,
@@ -397,10 +434,19 @@ export class AcademicYearLifecycleService {
   // CALCULAR Y APLICAR PROMOCIONES
   // ═══════════════════════════════════════════════════════════════════════════
 
-  private async calculateAndApplyPromotions(yearId: string, userId: string) {
+  /**
+   * Calcula (solo lectura) qué escrituras habría que aplicar para promover/repetir
+   * a cada estudiante activo del año. NO escribe nada — ver closeYear() para la
+   * fase de escritura atómica (G-2).
+   */
+  private async computePromotions(yearId: string): Promise<{
+    writes: PromotionWrite[];
+    promotedCount: number;
+    repeatedCount: number;
+    withdrawnCount: number;
+  }> {
     let promotedCount = 0;
     let repeatedCount = 0;
-    let withdrawnCount = 0;
 
     const year = await this.getYearById(yearId);
     const rulesCtx = await this.institutionContext.getContext(year.institutionId);
@@ -421,28 +467,20 @@ export class AcademicYearLifecycleService {
       },
     });
 
+    const writes: PromotionWrite[] = [];
     for (const enrollment of enrollments) {
       const assessment = await this.buildPromotionAssessment(enrollment, rulesCtx);
       const shouldPromote = assessment.result.status !== 'NOT_PROMOTED';
-
       const newStatus: EnrollmentStatus = shouldPromote ? 'PROMOTED' : 'REPEATED';
 
-      await this.prisma.studentEnrollment.update({
-        where: { id: enrollment.id },
-        data: { status: newStatus },
-      });
-
-      // Crear evento de auditoría
-      await this.prisma.enrollmentEvent.create({
-        data: {
-          institutionId: enrollment.institutionId,
-          enrollmentId: enrollment.id,
-          type: shouldPromote ? 'PROMOTED' : 'REPEATED',
-          reason: shouldPromote
-            ? `Cierre de año lectivo: ${assessment.result.reasons.join('; ') || 'Cumple los requisitos de promoción'}`
-            : assessment.result.reasons.join('; ') || 'No cumple los requisitos de promoción',
-          performedById: userId,
-        },
+      writes.push({
+        enrollmentId: enrollment.id,
+        institutionId: enrollment.institutionId,
+        newStatus,
+        eventType: shouldPromote ? 'PROMOTED' : 'REPEATED',
+        reason: shouldPromote
+          ? `Cierre de año lectivo: ${assessment.result.reasons.join('; ') || 'Cumple los requisitos de promoción'}`
+          : assessment.result.reasons.join('; ') || 'No cumple los requisitos de promoción',
       });
 
       if (shouldPromote) {
@@ -453,14 +491,14 @@ export class AcademicYearLifecycleService {
     }
 
     // Contar los que ya estaban retirados
-    withdrawnCount = await this.prisma.studentEnrollment.count({
+    const withdrawnCount = await this.prisma.studentEnrollment.count({
       where: {
         academicYearId: yearId,
         status: 'WITHDRAWN',
       },
     });
 
-    return { promotedCount, repeatedCount, withdrawnCount };
+    return { writes, promotedCount, repeatedCount, withdrawnCount };
   }
 
   private async buildPromotionAssessment(enrollment: any, rulesCtx: InstitutionRulesContext) {
