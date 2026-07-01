@@ -2,6 +2,7 @@ import { Injectable, ForbiddenException } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { RecordAttendanceDto, UpdateAttendanceDto } from './dto/record-attendance.dto';
+import { AttendanceAuditService, AttendanceAuditActor, AttendanceAuditEventInput } from './attendance-audit.service';
 import {
   calculateExpectedClassesBatch,
   type TeacherAssignmentInfo,
@@ -11,7 +12,10 @@ import {
 
 @Injectable()
 export class AttendanceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly attendanceAudit: AttendanceAuditService,
+  ) {}
 
   /**
    * M-3: impide modificar asistencia de una fecha que cae dentro de un período FINALIZED.
@@ -34,11 +38,19 @@ export class AttendanceService {
     }
   }
 
-  async recordBulk(dto: RecordAttendanceDto) {
+  async recordBulk(dto: RecordAttendanceDto, actor?: AttendanceAuditActor) {
     const date = new Date(dto.date);
     const ta = await this.prisma.teacherAssignment.findUnique({ where: { id: dto.teacherAssignmentId }, select: { institutionId: true, academicYearId: true } });
     const instId = ta!.institutionId;
     await this.guardAttendanceDateNotFinalized(ta!.academicYearId, date);
+
+    // Estado previo (para auditoría forense: estado anterior vs nuevo)
+    const enrollmentIds = dto.records.map((r) => r.studentEnrollmentId);
+    const existing = await this.prisma.attendanceRecord.findMany({
+      where: { teacherAssignmentId: dto.teacherAssignmentId, date, studentEnrollmentId: { in: enrollmentIds } },
+      select: { studentEnrollmentId: true, status: true },
+    });
+    const prevMap = new Map(existing.map((e) => [e.studentEnrollmentId, e.status as string]));
 
     const operations = dto.records.map((record) =>
       this.prisma.attendanceRecord.upsert({
@@ -64,24 +76,59 @@ export class AttendanceService {
       }),
     );
 
-    return this.prisma.$transaction(operations);
+    const results = await this.prisma.$transaction(operations);
+
+    // Auditoría: CREATE si no existía; UPDATE solo si el estado cambió
+    const auditEvents: AttendanceAuditEventInput[] = [];
+    dto.records.forEach((record, i) => {
+      const prev = prevMap.get(record.studentEnrollmentId);
+      const saved: any = results[i];
+      if (prev === undefined) {
+        auditEvents.push({
+          institutionId: instId, action: 'CREATE', attendanceRecordId: saved?.id,
+          studentEnrollmentId: record.studentEnrollmentId, teacherAssignmentId: dto.teacherAssignmentId,
+          date, previousStatus: null, newStatus: record.status,
+        });
+      } else if (prev !== record.status) {
+        auditEvents.push({
+          institutionId: instId, action: 'UPDATE', attendanceRecordId: saved?.id,
+          studentEnrollmentId: record.studentEnrollmentId, teacherAssignmentId: dto.teacherAssignmentId,
+          date, previousStatus: prev, newStatus: record.status,
+        });
+      }
+    });
+    await this.attendanceAudit.recordMany(auditEvents, actor);
+
+    return results;
   }
 
-  async update(id: string, dto: UpdateAttendanceDto) {
+  async update(id: string, dto: UpdateAttendanceDto, actor?: AttendanceAuditActor) {
     const record = await this.prisma.attendanceRecord.findUnique({
       where: { id },
-      select: { date: true, teacherAssignment: { select: { academicYearId: true } } },
+      select: {
+        date: true, status: true, institutionId: true,
+        studentEnrollmentId: true, teacherAssignmentId: true,
+        teacherAssignment: { select: { academicYearId: true } },
+      },
     });
     if (record?.teacherAssignment) {
       await this.guardAttendanceDateNotFinalized(record.teacherAssignment.academicYearId, record.date);
     }
-    return this.prisma.attendanceRecord.update({
+    const result = await this.prisma.attendanceRecord.update({
       where: { id },
       data: {
         status: dto.status,
         observations: dto.observations,
       },
     });
+    if (record && record.status !== dto.status) {
+      await this.attendanceAudit.recordMany([{
+        institutionId: record.institutionId, action: 'UPDATE', attendanceRecordId: id,
+        studentEnrollmentId: record.studentEnrollmentId, teacherAssignmentId: record.teacherAssignmentId,
+        date: record.date, previousStatus: record.status as string, newStatus: dto.status,
+      }], actor);
+    }
+    return result;
   }
 
   async getByAssignmentAndDate(teacherAssignmentId: string, date: string) {

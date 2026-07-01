@@ -533,6 +533,7 @@ model Institution {
   rlsTeacherAssignments      TeacherAssignment[]      @relation("RlsInstitutionTA")
   rlsPartialGrades           PartialGrade[]           @relation("RlsInstitutionPG")
   rlsGradeAuditEvents        GradeAuditEvent[]        @relation("RlsInstitutionGAE")
+  rlsAttendanceAuditEvents   AttendanceAuditEvent[]   @relation("RlsInstitutionAAE")
   rlsPeriodFinalGrades       PeriodFinalGrade[]       @relation("RlsInstitutionPFG")
   rlsFinalComponentGrades    FinalComponentGrade[]    @relation("RlsInstitutionFCG")
   rlsStudentGrades           StudentGrade[]           @relation("RlsInstitutionSG")
@@ -1879,6 +1880,37 @@ model GradeAuditEvent {
   @@index([institutionId, performedAt])
   @@index([studentEnrollmentId])
   @@index([teacherAssignmentId, academicTermId])
+  @@index([actorUserId])
+}
+
+// Auditoría forense de asistencia (append-only). Mismo enfoque que GradeAuditEvent.
+model AttendanceAuditEvent {
+  id            String           @id @default(cuid())
+  institutionId String
+  action        GradeAuditAction // CREATE / UPDATE / DELETE (enum compartido de acciones)
+
+  actorUserId String?
+  actorName   String?
+  actorRole   String?
+
+  attendanceRecordId  String? // id del registro (null tras DELETE)
+  studentEnrollmentId String?
+  teacherAssignmentId String?
+  date                DateTime? @db.Date
+
+  // Valores (lo forense): estado anterior y nuevo (PRESENT/ABSENT/LATE/EXCUSED)
+  previousStatus String?
+  newStatus      String?
+  previousValue  Json?
+  newValue       Json?
+
+  performedAt DateTime @default(now())
+
+  institution Institution @relation("RlsInstitutionAAE", fields: [institutionId], references: [id])
+
+  @@index([institutionId, performedAt])
+  @@index([studentEnrollmentId])
+  @@index([teacherAssignmentId])
   @@index([actorUserId])
 }
 
