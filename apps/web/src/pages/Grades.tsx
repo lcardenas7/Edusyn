@@ -493,13 +493,14 @@ export default function Grades() {
   // ESTADO DE NOTAS
   // ============================================
   
-  const [grades, setGrades] = useState<Record<string, Record<string, number>>>({})
+  const [grades, setGrades] = useState<Record<string, Record<string, number | null>>>({})
 
   // Crear objeto de notas vacío
-  const createEmptyGrades = useCallback((): Record<string, number> => {
-    const gradeObj: Record<string, number> = {}
+  // C-2: celda sin nota = null (distinto de un 0 real). No se inicializa en 0.
+  const createEmptyGrades = useCallback((): Record<string, number | null> => {
+    const gradeObj: Record<string, number | null> = {}
     allActivities.forEach(activity => {
-      gradeObj[activity.id] = 0
+      gradeObj[activity.id] = null
     })
     return gradeObj
   }, [allActivities])
@@ -512,7 +513,7 @@ export default function Grades() {
       setAdditionalActivities({})
 
       if (!selectedAssignment?.id || !academicTermId || students.length === 0) {
-        const initGrades: Record<string, Record<string, number>> = {}
+        const initGrades: Record<string, Record<string, number | null>> = {}
         students.forEach(student => {
           initGrades[student.id] = createEmptyGrades()
         })
@@ -524,7 +525,7 @@ export default function Grades() {
         const response = await partialGradesApi.getByAssignment(selectedAssignment.id, academicTermId)
         const savedGrades = response.data || []
         
-        const initGrades: Record<string, Record<string, number>> = {}
+        const initGrades: Record<string, Record<string, number | null>> = {}
         students.forEach(student => {
           initGrades[student.id] = createEmptyGrades()
         })
@@ -553,7 +554,7 @@ export default function Grades() {
         setGrades(initGrades)
       } catch (err) {
         console.error('Error loading saved grades:', err)
-        const initGrades: Record<string, Record<string, number>> = {}
+        const initGrades: Record<string, Record<string, number | null>> = {}
         students.forEach(student => {
           initGrades[student.id] = createEmptyGrades()
         })
@@ -624,12 +625,16 @@ export default function Grades() {
     })
   }
 
-  const updateGrade = (studentId: string, activityId: string, value: number) => {
-    let clampedValue = value
-    if (value > maxGrade) clampedValue = maxGrade
-    else if (value < minGrade && value !== 0) clampedValue = minGrade
-    else if (value < 0) clampedValue = 0
-    
+  const updateGrade = (studentId: string, activityId: string, value: number | null) => {
+    // C-2: null = celda vacía (sin nota). Un 0 real se conserva; solo se recorta el rango.
+    let clampedValue: number | null = value
+    if (value !== null) {
+      if (Number.isNaN(value)) clampedValue = null
+      else if (value > maxGrade) clampedValue = maxGrade
+      else if (value < minGrade && value !== 0) clampedValue = minGrade
+      else if (value < 0) clampedValue = 0
+    }
+
     setGrades(prev => ({
       ...prev,
       [studentId]: { ...prev[studentId], [activityId]: clampedValue }
@@ -653,7 +658,7 @@ export default function Grades() {
     
     process.subprocesses.forEach((sub, subIdx) => {
       const subActivities = allProcessActivities.filter(a => a.subprocessIndex === subIdx)
-      const subValues = subActivities.map(a => studentGrades[a.id] || 0).filter(v => v > 0)
+      const subValues = subActivities.map(a => studentGrades[a.id]).filter((v): v is number => v !== null && v !== undefined && !Number.isNaN(v))
       
       if (subValues.length > 0) {
         const subAvg = subValues.reduce((a, b) => a + b, 0) / subValues.length
@@ -665,7 +670,7 @@ export default function Grades() {
     // Incluir actividades adicionales (sin subproceso)
     const additionalActs = allProcessActivities.filter(a => a.subprocessIndex === -1)
     if (additionalActs.length > 0) {
-      const addValues = additionalActs.map(a => studentGrades[a.id] || 0).filter(v => v > 0)
+      const addValues = additionalActs.map(a => studentGrades[a.id]).filter((v): v is number => v !== null && v !== undefined && !Number.isNaN(v))
       if (addValues.length > 0) {
         const addAvg = addValues.reduce((a, b) => a + b, 0) / addValues.length
         // Las actividades adicionales se promedian con el resto
@@ -931,10 +936,12 @@ export default function Grades() {
 
           Object.entries(colToActivityId).forEach(([col, actId]) => {
             const val = parseFloat(row[parseInt(col)])
-            if (!isNaN(val) && val > 0) {
+            // C-2: un 0 en el Excel es una nota real (0.0), no "vacío". Solo se omite la celda vacía (NaN).
+            if (!isNaN(val)) {
               let clamped = val
               if (clamped > maxGrade) clamped = maxGrade
-              if (clamped < minGrade) clamped = minGrade
+              if (clamped < minGrade && clamped !== 0) clamped = minGrade
+              else if (clamped < 0) clamped = 0
               updatedGrades[student.id][actId] = Math.round(clamped * 10) / 10
               imported++
             }
@@ -1060,20 +1067,22 @@ export default function Grades() {
         activityIndex: number;
         activityName: string;
         activityType?: string;
-        score: number;
+        score: number | null;
       }> = []
 
       students.forEach(student => {
         const studentGrades = grades[student.id] || {}
-        
+
         processConfigs.forEach(process => {
           const allProcessActivities = [
             ...process.activities,
             ...(additionalActivities[process.code] || [])
           ]
-          
+
           allProcessActivities.forEach((activity, idx) => {
-            const score = studentGrades[activity.id] || 0
+            // C-2: null = sin nota (el backend borra la celda); un número (incl. 0) se guarda.
+            const raw = studentGrades[activity.id]
+            const score = (raw === null || raw === undefined || Number.isNaN(raw)) ? null : raw
             partialGradesToSave.push({
               studentEnrollmentId: student.enrollmentId,
               teacherAssignmentId: selectedAssignment.id,
@@ -1091,7 +1100,7 @@ export default function Grades() {
       await withSave(() => partialGradesApi.bulkUpsert(partialGradesToSave))
       // PeriodFinalGrade se recalcula automáticamente en el backend
       
-      const notasConValor = partialGradesToSave.filter(g => g.score > 0).length
+      const notasConValor = partialGradesToSave.filter(g => g.score !== null && g.score !== undefined).length
       TOAST.grades.saved(selectedAssignment?.subject?.name, selectedAssignment?.group?.name)
       if (notasConValor > 0) toast.info(`${notasConValor} notas guardadas`)
     } catch (err: any) {
@@ -1742,8 +1751,8 @@ export default function Grades() {
                                   step="0.1"
                                   min={minGrade}
                                   max={maxGrade}
-                                  value={grades[student.id]?.[activity.id] || ''}
-                                  onChange={(e) => updateGrade(student.id, activity.id, parseFloat(e.target.value) || 0)}
+                                  value={grades[student.id]?.[activity.id] ?? ''}
+                                  onChange={(e) => { const v = e.target.value.trim(); updateGrade(student.id, activity.id, v === '' ? null : parseFloat(v)) }}
                                   onKeyDown={(e) => handleKeyNavigation(e, student.id, activity.id)}
                                   onFocus={(e) => e.target.select()}
                                   disabled={!currentPeriodOpen}

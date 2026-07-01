@@ -299,7 +299,7 @@ export const partialGradesApi = {
     activityIndex: number;
     activityName: string;
     activityType?: string;
-    score: number;
+    score: number | null; // null = sin nota (borra la celda); número (incl. 0) = guardar (C-2)
     observations?: string;
   }>) => api.post('/partial-grades/bulk', { grades }),
   getByAssignment: (teacherAssignmentId: string, academicTermId: string) =>

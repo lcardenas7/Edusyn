@@ -104,7 +104,7 @@ export class PartialGradesService {
     activityIndex: number;
     activityName: string;
     activityType?: string;
-    score: number;
+    score: number | null; // null/undefined = "sin nota" (borrar la celda); 0 = cero real (C-2)
     observations?: string;
   }>, actor?: GradeAuditActor) {
     // Validar que ningún período esté FINALIZED
@@ -168,11 +168,30 @@ export class PartialGradesService {
             }
           }
 
-          // Delete conflicting old grades (current teacher's value takes precedence)
+          // Delete conflicting old grades (current teacher's value takes precedence).
+          // C-3: nunca borrar sin rastro — auditar la nota del docente anterior antes de borrarla.
           if (conflictIds.length > 0) {
+            const conflicting = await this.prisma.partialGrade.findMany({
+              where: { id: { in: conflictIds } },
+              select: {
+                id: true, institutionId: true, score: true, studentEnrollmentId: true,
+                teacherAssignmentId: true, academicTermId: true, componentType: true,
+                activityIndex: true, activityName: true,
+              },
+            });
             await this.prisma.partialGrade.deleteMany({
               where: { id: { in: conflictIds } },
             });
+            if (conflicting.length > 0) {
+              await this.gradeAudit.recordMany(conflicting.map((d) => ({
+                institutionId: d.institutionId, action: 'DELETE' as const, partialGradeId: d.id,
+                studentEnrollmentId: d.studentEnrollmentId, teacherAssignmentId: d.teacherAssignmentId,
+                academicTermId: d.academicTermId, componentType: d.componentType,
+                activityIndex: d.activityIndex, activityName: d.activityName,
+                previousScore: Number(d.score), newScore: null,
+                previousValue: { reason: 'Reemplazo por cambio de docente (la nota del docente anterior fue sustituida por la del docente actual)' },
+              })), actor);
+            }
           }
 
           // Migrate non-conflicting old grades to the current assignment
@@ -188,8 +207,9 @@ export class PartialGradesService {
 
     const results: any[] = [];
     for (const grade of grades) {
-      if (grade.score > 0) {
-        const result = await this.upsert(grade, actor);
+      // C-2: null/undefined = borrar la celda; cualquier número (incluido 0) = guardar.
+      if (grade.score !== null && grade.score !== undefined) {
+        const result = await this.upsert({ ...grade, score: grade.score }, actor);
         results.push({ action: 'upsert', ...result });
       } else {
         try {
@@ -373,36 +393,28 @@ export class PartialGradesService {
     // 6. Redondear a 1 decimal
     finalScore = Math.round(finalScore * 10) / 10;
 
-    // 7. Upsert PeriodFinalGrade
-    if (finalScore > 0) {
-      await this.prisma.periodFinalGrade.upsert({
-        where: {
-          studentEnrollmentId_academicTermId_subjectId: {
-            studentEnrollmentId,
-            academicTermId,
-            subjectId: assignment.subjectId,
-          },
-        },
-        update: { finalScore },
-        create: {
-          institutionId: assignment.institutionId,
-          studentEnrollmentId,
-          academicTermId,
-          subjectId: assignment.subjectId,
-          finalScore,
-          enteredById: assignment.teacherId,
-        },
-      });
-    } else {
-      // Score = 0 → eliminar
-      await this.prisma.periodFinalGrade.deleteMany({
-        where: {
+    // 7. Upsert PeriodFinalGrade.
+    // C-2: la nota final se guarda SIEMPRE que existan parciales, incluido 0 real
+    // (un 0 legítimo ya no se interpreta como "borrar"). El caso "sin parciales"
+    // ya se resolvió en el paso 3 (delete).
+    await this.prisma.periodFinalGrade.upsert({
+      where: {
+        studentEnrollmentId_academicTermId_subjectId: {
           studentEnrollmentId,
           academicTermId,
           subjectId: assignment.subjectId,
         },
-      });
-    }
+      },
+      update: { finalScore },
+      create: {
+        institutionId: assignment.institutionId,
+        studentEnrollmentId,
+        academicTermId,
+        subjectId: assignment.subjectId,
+        finalScore,
+        enteredById: assignment.teacherId,
+      },
+    });
   }
 
   async count(institutionId?: string) {
