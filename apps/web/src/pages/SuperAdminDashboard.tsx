@@ -19,6 +19,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { 
   Building2, 
   Users, 
@@ -422,6 +423,8 @@ const AVAILABLE_MODULES: ModuleConfig[] = [
 // }
 
 export default function SuperAdminDashboard() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [institutions, setInstitutions] = useState<Institution[]>([])
   const [stats, setStats] = useState<SystemStats>({
     totalInstitutions: 0,
@@ -439,6 +442,14 @@ export default function SuperAdminDashboard() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [observeInstitution, setObserveInstitution] = useState<Institution | null>(null) // null = sin abrir; con valor = modal por institución
   const [showGlobalAudit, setShowGlobalAudit] = useState(false)
+
+  // El sidebar del SuperAdmin usa rutas (/superadmin/audit-logs, /institutions/new, …) que
+  // todas renderizan este mismo dashboard. Abrimos la vista correspondiente según la ruta,
+  // para que los ítems del menú no muestren siempre la lista de instituciones.
+  useEffect(() => {
+    if (location.pathname === '/superadmin/audit-logs') setShowGlobalAudit(true)
+    if (location.pathname === '/superadmin/institutions/new') setShowCreateModal(true)
+  }, [location.pathname])
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -824,7 +835,10 @@ export default function SuperAdminDashboard() {
       {/* Modal: Crear Institución */}
       {showCreateModal && (
         <CreateInstitutionModal
-          onClose={() => setShowCreateModal(false)}
+          onClose={() => {
+            setShowCreateModal(false)
+            if (location.pathname === '/superadmin/institutions/new') navigate('/superadmin/institutions')
+          }}
           onCreated={(newInst) => {
             setInstitutions(prev => [newInst, ...prev])
             setShowCreateModal(false)
@@ -844,7 +858,10 @@ export default function SuperAdminDashboard() {
       {showGlobalAudit && (
         <ObservabilityModal
           institution={null}
-          onClose={() => setShowGlobalAudit(false)}
+          onClose={() => {
+            setShowGlobalAudit(false)
+            if (location.pathname === '/superadmin/audit-logs') navigate('/superadmin/institutions')
+          }}
         />
       )}
 
