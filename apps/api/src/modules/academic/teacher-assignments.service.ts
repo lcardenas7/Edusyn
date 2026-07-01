@@ -242,7 +242,9 @@ export class TeacherAssignmentsService {
   /**
    * Finalizar una asignación y crear una nueva para el docente reemplazo.
    * La asignación original queda histórica con endDate + endReason.
-   * Los datos (notas, asistencia, etc.) quedan vinculados a la asignación original.
+   * Las notas y la asistencia se transfieren a la nueva asignación para dar
+   * continuidad al docente reemplazo (ve la planilla y la asistencia al entrar,
+   * no en blanco). La asignación nueva está recién creada → sin conflictos de llave.
    */
   async replaceTeacher(
     assignmentId: string,
@@ -295,7 +297,24 @@ export class TeacherAssignmentsService {
         data: { teacherAssignmentId: newAssignment.id },
       });
 
-      return { closedAssignment: closed, newAssignment };
+      // 4. Transferir notas y asistencia para continuidad del docente reemplazo.
+      // (La asignación nueva no tiene datos aún → no hay conflictos de llave única.)
+      const [movedGrades, movedAttendance] = await Promise.all([
+        tx.partialGrade.updateMany({
+          where: { teacherAssignmentId: assignmentId },
+          data: { teacherAssignmentId: newAssignment.id },
+        }),
+        tx.attendanceRecord.updateMany({
+          where: { teacherAssignmentId: assignmentId },
+          data: { teacherAssignmentId: newAssignment.id },
+        }),
+      ]);
+
+      return {
+        closedAssignment: closed,
+        newAssignment,
+        transferred: { grades: movedGrades.count, attendance: movedAttendance.count },
+      };
     });
 
     return result;
@@ -456,6 +475,19 @@ export class TeacherAssignmentsService {
           where: { teacherAssignmentId: assignment.id },
           data: { teacherAssignmentId: newAssignment.id },
         });
+
+        // 4. Transferir notas y asistencia para continuidad del docente reemplazo.
+        // (La asignación nueva no tiene datos aún → sin conflictos de llave única.)
+        await Promise.all([
+          tx.partialGrade.updateMany({
+            where: { teacherAssignmentId: assignment.id },
+            data: { teacherAssignmentId: newAssignment.id },
+          }),
+          tx.attendanceRecord.updateMany({
+            where: { teacherAssignmentId: assignment.id },
+            data: { teacherAssignmentId: newAssignment.id },
+          }),
+        ]);
       }
 
       return { closedAssignments, newAssignments };
