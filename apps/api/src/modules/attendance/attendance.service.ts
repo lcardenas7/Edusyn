@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { RecordAttendanceDto, UpdateAttendanceDto } from './dto/record-attendance.dto';
@@ -13,10 +13,32 @@ import {
 export class AttendanceService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * M-3: impide modificar asistencia de una fecha que cae dentro de un período FINALIZED.
+   * Solo bloquea cuando hay certeza (el período tiene rango de fechas que contiene la fecha).
+   */
+  private async guardAttendanceDateNotFinalized(academicYearId: string, date: Date): Promise<void> {
+    const finalizedTerm = await this.prisma.academicTerm.findFirst({
+      where: {
+        academicYearId,
+        status: 'FINALIZED',
+        startDate: { lte: date },
+        endDate: { gte: date },
+      },
+      select: { name: true },
+    });
+    if (finalizedTerm) {
+      throw new ForbiddenException(
+        `La asistencia de esta fecha pertenece a un período finalizado (${finalizedTerm.name}). Debe reabrirse formalmente para modificarla.`,
+      );
+    }
+  }
+
   async recordBulk(dto: RecordAttendanceDto) {
     const date = new Date(dto.date);
-    const ta = await this.prisma.teacherAssignment.findUnique({ where: { id: dto.teacherAssignmentId }, select: { institutionId: true } });
+    const ta = await this.prisma.teacherAssignment.findUnique({ where: { id: dto.teacherAssignmentId }, select: { institutionId: true, academicYearId: true } });
     const instId = ta!.institutionId;
+    await this.guardAttendanceDateNotFinalized(ta!.academicYearId, date);
 
     const operations = dto.records.map((record) =>
       this.prisma.attendanceRecord.upsert({
@@ -46,6 +68,13 @@ export class AttendanceService {
   }
 
   async update(id: string, dto: UpdateAttendanceDto) {
+    const record = await this.prisma.attendanceRecord.findUnique({
+      where: { id },
+      select: { date: true, teacherAssignment: { select: { academicYearId: true } } },
+    });
+    if (record?.teacherAssignment) {
+      await this.guardAttendanceDateNotFinalized(record.teacherAssignment.academicYearId, record.date);
+    }
     return this.prisma.attendanceRecord.update({
       where: { id },
       data: {
