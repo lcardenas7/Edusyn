@@ -226,7 +226,12 @@ const AcademicYearWizard: React.FC = () => {
         return
       }
       await academicYearLifecycleApi.activate(yearToActivate.id)
-      setSuccess('¡Año lectivo activado exitosamente!')
+      const warnings: string[] = validation.data.warnings || []
+      setSuccess(
+        warnings.length > 0
+          ? `¡Año lectivo activado! Ten en cuenta: ${warnings.join(' ')}`
+          : '¡Año lectivo activado exitosamente!'
+      )
       if (institution?.id) await loadPeriodsFromActiveYear(institution.id)
       await loadData()
     } catch (err: any) {

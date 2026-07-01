@@ -246,8 +246,11 @@ export class AcademicYearLifecycleService {
       );
     }
 
-    // Validaciones de configuración mínima
-    const validationErrors = await this.validateYearForActivation(dto.yearId);
+    // Validaciones de configuración mínima (G-1).
+    // Bloqueantes: sin esto el año activado sería inoperable (sin dónde matricular,
+    // sin cómo clasificar notas). Advertencias: incompleto pero operable — no bloquean
+    // para no romper el onboarding real de instituciones que cargan datos en días.
+    const { errors: validationErrors, warnings } = await this.validateYearForActivation(dto.yearId);
     if (validationErrors.length > 0) {
       throw new BadRequestException({
         message: 'El año lectivo no cumple con los requisitos mínimos para ser activado',
@@ -265,17 +268,20 @@ export class AcademicYearLifecycleService {
       },
     });
 
-    return updatedYear;
+    return { ...updatedYear, warnings };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // VALIDAR AÑO PARA ACTIVACIÓN
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async validateYearForActivation(yearId: string): Promise<string[]> {
+  async validateYearForActivation(yearId: string): Promise<{ errors: string[]; warnings: string[] }> {
     const errors: string[] = [];
+    const warnings: string[] = [];
 
-    // Verificar que tenga al menos un período académico
+    const year = await this.getYearById(yearId);
+
+    // BLOQUEANTE — al menos un período académico (ya existía).
     const termsCount = await this.prisma.academicTerm.count({
       where: { academicYearId: yearId },
     });
@@ -283,16 +289,35 @@ export class AcademicYearLifecycleService {
       errors.push('Debe configurar al menos un período académico');
     }
 
-    // Verificar que tenga grupos configurados (a través de asignaciones de docentes)
-    // Esto es opcional, pero recomendado
-    // const assignmentsCount = await this.prisma.teacherAssignment.count({
-    //   where: { academicYearId: yearId },
-    // });
-    // if (assignmentsCount === 0) {
-    //   errors.push('Se recomienda tener al menos una asignación de docente');
-    // }
+    // BLOQUEANTE — escala de desempeño institucional. Sin ella, ninguna nota se puede
+    // clasificar (getPerformanceLevel) y los boletines quedan sin desempeño cualitativo.
+    const performanceScaleCount = await this.prisma.performanceScale.count({
+      where: { institutionId: year.institutionId },
+    });
+    if (performanceScaleCount === 0) {
+      errors.push('Debe configurar la escala de desempeño institucional antes de activar el año');
+    }
 
-    return errors;
+    // BLOQUEANTE — al menos un grupo en la estructura académica de la institución.
+    // Sin grupos no hay dónde matricular estudiantes ni asignar docentes.
+    const groupsCount = await this.prisma.group.count({
+      where: { grade: { institutionId: year.institutionId } },
+    });
+    if (groupsCount === 0) {
+      errors.push('Debe crear al menos un grupo (grado + grupo) antes de activar el año');
+    }
+
+    // ADVERTENCIA (no bloquea) — sin carga docente asignada a este año, no se podrán
+    // registrar notas ni asistencia todavía, pero el año puede activarse mientras se
+    // completa la asignación (onboarding real toma varios días).
+    const assignmentsCount = await this.prisma.teacherAssignment.count({
+      where: { academicYearId: yearId },
+    });
+    if (assignmentsCount === 0) {
+      warnings.push('No hay carga académica (docente-grupo-asignatura) asignada para este año. Sin ella no se podrán registrar notas ni asistencia.');
+    }
+
+    return { errors, warnings };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

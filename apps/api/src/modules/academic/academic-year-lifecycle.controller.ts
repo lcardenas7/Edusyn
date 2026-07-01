@@ -108,10 +108,11 @@ export class AcademicYearLifecycleController {
   @Get(':yearId/validate-activation')
   @Roles('ADMIN_INSTITUTIONAL', 'SUPERADMIN')
   async validateForActivation(@Param('yearId') yearId: string) {
-    const errors = await this.yearService.validateYearForActivation(yearId);
+    const { errors, warnings } = await this.yearService.validateYearForActivation(yearId);
     return {
       isValid: errors.length === 0,
       errors,
+      warnings,
     };
   }
 
