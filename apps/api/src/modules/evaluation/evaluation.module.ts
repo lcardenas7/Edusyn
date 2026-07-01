@@ -18,6 +18,7 @@ import { PeriodFinalGradesController } from './period-final-grades.controller';
 import { PeriodFinalGradesService } from './period-final-grades.service';
 import { PartialGradesController } from './partial-grades.controller';
 import { PartialGradesService } from './partial-grades.service';
+import { GradeAuditService } from './grade-audit.service';
 import { FinalComponentsController } from './final-components.controller';
 import { FinalComponentsService } from './final-components.service';
 import { FinalComponentGradesController } from './final-component-grades.controller';
@@ -47,9 +48,10 @@ import { FinalComponentGradesService } from './final-component-grades.service';
     PreventiveCutsService,
     PeriodFinalGradesService,
     PartialGradesService,
+    GradeAuditService,
     FinalComponentsService,
     FinalComponentGradesService,
   ],
-  exports: [StudentGradesService, PeriodFinalGradesService, PartialGradesService, FinalComponentsService, FinalComponentGradesService],
+  exports: [StudentGradesService, PeriodFinalGradesService, PartialGradesService, GradeAuditService, FinalComponentsService, FinalComponentGradesService],
 })
 export class EvaluationModule {}

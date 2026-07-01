@@ -1,9 +1,13 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { GradeAuditService, GradeAuditActor } from './grade-audit.service';
 
 @Injectable()
 export class PartialGradesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly gradeAudit: GradeAuditService,
+  ) {}
 
   /**
    * Valida que el período NO esté FINALIZED.
@@ -32,10 +36,47 @@ export class PartialGradesService {
     activityType?: string;
     score: number;
     observations?: string;
-  }) {
+    // Concurrencia: string ISO = "creo que la fila tiene este updatedAt"; null = "creo que no existe fila";
+    // undefined = no verificar conflicto (comportamiento anterior).
+    expectedUpdatedAt?: string | null;
+  }, actor?: GradeAuditActor): Promise<any> {
     await this.guardTermNotFinalized(data.academicTermId);
     const ta = await this.prisma.teacherAssignment.findUnique({ where: { id: data.teacherAssignmentId }, select: { institutionId: true } });
-    return this.prisma.partialGrade.upsert({
+
+    // Estado previo (para auditoría forense: nota anterior vs nueva, y para detectar conflicto)
+    const prev = await this.prisma.partialGrade.findUnique({
+      where: {
+        studentEnrollmentId_teacherAssignmentId_academicTermId_componentType_activityIndex: {
+          studentEnrollmentId: data.studentEnrollmentId,
+          teacherAssignmentId: data.teacherAssignmentId,
+          academicTermId: data.academicTermId,
+          componentType: data.componentType,
+          activityIndex: data.activityIndex,
+        },
+      },
+      select: { id: true, score: true, updatedAt: true },
+    });
+
+    // Concurrencia: si el cliente indicó qué esperaba ver y no coincide con lo que hay
+    // ahora en la BD, alguien más cambió esta MISMA celda entre que el cliente cargó
+    // y guardó. No se sobreescribe: se reporta el conflicto para que el cliente decida.
+    if (data.expectedUpdatedAt !== undefined) {
+      const conflict = data.expectedUpdatedAt === null
+        ? !!prev
+        : (!prev || prev.updatedAt.toISOString() !== data.expectedUpdatedAt);
+      if (conflict) {
+        return {
+          conflict: true,
+          studentEnrollmentId: data.studentEnrollmentId,
+          componentType: data.componentType,
+          activityIndex: data.activityIndex,
+          serverScore: prev ? Number(prev.score) : null,
+          serverUpdatedAt: prev?.updatedAt ?? null,
+        };
+      }
+    }
+
+    const result = await this.prisma.partialGrade.upsert({
       where: {
         studentEnrollmentId_teacherAssignmentId_academicTermId_componentType_activityIndex: {
           studentEnrollmentId: data.studentEnrollmentId,
@@ -53,6 +94,28 @@ export class PartialGradesService {
       },
       create: { ...data, institutionId: ta!.institutionId },
     });
+
+    // Auditoría: CREATE si no existía; UPDATE solo si la nota cambió
+    const prevScore = prev ? Number(prev.score) : null;
+    if (!prev) {
+      await this.gradeAudit.record({
+        institutionId: ta!.institutionId, action: 'CREATE', partialGradeId: result.id,
+        studentEnrollmentId: data.studentEnrollmentId, teacherAssignmentId: data.teacherAssignmentId,
+        academicTermId: data.academicTermId, componentType: data.componentType,
+        activityIndex: data.activityIndex, activityName: data.activityName,
+        previousScore: null, newScore: data.score,
+      }, actor);
+    } else if (prevScore !== data.score) {
+      await this.gradeAudit.record({
+        institutionId: ta!.institutionId, action: 'UPDATE', partialGradeId: result.id,
+        studentEnrollmentId: data.studentEnrollmentId, teacherAssignmentId: data.teacherAssignmentId,
+        academicTermId: data.academicTermId, componentType: data.componentType,
+        activityIndex: data.activityIndex, activityName: data.activityName,
+        previousScore: prevScore, newScore: data.score,
+      }, actor);
+    }
+
+    return { conflict: false, ...result };
   }
 
   async bulkUpsert(grades: Array<{
@@ -63,9 +126,10 @@ export class PartialGradesService {
     activityIndex: number;
     activityName: string;
     activityType?: string;
-    score: number;
+    score: number | null; // null/undefined = "sin nota" (borrar la celda); 0 = cero real (C-2)
     observations?: string;
-  }>) {
+    expectedUpdatedAt?: string | null; // concurrencia: ver upsert()
+  }>, actor?: GradeAuditActor) {
     // Validar que ningún período esté FINALIZED
     const termIds = [...new Set(grades.map(g => g.academicTermId))];
     for (const termId of termIds) {
@@ -127,11 +191,30 @@ export class PartialGradesService {
             }
           }
 
-          // Delete conflicting old grades (current teacher's value takes precedence)
+          // Delete conflicting old grades (current teacher's value takes precedence).
+          // C-3: nunca borrar sin rastro — auditar la nota del docente anterior antes de borrarla.
           if (conflictIds.length > 0) {
+            const conflicting = await this.prisma.partialGrade.findMany({
+              where: { id: { in: conflictIds } },
+              select: {
+                id: true, institutionId: true, score: true, studentEnrollmentId: true,
+                teacherAssignmentId: true, academicTermId: true, componentType: true,
+                activityIndex: true, activityName: true,
+              },
+            });
             await this.prisma.partialGrade.deleteMany({
               where: { id: { in: conflictIds } },
             });
+            if (conflicting.length > 0) {
+              await this.gradeAudit.recordMany(conflicting.map((d) => ({
+                institutionId: d.institutionId, action: 'DELETE' as const, partialGradeId: d.id,
+                studentEnrollmentId: d.studentEnrollmentId, teacherAssignmentId: d.teacherAssignmentId,
+                academicTermId: d.academicTermId, componentType: d.componentType,
+                activityIndex: d.activityIndex, activityName: d.activityName,
+                previousScore: Number(d.score), newScore: null,
+                previousValue: { reason: 'Reemplazo por cambio de docente (la nota del docente anterior fue sustituida por la del docente actual)' },
+              })), actor);
+            }
           }
 
           // Migrate non-conflicting old grades to the current assignment
@@ -146,12 +229,50 @@ export class PartialGradesService {
     }
 
     const results: any[] = [];
+    const conflicts: any[] = [];
     for (const grade of grades) {
-      if (grade.score > 0) {
-        const result = await this.upsert(grade);
-        results.push({ action: 'upsert', ...result });
+      // C-2: null/undefined = borrar la celda; cualquier número (incluido 0) = guardar.
+      if (grade.score !== null && grade.score !== undefined) {
+        const result = await this.upsert({ ...grade, score: grade.score }, actor);
+        if (result.conflict) {
+          conflicts.push(result);
+        } else {
+          results.push({ action: 'upsert', ...result });
+        }
       } else {
         try {
+          // Capturar lo que se va a borrar para la auditoría forense
+          const toDelete = await this.prisma.partialGrade.findMany({
+            where: {
+              studentEnrollmentId: grade.studentEnrollmentId,
+              teacherAssignmentId: grade.teacherAssignmentId,
+              academicTermId: grade.academicTermId,
+              componentType: grade.componentType,
+              activityIndex: grade.activityIndex,
+            },
+            select: { id: true, institutionId: true, score: true, activityName: true, updatedAt: true },
+          });
+
+          // Concurrencia: si el cliente indicó qué esperaba ver y no coincide, alguien más
+          // cambió esta celda mientras tanto — no borrar en silencio, reportar conflicto.
+          if (grade.expectedUpdatedAt !== undefined) {
+            const current = toDelete[0];
+            const isConflict = grade.expectedUpdatedAt === null
+              ? !!current
+              : (!current || current.updatedAt.toISOString() !== grade.expectedUpdatedAt);
+            if (isConflict) {
+              conflicts.push({
+                conflict: true,
+                studentEnrollmentId: grade.studentEnrollmentId,
+                componentType: grade.componentType,
+                activityIndex: grade.activityIndex,
+                serverScore: current ? Number(current.score) : null,
+                serverUpdatedAt: current?.updatedAt ?? null,
+              });
+              continue;
+            }
+          }
+
           await this.prisma.partialGrade.deleteMany({
             where: {
               studentEnrollmentId: grade.studentEnrollmentId,
@@ -161,6 +282,15 @@ export class PartialGradesService {
               activityIndex: grade.activityIndex,
             },
           });
+          if (toDelete.length > 0) {
+            await this.gradeAudit.recordMany(toDelete.map((d) => ({
+              institutionId: d.institutionId, action: 'DELETE' as const, partialGradeId: d.id,
+              studentEnrollmentId: grade.studentEnrollmentId, teacherAssignmentId: grade.teacherAssignmentId,
+              academicTermId: grade.academicTermId, componentType: grade.componentType,
+              activityIndex: grade.activityIndex, activityName: d.activityName,
+              previousScore: Number(d.score), newScore: null,
+            })), actor);
+          }
           results.push({ action: 'delete', ...grade });
         } catch (e) {
           // Ignorar si no existe
@@ -191,7 +321,9 @@ export class PartialGradesService {
       }
     }
 
-    return results;
+    // `conflicts`: celdas que NO se guardaron porque alguien más las cambió mientras
+    // tanto (concurrencia — ver upsert()). El cliente debe mostrarlas y no asumir éxito.
+    return { results, conflicts };
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -211,6 +343,20 @@ export class PartialGradesService {
       select: { subjectId: true, teacherId: true, institutionId: true },
     });
     if (!assignment) return;
+
+    // C-1: si la nota final fue fijada MANUALMENTE, el recálculo automático la respeta
+    // (no la sobreescribe ni la borra). Solo un cambio manual explícito puede modificarla.
+    const existingFinal = await this.prisma.periodFinalGrade.findUnique({
+      where: {
+        studentEnrollmentId_academicTermId_subjectId: {
+          studentEnrollmentId,
+          academicTermId,
+          subjectId: assignment.subjectId,
+        },
+      },
+      select: { isManualOverride: true },
+    });
+    if (existingFinal?.isManualOverride) return;
 
     // 2. Obtener TODOS los PartialGrades restantes de este estudiante/asignatura/período
     const partials = await this.prisma.partialGrade.findMany({
@@ -312,36 +458,29 @@ export class PartialGradesService {
     // 6. Redondear a 1 decimal
     finalScore = Math.round(finalScore * 10) / 10;
 
-    // 7. Upsert PeriodFinalGrade
-    if (finalScore > 0) {
-      await this.prisma.periodFinalGrade.upsert({
-        where: {
-          studentEnrollmentId_academicTermId_subjectId: {
-            studentEnrollmentId,
-            academicTermId,
-            subjectId: assignment.subjectId,
-          },
-        },
-        update: { finalScore },
-        create: {
-          institutionId: assignment.institutionId,
-          studentEnrollmentId,
-          academicTermId,
-          subjectId: assignment.subjectId,
-          finalScore,
-          enteredById: assignment.teacherId,
-        },
-      });
-    } else {
-      // Score = 0 → eliminar
-      await this.prisma.periodFinalGrade.deleteMany({
-        where: {
+    // 7. Upsert PeriodFinalGrade.
+    // C-2: la nota final se guarda SIEMPRE que existan parciales, incluido 0 real
+    // (un 0 legítimo ya no se interpreta como "borrar"). El caso "sin parciales"
+    // ya se resolvió en el paso 3 (delete).
+    await this.prisma.periodFinalGrade.upsert({
+      where: {
+        studentEnrollmentId_academicTermId_subjectId: {
           studentEnrollmentId,
           academicTermId,
           subjectId: assignment.subjectId,
         },
-      });
-    }
+      },
+      update: { finalScore, isManualOverride: false },
+      create: {
+        institutionId: assignment.institutionId,
+        studentEnrollmentId,
+        academicTermId,
+        subjectId: assignment.subjectId,
+        finalScore,
+        enteredById: assignment.teacherId,
+        isManualOverride: false,
+      },
+    });
   }
 
   async count(institutionId?: string) {
@@ -411,15 +550,29 @@ export class PartialGradesService {
     });
   }
 
-  async delete(id: string) {
+  async delete(id: string, actor?: GradeAuditActor) {
     const grade = await this.prisma.partialGrade.findUnique({
       where: { id },
-      select: { academicTermId: true },
+      select: {
+        academicTermId: true, institutionId: true, score: true,
+        studentEnrollmentId: true, teacherAssignmentId: true, componentType: true,
+        activityIndex: true, activityName: true,
+      },
     });
     if (grade) {
       await this.guardTermNotFinalized(grade.academicTermId);
     }
-    return this.prisma.partialGrade.delete({ where: { id } });
+    const result = await this.prisma.partialGrade.delete({ where: { id } });
+    if (grade) {
+      await this.gradeAudit.record({
+        institutionId: grade.institutionId, action: 'DELETE', partialGradeId: id,
+        studentEnrollmentId: grade.studentEnrollmentId, teacherAssignmentId: grade.teacherAssignmentId,
+        academicTermId: grade.academicTermId, componentType: grade.componentType,
+        activityIndex: grade.activityIndex, activityName: grade.activityName,
+        previousScore: Number(grade.score), newScore: null,
+      }, actor);
+    }
+    return result;
   }
 
   /**
@@ -529,15 +682,25 @@ export class PartialGradesService {
     academicTermId: string,
     componentType: string,
     activityIndex: number,
+    actor?: GradeAuditActor,
   ) {
     await this.guardTermNotFinalized(academicTermId);
-    return this.prisma.partialGrade.deleteMany({
-      where: {
-        teacherAssignmentId,
-        academicTermId,
-        componentType,
-        activityIndex,
-      },
+    // Capturar lo que se va a borrar para la auditoría forense
+    const toDelete = await this.prisma.partialGrade.findMany({
+      where: { teacherAssignmentId, academicTermId, componentType, activityIndex },
+      select: { id: true, institutionId: true, score: true, studentEnrollmentId: true, activityName: true },
     });
+    const result = await this.prisma.partialGrade.deleteMany({
+      where: { teacherAssignmentId, academicTermId, componentType, activityIndex },
+    });
+    if (toDelete.length > 0) {
+      await this.gradeAudit.recordMany(toDelete.map((d) => ({
+        institutionId: d.institutionId, action: 'DELETE' as const, partialGradeId: d.id,
+        studentEnrollmentId: d.studentEnrollmentId, teacherAssignmentId,
+        academicTermId, componentType, activityIndex, activityName: d.activityName,
+        previousScore: Number(d.score), newScore: null,
+      })), actor);
+    }
+    return result;
   }
 }

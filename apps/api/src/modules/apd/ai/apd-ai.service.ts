@@ -32,11 +32,20 @@ import {
 export class ApdAiService implements IApdAiService {
   private readonly logger = new Logger(ApdAiService.name);
   private readonly config: ApdAiServiceConfig;
+  // Multi-key: claves por proveedor para que coexistan free (OpenRouter) y
+  // premium (Gemini) según el plan de la institución (orquestador §21).
+  private readonly providerKeys: Record<string, string | undefined>;
 
   constructor() {
     const providerEnv = process.env.APD_AI_PROVIDER?.trim().toUpperCase();
     const apiKey = process.env.APD_AI_API_KEY;
     const detectedProvider = this.detectProvider(apiKey);
+    this.providerKeys = {
+      OPENROUTER: process.env.OPENROUTER_API_KEY || (detectedProvider === 'OPENROUTER' ? apiKey : undefined),
+      GEMINI: process.env.GEMINI_API_KEY || (detectedProvider === 'GEMINI' ? apiKey : undefined),
+      GROQ: process.env.GROQ_API_KEY || (detectedProvider === 'GROQ' ? apiKey : undefined),
+      XAI: process.env.XAI_API_KEY || (detectedProvider === 'XAI' ? apiKey : undefined),
+    };
     this.config = {
       provider: (providerEnv as any) || detectedProvider,
       model: process.env.APD_AI_MODEL || this.getDefaultModel(detectedProvider),
@@ -55,7 +64,9 @@ export class ApdAiService implements IApdAiService {
   }
 
   isEnabled(): boolean {
-    return this.config.provider !== 'DISABLED' && !!this.config.apiKey;
+    if (this.config.provider !== 'DISABLED' && !!this.config.apiKey) return true;
+    // También habilitado si hay alguna key por proveedor (multi-key del orquestador).
+    return Object.values(this.providerKeys).some(Boolean);
   }
 
   private isGeminiEnabled(): boolean {
@@ -71,14 +82,16 @@ export class ApdAiService implements IApdAiService {
     return 'GEMINI'; // fallback
   }
 
-  // Modelos de OpenRouter en orden de prioridad para cascada de reintentos
+  // Modelos de OpenRouter en orden de prioridad para cascada de reintentos.
+  // Si un modelo ya no existe / dejó de ser gratis (404), se cae al siguiente.
   private static readonly OPENROUTER_MODEL_CASCADE = [
-    'google/gemma-4-31b-it:free',
-    'z-ai/glm-4.5-air:free',
     'meta-llama/llama-3.3-70b-instruct:free',
-    'google/gemma-4-26b-a4b-it:free',
-    'openai/gpt-oss-20b:free',
+    'z-ai/glm-4.5-air:free',
+    'deepseek/deepseek-chat-v3-0324:free',
+    'qwen/qwen-2.5-72b-instruct:free',
     'nvidia/nemotron-nano-9b-v2:free',
+    'openai/gpt-oss-20b:free',
+    'mistralai/mistral-7b-instruct:free',
   ];
 
   private getDefaultModel(provider: string): string {
@@ -98,13 +111,15 @@ export class ApdAiService implements IApdAiService {
   private async callOpenRouterJson<T>(
     systemInstruction: string,
     userPrompt: string,
+    maxTokens?: number,
+    creds?: { apiKey?: string; model?: string },
   ): Promise<T> {
-    if (!this.isOpenRouterEnabled()) {
-      throw new Error('OpenRouter no está habilitado');
-    }
+    const apiKey = creds?.apiKey ?? this.providerKeys.OPENROUTER ?? this.config.apiKey;
+    if (!apiKey) throw new Error('OpenRouter no está habilitado');
 
-    const modelsToTry = this.config.model && !ApdAiService.OPENROUTER_MODEL_CASCADE.includes(this.config.model)
-      ? [this.config.model, ...ApdAiService.OPENROUTER_MODEL_CASCADE]
+    const preferred = creds?.model || this.config.model;
+    const modelsToTry = preferred && !ApdAiService.OPENROUTER_MODEL_CASCADE.includes(preferred)
+      ? [preferred, ...ApdAiService.OPENROUTER_MODEL_CASCADE]
       : ApdAiService.OPENROUTER_MODEL_CASCADE;
 
     let lastError: Error | null = null;
@@ -112,21 +127,30 @@ export class ApdAiService implements IApdAiService {
     for (const model of modelsToTry) {
       try {
         this.logger.log(`OpenRouter intentando modelo: ${model}`);
-        const result = await this.callOpenRouterWithModel<T>(model, systemInstruction, userPrompt);
+        const result = await this.callOpenRouterWithModel<T>(model, systemInstruction, userPrompt, maxTokens, apiKey);
         this.logger.log(`OpenRouter modelo exitoso: ${model}`);
         return result;
       } catch (err: any) {
         lastError = err;
         const errMessage = String(err?.message || err || '');
-        const is429 = errMessage.includes('429') || errMessage.toLowerCase().includes('rate-limit');
+        const lower = errMessage.toLowerCase();
+        const is429 = errMessage.includes('429') || lower.includes('rate-limit');
         const isRetryableProviderError =
           /OpenRouter HTTP (5\d\d)/i.test(errMessage) ||
-          errMessage.includes('no healthy upstream') ||
-          errMessage.toLowerCase().includes('provider returned error') ||
-          errMessage.toLowerCase().includes('temporarily unavailable');
+          lower.includes('no healthy upstream') ||
+          lower.includes('provider returned error') ||
+          lower.includes('temporarily unavailable');
+        // Modelo inexistente / ya no gratis (404): cae al siguiente de la cascada.
+        const isModelUnavailable =
+          /OpenRouter HTTP 404/i.test(errMessage) ||
+          lower.includes('unavailable') ||
+          lower.includes('use this slug instead') ||
+          lower.includes('not a valid model') ||
+          lower.includes('no endpoints found') ||
+          lower.includes('no allowed providers');
 
-        if (is429 || isRetryableProviderError) {
-          this.logger.warn(`OpenRouter modelo ${model} falló con error recuperable (${errMessage}), probando siguiente...`);
+        if (is429 || isRetryableProviderError || isModelUnavailable) {
+          this.logger.warn(`OpenRouter modelo ${model} no usable (${errMessage}), probando siguiente...`);
           continue;
         }
         // Para otros errores, no reintentar con otro modelo
@@ -141,6 +165,8 @@ export class ApdAiService implements IApdAiService {
     model: string,
     systemInstruction: string,
     userPrompt: string,
+    maxTokens?: number,
+    apiKey?: string,
   ): Promise<T> {
     const url = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -148,7 +174,7 @@ export class ApdAiService implements IApdAiService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.apiKey}`,
+        'Authorization': `Bearer ${apiKey ?? this.config.apiKey}`,
         'HTTP-Referer': 'https://edusyn.co',
         'X-Title': 'Edusyn - Valeria AI',
       },
@@ -159,7 +185,7 @@ export class ApdAiService implements IApdAiService {
           { role: 'user', content: userPrompt },
         ],
         temperature: this.config.temperature ?? 0.7,
-        max_tokens: Math.max(this.config.maxTokens ?? 2000, 4000),
+        max_tokens: Math.max(maxTokens ?? this.config.maxTokens ?? 2000, 4000),
       }),
     });
 
@@ -189,19 +215,20 @@ export class ApdAiService implements IApdAiService {
   private async callGroqJson<T>(
     systemInstruction: string,
     userPrompt: string,
+    maxTokens?: number,
+    creds?: { apiKey?: string; model?: string },
   ): Promise<T> {
-    if (!this.isGroqEnabled()) {
-      throw new Error('Groq no está habilitado');
-    }
+    const apiKey = creds?.apiKey ?? this.providerKeys.GROQ ?? this.config.apiKey;
+    if (!apiKey) throw new Error('Groq no está habilitado');
 
-    const model = this.config.model || 'llama-3.1-8b-instant';
+    const model = creds?.model || this.config.model || 'llama-3.1-8b-instant';
     const url = 'https://api.groq.com/openai/v1/chat/completions';
 
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.apiKey}`,
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model,
@@ -210,7 +237,7 @@ export class ApdAiService implements IApdAiService {
           { role: 'user', content: userPrompt },
         ],
         temperature: this.config.temperature ?? 0.7,
-        max_tokens: this.config.maxTokens ?? 2000,
+        max_tokens: maxTokens ?? this.config.maxTokens ?? 2000,
       }),
     });
 
@@ -232,19 +259,20 @@ export class ApdAiService implements IApdAiService {
   private async callXaiJson<T>(
     systemInstruction: string,
     userPrompt: string,
+    maxTokens?: number,
+    creds?: { apiKey?: string; model?: string },
   ): Promise<T> {
-    if (!this.isXaiEnabled()) {
-      throw new Error('xAI no está habilitado');
-    }
+    const apiKey = creds?.apiKey ?? this.providerKeys.XAI ?? this.config.apiKey;
+    if (!apiKey) throw new Error('xAI no está habilitado');
 
-    const model = this.config.model || 'grok-3-mini';
+    const model = creds?.model || this.config.model || 'grok-3-mini';
     const url = 'https://api.x.ai/v1/chat/completions';
 
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.apiKey}`,
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model,
@@ -253,7 +281,7 @@ export class ApdAiService implements IApdAiService {
           { role: 'user', content: userPrompt },
         ],
         temperature: this.config.temperature ?? 0.7,
-        max_tokens: this.config.maxTokens ?? 2000,
+        max_tokens: maxTokens ?? this.config.maxTokens ?? 2000,
       }),
     });
 
@@ -275,20 +303,26 @@ export class ApdAiService implements IApdAiService {
   private async callLlmJson<T>(
     systemInstruction: string,
     userPrompt: string,
+    maxTokens?: number,
+    route?: { provider?: string; model?: string },
   ): Promise<T> {
-    if (this.isOpenRouterEnabled()) {
-      return this.callOpenRouterJson<T>(systemInstruction, userPrompt);
+    // Proveedor efectivo: el del route (orquestador) o el de la config por defecto.
+    const provider = (route?.provider || this.config.provider || '').toUpperCase();
+    const apiKey = this.providerKeys[provider] || this.config.apiKey;
+    if (!apiKey) throw new Error(`Sin API key para el proveedor ${provider || 'IA'}`);
+    const creds = { apiKey, model: route?.model };
+    switch (provider) {
+      case 'OPENROUTER': return this.callOpenRouterJson<T>(systemInstruction, userPrompt, maxTokens, creds);
+      case 'GROQ': return this.callGroqJson<T>(systemInstruction, userPrompt, maxTokens, creds);
+      case 'XAI': return this.callXaiJson<T>(systemInstruction, userPrompt, maxTokens, creds);
+      case 'GEMINI': return this.callGeminiJson<T>(systemInstruction, userPrompt, maxTokens, creds);
+      default: throw new Error('Ningún proveedor de IA está habilitado');
     }
-    if (this.isGroqEnabled()) {
-      return this.callGroqJson<T>(systemInstruction, userPrompt);
-    }
-    if (this.isXaiEnabled()) {
-      return this.callXaiJson<T>(systemInstruction, userPrompt);
-    }
-    if (this.isGeminiEnabled()) {
-      return this.callGeminiJson<T>(systemInstruction, userPrompt);
-    }
-    throw new Error('Ningún proveedor de IA está habilitado');
+  }
+
+  /** ¿Hay API key disponible para este proveedor? (para el orquestador). */
+  providerAvailable(provider: string): boolean {
+    return !!this.providerKeys[(provider || '').toUpperCase()];
   }
 
   private sanitizeVisualSvg(svg?: string): string | undefined {
@@ -319,13 +353,14 @@ export class ApdAiService implements IApdAiService {
   private async callGeminiJson<T>(
     systemInstruction: string,
     userPrompt: string,
+    maxTokens?: number,
+    creds?: { apiKey?: string; model?: string },
   ): Promise<T> {
-    if (!this.isGeminiEnabled()) {
-      throw new Error('Gemini no está habilitado');
-    }
+    const apiKey = creds?.apiKey ?? this.providerKeys.GEMINI ?? this.config.apiKey;
+    if (!apiKey) throw new Error('Gemini no está habilitado');
 
-    const model = this.config.model || 'gemini-2.0-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${this.config.apiKey}`;
+    const model = creds?.model || this.config.model || 'gemini-2.0-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -343,7 +378,7 @@ export class ApdAiService implements IApdAiService {
         ],
         generationConfig: {
           temperature: this.config.temperature,
-          maxOutputTokens: this.config.maxTokens,
+          maxOutputTokens: maxTokens ?? this.config.maxTokens,
           responseMimeType: 'application/json',
         },
       }),
@@ -1342,6 +1377,151 @@ export class ApdAiService implements IApdAiService {
         questions: parsedQuestions,
       },
       confidence: 0.95,
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DISEÑO PEDAGÓGICO IA ("Estudio") — genera un Activo Pedagógico estructurado.
+  // Reutiliza el cliente LLM (callLlmJson). Si la IA no está habilitada o falla,
+  // devuelve una plantilla estructurada para que el módulo nunca quede vacío.
+  // ═══════════════════════════════════════════════════════════════════════════
+  async generatePedagogicalDesign(input: {
+    prompt: string;
+    experienceType?: string;
+    gradeName?: string;
+    subjectName?: string;
+    sessions?: number;
+    institutionName?: string;
+  }, route?: { provider?: string; model?: string }): Promise<{ content: any; dna: any; provider: string; model: string }> {
+    const system = this.buildDesignSystemPrompt(input);
+    const user = this.buildDesignUserPrompt(input);
+
+    const provider = (route?.provider || this.config.provider || '').toUpperCase();
+    const model = route?.model || this.config.model || '';
+    const available = this.providerAvailable(provider) || (this.isEnabled() && !route?.provider);
+
+    if (!available) {
+      return {
+        content: { ...this.placeholderDesign(input), _aiStatus: 'disabled', _aiError: `IA no configurada para el proveedor ${provider || 'IA'} en el servidor.` },
+        dna: this.placeholderDesignDna(input), provider: 'DISABLED', model: 'none',
+      };
+    }
+    try {
+      // El diseño es un JSON grande y detallado: margen amplio para no truncarlo.
+      const raw = await this.callLlmJson<any>(system, user, 10000, route);
+      const content = raw?.content ?? raw;
+      const dna = raw?.dna ?? this.placeholderDesignDna(input);
+      if (!content || typeof content !== 'object' || (!content.moments && !content.learning && !content.activities)) {
+        throw new Error('La IA devolvió un contenido incompleto o con formato inesperado.');
+      }
+      return { content, dna, provider, model };
+    } catch (e) {
+      const msg = String((e as any)?.message || e).slice(0, 400);
+      this.logger.warn(`generatePedagogicalDesign falló (${provider}/${model}): ${msg}`);
+      return {
+        content: { ...this.placeholderDesign(input), _aiStatus: 'error', _aiError: msg },
+        dna: this.placeholderDesignDna(input), provider: 'FALLBACK', model: model || 'none',
+      };
+    }
+  }
+
+  private static readonly DESIGN_TYPE_GUIDANCE: Record<string, string> = {
+    LESSON_PLAN: 'PLAN DE CLASE: UNA sola sesión. EXACTAMENTE 3 momentos: INICIO, DESARROLLO, CIERRE. 2-3 actividades. identification.sessions = 1.',
+    SEQUENCE: 'SECUENCIA DIDÁCTICA: VARIAS sesiones encadenadas (usa 4-6). Aquí cada elemento de "moments" representa una SESIÓN COMPLETA con su propio propósito (NO los 3 momentos de una clase). Progresión de menor a mayor complejidad. identification.sessions = número de sesiones.',
+    UNIT: 'UNIDAD COMPLETA: abarca varias semanas (6-10 sesiones). MÁS objetivos y resultados de aprendizaje, evaluación formativa Y sumativa, varios productos. "moments" lista las SESIONES o etapas de la unidad. identification.sessions alto.',
+    PBL: 'PROYECTO ABP: DEBE incluir una PREGUNTA ORIENTADORA como primer objetivo y un PRODUCTO FINAL auténtico. "moments" son las FASES del proyecto (lanzamiento, investigación, construcción, presentación), no momentos de clase. Evaluación por proceso + producto.',
+    STEAM: 'CLASE STEAM: integra AL MENOS 2 áreas (ciencia/tecnología/ingeniería/arte/matemáticas) en torno a un RETO de diseño. Las actividades incluyen diseñar, construir y probar.',
+    FLIPPED: 'CLASE INVERTIDA: el contenido se estudia ANTES en casa (descríbelo y ponlo en resources); el primer momento es ese trabajo previo y la sesión presencial es práctica activa y resolución de dudas.',
+    CHALLENGE: 'APRENDIZAJE BASADO EN RETOS: un reto auténtico del contexto del estudiante. Fases: comprometer, investigar, actuar. Solución real e iteración.',
+    WORKSHOP: 'TALLER: foco en práctica guiada PASO A PASO para producir algo concreto. Actividades detalladas con tiempos y producto tangible.',
+    LAB: 'LABORATORIO: práctica experimental con objetivo, materiales, procedimiento, registro de datos, conclusiones y normas de seguridad.',
+    EVALUATION: 'EVALUACIÓN: el foco es el INSTRUMENTO. Prioriza "evaluation" y "rubric" MUY detallados (criterios con niveles y descriptores claros); "moments" puede ser breve.',
+    INTERACTIVE_LESSON: 'LECCIÓN INTERACTIVA: secuencia de pantallas/slides con micro-actividades y chequeos de comprensión frecuentes. "moments" = bloques de la lección.',
+  };
+
+  private buildDesignSystemPrompt(input: { experienceType?: string }): string {
+    const type = (input.experienceType || 'LESSON_PLAN').toUpperCase();
+    const guidance = ApdAiService.DESIGN_TYPE_GUIDANCE[type] || ApdAiService.DESIGN_TYPE_GUIDANCE.LESSON_PLAN;
+    return [
+      'Eres Valeria, diseñadora pedagógica experta del sistema educativo colombiano (MEN).',
+      'Diseñas experiencias de aprendizaje completas, prácticas y aplicables en el aula.',
+      '',
+      `=== TIPO DE EXPERIENCIA: ${type} ===`,
+      guidance,
+      'La ESTRUCTURA, el alcance y el número de momentos/actividades DEBEN reflejar este tipo. No entregues un plan de clase genérico para todos los tipos.',
+      '',
+      'Devuelve EXCLUSIVAMENTE un JSON válido con esta forma exacta:',
+      '{',
+      '  "content": {',
+      '    "identification": { "area": "", "subject": "", "grade": "", "sessions": 1, "totalMinutes": 0 },',
+      '    "framework": { "competencies": [""], "dba": [""], "standards": [""] },',
+      '    "learning": { "objectives": [""], "outcomes": [""], "bloomLevels": [""] },',
+      '    "contentSummary": "2 a 4 párrafos que EXPLICAN el contenido conceptual del tema con sustancia, definiciones y ejemplos concretos (el saber que el docente enseña, no un resumen vago)",',
+      '    "moments": [ { "phase": "nombre del momento, sesión o fase según el tipo", "minutes": 0, "description": "párrafo detallado de QUÉ ocurre y CÓMO", "teacherActions": ["lo que el docente hace y dice, concreto"], "studentActions": ["lo que hacen los estudiantes"] } ],',
+      '    "activities": [ { "title": "", "type": "TASK|QUIZ|FORUM|PROJECT|GAME|LESSON", "minutes": 0, "instructions": "instrucciones detalladas paso a paso para realizarla", "content": "el desarrollo/contenido REAL de la actividad con ejemplos concretos del tema", "example": "un ejemplo trabajado y resuelto", "product": "" } ],',
+      '    "evaluation": { "type": "", "criteria": [""], "evidences": [""] },',
+      '    "rubric": { "criteria": [ { "name": "", "levels": [ { "label": "", "descriptor": "", "score": 0 } ] } ] },',
+      '    "dua": { "barriers": [""], "adjustments": [""] },',
+      '    "resources": [ { "name": "", "url": "" } ]',
+      '  },',
+      '  "dna": {',
+      '    "topic": "", "competencies": [""], "difficulty": "BAJA|MEDIA|ALTA",',
+      '    "bloomLevels": [""], "methodology": ["ABP|STEAM|FLIPPED|COOP|TRADICIONAL"],',
+      '    "evaluationType": "", "usesICT": false, "estimatedMinutes": 0,',
+      '    "work": { "individual": true, "collaborative": true }',
+      '  }',
+      '}',
+      '',
+      '=== PROFUNDIDAD (lo más importante) ===',
+      'Sé EXTENSO y EXPLICATIVO. "contentSummary", cada "description", "instructions" y "content" deben tener VARIAS oraciones con sustancia real, el contenido del tema y ejemplos concretos — NUNCA títulos sueltos ni generalidades como "explicación del tema". Un docente debe poder dar la clase leyendo esto, sin buscar nada más. Escribe como un experto que prepara material listo para usar.',
+      '',
+      'Reglas: español claro; los "moments" y su cantidad deben corresponder al TIPO de experiencia (no siempre 3); actividades concretas y realizables con tiempos; evaluación con evidencias; ajustes DUA reales. No incluyas texto fuera del JSON.',
+    ].join('\n');
+  }
+
+  private buildDesignUserPrompt(input: {
+    prompt: string; gradeName?: string; subjectName?: string; sessions?: number; institutionName?: string;
+  }): string {
+    return [
+      `Solicitud del docente: ${input.prompt}`,
+      input.gradeName ? `Grado: ${input.gradeName}` : '',
+      input.subjectName ? `Asignatura: ${input.subjectName}` : '',
+      input.sessions ? `Número de sesiones: ${input.sessions}` : '',
+      input.institutionName ? `Institución: ${input.institutionName}` : '',
+      '',
+      'Diseña la experiencia completa siguiendo la estructura JSON indicada.',
+    ].filter(Boolean).join('\n');
+  }
+
+  private placeholderDesignDna(input: { prompt: string }): any {
+    return {
+      topic: (input.prompt || '').slice(0, 80),
+      competencies: [], difficulty: 'MEDIA', bloomLevels: ['Comprender', 'Aplicar'],
+      methodology: ['TRADICIONAL'], evaluationType: 'Formativa', usesICT: false,
+      estimatedMinutes: 110, work: { individual: true, collaborative: true },
+    };
+  }
+
+  private placeholderDesign(input: { prompt: string; gradeName?: string; subjectName?: string; sessions?: number }): any {
+    const topic = (input.prompt || 'el tema').replace(/^necesito\s+(un|una)?\s*(plan|gu[ií]a)\s*(de\s*clase[s]?)?\s*(sobre|de|del)?\s*/i, '').trim() || input.prompt;
+    return {
+      identification: { area: input.subjectName || '', subject: input.subjectName || '', grade: input.gradeName || '', sessions: input.sessions || 1, totalMinutes: 110 },
+      framework: { competencies: [], dba: [], standards: [] },
+      learning: { objectives: [`Comprender los conceptos centrales de ${topic}.`], outcomes: [`El estudiante explica y aplica ${topic}.`], bloomLevels: ['Comprender', 'Aplicar'] },
+      moments: [
+        { phase: 'INICIO', minutes: 20, description: `Exploración de saberes previos sobre ${topic} con una pregunta motivadora.`, activities: ['Lluvia de ideas guiada'] },
+        { phase: 'DESARROLLO', minutes: 60, description: `Explicación, modelado y práctica guiada de ${topic}.`, activities: ['Explicación con ejemplos', 'Práctica en parejas'] },
+        { phase: 'CIERRE', minutes: 30, description: 'Síntesis, producto y evaluación formativa.', activities: ['Ticket de salida'] },
+      ],
+      activities: [
+        { title: `Actividad introductoria: ${topic}`, description: 'Actividad de apertura para activar saberes previos.', type: 'TASK', minutes: 20, product: 'Participación oral' },
+        { title: `Práctica guiada: ${topic}`, description: 'Ejercicio aplicado en parejas.', type: 'TASK', minutes: 40, product: 'Hoja de trabajo' },
+      ],
+      evaluation: { type: 'Formativa', criteria: ['Comprende los conceptos', 'Aplica lo aprendido'], evidences: ['Hoja de trabajo', 'Ticket de salida'] },
+      rubric: { criteria: [ { name: 'Comprensión', levels: [ { label: 'Superior', descriptor: 'Domina el concepto', score: 5 }, { label: 'Básico', descriptor: 'Comprende parcialmente', score: 3 } ] } ] },
+      dua: { barriers: ['Diferentes ritmos de aprendizaje'], adjustments: ['Material visual de apoyo', 'Tiempo adicional', 'Trabajo en parejas'] },
+      resources: [],
+      _placeholder: true,
     };
   }
 

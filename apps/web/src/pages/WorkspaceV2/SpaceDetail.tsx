@@ -18,6 +18,7 @@ import { BibliotecaModule } from './modules/BibliotecaModule'
 import { ProyectoModule } from './modules/ProyectoModule'
 import { ListaModule, type ListaItem } from './modules/ListaModule'
 import { TableroModule } from './modules/TableroModule'
+import { EstudioModule } from './modules/EstudioModule'
 import { QuickSearch } from './components/QuickSearch'
 
 interface BoardData {
@@ -238,7 +239,9 @@ export default function SpaceDetailPage() {
                 <h2 className="text-lg font-bold text-slate-900">{openModuleDef!.label}</h2>
               </div>
 
-              {openModule === 'recaudo' ? (
+              {openModule === 'estudio' ? (
+                <EstudioModule boardId={board.id} />
+              ) : openModule === 'recaudo' ? (
                 <RecaudoModule boardId={board.id} />
               ) : openModule === 'tablero' ? (
                 <TableroModule boardId={board.id} />

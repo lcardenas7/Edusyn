@@ -35,6 +35,15 @@
 - ✅ **Consolidación en producción** (2026-06-29, reversible, con backups en `Edusyn-Backups/`):
   - Antonio Castellón: 15 tableros CLASS_LOG → 11 espacios de curso (1×curso), materia como etiqueta (SPEAKING/FUNDAMENTOS). 70 items intactos. Script `apps/api/scripts/consolidate-antonio.cjs`.
   - Luis Cárdenas (grupo B): 4 tableros → 1 "Octavo B" con Recaudo (Libros 37 cargos + Observador 9) + Roles. Script `apps/api/scripts/consolidate-group-b.cjs`.
+- ✅ **V2 EN VIVO EN PRODUCCIÓN** (2026-06-29, commit `7897b44`): V2 reemplazó a V1 en `/my-workspace`. Sin migraciones (solo código).
+  - V1 clásica escondida en `/my-workspace-classic` (respaldo, sin enlace en menú). `/my-workspace-v2` queda como alias.
+  - Se eliminó el flag `WORKSPACE_V2_ENABLED` (ya no hay gating por hostname).
+  - Funciones nuevas: borrar/archivar espacios, vista de archivados (restaurar/eliminar), eliminar recaudo, chips de módulos en tarjetas.
+
+## Estudio · Diseño Pedagógico IA (en staging)
+- ✅ **E0** Cimientos: modelos `PedagogicalDesign` + `PedagogicalDesignVersion` (migración `20260629120000_pedagogical_design_e0`, aplicada en staging). Doc `docs/DISENO_PEDAGOGICO_IA.md`.
+- ✅ **E1** Generar/ver/editar/guardar/eliminar: módulo "Estudio" (✨) activable en el curso; backend `pedagogical-design` reutiliza `ApdAiService.generatePedagogicalDesign` (callLlmJson) con plantilla de respaldo. **Solo staging**, pendiente prueba del usuario antes de prod.
+- ⬜ **E2** Versiones + PDF · **E3** Enviar al Aula Virtual (Composer) · resto del roadmap en el doc.
 
 ## Siguiente
 - ⬜ **F13b** (opcional) Plantillas + ritual de inicio/cierre de día.

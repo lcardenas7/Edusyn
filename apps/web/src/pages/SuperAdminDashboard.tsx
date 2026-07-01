@@ -19,6 +19,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { 
   Building2, 
   Users, 
@@ -38,7 +39,8 @@ import {
   RefreshCw,
   ChevronDown,
   Edit,
-  Trash2
+  Trash2,
+  Activity
 } from 'lucide-react'
 import { superadminApi } from '../lib/api'
 
@@ -421,6 +423,8 @@ const AVAILABLE_MODULES: ModuleConfig[] = [
 // }
 
 export default function SuperAdminDashboard() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [institutions, setInstitutions] = useState<Institution[]>([])
   const [stats, setStats] = useState<SystemStats>({
     totalInstitutions: 0,
@@ -436,6 +440,16 @@ export default function SuperAdminDashboard() {
   const [showModulesModal, setShowModulesModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [observeInstitution, setObserveInstitution] = useState<Institution | null>(null) // null = sin abrir; con valor = modal por institución
+  const [showGlobalAudit, setShowGlobalAudit] = useState(false)
+
+  // El sidebar del SuperAdmin usa rutas (/superadmin/audit-logs, /institutions/new, …) que
+  // todas renderizan este mismo dashboard. Abrimos la vista correspondiente según la ruta,
+  // para que los ítems del menú no muestren siempre la lista de instituciones.
+  useEffect(() => {
+    if (location.pathname === '/superadmin/audit-logs') setShowGlobalAudit(true)
+    if (location.pathname === '/superadmin/institutions/new') setShowCreateModal(true)
+  }, [location.pathname])
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -659,13 +673,23 @@ export default function SuperAdminDashboard() {
           <div className="p-5 border-b border-slate-200">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-slate-900">Instituciones</h2>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Nueva Institución
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowGlobalAudit(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                  title="Registro de cambios de notas en todas las instituciones"
+                >
+                  <Activity className="w-4 h-4" />
+                  Auditoría general
+                </button>
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Nueva Institución
+                </button>
+              </div>
             </div>
             <div className="mt-4 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -746,6 +770,13 @@ export default function SuperAdminDashboard() {
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
+                          onClick={() => setObserveInstitution(inst)}
+                          className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-emerald-600 transition-colors"
+                          title="Uso y registros (auditoría)"
+                        >
+                          <Activity className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => {
                             setSelectedInstitution(inst)
                             setShowEditModal(true)
@@ -804,10 +835,32 @@ export default function SuperAdminDashboard() {
       {/* Modal: Crear Institución */}
       {showCreateModal && (
         <CreateInstitutionModal
-          onClose={() => setShowCreateModal(false)}
+          onClose={() => {
+            setShowCreateModal(false)
+            if (location.pathname === '/superadmin/institutions/new') navigate('/superadmin/institutions')
+          }}
           onCreated={(newInst) => {
             setInstitutions(prev => [newInst, ...prev])
             setShowCreateModal(false)
+          }}
+        />
+      )}
+
+      {/* Modal: Observabilidad por institución */}
+      {observeInstitution && (
+        <ObservabilityModal
+          institution={observeInstitution}
+          onClose={() => setObserveInstitution(null)}
+        />
+      )}
+
+      {/* Modal: Auditoría general (todas las instituciones) */}
+      {showGlobalAudit && (
+        <ObservabilityModal
+          institution={null}
+          onClose={() => {
+            setShowGlobalAudit(false)
+            if (location.pathname === '/superadmin/audit-logs') navigate('/superadmin/institutions')
           }}
         />
       )}
@@ -1950,6 +2003,175 @@ function ModulesModal({
               {loading ? 'Guardando...' : 'Guardar Cambios'}
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Modal: Observabilidad (uso + registro forense de notas) — global o por institución
+// ─────────────────────────────────────────────────────────────────────────────
+function ObservabilityModal({
+  institution,
+  onClose,
+}: {
+  institution: Institution | null
+  onClose: () => void
+}) {
+  const [tab, setTab] = useState<'usage' | 'audit'>(institution ? 'usage' : 'audit')
+  const [usage, setUsage] = useState<any>(null)
+  const [usageLoading, setUsageLoading] = useState(false)
+  const [audit, setAudit] = useState<any[]>([])
+  const [auditLoading, setAuditLoading] = useState(false)
+  const [actionFilter, setActionFilter] = useState<string>('')
+
+  useEffect(() => {
+    if (tab === 'usage' && institution && !usage) {
+      setUsageLoading(true)
+      superadminApi.getInstitutionUsage(institution.id)
+        .then(r => setUsage(r.data))
+        .catch(() => setUsage(null))
+        .finally(() => setUsageLoading(false))
+    }
+  }, [tab, institution, usage])
+
+  useEffect(() => {
+    if (tab === 'audit') {
+      setAuditLoading(true)
+      superadminApi.getGradeAuditLog({
+        institutionId: institution?.id,
+        action: actionFilter || undefined,
+        limit: 100,
+      })
+        .then(r => setAudit(r.data?.items || []))
+        .catch(() => setAudit([]))
+        .finally(() => setAuditLoading(false))
+    }
+  }, [tab, institution, actionFilter])
+
+  const actionLabel = (a: string) => a === 'CREATE' ? '🟢 Ingresó' : a === 'UPDATE' ? '✏️ Cambió' : '🗑️ Borró'
+  const actionColor = (a: string) => a === 'CREATE' ? 'text-green-700 bg-green-50' : a === 'UPDATE' ? 'text-amber-700 bg-amber-50' : 'text-red-700 bg-red-50'
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-5 border-b border-slate-200 flex items-center justify-between shrink-0">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-emerald-600" />
+              {institution ? `Observabilidad · ${institution.name}` : 'Auditoría general (todas las instituciones)'}
+            </h2>
+            <p className="text-sm text-slate-500">Solo lectura · datos y registros de uso</p>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg"><XCircle className="w-5 h-5 text-slate-400" /></button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 px-5 pt-3 border-b border-slate-200 shrink-0">
+          {institution && (
+            <button onClick={() => setTab('usage')} className={`px-4 py-2 text-sm font-medium rounded-t-lg ${tab === 'usage' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>
+              Estadísticas de uso
+            </button>
+          )}
+          <button onClick={() => setTab('audit')} className={`px-4 py-2 text-sm font-medium rounded-t-lg ${tab === 'audit' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>
+            Registro de cambios de notas
+          </button>
+        </div>
+
+        <div className="p-5 overflow-y-auto flex-1">
+          {tab === 'usage' && institution && (
+            usageLoading ? <p className="text-sm text-slate-500 py-8 text-center">Cargando…</p> : usage ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {[
+                    { label: 'Estudiantes', value: usage.students },
+                    { label: 'Docentes', value: usage.teachers },
+                    { label: 'Aulas virtuales', value: usage.classrooms },
+                    { label: 'Notas en planilla', value: usage.partialGrades },
+                    { label: 'Cambios registrados', value: usage.gradeAudit?.total },
+                    { label: 'Notas borradas', value: usage.gradeAudit?.deletes, danger: true },
+                  ].map((c) => (
+                    <div key={c.label} className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                      <div className={`text-2xl font-bold ${c.danger && c.value > 0 ? 'text-red-600' : 'text-slate-900'}`}>{(c.value ?? 0).toLocaleString()}</div>
+                      <div className="text-xs text-slate-500 mt-1">{c.label}</div>
+                    </div>
+                  ))}
+                </div>
+                {usage.gradeAudit?.recent?.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-slate-700 mb-2">Últimos cambios</h4>
+                    <div className="space-y-1">
+                      {usage.gradeAudit.recent.map((r: any) => (
+                        <div key={r.id} className="text-sm text-slate-600 flex items-center gap-2">
+                          <span className={`text-xs px-2 py-0.5 rounded ${actionColor(r.action)}`}>{actionLabel(r.action)}</span>
+                          <span className="font-medium">{r.actorName || '—'}</span>
+                          <span className="text-slate-400">·</span>
+                          <span>{r.activityName || 'nota'}</span>
+                          {r.previousScore != null && <span className="text-slate-400">({r.previousScore} → {r.newScore ?? '—'})</span>}
+                          <span className="text-slate-400 ml-auto">{new Date(r.performedAt).toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : <p className="text-sm text-slate-500 py-8 text-center">No se pudo cargar el uso.</p>
+          )}
+
+          {tab === 'audit' && (
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                {['', 'CREATE', 'UPDATE', 'DELETE'].map(a => (
+                  <button key={a || 'ALL'} onClick={() => setActionFilter(a)} className={`px-3 py-1.5 text-xs rounded-lg border ${actionFilter === a ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-200 text-slate-600 hover:border-slate-400'}`}>
+                    {a === '' ? 'Todos' : a === 'CREATE' ? 'Ingresos' : a === 'UPDATE' ? 'Cambios' : 'Borrados'}
+                  </button>
+                ))}
+              </div>
+              {auditLoading ? <p className="text-sm text-slate-500 py-8 text-center">Cargando…</p> : audit.length === 0 ? (
+                <p className="text-sm text-slate-500 py-8 text-center">Sin registros todavía. La auditoría captura los cambios desde su activación.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs text-slate-500 uppercase">
+                      <tr className="border-b border-slate-200">
+                        <th className="text-left py-2 pr-3">Cuándo</th>
+                        <th className="text-left py-2 pr-3">Acción</th>
+                        <th className="text-left py-2 pr-3">Quién</th>
+                        <th className="text-left py-2 pr-3">Estudiante / Asignatura</th>
+                        <th className="text-left py-2 pr-3">Actividad</th>
+                        <th className="text-left py-2">Nota</th>
+                        {!institution && <th className="text-left py-2">Institución</th>}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {audit.map((e: any) => (
+                        <tr key={e.id} className="hover:bg-slate-50">
+                          <td className="py-2 pr-3 text-slate-500 whitespace-nowrap">{new Date(e.performedAt).toLocaleString()}</td>
+                          <td className="py-2 pr-3"><span className={`text-xs px-2 py-0.5 rounded ${actionColor(e.action)}`}>{actionLabel(e.action)}</span></td>
+                          <td className="py-2 pr-3">
+                            <div className="font-medium text-slate-800">{e.actor?.name || '—'}</div>
+                            {e.actor?.role && <div className="text-xs text-slate-400">{e.actor.role}</div>}
+                          </td>
+                          <td className="py-2 pr-3">
+                            <div className="text-slate-700">{e.student || '—'}</div>
+                            <div className="text-xs text-slate-400">{e.subject || ''}{e.group ? ` · ${e.group}` : ''}</div>
+                          </td>
+                          <td className="py-2 pr-3 text-slate-600">{e.activity || '—'}{e.component ? <span className="text-xs text-slate-400"> · {e.component}</span> : null}</td>
+                          <td className="py-2 whitespace-nowrap">
+                            {e.action === 'DELETE' ? <span className="text-red-600">{e.previousScore ?? '—'} → borrada</span>
+                              : e.action === 'CREATE' ? <span className="text-green-700">{e.newScore ?? '—'}</span>
+                              : <span className="text-amber-700">{e.previousScore ?? '—'} → {e.newScore ?? '—'}</span>}
+                          </td>
+                          {!institution && <td className="py-2 text-slate-500">{e.institution?.name || '—'}</td>}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

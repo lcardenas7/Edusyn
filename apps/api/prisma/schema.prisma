@@ -532,6 +532,8 @@ model Institution {
   rlsStudentEnrollments      StudentEnrollment[]      @relation("RlsInstitutionSE")
   rlsTeacherAssignments      TeacherAssignment[]      @relation("RlsInstitutionTA")
   rlsPartialGrades           PartialGrade[]           @relation("RlsInstitutionPG")
+  rlsGradeAuditEvents        GradeAuditEvent[]        @relation("RlsInstitutionGAE")
+  rlsAttendanceAuditEvents   AttendanceAuditEvent[]   @relation("RlsInstitutionAAE")
   rlsPeriodFinalGrades       PeriodFinalGrade[]       @relation("RlsInstitutionPFG")
   rlsFinalComponentGrades    FinalComponentGrade[]    @relation("RlsInstitutionFCG")
   rlsStudentGrades           StudentGrade[]           @relation("RlsInstitutionSG")
@@ -1793,6 +1795,8 @@ model PeriodFinalGrade {
   finalScore          Decimal  @db.Decimal(5, 2)
   observations        String?
   enteredById         String
+  // C-1: nota final fijada manualmente. Si true, el recálculo desde parciales NO la sobreescribe.
+  isManualOverride    Boolean  @default(false)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -1829,6 +1833,85 @@ model PartialGrade {
   @@unique([studentEnrollmentId, teacherAssignmentId, academicTermId, componentType, activityIndex])
   @@index([teacherAssignmentId, academicTermId])
   @@index([studentEnrollmentId, academicTermId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AUDITORÍA FORENSE DE NOTAS (append-only)
+// Registra quién creó/cambió/borró una nota, cuándo y con qué valores.
+// Hacia adelante: solo captura desde que se instrumenta (no recupera el pasado).
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum GradeAuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model GradeAuditEvent {
+  id            String           @id @default(cuid())
+  institutionId String
+  source        String           @default("PARTIAL_GRADE") // origen del cambio (futuro: STUDENT_GRADE, etc.)
+  action        GradeAuditAction
+
+  // Quién y cuándo (snapshot del actor por si luego se desactiva o elimina)
+  actorUserId String?
+  actorName   String?
+  actorRole   String?
+
+  // Contexto del registro afectado
+  partialGradeId      String? // id del registro (null tras DELETE)
+  studentEnrollmentId String?
+  teacherAssignmentId String?
+  academicTermId      String?
+  componentType       String?
+  activityIndex       Int?
+  activityName        String?
+
+  // Valores (lo forense): nota anterior y nueva
+  previousScore Decimal? @db.Decimal(5, 2)
+  newScore      Decimal? @db.Decimal(5, 2)
+  previousValue Json?
+  newValue      Json?
+
+  performedAt DateTime @default(now())
+
+  institution Institution @relation("RlsInstitutionGAE", fields: [institutionId], references: [id])
+
+  @@index([institutionId, performedAt])
+  @@index([studentEnrollmentId])
+  @@index([teacherAssignmentId, academicTermId])
+  @@index([actorUserId])
+}
+
+// Auditoría forense de asistencia (append-only). Mismo enfoque que GradeAuditEvent.
+model AttendanceAuditEvent {
+  id            String           @id @default(cuid())
+  institutionId String
+  action        GradeAuditAction // CREATE / UPDATE / DELETE (enum compartido de acciones)
+
+  actorUserId String?
+  actorName   String?
+  actorRole   String?
+
+  attendanceRecordId  String? // id del registro (null tras DELETE)
+  studentEnrollmentId String?
+  teacherAssignmentId String?
+  date                DateTime? @db.Date
+
+  // Valores (lo forense): estado anterior y nuevo (PRESENT/ABSENT/LATE/EXCUSED)
+  previousStatus String?
+  newStatus      String?
+  previousValue  Json?
+  newValue       Json?
+
+  performedAt DateTime @default(now())
+
+  institution Institution @relation("RlsInstitutionAAE", fields: [institutionId], references: [id])
+
+  @@index([institutionId, performedAt])
+  @@index([studentEnrollmentId])
+  @@index([teacherAssignmentId])
+  @@index([actorUserId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -4960,6 +5043,7 @@ model WorkspaceBoard {
   resources    WorkspaceResource[]
   resourceFolders WorkspaceResourceFolder[]
   projects     WorkspaceProject[]
+  pedagogicalDesigns PedagogicalDesign[] @relation("BoardPedagogicalDesigns")
 
   @@index([teacherId, institutionId])
   @@index([teacherId, type])
@@ -5330,6 +5414,113 @@ model WorkspaceProjectMember {
   project WorkspaceProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DISEÑO PEDAGÓGICO IA ("Estudio") — Activo Pedagógico Vivo (APV)
+// E0: cimientos. El contenido vive como JSON versionado; el ADN va en `dna`.
+// docs/DISENO_PEDAGOGICO_IA.md
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum PedagogicalExperienceType {
+  LESSON_PLAN
+  SEQUENCE
+  PBL                 // Proyecto ABP
+  STEAM
+  FLIPPED             // Clase invertida
+  CHALLENGE           // Aprendizaje basado en retos
+  WORKSHOP            // Taller
+  LAB                 // Laboratorio
+  EVALUATION
+  INTERACTIVE_LESSON  // Lección interactiva
+  UNIT                // Unidad completa
+}
+
+enum PedagogicalDesignStatus {
+  DRAFT
+  IN_USE
+  EVALUATED
+  IMPROVABLE
+  ARCHIVED
+}
+
+enum PedagogicalVisibility {
+  PRIVATE
+  AREA
+  INSTITUTION
+}
+
+model PedagogicalDesign {
+  id             String   @id @default(cuid())
+  teacherId      String
+  institutionId  String
+  boardId        String?  // Curso (WorkspaceBoard) donde vive; null = personal
+  subjectId      String?
+  gradeId        String?
+  groupId        String?
+  experienceType PedagogicalExperienceType @default(LESSON_PLAN)
+  title          String
+  summary        String?  @db.Text
+  status         PedagogicalDesignStatus   @default(DRAFT)
+  visibility     PedagogicalVisibility     @default(PRIVATE)
+  dna            Json?    // ADN pedagógico (§24): tema, competencias, bloom, metodología…
+  sourceDesignId String?  // Linaje si fue clonado de otro diseño
+  aiProviderUsed String?  // Trazabilidad de costo de IA
+  aiModelUsed    String?
+  aiTokens       Int?
+  currentVersionNumber Int @default(1)
+  isArchived     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  board    WorkspaceBoard?            @relation("BoardPedagogicalDesigns", fields: [boardId], references: [id], onDelete: Cascade)
+  versions PedagogicalDesignVersion[]
+
+  @@index([teacherId, institutionId])
+  @@index([boardId])
+  @@index([institutionId, visibility])
+}
+
+model PedagogicalDesignVersion {
+  id               String   @id @default(cuid())
+  designId         String
+  versionNumber    Int
+  content          Json     // Objeto estructurado del APV (momentos, actividades, evaluación…)
+  changeNote       String?  @db.Text
+  createdByAi       Boolean  @default(false)
+  evidenceSnapshot Json?    // Señales que motivaron esta versión (ciclo de evidencia)
+  createdAt        DateTime @default(now())
+
+  design PedagogicalDesign @relation(fields: [designId], references: [id], onDelete: Cascade)
+
+  @@unique([designId, versionNumber])
+  @@index([designId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ORQUESTADOR DE IA — plan por institución (free/premium), cuota y consumo.
+// docs/DISENO_PEDAGOGICO_IA.md §21
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum AiTier {
+  FREE      // modelos gratis (OpenRouter cascade) — validación / plan básico
+  PREMIUM   // modelo de pago (ej. Gemini Flash) — instituciones que pagan
+  BYOK      // la institución trae su propia API key
+}
+
+model InstitutionAiPlan {
+  id                  String   @id @default(cuid())
+  institutionId       String   @unique
+  tier                AiTier   @default(FREE)
+  modelOverride       String?            // forzar un modelo concreto (opcional)
+  monthlyTokenQuota   Int      @default(2000000) // tope mensual de tokens
+  tokensUsedThisMonth Int      @default(0)
+  periodResetAt       DateTime @default(now())   // inicio del período de cuota
+  byokApiKeyRef       String?            // referencia a key propia (futuro)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([institutionId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

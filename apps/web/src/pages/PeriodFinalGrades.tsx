@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react'
-import { compareFullNames } from '../utils/sortStudents'
 import { useAuth } from '../contexts/AuthContext'
-import { 
+import {
   Save,
   Search,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Lock
 } from 'lucide-react'
-import { 
-  academicYearsApi, 
-  groupsApi, 
+import {
+  academicYearsApi,
+  groupsApi,
   academicStudentsApi,
-  periodFinalGradesApi 
+  periodFinalGradesApi,
+  teacherAssignmentsApi
 } from '../lib/api'
 
 interface AcademicTerm {
@@ -27,8 +28,7 @@ interface Subject {
 
 interface Student {
   id: string
-  firstName: string
-  lastName: string
+  name: string // nombre completo canónico del backend ("Apellidos Nombres"), ya ordenado
   enrollmentId: string
 }
 
@@ -40,6 +40,7 @@ interface GradeEntry {
   finalScore: number | null
   observations: string
   saved: boolean
+  isManualOverride?: boolean
 }
 
 export default function PeriodFinalGrades() {
@@ -112,29 +113,29 @@ export default function PeriodFinalGrades() {
     try {
       // Usar academicStudentsApi para mantener separación de dominios
       const studentsRes = await academicStudentsApi.getByGroup({ groupId: selectedGroupId, academicYearId: selectedYearId })
-      // El endpoint académico retorna { id, name, enrollmentId }, adaptar al formato esperado
-      const studentsList = (studentsRes.data || []).map((s: any) => {
-        const [firstName, ...lastParts] = s.name.split(' ')
-        return {
-          id: s.id,
-          firstName,
-          lastName: lastParts.join(' '),
-          enrollmentId: s.enrollmentId,
-        }
-      })
+      // El endpoint académico ya devuelve { id, name, enrollmentId } con el nombre canónico
+      // ("Apellidos Nombres") y ordenado. Se usa tal cual para coincidir con la planilla.
+      const studentsList: Student[] = (studentsRes.data || []).map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        enrollmentId: s.enrollmentId,
+      }))
       setStudents(studentsList)
 
-      // Obtener asignaturas del grupo (desde las asignaciones de docentes)
-      const group = groups.find(g => g.id === selectedGroupId)
-      if (group?.grade?.areas) {
-        const allSubjects: Subject[] = []
-        group.grade.areas.forEach((area: any) => {
-          area.subjects?.forEach((subject: any) => {
-            allSubjects.push({ id: subject.id, name: subject.name })
-          })
-        })
-        setSubjects(allSubjects)
+      // Obtener asignaturas del grupo desde las asignaciones de docentes (fuente confiable,
+      // la misma que usa la planilla). El endpoint de grupos no trae grade.areas.subjects,
+      // por lo que antes el selector quedaba vacío/deshabilitado.
+      const taRes = await teacherAssignmentsApi.getAll({ groupId: selectedGroupId, academicYearId: selectedYearId })
+      const seen = new Set<string>()
+      const allSubjects: Subject[] = []
+      for (const a of (taRes.data || [])) {
+        if (a.subject?.id && !seen.has(a.subject.id)) {
+          seen.add(a.subject.id)
+          allSubjects.push({ id: a.subject.id, name: a.subject.name })
+        }
       }
+      allSubjects.sort((s1, s2) => s1.name.localeCompare(s2.name))
+      setSubjects(allSubjects)
     } catch (err) {
       console.error('Error loading students/subjects:', err)
     }
@@ -152,16 +153,19 @@ export default function PeriodFinalGrades() {
         )
         return {
           studentEnrollmentId: student.enrollmentId,
-          studentName: `${student.lastName}, ${student.firstName}`,
+          studentName: student.name,
           subjectId: selectedSubjectId,
           subjectName: subjects.find(s => s.id === selectedSubjectId)?.name || '',
           finalScore: existing?.finalScore ? parseFloat(existing.finalScore) : null,
           observations: existing?.observations || '',
           saved: !!existing,
+          isManualOverride: existing?.isManualOverride ?? false,
         }
       })
 
-      setGrades(gradeEntries.sort((a, b) => compareFullNames(a.studentName, b.studentName)))
+      // El backend ya entrega los estudiantes ordenados canónicamente; se respeta ese orden
+      // para que coincida exactamente con la planilla (no se re-ordena).
+      setGrades(gradeEntries)
     } catch (err) {
       console.error('Error loading existing grades:', err)
     }
@@ -365,6 +369,14 @@ export default function PeriodFinalGrades() {
                     <td className="px-2 py-4 text-center text-sm font-medium text-slate-500">{idx + 1}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="font-medium text-slate-900">{grade.studentName}</span>
+                      {grade.isManualOverride && (
+                        <span
+                          className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-100 text-violet-700 align-middle"
+                          title="Nota final fijada manualmente. El recálculo desde parciales NO la modifica."
+                        >
+                          <Lock className="w-3 h-3" /> Fijada
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <input

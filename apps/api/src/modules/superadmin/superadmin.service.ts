@@ -495,4 +495,136 @@ export class SuperadminService {
       totalStudents,
     };
   }
+
+  /**
+   * Estadísticas de uso de una institución (observabilidad SuperAdmin).
+   * Solo lectura: conteos de quiénes y cuánto usan la plataforma.
+   */
+  async getInstitutionUsage(superAdminId: string, institutionId: string) {
+    await this.verifySuperAdmin(superAdminId);
+
+    const [
+      students,
+      teacherAssignments,
+      classrooms,
+      partialGrades,
+      auditTotal,
+      auditDeletes,
+      recentAudit,
+    ] = await Promise.all([
+      this.prisma.student.count({ where: { institutionId } }),
+      this.prisma.teacherAssignment.count({ where: { institutionId } }),
+      this.prisma.classroom.count({ where: { institutionId } }),
+      this.prisma.partialGrade.count({ where: { institutionId } }),
+      this.prisma.gradeAuditEvent.count({ where: { institutionId } }),
+      this.prisma.gradeAuditEvent.count({ where: { institutionId, action: 'DELETE' } }),
+      this.prisma.gradeAuditEvent.findMany({
+        where: { institutionId },
+        orderBy: { performedAt: 'desc' },
+        take: 5,
+        select: { id: true, action: true, actorName: true, activityName: true, previousScore: true, newScore: true, performedAt: true },
+      }),
+    ]);
+
+    // Docentes distintos con carga académica
+    const distinctTeachers = await this.prisma.teacherAssignment.findMany({
+      where: { institutionId },
+      select: { teacherId: true },
+      distinct: ['teacherId'],
+    });
+
+    return {
+      students,
+      teachers: distinctTeachers.length,
+      teacherAssignments,
+      classrooms,
+      partialGrades,
+      gradeAudit: { total: auditTotal, deletes: auditDeletes, recent: recentAudit },
+    };
+  }
+
+  /**
+   * Registro forense de cambios de notas (visor SuperAdmin).
+   * Sin institutionId = vista general (todas las instituciones).
+   * Con institutionId = por institución. Filtros opcionales por acción/estudiante/actor.
+   */
+  async getGradeAuditLog(
+    superAdminId: string,
+    params: {
+      institutionId?: string;
+      action?: 'CREATE' | 'UPDATE' | 'DELETE';
+      studentEnrollmentId?: string;
+      actorUserId?: string;
+      limit?: number;
+      offset?: number;
+    },
+  ) {
+    await this.verifySuperAdmin(superAdminId);
+
+    const where: any = {};
+    if (params.institutionId) where.institutionId = params.institutionId;
+    if (params.action) where.action = params.action;
+    if (params.studentEnrollmentId) where.studentEnrollmentId = params.studentEnrollmentId;
+    if (params.actorUserId) where.actorUserId = params.actorUserId;
+
+    const take = Math.min(Math.max(params.limit || 50, 1), 200);
+    const skip = Math.max(params.offset || 0, 0);
+
+    const [events, total] = await Promise.all([
+      this.prisma.gradeAuditEvent.findMany({
+        where,
+        orderBy: { performedAt: 'desc' },
+        take,
+        skip,
+        include: { institution: { select: { id: true, name: true } } },
+      }),
+      this.prisma.gradeAuditEvent.count({ where }),
+    ]);
+
+    // Resolver nombres legibles (estudiante, asignatura, periodo, actor) en lote
+    const enrollmentIds = [...new Set(events.map((e) => e.studentEnrollmentId).filter(Boolean) as string[])];
+    const taIds = [...new Set(events.map((e) => e.teacherAssignmentId).filter(Boolean) as string[])];
+    const termIds = [...new Set(events.map((e) => e.academicTermId).filter(Boolean) as string[])];
+    const userIds = [...new Set(events.map((e) => e.actorUserId).filter(Boolean) as string[])];
+
+    const [enrollments, assignments, terms, users] = await Promise.all([
+      enrollmentIds.length ? this.prisma.studentEnrollment.findMany({ where: { id: { in: enrollmentIds } }, select: { id: true, student: { select: { firstName: true, lastName: true } } } }) : Promise.resolve([]),
+      taIds.length ? this.prisma.teacherAssignment.findMany({ where: { id: { in: taIds } }, select: { id: true, subject: { select: { name: true } }, group: { select: { name: true, grade: { select: { name: true } } } } } }) : Promise.resolve([]),
+      termIds.length ? this.prisma.academicTerm.findMany({ where: { id: { in: termIds } }, select: { id: true, name: true } }) : Promise.resolve([]),
+      userIds.length ? this.prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, firstName: true, lastName: true, email: true } }) : Promise.resolve([]),
+    ]);
+
+    const enrollMap = new Map<string, string | null>(enrollments.map((e: any): [string, string | null] => [e.id, e.student ? `${e.student.firstName} ${e.student.lastName}` : null]));
+    const taMap = new Map<string, { subject: string | null; group: string | null }>(assignments.map((a: any): [string, { subject: string | null; group: string | null }] => [a.id, { subject: a.subject?.name || null, group: a.group ? `${a.group.grade?.name || ''} ${a.group.name}`.trim() : null }]));
+    const termMap = new Map<string, string>(terms.map((t: any): [string, string] => [t.id, t.name]));
+    const userMap = new Map<string, { name: string; email: string }>(users.map((u: any): [string, { name: string; email: string }] => [u.id, { name: `${u.firstName} ${u.lastName}`.trim(), email: u.email }]));
+
+    const items = events.map((e) => {
+      const ta = e.teacherAssignmentId ? taMap.get(e.teacherAssignmentId) : null;
+      const currentActor = e.actorUserId ? userMap.get(e.actorUserId) : null;
+      return {
+        id: e.id,
+        institution: (e as any).institution,
+        action: e.action,
+        performedAt: e.performedAt,
+        actor: {
+          userId: e.actorUserId,
+          // nombre actual del usuario (si existe) o el snapshot guardado al momento del cambio
+          name: currentActor?.name || e.actorName || null,
+          email: currentActor?.email || e.actorName || null,
+          role: e.actorRole,
+        },
+        student: e.studentEnrollmentId ? enrollMap.get(e.studentEnrollmentId) || null : null,
+        subject: ta?.subject || null,
+        group: ta?.group || null,
+        term: e.academicTermId ? termMap.get(e.academicTermId) || null : null,
+        component: e.componentType,
+        activity: e.activityName,
+        previousScore: e.previousScore !== null && e.previousScore !== undefined ? Number(e.previousScore) : null,
+        newScore: e.newScore !== null && e.newScore !== undefined ? Number(e.newScore) : null,
+      };
+    });
+
+    return { items, total, limit: take, offset: skip };
+  }
 }

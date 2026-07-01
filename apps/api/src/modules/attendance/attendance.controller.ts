@@ -11,16 +11,25 @@ import { RecordAttendanceDto, UpdateAttendanceDto } from './dto/record-attendanc
 export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
 
+  /** Actor (quién hace el cambio) del JWT para la auditoría forense. */
+  private actorFrom(req: any): { userId?: string; name?: string; role?: string } {
+    const roles = req?.user?.roles;
+    const role = Array.isArray(roles)
+      ? roles.map((r: any) => (typeof r === 'string' ? r : r?.role?.name || r?.roleName || r?.name)).filter(Boolean).join(', ')
+      : undefined;
+    return { userId: req?.user?.id, name: req?.user?.email, role: role || undefined };
+  }
+
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  recordBulk(@Body() dto: RecordAttendanceDto) {
-    return this.attendanceService.recordBulk(dto);
+  recordBulk(@Body() dto: RecordAttendanceDto, @Request() req: any) {
+    return this.attendanceService.recordBulk(dto, this.actorFrom(req));
   }
 
   @Put(':id')
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE')
-  update(@Param('id') id: string, @Body() dto: UpdateAttendanceDto) {
-    return this.attendanceService.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateAttendanceDto, @Request() req: any) {
+    return this.attendanceService.update(id, dto, this.actorFrom(req));
   }
 
   @Get('by-assignment/:teacherAssignmentId')

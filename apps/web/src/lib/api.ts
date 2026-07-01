@@ -299,8 +299,9 @@ export const partialGradesApi = {
     activityIndex: number;
     activityName: string;
     activityType?: string;
-    score: number;
+    score: number | null; // null = sin nota (borra la celda); número (incl. 0) = guardar (C-2)
     observations?: string;
+    expectedUpdatedAt?: string | null; // concurrencia: detecta si alguien más cambió esta celda
   }>) => api.post('/partial-grades/bulk', { grades }),
   getByAssignment: (teacherAssignmentId: string, academicTermId: string) =>
     api.get('/partial-grades/by-assignment', { params: { teacherAssignmentId, academicTermId } }),
@@ -1155,8 +1156,15 @@ export const superadminApi = {
   suspendInstitution: (id: string) => api.patch(`/superadmin/institutions/${id}/suspend`),
   
   // Eliminar institución (requiere confirmación)
-  deleteInstitution: (id: string, confirmationName: string) => 
+  deleteInstitution: (id: string, confirmationName: string) =>
     api.delete(`/superadmin/institutions/${id}`, { data: { confirmationName } }),
+
+  // Observabilidad: estadísticas de uso por institución
+  getInstitutionUsage: (id: string) => api.get(`/superadmin/institutions/${id}/usage`),
+
+  // Observabilidad: registro forense de cambios de notas (general o por institución)
+  getGradeAuditLog: (params?: { institutionId?: string; action?: string; studentEnrollmentId?: string; actorUserId?: string; limit?: number; offset?: number }) =>
+    api.get('/superadmin/grade-audit', { params }),
 }
 
 // Documentos Institucionales
@@ -1991,6 +1999,19 @@ export const teacherWorkspaceApi = {
   moveItem: (id: string, data: { columnId: string; sortOrder: number }) =>
     api.patch(`/teacher-workspace/items/${id}/move`, data),
   deleteItem: (id: string) => api.delete(`/teacher-workspace/items/${id}`),
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DISEÑO PEDAGÓGICO IA ("Estudio")
+// ═══════════════════════════════════════════════════════════════════════════
+export const pedagogicalDesignApi = {
+  generate: (data: { prompt: string; experienceType?: string; boardId?: string; gradeName?: string; subjectName?: string; sessions?: number }) =>
+    api.post('/pedagogical-design/generate', data),
+  list: (boardId?: string) => api.get('/pedagogical-design', { params: boardId ? { boardId } : undefined }),
+  get: (id: string) => api.get(`/pedagogical-design/${id}`),
+  update: (id: string, data: { title?: string; summary?: string; experienceType?: string; dna?: any; content?: any; changeNote?: string }) =>
+    api.put(`/pedagogical-design/${id}`, data),
+  delete: (id: string) => api.delete(`/pedagogical-design/${id}`),
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

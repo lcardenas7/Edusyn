@@ -43,8 +43,9 @@ export class PeriodFinalGradesService {
         finalScore: data.finalScore,
         observations: data.observations,
         enteredById: data.enteredById,
+        isManualOverride: true, // C-1: escritura manual = fijada; el recálculo no la pisa
       },
-      create: { ...data, institutionId: (await this.prisma.studentEnrollment.findUnique({ where: { id: data.studentEnrollmentId }, select: { institutionId: true } }))!.institutionId },
+      create: { ...data, isManualOverride: true, institutionId: (await this.prisma.studentEnrollment.findUnique({ where: { id: data.studentEnrollmentId }, select: { institutionId: true } }))!.institutionId },
       include: {
         studentEnrollment: {
           include: {

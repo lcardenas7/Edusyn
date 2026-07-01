@@ -7,6 +7,7 @@ import { ApdProgressService } from './apd-progress.service';
 import { ApdAlertsService } from './apd-alerts.service';
 import { ApdAcademicService } from './apd-academic.service';
 import { ApdAiService } from './ai/apd-ai.service';
+import { AiOrchestratorService } from './ai/ai-orchestrator.service';
 
 @Module({
   imports: [PrismaModule],
@@ -18,6 +19,7 @@ import { ApdAiService } from './ai/apd-ai.service';
     ApdAlertsService,
     ApdAcademicService,
     ApdAiService,
+    AiOrchestratorService,
   ],
   exports: [
     ApdService,
@@ -26,6 +28,7 @@ import { ApdAiService } from './ai/apd-ai.service';
     ApdAlertsService,
     ApdAcademicService,
     ApdAiService,
+    AiOrchestratorService,
   ],
 })
 export class ApdModule {}

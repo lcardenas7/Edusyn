@@ -3,7 +3,7 @@ import { BookOpen, ChevronDown, Save, Plus, Trash2, X, AlertTriangle, Lock, Down
 import * as XLSX from 'xlsx'
 import { useAuth } from '../contexts/AuthContext'
 import { useAcademic, type AcademicLevel, type QualitativeLevel } from '../contexts/AcademicContext'
-import { teacherAssignmentsApi, academicStudentsApi, gradingPeriodConfigApi, partialGradesApi, achievementsApi, achievementConfigApi, achievementBankApi, finalComponentsApi, finalComponentGradesApi } from '../lib/api'
+import { teacherAssignmentsApi, academicStudentsApi, gradingPeriodConfigApi, partialGradesApi, achievementsApi, achievementConfigApi, achievementBankApi, finalComponentsApi, finalComponentGradesApi, periodFinalGradesApi } from '../lib/api'
 import { toast, TOAST } from '../lib/toast'
 import { useSaveStatus } from '../hooks/useSaveStatus'
 import SaveStatusPill from '../components/SaveStatusPill'
@@ -493,13 +493,26 @@ export default function Grades() {
   // ESTADO DE NOTAS
   // ============================================
   
-  const [grades, setGrades] = useState<Record<string, Record<string, number>>>({})
+  const [grades, setGrades] = useState<Record<string, Record<string, number | null>>>({})
+  // Concurrencia: snapshot de lo cargado del servidor (última vez que se leyó/guardó).
+  // Al guardar, solo se envían las celdas que difieren de este snapshot — así dos personas
+  // editando celdas distintas de la misma planilla no se pisan (guardado por diferencias).
+  const [gradesBaseline, setGradesBaseline] = useState<Record<string, Record<string, number | null>>>({})
+  // Nombres de actividad tal como estaban en el snapshot (para incluir renombres en el diff).
+  const [baselineActivityNames, setBaselineActivityNames] = useState<Record<string, string>>({})
+  // Concurrencia: updatedAt de cada celda tal como está en el servidor (null = la celda no
+  // existe en el servidor). Se envía al guardar para detectar si alguien más la cambió.
+  const [gradesServerUpdatedAt, setGradesServerUpdatedAt] = useState<Record<string, Record<string, string | null>>>({})
+  // C-1 (UX): notas finales fijadas manualmente por coordinación (enrollmentId → nota).
+  // Sirven para avisar al docente que su cambio de parcial NO moverá ese final.
+  const [finalOverrides, setFinalOverrides] = useState<Record<string, number>>({})
 
   // Crear objeto de notas vacío
-  const createEmptyGrades = useCallback((): Record<string, number> => {
-    const gradeObj: Record<string, number> = {}
+  // C-2: celda sin nota = null (distinto de un 0 real). No se inicializa en 0.
+  const createEmptyGrades = useCallback((): Record<string, number | null> => {
+    const gradeObj: Record<string, number | null> = {}
     allActivities.forEach(activity => {
-      gradeObj[activity.id] = 0
+      gradeObj[activity.id] = null
     })
     return gradeObj
   }, [allActivities])
@@ -512,11 +525,14 @@ export default function Grades() {
       setAdditionalActivities({})
 
       if (!selectedAssignment?.id || !academicTermId || students.length === 0) {
-        const initGrades: Record<string, Record<string, number>> = {}
+        const initGrades: Record<string, Record<string, number | null>> = {}
         students.forEach(student => {
           initGrades[student.id] = createEmptyGrades()
         })
         setGrades(initGrades)
+        setGradesBaseline(JSON.parse(JSON.stringify(initGrades)))
+        setBaselineActivityNames({})
+        setGradesServerUpdatedAt({})
         return
       }
       
@@ -524,11 +540,13 @@ export default function Grades() {
         const response = await partialGradesApi.getByAssignment(selectedAssignment.id, academicTermId)
         const savedGrades = response.data || []
         
-        const initGrades: Record<string, Record<string, number>> = {}
+        const initGrades: Record<string, Record<string, number | null>> = {}
+        const initUpdatedAt: Record<string, Record<string, string | null>> = {}
         students.forEach(student => {
           initGrades[student.id] = createEmptyGrades()
+          initUpdatedAt[student.id] = {}
         })
-        
+
         // Mapear notas guardadas y extraer nombres personalizados
         const savedNames: Record<string, string> = {}
         savedGrades.forEach((grade: any) => {
@@ -539,6 +557,7 @@ export default function Grades() {
               const activity = process.activities[grade.activityIndex - 1]
               if (activity) {
                 initGrades[student.id][activity.id] = Number(grade.score)
+                initUpdatedAt[student.id][activity.id] = grade.updatedAt || null
                 // Guardar nombre personalizado si difiere del generado
                 if (grade.activityName && grade.activityName !== activity.name) {
                   savedNames[activity.id] = grade.activityName
@@ -547,22 +566,49 @@ export default function Grades() {
             }
           }
         })
-        
+
         // Reemplazar nombres personalizados (no mezclar con los del grupo anterior)
         setCustomActivityNames(savedNames)
+        setBaselineActivityNames(savedNames)
         setGrades(initGrades)
+        setGradesBaseline(JSON.parse(JSON.stringify(initGrades)))
+        setGradesServerUpdatedAt(initUpdatedAt)
       } catch (err) {
         console.error('Error loading saved grades:', err)
-        const initGrades: Record<string, Record<string, number>> = {}
+        const initGrades: Record<string, Record<string, number | null>> = {}
         students.forEach(student => {
           initGrades[student.id] = createEmptyGrades()
         })
         setGrades(initGrades)
+        setGradesBaseline(JSON.parse(JSON.stringify(initGrades)))
+        setGradesServerUpdatedAt({})
       }
     }
-    
+
     loadSavedGrades()
   }, [selectedAssignment?.id, academicTermId, students, createEmptyGrades, processConfigs])
+
+  // C-1 (UX): cargar las notas finales fijadas manualmente para el grupo+período+asignatura.
+  useEffect(() => {
+    const groupId = selectedAssignment?.group?.id
+    const subjectId = selectedAssignment?.subject?.id
+    if (!groupId || !subjectId || !academicTermId) { setFinalOverrides({}); return }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await periodFinalGradesApi.getByGroup(groupId, academicTermId)
+        if (cancelled) return
+        const map: Record<string, number> = {}
+        for (const g of (res.data || [])) {
+          if (g.subjectId === subjectId && g.isManualOverride) {
+            map[g.studentEnrollmentId] = Number(g.finalScore)
+          }
+        }
+        setFinalOverrides(map)
+      } catch { if (!cancelled) setFinalOverrides({}) }
+    })()
+    return () => { cancelled = true }
+  }, [selectedAssignment?.group?.id, selectedAssignment?.subject?.id, academicTermId])
 
   const [newActivity, setNewActivity] = useState({ name: '', type: activityTypes[0] })
 
@@ -624,12 +670,16 @@ export default function Grades() {
     })
   }
 
-  const updateGrade = (studentId: string, activityId: string, value: number) => {
-    let clampedValue = value
-    if (value > maxGrade) clampedValue = maxGrade
-    else if (value < minGrade && value !== 0) clampedValue = minGrade
-    else if (value < 0) clampedValue = 0
-    
+  const updateGrade = (studentId: string, activityId: string, value: number | null) => {
+    // C-2: null = celda vacía (sin nota). Un 0 real se conserva; solo se recorta el rango.
+    let clampedValue: number | null = value
+    if (value !== null) {
+      if (Number.isNaN(value)) clampedValue = null
+      else if (value > maxGrade) clampedValue = maxGrade
+      else if (value < minGrade && value !== 0) clampedValue = minGrade
+      else if (value < 0) clampedValue = 0
+    }
+
     setGrades(prev => ({
       ...prev,
       [studentId]: { ...prev[studentId], [activityId]: clampedValue }
@@ -653,7 +703,7 @@ export default function Grades() {
     
     process.subprocesses.forEach((sub, subIdx) => {
       const subActivities = allProcessActivities.filter(a => a.subprocessIndex === subIdx)
-      const subValues = subActivities.map(a => studentGrades[a.id] || 0).filter(v => v > 0)
+      const subValues = subActivities.map(a => studentGrades[a.id]).filter((v): v is number => v !== null && v !== undefined && !Number.isNaN(v))
       
       if (subValues.length > 0) {
         const subAvg = subValues.reduce((a, b) => a + b, 0) / subValues.length
@@ -665,7 +715,7 @@ export default function Grades() {
     // Incluir actividades adicionales (sin subproceso)
     const additionalActs = allProcessActivities.filter(a => a.subprocessIndex === -1)
     if (additionalActs.length > 0) {
-      const addValues = additionalActs.map(a => studentGrades[a.id] || 0).filter(v => v > 0)
+      const addValues = additionalActs.map(a => studentGrades[a.id]).filter((v): v is number => v !== null && v !== undefined && !Number.isNaN(v))
       if (addValues.length > 0) {
         const addAvg = addValues.reduce((a, b) => a + b, 0) / addValues.length
         // Las actividades adicionales se promedian con el resto
@@ -931,10 +981,12 @@ export default function Grades() {
 
           Object.entries(colToActivityId).forEach(([col, actId]) => {
             const val = parseFloat(row[parseInt(col)])
-            if (!isNaN(val) && val > 0) {
+            // C-2: un 0 en el Excel es una nota real (0.0), no "vacío". Solo se omite la celda vacía (NaN).
+            if (!isNaN(val)) {
               let clamped = val
               if (clamped > maxGrade) clamped = maxGrade
-              if (clamped < minGrade) clamped = minGrade
+              if (clamped < minGrade && clamped !== 0) clamped = minGrade
+              else if (clamped < 0) clamped = 0
               updatedGrades[student.id][actId] = Math.round(clamped * 10) / 10
               imported++
             }
@@ -1060,40 +1112,150 @@ export default function Grades() {
         activityIndex: number;
         activityName: string;
         activityType?: string;
-        score: number;
+        score: number | null;
+        expectedUpdatedAt?: string | null;
       }> = []
 
       students.forEach(student => {
         const studentGrades = grades[student.id] || {}
-        
+
         processConfigs.forEach(process => {
           const allProcessActivities = [
             ...process.activities,
             ...(additionalActivities[process.code] || [])
           ]
-          
+
           allProcessActivities.forEach((activity, idx) => {
-            const score = studentGrades[activity.id] || 0
+            // C-2: null = sin nota (el backend borra la celda); un número (incl. 0) se guarda.
+            const raw = studentGrades[activity.id]
+            const score = (raw === null || raw === undefined || Number.isNaN(raw)) ? null : raw
+            const activityName = customActivityNames[activity.id] || activity.name
+
+            // Concurrencia (guardado por diferencias): solo se envía la celda si su nota
+            // cambió respecto al snapshot cargado, o si cambió el nombre de una actividad
+            // que ya tiene nota (el nombre solo se persiste si hay una fila que lo cargue).
+            // Así, dos personas editando celdas distintas de la misma planilla no se pisan.
+            const baseScoreRaw = gradesBaseline[student.id]?.[activity.id]
+            const baseScore = (baseScoreRaw === null || baseScoreRaw === undefined || Number.isNaN(baseScoreRaw)) ? null : baseScoreRaw
+            const baseName = baselineActivityNames[activity.id] || activity.name
+            const scoreChanged = score !== baseScore
+            const nameChanged = score !== null && activityName !== baseName
+            if (!scoreChanged && !nameChanged) return
+
             partialGradesToSave.push({
               studentEnrollmentId: student.enrollmentId,
               teacherAssignmentId: selectedAssignment.id,
               academicTermId: academicTermId!,
               componentType: process.code,
               activityIndex: idx + 1,
-              activityName: customActivityNames[activity.id] || activity.name,
+              activityName,
               activityType: activity.type,
               score,
+              // Lo que el cliente vio la última vez para ESTA celda puntual — permite al
+              // backend detectar si alguien más la cambió mientras tanto (misma celda).
+              expectedUpdatedAt: gradesServerUpdatedAt[student.id]?.[activity.id] ?? null,
             })
           })
         })
       })
 
-      await withSave(() => partialGradesApi.bulkUpsert(partialGradesToSave))
+      if (partialGradesToSave.length === 0) {
+        toast.info('No hay cambios por guardar')
+        return
+      }
+
+      const saveResponse = await withSave(() => partialGradesApi.bulkUpsert(partialGradesToSave))
       // PeriodFinalGrade se recalcula automáticamente en el backend
-      
-      const notasConValor = partialGradesToSave.filter(g => g.score > 0).length
-      TOAST.grades.saved(selectedAssignment?.subject?.name, selectedAssignment?.group?.name)
-      if (notasConValor > 0) toast.info(`${notasConValor} notas guardadas`)
+      const conflicts: any[] = saveResponse?.data?.conflicts || []
+      const results: any[] = saveResponse?.data?.results || []
+      const conflictKey = (c: { studentEnrollmentId: string; componentType: string; activityIndex: number }) =>
+        `${c.studentEnrollmentId}|${c.componentType}|${c.activityIndex}`
+      const conflictSet = new Set(conflicts.map(conflictKey))
+
+      // Resolver, por cada item enviado, a qué estudiante/actividad corresponde (una sola vez).
+      const resolveCell = (g: { studentEnrollmentId: string; componentType: string; activityIndex: number }) => {
+        const student = students.find(s => s.enrollmentId === g.studentEnrollmentId)
+        const process = processConfigs.find(p => p.code === g.componentType)
+        const allProcessActivities = process
+          ? [...process.activities, ...(additionalActivities[process.code] || [])]
+          : []
+        const activity = allProcessActivities[g.activityIndex - 1]
+        return student && activity ? { studentId: student.id, activityId: activity.id } : null
+      }
+
+      // Actualizar el snapshot base SOLO con lo que realmente se guardó (no lo que tuvo conflicto),
+      // para que el próximo diff sea contra el estado ya persistido.
+      setGradesBaseline(prev => {
+        const next = JSON.parse(JSON.stringify(prev))
+        partialGradesToSave.forEach(g => {
+          if (conflictSet.has(conflictKey(g))) return // no se guardó: no tocar el baseline
+          const cell = resolveCell(g)
+          if (cell) {
+            if (!next[cell.studentId]) next[cell.studentId] = {}
+            next[cell.studentId][cell.activityId] = g.score
+          }
+        })
+        return next
+      })
+      setBaselineActivityNames(prev => ({ ...prev, ...customActivityNames }))
+
+      // updatedAt: para lo guardado, tomar el updatedAt real que devolvió el servidor
+      // (evita otro falso-conflicto en el siguiente guardado). Para lo borrado, null.
+      setGradesServerUpdatedAt(prev => {
+        const next = JSON.parse(JSON.stringify(prev))
+        results.forEach((r: any) => {
+          const cell = resolveCell(r)
+          if (!cell) return
+          if (!next[cell.studentId]) next[cell.studentId] = {}
+          next[cell.studentId][cell.activityId] = r.action === 'delete' ? null : (r.updatedAt || null)
+        })
+        return next
+      })
+
+      // Conflictos: alguien más cambió esa MISMA celda mientras editabas. No se sobrescribió
+      // su valor — se refleja el valor actual del servidor para que decidas si reintentar.
+      if (conflicts.length > 0) {
+        setGrades(prev => {
+          const next = JSON.parse(JSON.stringify(prev))
+          conflicts.forEach((c: any) => {
+            const cell = resolveCell(c)
+            if (cell) {
+              if (!next[cell.studentId]) next[cell.studentId] = {}
+              next[cell.studentId][cell.activityId] = c.serverScore
+            }
+          })
+          return next
+        })
+        setGradesBaseline(prev => {
+          const next = JSON.parse(JSON.stringify(prev))
+          conflicts.forEach((c: any) => {
+            const cell = resolveCell(c)
+            if (cell) {
+              if (!next[cell.studentId]) next[cell.studentId] = {}
+              next[cell.studentId][cell.activityId] = c.serverScore
+            }
+          })
+          return next
+        })
+        setGradesServerUpdatedAt(prev => {
+          const next = JSON.parse(JSON.stringify(prev))
+          conflicts.forEach((c: any) => {
+            const cell = resolveCell(c)
+            if (cell) {
+              if (!next[cell.studentId]) next[cell.studentId] = {}
+              next[cell.studentId][cell.activityId] = c.serverUpdatedAt || null
+            }
+          })
+          return next
+        })
+        toast.warning(`⚠️ ${conflicts.length} nota(s) NO se guardaron: alguien más las cambió mientras editabas. Se muestra el valor actual — revísalas y vuelve a guardar si aún quieres tu valor.`)
+      }
+
+      const notasConValor = results.filter((g: any) => g.action !== 'delete').length
+      if (conflicts.length === 0 || results.length > 0) {
+        TOAST.grades.saved(selectedAssignment?.subject?.name, selectedAssignment?.group?.name)
+      }
+      if (notasConValor > 0) toast.info(`${notasConValor} nota(s) guardada(s)`)
     } catch (err: any) {
       console.error('Error saving grades:', err)
       TOAST.grades.error(err)
@@ -1715,8 +1877,9 @@ export default function Grades() {
                   </tr>
                 ) : students.map((student, idx) => {
                   const finalGrade = calculateFinalGrade(student.id)
-                  const performance = getPerformanceLevel(finalGrade)
-                  
+                  const override = finalOverrides[student.enrollmentId]
+                  const performance = getPerformanceLevel(override ?? finalGrade)
+
                   return (
                     <tr key={student.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-2 py-2 text-center text-sm font-medium text-slate-500">{idx + 1}</td>
@@ -1742,8 +1905,8 @@ export default function Grades() {
                                   step="0.1"
                                   min={minGrade}
                                   max={maxGrade}
-                                  value={grades[student.id]?.[activity.id] || ''}
-                                  onChange={(e) => updateGrade(student.id, activity.id, parseFloat(e.target.value) || 0)}
+                                  value={grades[student.id]?.[activity.id] ?? ''}
+                                  onChange={(e) => { const v = e.target.value.trim(); updateGrade(student.id, activity.id, v === '' ? null : parseFloat(v)) }}
                                   onKeyDown={(e) => handleKeyNavigation(e, student.id, activity.id)}
                                   onFocus={(e) => e.target.select()}
                                   disabled={!currentPeriodOpen}
@@ -1760,10 +1923,17 @@ export default function Grades() {
                       })}
                       
                       <td className="px-2 py-1 text-center font-bold text-slate-900 bg-slate-100">
-                        {finalGrade > 0 ? finalGrade.toFixed(1) : '-'}
+                        {override !== undefined ? (
+                          <span
+                            className="inline-flex items-center gap-1 text-violet-700"
+                            title={`Nota final fijada manualmente por coordinación (${override.toFixed(1)}). Tus cambios de parciales NO la modifican.`}
+                          >
+                            <Lock className="w-3 h-3" /> {override.toFixed(1)}
+                          </span>
+                        ) : (finalGrade > 0 ? finalGrade.toFixed(1) : '-')}
                       </td>
                       <td className="px-2 py-1 text-center">
-                        {finalGrade > 0 && (
+                        {(override ?? finalGrade) > 0 && (
                           <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${performance.color}`}>
                             {performance.label}
                           </span>

@@ -242,7 +242,9 @@ export class TeacherAssignmentsService {
   /**
    * Finalizar una asignación y crear una nueva para el docente reemplazo.
    * La asignación original queda histórica con endDate + endReason.
-   * Los datos (notas, asistencia, etc.) quedan vinculados a la asignación original.
+   * Las notas y la asistencia se transfieren a la nueva asignación para dar
+   * continuidad al docente reemplazo (ve la planilla y la asistencia al entrar,
+   * no en blanco). La asignación nueva está recién creada → sin conflictos de llave.
    */
   async replaceTeacher(
     assignmentId: string,
@@ -295,7 +297,24 @@ export class TeacherAssignmentsService {
         data: { teacherAssignmentId: newAssignment.id },
       });
 
-      return { closedAssignment: closed, newAssignment };
+      // 4. Transferir notas y asistencia para continuidad del docente reemplazo.
+      // (La asignación nueva no tiene datos aún → no hay conflictos de llave única.)
+      const [movedGrades, movedAttendance] = await Promise.all([
+        tx.partialGrade.updateMany({
+          where: { teacherAssignmentId: assignmentId },
+          data: { teacherAssignmentId: newAssignment.id },
+        }),
+        tx.attendanceRecord.updateMany({
+          where: { teacherAssignmentId: assignmentId },
+          data: { teacherAssignmentId: newAssignment.id },
+        }),
+      ]);
+
+      return {
+        closedAssignment: closed,
+        newAssignment,
+        transferred: { grades: movedGrades.count, attendance: movedAttendance.count },
+      };
     });
 
     return result;
@@ -456,6 +475,19 @@ export class TeacherAssignmentsService {
           where: { teacherAssignmentId: assignment.id },
           data: { teacherAssignmentId: newAssignment.id },
         });
+
+        // 4. Transferir notas y asistencia para continuidad del docente reemplazo.
+        // (La asignación nueva no tiene datos aún → sin conflictos de llave única.)
+        await Promise.all([
+          tx.partialGrade.updateMany({
+            where: { teacherAssignmentId: assignment.id },
+            data: { teacherAssignmentId: newAssignment.id },
+          }),
+          tx.attendanceRecord.updateMany({
+            where: { teacherAssignmentId: assignment.id },
+            data: { teacherAssignmentId: newAssignment.id },
+          }),
+        ]);
       }
 
       return { closedAssignments, newAssignments };
@@ -524,15 +556,18 @@ export class TeacherAssignmentsService {
       throw new NotFoundException('Asignación no encontrada');
     }
 
-    // Verificar si tiene datos asociados que impidan el borrado
-    const [partialGrades, scheduleEntries] = await Promise.all([
+    // Verificar si tiene datos asociados que impidan el borrado.
+    // C-5: la asignación cascada a PartialGrade Y AttendanceRecord; hay que revisar AMBOS
+    // (antes solo se revisaban notas → la asistencia se borraba en silencio).
+    const [partialGrades, attendanceRecords, scheduleEntries] = await Promise.all([
       this.prisma.partialGrade.count({ where: { teacherAssignmentId: assignmentId } }),
+      this.prisma.attendanceRecord.count({ where: { teacherAssignmentId: assignmentId } }),
       this.prisma.scheduleEntry.count({ where: { teacherAssignmentId: assignmentId } }),
     ]);
 
-    if (partialGrades > 0) {
+    if (partialGrades > 0 || attendanceRecords > 0) {
       throw new BadRequestException(
-        `No se puede eliminar: la asignación tiene ${partialGrades} nota(s) registrada(s). Use "Finalizar" en su lugar.`
+        `No se puede eliminar: la asignación tiene ${partialGrades} nota(s) y ${attendanceRecords} registro(s) de asistencia. Use "Finalizar" en su lugar para conservar la historia.`
       );
     }
 
@@ -561,11 +596,22 @@ export class TeacherAssignmentsService {
     });
     
     const yearIds = years.map(y => y.id);
-    
+
     if (yearIds.length === 0) {
       return { deleted: 0, message: 'No se encontraron años académicos' };
     }
-    
+
+    // C-5: borrar carga académica cascada a notas Y asistencia. Nunca destruir historia en masa.
+    const [gradeCount, attendanceCount] = await Promise.all([
+      this.prisma.partialGrade.count({ where: { teacherAssignment: { academicYearId: { in: yearIds } } } }),
+      this.prisma.attendanceRecord.count({ where: { teacherAssignment: { academicYearId: { in: yearIds } } } }),
+    ]);
+    if (gradeCount > 0 || attendanceCount > 0) {
+      throw new BadRequestException(
+        `No se puede eliminar la carga académica: existen ${gradeCount} nota(s) y ${attendanceCount} registro(s) de asistencia que se perderían en cascada. Finalice las asignaciones en lugar de eliminarlas.`
+      );
+    }
+
     const result = await this.prisma.teacherAssignment.deleteMany({
       where: { academicYearId: { in: yearIds } },
     });

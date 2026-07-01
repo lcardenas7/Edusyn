@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { type ValeriaActivityDraft, type ValeriaQuestionDraft, valeriaAssistantBridge } from '../contexts/ValeriaContext'
 import { classroomApi, storageApi, liveSessionApi, apdApi, lessonApi } from '../lib/api'
+import { compareStudents } from '../utils/sortStudents'
 import LiveQuiz from '../components/LiveQuiz'
 import { CreateSelfAssessmentForm, StudentSelfAssessment, SelfAssessmentResults } from '../components/SelfAssessmentUI'
 const RichTextEditor = lazy(() => import('../components/RichTextEditor'))
@@ -1878,6 +1879,7 @@ interface Activity {
   syncToGradebook?: boolean; gradebookComponent?: string; gradebookIndex?: number;
   createdAt: string; updatedAt: string;
   section?: { id: string; title: string };
+  gradingPending?: number; // entregas SUBMITTED/LATE por calificar (solo payload docente)
   _count?: { submissions: number };
   submissions?: { id: string; status: string; score?: number; submittedAt?: string; feedback?: string; attemptNumber: number }[];
 }
@@ -1905,6 +1907,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [showCreate, setShowCreate] = useState(false)
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
   const [activityTypeFilter, setActivityTypeFilter] = useState<string>('ALL')
+  const [workFilter, setWorkFilter] = useState<string>('ALL') // filtro por estado de trabajo (pendiente/por calificar/etc.)
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [submissionsLoading, setSubmissionsLoading] = useState(false)
 
@@ -2193,7 +2196,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   useEffect(() => { loadActivities() }, [loadActivities])
-  useEffect(() => { setActivityTypeFilter('ALL') }, [classroom.id])
+  useEffect(() => { setActivityTypeFilter('ALL'); setWorkFilter('ALL') }, [classroom.id])
 
   // Track last visit per classroom to highlight NEW activities for students
   useEffect(() => {
@@ -5000,9 +5003,48 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   }
 
   // ── ACTIVITIES LIST VIEW ──
-  const filteredActivities = activityTypeFilter === 'ALL'
+  const typeFilteredActivities = activityTypeFilter === 'ALL'
     ? activities
     : activities.filter(a => a.type === activityTypeFilter)
+
+  // Estado de trabajo: clasificación usada para filtrar, ordenar y dar jerarquía visual.
+  // Se permite solapamiento (una actividad puede pertenecer a varios estados: p.ej. "vence hoy" + "por calificar").
+  // `rank` 0 = lo más accionable (sube y se resalta); mayor = terminado (baja y se atenúa).
+  const DUE_SOON_MS = 48 * 60 * 60 * 1000
+  const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+  const getWorkInfo = (act: Activity): { rank: number; border: string; keys: Set<string> } => {
+    const nowD = new Date()
+    const due = act.dueDate ? new Date(act.dueDate) : null
+    const open = act.openDate ? new Date(act.openDate) : null
+    const keys = new Set<string>()
+    if (isStudent) {
+      const sub = act.submissions?.[0]
+      if (sub?.status === 'RETURNED') { keys.add('RETURNED'); return { rank: 1, border: '#fb923c', keys } }
+      if (sub?.status === 'GRADED' || sub?.status === 'AUTO_GRADED') { keys.add('GRADED'); return { rank: 7, border: 'transparent', keys } }
+      if (sub?.status === 'SUBMITTED' || sub?.status === 'LATE') { keys.add('SUBMITTED'); return { rank: 6, border: 'transparent', keys } }
+      if (open && nowD < open) { keys.add('LOCKED'); return { rank: 8, border: 'transparent', keys } }
+      if (due && nowD > due) { keys.add('OVERDUE'); keys.add('PENDING'); return { rank: 0, border: '#ef4444', keys } }
+      if (due && due.getTime() - nowD.getTime() < DUE_SOON_MS) { keys.add('DUE_SOON'); keys.add('PENDING'); return { rank: 2, border: '#fbbf24', keys } }
+      keys.add('PENDING'); return { rank: 3, border: '#cbd5e1', keys }
+    }
+    // Docente
+    if (!act.isPublished) { keys.add('DRAFT'); return { rank: 4, border: '#cbd5e1', keys } }
+    if ((act.gradingPending || 0) > 0) keys.add('GRADING')
+    if (due && sameDay(due, nowD)) keys.add('DUE_TODAY')
+    if (due && nowD > due && !sameDay(due, nowD)) keys.add('OVERDUE')
+    if ((act._count?.submissions || 0) === 0) keys.add('NO_SUBMISSIONS')
+    keys.add('PUBLISHED')
+    const rank = keys.has('GRADING') ? 0 : keys.has('DUE_TODAY') ? 1 : keys.has('OVERDUE') ? 2 : keys.has('NO_SUBMISSIONS') ? 3 : 5
+    const border = keys.has('GRADING') ? '#fb923c' : keys.has('DUE_TODAY') ? '#fbbf24' : keys.has('OVERDUE') ? '#ef4444' : 'transparent'
+    return { rank, border, keys }
+  }
+
+  const filteredActivities = typeFilteredActivities
+    .filter(a => workFilter === 'ALL' || getWorkInfo(a).keys.has(workFilter))
+    .sort((a, b) => getWorkInfo(a).rank - getWorkInfo(b).rank)
+
+  // Conteos por estado de trabajo (sobre el filtro de tipo, no del de estado) para chips y centro de control.
+  const workCount = (key: string) => typeFilteredActivities.filter(a => getWorkInfo(a).keys.has(key)).length
 
   // Helper: true if activity was published after the student's last visit
   const isNewActivity = (act: Activity) => {
@@ -5102,6 +5144,56 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 >
                   {tab.label}
                   <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>{tab.count}</span>
+                </button>
+              )
+            })}
+        </div>
+      )}
+
+      {/* Centro de control del docente — widgets accionables que filtran por estado de trabajo */}
+      {isTeacher && activities.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {([
+            { key: 'GRADING', label: 'Por calificar', icon: '🟠', active: 'bg-orange-500 border-orange-500 text-white', idle: 'border-orange-200 text-orange-700 hover:border-orange-400' },
+            { key: 'DUE_TODAY', label: 'Vence hoy', icon: '⏰', active: 'bg-amber-500 border-amber-500 text-white', idle: 'border-amber-200 text-amber-700 hover:border-amber-400' },
+            { key: 'NO_SUBMISSIONS', label: 'Sin entregas', icon: '📭', active: 'bg-slate-700 border-slate-700 text-white', idle: 'border-slate-200 text-slate-600 hover:border-slate-400' },
+            { key: 'DRAFT', label: 'Borradores', icon: '✍️', active: 'bg-slate-700 border-slate-700 text-white', idle: 'border-slate-200 text-slate-600 hover:border-slate-400' },
+          ] as { key: string; label: string; icon: string; active: string; idle: string }[]).map(w => {
+            const count = workCount(w.key)
+            const isOn = workFilter === w.key
+            return (
+              <button key={w.key} onClick={() => setWorkFilter(isOn ? 'ALL' : w.key)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${isOn ? w.active : `bg-white ${w.idle}`}`}>
+                <span>{w.icon}</span> {w.label}
+                <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${isOn ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-600'}`}>{count}</span>
+              </button>
+            )
+          })}
+          {workFilter !== 'ALL' && (
+            <button onClick={() => setWorkFilter('ALL')} className="px-3 py-2.5 rounded-xl text-sm text-slate-500 hover:text-slate-700">Ver todas</button>
+          )}
+        </div>
+      )}
+
+      {/* Chips de estado para el estudiante — qué hacer primero */}
+      {isStudent && activities.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {([
+            { key: 'ALL', label: 'Todas', count: typeFilteredActivities.length },
+            { key: 'PENDING', label: 'Pendientes', count: workCount('PENDING') },
+            { key: 'DUE_SOON', label: 'Por vencer', count: workCount('DUE_SOON') },
+            { key: 'OVERDUE', label: 'Vencidas', count: workCount('OVERDUE') },
+            { key: 'RETURNED', label: 'Devueltas', count: workCount('RETURNED') },
+            { key: 'GRADED', label: 'Calificadas', count: workCount('GRADED') },
+          ] as { key: string; label: string; count: number }[])
+            .filter(c => c.key === 'ALL' || c.count > 0)
+            .map(c => {
+              const isOn = workFilter === c.key
+              return (
+                <button key={c.key} onClick={() => setWorkFilter(c.key)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all ${isOn ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-200 text-slate-500 hover:border-slate-400'}`}>
+                  {c.label}
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${isOn ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>{c.count}</span>
                 </button>
               )
             })}
@@ -5478,8 +5570,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       ) : filteredActivities.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
           <ClipboardList className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-          <p className="text-base font-medium text-slate-500">Sin actividades de este tipo</p>
-          <button onClick={() => setActivityTypeFilter('ALL')} className="mt-2 text-sm text-blue-600 hover:underline">Ver todas</button>
+          <p className="text-base font-medium text-slate-500">{workFilter !== 'ALL' || activityTypeFilter !== 'ALL' ? 'Nada en este filtro' : 'Sin actividades'}</p>
+          <button onClick={() => { setActivityTypeFilter('ALL'); setWorkFilter('ALL') }} className="mt-2 text-sm text-blue-600 hover:underline">Ver todas</button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -5517,8 +5609,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             const duePast = isDuePast(act.dueDate)
             const studentStatus = isStudent ? getStudentTaskStatus(act) : null
             const studentSub = isStudent ? act.submissions?.[0] : null
+            const workInfo = getWorkInfo(act)
             return (
-              <button key={act.id} onClick={() => openActivity(act)} className={`w-full text-left bg-white rounded-2xl border-2 p-5 transition-all hover:shadow-sm group ${isNew ? 'border-yellow-300 hover:border-yellow-400' : 'border-slate-200 hover:border-blue-300'}`}>
+              <button key={act.id} onClick={() => openActivity(act)} style={{ borderLeftColor: workInfo.border, borderLeftWidth: '4px' }} className={`w-full text-left bg-white rounded-2xl border-2 p-5 transition-all hover:shadow-sm group ${isNew ? 'border-yellow-300 hover:border-yellow-400' : 'border-slate-200 hover:border-blue-300'} ${workInfo.rank >= 6 ? 'opacity-70 hover:opacity-100' : ''}`}>
                 <div className="flex items-start gap-4">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : act.type === 'LIVE_QUIZ' ? 'bg-violet-100' : act.type === 'HOME_QUIZ' ? 'bg-pink-50' : act.type === 'EXAM' ? 'bg-red-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
                     {isLesson(act.type) ? <BookOpen className="w-6 h-6 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-6 h-6 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : act.type === 'LIVE_QUIZ' ? <Zap className="w-6 h-6 text-violet-700" /> : act.type === 'HOME_QUIZ' ? <Home className="w-6 h-6 text-pink-600" /> : act.type === 'EXAM' ? <Award className="w-6 h-6 text-red-500" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
@@ -5528,6 +5621,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                       <h3 className="text-base font-bold text-slate-800 group-hover:text-blue-700">{act.title}</h3>
                       {isNew && <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-yellow-100 text-yellow-800 border border-yellow-300">NUEVO</span>}
                       {!isStudent && <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>}
+                      {isTeacher && (act.gradingPending || 0) > 0 && <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-orange-100 text-orange-700">🟠 {act.gradingPending} por calificar</span>}
                       {act.type === 'TASK' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700">Tarea</span>}
                       {act.type === 'QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-purple-50 text-purple-700">Quiz</span>}
                       {act.type === 'EXAM' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-red-50 text-red-700">Examen</span>}
@@ -6202,11 +6296,14 @@ function StudentsTab({ classroomId }: { classroomId: string }) {
     return { firstName, lastName, secondLastName, email, photo }
   }
 
-  const filtered = students.filter((s: any) => {
-    if (!search.trim()) return true
-    const { firstName, lastName } = getStudentName(s)
-    return `${firstName} ${lastName}`.toLowerCase().includes(search.toLowerCase())
-  })
+  const filtered = students
+    .filter((s: any) => {
+      if (!search.trim()) return true
+      const { firstName, lastName } = getStudentName(s)
+      return `${firstName} ${lastName}`.toLowerCase().includes(search.toLowerCase())
+    })
+    // Mismo orden canónico que la planilla/notas (apellido1 + apellido2 + nombre)
+    .sort((a: any, b: any) => compareStudents(getStudentName(a), getStudentName(b)))
 
   return (
     <div className="space-y-5">
@@ -6238,8 +6335,9 @@ function StudentsTab({ classroomId }: { classroomId: string }) {
           )}
           {filtered.map((s: any, i: number) => {
             const { firstName, lastName, secondLastName, email, photo } = getStudentName(s)
+            // Mismo formato que la planilla/notas: "Apellido1 Apellido2 Nombre" (apellido primero)
             const displayName = lastName && firstName
-              ? `${lastName}${secondLastName ? ' ' + secondLastName : ''}, ${firstName}`
+              ? `${lastName}${secondLastName ? ' ' + secondLastName : ''} ${firstName}`
               : lastName || firstName || 'Sin nombre'
             const initials = `${firstName[0] || ''}${lastName[0] || ''}`
 
