@@ -1,4 +1,4 @@
-import { resolveScaleLevel } from './performance-scale.util';
+import { resolveScaleLevel, deriveScaleFromConfig, DEFAULT_PERFORMANCE_SCALE } from './performance-scale.util';
 
 /**
  * Q-1 — La escala enriquecida usa los valores configurados por la institución;
@@ -37,5 +37,57 @@ describe('resolveScaleLevel (Q-1)', () => {
     expect(sup).toBeGreaterThan(alt);
     expect(alt).toBeGreaterThan(bas);
     expect(bas).toBeGreaterThan(bajo);
+  });
+});
+
+describe('deriveScaleFromConfig (Consolidación)', () => {
+  it('usa gradingConfig.performanceLevels cuando existen (caso Ciudadela)', () => {
+    const grading = {
+      performanceLevels: [
+        { code: 'SUPERIOR', name: 'Superior', minScore: 4.5, maxScore: 5, order: 0, isApproved: true },
+        { code: 'BAJO', name: 'Bajo', minScore: 1, maxScore: 2.9, order: 3, isApproved: false },
+      ],
+    };
+    const rows = deriveScaleFromConfig(grading, null);
+    expect(rows).toHaveLength(2);
+    const sup = rows.find((r) => r.level === 'SUPERIOR')!;
+    expect(sup.minScore).toBe(4.5);
+    expect(sup.label).toBe('Superior');
+    expect(rows.find((r) => r.level === 'BAJO')!.isApproved).toBe(false);
+  });
+
+  it('cae a academicLevelsConfig numérico si gradingConfig no tiene niveles (caso Villas)', () => {
+    const academic = [
+      { name: 'Preescolar', gradingScaleType: 'QUALITATIVE_DESC', performanceLevels: [] },
+      {
+        name: 'Primaria',
+        gradingScaleType: 'NUMERIC_1_5',
+        performanceLevels: [
+          { code: 'BASICO', name: 'Básico', minScore: 3, maxScore: 3.9, isApproved: true },
+        ],
+      },
+    ];
+    const rows = deriveScaleFromConfig({ performanceLevels: [] }, academic);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].level).toBe('BASICO');
+  });
+
+  it('cae a la escala por defecto 0-5 si no hay niveles en ningún lado', () => {
+    const rows = deriveScaleFromConfig(null, null);
+    expect(rows).toEqual(DEFAULT_PERFORMANCE_SCALE);
+    expect(rows).toHaveLength(4);
+  });
+
+  it('ignora códigos desconocidos y niveles sin rango', () => {
+    const grading = {
+      performanceLevels: [
+        { code: 'RARO', name: 'X', minScore: 1, maxScore: 2 },
+        { code: 'ALTO', name: 'Alto', minScore: 4, maxScore: 4.5 }, // válido
+        { code: 'BASICO', name: 'Básico', minScore: null, maxScore: 3.9 }, // sin rango
+      ],
+    };
+    const rows = deriveScaleFromConfig(grading, null);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].level).toBe('ALTO');
   });
 });
