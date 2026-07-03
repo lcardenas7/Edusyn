@@ -299,18 +299,36 @@ export class StudentGradesService {
       orderBy: { order: 'asc' },
     });
 
+    // A-11 / INV-10: PeriodFinalGrade se indexa por subjectId (no por asignación).
+    // Resolvemos el subjectId una sola vez para leer la nota canónica del período.
+    const assignment = await this.prisma.teacherAssignment.findUnique({
+      where: { id: teacherAssignmentId },
+      select: { subjectId: true },
+    });
+    const subjectId = assignment?.subjectId ?? null;
+
     const termSources = await Promise.all(
       terms.map(async (term) => {
-        const result = await this.calculateTermGrade(
-          studentEnrollmentId,
-          teacherAssignmentId,
-          term.id,
-        );
+        // A-11 / INV-10: leer la nota CANÓNICA del período (PeriodFinalGrade respeta
+        // el override manual C-1 y la recuperación). Fallback a recompute si aún no
+        // existe PeriodFinalGrade. Mismo criterio que buildGroupReportCards en boletines.
+        const grade = subjectId
+          ? await this.resolveCanonicalPeriodGrade(
+              studentEnrollmentId,
+              teacherAssignmentId,
+              subjectId,
+              term.id,
+            )
+          : (await this.calculateTermGrade(
+              studentEnrollmentId,
+              teacherAssignmentId,
+              term.id,
+            )).grade;
         return {
           id: term.id,
           name: term.name,
           type: 'period' as const,
-          grade: result.grade,
+          grade,
           weight: term.weightPercentage,
         };
       }),
@@ -358,6 +376,43 @@ export class StudentGradesService {
     const annualGrade = totalWeight > 0 ? this.roundToOneDecimal((weightedSum * 100) / totalWeight) : null;
 
     return { annualGrade, sources: allSources };
+  }
+
+  /**
+   * A-11 / INV-10 — Resuelve la nota CANÓNICA de un período para una asignatura.
+   *
+   * `PeriodFinalGrade` es la fuente única de verdad del período: ya refleja el
+   * override manual (`isManualOverride`, C-1) y la nota de recuperación
+   * (`period-recovery` escribe ahí). Leerlo garantiza que promoción, boletines,
+   * MEN y dashboard consuman el MISMO valor (INV-10).
+   *
+   * Solo si aún no existe `PeriodFinalGrade` para la coordenada, se recae en el
+   * recálculo desde `PartialGrade` (mismo comportamiento previo, sin regresión).
+   */
+  private async resolveCanonicalPeriodGrade(
+    studentEnrollmentId: string,
+    teacherAssignmentId: string,
+    subjectId: string,
+    academicTermId: string,
+  ): Promise<number | null> {
+    const pfg = await this.prisma.periodFinalGrade.findUnique({
+      where: {
+        studentEnrollmentId_academicTermId_subjectId: {
+          studentEnrollmentId,
+          academicTermId,
+          subjectId,
+        },
+      },
+      select: { finalScore: true },
+    });
+    if (pfg) return Number(pfg.finalScore);
+
+    const recomputed = await this.calculateTermGrade(
+      studentEnrollmentId,
+      teacherAssignmentId,
+      academicTermId,
+    );
+    return recomputed.grade;
   }
 
   /**
