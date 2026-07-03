@@ -130,24 +130,13 @@ export class PerformanceGeneratorService {
     const results: StudentSubjectPerformance[] = [];
 
     for (const ta of teacherAssignments) {
-      // Get grades for this student in this subject/term
-      const grades = await this.prisma.studentGrade.findMany({
-        where: {
-          studentEnrollmentId,
-          evaluativeActivity: {
-            teacherAssignmentId: ta.id,
-            academicTermId,
-          },
-        },
-        include: {
-          evaluativeActivity: {
-            include: { component: true },
-          },
-        },
-      });
-
-      // Calculate scores by dimension (component)
-      const dimensionScores = this.calculateDimensionScores(grades);
+      // Q-0: la fuente de verdad de las notas es PartialGrade (planilla moderna).
+      // Solo si no hay parciales se recae en StudentGrade (legacy).
+      const dimensionScores = await this.getDimensionScores(
+        studentEnrollmentId,
+        ta.id,
+        academicTermId,
+      );
 
       // Build performances for each dimension
       const performances: GeneratedPerformance[] = [];
@@ -194,31 +183,67 @@ export class PerformanceGeneratorService {
     return results;
   }
 
-  private calculateDimensionScores(
-    grades: Array<{
-      score: any;
-      evaluativeActivity: {
-        component: { code: string; name: string };
-      };
-    }>,
+  /**
+   * Q-0: obtiene los puntajes por dimensión (COG/PROC/ACT) desde PartialGrade
+   * (fuente de verdad de la planilla moderna). Si no hay parciales, cae en
+   * StudentGrade (sistema legacy) para no romper instituciones que aún lo usan.
+   */
+  private async getDimensionScores(
+    studentEnrollmentId: string,
+    teacherAssignmentId: string,
+    academicTermId: string,
+  ): Promise<Record<PerformanceDimension, number>> {
+    const partials = await this.prisma.partialGrade.findMany({
+      where: { studentEnrollmentId, teacherAssignmentId, academicTermId },
+      select: { componentType: true, score: true },
+    });
+
+    if (partials.length > 0) {
+      return this.accumulateDimensionScores(
+        partials.map((p) => ({ code: p.componentType, score: Number(p.score) })),
+      );
+    }
+
+    // Fallback legacy: StudentGrade (vía EvaluativeActivity → component.code)
+    const grades = await this.prisma.studentGrade.findMany({
+      where: {
+        studentEnrollmentId,
+        evaluativeActivity: { teacherAssignmentId, academicTermId },
+      },
+      include: { evaluativeActivity: { include: { component: true } } },
+    });
+    return this.accumulateDimensionScores(
+      grades.map((g) => ({ code: g.evaluativeActivity.component.code, score: Number(g.score) })),
+    );
+  }
+
+  /**
+   * Mapea un código de componente / componentType al saber (dimensión).
+   * Misma heurística para PartialGrade.componentType y EvaluationComponent.code.
+   */
+  private componentCodeToDimension(rawCode: string): PerformanceDimension | null {
+    const code = (rawCode || '').toUpperCase();
+    if (code.includes('COG') || code === 'SABER') return 'COGNITIVO';
+    if (code.includes('PROC') || code === 'HACER') return 'PROCEDIMENTAL';
+    if (code.includes('ACT') || code === 'SER') return 'ACTITUDINAL';
+    return null;
+  }
+
+  /**
+   * Promedia los puntajes por dimensión a partir de una lista { code, score }.
+   */
+  private accumulateDimensionScores(
+    items: Array<{ code: string; score: number }>,
   ): Record<PerformanceDimension, number> {
-    const dimensionGrades: Record<PerformanceDimension, number[]> = {
+    const buckets: Record<PerformanceDimension, number[]> = {
       COGNITIVO: [],
       PROCEDIMENTAL: [],
       ACTITUDINAL: [],
     };
 
-    for (const grade of grades) {
-      const componentCode = grade.evaluativeActivity.component.code.toUpperCase();
-      const score = Number(grade.score);
-
-      if (componentCode.includes('COG') || componentCode === 'SABER') {
-        dimensionGrades.COGNITIVO.push(score);
-      } else if (componentCode.includes('PROC') || componentCode === 'HACER') {
-        dimensionGrades.PROCEDIMENTAL.push(score);
-      } else if (componentCode.includes('ACT') || componentCode === 'SER') {
-        dimensionGrades.ACTITUDINAL.push(score);
-      }
+    for (const item of items) {
+      const dimension = this.componentCodeToDimension(item.code);
+      if (dimension) buckets[dimension].push(item.score);
     }
 
     const result: Record<PerformanceDimension, number> = {
@@ -227,8 +252,8 @@ export class PerformanceGeneratorService {
       ACTITUDINAL: 0,
     };
 
-    for (const dimension of Object.keys(dimensionGrades) as PerformanceDimension[]) {
-      const scores = dimensionGrades[dimension];
+    for (const dimension of Object.keys(buckets) as PerformanceDimension[]) {
+      const scores = buckets[dimension];
       if (scores.length > 0) {
         result[dimension] = scores.reduce((a, b) => a + b, 0) / scores.length;
       }
