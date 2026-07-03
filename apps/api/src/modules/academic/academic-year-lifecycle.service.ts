@@ -933,7 +933,7 @@ export class AcademicYearLifecycleService {
       level: s.level,
       minScore: Number(s.minScore),
       maxScore: Number(s.maxScore),
-      description: null, // PerformanceScale no tiene description en el schema actual
+      description: s.descriptor ?? null, // Q-1: descriptor pedagógico del nivel
     }));
   }
 

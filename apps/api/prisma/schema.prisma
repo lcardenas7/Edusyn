@@ -1240,6 +1240,11 @@ model PerformanceScale {
   level         PerformanceLevel
   minScore      Decimal
   maxScore      Decimal
+  // Q-1: enriquecimiento de la escala (nullable → default derivado del enum en código)
+  label       String? // Nombre visible del nivel (default = nombre del enum)
+  descriptor  String? @db.Text // Descriptor pedagógico del nivel (IB / standards-based)
+  order       Int? // Orden canónico (default código: SUP=4, ALT=3, BAS=2, BAJO=1)
+  isApproved  Boolean? // ¿Aprueba? (default código: BAJO=false, resto=true)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
