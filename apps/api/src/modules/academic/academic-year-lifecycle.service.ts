@@ -6,6 +6,7 @@ import { AttendanceService } from '../attendance/attendance.service';
 import { StudentGradesService } from '../evaluation/student-grades.service';
 import { evaluatePromotion, type StudentPromotionData } from '../../engines/promotion.engine';
 import type { InstitutionRulesContext } from '../../engines/InstitutionRulesContext';
+import { resolveScaleLevel } from '../evaluation/performance-scale.util';
 import {
   AcademicTermForReport,
   PerformanceScaleForReport,
@@ -939,19 +940,25 @@ export class AcademicYearLifecycleService {
 
   /**
    * Obtiene la nota mínima aprobatoria de una institución.
-   * Busca el nivel BASICO que es el mínimo aprobatorio.
+   * Consolidación P2: es el minScore más bajo entre los niveles que APRUEBAN
+   * (isApproved, con defaults del enum de Q-1), en vez de asumir "BASICO".
    */
   async getPassingGrade(institutionId: string): Promise<number> {
-    const passingScale = await this.prisma.performanceScale.findFirst({
-      where: {
-        institutionId,
-        level: 'BASICO',
-      },
-      orderBy: { minScore: 'asc' },
+    const scales = await this.prisma.performanceScale.findMany({
+      where: { institutionId },
     });
 
-    // Si no encuentra escala, usar 3.0 como default (común en Colombia)
-    return passingScale ? Number(passingScale.minScore) : 3.0;
+    if (scales.length > 0) {
+      const approvedMins = scales
+        .filter((s) => resolveScaleLevel(s).isApproved)
+        .map((s) => Number(s.minScore));
+      if (approvedMins.length > 0) {
+        return Math.min(...approvedMins);
+      }
+    }
+
+    // Sin escala configurada → default 3.0 (común en Colombia)
+    return 3.0;
   }
 
   /**

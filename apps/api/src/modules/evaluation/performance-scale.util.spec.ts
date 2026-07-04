@@ -1,4 +1,4 @@
-import { resolveScaleLevel, deriveScaleFromConfig, DEFAULT_PERFORMANCE_SCALE } from './performance-scale.util';
+import { resolveScaleLevel, deriveScaleFromConfig, DEFAULT_PERFORMANCE_SCALE, validateScaleRanges } from './performance-scale.util';
 
 /**
  * Q-1 — La escala enriquecida usa los valores configurados por la institución;
@@ -89,5 +89,28 @@ describe('deriveScaleFromConfig (Consolidación)', () => {
     const rows = deriveScaleFromConfig(grading, null);
     expect(rows).toHaveLength(1);
     expect(rows[0].level).toBe('ALTO');
+  });
+});
+
+describe('validateScaleRanges (P2)', () => {
+  const R = (level: any, minScore: number, maxScore: number) => ({ level, minScore, maxScore });
+
+  it('escala por defecto es válida (adyacencia 2.9→3.0 no es hueco)', () => {
+    expect(validateScaleRanges(DEFAULT_PERFORMANCE_SCALE)).toEqual([]);
+  });
+
+  it('detecta un hueco real (> 0.1)', () => {
+    const issues = validateScaleRanges([R('BAJO', 1, 2.5), R('BASICO', 3, 5)]);
+    expect(issues.some((i) => i.includes('Hueco'))).toBe(true);
+  });
+
+  it('detecta solape', () => {
+    const issues = validateScaleRanges([R('BAJO', 1, 3.2), R('BASICO', 3, 3.9)]);
+    expect(issues.some((i) => i.includes('Solape'))).toBe(true);
+  });
+
+  it('detecta min > max', () => {
+    const issues = validateScaleRanges([R('ALTO', 4.5, 4)]);
+    expect(issues.some((i) => i.includes('mayor que máximo'))).toBe(true);
   });
 });

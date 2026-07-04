@@ -2,6 +2,7 @@ import { Injectable, ForbiddenException, NotFoundException, ConflictException } 
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateInstitutionDto, UpdateInstitutionDto, UpdateInstitutionModulesDto } from './dto/create-institution.dto';
 import * as bcrypt from 'bcryptjs';
+import { DEFAULT_PERFORMANCE_SCALE } from '../evaluation/performance-scale.util';
 
 @Injectable()
 export class SuperadminService {
@@ -171,6 +172,21 @@ export class SuperadminService {
           })),
         });
       }
+
+      // 2b. Sembrar la escala de desempeño por defecto (0-5) para que ninguna
+      // institución nazca sin escala. El admin la ajusta luego en Niveles/Calificación
+      // y syncScaleFromConfig la actualiza. (Consolidación P2)
+      await tx.performanceScale.createMany({
+        data: DEFAULT_PERFORMANCE_SCALE.map((r) => ({
+          institutionId: institution.id,
+          level: r.level,
+          minScore: r.minScore,
+          maxScore: r.maxScore,
+          label: r.label,
+          order: r.order,
+          isApproved: r.isApproved,
+        })),
+      });
 
       // 3. Obtener o crear el rol ADMIN_INSTITUTIONAL
       let adminRole = await tx.role.findUnique({

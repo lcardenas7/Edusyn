@@ -66,6 +66,37 @@ export const DEFAULT_PERFORMANCE_SCALE: DerivedScaleRow[] = [
   { level: 'BAJO', minScore: 1.0, maxScore: 2.9, label: 'Bajo', order: 1, isApproved: false, descriptor: null },
 ];
 
+/**
+ * Valida que un conjunto de rangos de escala sea coherente: sin min>max, sin
+ * solapes y sin huecos mayores a 0.1 (la adyacencia 2.9→3.0 es válida por el
+ * redondeo a 1 decimal). Devuelve la lista de problemas (vacía = OK). No lanza.
+ */
+export function validateScaleRanges(
+  rows: Array<{ level: PerformanceLevel; minScore: number; maxScore: number }>,
+): string[] {
+  const issues: string[] = [];
+  for (const r of rows) {
+    if (r.minScore > r.maxScore) {
+      issues.push(`${r.level}: mínimo (${r.minScore}) mayor que máximo (${r.maxScore})`);
+    }
+  }
+  const sorted = [...rows].sort((a, b) => a.minScore - b.minScore);
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1];
+    const cur = sorted[i];
+    if (cur.minScore <= prev.maxScore) {
+      issues.push(
+        `Solape entre ${prev.level} [${prev.minScore}-${prev.maxScore}] y ${cur.level} [${cur.minScore}-${cur.maxScore}]`,
+      );
+    } else if (cur.minScore - prev.maxScore > 0.1 + 1e-9) {
+      issues.push(
+        `Hueco entre ${prev.level} (máx ${prev.maxScore}) y ${cur.level} (mín ${cur.minScore})`,
+      );
+    }
+  }
+  return issues;
+}
+
 /** Mapea una lista de niveles de la config (gradingConfig o academicLevels) a filas de escala. */
 function mapConfigLevels(levels: any): DerivedScaleRow[] {
   if (!Array.isArray(levels)) return [];

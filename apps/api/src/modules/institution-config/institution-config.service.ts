@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
-import { deriveScaleFromConfig } from '../evaluation/performance-scale.util'
+import { deriveScaleFromConfig, validateScaleRanges } from '../evaluation/performance-scale.util'
 
 // DTOs para la configuración
 export interface ProfileDto {
@@ -313,6 +313,13 @@ export class InstitutionConfigService {
       if (!inst) return { synced: 0 }
 
       const rows = deriveScaleFromConfig(inst.gradingConfig, inst.academicLevelsConfig)
+
+      // Validación no bloqueante: avisar si los rangos tienen huecos/solapes.
+      const issues = validateScaleRanges(rows)
+      if (issues.length > 0) {
+        console.warn(`[syncScaleFromConfig] escala con avisos para ${institutionId}:`, issues)
+      }
+
       for (const r of rows) {
         await this.prisma.performanceScale.upsert({
           where: { institutionId_level: { institutionId, level: r.level } },
