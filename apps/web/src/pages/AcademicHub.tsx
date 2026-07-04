@@ -72,8 +72,8 @@ export default function AcademicHub() {
   // Configuración académica (SIEE)
   const configCards: ConfigCard[] = [
     {
-      title: 'Niveles Académicos',
-      description: 'Calendario y escalas por nivel educativo',
+      title: 'Niveles y Escala de Valoración',
+      description: 'Superior/Alto/Básico/Bajo, rangos y nota mínima — es lo que usa el boletín',
       icon: GraduationCap,
       href: '/academic/config/levels',
       color: 'text-indigo-600',
@@ -81,8 +81,8 @@ export default function AcademicHub() {
       borderColor: 'border-indigo-200'
     },
     {
-      title: 'Sistema de Calificación',
-      description: 'Procesos evaluativos y pesos (SIEE)',
+      title: 'Procesos y Pesos',
+      description: 'Cuánto pesa cada saber: Cognitivo, Procedimental, Actitudinal (suman 100%)',
       icon: Percent,
       href: '/academic/config/scale',
       color: 'text-teal-600',

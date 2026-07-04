@@ -156,8 +156,8 @@ export default function Scale() {
               <Percent className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-slate-900">Sistema de Calificación</h1>
-              <p className="text-sm text-slate-500">Configura los componentes evaluativos y la escala de valoración</p>
+              <h1 className="text-xl font-semibold text-slate-900">Procesos y Pesos</h1>
+              <p className="text-sm text-slate-500">Cuánto pesa cada saber (Cognitivo, Procedimental, Actitudinal). La escala de valoración se define en Niveles.</p>
             </div>
           </div>
         </div>
