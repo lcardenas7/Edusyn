@@ -407,6 +407,182 @@ export class TemplatesService {
     });
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ASISTENTE "PLAN DE ESTUDIOS" — orquestador atómico
+  // Crea/actualiza Catálogo (Area/Subject) + Plantilla (TemplateArea/TemplateSubject)
+  // + asignación al grado, en UNA transacción. Idempotente por grado+año: re-armar
+  // el mismo grado actualiza (no duplica) y reutiliza materias ya existentes.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async quickSetup(dto: {
+    institutionId: string;
+    academicYearId: string;
+    gradeId: string;
+    areas: Array<{
+      areaId?: string;
+      newAreaName?: string;
+      subjects: Array<{
+        subjectId?: string;
+        newSubjectName?: string;
+        weeklyHours: number;
+        subjectType?: string;
+      }>;
+    }>;
+  }) {
+    const grade = await this.prisma.grade.findUnique({
+      where: { id: dto.gradeId },
+      select: { id: true, name: true, stage: true, institutionId: true },
+    });
+    if (!grade) throw new NotFoundException('Grado no encontrado');
+    if (grade.institutionId !== dto.institutionId) {
+      throw new BadRequestException('El grado no pertenece a la institución');
+    }
+    if (grade.stage === 'PREESCOLAR') {
+      throw new BadRequestException(
+        'El asistente aplica a grados con asignaturas. Preescolar se evalúa por dimensiones.',
+      );
+    }
+    if (!dto.areas || dto.areas.length === 0) {
+      throw new BadRequestException('Agrega al menos un área con asignaturas');
+    }
+
+    const level = this.mapGradeStageToAcademicLevel(grade.stage);
+    const { institutionId, academicYearId, gradeId } = dto;
+    const areaCount = dto.areas.length;
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        // 1. Plantilla del grado: editar la existente o crear una nueva
+        const existingGT = await tx.gradeTemplate.findUnique({
+          where: { gradeId_academicYearId: { gradeId, academicYearId } },
+          select: { templateId: true },
+        });
+
+        let templateId = existingGT?.templateId ?? null;
+        if (!templateId) {
+          let name = `Plantilla ${grade.name}`;
+          const clash = await tx.academicTemplate.findUnique({
+            where: { institutionId_academicYearId_name: { institutionId, academicYearId, name } },
+            select: { id: true },
+          });
+          if (clash) name = `${name} (${gradeId.slice(0, 4)})`;
+          const created = await tx.academicTemplate.create({
+            data: { institutionId, academicYearId, name, level, isDefault: false },
+            select: { id: true },
+          });
+          templateId = created.id;
+        }
+
+        let areaOrder = 0;
+        for (const a of dto.areas) {
+          // Resolver o crear el Área del catálogo (dedup por institución+nombre)
+          let areaId = a.areaId ?? null;
+          const newAreaName = a.newAreaName?.trim();
+          if (!areaId && newAreaName) {
+            const existingArea = await tx.area.findUnique({
+              where: { institutionId_name: { institutionId, name: newAreaName } },
+              select: { id: true },
+            });
+            areaId =
+              existingArea?.id ??
+              (
+                await tx.area.create({
+                  data: { institutionId, name: newAreaName, order: areaOrder },
+                  select: { id: true },
+                })
+              ).id;
+          }
+          if (!areaId) continue;
+
+          // Upsert del área en la plantilla
+          let ta = await tx.templateArea.findUnique({
+            where: { templateId_areaId: { templateId, areaId } },
+            select: { id: true },
+          });
+          if (!ta) {
+            ta = await tx.templateArea.create({
+              data: {
+                templateId,
+                areaId,
+                weightPercentage: Math.round((100 / areaCount) * 10) / 10,
+                calculationType: 'AVERAGE',
+                approvalRule: 'AREA_AVERAGE',
+                recoveryRule: 'INDIVIDUAL_SUBJECT',
+                isMandatory: true,
+                order: areaOrder,
+              },
+              select: { id: true },
+            });
+          }
+          areaOrder++;
+
+          // Asignaturas del área
+          const subjCount = a.subjects.length || 1;
+          let subjOrder = 0;
+          for (const s of a.subjects) {
+            let subjectId = s.subjectId ?? null;
+            const newSubjectName = s.newSubjectName?.trim();
+            if (!subjectId && newSubjectName) {
+              const existingSubj = await tx.subject.findUnique({
+                where: { areaId_name: { areaId, name: newSubjectName } },
+                select: { id: true },
+              });
+              subjectId =
+                existingSubj?.id ??
+                (
+                  await tx.subject.create({
+                    data: {
+                      areaId,
+                      name: newSubjectName,
+                      subjectType: (s.subjectType as any) ?? 'MANDATORY',
+                      order: subjOrder,
+                    },
+                    select: { id: true },
+                  })
+                ).id;
+            }
+            if (!subjectId) continue;
+
+            const hours = Number.isFinite(s.weeklyHours) ? Math.max(0, Math.trunc(s.weeklyHours)) : 0;
+            const existingTS = await tx.templateSubject.findUnique({
+              where: { templateAreaId_subjectId: { templateAreaId: ta.id, subjectId } },
+              select: { id: true },
+            });
+            if (existingTS) {
+              await tx.templateSubject.update({ where: { id: existingTS.id }, data: { weeklyHours: hours } });
+            } else {
+              await tx.templateSubject.create({
+                data: {
+                  templateAreaId: ta.id,
+                  subjectId,
+                  weeklyHours: hours,
+                  weightPercentage: Math.round((100 / subjCount) * 10) / 10,
+                  order: subjOrder,
+                },
+              });
+            }
+            subjOrder++;
+          }
+        }
+
+        // 3. Asignar la plantilla al grado
+        if (existingGT) {
+          if (existingGT.templateId !== templateId) {
+            await tx.gradeTemplate.update({
+              where: { gradeId_academicYearId: { gradeId, academicYearId } },
+              data: { templateId },
+            });
+          }
+        } else {
+          await tx.gradeTemplate.create({ data: { gradeId, templateId, academicYearId } });
+        }
+
+        return { success: true, templateId, gradeId, areasProcessed: dto.areas.length };
+      },
+      { timeout: 30000 },
+    );
+  }
+
   async syncTemplateFromActiveAssignments(
     gradeId: string,
     academicYearId: string,

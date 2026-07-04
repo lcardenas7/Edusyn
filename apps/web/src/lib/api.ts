@@ -1299,8 +1299,19 @@ export const academicTemplatesApi = {
   removeSubject: (templateSubjectId: string, force = false) => api.delete(`/academic-templates/subjects/${templateSubjectId}${force ? '?force=true' : ''}`),
 
   // Asignación a grados (por año académico)
-  assignToGrade: (gradeId: string, templateId: string, academicYearId: string, overrides?: any) => 
+  assignToGrade: (gradeId: string, templateId: string, academicYearId: string, overrides?: any) =>
     api.post(`/academic-templates/grades/${gradeId}/assign`, { templateId, academicYearId, overrides }),
+  // Asistente Plan de Estudios: crea catálogo + plantilla + asignación en una llamada
+  quickSetup: (data: {
+    institutionId: string;
+    academicYearId: string;
+    gradeId: string;
+    areas: Array<{
+      areaId?: string;
+      newAreaName?: string;
+      subjects: Array<{ subjectId?: string; newSubjectName?: string; weeklyHours: number; subjectType?: string }>;
+    }>;
+  }) => api.post('/academic-templates/quick-setup', data),
   syncFromAssignments: (gradeId: string, academicYearId: string) =>
     api.post(`/academic-templates/grades/${gradeId}/sync-from-assignments`, { academicYearId }),
   removeFromGrade: (gradeId: string, academicYearId: string) => 

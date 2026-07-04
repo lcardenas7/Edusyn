@@ -9,7 +9,8 @@ import {
   Settings,
   Users,
   FileText,
-  Layers
+  Layers,
+  Sparkles
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAcademic } from '../contexts/AcademicContext'
@@ -157,6 +158,21 @@ export default function AcademicHub() {
           <p className="text-xs text-slate-400 mt-1">Sistema en funcionamiento</p>
         </div>
       </div>
+
+      {/* Asistente destacado */}
+      <Link
+        to="/academic/plan-wizard"
+        className="group flex items-center gap-4 p-5 mb-8 rounded-xl border border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50 hover:shadow-md transition-all"
+      >
+        <div className="w-12 h-12 rounded-lg bg-purple-600 flex items-center justify-center flex-shrink-0">
+          <Sparkles className="w-6 h-6 text-white" />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-slate-900">Asistente: Plan de Estudios</h3>
+          <p className="text-sm text-slate-600">Arma el plan de un grado en 3 pasos — catálogo, plantilla y asignación, todo de una vez.</p>
+        </div>
+        <ChevronRight className="w-5 h-5 text-purple-600 group-hover:translate-x-1 transition-transform" />
+      </Link>
 
       {/* Tarjetas principales */}
       <h2 className="text-lg font-semibold text-slate-800 mb-4">Gestión Principal</h2>
