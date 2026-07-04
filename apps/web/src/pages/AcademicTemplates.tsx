@@ -498,6 +498,19 @@ export default function AcademicTemplates() {
         </div>
       </div>
 
+      {/* Explicador — paso 2/3 del plan de estudios */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <Layers className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+          <div className="text-sm text-blue-700">
+            <span className="font-medium text-blue-900">Aquí armas el plan y lo enciendes.</span>{' '}
+            En la pestaña <strong>Plantillas</strong> defines el plan de un nivel (áreas y asignaturas con <strong>horas</strong> y
+            pesos, tomando las materias del <strong>Catálogo</strong>). En la pestaña <strong>Asignación a Grados</strong> aplicas
+            ese plan a cada grado — ese paso es el que hace que las materias aparezcan en el boletín. Todo es <strong>por año</strong>.
+          </div>
+        </div>
+      </div>
+
       {/* Tabs */}
       <div className="border-b border-gray-200">
         <nav className="flex gap-4">

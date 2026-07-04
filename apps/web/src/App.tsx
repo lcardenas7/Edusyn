@@ -11,7 +11,6 @@ import Grades from './pages/Grades'
 import Attendance from './pages/Attendance'
 import Alerts from './pages/Alerts'
 import Statistics from './pages/Statistics'
-import AreasAdmin from './pages/AreasAdmin'
 import Teachers from './pages/Teachers'
 import AcademicLoad from './pages/AcademicLoad'
 import Reports from './pages/Reports'
@@ -301,7 +300,6 @@ function App() {
                   <Route path="/attendance" element={<Attendance />} />
                   <Route path="/alerts" element={<Alerts />} />
                   <Route path="/statistics" element={<Statistics />} />
-                  <Route path="/admin/areas" element={<AreasAdmin />} />
                   <Route path="/teachers" element={<Teachers />} />
                   <Route path="/academic-load" element={<AcademicLoad />} />
                   <Route path="/reports" element={<ReportsHub />} />
