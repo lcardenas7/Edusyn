@@ -175,6 +175,10 @@ const institutionalNavigation: NavItem[] = [
       { name: 'Nota Final Período', href: '/period-final-grades', icon: FileText, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
       { name: 'Logros y Juicios', href: '/achievements', icon: Target, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'PERFORMANCE' },
       { name: 'Recuperaciones', href: '/recoveries', icon: RefreshCw, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'RECOVERY' },
+      // Ventanas = operación recurrente del período (las gestiona coordinación);
+      // por eso viven aquí además de en Configuración SIEE.
+      { name: 'Ventanas de Calificación', href: '/academic/config/windows/grading', icon: CalendarClock, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
+      { name: 'Ventanas de Recuperación', href: '/academic/config/windows/recovery', icon: CalendarClock, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'RECOVERY' },
       { name: 'Acompañamiento', href: '/pedagogical-support', icon: Sparkles, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'ACADEMIC', requiresDimensions: true },
       { name: 'Inclusión Educativa', href: '/differential-support', icon: Heart, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE'], module: 'DIAGNOSIS' },
     ]
