@@ -9,7 +9,8 @@ import {
   Settings,
   Users,
   FileText,
-  Layers
+  Layers,
+  Sparkles
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAcademic } from '../contexts/AcademicContext'
@@ -69,11 +70,11 @@ export default function AcademicHub() {
     },
   ]
 
-  // Configuración académica (SIEE)
-  const configCards: ConfigCard[] = [
+  // Estructura del SIEE — se define al inicio del año (cambiarla a mitad de año tiene impacto)
+  const structureCards: ConfigCard[] = [
     {
-      title: 'Niveles Académicos',
-      description: 'Calendario y escalas por nivel educativo',
+      title: 'Niveles y Escala de Valoración',
+      description: 'Superior/Alto/Básico/Bajo, rangos y nota mínima — es lo que usa el boletín',
       icon: GraduationCap,
       href: '/academic/config/levels',
       color: 'text-indigo-600',
@@ -81,8 +82,8 @@ export default function AcademicHub() {
       borderColor: 'border-indigo-200'
     },
     {
-      title: 'Sistema de Calificación',
-      description: 'Procesos evaluativos y pesos (SIEE)',
+      title: 'Procesos y Pesos',
+      description: 'Cuánto pesa cada saber: Cognitivo, Procedimental, Actitudinal (suman 100%)',
       icon: Percent,
       href: '/academic/config/scale',
       color: 'text-teal-600',
@@ -98,9 +99,13 @@ export default function AcademicHub() {
       bgColor: 'bg-amber-50',
       borderColor: 'border-amber-200'
     },
+  ]
+
+  // Operación del período — recurrente, la gestiona coordinación cada período
+  const periodOpsCards: ConfigCard[] = [
     {
       title: 'Ventanas de Calificación',
-      description: 'Fechas para ingreso de notas',
+      description: 'Abrir/cerrar las fechas en que los docentes digitan notas',
       icon: CalendarClock,
       href: '/academic/config/windows/grading',
       color: 'text-rose-600',
@@ -109,7 +114,7 @@ export default function AcademicHub() {
     },
     {
       title: 'Ventanas de Recuperación',
-      description: 'Fechas para actividades de recuperación',
+      description: 'Abrir/cerrar las fechas para actividades de recuperación',
       icon: RefreshCw,
       href: '/academic/config/windows/recovery',
       color: 'text-cyan-600',
@@ -154,6 +159,21 @@ export default function AcademicHub() {
         </div>
       </div>
 
+      {/* Asistente destacado */}
+      <Link
+        to="/academic/plan-wizard"
+        className="group flex items-center gap-4 p-5 mb-8 rounded-xl border border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50 hover:shadow-md transition-all"
+      >
+        <div className="w-12 h-12 rounded-lg bg-purple-600 flex items-center justify-center flex-shrink-0">
+          <Sparkles className="w-6 h-6 text-white" />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-slate-900">Asistente: Plan de Estudios</h3>
+          <p className="text-sm text-slate-600">Arma el plan de un grado en 3 pasos — catálogo, plantilla y asignación, todo de una vez.</p>
+        </div>
+        <ChevronRight className="w-5 h-5 text-purple-600 group-hover:translate-x-1 transition-transform" />
+      </Link>
+
       {/* Tarjetas principales */}
       <h2 className="text-lg font-semibold text-slate-800 mb-4">Gestión Principal</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -181,12 +201,40 @@ export default function AcademicHub() {
           <Settings className="w-5 h-5 text-slate-600" />
           <h2 className="text-lg font-semibold text-slate-800">Configuración Académica (SIEE)</h2>
         </div>
-        <p className="text-sm text-slate-500 mb-6">
-          Sistema Institucional de Evaluación de Estudiantes - Configuración de niveles, escalas, períodos y ventanas
+
+        {/* Estructura — se define al inicio del año */}
+        <p className="text-sm font-medium text-slate-700 mb-1">Estructura del SIEE</p>
+        <p className="text-xs text-slate-500 mb-4">
+          Se define al inicio del año. Cambiarla con notas digitadas tiene impacto en boletines y promoción.
         </p>
-        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          {structureCards.map((card) => (
+            <Link
+              key={card.href}
+              to={card.href}
+              className={`group p-4 rounded-lg border ${card.borderColor} bg-white hover:${card.bgColor} hover:shadow-sm transition-all`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg ${card.bgColor} flex items-center justify-center`}>
+                  <card.icon className={`w-5 h-5 ${card.color}`} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium text-slate-900">{card.title}</h3>
+                  <p className="text-xs text-slate-500">{card.description}</p>
+                </div>
+                <ChevronRight className={`w-4 h-4 ${card.color} opacity-0 group-hover:opacity-100 transition-opacity`} />
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        {/* Operación del período — recurrente (coordinación) */}
+        <p className="text-sm font-medium text-slate-700 mb-1">Operación del período</p>
+        <p className="text-xs text-slate-500 mb-4">
+          Tareas recurrentes de cada período (también disponibles en el menú Gestión Académica).
+        </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {configCards.map((card) => (
+          {periodOpsCards.map((card) => (
             <Link
               key={card.href}
               to={card.href}

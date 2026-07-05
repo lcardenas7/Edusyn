@@ -236,16 +236,22 @@ export default function AcademicCatalog() {
         </button>
       </div>
 
-      {/* Info Card */}
+      {/* Info Card — flujo completo del plan de estudios */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <BookOpen className="w-5 h-5 text-blue-600 mt-0.5" />
+          <BookOpen className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
           <div>
-            <h3 className="font-medium text-blue-900">¿Cómo funciona?</h3>
+            <h3 className="font-medium text-blue-900">Estás en el paso 1 de 4: la biblioteca</h3>
             <p className="text-sm text-blue-700 mt-1">
-              El catálogo académico es la base de tu estructura. Aquí defines <strong>qué áreas y asignaturas existen</strong> en tu institución.
-              Luego, en las <strong>Plantillas Académicas</strong>, decides cuáles aplican a cada nivel o grado.
+              Aquí solo defines <strong>qué áreas y asignaturas existen</strong> (nombres y códigos). Para que una materia
+              cuente en un grado, el plan de estudios sigue este orden:
             </p>
+            <ol className="text-sm text-blue-700 mt-2 space-y-0.5 list-decimal list-inside">
+              <li><strong>Catálogo</strong> (aquí) — crea áreas y asignaturas.</li>
+              <li><strong>Plantillas Académicas</strong> — arma el plan de un nivel con horas y pesos.</li>
+              <li><strong>Plantillas → pestaña Grados</strong> — asigna el plan a cada grado.</li>
+              <li><strong>Carga Académica</strong> — asigna el docente a cada grupo + asignatura.</li>
+            </ol>
           </div>
         </div>
       </div>

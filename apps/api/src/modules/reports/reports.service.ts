@@ -14,6 +14,20 @@ import type { AcademicStructureType } from '../../engines/AcademicStructure';
 import { SupabaseStorageService } from '../storage/supabase-storage.service';
 import { AcademicDataSourceService, ReportMode } from './academic-data-source.service';
 
+/** Fila común de nota para el reporte de reprobadas (parcial o final). grade=null = sin datos. */
+interface FailedRow {
+  studentEnrollmentId: string;
+  studentName: string;
+  group: string;
+  subjectId: string;
+  subjectName: string;
+  areaId: string | null;
+  areaName: string;
+  termName: string;
+  grade: number | null;
+  hasData: boolean;
+}
+
 @Injectable()
 export class ReportsService {
   constructor(
@@ -1393,30 +1407,215 @@ export class ReportsService {
   /**
    * Reporte 6: Asignaturas reprobadas
    * ¿Qué materias perdió cada estudiante?
+   *
+   * scope 'final'   → nota derivada del período (para después del cierre; comportamiento clásico).
+   * scope 'partial' → "corte" a una fecha: calcula la nota parcial con el mismo motor del
+   *                   Corte Preventivo (calculateTermGradeAtDate), distinguiendo "sin datos"
+   *                   de "en riesgo". Sirve a mitad de período.
+   *
+   * Respeta la regla de aprobación institucional (areaApprovalRule + areaFailIfAnyFails) y
+   * devuelve DOS vistas: por asignatura (results) y por área (areaResults). `officialUnit`
+   * indica cuál cuenta como reprobación oficial en este colegio (otras calculan distinto).
    */
-  async getFailedSubjects(institutionId: string, academicYearId: string, groupId: string, termId?: string, reportMode?: ReportMode) {
-    const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
-    const { meta, grades } = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId, reportMode });
+  async getFailedSubjects(
+    institutionId: string,
+    academicYearId: string,
+    groupId: string,
+    termId?: string,
+    opts?: {
+      reportMode?: ReportMode;
+      scope?: 'partial' | 'final';
+      cutoffDate?: Date;
+      areaId?: string;
+      subjectId?: string;
+    },
+  ) {
+    const scope = opts?.scope ?? 'final';
+    // C-3: umbral aprobatorio del nivel educativo del grupo (no el global de la institución)
+    const grp = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      select: { grade: { select: { stage: true, name: true } } },
+    });
+    const passingGrade = await this.academicYearService.getPassingGrade(institutionId, {
+      stage: grp?.grade?.stage, gradeName: grp?.grade?.name,
+    });
 
-    const failed = grades
-      .filter(g => g.finalScore < passingGrade)
-      .map(g => ({
+    // Regla de aprobación del colegio (unas reprueban por área, otras por asignatura)
+    const inst = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { areaApprovalRule: true, areaFailIfAnyFails: true },
+    });
+    const approvalRule = (inst?.areaApprovalRule as string) || 'AREA_AVERAGE';
+    const failIfAnyFails = inst?.areaFailIfAnyFails ?? false;
+    // AREA_AVERAGE → la unidad oficial es el ÁREA (promedio). El resto → la ASIGNATURA.
+    const officialUnit: 'area' | 'subject' =
+      approvalRule === 'AREA_AVERAGE' && !failIfAnyFails ? 'area' : 'subject';
+
+    // 1. Obtener filas de nota (parcial o final) en una forma común
+    let rows: FailedRow[];
+    let meta: any;
+    let cutoffDate: Date | null = null;
+
+    if (scope === 'partial') {
+      if (!termId) throw new BadRequestException('El corte parcial requiere un período (termId).');
+      cutoffDate = opts?.cutoffDate ?? new Date();
+      rows = await this.loadPartialFailedRows(academicYearId, groupId, termId, cutoffDate);
+      meta = { source: 'live', scope: 'partial', cutoffDate: cutoffDate.toISOString() };
+    } else {
+      const res = await this.academicDataSource.getTermGradeData({ institutionId, academicYearId, groupId, termId, reportMode: opts?.reportMode });
+      meta = { ...res.meta, scope: 'final' };
+      rows = res.grades.map(g => ({
+        studentEnrollmentId: g.studentEnrollmentId,
         studentName: g.studentFullName || `${g.studentLastName} ${g.studentFirstName}`,
         group: g.groupName,
+        subjectId: g.subjectId,
         subjectName: g.subjectName,
+        areaId: g.areaId,
         areaName: g.areaName || '',
-        grade: g.finalScore,
         termName: g.termName,
-        deficit: Math.round((passingGrade - g.finalScore) * 10) / 10,
-        recoverable: g.finalScore >= (passingGrade - 1.0),
+        grade: g.finalScore,
+        hasData: true,
+      }));
+    }
+
+    // 2. Filtros (C-4): por área y/o asignatura
+    if (opts?.areaId) rows = rows.filter(r => r.areaId === opts.areaId);
+    if (opts?.subjectId) rows = rows.filter(r => r.subjectId === opts.subjectId);
+
+    // 3. Vista POR ASIGNATURA (solo las que tienen nota y están por debajo)
+    const failed = rows
+      .filter(r => r.hasData && r.grade !== null && (r.grade as number) < passingGrade)
+      .map(r => ({
+        studentName: r.studentName,
+        group: r.group,
+        subjectName: r.subjectName,
+        areaName: r.areaName,
+        grade: r.grade as number,
+        termName: r.termName,
+        deficit: Math.round((passingGrade - (r.grade as number)) * 10) / 10,
+        recoverable: (r.grade as number) >= (passingGrade - 1.0),
       }))
       .sort((a, b) => a.studentName.localeCompare(b.studentName) || a.subjectName.localeCompare(b.subjectName));
+
+    // 4. Vista POR ÁREA (promedio de área según la regla institucional)
+    const areaResults = this.buildFailedAreas(rows, passingGrade, approvalRule, failIfAnyFails);
 
     // Resumen
     const uniqueStudents = new Set(failed.map(f => f.studentName)).size;
     const uniqueSubjects = new Set(failed.map(f => f.subjectName)).size;
+    const studentsWithFailedAreas = new Set(areaResults.filter(a => a.failed).map(a => a.studentName)).size;
+    const gradedRows = rows.filter(r => r.hasData).length;
+    const failRate = gradedRows > 0 ? Math.round((failed.length / gradedRows) * 1000) / 10 : 0;
 
-    return { meta, passingGrade, totalFailed: failed.length, uniqueStudents, uniqueSubjects, results: failed };
+    return {
+      meta,
+      scope,
+      cutoffDate: cutoffDate ? cutoffDate.toISOString() : null,
+      passingGrade,
+      rule: { approvalRule, failIfAnyFails, officialUnit },
+      totalFailed: failed.length,
+      uniqueStudents,
+      uniqueSubjects,
+      totalFailedAreas: areaResults.filter(a => a.failed).length,
+      studentsWithFailedAreas,
+      summary: { totalFailed: failed.length, studentsAffected: uniqueStudents, failRate },
+      results: failed,
+      areaResults,
+    };
+  }
+
+  /**
+   * Corte parcial: calcula la nota de cada estudiante × asignatura del grupo a una fecha,
+   * con el mismo motor del Corte Preventivo. grade === null = "sin datos aún" (no reprobado).
+   */
+  private async loadPartialFailedRows(
+    academicYearId: string,
+    groupId: string,
+    termId: string,
+    cutoffDate: Date,
+  ): Promise<FailedRow[]> {
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      select: { name: true, grade: { select: { name: true } } },
+    });
+    const groupName = `${group?.grade?.name ?? ''} ${group?.name ?? ''}`.trim();
+
+    const assignments = await this.prisma.teacherAssignment.findMany({
+      where: { academicYearId, groupId },
+      include: { subject: { include: { area: { select: { id: true, name: true } } } } },
+    });
+
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: { academicYearId, groupId, status: 'ACTIVE' },
+      include: { student: { select: { firstName: true, secondName: true, lastName: true, secondLastName: true } } },
+      orderBy: { student: { lastName: 'asc' } },
+    });
+
+    const rows: FailedRow[] = [];
+    for (const enr of enrollments) {
+      const studentName = [enr.student.lastName, enr.student.secondLastName, enr.student.firstName, enr.student.secondName]
+        .filter(Boolean).join(' ');
+      for (const a of assignments) {
+        const res = await this.studentGradesService.calculateTermGradeAtDate(enr.id, a.id, termId, cutoffDate);
+        rows.push({
+          studentEnrollmentId: enr.id,
+          studentName,
+          group: groupName,
+          subjectId: a.subjectId,
+          subjectName: a.subject?.name ?? 'Asignatura',
+          areaId: a.subject?.area?.id ?? null,
+          areaName: a.subject?.area?.name ?? '',
+          termName: '',
+          grade: res.grade,
+          hasData: res.grade !== null,
+        });
+      }
+    }
+    return rows;
+  }
+
+  /**
+   * Agrega las filas por estudiante → área y decide si el área está reprobada según la regla:
+   *   AREA_AVERAGE      → promedio del área < aprobatoria
+   *   ALL_SUBJECTS_PASS → alguna asignatura del área por debajo
+   *   DOMINANT_*        → (sin marca de dominante en este contexto) se usa el promedio del área
+   *   areaFailIfAnyFails=true → además reprueba si cualquier asignatura reprueba
+   */
+  private buildFailedAreas(
+    rows: FailedRow[],
+    passingGrade: number,
+    approvalRule: string,
+    failIfAnyFails: boolean,
+  ) {
+    // studentEnrollmentId → areaId → { areaName, scores[], failedSubjects[] }
+    const map = new Map<string, { studentName: string; areas: Map<string, { areaName: string; scores: number[]; failedSubjects: string[] }> }>();
+    for (const r of rows) {
+      if (!r.hasData || r.grade === null) continue;
+      const areaKey = r.areaId ?? `name:${r.areaName || 'sin-area'}`;
+      if (!map.has(r.studentEnrollmentId)) map.set(r.studentEnrollmentId, { studentName: r.studentName, areas: new Map() });
+      const st = map.get(r.studentEnrollmentId)!;
+      if (!st.areas.has(areaKey)) st.areas.set(areaKey, { areaName: r.areaName || 'Sin área', scores: [], failedSubjects: [] });
+      const ar = st.areas.get(areaKey)!;
+      ar.scores.push(r.grade as number);
+      if ((r.grade as number) < passingGrade) ar.failedSubjects.push(r.subjectName);
+    }
+
+    const out: Array<{ studentName: string; areaName: string; areaAverage: number; failedSubjects: string[]; failed: boolean }> = [];
+    for (const st of map.values()) {
+      for (const ar of st.areas.values()) {
+        if (ar.scores.length === 0) continue;
+        const avg = Math.round((ar.scores.reduce((a, b) => a + b, 0) / ar.scores.length) * 10) / 10;
+        const anySubjectFails = ar.failedSubjects.length > 0;
+        let failed: boolean;
+        if (approvalRule === 'ALL_SUBJECTS_PASS') failed = anySubjectFails;
+        else failed = avg < passingGrade; // AREA_AVERAGE y DOMINANT (fallback)
+        if (failIfAnyFails && anySubjectFails) failed = true;
+        out.push({ studentName: st.studentName, areaName: ar.areaName, areaAverage: avg, failedSubjects: ar.failedSubjects, failed });
+      }
+    }
+    return out
+      .filter(a => a.failed)
+      .sort((a, b) => a.studentName.localeCompare(b.studentName) || a.areaName.localeCompare(b.areaName));
   }
 
   /**
@@ -2927,16 +3126,28 @@ export class ReportsService {
       });
     }
 
-    // Resolver logoUrl a URL firmada si es una key de R2
-    if (config.logoUrl) {
+    // FUENTE ÚNICA DEL ESCUDO: el logo del perfil institucional (Institution.logo).
+    // El boletín ya no depende de ReportCardConfig.logoUrl (que se corrompía al
+    // reenviar URLs firmadas). config.logoUrl legado solo se usa como fallback.
+    const inst = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { logo: true, primaryColor: true },
+    });
+    // Color de marca: fuente única = perfil institucional; fallback al de la config del boletín.
+    if (inst?.primaryColor) {
+      config = { ...config, primaryColor: inst.primaryColor };
+    }
+    const rawLogo = inst?.logo || config.logoUrl || null;
+    let resolvedLogo = rawLogo;
+    // Resolver a URL firmada solo si es una key de almacenamiento (no una URL http ya lista)
+    if (rawLogo && !/^https?:\/\//i.test(rawLogo)) {
       try {
-        const resolvedUrl = await this.storageService.resolveFileUrl(config.logoUrl, 3600);
-        config = { ...config, logoUrl: resolvedUrl };
+        resolvedLogo = await this.storageService.resolveFileUrl(rawLogo, 3600);
       } catch (err) {
-        console.error('Error resolving logoUrl:', config.logoUrl, err);
-        // mantener valor original
+        console.error('Error resolving logo:', rawLogo, err);
       }
     }
+    config = { ...config, logoUrl: resolvedLogo };
 
     return config;
   }
@@ -2950,7 +3161,9 @@ export class ReportsService {
       data: {
         showLogo: data.showLogo,
         showShield: data.showShield,
-        logoUrl: data.logoUrl,
+        // logoUrl NO se persiste desde aquí: el escudo es fuente única (Institution.logo).
+        // Antes se guardaba data.logoUrl (a veces una URL firmada temporal) → se "borraba"
+        // al caducar. El logo se administra en el perfil institucional.
         headerResolution: data.headerResolution,
         headerMunicipality: data.headerMunicipality,
         headerDepartment: data.headerDepartment,

@@ -6,6 +6,7 @@ import { AttendanceService } from '../attendance/attendance.service';
 import { StudentGradesService } from '../evaluation/student-grades.service';
 import { evaluatePromotion, type StudentPromotionData } from '../../engines/promotion.engine';
 import type { InstitutionRulesContext } from '../../engines/InstitutionRulesContext';
+import { resolveScaleLevel } from '../evaluation/performance-scale.util';
 import {
   AcademicTermForReport,
   PerformanceScaleForReport,
@@ -933,25 +934,69 @@ export class AcademicYearLifecycleService {
       level: s.level,
       minScore: Number(s.minScore),
       maxScore: Number(s.maxScore),
-      description: null, // PerformanceScale no tiene description en el schema actual
+      description: s.descriptor ?? null, // Q-1: descriptor pedagógico del nivel
     }));
   }
 
   /**
    * Obtiene la nota mínima aprobatoria de una institución.
-   * Busca el nivel BASICO que es el mínimo aprobatorio.
+   * Consolidación P2: es el minScore más bajo entre los niveles que APRUEBAN
+   * (isApproved, con defaults del enum de Q-1), en vez de asumir "BASICO".
+   *
+   * C-3 (Opción A): si se pasa el nivel educativo (stage/gradeName), se usa el
+   * `minPassingGrade` de ESE nivel desde `academicLevelsConfig` (colegios multinivel
+   * con umbrales distintos por nivel). Si no se encuentra, cae al umbral global.
    */
-  async getPassingGrade(institutionId: string): Promise<number> {
-    const passingScale = await this.prisma.performanceScale.findFirst({
-      where: {
-        institutionId,
-        level: 'BASICO',
-      },
-      orderBy: { minScore: 'asc' },
+  async getPassingGrade(
+    institutionId: string,
+    level?: { stage?: string | null; gradeName?: string | null },
+  ): Promise<number> {
+    if (level && (level.stage || level.gradeName)) {
+      const perLevel = await this.resolveLevelPassingGrade(institutionId, level.stage, level.gradeName);
+      if (perLevel !== null) return perLevel;
+    }
+
+    const scales = await this.prisma.performanceScale.findMany({
+      where: { institutionId },
     });
 
-    // Si no encuentra escala, usar 3.0 como default (común en Colombia)
-    return passingScale ? Number(passingScale.minScore) : 3.0;
+    if (scales.length > 0) {
+      const approvedMins = scales
+        .filter((s) => resolveScaleLevel(s).isApproved)
+        .map((s) => Number(s.minScore));
+      if (approvedMins.length > 0) {
+        return Math.min(...approvedMins);
+      }
+    }
+
+    // Sin escala configurada → default 3.0 (común en Colombia)
+    return 3.0;
+  }
+
+  /**
+   * Resuelve el `minPassingGrade` de un nivel educativo desde academicLevelsConfig.
+   * Mapea el nivel por code/name == stage, o porque el grado esté en su lista `grades[]`
+   * (mismo criterio que classroom.resolveScale). Devuelve null si no hay match o valor.
+   */
+  private async resolveLevelPassingGrade(
+    institutionId: string,
+    stage?: string | null,
+    gradeName?: string | null,
+  ): Promise<number | null> {
+    const inst = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { academicLevelsConfig: true },
+    });
+    const raw = inst?.academicLevelsConfig as any;
+    const levels: any[] = Array.isArray(raw) ? raw : (Array.isArray(raw?.levels) ? raw.levels : []);
+    if (levels.length === 0) return null;
+
+    const stageU = stage?.toUpperCase();
+    const found = levels.find((l: any) =>
+      (stageU && (l.code?.toUpperCase() === stageU || l.name?.toUpperCase() === stageU)) ||
+      (gradeName && (l.grades || []).some((g: string) => g === gradeName)),
+    );
+    return found && typeof found.minPassingGrade === 'number' ? found.minPassingGrade : null;
   }
 
   /**

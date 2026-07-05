@@ -126,6 +126,7 @@ interface InstitutionConfig {
   phone: string
   email: string
   website: string
+  primaryColor: string
   rector: string
   slug: string
   status: string
@@ -150,6 +151,7 @@ const defaultInstitution: InstitutionConfig = {
   phone: '',
   email: '',
   website: '',
+  primaryColor: '#1E3A8A',
   rector: '',
   slug: '',
   status: '',
@@ -204,6 +206,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
           phone: data.phone || '',
           email: data.email || '',
           website: data.website || '',
+          primaryColor: data.primaryColor || '#1E3A8A',
           rector: '',
           slug: data.slug || '',
           status: data.status || '',
@@ -234,6 +237,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
         phone: institution.phone,
         email: institution.email,
         website: institution.website,
+        primaryColor: institution.primaryColor,
       })
       return true
     } catch (error) {

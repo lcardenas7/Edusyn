@@ -18,12 +18,20 @@ export class PerformanceScaleService {
       update: {
         minScore: dto.minScore,
         maxScore: dto.maxScore,
+        label: dto.label,
+        descriptor: dto.descriptor,
+        order: dto.order,
+        isApproved: dto.isApproved,
       },
       create: {
         institutionId: dto.institutionId,
         level: dto.level,
         minScore: dto.minScore,
         maxScore: dto.maxScore,
+        label: dto.label,
+        descriptor: dto.descriptor,
+        order: dto.order,
+        isApproved: dto.isApproved,
       },
     });
   }

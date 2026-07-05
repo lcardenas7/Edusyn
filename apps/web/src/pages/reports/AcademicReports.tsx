@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell,
@@ -119,6 +119,8 @@ export default function AcademicReports() {
   const [filterGradeId, setFilterGradeId] = useState('all')
   const [honorRollTopN, setHonorRollTopN] = useState(5)
   const [honorRollMode, setHonorRollMode] = useState<'both' | 'separate' | 'integral'>('both')
+  const [failedScope, setFailedScope] = useState<'partial' | 'final'>('final')
+  const [failedView, setFailedView] = useState<'subject' | 'area'>('subject')
   const [gradeDistMode, setGradeDistMode] = useState<'both' | 'separate' | 'integral'>('both')
   const [filterSubjectIds, setFilterSubjectIds] = useState<string[]>([])
   const [sldViewMode, setSldViewMode] = useState<'cards' | 'table'>('cards')
@@ -219,6 +221,14 @@ export default function AcademicReports() {
     setMinimumGradeData(null)
     setMinimumGradeGroupData([])
   }
+
+  // Deep-link desde el hub de reportes: ?report=<id> preselecciona el reporte (una vez).
+  const [searchParams] = useSearchParams()
+  React.useEffect(() => {
+    const rid = searchParams.get('report')
+    if (rid) handleSelectReport(rid)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const loadReportData = async (reportId: string) => {
     if (!filterYear) return
@@ -453,7 +463,12 @@ export default function AcademicReports() {
         }
         case 'failed-subjects': {
           if (filterGrade === 'all') break
-          const res = await reportsApi.getFailedSubjects(filterYear, filterGrade, filterPeriod || undefined)
+          // Modo parcial ("corte") requiere período; si no hay, cae a final.
+          const scope = failedScope === 'partial' && filterPeriod ? 'partial' : 'final'
+          const res = await reportsApi.getFailedSubjects(filterYear, filterGrade, filterPeriod || undefined, {
+            scope,
+            subjectId: filterSubject && filterSubject !== 'all' ? filterSubject : undefined,
+          })
           setReportData(res.data)
           break
         }
@@ -2213,8 +2228,57 @@ export default function AcademicReports() {
       const failSubjectCols = Array.from(failAllSubjects).sort()
       const failStudentRows = Array.from(failStudentMap.values()).sort((a, b) => b.subjects.size - a.subjects.size || a.name.localeCompare(b.name))
 
+      const failAreaResults = (reportData.areaResults || []) as any[]
       return (
         <div className="space-y-4">
+          {/* Controles: modo (corte parcial / final) + vista (asignatura / área) */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden text-xs">
+              <button onClick={() => { setFailedScope('final'); loadReportData('failed-subjects') }} className={`px-3 py-1.5 ${failedScope === 'final' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>Final (post-cierre)</button>
+              <button onClick={() => { setFailedScope('partial'); loadReportData('failed-subjects') }} className={`px-3 py-1.5 border-l border-slate-200 ${failedScope === 'partial' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`} disabled={!filterPeriod} title={!filterPeriod ? 'Selecciona un período para el corte parcial' : ''}>Corte parcial</button>
+            </div>
+            <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden text-xs">
+              <button onClick={() => setFailedView('subject')} className={`px-3 py-1.5 ${failedView === 'subject' ? 'bg-slate-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>Por asignatura</button>
+              <button onClick={() => setFailedView('area')} className={`px-3 py-1.5 border-l border-slate-200 ${failedView === 'area' ? 'bg-slate-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>Por área</button>
+            </div>
+          </div>
+          {reportData.rule && (
+            <div className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+              Este colegio reprueba <strong>{reportData.rule.officialUnit === 'area' ? 'por área (promedio del área)' : 'por asignatura'}</strong>
+              <span className="text-slate-400"> · regla {reportData.rule.approvalRule}{reportData.rule.failIfAnyFails ? ' + pierde el área si cualquier asignatura pierde' : ''}</span>
+              {reportData.scope === 'partial' && reportData.cutoffDate && (
+                <span className="text-orange-600"> · Corte parcial al {new Date(reportData.cutoffDate).toLocaleDateString('es-CO')} — notas provisionales.</span>
+              )}
+            </div>
+          )}
+          {failedView === 'area' ? (
+            <div className="overflow-x-auto border border-slate-200 rounded-xl">
+              <table className="text-xs w-full">
+                <thead>
+                  <tr className="bg-slate-200">
+                    <th className="px-3 py-1.5 text-left">Estudiante</th>
+                    <th className="px-3 py-1.5 text-left">Área reprobada</th>
+                    <th className="px-3 py-1.5 text-center">Promedio área</th>
+                    <th className="px-3 py-1.5 text-left">Asignaturas por debajo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {failAreaResults.length === 0 && (
+                    <tr><td colSpan={4} className="px-3 py-4 text-center text-slate-400">Sin áreas reprobadas con esta regla.</td></tr>
+                  )}
+                  {failAreaResults.map((a, i) => (
+                    <tr key={i} className="border-t hover:bg-slate-50">
+                      <td className="px-3 py-1.5 font-medium">{a.studentName}</td>
+                      <td className="px-3 py-1.5">{a.areaName}</td>
+                      <td className="px-3 py-1.5 text-center text-red-600 font-semibold">{a.areaAverage?.toFixed(1)}</td>
+                      <td className="px-3 py-1.5 text-slate-500">{(a.failedSubjects || []).join(', ') || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+          <>
           {reportData.summary && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center"><p className="text-xs text-red-500 uppercase font-medium">Total reprobadas</p><p className="text-2xl font-bold text-red-700">{reportData.summary.totalFailed}</p></div>
@@ -2258,6 +2322,8 @@ export default function AcademicReports() {
               </tbody>
             </table>
           </div>
+          </>
+          )}
         </div>
       )
     }

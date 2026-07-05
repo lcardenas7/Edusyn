@@ -239,24 +239,66 @@ export class StudentGradesService {
       },
     });
 
-    if (!plan) return { grade: null, components: [] };
+    // Fuente de verdad: PartialGrade (planilla), HASTA la fecha de corte.
+    // PartialGrade no tiene fecha por actividad → se usa createdAt (cuándo se digitó).
+    // Se toma el fin del día del corte para incluir las notas cargadas ese mismo día.
+    const upperBound = new Date(cutoffDate);
+    upperBound.setHours(23, 59, 59, 999);
+    const partials = await this.prisma.partialGrade.findMany({
+      where: {
+        studentEnrollmentId,
+        teacherAssignmentId,
+        academicTermId,
+        createdAt: { lte: upperBound },
+      },
+    });
 
-    const componentResults = await Promise.all(
-      plan.components.map(async (cw) => {
-        const avg = await this.calculateComponentAverageAtDate(
-          studentEnrollmentId,
-          academicTermId,
-          cw.componentId,
-          cutoffDate,
-        );
-        return {
-          componentId: cw.componentId,
-          name: cw.component.name,
-          average: avg,
-          percentage: cw.percentage,
-        };
-      }),
-    );
+    // Sin plan de evaluación → promedio simple de los parciales hasta la fecha,
+    // igual que recomputePeriodFinalGrade (antes devolvía null → "s/d" para todos).
+    if (!plan || plan.components.length === 0) {
+      if (partials.length === 0) return { grade: null, components: [] };
+      const avg = this.roundToOneDecimal(
+        partials.reduce((a, p) => a + Number(p.score), 0) / partials.length,
+      );
+      return { grade: avg, components: [] };
+    }
+
+    let componentResults: { componentId: string; name: string; average: number | null; percentage: number }[];
+
+    if (partials.length > 0) {
+      // Agrupar PartialGrades por componentType (== EvaluationComponent.code)
+      const scoresByType = new Map<string, number[]>();
+      for (const p of partials) {
+        const scores = scoresByType.get(p.componentType) || [];
+        scores.push(Number(p.score));
+        scoresByType.set(p.componentType, scores);
+      }
+      componentResults = plan.components.map((cw) => {
+        const scores = scoresByType.get(cw.component.code) || [];
+        const avg = scores.length > 0
+          ? this.roundToOneDecimal(scores.reduce((a, b) => a + b, 0) / scores.length)
+          : null;
+        return { componentId: cw.componentId, name: cw.component.name, average: avg, percentage: cw.percentage };
+      });
+    } else {
+      // Fallback legado: StudentGrade / EvaluativeActivity con fecha (sistema anterior)
+      componentResults = await Promise.all(
+        plan.components.map(async (cw) => {
+          const avg = await this.calculateComponentAverageAtDate(
+            studentEnrollmentId,
+            academicTermId,
+            cw.componentId,
+            cutoffDate,
+          );
+          return {
+            componentId: cw.componentId,
+            name: cw.component.name,
+            average: avg,
+            percentage: cw.percentage,
+          };
+        }),
+      );
+    }
 
     const validComponents = componentResults.filter((c) => c.average !== null);
     if (validComponents.length === 0)
@@ -299,18 +341,36 @@ export class StudentGradesService {
       orderBy: { order: 'asc' },
     });
 
+    // A-11 / INV-10: PeriodFinalGrade se indexa por subjectId (no por asignación).
+    // Resolvemos el subjectId una sola vez para leer la nota canónica del período.
+    const assignment = await this.prisma.teacherAssignment.findUnique({
+      where: { id: teacherAssignmentId },
+      select: { subjectId: true },
+    });
+    const subjectId = assignment?.subjectId ?? null;
+
     const termSources = await Promise.all(
       terms.map(async (term) => {
-        const result = await this.calculateTermGrade(
-          studentEnrollmentId,
-          teacherAssignmentId,
-          term.id,
-        );
+        // A-11 / INV-10: leer la nota CANÓNICA del período (PeriodFinalGrade respeta
+        // el override manual C-1 y la recuperación). Fallback a recompute si aún no
+        // existe PeriodFinalGrade. Mismo criterio que buildGroupReportCards en boletines.
+        const grade = subjectId
+          ? await this.resolveCanonicalPeriodGrade(
+              studentEnrollmentId,
+              teacherAssignmentId,
+              subjectId,
+              term.id,
+            )
+          : (await this.calculateTermGrade(
+              studentEnrollmentId,
+              teacherAssignmentId,
+              term.id,
+            )).grade;
         return {
           id: term.id,
           name: term.name,
           type: 'period' as const,
-          grade: result.grade,
+          grade,
           weight: term.weightPercentage,
         };
       }),
@@ -358,6 +418,43 @@ export class StudentGradesService {
     const annualGrade = totalWeight > 0 ? this.roundToOneDecimal((weightedSum * 100) / totalWeight) : null;
 
     return { annualGrade, sources: allSources };
+  }
+
+  /**
+   * A-11 / INV-10 — Resuelve la nota CANÓNICA de un período para una asignatura.
+   *
+   * `PeriodFinalGrade` es la fuente única de verdad del período: ya refleja el
+   * override manual (`isManualOverride`, C-1) y la nota de recuperación
+   * (`period-recovery` escribe ahí). Leerlo garantiza que promoción, boletines,
+   * MEN y dashboard consuman el MISMO valor (INV-10).
+   *
+   * Solo si aún no existe `PeriodFinalGrade` para la coordenada, se recae en el
+   * recálculo desde `PartialGrade` (mismo comportamiento previo, sin regresión).
+   */
+  private async resolveCanonicalPeriodGrade(
+    studentEnrollmentId: string,
+    teacherAssignmentId: string,
+    subjectId: string,
+    academicTermId: string,
+  ): Promise<number | null> {
+    const pfg = await this.prisma.periodFinalGrade.findUnique({
+      where: {
+        studentEnrollmentId_academicTermId_subjectId: {
+          studentEnrollmentId,
+          academicTermId,
+          subjectId,
+        },
+      },
+      select: { finalScore: true },
+    });
+    if (pfg) return Number(pfg.finalScore);
+
+    const recomputed = await this.calculateTermGrade(
+      studentEnrollmentId,
+      teacherAssignmentId,
+      academicTermId,
+    );
+    return recomputed.grade;
   }
 
   /**

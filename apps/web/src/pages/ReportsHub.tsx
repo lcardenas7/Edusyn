@@ -38,39 +38,49 @@ interface ReportCategory {
   icon: any
   href: string
   color: string        // e.g. 'blue'
-  reportCount: number
-  reports: SubReport[]
+  reports: SubReport[] // el conteo se deriva de aquí (no se hardcodea)
 }
 
+// Los ids de cada sub-reporte DEBEN coincidir con los de su página destino
+// (deep-link ?report=id). El badge de cada categoría = reports.length.
 const CATEGORIES: ReportCategory[] = [
   {
     id: 'admin', name: 'Administración', description: 'Carga docente, cobertura y gestión',
-    icon: Briefcase, href: '/reports/admin', color: 'blue', reportCount: 8,
+    icon: Briefcase, href: '/reports/admin', color: 'blue',
     reports: [
       { id: 'load-teacher', name: 'Carga docente', href: '/reports/admin', icon: Users },
       { id: 'load-group', name: 'Carga por grupo', href: '/reports/admin', icon: GraduationCap },
       { id: 'teachers-active', name: 'Docentes activos', href: '/reports/admin', icon: UserCheck },
-      { id: 'enrollment-summary', name: 'Resumen matrícula', href: '/reports/admin', icon: GraduationCap },
+      { id: 'teachers-no-load', name: 'Docentes sin carga', href: '/reports/admin', icon: UserX },
+      { id: 'coverage', name: 'Cobertura académica', href: '/reports/admin', icon: ClipboardList },
+      { id: 'hours-summary', name: 'Resumen de horas', href: '/reports/admin', icon: BarChart3 },
+      { id: 'staff-list', name: 'Listado de personal', href: '/reports/admin', icon: Users },
+      { id: 'enrollment-summary', name: 'Resumen de matrícula', href: '/reports/admin', icon: GraduationCap },
     ],
   },
   {
     id: 'academic', name: 'Académico', description: 'Consolidados, ranking y rendimiento estudiantil',
-    icon: BookOpen, href: '/reports/academic', color: 'green', reportCount: 9,
+    icon: BookOpen, href: '/reports/academic', color: 'green',
     reports: [
-      { id: 'cons-subjects', name: 'Consolidado asignaturas', href: '/reports/academic', icon: ClipboardList },
-      { id: 'cons-areas', name: 'Consolidado áreas', href: '/reports/academic', icon: FileText },
-      { id: 'ranking-students', name: 'Ranking de estudiantes', href: '/reports/academic', icon: TrendingUp },
+      { id: 'cons-subjects', name: 'Consolidado por asignaturas', href: '/reports/academic', icon: ClipboardList },
+      { id: 'cons-areas', name: 'Consolidado por áreas', href: '/reports/academic', icon: FileSpreadsheet },
       { id: 'avg-subject', name: 'Promedio por asignatura', href: '/reports/academic', icon: BookOpen },
       { id: 'avg-area', name: 'Promedio por áreas', href: '/reports/academic', icon: FileSpreadsheet },
+      { id: 'ranking-students', name: 'Ranking de estudiantes', href: '/reports/academic', icon: TrendingUp },
       { id: 'ranking-institutional', name: 'Ranking institucional', href: '/reports/academic', icon: Users },
       { id: 'honor-roll', name: 'Top 5 por grado', href: '/reports/academic', icon: TrendingUp },
       { id: 'grade-distribution', name: 'Estudiantes por nivel', href: '/reports/academic', icon: BarChart3 },
-      { id: 'teacher-performance', name: 'Rendimiento docente', href: '/reports/academic', icon: Users },
+      { id: 'subject-level-dist', name: 'Niveles por asignatura', href: '/reports/academic', icon: BarChart3 },
+      { id: 'min-grade', name: 'Nota mínima requerida', href: '/reports/academic', icon: TrendingUp },
+      { id: 'failed-subjects', name: 'Asignaturas reprobadas (parcial o final)', href: '/reports/academic', icon: AlertTriangle },
+      { id: 'recovery-list', name: 'Listado de recuperación', href: '/reports/academic', icon: FileText },
+      { id: 'promotion-projection', name: 'Proyección de promoción', href: '/reports/academic', icon: GraduationCap },
+      { id: 'teacher-performance', name: 'Rendimiento por docente', href: '/reports/academic', icon: Users },
     ],
   },
   {
     id: 'convivencia', name: 'Convivencia', description: 'Observador, actas, situaciones y remisiones',
-    icon: Shield, href: '/observer-stats', color: 'amber', reportCount: 6,
+    icon: Shield, href: '/observer-stats', color: 'amber',
     reports: [
       { id: 'conv-stats', name: 'Informe convivencial', href: '/observer-stats', icon: BarChart3 },
       { id: 'conv-observer', name: 'Observador del estudiante', href: '/observer', icon: ClipboardList },
@@ -81,50 +91,59 @@ const CATEGORIES: ReportCategory[] = [
   },
   {
     id: 'evaluation', name: 'Evaluación (SIEE)', description: 'Sistema de evaluación institucional',
-    icon: ClipboardList, href: '/reports/evaluation', color: 'purple', reportCount: 6,
+    icon: ClipboardList, href: '/reports/evaluation', color: 'purple',
     reports: [
       { id: 'eval-compliance', name: 'Cumplimiento SIEE', href: '/reports/evaluation', icon: CheckCircle },
+      { id: 'eval-criteria', name: 'Criterios de evaluación', href: '/reports/evaluation', icon: ClipboardList },
       { id: 'eval-weights', name: 'Pesos de períodos', href: '/reports/evaluation', icon: BarChart3 },
-      { id: 'eval-recovery', name: 'Políticas recuperación', href: '/reports/evaluation', icon: FileText },
+      { id: 'eval-recovery', name: 'Políticas de recuperación', href: '/reports/evaluation', icon: FileText },
+      { id: 'eval-promotion', name: 'Criterios de promoción', href: '/reports/evaluation', icon: Users },
+      { id: 'eval-scale', name: 'Escala de valoración', href: '/reports/evaluation', icon: BarChart3 },
     ],
   },
   {
     id: 'attendance', name: 'Asistencia', description: 'Control por grupo, estudiante y docente',
-    icon: Calendar, href: '/reports/attendance', color: 'amber', reportCount: 6,
+    icon: Calendar, href: '/reports/attendance', color: 'amber',
     reports: [
-      { id: 'att-group', name: 'Asistencia por grupo', href: '/reports/attendance', icon: Users },
-      { id: 'att-student', name: 'Asistencia individual', href: '/reports/attendance', icon: UserCheck },
-      { id: 'att-summary', name: 'Resumen general', href: '/reports/attendance', icon: BarChart3 },
+      { id: 'att-group', name: 'Asistencia por grupo', href: '/reports/attendance', icon: GraduationCap },
+      { id: 'att-student', name: 'Asistencia por estudiante', href: '/reports/attendance', icon: Users },
+      { id: 'att-subject', name: 'Asistencia por asignatura', href: '/reports/attendance', icon: ClipboardList },
+      { id: 'att-teacher', name: 'Asistencia por docente', href: '/reports/attendance', icon: UserCheck },
+      { id: 'att-critical', name: 'Inasistencias críticas', href: '/reports/attendance', icon: AlertTriangle },
+      { id: 'att-consolidated', name: 'Consolidado institucional', href: '/reports/attendance', icon: BarChart3 },
+      { id: 'att-tutoring', name: 'Asistencia de tutoría', href: '/reports/attendance', icon: Calendar },
     ],
   },
   {
     id: 'bulletins', name: 'Boletines', description: 'Boletines parciales, finales y certificados',
-    icon: FileText, href: '/reports/bulletins', color: 'indigo', reportCount: 5,
+    icon: FileText, href: '/reports/bulletins', color: 'indigo',
     reports: [
-      { id: 'report-partial', name: 'Boletines parciales', href: '/reports/bulletins', icon: FileText },
-      { id: 'report-final', name: 'Boletines finales', href: '/reports/bulletins', icon: FileText },
-      { id: 'certificate', name: 'Certificados', href: '/reports/bulletins', icon: GraduationCap },
+      { id: 'report-partial', name: 'Boletín parcial (por período)', href: '/reports/bulletins', icon: FileText },
+      { id: 'report-final', name: 'Boletín final (año)', href: '/reports/bulletins', icon: FileText },
+      { id: 'report-certificate', name: 'Certificado de notas', href: '/reports/bulletins', icon: ClipboardList },
+      { id: 'report-constancy', name: 'Constancia de estudio', href: '/reports/bulletins', icon: GraduationCap },
+      { id: 'report-promotion', name: 'Acta de promoción', href: '/reports/bulletins', icon: GraduationCap },
     ],
   },
   {
-    id: 'alerts', name: 'Alertas', description: 'Riesgo académico y análisis de rendimiento',
-    icon: Bell, href: '/reports/alerts', color: 'red', reportCount: 3,
+    id: 'alerts', name: 'Alertas', description: 'Seguimiento continuo de riesgo (distinto del Corte Preventivo por fecha)',
+    icon: Bell, href: '/reports/alerts', color: 'red',
     reports: [
-      { id: 'alert-low', name: 'Bajo rendimiento', href: '/reports/alerts', icon: TrendingDown },
-      { id: 'alert-fail', name: 'Riesgo reprobación', href: '/reports/alerts', icon: AlertTriangle },
-      { id: 'alert-att', name: 'Alertas asistencia', href: '/reports/alerts', icon: Users },
+      { id: 'alert-low-performance', name: 'Bajo rendimiento', href: '/reports/alerts', icon: TrendingDown },
+      { id: 'alert-fail-risk', name: 'Riesgo de reprobación', href: '/reports/alerts', icon: AlertTriangle },
+      { id: 'alert-attendance', name: 'Alertas de asistencia', href: '/reports/alerts', icon: Users },
     ],
   },
   {
-    id: 'preventive', name: 'Corte Preventivo', description: 'Cómo va cada estudiante antes de cerrar el período',
-    icon: ShieldAlert, href: '/reports/preventive-cut', color: 'orange', reportCount: 1,
+    id: 'preventive', name: 'Corte Preventivo', description: 'Cómo va cada estudiante a una fecha, antes de cerrar el período',
+    icon: ShieldAlert, href: '/reports/preventive-cut', color: 'orange',
     reports: [
       { id: 'preventive-group', name: 'Corte por grupo (con PDF)', href: '/reports/preventive-cut', icon: ShieldAlert },
     ],
   },
   {
     id: 'commission', name: 'Comisión de Evaluación', description: 'Genera el acta formal de comisión con datos académicos y convivenciales',
-    icon: ClipboardList, href: '/reports/commission', color: 'teal', reportCount: 1,
+    icon: ClipboardList, href: '/reports/commission', color: 'teal',
     reports: [
       { id: 'commission-acta', name: 'Acta de comisión (configurable)', href: '/reports/commission', icon: FileText },
     ],
@@ -170,7 +189,7 @@ export default function ReportsHub() {
       })).filter(cat => cat.reports.length > 0 || cat.name.toLowerCase().includes(q))
     : visibleCategories
 
-  const totalReports = visibleCategories.reduce((s, c) => s + c.reportCount, 0)
+  const totalReports = visibleCategories.reduce((s, c) => s + c.reports.length, 0)
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
@@ -220,7 +239,7 @@ export default function ReportsHub() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`text-xs font-medium ${c.text} bg-white/80 px-2 py-0.5 rounded-full border ${c.border}`}>
-                    {cat.reportCount}
+                    {cat.reports.length}
                   </span>
                   <ChevronRight className={`w-4 h-4 text-slate-400 group-hover:${c.text} transition-colors`} />
                 </div>
@@ -238,15 +257,6 @@ export default function ReportsHub() {
                     {r.name}
                   </Link>
                 ))}
-                {cat.reports.length < cat.reportCount && (
-                  <Link
-                    to={cat.href}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors"
-                  >
-                    +{cat.reportCount - cat.reports.length} más
-                    <ChevronRight className="w-3 h-3" />
-                  </Link>
-                )}
               </div>
             </div>
           )

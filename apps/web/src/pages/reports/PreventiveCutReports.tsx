@@ -63,6 +63,7 @@ export default function PreventiveCutReports() {
   const [error, setError] = useState<string | null>(null)
   const [downloadingGroup, setDownloadingGroup] = useState(false)
   const [downloadingStudent, setDownloadingStudent] = useState<string | null>(null)
+  const [showGrades, setShowGrades] = useState(true) // false = PDF "sin notas" (solo marca de riesgo)
 
   const canRun = filterPeriod && filterGrade && filterGrade !== 'all'
 
@@ -93,7 +94,7 @@ export default function PreventiveCutReports() {
     if (!canRun) return
     setDownloadingGroup(true)
     try {
-      const res = await preventiveCutsApi.groupPdf({ academicTermId: filterPeriod, groupId: filterGrade, cutoffDate, threshold })
+      const res = await preventiveCutsApi.groupPdf({ academicTermId: filterPeriod, groupId: filterGrade, cutoffDate, threshold, showGrades })
       downloadBlob(res.data, `corte-preventivo-${data?.group.gradeName || ''}-${data?.group.name || 'grupo'}.pdf`)
     } catch {
       setError('No se pudo descargar el PDF del grupo.')
@@ -108,7 +109,7 @@ export default function PreventiveCutReports() {
     try {
       const res = await preventiveCutsApi.studentPdf({
         academicTermId: filterPeriod, groupId: filterGrade,
-        studentEnrollmentId: student.studentEnrollmentId, cutoffDate, threshold,
+        studentEnrollmentId: student.studentEnrollmentId, cutoffDate, threshold, showGrades,
       })
       downloadBlob(res.data, `corte-${student.name.replace(/\s+/g, '_').toLowerCase()}.pdf`)
     } catch {
@@ -205,10 +206,17 @@ export default function PreventiveCutReports() {
                 <p className="text-xs text-slate-500">Materias</p>
               </div>
             </div>
-            <button onClick={handleGroupPdf} disabled={downloadingGroup} className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm disabled:opacity-50">
-              {downloadingGroup ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
-              Descargar PDF del grupo
-            </button>
+            <div className="flex flex-col items-end gap-2">
+              <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
+                <input type="checkbox" checked={showGrades} onChange={(e) => setShowGrades(e.target.checked)} className="w-4 h-4 rounded" />
+                Mostrar notas en el PDF
+                <span className="text-xs text-slate-400">(sin marcar: solo materias en riesgo con X)</span>
+              </label>
+              <button onClick={handleGroupPdf} disabled={downloadingGroup} className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm disabled:opacity-50">
+                {downloadingGroup ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                Descargar PDF del grupo
+              </button>
+            </div>
           </div>
 
           {/* Tabla */}

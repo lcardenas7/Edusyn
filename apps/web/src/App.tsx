@@ -11,7 +11,6 @@ import Grades from './pages/Grades'
 import Attendance from './pages/Attendance'
 import Alerts from './pages/Alerts'
 import Statistics from './pages/Statistics'
-import AreasAdmin from './pages/AreasAdmin'
 import Teachers from './pages/Teachers'
 import AcademicLoad from './pages/AcademicLoad'
 import Reports from './pages/Reports'
@@ -40,6 +39,7 @@ import InstitutionalDocuments from './pages/InstitutionalDocuments'
 import ManagementTasks from './pages/ManagementTasks'
 import AcademicCatalog from './pages/AcademicCatalog'
 import AcademicTemplates from './pages/AcademicTemplates'
+import PlanEstudiosWizard from './pages/PlanEstudiosWizard'
 import ForceChangePassword from './pages/ForceChangePassword'
 import PedagogicalSupport from './pages/PedagogicalSupport'
 import DifferentialSupport from './pages/DifferentialSupport'
@@ -301,7 +301,6 @@ function App() {
                   <Route path="/attendance" element={<Attendance />} />
                   <Route path="/alerts" element={<Alerts />} />
                   <Route path="/statistics" element={<Statistics />} />
-                  <Route path="/admin/areas" element={<AreasAdmin />} />
                   <Route path="/teachers" element={<Teachers />} />
                   <Route path="/academic-load" element={<AcademicLoad />} />
                   <Route path="/reports" element={<ReportsHub />} />
@@ -355,6 +354,8 @@ function App() {
                   <Route path="/institution/profile" element={<Profile />} />
                   <Route path="/institution/structure" element={<Structure />} />
                   
+                  <Route path="/academic/plan-wizard" element={<PlanEstudiosWizard />} />
+
                   {/* Rutas alias para nueva estructura (mantienen compatibilidad) */}
                   <Route path="/academic/catalog" element={<AcademicCatalog />} />
                   <Route path="/academic/templates" element={<AcademicTemplates />} />

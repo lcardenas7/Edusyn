@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
+import { deriveScaleFromConfig, validateScaleRanges } from '../evaluation/performance-scale.util'
 
 // DTOs para la configuración
 export interface ProfileDto {
@@ -11,6 +12,7 @@ export interface ProfileDto {
   email?: string
   website?: string
   logo?: string
+  primaryColor?: string
   city?: string
   rector?: string
 }
@@ -258,6 +260,10 @@ export class InstitutionConfigService {
       UPDATE "Institution" SET "gradingConfig" = ${configJson}::jsonb WHERE id = ${institutionId}
     `
 
+    // Consolidación: proyectar los niveles configurados a la tabla PerformanceScale
+    // (la fuente que leen boletines/desempeños/promoción).
+    await this.syncScaleFromConfig(institutionId)
+
     return { success: true, gradingConfig: config }
   }
 
@@ -288,7 +294,63 @@ export class InstitutionConfigService {
       UPDATE "Institution" SET "academicLevelsConfig" = ${levelsJson}::jsonb WHERE id = ${institutionId}
     `
 
+    // Consolidación: proyectar los niveles configurados a la tabla PerformanceScale.
+    await this.syncScaleFromConfig(institutionId)
+
     return { success: true, academicLevelsConfig: levels }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CONSOLIDACIÓN DE ESCALA — mantiene PerformanceScale (tabla) sincronizada con
+  // la config JSON. La tabla es la que leen boletines, desempeños y promoción.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async syncScaleFromConfig(institutionId: string): Promise<{ synced: number }> {
+    try {
+      const inst = await this.prisma.institution.findUnique({
+        where: { id: institutionId },
+        select: { gradingConfig: true, academicLevelsConfig: true },
+      })
+      if (!inst) return { synced: 0 }
+
+      const rows = deriveScaleFromConfig(inst.gradingConfig, inst.academicLevelsConfig)
+
+      // Validación no bloqueante: avisar si los rangos tienen huecos/solapes.
+      const issues = validateScaleRanges(rows)
+      if (issues.length > 0) {
+        console.warn(`[syncScaleFromConfig] escala con avisos para ${institutionId}:`, issues)
+      }
+
+      for (const r of rows) {
+        await this.prisma.performanceScale.upsert({
+          where: { institutionId_level: { institutionId, level: r.level } },
+          update: {
+            minScore: r.minScore,
+            maxScore: r.maxScore,
+            label: r.label,
+            order: r.order,
+            isApproved: r.isApproved,
+            // No pisar un descriptor ya configurado con null (el JSON no trae descriptor)
+            ...(r.descriptor != null && { descriptor: r.descriptor }),
+          },
+          create: {
+            institutionId,
+            level: r.level,
+            minScore: r.minScore,
+            maxScore: r.maxScore,
+            label: r.label,
+            order: r.order,
+            isApproved: r.isApproved,
+            descriptor: r.descriptor,
+          },
+        })
+      }
+      return { synced: rows.length }
+    } catch (error) {
+      // No romper el guardado de config si la sincronización falla.
+      console.error('[syncScaleFromConfig] error:', error)
+      return { synced: 0 }
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -418,6 +480,7 @@ export class InstitutionConfigService {
         email: true,
         website: true,
         logo: true,
+        primaryColor: true,
         slug: true,
         status: true,
       },
@@ -448,6 +511,7 @@ export class InstitutionConfigService {
         ...(dto.email !== undefined && { email: dto.email }),
         ...(dto.website !== undefined && { website: dto.website }),
         ...(dto.logo !== undefined && { logo: dto.logo }),
+        ...(dto.primaryColor !== undefined && { primaryColor: dto.primaryColor }),
       },
       select: {
         id: true,
@@ -460,6 +524,7 @@ export class InstitutionConfigService {
         email: true,
         website: true,
         logo: true,
+        primaryColor: true,
         slug: true,
         status: true,
       },

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateGroupDto } from './dto/create-group.dto';
+import { sortGroups } from '../../common/utils/group-order.util';
 
 @Injectable()
 export class GroupsService {
@@ -68,8 +69,10 @@ export class GroupsService {
         { name: 'asc' },
       ],
     });
-    
-    return groups;
+
+    // Orden canónico "por grupo" (Sexto A, Sexto B, Séptimo A…), robusto a grade.number
+    // sin poblar. Se aplica en el ORIGEN para que todos los selectores hereden el mismo orden.
+    return sortGroups(groups);
   }
 
   async delete(id: string) {

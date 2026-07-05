@@ -1,4 +1,4 @@
-import { IsIn, IsNumber, IsString, Max, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
 const PERFORMANCE_LEVELS = ['SUPERIOR', 'ALTO', 'BASICO', 'BAJO'] as const;
 
@@ -18,4 +18,21 @@ export class UpsertPerformanceScaleDto {
   @Min(0)
   @Max(100)
   maxScore: number;
+
+  // Q-1: enriquecimiento opcional de la escala (si se omiten, aplican defaults del enum)
+  @IsOptional()
+  @IsString()
+  label?: string;
+
+  @IsOptional()
+  @IsString()
+  descriptor?: string;
+
+  @IsOptional()
+  @IsInt()
+  order?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isApproved?: boolean;
 }

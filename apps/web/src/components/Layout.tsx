@@ -121,18 +121,34 @@ const superAdminNavigation: NavItem[] = [
 const institutionalNavigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'DASHBOARD' },
   
-  // Gestión Institucional (Solo Admin y Coordinador)
-  { 
-    name: 'Gestión Institucional', 
-    icon: Building2, 
-    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'],
+  // ── CONFIGURACIÓN (reglas de evaluación e institución) — Solo Admin/Rector ──
+  // NO coordinador: cambiar la escala/pesos/nota mínima a mitad de año recalcula los
+  // boletines de TODO el colegio. Es configuración estructural, se toca una vez al año.
+  {
+    name: 'Configuración',
+    icon: Settings,
+    roles: ['ADMIN_INSTITUTIONAL', 'RECTOR'],
     module: 'CONFIG',
     children: [
-      { name: 'Configuración', href: '/institution', icon: Settings, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'CONFIG' },
-      { name: 'Configuración SIEE', href: '/academic', icon: Percent, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
+      { name: 'Configuración Institucional', href: '/institution', icon: Building2, roles: ['ADMIN_INSTITUTIONAL', 'RECTOR'], module: 'CONFIG' },
+      { name: 'Configuración SIEE', href: '/academic', icon: Percent, roles: ['ADMIN_INSTITUTIONAL', 'RECTOR'], module: 'ACADEMIC' },
+      { name: 'Permisos de Reportes', href: '/capabilities-config', icon: Shield, roles: ['ADMIN_INSTITUTIONAL'], module: 'CONFIG' },
+    ]
+  },
+
+  // ── PLAN DE ESTUDIOS (estructura académica) — Admin y Coordinador ──
+  // Es el oficio del coordinador académico: armar catálogo, plantillas, el plan por
+  // grado (asistente) y asignar la carga docente. Separado de la config de evaluación.
+  {
+    name: 'Plan de Estudios',
+    icon: GraduationCap,
+    roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'],
+    module: 'ACADEMIC',
+    children: [
+      { name: 'Asistente: Plan de Estudios', href: '/academic/plan-wizard', icon: Sparkles, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
       { name: 'Catálogo Académico', href: '/academic-catalog', icon: Layers, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
       { name: 'Plantillas Académicas', href: '/academic-templates', icon: BookOpen, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
-      { name: 'Permisos de Reportes', href: '/capabilities-config', icon: Shield, roles: ['ADMIN_INSTITUTIONAL'], module: 'CONFIG' },
+      { name: 'Carga Académica', href: '/academic-load', icon: Briefcase, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
     ]
   },
   
@@ -159,7 +175,7 @@ const institutionalNavigation: NavItem[] = [
       { name: 'Docentes', href: '/teachers', icon: UserCog, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'USERS' },
       { name: 'Estudiantes', href: '/students', icon: Users, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'USERS' },
       { name: 'Otros Usuarios', href: '/staff', icon: UserCheck, roles: ['ADMIN_INSTITUTIONAL'], module: 'USERS' },
-      { name: 'Carga Académica', href: '/academic-load', icon: Briefcase, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
+      // Carga Académica se movió a "Plan de Estudios" (es parte de armar el plan del grado).
       { name: 'Permisos', href: '/admin/permissions', icon: UserCheck, roles: ['ADMIN_INSTITUTIONAL'], module: 'USERS' },
     ]
   },
@@ -175,6 +191,10 @@ const institutionalNavigation: NavItem[] = [
       { name: 'Nota Final Período', href: '/period-final-grades', icon: FileText, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
       { name: 'Logros y Juicios', href: '/achievements', icon: Target, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'PERFORMANCE' },
       { name: 'Recuperaciones', href: '/recoveries', icon: RefreshCw, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'RECOVERY' },
+      // Ventanas = operación recurrente del período (las gestiona coordinación);
+      // por eso viven aquí además de en Configuración SIEE.
+      { name: 'Ventanas de Calificación', href: '/academic/config/windows/grading', icon: CalendarClock, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'ACADEMIC' },
+      { name: 'Ventanas de Recuperación', href: '/academic/config/windows/recovery', icon: CalendarClock, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR'], module: 'RECOVERY' },
       { name: 'Acompañamiento', href: '/pedagogical-support', icon: Sparkles, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE'], module: 'ACADEMIC', requiresDimensions: true },
       { name: 'Inclusión Educativa', href: '/differential-support', icon: Heart, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'RECTOR', 'PSICOLOGA', 'DOCENTE'], module: 'DIAGNOSIS' },
     ]

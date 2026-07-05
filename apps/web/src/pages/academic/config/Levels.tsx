@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { 
+import { useState, useEffect } from 'react'
+import {
   GraduationCap,
   Calendar,
   BookOpen,
@@ -9,12 +9,15 @@ import {
   ChevronDown,
   Save,
   Eye,
-  ArrowLeft
+  ArrowLeft,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAcademic, AcademicLevel, GradingScaleType } from '../../../contexts/AcademicContext'
 import { usePermissions, PERMISSIONS } from '../../../hooks/usePermissions'
 import AcademicYearBanner, { useAcademicYearStatus } from '../../../components/AcademicYearBanner'
+import { performanceScaleApi } from '../../../lib/api'
 
 export default function Levels() {
   const { 
@@ -28,6 +31,23 @@ export default function Levels() {
   const canEditGradingLevels = can(PERMISSIONS.CONFIG_GRADING_EDIT_LEVELS) && !isReadOnly
   
   const [expandedLevels, setExpandedLevels] = useState<string[]>([])
+
+  // 2.3b — Estado real de la escala conectada al boletín (tabla PerformanceScale).
+  // null = cargando / no se pudo consultar.
+  const [connectedScale, setConnectedScale] = useState<Array<{ level: string; minScore: number; maxScore: number }> | null>(null)
+
+  const refreshConnectedScale = async () => {
+    try {
+      const res = await performanceScaleApi.getAll()
+      setConnectedScale(Array.isArray(res.data) ? res.data : [])
+    } catch {
+      setConnectedScale(null) // sin permiso o error de red: no mostrar el banner
+    }
+  }
+
+  useEffect(() => {
+    refreshConnectedScale()
+  }, [])
 
   const toggleExpand = (levelId: string) => {
     const key = `level-${levelId}`
@@ -200,6 +220,8 @@ export default function Levels() {
   const handleSave = async () => {
     const success = await saveAcademicLevelsToAPI()
     if (success) {
+      // El backend sincroniza PerformanceScale al guardar → refrescar el indicador
+      refreshConnectedScale()
       alert('✅ Niveles académicos guardados correctamente')
     } else {
       alert('❌ Error al guardar. Intente de nuevo.')
@@ -224,8 +246,8 @@ export default function Levels() {
               <GraduationCap className="w-6 h-6 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-slate-900">Niveles Académicos y Calendario</h1>
-              <p className="text-sm text-slate-500">Configura el calendario y los niveles con su sistema de calificación</p>
+              <h1 className="text-xl font-semibold text-slate-900">Niveles y Escala de Valoración</h1>
+              <p className="text-sm text-slate-500">Escala de valoración (Superior/Alto/Básico/Bajo), rangos y nota mínima. Es la escala que usa el boletín.</p>
             </div>
           </div>
         </div>
@@ -279,6 +301,33 @@ export default function Levels() {
             </label>
           </div>
         </div>
+
+        {/* 2.3b — Estado de la escala conectada al boletín */}
+        {connectedScale !== null && (
+          connectedScale.length > 0 ? (
+            <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl">
+              <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <div className="text-sm">
+                <span className="font-medium text-green-800">Escala conectada al boletín</span>
+                <span className="text-green-700"> — {connectedScale.length} niveles activos: </span>
+                <span className="text-green-700">
+                  {[...connectedScale]
+                    .sort((a, b) => Number(b.minScore) - Number(a.minScore))
+                    .map(s => `${s.level} (${s.minScore}–${s.maxScore})`)
+                    .join(' · ')}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+              <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+              <div className="text-sm">
+                <span className="font-medium text-amber-800">La escala aún no está conectada al boletín.</span>
+                <span className="text-amber-700"> Configura los niveles de desempeño abajo y presiona Guardar — el sistema la conectará automáticamente.</span>
+              </div>
+            </div>
+          )
+        )}
 
         {/* Niveles Académicos */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">

@@ -24,6 +24,24 @@ export class TemplatesController {
   // PLANTILLAS
   // ═══════════════════════════════════════════════════════════════════════════
 
+  // Asistente "Plan de Estudios" — orquesta catálogo + plantilla + asignación a grado
+  @Post('quick-setup')
+  @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
+  async quickSetup(
+    @Body() body: {
+      institutionId: string;
+      academicYearId: string;
+      gradeId: string;
+      areas: Array<{
+        areaId?: string;
+        newAreaName?: string;
+        subjects: Array<{ subjectId?: string; newSubjectName?: string; weeklyHours: number; subjectType?: string }>;
+      }>;
+    },
+  ) {
+    return this.templatesService.quickSetup(body);
+  }
+
   @Post()
   @Roles('SUPERADMIN', 'ADMIN_INSTITUTIONAL', 'COORDINADOR')
   async createTemplate(

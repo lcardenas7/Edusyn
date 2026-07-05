@@ -66,7 +66,7 @@ export const institutionConfigApi = {
 // Institution Profile (identidad institucional - para admin institucional)
 export const institutionProfileApi = {
   get: () => api.get('/institution-config/profile'),
-  update: (data: { name?: string; nit?: string; daneCode?: string; city?: string; address?: string; phone?: string; email?: string; website?: string; logo?: string }) => 
+  update: (data: { name?: string; nit?: string; daneCode?: string; city?: string; address?: string; phone?: string; email?: string; website?: string; logo?: string; primaryColor?: string }) =>
     api.put('/institution-config/profile', data),
 }
 
@@ -406,9 +406,9 @@ export const preventiveCutsApi = {
     api.get('/preventive-cuts/alerts', { params }),
 
   // Descargas PDF (blob con auth)
-  groupPdf: (params: { academicTermId: string; groupId: string; cutoffDate?: string; threshold?: number }) =>
+  groupPdf: (params: { academicTermId: string; groupId: string; cutoffDate?: string; threshold?: number; showGrades?: boolean }) =>
     api.get('/preventive-cuts/pdf/group', { params, responseType: 'blob' }),
-  studentPdf: (params: { academicTermId: string; groupId: string; studentEnrollmentId: string; cutoffDate?: string; threshold?: number }) =>
+  studentPdf: (params: { academicTermId: string; groupId: string; studentEnrollmentId: string; cutoffDate?: string; threshold?: number; showGrades?: boolean }) =>
     api.get('/preventive-cuts/pdf/student', { params, responseType: 'blob' }),
 }
 
@@ -438,8 +438,8 @@ export const reportsApi = {
     api.get('/reports/academic/grade-distribution', { params: { academicYearId, groupId, ...params } }),
   getSubjectLevelDistribution: (academicYearId: string, params?: { groupId?: string; gradeId?: string; termId?: string; stage?: string }) =>
     api.get('/reports/academic/subject-level-distribution', { params: { academicYearId, ...params } }),
-  getFailedSubjects: (academicYearId: string, groupId: string, termId?: string) =>
-    api.get('/reports/academic/failed-subjects', { params: { academicYearId, groupId, termId } }),
+  getFailedSubjects: (academicYearId: string, groupId: string, termId?: string, opts?: { scope?: 'partial' | 'final'; cutoffDate?: string; areaId?: string; subjectId?: string }) =>
+    api.get('/reports/academic/failed-subjects', { params: { academicYearId, groupId, termId, ...opts } }),
   getRecoveryList: (academicYearId: string, groupId: string, params?: { termId?: string; minScore?: number; maxScore?: number }) =>
     api.get('/reports/academic/recovery-list', { params: { academicYearId, groupId, ...params } }),
   getPromotionProjection: (academicYearId: string, groupId: string) =>
@@ -1299,8 +1299,19 @@ export const academicTemplatesApi = {
   removeSubject: (templateSubjectId: string, force = false) => api.delete(`/academic-templates/subjects/${templateSubjectId}${force ? '?force=true' : ''}`),
 
   // Asignación a grados (por año académico)
-  assignToGrade: (gradeId: string, templateId: string, academicYearId: string, overrides?: any) => 
+  assignToGrade: (gradeId: string, templateId: string, academicYearId: string, overrides?: any) =>
     api.post(`/academic-templates/grades/${gradeId}/assign`, { templateId, academicYearId, overrides }),
+  // Asistente Plan de Estudios: crea catálogo + plantilla + asignación en una llamada
+  quickSetup: (data: {
+    institutionId: string;
+    academicYearId: string;
+    gradeId: string;
+    areas: Array<{
+      areaId?: string;
+      newAreaName?: string;
+      subjects: Array<{ subjectId?: string; newSubjectName?: string; weeklyHours: number; subjectType?: string }>;
+    }>;
+  }) => api.post('/academic-templates/quick-setup', data),
   syncFromAssignments: (gradeId: string, academicYearId: string) =>
     api.post(`/academic-templates/grades/${gradeId}/sync-from-assignments`, { academicYearId }),
   removeFromGrade: (gradeId: string, academicYearId: string) => 
