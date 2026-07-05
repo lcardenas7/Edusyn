@@ -1431,7 +1431,14 @@ export class ReportsService {
     },
   ) {
     const scope = opts?.scope ?? 'final';
-    const passingGrade = await this.academicYearService.getPassingGrade(institutionId);
+    // C-3: umbral aprobatorio del nivel educativo del grupo (no el global de la institución)
+    const grp = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      select: { grade: { select: { stage: true, name: true } } },
+    });
+    const passingGrade = await this.academicYearService.getPassingGrade(institutionId, {
+      stage: grp?.grade?.stage, gradeName: grp?.grade?.name,
+    });
 
     // Regla de aprobación del colegio (unas reprueban por área, otras por asignatura)
     const inst = await this.prisma.institution.findUnique({

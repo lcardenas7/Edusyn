@@ -942,8 +942,20 @@ export class AcademicYearLifecycleService {
    * Obtiene la nota mínima aprobatoria de una institución.
    * Consolidación P2: es el minScore más bajo entre los niveles que APRUEBAN
    * (isApproved, con defaults del enum de Q-1), en vez de asumir "BASICO".
+   *
+   * C-3 (Opción A): si se pasa el nivel educativo (stage/gradeName), se usa el
+   * `minPassingGrade` de ESE nivel desde `academicLevelsConfig` (colegios multinivel
+   * con umbrales distintos por nivel). Si no se encuentra, cae al umbral global.
    */
-  async getPassingGrade(institutionId: string): Promise<number> {
+  async getPassingGrade(
+    institutionId: string,
+    level?: { stage?: string | null; gradeName?: string | null },
+  ): Promise<number> {
+    if (level && (level.stage || level.gradeName)) {
+      const perLevel = await this.resolveLevelPassingGrade(institutionId, level.stage, level.gradeName);
+      if (perLevel !== null) return perLevel;
+    }
+
     const scales = await this.prisma.performanceScale.findMany({
       where: { institutionId },
     });
@@ -959,6 +971,32 @@ export class AcademicYearLifecycleService {
 
     // Sin escala configurada → default 3.0 (común en Colombia)
     return 3.0;
+  }
+
+  /**
+   * Resuelve el `minPassingGrade` de un nivel educativo desde academicLevelsConfig.
+   * Mapea el nivel por code/name == stage, o porque el grado esté en su lista `grades[]`
+   * (mismo criterio que classroom.resolveScale). Devuelve null si no hay match o valor.
+   */
+  private async resolveLevelPassingGrade(
+    institutionId: string,
+    stage?: string | null,
+    gradeName?: string | null,
+  ): Promise<number | null> {
+    const inst = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { academicLevelsConfig: true },
+    });
+    const raw = inst?.academicLevelsConfig as any;
+    const levels: any[] = Array.isArray(raw) ? raw : (Array.isArray(raw?.levels) ? raw.levels : []);
+    if (levels.length === 0) return null;
+
+    const stageU = stage?.toUpperCase();
+    const found = levels.find((l: any) =>
+      (stageU && (l.code?.toUpperCase() === stageU || l.name?.toUpperCase() === stageU)) ||
+      (gradeName && (l.grades || []).some((g: string) => g === gradeName)),
+    );
+    return found && typeof found.minPassingGrade === 'number' ? found.minPassingGrade : null;
   }
 
   /**

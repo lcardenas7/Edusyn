@@ -14,6 +14,7 @@ describe('ReportsService.getFailedSubjects (scope=final, regla área/asignatura)
   function makeService(approvalRule: string, failIfAnyFails = false) {
     const prisma: any = {
       institution: { findUnique: jest.fn().mockResolvedValue({ areaApprovalRule: approvalRule, areaFailIfAnyFails: failIfAnyFails }) },
+      group: { findUnique: jest.fn().mockResolvedValue({ grade: { stage: 'BASICA_PRIMARIA', name: '5A' } }) },
     };
     const academicYearService: any = { getPassingGrade: jest.fn().mockResolvedValue(3.0) };
     const academicDataSource: any = { getTermGradeData: jest.fn().mockResolvedValue({ meta: { source: 'live' }, grades }) };

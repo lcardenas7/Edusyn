@@ -78,8 +78,8 @@ Así el "informe parcial de reprobadas del primer período" queda claro y consis
 - Exponer el reporte en dos vistas: **por asignatura** y **por área** (agregando el promedio de área).
 - Mostrar en la UI **con qué regla** se calculó ("Este colegio reprueba por área"), dejando explícito que otras instituciones calculan distinto.
 
-### C-3 · Umbral de aprobación por nivel  *(R-3)*
-`getPassingGrade` debe aceptar el nivel/stage y devolver el mínimo aprobatorio de **ese** nivel, no el global.
+### C-3 · Umbral de aprobación por nivel  *(R-3)* — ✅ HECHO (Opción A)
+`getPassingGrade` acepta ahora `{ stage, gradeName }` y devuelve el `minPassingGrade` de **ese** nivel desde `academicLevelsConfig` (mismo mapeo que `classroom.resolveScale`), con fallback al umbral global. `getFailedSubjects` resuelve el nivel del grupo y lo pasa. Opción B (segmentar `PerformanceScale` por nivel + consolidar) queda para la "Config Consolidation".
 
 ### C-4 · Filtros  *(R-4)*
 Añadir `areaId` y `subjectId` (y opcional `stage`) a los endpoints de reprobados/recuperación + selectores en la UI.
