@@ -417,7 +417,8 @@ model Institution {
   daneCode    String?           @unique
   nit         String?
   slug        String            @unique // URL amigable para login (ej: "colegio-san-jose")
-  logo        String? // URL del logo
+  logo        String? // URL del logo (fuente única del escudo: boletín, corte, facturas…)
+  primaryColor String?          @default("#1E3A8A") // Color de marca institucional (branding único: PDFs y formatos)
   city        String? // Ciudad de la institución
   address     String? // Dirección de la institución
   phone       String? // Teléfono de contacto

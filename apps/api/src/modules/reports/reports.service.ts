@@ -3131,8 +3131,12 @@ export class ReportsService {
     // reenviar URLs firmadas). config.logoUrl legado solo se usa como fallback.
     const inst = await this.prisma.institution.findUnique({
       where: { id: institutionId },
-      select: { logo: true },
+      select: { logo: true, primaryColor: true },
     });
+    // Color de marca: fuente única = perfil institucional; fallback al de la config del boletín.
+    if (inst?.primaryColor) {
+      config = { ...config, primaryColor: inst.primaryColor };
+    }
     const rawLogo = inst?.logo || config.logoUrl || null;
     let resolvedLogo = rawLogo;
     // Resolver a URL firmada solo si es una key de almacenamiento (no una URL http ya lista)

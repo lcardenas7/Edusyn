@@ -179,6 +179,29 @@ export default function Profile() {
                 placeholder="https://www.ejemplo.edu.co"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Color institucional</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={institution.primaryColor || '#1E3A8A'}
+                  onChange={(e) => canEditInfo && setInstitution({ ...institution, primaryColor: e.target.value })}
+                  className="w-12 h-10 border border-slate-300 rounded-lg cursor-pointer disabled:cursor-not-allowed p-0.5"
+                  disabled={!canEditInfo}
+                  title="Color de marca institucional"
+                />
+                <input
+                  type="text"
+                  value={institution.primaryColor || '#1E3A8A'}
+                  onChange={(e) => canEditInfo && setInstitution({ ...institution, primaryColor: e.target.value })}
+                  className="w-32 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm uppercase"
+                  readOnly={!canEditInfo}
+                  disabled={!canEditInfo}
+                  placeholder="#1E3A8A"
+                />
+              </div>
+              <p className="text-xs text-slate-400 mt-1">Se usa en boletines, cortes y exportaciones (encabezados y barras).</p>
+            </div>
           </div>
 
           {/* Enlace a estructura organizacional */}

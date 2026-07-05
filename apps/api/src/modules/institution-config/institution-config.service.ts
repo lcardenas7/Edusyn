@@ -12,6 +12,7 @@ export interface ProfileDto {
   email?: string
   website?: string
   logo?: string
+  primaryColor?: string
   city?: string
   rector?: string
 }
@@ -479,6 +480,7 @@ export class InstitutionConfigService {
         email: true,
         website: true,
         logo: true,
+        primaryColor: true,
         slug: true,
         status: true,
       },
@@ -509,6 +511,7 @@ export class InstitutionConfigService {
         ...(dto.email !== undefined && { email: dto.email }),
         ...(dto.website !== undefined && { website: dto.website }),
         ...(dto.logo !== undefined && { logo: dto.logo }),
+        ...(dto.primaryColor !== undefined && { primaryColor: dto.primaryColor }),
       },
       select: {
         id: true,
@@ -521,6 +524,7 @@ export class InstitutionConfigService {
         email: true,
         website: true,
         logo: true,
+        primaryColor: true,
         slug: true,
         status: true,
       },
