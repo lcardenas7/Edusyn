@@ -438,8 +438,8 @@ export const reportsApi = {
     api.get('/reports/academic/grade-distribution', { params: { academicYearId, groupId, ...params } }),
   getSubjectLevelDistribution: (academicYearId: string, params?: { groupId?: string; gradeId?: string; termId?: string; stage?: string }) =>
     api.get('/reports/academic/subject-level-distribution', { params: { academicYearId, ...params } }),
-  getFailedSubjects: (academicYearId: string, groupId: string, termId?: string) =>
-    api.get('/reports/academic/failed-subjects', { params: { academicYearId, groupId, termId } }),
+  getFailedSubjects: (academicYearId: string, groupId: string, termId?: string, opts?: { scope?: 'partial' | 'final'; cutoffDate?: string; areaId?: string; subjectId?: string }) =>
+    api.get('/reports/academic/failed-subjects', { params: { academicYearId, groupId, termId, ...opts } }),
   getRecoveryList: (academicYearId: string, groupId: string, params?: { termId?: string; minScore?: number; maxScore?: number }) =>
     api.get('/reports/academic/recovery-list', { params: { academicYearId, groupId, ...params } }),
   getPromotionProjection: (academicYearId: string, groupId: string) =>

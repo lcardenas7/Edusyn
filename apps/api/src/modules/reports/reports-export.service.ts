@@ -250,7 +250,7 @@ export class ReportsExportService {
     termId?: string,
   ): Promise<ExcelJS.Workbook> {
     const data = await this.reportsService.getFailedSubjects(
-      institutionId, academicYearId, groupId, termId,
+      institutionId, academicYearId, groupId, termId, {},
     );
 
     const workbook = new ExcelJS.Workbook();

@@ -251,9 +251,19 @@ export class ReportsController {
     @Query('groupId') groupId: string,
     @Query('termId') termId?: string,
     @Query('reportMode') reportMode?: ReportMode,
+    @Query('scope') scope?: 'partial' | 'final',
+    @Query('cutoffDate') cutoffDate?: string,
+    @Query('areaId') areaId?: string,
+    @Query('subjectId') subjectId?: string,
   ) {
     const institutionId = req.user.institutionId;
-    return this.reportsService.getFailedSubjects(institutionId, academicYearId, groupId, termId, reportMode);
+    return this.reportsService.getFailedSubjects(institutionId, academicYearId, groupId, termId, {
+      reportMode,
+      scope,
+      cutoffDate: cutoffDate ? new Date(cutoffDate) : undefined,
+      areaId,
+      subjectId,
+    });
   }
 
   @Get('academic/recovery-list')
