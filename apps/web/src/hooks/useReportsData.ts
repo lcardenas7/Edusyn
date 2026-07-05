@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { academicYearsApi, academicYearLifecycleApi, academicTermsApi, teacherAssignmentsApi, groupsApi, subjectsApi, studentsApi, institutionConfigApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
+import { sortGroups } from '../utils/groupOrder'
 
 export interface PerformanceLevelConfig {
   id: string
@@ -189,7 +190,7 @@ export function useReportsData() {
           teacherAssignmentsApi.getAll({ academicYearId: filterYear })
         ])
         setTerms(termsRes.data || [])
-        setGroups(groupsRes.data || [])
+        setGroups(sortGroups(groupsRes.data || [])) // orden canónico "por grupo"
         setSubjects(subjectsRes.data || [])
         
         // Extraer docentes únicos
