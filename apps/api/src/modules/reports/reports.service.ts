@@ -3126,16 +3126,24 @@ export class ReportsService {
       });
     }
 
-    // Resolver logoUrl a URL firmada si es una key de R2
-    if (config.logoUrl) {
+    // FUENTE ÚNICA DEL ESCUDO: el logo del perfil institucional (Institution.logo).
+    // El boletín ya no depende de ReportCardConfig.logoUrl (que se corrompía al
+    // reenviar URLs firmadas). config.logoUrl legado solo se usa como fallback.
+    const inst = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { logo: true },
+    });
+    const rawLogo = inst?.logo || config.logoUrl || null;
+    let resolvedLogo = rawLogo;
+    // Resolver a URL firmada solo si es una key de almacenamiento (no una URL http ya lista)
+    if (rawLogo && !/^https?:\/\//i.test(rawLogo)) {
       try {
-        const resolvedUrl = await this.storageService.resolveFileUrl(config.logoUrl, 3600);
-        config = { ...config, logoUrl: resolvedUrl };
+        resolvedLogo = await this.storageService.resolveFileUrl(rawLogo, 3600);
       } catch (err) {
-        console.error('Error resolving logoUrl:', config.logoUrl, err);
-        // mantener valor original
+        console.error('Error resolving logo:', rawLogo, err);
       }
     }
+    config = { ...config, logoUrl: resolvedLogo };
 
     return config;
   }
@@ -3149,7 +3157,9 @@ export class ReportsService {
       data: {
         showLogo: data.showLogo,
         showShield: data.showShield,
-        logoUrl: data.logoUrl,
+        // logoUrl NO se persiste desde aquí: el escudo es fuente única (Institution.logo).
+        // Antes se guardaba data.logoUrl (a veces una URL firmada temporal) → se "borraba"
+        // al caducar. El logo se administra en el perfil institucional.
         headerResolution: data.headerResolution,
         headerMunicipality: data.headerMunicipality,
         headerDepartment: data.headerDepartment,
