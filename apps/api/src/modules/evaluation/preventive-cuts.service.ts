@@ -1,12 +1,15 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PerformanceLevel, PreventiveAlertStatus } from '@prisma/client';
 import PDFDocument from 'pdfkit';
+import * as http from 'http';
+import * as https from 'https';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { ExecutePreventiveCutDto } from './dto/execute-preventive-cut.dto';
 import { UpsertPreventiveCutConfigDto } from './dto/upsert-preventive-cut-config.dto';
 import { UpdatePreventiveAlertDto } from './dto/update-preventive-alert.dto';
 import { StudentGradesService } from './student-grades.service';
+import { SupabaseStorageService } from '../storage/supabase-storage.service';
 
 // Resultado por materia de un estudiante en el corte
 interface CutSubjectResult {
@@ -29,7 +32,7 @@ interface CutStudentResult {
 export interface GroupCutResult {
   cutoffDate: Date;
   threshold: number;
-  institution: { id: string; name: string };
+  institution: { id: string; name: string; logo?: string | null; primaryColor?: string | null };
   group: { id: string; name: string; gradeName: string };
   term: { id: string; name: string };
   subjectNames: string[];
@@ -43,6 +46,7 @@ export class PreventiveCutsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly studentGradesService: StudentGradesService,
+    private readonly storageService: SupabaseStorageService,
   ) {}
 
   async upsertConfig(dto: UpsertPreventiveCutConfigDto) {
@@ -339,7 +343,12 @@ export class PreventiveCutsService {
     return {
       cutoffDate,
       threshold,
-      institution: { id: term.academicYear.institution.id, name: term.academicYear.institution.name },
+      institution: {
+        id: term.academicYear.institution.id,
+        name: term.academicYear.institution.name,
+        logo: (term.academicYear.institution as any).logo ?? null,
+        primaryColor: (term.academicYear.institution as any).primaryColor ?? null,
+      },
       group: { id: group.id, name: group.name, gradeName: group.grade?.name ?? '' },
       term: { id: term.id, name: term.name },
       subjectNames: assignments.map((a) => a.subject?.name ?? 'Asignatura'),
@@ -355,8 +364,12 @@ export class PreventiveCutsService {
     groupId: string;
     cutoffDate?: Date;
     threshold?: number;
+    showGrades?: boolean; // false = "sin notas" (marca X en materias en riesgo)
   }): Promise<Buffer> {
     const data = await this.executeGroupView(params);
+    const showGrades = params.showGrades !== false;
+    const brand = this.brandColor(data.institution.primaryColor);
+    const logo = await this.resolveLogoBuffer(data.institution.logo);
 
     return this.buildPdf((doc, m, w) => {
       this.renderHeader(
@@ -365,6 +378,8 @@ export class PreventiveCutsService {
         w,
         data.institution.name,
         'CORTE PREVENTIVO — INFORME DE GRUPO',
+        brand,
+        logo,
       );
       doc
         .fontSize(9)
@@ -400,7 +415,7 @@ export class PreventiveCutsService {
         doc.fontSize(8).font('Helvetica-Bold').fillColor('#000');
         doc.text('#', m, y, { width: 22 });
         doc.text('Estudiante', m + 22, y, { width: nameW });
-        doc.text('Prom. parcial', m + 22 + nameW, y, { width: avgW, align: 'center' });
+        doc.text(showGrades ? 'Prom. parcial' : 'Riesgo', m + 22 + nameW, y, { width: avgW, align: 'center' });
         doc.text('Materias en riesgo', m + 22 + nameW + avgW, y, { width: riskW, align: 'center' });
         doc.text('Detalle', m + 22 + nameW + avgW + riskW, y, { width: subjW });
         doc.moveDown(0.3);
@@ -419,13 +434,15 @@ export class PreventiveCutsService {
         const riskSubjects = st.subjects.filter((s) => s.isRisk);
         const detail =
           riskSubjects.length > 0
-            ? riskSubjects.map((s) => `${s.subjectName} (${s.grade?.toFixed(1)})`).join(', ')
+            ? riskSubjects
+                .map((s) => (showGrades ? `${s.subjectName} (${s.grade?.toFixed(1)})` : s.subjectName))
+                .join(', ')
             : '—';
 
         doc.fontSize(7.5).font('Helvetica').fillColor(st.overallRisk ? '#b91c1c' : '#000');
         doc.text(String(i + 1), m, y, { width: 22 });
         doc.text(st.name, m + 22, y, { width: nameW });
-        doc.text(st.average !== null ? st.average.toFixed(1) : 's/d', m + 22 + nameW, y, { width: avgW, align: 'center' });
+        doc.text(showGrades ? (st.average !== null ? st.average.toFixed(1) : 's/d') : (st.overallRisk ? 'X' : '—'), m + 22 + nameW, y, { width: avgW, align: 'center' });
         doc.text(String(st.atRiskCount), m + 22 + nameW + avgW, y, { width: riskW, align: 'center' });
         doc.fontSize(6.8).fillColor('#555');
         doc.text(detail, m + 22 + nameW + avgW + riskW, y, { width: subjW });
@@ -442,12 +459,16 @@ export class PreventiveCutsService {
     studentEnrollmentId: string;
     cutoffDate?: Date;
     threshold?: number;
+    showGrades?: boolean; // false = "sin notas" (marca X en materias en riesgo)
   }): Promise<Buffer> {
     const data = await this.executeGroupView(params);
     const student = data.students.find(
       (s) => s.studentEnrollmentId === params.studentEnrollmentId,
     );
     if (!student) throw new BadRequestException('Estudiante no encontrado en el grupo');
+    const showGrades = params.showGrades !== false;
+    const brand = this.brandColor(data.institution.primaryColor);
+    const logo = await this.resolveLogoBuffer(data.institution.logo);
 
     return this.buildPdf((doc, m, w) => {
       this.renderHeader(
@@ -456,6 +477,8 @@ export class PreventiveCutsService {
         w,
         data.institution.name,
         'CORTE PREVENTIVO — INFORME DEL ESTUDIANTE',
+        brand,
+        logo,
       );
       doc.fontSize(11).font('Helvetica-Bold').fillColor('#000').text(student.name, m, doc.y, { width: w });
       doc.moveDown(0.2);
@@ -481,7 +504,7 @@ export class PreventiveCutsService {
         const y = doc.y;
         doc.fontSize(9).font('Helvetica-Bold');
         doc.text('Asignatura', m, y, { width: subjW });
-        doc.text('Nota parcial', m + subjW, y, { width: gradeW, align: 'center' });
+        doc.text(showGrades ? 'Nota parcial' : 'Riesgo', m + subjW, y, { width: gradeW, align: 'center' });
         doc.text('Estado', m + subjW + gradeW, y, { width: statW, align: 'center' });
         doc.moveDown(0.3);
         doc.moveTo(m, doc.y).lineTo(m + w, doc.y).strokeColor('#ccc').stroke();
@@ -494,9 +517,12 @@ export class PreventiveCutsService {
         const y = doc.y;
         const status = !s.hasData ? 'Sin datos' : s.isRisk ? 'En riesgo' : 'Al día';
         const color = !s.hasData ? '#888' : s.isRisk ? '#b91c1c' : '#15803d';
-        doc.fontSize(9).font('Helvetica').fillColor('#000');
+        const notaCell = showGrades
+          ? (s.hasData ? (s.grade as number).toFixed(1) : 's/d')
+          : (!s.hasData ? 's/d' : s.isRisk ? 'X' : '—');
+        doc.fontSize(9).font('Helvetica').fillColor(showGrades ? '#000' : color);
         doc.text(s.subjectName, m, y, { width: subjW });
-        doc.text(s.hasData ? (s.grade as number).toFixed(1) : 's/d', m + subjW, y, { width: gradeW, align: 'center' });
+        doc.text(notaCell, m + subjW, y, { width: gradeW, align: 'center' });
         doc.fillColor(color).font('Helvetica-Bold');
         doc.text(status, m + subjW + gradeW, y, { width: statW, align: 'center' });
         doc.fillColor('#000');
@@ -508,8 +534,9 @@ export class PreventiveCutsService {
       doc.moveDown(0.4);
       doc.fontSize(9).font('Helvetica-Bold').fillColor('#000');
       doc.text(
-        `Promedio parcial: ${student.average !== null ? student.average.toFixed(1) : 'sin datos'}   |   ` +
-          `Materias en riesgo: ${student.atRiskCount}`,
+        (showGrades
+          ? `Promedio parcial: ${student.average !== null ? student.average.toFixed(1) : 'sin datos'}   |   `
+          : '') + `Materias en riesgo: ${student.atRiskCount}`,
         m,
         doc.y,
         { width: w },
@@ -554,13 +581,69 @@ export class PreventiveCutsService {
     w: number,
     institutionName: string,
     title: string,
+    brand: string = '#4338ca',
+    logo: Buffer | null = null,
   ) {
-    doc.fontSize(13).font('Helvetica-Bold').fillColor('#1e293b').text(institutionName, m, doc.y, { width: w, align: 'center' });
+    const startY = doc.y;
+    let textX = m;
+    let textW = w;
+    const align: 'left' | 'center' = logo ? 'left' : 'center';
+    if (logo) {
+      try {
+        doc.image(logo, m, startY, { fit: [46, 46] });
+        textX = m + 56;
+        textW = w - 56;
+      } catch {
+        // logo inválido → seguir sin él
+      }
+    }
+    doc.fontSize(13).font('Helvetica-Bold').fillColor('#1e293b').text(institutionName, textX, startY, { width: textW, align });
     doc.moveDown(0.2);
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#4338ca').text(title, m, doc.y, { width: w, align: 'center' });
-    doc.moveDown(0.3);
-    doc.moveTo(m, doc.y).lineTo(m + w, doc.y).strokeColor('#4338ca').lineWidth(1).stroke();
+    doc.fontSize(11).font('Helvetica-Bold').fillColor(brand).text(title, textX, doc.y, { width: textW, align });
+    const lineY = Math.max(doc.y + 4, logo ? startY + 50 : doc.y + 4);
+    doc.moveTo(m, lineY).lineTo(m + w, lineY).strokeColor(brand).lineWidth(1).stroke();
+    doc.y = lineY;
     doc.moveDown(0.6);
     doc.fillColor('#000').lineWidth(1);
+  }
+
+  // ── Branding institucional (fuente única: perfil de la institución) ─────────
+  private brandColor(hex?: string | null): string {
+    return hex && /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : '#4338ca';
+  }
+
+  private async resolveLogoBuffer(logo?: string | null): Promise<Buffer | null> {
+    if (!logo) return null;
+    let url = logo;
+    if (!/^https?:\/\//i.test(logo)) {
+      try {
+        url = await this.storageService.resolveFileUrl(logo, 600);
+      } catch {
+        return null;
+      }
+    }
+    return this.fetchImage(url);
+  }
+
+  private fetchImage(url: string): Promise<Buffer | null> {
+    return new Promise((resolve) => {
+      try {
+        const client = url.startsWith('https') ? https : http;
+        client
+          .get(url, (res) => {
+            if (res.statusCode !== 200) {
+              resolve(null);
+              return;
+            }
+            const chunks: Buffer[] = [];
+            res.on('data', (c) => chunks.push(c as Buffer));
+            res.on('end', () => resolve(Buffer.concat(chunks)));
+            res.on('error', () => resolve(null));
+          })
+          .on('error', () => resolve(null));
+      } catch {
+        resolve(null);
+      }
+    });
   }
 }

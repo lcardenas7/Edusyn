@@ -406,9 +406,9 @@ export const preventiveCutsApi = {
     api.get('/preventive-cuts/alerts', { params }),
 
   // Descargas PDF (blob con auth)
-  groupPdf: (params: { academicTermId: string; groupId: string; cutoffDate?: string; threshold?: number }) =>
+  groupPdf: (params: { academicTermId: string; groupId: string; cutoffDate?: string; threshold?: number; showGrades?: boolean }) =>
     api.get('/preventive-cuts/pdf/group', { params, responseType: 'blob' }),
-  studentPdf: (params: { academicTermId: string; groupId: string; studentEnrollmentId: string; cutoffDate?: string; threshold?: number }) =>
+  studentPdf: (params: { academicTermId: string; groupId: string; studentEnrollmentId: string; cutoffDate?: string; threshold?: number; showGrades?: boolean }) =>
     api.get('/preventive-cuts/pdf/student', { params, responseType: 'blob' }),
 }
 

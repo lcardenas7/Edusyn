@@ -90,12 +90,14 @@ export class PreventiveCutsController {
     @Query('groupId') groupId: string,
     @Query('cutoffDate') cutoffDate?: string,
     @Query('threshold') threshold?: string,
+    @Query('showGrades') showGrades?: string,
   ) {
     const pdf = await this.preventiveCutsService.generateGroupPdf({
       academicTermId,
       groupId,
       cutoffDate: cutoffDate ? new Date(cutoffDate) : undefined,
       threshold: threshold ? Number(threshold) : undefined,
+      showGrades: showGrades !== 'false',
     });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="corte-preventivo-grupo.pdf"');
@@ -111,6 +113,7 @@ export class PreventiveCutsController {
     @Query('studentEnrollmentId') studentEnrollmentId: string,
     @Query('cutoffDate') cutoffDate?: string,
     @Query('threshold') threshold?: string,
+    @Query('showGrades') showGrades?: string,
   ) {
     const pdf = await this.preventiveCutsService.generateStudentPdf({
       academicTermId,
@@ -118,6 +121,7 @@ export class PreventiveCutsController {
       studentEnrollmentId,
       cutoffDate: cutoffDate ? new Date(cutoffDate) : undefined,
       threshold: threshold ? Number(threshold) : undefined,
+      showGrades: showGrades !== 'false',
     });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="corte-preventivo-estudiante.pdf"');
