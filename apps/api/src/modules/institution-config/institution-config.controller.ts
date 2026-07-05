@@ -1,12 +1,19 @@
 import { Controller, Get, Put, Body, UseGuards, Request, BadRequestException } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { RolesGuard } from '../auth/guards/roles.guard'
+import { Roles } from '../auth/decorators/roles.decorator'
 import type { ProfileDto, AreaConfigDto, GradingConfigDto, AcademicLevelConfig, PeriodConfig } from './institution-config.service'
 import { InstitutionConfigService } from './institution-config.service'
 import { InstitutionContextService } from '../institution-context/institution-context.service'
 import { PrismaService } from '../../prisma/prisma.service'
 
+// Escribir la config de evaluación (perfil, áreas, calificación, niveles, períodos)
+// recalcula boletines/promoción de TODA la institución → solo Admin/Rector.
+// Los GET quedan abiertos (leer la config para contexto es inofensivo).
+const CONFIG_WRITE_ROLES = ['SUPERADMIN', 'SUPER_ADMIN', 'ADMIN_INSTITUTIONAL', 'RECTOR'] as const
+
 @Controller('institution-config')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class InstitutionConfigController {
   constructor(
     private configService: InstitutionConfigService,
@@ -65,6 +72,7 @@ export class InstitutionConfigController {
   }
 
   @Put('profile')
+  @Roles(...CONFIG_WRITE_ROLES)
   async updateProfile(@Request() req, @Body() dto: ProfileDto) {
     const institutionId = await this.getInstitutionId(req.user.id)
     return this.configService.updateProfile(institutionId, dto)
@@ -81,6 +89,7 @@ export class InstitutionConfigController {
   }
 
   @Put('areas')
+  @Roles(...CONFIG_WRITE_ROLES)
   async updateAreaConfig(@Request() req, @Body() config: AreaConfigDto) {
     const institutionId = await this.getInstitutionId(req.user.id)
     return this.configService.updateAreaConfig(institutionId, config)
@@ -97,6 +106,7 @@ export class InstitutionConfigController {
   }
 
   @Put('grading')
+  @Roles(...CONFIG_WRITE_ROLES)
   async updateGradingConfig(@Request() req, @Body() config: GradingConfigDto) {
     const institutionId = await this.getInstitutionId(req.user.id)
     return this.configService.updateGradingConfig(institutionId, config)
@@ -113,6 +123,7 @@ export class InstitutionConfigController {
   }
 
   @Put('academic-levels')
+  @Roles(...CONFIG_WRITE_ROLES)
   async updateAcademicLevels(@Request() req, @Body() levels: AcademicLevelConfig[]) {
     const institutionId = await this.getInstitutionId(req.user.id)
     return this.configService.updateAcademicLevels(institutionId, levels)
@@ -129,6 +140,7 @@ export class InstitutionConfigController {
   }
 
   @Put('periods')
+  @Roles(...CONFIG_WRITE_ROLES)
   async updatePeriods(@Request() req, @Body() periods: PeriodConfig[]) {
     const institutionId = await this.getInstitutionId(req.user.id)
     return this.configService.updatePeriods(institutionId, periods)
