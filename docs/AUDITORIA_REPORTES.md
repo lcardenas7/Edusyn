@@ -90,8 +90,9 @@ Añadir `areaId` y `subjectId` (y opcional `stage`) a los endpoints de reprobado
 - **Deep-link funcional**: `AcademicReports` ahora consume `?report=<id>` (useSearchParams) y preselecciona el reporte. Las demás páginas aún abren la categoría (pendiente menor, mismo patrón).
 - Nombres más claros (Corte Preventivo = a una fecha; Alertas = seguimiento continuo; "Asignaturas reprobadas (parcial o final)").
 
-### C-6 · Formateador Excel compartido  *(R-7 — segunda fase: "formatos")*
-Un helper único (`applyReportStyle`) con: bloque de título (institución, reporte, período, fecha de generación), encabezado con relleno + bordes, **panel congelado** en la fila de datos, **autofiltro**, ancho auto, formato numérico (1 decimal), **zebra**, y **resaltado** de notas reprobadas en rojo. Aplicarlo a las exportaciones de notas (sábana), docentes, ranking, reprobados, recuperación y a las plantillas/listados de docentes y estudiantes. *No* reescribir la lógica de datos — solo el formato.
+### C-6 · Formateador Excel compartido  *(R-7)* — ✅ HECHO (módulo Reportes)
+Helper único `writeReportSheet` (`excel-report.helper.ts`) con: bloque de título (institución, reporte, contexto, fecha), encabezado con relleno + bordes, **panel congelado**, **autofiltro**, ancho auto, formato numérico (1 decimal), **cebra** y **resaltado en rojo** de notas reprobadas (umbral por nivel, reutiliza C-3). Aplicado a las 7 exportaciones de `reports-export.service` (sábana de notas, distribución, rendimiento docente, ranking, reprobadas, recuperación, proyección) sin tocar la lógica de datos.
+**Pendiente (mismo patrón, follow-up):** exportaciones fuera del módulo Reportes — listados de estudiantes/docentes en frontend (`Students.tsx`, `Grades.tsx`, con SheetJS), plantillas de carga (`bulk-upload-template.helper`), `enrollment-reports` y `men-reports`.
 
 ### Orden sugerido
 1. **C-1 + C-2 + C-4** (el bug del informe parcial + regla institucional + filtros) — es lo que el fundador señaló.
