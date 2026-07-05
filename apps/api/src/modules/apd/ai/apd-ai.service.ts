@@ -14,6 +14,8 @@ import {
   ApdAiTeacherQuestionRequest,
   ApdAiTeacherQuestionResponse,
   ApdAiQuestionDraft,
+  ApdAiLessonDraft,
+  ApdAiLessonSlideDraft,
   ApdAiServiceConfig,
 } from './apd-ai.interfaces';
 
@@ -83,15 +85,20 @@ export class ApdAiService implements IApdAiService {
   }
 
   // Modelos de OpenRouter en orden de prioridad para cascada de reintentos.
-  // Si un modelo ya no existe / dejó de ser gratis (404), se cae al siguiente.
+  // Si un modelo ya no existe / dejó de ser gratis (404) o está saturado (429),
+  // se cae al siguiente. TODOS deben ser slugs ":free" vigentes (verificado contra
+  // https://openrouter.ai/api/v1/models) — un slug muerto desperdicia una llamada
+  // y encarece la latencia. Solo modelos "instruct/it" (no "reasoning/thinking",
+  // que rompen el JSON-only). Revisar esta lista cada pocos meses.
+  // Última verificación: 2026-07.
   private static readonly OPENROUTER_MODEL_CASCADE = [
-    'meta-llama/llama-3.3-70b-instruct:free',
-    'z-ai/glm-4.5-air:free',
-    'deepseek/deepseek-chat-v3-0324:free',
-    'qwen/qwen-2.5-72b-instruct:free',
-    'nvidia/nemotron-nano-9b-v2:free',
+    'meta-llama/llama-3.3-70b-instruct:free', // fuerte; a veces 429 transitorio → cae rápido al siguiente
+    'openai/gpt-oss-120b:free',
+    'qwen/qwen3-next-80b-a3b-instruct:free',
     'openai/gpt-oss-20b:free',
-    'mistralai/mistral-7b-instruct:free',
+    'google/gemma-4-31b-it:free',
+    'nvidia/nemotron-nano-9b-v2:free', // verificado funcionando; fallback rápido
+    'meta-llama/llama-3.2-3b-instruct:free', // último recurso, ligero
   ];
 
   private getDefaultModel(provider: string): string {
@@ -1607,6 +1614,154 @@ export class ApdAiService implements IApdAiService {
    * - NO hace fallback silencioso: si falla, lanza Error para que el caller decida.
    * - Valida estructura básica antes de retornar.
    */
+  /**
+   * Genera la estructura de una Lección Interactiva viva usando el LLM real (Valeria),
+   * a partir de un tema y/o material del docente. Reemplaza al generador de plantilla
+   * de LessonService (que queda como fallback cuando la IA no está habilitada).
+   *
+   * Produce una secuencia pedagógica: introducción → contenido intercalado con preguntas
+   * embebidas (con opciones reales, respuesta y explicación) → checkpoints → insignia final.
+   * Nunca puntúa notas críticas: el grading de las respuestas lo hace LessonService.
+   */
+  async generateLessonSlides(params: {
+    topic: string;
+    content?: string;
+    gradeName?: string;
+    subjectName?: string;
+    language?: string;
+  }): Promise<ApdAiLessonDraft> {
+    if (!this.isEnabled()) {
+      throw new Error('La generación con IA no está habilitada (APD_AI_API_KEY ausente).');
+    }
+    const topic = (params.topic || '').trim();
+    const content = (params.content || '').trim();
+    if (!topic && !content) throw new Error('Tema o contenido requerido');
+    const lang = params.language || 'español';
+
+    const systemInstruction = [
+      'Eres Valeria, diseñadora pedagógica experta del sistema educativo colombiano (MEN).',
+      `Diseñas Lecciones Interactivas vivas (estilo Nearpod/Brilliant) en ${lang}, para consumo autónomo del estudiante.`,
+      'Responde EXCLUSIVAMENTE con un JSON válido, sin texto adicional, sin markdown, sin backticks.',
+      '',
+      'Principios de diseño de la lección:',
+      '- Bloques cortos: cada slide CONTENT explica UNA idea, en 2-4 frases, lenguaje claro y cercano al nivel del estudiante.',
+      '- Interacción frecuente: inserta una slide ACTIVITY (pregunta embebida) cada 1-2 slides de contenido.',
+      '- Las preguntas evalúan comprensión real, no memoria trivial. Distractores plausibles del mismo dominio.',
+      '- Usa CHECKPOINT como pausa de consolidación tras cada bloque temático (2-3 en total).',
+      '- Termina SIEMPRE con una slide BADGE_REVEAL.',
+      '- NUNCA generes contenido genérico tipo "Opción A/B/C/D" ni "¿Qué aprendiste?". Todo debe ser específico y verificable.',
+      '- El body de CONTENT es HTML simple (usa <p>, <strong>, <ul><li>). Sin estilos inline ni scripts.',
+      '',
+      'Esquema JSON exacto a producir:',
+      '{',
+      '  "title": "Título atractivo de la lección",',
+      '  "description": "1 frase que resume qué aprenderá el estudiante",',
+      '  "slides": [',
+      '    { "type": "CONTENT", "title": "…", "body": "<p>…</p>" },',
+      '    { "type": "ACTIVITY", "title": "…", "activityData": {',
+      '        "questionType": "MULTIPLE_CHOICE" | "TRUE_FALSE",',
+      '        "question": "Enunciado específico",',
+      '        "options": ["…","…","…","…"],',
+      '        "correctAnswer": "Texto EXACTO de la opción correcta (o \\"Verdadero\\"/\\"Falso\\")",',
+      '        "explanation": "Por qué es correcta (1-2 frases)",',
+      '        "hint": "Pista breve sin revelar la respuesta",',
+      '        "points": 10 } },',
+      '    { "type": "CHECKPOINT", "title": "…" },',
+      '    { "type": "BADGE_REVEAL" }',
+      '  ]',
+      '}',
+      '',
+      'Genera entre 6 y 12 slides en total, con al menos 3 slides ACTIVITY.',
+      params.gradeName ? `Nivel educativo objetivo: ${params.gradeName}.` : '',
+      params.subjectName ? `Asignatura: ${params.subjectName}.` : '',
+    ].filter(Boolean).join('\n');
+
+    const materialBlock = content
+      ? `\n\nMaterial base del docente (fundamenta la lección en este contenido, no lo contradigas):\n"""\n${content.slice(0, 6000)}\n"""`
+      : '';
+    const userPrompt = `Tema de la lección: ${topic || '(deriva un título del material)'}\n\nDiseña la lección interactiva siguiendo el esquema JSON indicado.${materialBlock}`;
+
+    let raw: any;
+    try {
+      raw = await this.callLlmJson<{ title?: string; description?: string; slides?: any[] }>(
+        systemInstruction,
+        userPrompt,
+        8000,
+      );
+    } catch (err: any) {
+      this.logger.error(`generateLessonSlides LLM error (${this.config.provider}): ${err?.message || err}`);
+      throw new Error(`El proveedor de IA (${this.config.provider}) no respondió: ${err?.message || 'error desconocido'}`);
+    }
+
+    const rawSlides: any[] = Array.isArray(raw?.slides) ? raw.slides : [];
+    const slides: ApdAiLessonSlideDraft[] = [];
+    for (const s of rawSlides) {
+      const rawType = (typeof s?.type === 'string' ? s.type : '').toUpperCase();
+      if (rawType === 'CONTENT') {
+        const body = typeof s?.body === 'string' ? s.body.trim() : '';
+        if (!body) continue;
+        slides.push({ type: 'CONTENT', title: typeof s?.title === 'string' ? s.title.trim() : undefined, body });
+      } else if (rawType === 'ACTIVITY') {
+        const ad = s?.activityData || {};
+        const question = typeof ad?.question === 'string' ? ad.question.trim() : '';
+        if (!question) continue;
+        const qType = String(ad?.questionType || 'MULTIPLE_CHOICE').toUpperCase() === 'TRUE_FALSE'
+          ? 'TRUE_FALSE' : 'MULTIPLE_CHOICE';
+        const correct = typeof ad?.correctAnswer === 'string' ? ad.correctAnswer.trim() : '';
+        if (qType === 'TRUE_FALSE') {
+          const isTrue = correct.toLowerCase().startsWith('v') || correct.toLowerCase() === 'true';
+          slides.push({
+            type: 'ACTIVITY',
+            title: typeof s?.title === 'string' ? s.title.trim() : undefined,
+            activityData: {
+              questionType: 'TRUE_FALSE', question, options: ['Verdadero', 'Falso'],
+              correctAnswer: isTrue ? 'Verdadero' : 'Falso',
+              explanation: typeof ad?.explanation === 'string' ? ad.explanation.trim() : undefined,
+              hint: typeof ad?.hint === 'string' ? ad.hint.trim() : undefined,
+              points: Number.isFinite(ad?.points) ? ad.points : 10,
+            },
+          });
+        } else {
+          const options = Array.isArray(ad?.options)
+            ? ad.options.filter((o: any) => typeof o === 'string' && o.trim()).map((o: string) => o.trim()).slice(0, 6)
+            : [];
+          if (options.length < 2) continue;
+          slides.push({
+            type: 'ACTIVITY',
+            title: typeof s?.title === 'string' ? s.title.trim() : undefined,
+            activityData: {
+              questionType: 'MULTIPLE_CHOICE', question, options,
+              correctAnswer: correct && options.includes(correct) ? correct : options[0],
+              explanation: typeof ad?.explanation === 'string' ? ad.explanation.trim() : undefined,
+              hint: typeof ad?.hint === 'string' ? ad.hint.trim() : undefined,
+              points: Number.isFinite(ad?.points) ? ad.points : 10,
+            },
+          });
+        }
+      } else if (rawType === 'CHECKPOINT') {
+        slides.push({ type: 'CHECKPOINT', title: typeof s?.title === 'string' ? s.title.trim() : undefined });
+      } else if (rawType === 'BADGE_REVEAL') {
+        slides.push({ type: 'BADGE_REVEAL', badgeEmoji: typeof s?.badgeEmoji === 'string' ? s.badgeEmoji : undefined, badgeTitle: typeof s?.badgeTitle === 'string' ? s.badgeTitle : undefined });
+      }
+    }
+
+    // Garantías mínimas de estructura: al menos 1 contenido y cierre con insignia.
+    const hasContent = slides.some(s => s.type === 'CONTENT');
+    if (!hasContent) {
+      throw new Error('La IA respondió pero la lección no tenía contenido válido.');
+    }
+    if (!slides.some(s => s.type === 'BADGE_REVEAL')) {
+      slides.push({ type: 'BADGE_REVEAL' });
+    }
+
+    return {
+      title: (typeof raw?.title === 'string' && raw.title.trim()) || topic || 'Nueva lección',
+      description: (typeof raw?.description === 'string' && raw.description.trim())
+        || `Lección interactiva sobre ${topic || 'el tema'}`,
+      slides,
+    };
+  }
+
   async generateQuizQuestions(params: {
     topic: string;
     count: number;

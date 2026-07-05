@@ -315,6 +315,7 @@ export default function LessonEditor({
         topic: aiTopic.trim(),
         content: aiContent.trim(),
         gradeName,
+        subjectName,
       })
       if (data) {
         setTitle(data.title || aiTopic)
@@ -335,6 +336,13 @@ export default function LessonEditor({
           })))
           setSelectedSlideIndex(0)
         }
+        // Avisar qué motor produjo la lección: IA real vs plantilla base.
+        if (data.source === 'TEMPLATE') {
+          setSuccess('Se creó una estructura base (IA no disponible). Revísala y enriquécela antes de publicar.')
+        } else {
+          setSuccess('Valeria generó tu lección. Revisa y ajusta cada slide antes de publicar.')
+        }
+        setTimeout(() => setSuccess(''), 5000)
       }
       setShowAIModal(false)
       setAiTopic('')

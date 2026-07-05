@@ -2429,8 +2429,8 @@ export const lessonApi = {
     api.get<LessonStudentProgress[]>(`/classrooms/lessons/${lessonId}/progress`),
 
   // AI generation
-  generateAI: (data: { topic: string; content: string; gradeName?: string }) =>
-    api.post(`/classrooms/lessons/generate-ai`, data),
+  generateAI: (data: { topic: string; content: string; gradeName?: string; subjectName?: string }) =>
+    api.post<{ title: string; description: string; slides: any[]; source: 'AI' | 'TEMPLATE' }>(`/classrooms/lessons/generate-ai`, data),
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

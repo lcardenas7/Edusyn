@@ -1,9 +1,15 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ApdAiService } from '../apd/ai/apd-ai.service';
 
 @Injectable()
 export class LessonService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(LessonService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly apdAi: ApdAiService,
+  ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // TEACHER: CRUD
@@ -459,6 +465,54 @@ export class LessonService {
   // AI: Generate lesson from text/topic
   // ═══════════════════════════════════════════════════════════════════════════
 
+  /**
+   * Genera una lección con IA real (Valeria) cuando está habilitada. Si la IA no
+   * está configurada o falla, cae con gracia al generador de plantilla local
+   * (`generateLessonStructure`) para no romper nunca el flujo del docente.
+   * El campo `source` indica qué motor produjo el resultado, para avisar en UI.
+   */
+  async generateLesson(params: {
+    topic: string;
+    content?: string;
+    gradeName?: string;
+    subjectName?: string;
+  }): Promise<{
+    title: string;
+    description: string;
+    slides: Array<{ type: string; sortOrder: number; title?: string; body?: string; activityData?: any; badgeEmoji?: string; badgeTitle?: string }>;
+    source: 'AI' | 'TEMPLATE';
+  }> {
+    if (this.apdAi.isEnabled()) {
+      try {
+        const draft = await this.apdAi.generateLessonSlides({
+          topic: params.topic,
+          content: params.content,
+          gradeName: params.gradeName,
+          subjectName: params.subjectName,
+        });
+        return {
+          title: draft.title,
+          description: draft.description,
+          slides: draft.slides.map((s, i) => ({
+            type: s.type,
+            sortOrder: i,
+            title: s.title,
+            body: s.body,
+            activityData: s.activityData,
+            badgeEmoji: s.badgeEmoji,
+            badgeTitle: s.badgeTitle,
+          })),
+          source: 'AI',
+        };
+      } catch (err: any) {
+        // No romper: registrar y caer al fallback de plantilla.
+        this.logger.warn(`generateLesson: IA falló, usando plantilla. ${err?.message || err}`);
+      }
+    }
+    const template = this.generateLessonStructure(params.topic, params.content || '', params.gradeName);
+    return { ...template, source: 'TEMPLATE' };
+  }
+
   generateLessonStructure(topic: string, content: string, gradeName?: string): {
     title: string;
     description: string;
@@ -470,8 +524,8 @@ export class LessonService {
       activityData?: any;
     }>;
   } {
-    // This is a template generator. The actual AI generation happens via Valeria API
-    // which will call this structure format. Here we provide a fallback structure.
+    // Fallback de plantilla: se usa cuando la IA (Valeria) no está habilitada o falla.
+    // La generación real con LLM vive en ApdAiService.generateLessonSlides (ver generateLesson()).
     const paragraphs = content.split(/\n\n+/).filter(p => p.trim().length > 20);
 
     if (paragraphs.length === 0) {

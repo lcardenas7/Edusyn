@@ -189,6 +189,32 @@ export interface ApdAiQuestionDraft {
   contextId?: string;
 }
 
+// ─── Generación de Lecciones Interactivas (Classroom) ──────────────────────
+// La IA produce la estructura de slides de una lección viva. El grading real y
+// la persistencia los maneja LessonService; aquí solo se genera el borrador.
+export interface ApdAiLessonSlideDraft {
+  type: 'CONTENT' | 'ACTIVITY' | 'CHECKPOINT' | 'BADGE_REVEAL';
+  title?: string;
+  body?: string; // HTML enriquecido para slides CONTENT
+  activityData?: {
+    questionType: 'MULTIPLE_CHOICE' | 'TRUE_FALSE';
+    question: string;
+    options: string[];
+    correctAnswer: string;
+    explanation?: string;
+    hint?: string;
+    points?: number;
+  };
+  badgeEmoji?: string;
+  badgeTitle?: string;
+}
+
+export interface ApdAiLessonDraft {
+  title: string;
+  description: string;
+  slides: ApdAiLessonSlideDraft[];
+}
+
 export interface ApdAiTeacherQuestionResponse {
   answer: string;
   keyPoints: string[];
