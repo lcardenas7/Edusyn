@@ -13,7 +13,8 @@
 
 ## A.0 Lo que está BIEN (para no romperlo)
 - **`AcademicDataSourceService`** centraliza la fuente: `FINALIZED` → snapshot congelado; `OPEN/CLOSED` → live (`PeriodFinalGrade`). Regla de oro clara y bien documentada. **Conservar.**
-- **`PreventiveCutsService`** (Corte Preventivo) **sí** calcula la nota parcial a una fecha de corte con `calculateTermGradeAtDate`, distingue "sin datos" de "en riesgo" (evita falsas alarmas al inicio), y entrega PDF por grupo y por estudiante. **Es el único reporte verdaderamente "parcial" y está bien hecho.**
+- **`PreventiveCutsService`** (Corte Preventivo) calcula la nota parcial a una fecha con `calculateTermGradeAtDate`, distingue "sin datos" de "en riesgo" y entrega PDF por grupo y por estudiante.
+  - ⚠️ **Bug corregido (2026-07-04):** `calculateTermGradeAtDate` leía de `StudentGrade`/`EvaluativeActivity` (vacío) en vez de `PartialGrade` (la planilla), y no tenía fallback sin plan → devolvía `null` para TODAS las materias → el corte salía "s/d / al día" aunque hubiera estudiantes reprobando. Se reescribió para leer `PartialGrade` con filtro por fecha (`createdAt <= corte`, fin de día) y promedio simple cuando no hay plan (igual que `recomputePeriodFinalGrade`). Esto también arregla el **modo parcial de C-1** (mismo motor). Test: `term-grade-at-date.spec`.
 
 ## A.1 El pipeline real de la nota (y qué necesita el cierre)
 

@@ -239,24 +239,66 @@ export class StudentGradesService {
       },
     });
 
-    if (!plan) return { grade: null, components: [] };
+    // Fuente de verdad: PartialGrade (planilla), HASTA la fecha de corte.
+    // PartialGrade no tiene fecha por actividad → se usa createdAt (cuándo se digitó).
+    // Se toma el fin del día del corte para incluir las notas cargadas ese mismo día.
+    const upperBound = new Date(cutoffDate);
+    upperBound.setHours(23, 59, 59, 999);
+    const partials = await this.prisma.partialGrade.findMany({
+      where: {
+        studentEnrollmentId,
+        teacherAssignmentId,
+        academicTermId,
+        createdAt: { lte: upperBound },
+      },
+    });
 
-    const componentResults = await Promise.all(
-      plan.components.map(async (cw) => {
-        const avg = await this.calculateComponentAverageAtDate(
-          studentEnrollmentId,
-          academicTermId,
-          cw.componentId,
-          cutoffDate,
-        );
-        return {
-          componentId: cw.componentId,
-          name: cw.component.name,
-          average: avg,
-          percentage: cw.percentage,
-        };
-      }),
-    );
+    // Sin plan de evaluación → promedio simple de los parciales hasta la fecha,
+    // igual que recomputePeriodFinalGrade (antes devolvía null → "s/d" para todos).
+    if (!plan || plan.components.length === 0) {
+      if (partials.length === 0) return { grade: null, components: [] };
+      const avg = this.roundToOneDecimal(
+        partials.reduce((a, p) => a + Number(p.score), 0) / partials.length,
+      );
+      return { grade: avg, components: [] };
+    }
+
+    let componentResults: { componentId: string; name: string; average: number | null; percentage: number }[];
+
+    if (partials.length > 0) {
+      // Agrupar PartialGrades por componentType (== EvaluationComponent.code)
+      const scoresByType = new Map<string, number[]>();
+      for (const p of partials) {
+        const scores = scoresByType.get(p.componentType) || [];
+        scores.push(Number(p.score));
+        scoresByType.set(p.componentType, scores);
+      }
+      componentResults = plan.components.map((cw) => {
+        const scores = scoresByType.get(cw.component.code) || [];
+        const avg = scores.length > 0
+          ? this.roundToOneDecimal(scores.reduce((a, b) => a + b, 0) / scores.length)
+          : null;
+        return { componentId: cw.componentId, name: cw.component.name, average: avg, percentage: cw.percentage };
+      });
+    } else {
+      // Fallback legado: StudentGrade / EvaluativeActivity con fecha (sistema anterior)
+      componentResults = await Promise.all(
+        plan.components.map(async (cw) => {
+          const avg = await this.calculateComponentAverageAtDate(
+            studentEnrollmentId,
+            academicTermId,
+            cw.componentId,
+            cutoffDate,
+          );
+          return {
+            componentId: cw.componentId,
+            name: cw.component.name,
+            average: avg,
+            percentage: cw.percentage,
+          };
+        }),
+      );
+    }
 
     const validComponents = componentResults.filter((c) => c.average !== null);
     if (validComponents.length === 0)
