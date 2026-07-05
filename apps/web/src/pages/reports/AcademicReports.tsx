@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell,
@@ -221,6 +221,14 @@ export default function AcademicReports() {
     setMinimumGradeData(null)
     setMinimumGradeGroupData([])
   }
+
+  // Deep-link desde el hub de reportes: ?report=<id> preselecciona el reporte (una vez).
+  const [searchParams] = useSearchParams()
+  React.useEffect(() => {
+    const rid = searchParams.get('report')
+    if (rid) handleSelectReport(rid)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const loadReportData = async (reportId: string) => {
     if (!filterYear) return

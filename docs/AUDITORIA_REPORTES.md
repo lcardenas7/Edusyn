@@ -84,9 +84,11 @@ Así el "informe parcial de reprobadas del primer período" queda claro y consis
 ### C-4 · Filtros  *(R-4)*
 Añadir `areaId` y `subjectId` (y opcional `stage`) a los endpoints de reprobados/recuperación + selectores en la UI.
 
-### C-5 · Unificar y limpiar el hub  *(R-5, R-6)*
-- Nombres que aclaren la diferencia (Corte Preventivo = parcial; Asignaturas Reprobadas = oficial post-cierre; Alertas = seguimiento continuo).
-- `reportCount` derivado de `reports.length` (no hardcode); verificar que cada sub-reporte funcione o quitarlo.
+### C-5 · Unificar y limpiar el hub  *(R-5, R-6)* — ✅ HECHO
+- `reportCount` **eliminado**: el badge se deriva de `reports.length` y se quitó el "+N más" fantasma.
+- **Ids corregidos** para que coincidan con las páginas destino (Alertas usaba `alert-low`→`alert-low-performance`; Boletines `certificate`→`report-certificate`) y **listas completadas** con los reportes reales (Admin 8, Evaluación 6, Asistencia 7, Boletines 5, Académico +failed-subjects/recovery/promotion).
+- **Deep-link funcional**: `AcademicReports` ahora consume `?report=<id>` (useSearchParams) y preselecciona el reporte. Las demás páginas aún abren la categoría (pendiente menor, mismo patrón).
+- Nombres más claros (Corte Preventivo = a una fecha; Alertas = seguimiento continuo; "Asignaturas reprobadas (parcial o final)").
 
 ### C-6 · Formateador Excel compartido  *(R-7 — segunda fase: "formatos")*
 Un helper único (`applyReportStyle`) con: bloque de título (institución, reporte, período, fecha de generación), encabezado con relleno + bordes, **panel congelado** en la fila de datos, **autofiltro**, ancho auto, formato numérico (1 decimal), **zebra**, y **resaltado** de notas reprobadas en rojo. Aplicarlo a las exportaciones de notas (sábana), docentes, ranking, reprobados, recuperación y a las plantillas/listados de docentes y estudiantes. *No* reescribir la lógica de datos — solo el formato.
