@@ -124,6 +124,9 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
   // Gamificación: toast flotante de XP ganado / subida de nivel
   const [xpToast, setXpToast] = useState<{ awarded: number; leveledUp: boolean; level: number | null } | null>(null)
   const xpToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Insignias recién ganadas (celebración destacada)
+  const [badgeToast, setBadgeToast] = useState<{ emoji: string; name: string; description: string } | null>(null)
+  const badgeToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -241,6 +244,14 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
             if (xpToastTimer.current) clearTimeout(xpToastTimer.current)
             xpToastTimer.current = setTimeout(() => setXpToast(null), 2600)
           }
+          // Insignias recién ganadas: celebración destacada (una a la vez)
+          if (data.xp?.newBadges && data.xp.newBadges.length > 0) {
+            const b = data.xp.newBadges[0]
+            setBadgeToast({ emoji: b.emoji, name: b.name, description: b.description })
+            confetti({ particleCount: 160, spread: 100, origin: { y: 0.4 } })
+            if (badgeToastTimer.current) clearTimeout(badgeToastTimer.current)
+            badgeToastTimer.current = setTimeout(() => setBadgeToast(null), 4200)
+          }
 
           if (data.isComplete) {
             if (soundEnabled) playSound('complete')
@@ -332,8 +343,11 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
     return () => window.removeEventListener('beforeunload', handler)
   }, [phase, isTeacher])
 
-  // Limpiar el timer del toast de XP al desmontar
-  useEffect(() => () => { if (xpToastTimer.current) clearTimeout(xpToastTimer.current) }, [])
+  // Limpiar timers de toasts al desmontar
+  useEffect(() => () => {
+    if (xpToastTimer.current) clearTimeout(xpToastTimer.current)
+    if (badgeToastTimer.current) clearTimeout(badgeToastTimer.current)
+  }, [])
 
   // ─────────────────────────────────────────────────────────────────
   // RENDER: LOADING
@@ -587,6 +601,18 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
             {xpToast.leveledUp && (
               <span className="text-sm font-bold uppercase tracking-wide">¡Subiste a nivel {xpToast.level ?? ''}! 🎉</span>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* BADGE TOAST (insignia recién ganada) */}
+      {badgeToast && (
+        <div className="pointer-events-none fixed top-1/3 left-1/2 -translate-x-1/2 z-[121]">
+          <div className="flex flex-col items-center gap-2 rounded-3xl bg-gradient-to-br from-amber-300 to-yellow-500 px-8 py-5 shadow-2xl border-2 border-amber-100 animate-[bounce_1s_ease-in-out_2]">
+            <span className="text-5xl drop-shadow">{badgeToast.emoji}</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-amber-900">¡Insignia desbloqueada!</span>
+            <span className="text-lg font-black text-amber-950">{badgeToast.name}</span>
+            <span className="text-xs text-amber-900/90">{badgeToast.description}</span>
           </div>
         </div>
       )}

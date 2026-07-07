@@ -6,6 +6,7 @@ import { classroomApi, storageApi, liveSessionApi, apdApi, lessonApi } from '../
 import { compareStudents } from '../utils/sortStudents'
 import LiveQuiz from '../components/LiveQuiz'
 import LearningIdentityWidget from '../components/LearningIdentityWidget'
+import LearningBadges from '../components/LearningBadges'
 import { CreateSelfAssessmentForm, StudentSelfAssessment, SelfAssessmentResults } from '../components/SelfAssessmentUI'
 const RichTextEditor = lazy(() => import('../components/RichTextEditor'))
 const LessonPlayer = lazy(() => import('../components/LessonPlayer'))
@@ -276,10 +277,11 @@ export default function Classroom() {
           )}
         </div>
 
-        {/* Identidad de aprendizaje del estudiante (XP / nivel / racha) */}
+        {/* Identidad de aprendizaje del estudiante (XP / nivel / racha + insignias) */}
         {isStudent && (
-          <div className="mb-5">
+          <div className="mb-5 space-y-3">
             <LearningIdentityWidget />
+            <LearningBadges />
           </div>
         )}
 

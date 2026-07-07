@@ -552,6 +552,7 @@ model Institution {
   rlsRoomRestrictions        RoomRestriction[]        @relation("RlsInstitutionRR")
   rlsLearningIdentities      LearningIdentity[]       @relation("RlsInstitutionLI")
   rlsXpEvents                XpEvent[]                @relation("RlsInstitutionXPE")
+  rlsLearningBadgeAwards     LearningBadgeAward[]     @relation("RlsInstitutionLBA")
   rlsObserverCommitments     ObserverCommitment[]     @relation("RlsInstitutionOC")
   rlsGuardianCitations       GuardianCitation[]       @relation("RlsInstitutionGC")
   rlsObserverReferrals       ObserverReferral[]       @relation("RlsInstitutionOR")
@@ -6270,6 +6271,7 @@ model LearningIdentity {
   institution Institution @relation("RlsInstitutionLI", fields: [institutionId], references: [id])
   student     Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
   xpEvents    XpEvent[]
+  badgeAwards LearningBadgeAward[]
 
   @@index([institutionId])
   @@index([studentId])
@@ -6304,6 +6306,25 @@ enum XpSource {
   QUIZ_GRADED // quiz calificado
   PLAY // EdusynPlay
   MANUAL // ajuste manual del docente
+}
+
+// Insignia ganada por un estudiante. El catálogo de insignias vive en código
+// (badge-catalog.ts) — aquí solo se registra qué código ganó y cuándo. Progreso
+// privado (nunca ranking público). Permanente: una vez ganada, no se pierde.
+model LearningBadgeAward {
+  id            String   @id @default(cuid())
+  institutionId String
+  identityId    String
+  studentId     String
+  badgeCode     String // referencia al catálogo estático de insignias
+  earnedAt      DateTime @default(now())
+
+  institution Institution      @relation("RlsInstitutionLBA", fields: [institutionId], references: [id])
+  identity    LearningIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, badgeCode]) // idempotente: una insignia por estudiante
+  @@index([institutionId])
+  @@index([identityId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

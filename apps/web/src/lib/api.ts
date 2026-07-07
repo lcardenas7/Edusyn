@@ -2425,7 +2425,10 @@ export const lessonApi = {
     api.post<LessonProgress & {
       isComplete?: boolean
       slideResult?: { answer: any; isCorrect: boolean; points: number; maxPoints: number } | null
-      xp?: { awarded: number; leveledUp: boolean; level: number | null; currentStreak: number | null } | null
+      xp?: {
+        awarded: number; leveledUp: boolean; level: number | null; currentStreak: number | null
+        newBadges: { code: string; name: string; description: string; emoji: string; tier: string }[]
+      } | null
     }>(`/classrooms/lessons/${lessonId}/advance`, data),
 
   // Teacher progress overview
@@ -2452,9 +2455,21 @@ export interface LearningIdentityView {
   lastActivityDate: string | null
 }
 
+export interface BadgeView {
+  code: string
+  name: string
+  description: string
+  emoji: string
+  tier: string
+  earned: boolean
+  earnedAt: string | null
+}
+
 export const gamificationApi = {
   // Identidad del estudiante autenticado
   me: () => api.get<LearningIdentityView>(`/gamification/me`),
+  // Catálogo de insignias con estado ganado/bloqueado
+  badges: () => api.get<{ total: number; earned: number; badges: BadgeView[] }>(`/gamification/badges`),
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

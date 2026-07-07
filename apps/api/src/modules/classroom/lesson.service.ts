@@ -450,7 +450,7 @@ export class LessonService {
     activityCorrect: boolean;
     activityPoints: number;
     isComplete: boolean;
-  }): Promise<{ awarded: number; leveledUp: boolean; level: number | null; currentStreak: number | null } | null> {
+  }): Promise<{ awarded: number; leveledUp: boolean; level: number | null; currentStreak: number | null; newBadges: GrantXpResult['newBadges'] } | null> {
     if (!p.activityCorrect && !p.isComplete) return null;
     try {
       const enrollment = await this.prisma.studentEnrollment.findUnique({
@@ -462,6 +462,7 @@ export class LessonService {
       let awarded = 0;
       let leveledUp = false;
       let last: GrantXpResult['identity'] = null;
+      const newBadges: GrantXpResult['newBadges'] = [];
 
       if (p.activityCorrect) {
         const r = await this.identity.grantXp({
@@ -476,6 +477,7 @@ export class LessonService {
         awarded += r.awarded;
         leveledUp = leveledUp || r.leveledUp;
         last = r.identity ?? last;
+        newBadges.push(...r.newBadges);
       }
 
       if (p.isComplete) {
@@ -491,9 +493,10 @@ export class LessonService {
         awarded += r.awarded;
         leveledUp = leveledUp || r.leveledUp;
         last = r.identity ?? last;
+        newBadges.push(...r.newBadges);
       }
 
-      return { awarded, leveledUp, level: last?.level ?? null, currentStreak: last?.currentStreak ?? null };
+      return { awarded, leveledUp, level: last?.level ?? null, currentStreak: last?.currentStreak ?? null, newBadges };
     } catch (err: any) {
       this.logger.warn(`awardLessonXp falló (no crítico): ${err?.message || err}`);
       return null;

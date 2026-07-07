@@ -26,4 +26,18 @@ export class GamificationController {
     if (!enrollment) throw new Error('No se encontró matrícula activa');
     return this.identity.getByStudent(enrollment.studentId);
   }
+
+  /** Catálogo de insignias con estado ganado/bloqueado del estudiante. */
+  @Get('badges')
+  @Roles('ESTUDIANTE')
+  async myBadges(@Request() req: any) {
+    const userId = req.user.id;
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { student: { userId }, status: 'ACTIVE' },
+      orderBy: { createdAt: 'desc' },
+      select: { studentId: true },
+    });
+    if (!enrollment) throw new Error('No se encontró matrícula activa');
+    return this.identity.getBadges(enrollment.studentId);
+  }
 }

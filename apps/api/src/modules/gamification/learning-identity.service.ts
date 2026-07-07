@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { XpSource, Prisma } from '@prisma/client';
+import { BADGE_CATALOG, BadgeStats } from './badge-catalog';
 
 export interface GrantXpParams {
   institutionId: string;
@@ -14,6 +15,14 @@ export interface GrantXpParams {
   idempotencyKey: string;
 }
 
+export interface EarnedBadge {
+  code: string;
+  name: string;
+  description: string;
+  emoji: string;
+  tier: string;
+}
+
 export interface GrantXpResult {
   granted: boolean; // false si ya se había concedido (idempotente) o amount<=0
   awarded: number; // XP realmente concedido en esta llamada
@@ -24,6 +33,7 @@ export interface GrantXpResult {
     currentStreak: number;
     longestStreak: number;
   } | null;
+  newBadges: EarnedBadge[]; // insignias recién ganadas en esta concesión
 }
 
 @Injectable()
@@ -84,15 +94,15 @@ export class LearningIdentityService {
   async grantXp(params: GrantXpParams): Promise<GrantXpResult> {
     const { institutionId, studentId, source, amount, idempotencyKey } = params;
     if (!institutionId || !studentId || amount <= 0) {
-      return { granted: false, awarded: 0, leveledUp: false, identity: null };
+      return { granted: false, awarded: 0, leveledUp: false, identity: null, newBadges: [] };
     }
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      const tx = await this.prisma.$transaction(async (tx) => {
         const existing = await tx.xpEvent.findUnique({ where: { idempotencyKey }, select: { id: true } });
         const current = await tx.learningIdentity.findUnique({ where: { studentId } });
         if (existing) {
           return {
-            granted: false, awarded: 0, leveledUp: false,
+            granted: false, identityId: current?.id ?? null, awarded: 0, leveledUp: false,
             identity: current && { totalXp: current.totalXp, level: current.level, currentStreak: current.currentStreak, longestStreak: current.longestStreak },
           };
         }
@@ -121,19 +131,76 @@ export class LearningIdentityService {
           },
         });
         return {
-          granted: true, awarded: amount, leveledUp,
+          granted: true, identityId: updated.id, awarded: amount, leveledUp,
           identity: { totalXp: updated.totalXp, level: updated.level, currentStreak: updated.currentStreak, longestStreak: updated.longestStreak },
         };
       });
+
+      // Evaluar insignias fuera de la transacción de XP (solo si se concedió algo).
+      let newBadges: EarnedBadge[] = [];
+      if (tx.granted && tx.identityId) {
+        newBadges = await this.evaluateAndAwardBadges(tx.identityId, studentId, institutionId);
+      }
+      return { granted: tx.granted, awarded: tx.awarded, leveledUp: tx.leveledUp, identity: tx.identity ?? null, newBadges };
     } catch (err: any) {
       // Carrera en idempotencyKey (unique) u otro error: nunca romper el flujo.
       this.logger.warn(`grantXp no concedió (${idempotencyKey}): ${err?.message || err}`);
       const identity = await this.prisma.learningIdentity.findUnique({ where: { studentId } }).catch(() => null);
       return {
-        granted: false, awarded: 0, leveledUp: false,
+        granted: false, awarded: 0, leveledUp: false, newBadges: [],
         identity: identity && { totalXp: identity.totalXp, level: identity.level, currentStreak: identity.currentStreak, longestStreak: identity.longestStreak },
       };
     }
+  }
+
+  /** Cuenta hitos del ledger y otorga las insignias recién cumplidas (idempotente). */
+  private async evaluateAndAwardBadges(identityId: string, studentId: string, institutionId: string): Promise<EarnedBadge[]> {
+    try {
+      const identity = await this.prisma.learningIdentity.findUnique({
+        where: { id: identityId },
+        select: { totalXp: true, level: true, currentStreak: true, longestStreak: true },
+      });
+      if (!identity) return [];
+
+      const [lessonsCompleted, quizzesGraded, awarded] = await Promise.all([
+        this.prisma.xpEvent.count({ where: { identityId, source: 'LESSON_COMPLETE' } }),
+        this.prisma.xpEvent.count({ where: { identityId, source: 'QUIZ_GRADED' } }),
+        this.prisma.learningBadgeAward.findMany({ where: { studentId }, select: { badgeCode: true } }),
+      ]);
+
+      const stats: BadgeStats = {
+        totalXp: identity.totalXp, level: identity.level,
+        currentStreak: identity.currentStreak, longestStreak: identity.longestStreak,
+        lessonsCompleted, quizzesGraded,
+      };
+      const alreadyHave = new Set(awarded.map(a => a.badgeCode));
+      const toAward = BADGE_CATALOG.filter(b => b.earned(stats) && !alreadyHave.has(b.code));
+      if (!toAward.length) return [];
+
+      await this.prisma.learningBadgeAward.createMany({
+        data: toAward.map(b => ({ institutionId, identityId, studentId, badgeCode: b.code })),
+        skipDuplicates: true, // idempotente ante carreras
+      });
+      return toAward.map(b => ({ code: b.code, name: b.name, description: b.description, emoji: b.emoji, tier: b.tier }));
+    } catch (err: any) {
+      this.logger.warn(`evaluateAndAwardBadges falló (no crítico): ${err?.message || err}`);
+      return [];
+    }
+  }
+
+  /** Catálogo completo con estado ganado/bloqueado para el estudiante (progreso privado). */
+  async getBadges(studentId: string) {
+    const identity = await this.prisma.learningIdentity.findUnique({ where: { studentId }, select: { id: true } });
+    const awarded = identity
+      ? await this.prisma.learningBadgeAward.findMany({ where: { studentId }, select: { badgeCode: true, earnedAt: true } })
+      : [];
+    const earnedAtByCode = new Map(awarded.map(a => [a.badgeCode, a.earnedAt]));
+    const badges = BADGE_CATALOG.map(b => ({
+      code: b.code, name: b.name, description: b.description, emoji: b.emoji, tier: b.tier,
+      earned: earnedAtByCode.has(b.code),
+      earnedAt: earnedAtByCode.get(b.code) ?? null,
+    }));
+    return { total: BADGE_CATALOG.length, earned: awarded.length, badges };
   }
 
   /** Identidad + umbrales de nivel para pintar la barra de progreso. */
