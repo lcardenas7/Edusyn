@@ -121,6 +121,10 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
   // Loading states
   const [advancing, setAdvancing] = useState(false)
 
+  // Gamificación: toast flotante de XP ganado / subida de nivel
+  const [xpToast, setXpToast] = useState<{ awarded: number; leveledUp: boolean; level: number | null } | null>(null)
+  const xpToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const containerRef = useRef<HTMLDivElement>(null)
 
   // ─────────────────────────────────────────────────────────────────
@@ -230,6 +234,14 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
             status: data.status ?? prev?.status ?? 'IN_PROGRESS',
           } as LessonProgress))
 
+          // Gamificación: mostrar XP ganado (dominio/completar) y subida de nivel
+          if (data.xp && data.xp.awarded > 0) {
+            setXpToast({ awarded: data.xp.awarded, leveledUp: !!data.xp.leveledUp, level: data.xp.level ?? null })
+            if (data.xp.leveledUp) confetti({ particleCount: 120, spread: 90, origin: { y: 0.3 } })
+            if (xpToastTimer.current) clearTimeout(xpToastTimer.current)
+            xpToastTimer.current = setTimeout(() => setXpToast(null), 2600)
+          }
+
           if (data.isComplete) {
             if (soundEnabled) playSound('complete')
             confetti({ particleCount: 200, spread: 120, origin: { y: 0.6 } })
@@ -319,6 +331,9 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
   }, [phase, isTeacher])
+
+  // Limpiar el timer del toast de XP al desmontar
+  useEffect(() => () => { if (xpToastTimer.current) clearTimeout(xpToastTimer.current) }, [])
 
   // ─────────────────────────────────────────────────────────────────
   // RENDER: LOADING
@@ -564,6 +579,18 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
       ref={containerRef}
       className={`fixed inset-0 z-[100] bg-gradient-to-br ${gradient} transition-all duration-700 flex flex-col select-none`}
     >
+      {/* XP TOAST (gamificación) */}
+      {xpToast && (
+        <div className="pointer-events-none fixed top-20 left-1/2 -translate-x-1/2 z-[120] animate-bounce">
+          <div className={`flex flex-col items-center gap-1 rounded-2xl px-6 py-3 shadow-2xl border-2 ${xpToast.leveledUp ? 'bg-amber-400 border-amber-200 text-amber-950' : 'bg-white/95 border-violet-200 text-violet-900'}`}>
+            <span className="text-2xl font-black tracking-tight">+{xpToast.awarded} XP</span>
+            {xpToast.leveledUp && (
+              <span className="text-sm font-bold uppercase tracking-wide">¡Subiste a nivel {xpToast.level ?? ''}! 🎉</span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* TOP BAR */}
       <div className="flex items-center gap-3 px-4 py-3 relative z-10">
         {/* Exit warning */}

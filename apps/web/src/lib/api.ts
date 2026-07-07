@@ -2422,7 +2422,11 @@ export const lessonApi = {
   start: (lessonId: string) =>
     api.post<LessonProgress>(`/classrooms/lessons/${lessonId}/start`),
   advance: (lessonId: string, data: { slideIndex: number; slideId: string; answer?: any; timeSpentDelta?: number }) =>
-    api.post(`/classrooms/lessons/${lessonId}/advance`, data),
+    api.post<LessonProgress & {
+      isComplete?: boolean
+      slideResult?: { answer: any; isCorrect: boolean; points: number; maxPoints: number } | null
+      xp?: { awarded: number; leveledUp: boolean; level: number | null; currentStreak: number | null } | null
+    }>(`/classrooms/lessons/${lessonId}/advance`, data),
 
   // Teacher progress overview
   getAllProgress: (lessonId: string) =>

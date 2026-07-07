@@ -1,14 +1,19 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ApdAiService } from '../apd/ai/apd-ai.service';
+import { LearningIdentityService, GrantXpResult } from '../gamification/learning-identity.service';
 
 @Injectable()
 export class LessonService {
   private readonly logger = new Logger(LessonService.name);
 
+  // XP por completar una lección (además del XP por cada acierto).
+  private static readonly LESSON_COMPLETE_XP = 50;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly apdAi: ApdAiService,
+    private readonly identity: LearningIdentityService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -359,16 +364,20 @@ export class LessonService {
 
     let scoreIncrement = 0;
     let maxScoreIncrement = 0;
+    let activityCorrect = false; // para XP por dominio (solo si acertó)
+    let activityPoints = 0;
 
     // If ACTIVITY slide, grade the answer
     if (slide.type === 'ACTIVITY' && data.answer !== undefined && slide.activityData) {
       const actData = slide.activityData as any;
       const points = actData.points || 10;
       maxScoreIncrement = points;
+      activityPoints = points;
 
       const isCorrect = this.gradeAnswer(actData, data.answer);
       if (isCorrect) {
         scoreIncrement = points;
+        activityCorrect = true;
       }
 
       answers[data.slideId] = {
@@ -413,11 +422,82 @@ export class LessonService {
       },
     });
 
+    // Gamificación: XP por DOMINIO (acertar) y por completar la lección. Idempotente
+    // por slide/lección para que reintentos no dupliquen XP. Nunca rompe el flujo.
+    const xp = await this.awardLessonXp({
+      studentEnrollmentId, lessonId, lessonTitle: lesson.title,
+      slideId: data.slideId, activityCorrect, activityPoints, isComplete,
+    });
+
     return {
       ...updatedProgress,
       isComplete,
+      xp,
       slideResult: slide.type === 'ACTIVITY' ? answers[data.slideId] : null,
     };
+  }
+
+  /**
+   * Concede el XP de una lección: por acertar la actividad (dominio) y por
+   * completarla. Idempotente. Devuelve un resumen para que la UI muestre el XP
+   * ganado / subida de nivel. Nunca lanza: la gamificación no puede romper el flujo.
+   */
+  private async awardLessonXp(p: {
+    studentEnrollmentId: string;
+    lessonId: string;
+    lessonTitle: string;
+    slideId: string;
+    activityCorrect: boolean;
+    activityPoints: number;
+    isComplete: boolean;
+  }): Promise<{ awarded: number; leveledUp: boolean; level: number | null; currentStreak: number | null } | null> {
+    if (!p.activityCorrect && !p.isComplete) return null;
+    try {
+      const enrollment = await this.prisma.studentEnrollment.findUnique({
+        where: { id: p.studentEnrollmentId },
+        select: { studentId: true, institutionId: true },
+      });
+      if (!enrollment) return null;
+
+      let awarded = 0;
+      let leveledUp = false;
+      let last: GrantXpResult['identity'] = null;
+
+      if (p.activityCorrect) {
+        const r = await this.identity.grantXp({
+          institutionId: enrollment.institutionId,
+          studentId: enrollment.studentId,
+          studentEnrollmentId: p.studentEnrollmentId,
+          source: 'LESSON_ACTIVITY',
+          amount: p.activityPoints,
+          reason: `Acierto en lección: ${p.lessonTitle}`,
+          idempotencyKey: `lesson:${p.lessonId}:slide:${p.slideId}:correct:${p.studentEnrollmentId}`,
+        });
+        awarded += r.awarded;
+        leveledUp = leveledUp || r.leveledUp;
+        last = r.identity ?? last;
+      }
+
+      if (p.isComplete) {
+        const r = await this.identity.grantXp({
+          institutionId: enrollment.institutionId,
+          studentId: enrollment.studentId,
+          studentEnrollmentId: p.studentEnrollmentId,
+          source: 'LESSON_COMPLETE',
+          amount: LessonService.LESSON_COMPLETE_XP,
+          reason: `Lección completada: ${p.lessonTitle}`,
+          idempotencyKey: `lesson:${p.lessonId}:complete:${p.studentEnrollmentId}`,
+        });
+        awarded += r.awarded;
+        leveledUp = leveledUp || r.leveledUp;
+        last = r.identity ?? last;
+      }
+
+      return { awarded, leveledUp, level: last?.level ?? null, currentStreak: last?.currentStreak ?? null };
+    } catch (err: any) {
+      this.logger.warn(`awardLessonXp falló (no crítico): ${err?.message || err}`);
+      return null;
+    }
   }
 
   // Teacher: get all students' progress

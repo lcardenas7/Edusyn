@@ -550,6 +550,8 @@ model Institution {
   rlsPeriodRecoveries        PeriodRecovery[]         @relation("RlsInstitutionPR")
   rlsFinalRecoveryPlans      FinalRecoveryPlan[]      @relation("RlsInstitutionFRP")
   rlsRoomRestrictions        RoomRestriction[]        @relation("RlsInstitutionRR")
+  rlsLearningIdentities      LearningIdentity[]       @relation("RlsInstitutionLI")
+  rlsXpEvents                XpEvent[]                @relation("RlsInstitutionXPE")
   rlsObserverCommitments     ObserverCommitment[]     @relation("RlsInstitutionOC")
   rlsGuardianCitations       GuardianCitation[]       @relation("RlsInstitutionGC")
   rlsObserverReferrals       ObserverReferral[]       @relation("RlsInstitutionOR")
@@ -1404,6 +1406,9 @@ model Student {
 
   // APD (Acompañamiento Pedagógico Diferencial)
   educationalSupportProfiles EducationalSupportProfile[]
+
+  // Gamificación — identidad de aprendizaje (persiste entre años/matrículas)
+  learningIdentity LearningIdentity?
 
   @@unique([institutionId, documentNumber])
 }
@@ -6238,6 +6243,67 @@ model LessonProgress {
   @@unique([lessonId, studentEnrollmentId])
   @@index([lessonId])
   @@index([studentEnrollmentId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GAMIFICACIÓN — Identidad de Aprendizaje (LearningIdentity)
+// Capa transversal y agnóstica de materia. XP por DOMINIO (no por clics):
+// se gana al demostrar aprendizaje (completar lección, acertar checkpoint…),
+// nunca por avanzar. Anclada en Student para persistir entre años/matrículas
+// (portafolio longitudinal). Progreso privado por defecto.
+// docs/PROPUESTA_UNIFICADA_RUTAS_BILINGUE.md §13 (Paso 1)
+// ═══════════════════════════════════════════════════════════════════════════
+
+model LearningIdentity {
+  id               String    @id @default(cuid())
+  institutionId    String
+  studentId        String    @unique
+  totalXp          Int       @default(0)
+  level            Int       @default(1)
+  currentStreak    Int       @default(0) // días consecutivos con actividad
+  longestStreak    Int       @default(0)
+  lastActivityDate DateTime? // fecha (día) de la última actividad, para la racha
+  skillXp          Json?     // XP agregado por habilidad/materia: { "Matemáticas": 120 }
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  institution Institution @relation("RlsInstitutionLI", fields: [institutionId], references: [id])
+  student     Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  xpEvents    XpEvent[]
+
+  @@index([institutionId])
+  @@index([studentId])
+}
+
+// Ledger append-only de concesiones de XP. Idempotente por idempotencyKey
+// (ej. "lesson:<lessonId>:complete:<enrollmentId>") para no conceder dos veces.
+model XpEvent {
+  id                  String   @id @default(cuid())
+  institutionId       String
+  identityId          String
+  studentId           String
+  studentEnrollmentId String? // contexto de la matrícula donde ocurrió (opcional)
+  source              XpSource
+  skill               String? // materia/habilidad; CEFR en el futuro (Paso 2)
+  amount              Int
+  reason              String? // texto legible: "Lección completada: El ciclo del agua"
+  idempotencyKey      String   @unique
+  createdAt           DateTime @default(now())
+
+  institution Institution      @relation("RlsInstitutionXPE", fields: [institutionId], references: [id])
+  identity    LearningIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId, createdAt])
+  @@index([identityId])
+  @@index([studentId])
+}
+
+enum XpSource {
+  LESSON_COMPLETE // completar una lección
+  LESSON_ACTIVITY // acertar una actividad/checkpoint dentro de una lección
+  QUIZ_GRADED // quiz calificado
+  PLAY // EdusynPlay
+  MANUAL // ajuste manual del docente
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
