@@ -20,7 +20,7 @@ import {
   Bold, Italic, Underline, List, ListOrdered, Youtube,
   FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
   BarChart3, ChevronDown, ChevronUp, ChevronRight, Clock, CheckCircle2, AlertTriangle,
-  CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check, Zap, RefreshCw, Sparkles, Gamepad2,
+  CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check, Zap, RefreshCw, Sparkles,
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -285,26 +285,6 @@ export default function Classroom() {
           </div>
         )}
 
-        {/* F0.3: Banner contextual Edusyn Play */}
-        {isTeacher && (
-          <div className="mb-5 flex items-center justify-between gap-4 rounded-xl bg-violet-50 border border-violet-200 px-5 py-3">
-            <div className="flex items-center gap-3">
-              <Gamepad2 className="w-5 h-5 text-violet-600 flex-shrink-0" />
-              <p className="text-sm text-violet-800">
-                <strong>¿Quieres jugar este contenido en vivo?</strong> Usa{' '}
-                <strong>Edusyn Play</strong> para quizzes y lecciones tipo Kahoot.
-              </p>
-            </div>
-            <a
-              href="/play-landing"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-shrink-0 text-sm font-bold text-violet-600 hover:text-violet-800 underline"
-            >
-              Ir a Play →
-            </a>
-          </div>
-        )}
 
         {error && (
           <div className="flex items-center gap-2 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
