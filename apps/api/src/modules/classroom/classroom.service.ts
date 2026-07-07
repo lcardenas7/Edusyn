@@ -1,9 +1,15 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { LearningIdentityService } from '../gamification/learning-identity.service';
 
 @Injectable()
 export class ClassroomService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ClassroomService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly identity: LearningIdentityService,
+  ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CLASSROOMS
@@ -1484,6 +1490,24 @@ export class ClassroomService {
         },
       }),
     ]);
+
+    // Gamificación: XP por DOMINIO (puntos de respuestas correctas), una sola vez
+    // por actividad y estudiante (anti-farming en reintentos). Nunca rompe el flujo.
+    try {
+      if (totalScore > 0) {
+        await this.identity.grantXp({
+          institutionId: sub.studentEnrollment.institutionId,
+          studentId: sub.studentEnrollment.studentId,
+          studentEnrollmentId: sub.studentEnrollmentId,
+          source: 'QUIZ_GRADED',
+          amount: Math.round(totalScore),
+          reason: `Quiz: ${sub.activity.title}`,
+          idempotencyKey: `quiz:activity:${sub.activityId}:enrollment:${sub.studentEnrollmentId}`,
+        });
+      }
+    } catch (err: any) {
+      this.logger.warn(`XP de quiz no concedido (no crítico): ${err?.message || err}`);
+    }
 
     // Return result
     return this.prisma.activitySubmission.findUnique({

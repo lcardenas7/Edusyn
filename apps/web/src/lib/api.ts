@@ -2438,6 +2438,26 @@ export const lessonApi = {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// GAMIFICACIÓN — Identidad de Aprendizaje (XP / nivel / racha)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface LearningIdentityView {
+  totalXp: number
+  level: number
+  currentStreak: number
+  longestStreak: number
+  skillXp: Record<string, number>
+  levelFloorXp: number
+  levelCeilXp: number
+  lastActivityDate: string | null
+}
+
+export const gamificationApi = {
+  // Identidad del estudiante autenticado
+  me: () => api.get<LearningIdentityView>(`/gamification/me`),
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // IMPORTACIÓN MASIVA DE NOTAS (Solo Rector/Admin)
 // ═══════════════════════════════════════════════════════════════════════════
 

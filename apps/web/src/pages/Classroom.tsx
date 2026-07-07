@@ -5,6 +5,7 @@ import { type ValeriaActivityDraft, type ValeriaQuestionDraft, valeriaAssistantB
 import { classroomApi, storageApi, liveSessionApi, apdApi, lessonApi } from '../lib/api'
 import { compareStudents } from '../utils/sortStudents'
 import LiveQuiz from '../components/LiveQuiz'
+import LearningIdentityWidget from '../components/LearningIdentityWidget'
 import { CreateSelfAssessmentForm, StudentSelfAssessment, SelfAssessmentResults } from '../components/SelfAssessmentUI'
 const RichTextEditor = lazy(() => import('../components/RichTextEditor'))
 const LessonPlayer = lazy(() => import('../components/LessonPlayer'))
@@ -274,6 +275,13 @@ export default function Classroom() {
             </button>
           )}
         </div>
+
+        {/* Identidad de aprendizaje del estudiante (XP / nivel / racha) */}
+        {isStudent && (
+          <div className="mb-5">
+            <LearningIdentityWidget />
+          </div>
+        )}
 
         {/* F0.3: Banner contextual Edusyn Play */}
         {isTeacher && (
