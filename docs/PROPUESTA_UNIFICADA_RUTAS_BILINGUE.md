@@ -382,4 +382,9 @@ Y un ajuste de secuencia impuesto por producción: **arreglar Lecciones es el Pa
 - **`LearningIdentityService.grantXp()`** — idempotente, recalcula nivel (curva cuadrática: nivel L = 50·(L-1)² XP; verificada) y racha diaria. **Nunca lanza:** ante error devuelve `granted:false` (la gamificación jamás rompe el flujo académico — incluso funciona si la migración aún no corrió).
 - **XP por DOMINIO, no por clics:** en Lecciones se concede al **acertar** una actividad (los `points` del slide) y al **completar** la lección (+50 XP bonus), no por avanzar.
 - **UI:** el reproductor de lecciones muestra toast flotante "+N XP" y celebra subida de nivel con confeti. Endpoint `GET gamification/me` (identidad del estudiante autenticado).
-- **Estado:** backend + UI de lecciones listos, typecheck limpio en API y web, curva verificada. **Pendiente:** correr la migración en staging/prod (deploy), widget de identidad persistente fuera de lecciones, y ampliar fuentes de XP (Play, quizzes) — future.
+- **Estado:** backend + UI de lecciones listos, typecheck limpio en API y web, curva verificada. Migración **aplicada y verificada en caliente en staging** (concesión, idempotencia, nivel, racha).
+
+### Paso 1 · increment 2 — widget persistente + XP de quizzes HECHO (2026-07-04)
+- **Widget de identidad** (`LearningIdentityWidget.tsx`, estética profesional): nivel, barra de XP hacia el siguiente nivel y racha. Montado en la cabecera de "Mis Clases" (solo estudiantes). Falla en silencio si el backend no tiene la capa. Endpoint `GET gamification/me` + `gamificationApi.me()`.
+- **Nueva fuente de XP: quizzes.** `submitQuiz` concede XP por DOMINIO (puntos de respuestas correctas) **una sola vez por actividad y estudiante** (idempotencia anti-farming en reintentos). Nunca rompe el flujo.
+- **Pendiente:** XP desde EdusynPlay (requiere vincular `LiveSessionGuest`→estudiante vía claim/conversión; hoy Play es centrado en invitados), `skill`/materia en el XP (resolver subject del aula), insignias y árboles por habilidad.
