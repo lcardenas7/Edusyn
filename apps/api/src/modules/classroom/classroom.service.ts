@@ -921,6 +921,34 @@ export class ClassroomService {
       throw new BadRequestException(`La nota no puede ser mayor a ${maxScore}`);
     }
 
+    // Gamificación: XP por DOMINIO al calificar (proporcional a la nota, hasta 30 XP),
+    // una sola vez por actividad y estudiante. Cubre tareas calificadas a mano (no solo
+    // lecciones/quizzes). Nunca rompe el flujo del docente.
+    try {
+      if (maxScore && maxScore > 0 && dto.score > 0) {
+        const enrollment = await this.prisma.studentEnrollment.findUnique({
+          where: { id: submission.studentEnrollmentId },
+          select: { studentId: true, institutionId: true },
+        });
+        if (enrollment) {
+          const xpAmount = Math.round(Math.min(dto.score / maxScore, 1) * 30);
+          if (xpAmount > 0) {
+            await this.identity.grantXp({
+              institutionId: enrollment.institutionId,
+              studentId: enrollment.studentId,
+              studentEnrollmentId: submission.studentEnrollmentId,
+              source: 'QUIZ_GRADED',
+              amount: xpAmount,
+              reason: `Actividad calificada: ${submission.activity.title}`,
+              idempotencyKey: `grade:activity:${submission.activityId}:enrollment:${submission.studentEnrollmentId}`,
+            });
+          }
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`XP de calificación no concedido (no crítico): ${err?.message || err}`);
+    }
+
     return this.prisma.activitySubmission.update({
       where: { id: submissionId },
       data: {

@@ -636,6 +636,9 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
           <p className="text-base text-slate-500 mt-1">Curso: {classroom.title}</p>
         </div>
 
+        {/* Identidad de aprendizaje (XP / nivel / racha) también dentro del aula */}
+        <LearningIdentityWidget />
+
         {/* Dashboard cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {/* Actividades pendientes */}

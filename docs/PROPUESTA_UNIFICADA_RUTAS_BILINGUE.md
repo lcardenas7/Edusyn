@@ -397,5 +397,11 @@ Y un ajuste de secuencia impuesto por producción: **arreglar Lecciones es el Pa
 - **Equidad (respuesta a la duda del fundador):** progreso **privado**, sin rankings públicos; las insignias premian hitos propios y **nunca castigan la no-participación** — un estudiante cuyo docente usa métodos tradicionales simplemente no ve gamificación, sin penalización. La gamificación es **aditiva y opcional**: el módulo académico tradicional (notas a mano, boletín) es intacto e independiente. *Futuro anotado:* interruptor de gamificación por institución/docente.
 - **Verificado en caliente en staging:** otorga por hito (first_lesson, level_5, xp_500), idempotente (no re-otorga), `getBadges` correcto. Typecheck limpio API + web.
 
+### Paso 1 · increment 4 — visibilidad dentro del aula + XP al calificar (2026-07-04)
+Tras probar en staging se detectó que la gamificación solo se veía en "Mis Clases" (la lista) y que casi nada daba XP (solo lecciones interactivas y quizzes auto-calificados; las tareas calificadas a mano no):
+- **Widget también dentro del aula:** `LearningIdentityWidget` montado en la pestaña "Inicio" del aula (HomeTab del estudiante), no solo en la lista.
+- **Nueva fuente de XP — calificación del docente:** `gradeSubmission` concede XP por dominio proporcional a la nota (hasta 30 XP, normalizado por `maxScore`), una vez por actividad y estudiante. Cubre **tareas calificadas a mano**, no solo lecciones/quizzes. Nunca rompe el flujo.
+- **Nota:** el XP **no es retroactivo** — solo acumula hacia adelante. Las notas previas al despliegue no generan XP (queda pendiente un backfill opcional idempotente si se quiere poblar el histórico).
+
 ### Nota — EdusynPlay es un motor SEPARADO (decisión del fundador, 2026-07-04)
 EdusynPlay **no** recibe esta gamificación por ahora. Es un motor aparte, estilo **Kahoot/Quizizz**, **no dependiente de institución** (jugadores invitados sin `studentId`, auth propio, rutas y layout propios). Integrar XP/insignias ahí requeriría vincular guest→estudiante y choca con su naturaleza no-institucional. **Puerta abierta:** revisarlo e integrarlo a futuro con su propio diseño. Cambios hechos: se retiró Play del **menú docente** (`Layout.tsx`) y el **banner** de `Classroom.tsx`; **las rutas siguen vivas** (`/play-landing`, `/play/*`), solo se ocultó de la navegación.
