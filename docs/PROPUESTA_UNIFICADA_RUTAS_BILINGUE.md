@@ -387,4 +387,12 @@ Y un ajuste de secuencia impuesto por producción: **arreglar Lecciones es el Pa
 ### Paso 1 · increment 2 — widget persistente + XP de quizzes HECHO (2026-07-04)
 - **Widget de identidad** (`LearningIdentityWidget.tsx`, estética profesional): nivel, barra de XP hacia el siguiente nivel y racha. Montado en la cabecera de "Mis Clases" (solo estudiantes). Falla en silencio si el backend no tiene la capa. Endpoint `GET gamification/me` + `gamificationApi.me()`.
 - **Nueva fuente de XP: quizzes.** `submitQuiz` concede XP por DOMINIO (puntos de respuestas correctas) **una sola vez por actividad y estudiante** (idempotencia anti-farming en reintentos). Nunca rompe el flujo.
-- **Pendiente:** XP desde EdusynPlay (requiere vincular `LiveSessionGuest`→estudiante vía claim/conversión; hoy Play es centrado en invitados), `skill`/materia en el XP (resolver subject del aula), insignias y árboles por habilidad.
+- **Pendiente:** XP desde EdusynPlay (requiere vincular `LiveSessionGuest`→estudiante vía claim/conversión; hoy Play es centrado en invitados), `skill`/materia en el XP (resolver subject del aula), árboles por habilidad.
+
+### Paso 1 · increment 3 — insignias / logros HECHO (2026-07-04)
+- **Modelo aditivo** (migración `20260704150000_learning_badges`): `LearningBadgeAward` (unique `[studentId, badgeCode]` → idempotente). El **catálogo vive en código** (`badge-catalog.ts`, 12 insignias: lecciones, quizzes, racha, nivel, XP) para no requerir config por institución.
+- **Otorgamiento automático dentro de `grantXp`:** tras conceder XP, cuenta hitos del ledger `XpEvent` y otorga las insignias recién cumplidas (createMany skipDuplicates). Devuelve `newBadges`. Nunca rompe el flujo.
+- **Endpoint** `GET gamification/badges` (catálogo con estado ganado/bloqueado + `earnedAt`).
+- **UI:** toast destacado de "insignia desbloqueada" con confeti en el reproductor de lecciones; grid `LearningBadges` (ganadas a color, bloqueadas con candado) en "Mis Clases".
+- **Equidad (respuesta a la duda del fundador):** progreso **privado**, sin rankings públicos; las insignias premian hitos propios y **nunca castigan la no-participación** — un estudiante cuyo docente usa métodos tradicionales simplemente no ve gamificación, sin penalización. La gamificación es **aditiva y opcional**: el módulo académico tradicional (notas a mano, boletín) es intacto e independiente. *Futuro anotado:* interruptor de gamificación por institución/docente.
+- **Verificado en caliente en staging:** otorga por hito (first_lesson, level_5, xp_500), idempotente (no re-otorga), `getBadges` correcto. Typecheck limpio API + web.
