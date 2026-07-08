@@ -459,6 +459,13 @@ export class LessonService {
       });
       if (!enrollment) return null;
 
+      // Materia (skill) para el desglose de XP por habilidad.
+      const lessonSubject = await this.prisma.lesson.findUnique({
+        where: { id: p.lessonId },
+        select: { activity: { select: { classroom: { select: { teacherAssignment: { select: { subject: { select: { name: true } } } } } } } } },
+      });
+      const skill = lessonSubject?.activity?.classroom?.teacherAssignment?.subject?.name ?? null;
+
       let awarded = 0;
       let leveledUp = false;
       let last: GrantXpResult['identity'] = null;
@@ -471,6 +478,7 @@ export class LessonService {
           studentEnrollmentId: p.studentEnrollmentId,
           source: 'LESSON_ACTIVITY',
           amount: p.activityPoints,
+          skill,
           reason: `Acierto en lección: ${p.lessonTitle}`,
           idempotencyKey: `lesson:${p.lessonId}:slide:${p.slideId}:correct:${p.studentEnrollmentId}`,
         });
@@ -487,6 +495,7 @@ export class LessonService {
           studentEnrollmentId: p.studentEnrollmentId,
           source: 'LESSON_COMPLETE',
           amount: LessonService.LESSON_COMPLETE_XP,
+          skill,
           reason: `Lección completada: ${p.lessonTitle}`,
           idempotencyKey: `lesson:${p.lessonId}:complete:${p.studentEnrollmentId}`,
         });

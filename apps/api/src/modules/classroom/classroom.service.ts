@@ -903,7 +903,7 @@ export class ClassroomService {
       include: {
         activity: {
           include: {
-            classroom: { select: { teacherAssignment: { select: { teacherId: true } } } },
+            classroom: { select: { teacherAssignment: { select: { teacherId: true, subject: { select: { name: true } } } } } },
           },
         },
       },
@@ -939,6 +939,7 @@ export class ClassroomService {
               studentEnrollmentId: submission.studentEnrollmentId,
               source: 'QUIZ_GRADED',
               amount: xpAmount,
+              skill: submission.activity.classroom.teacherAssignment.subject?.name ?? null,
               reason: `Actividad calificada: ${submission.activity.title}`,
               idempotencyKey: `grade:activity:${submission.activityId}:enrollment:${submission.studentEnrollmentId}`,
             });
@@ -975,7 +976,7 @@ export class ClassroomService {
       include: {
         activity: {
           include: {
-            classroom: { select: { teacherAssignment: { select: { teacherId: true } } } },
+            classroom: { select: { teacherAssignment: { select: { teacherId: true, subject: { select: { name: true } } } } } },
           },
         },
       },
@@ -1125,7 +1126,7 @@ export class ClassroomService {
       include: {
         activity: {
           include: {
-            classroom: { select: { teacherAssignment: { select: { teacherId: true } } } },
+            classroom: { select: { teacherAssignment: { select: { teacherId: true, subject: { select: { name: true } } } } } },
           },
         },
         studentEnrollment: {
@@ -1409,7 +1410,11 @@ export class ClassroomService {
       where: { id: submissionId },
       include: {
         studentEnrollment: { include: { student: true } },
-        activity: true,
+        activity: {
+          include: {
+            classroom: { select: { teacherAssignment: { select: { subject: { select: { name: true } } } } } },
+          },
+        },
       },
     });
     if (!sub || sub.studentEnrollment.student.userId !== userId) throw new ForbiddenException('No autorizado');
@@ -1531,6 +1536,7 @@ export class ClassroomService {
           studentEnrollmentId: sub.studentEnrollmentId,
           source: 'QUIZ_GRADED',
           amount: xpAmount,
+          skill: sub.activity.classroom.teacherAssignment.subject?.name ?? null,
           reason: `Quiz: ${sub.activity.title}`,
           idempotencyKey: `quiz:activity:${sub.activityId}:enrollment:${sub.studentEnrollmentId}`,
         });
