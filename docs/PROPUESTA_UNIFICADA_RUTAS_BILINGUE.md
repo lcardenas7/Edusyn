@@ -401,7 +401,12 @@ Y un ajuste de secuencia impuesto por producción: **arreglar Lecciones es el Pa
 Tras probar en staging se detectó que la gamificación solo se veía en "Mis Clases" (la lista) y que casi nada daba XP (solo lecciones interactivas y quizzes auto-calificados; las tareas calificadas a mano no):
 - **Widget también dentro del aula:** `LearningIdentityWidget` montado en la pestaña "Inicio" del aula (HomeTab del estudiante), no solo en la lista.
 - **Nueva fuente de XP — calificación del docente:** `gradeSubmission` concede XP por dominio proporcional a la nota (hasta 30 XP, normalizado por `maxScore`), una vez por actividad y estudiante. Cubre **tareas calificadas a mano**, no solo lecciones/quizzes. Nunca rompe el flujo.
-- **Nota:** el XP **no es retroactivo** — solo acumula hacia adelante. Las notas previas al despliegue no generan XP (queda pendiente un backfill opcional idempotente si se quiere poblar el histórico).
+- **Nota:** el XP **no es retroactivo** en vivo — solo acumula hacia adelante. Para el histórico existe `scripts/backfill-gamification-xp.ts` (idempotente).
+
+### Paso 1 · increment 5 — balance de XP + backfill del histórico (2026-07-07)
+- **Fix de balance:** el XP de quiz auto-calificado usaba `round(totalScore)` (suma cruda de puntos → miles de XP por quiz). Normalizado a `score/maxScore * 30`, consistente con las actividades a mano. Economía acotada (lección completa 50, quiz/tarea ≤30, acierto en lección = puntos del slide).
+- **Backfill (`scripts/backfill-gamification-xp.ts`, `--dry-run` soportado):** otorga XP+insignias por el trabajo ya hecho, con las **mismas claves idempotentes** que los caminos en vivo (convive sin duplicar). **Ejecutado en staging:** 321 estudiantes, 723 eventos, 321 insignias; XP máx ~129 (nivel 2). Ej.: JESUS 77 XP, nivel 2, insignia "Primera evaluación".
+- **Pendiente conocido:** `skillXp` queda vacío (`{}`) porque aún no se resuelve la materia por actividad/lección → los árboles por habilidad (futuro) necesitan poblar `skill` al conceder XP.
 
 ### Nota — EdusynPlay es un motor SEPARADO (decisión del fundador, 2026-07-04)
 EdusynPlay **no** recibe esta gamificación por ahora. Es un motor aparte, estilo **Kahoot/Quizizz**, **no dependiente de institución** (jugadores invitados sin `studentId`, auth propio, rutas y layout propios). Integrar XP/insignias ahí requeriría vincular guest→estudiante y choca con su naturaleza no-institucional. **Puerta abierta:** revisarlo e integrarlo a futuro con su propio diseño. Cambios hechos: se retiró Play del **menú docente** (`Layout.tsx`) y el **banner** de `Classroom.tsx`; **las rutas siguen vivas** (`/play-landing`, `/play/*`), solo se ocultó de la navegación.
