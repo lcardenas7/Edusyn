@@ -1519,16 +1519,18 @@ export class ClassroomService {
       }),
     ]);
 
-    // Gamificación: XP por DOMINIO (puntos de respuestas correctas), una sola vez
-    // por actividad y estudiante (anti-farming en reintentos). Nunca rompe el flujo.
+    // Gamificación: XP por DOMINIO normalizado (hasta 30 XP según % de acierto),
+    // una sola vez por actividad y estudiante (anti-farming). Nunca rompe el flujo.
     try {
-      if (totalScore > 0) {
+      const fraction = maxScore > 0 ? Math.min(normalizedScore / maxScore, 1) : 0;
+      const xpAmount = Math.round(fraction * 30);
+      if (xpAmount > 0) {
         await this.identity.grantXp({
           institutionId: sub.studentEnrollment.institutionId,
           studentId: sub.studentEnrollment.studentId,
           studentEnrollmentId: sub.studentEnrollmentId,
           source: 'QUIZ_GRADED',
-          amount: Math.round(totalScore),
+          amount: xpAmount,
           reason: `Quiz: ${sub.activity.title}`,
           idempotencyKey: `quiz:activity:${sub.activityId}:enrollment:${sub.studentEnrollmentId}`,
         });
