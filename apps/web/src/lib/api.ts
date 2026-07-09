@@ -2473,6 +2473,61 @@ export const gamificationApi = {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// RUTAS DE APRENDIZAJE (Learning Journeys) + grafo de competencias CEFR
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface CompetencyView {
+  id: string
+  framework: string
+  level: string | null
+  skill: string | null
+  code: string
+  statement: string
+}
+export interface RouteStepView {
+  id: string
+  title: string
+  sortOrder: number
+  activity?: { id: string; title: string; type: string; isPublished?: boolean } | null
+  competency?: CompetencyView | null
+}
+export interface RouteView {
+  id: string
+  title: string
+  description?: string | null
+  isPublished: boolean
+  targetLevel?: string | null
+  targetCompetency?: { code: string; statement: string; level: string | null; skill: string | null } | null
+  steps: RouteStepView[]
+}
+export interface RouteSummary {
+  id: string
+  title: string
+  description?: string | null
+  isPublished: boolean
+  targetLevel?: string | null
+  targetCompetency?: { code: string; statement: string; level: string | null; skill: string | null } | null
+  stepsCount: number
+}
+
+export const learningRouteApi = {
+  competencies: (level?: string, skill?: string) =>
+    api.get<CompetencyView[]>(`/learning-routes/competencies`, { params: { level, skill } }),
+  listByClassroom: (classroomId: string) =>
+    api.get<RouteSummary[]>(`/learning-routes/classroom/${classroomId}`),
+  get: (routeId: string) => api.get<RouteView>(`/learning-routes/${routeId}`),
+  create: (data: { classroomId: string; title: string; description?: string; targetCompetencyId?: string }) =>
+    api.post<RouteView>(`/learning-routes`, data),
+  update: (routeId: string, data: { title?: string; description?: string; isPublished?: boolean; targetCompetencyId?: string | null }) =>
+    api.put(`/learning-routes/${routeId}`, data),
+  remove: (routeId: string) => api.delete(`/learning-routes/${routeId}`),
+  addStep: (routeId: string, data: { title: string; activityId?: string; competencyId?: string }) =>
+    api.post(`/learning-routes/${routeId}/steps`, data),
+  removeStep: (stepId: string) => api.delete(`/learning-routes/steps/${stepId}`),
+  reorder: (routeId: string, stepIds: string[]) => api.put(`/learning-routes/${routeId}/steps/reorder`, { stepIds }),
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // IMPORTACIÓN MASIVA DE NOTAS (Solo Rector/Admin)
 // ═══════════════════════════════════════════════════════════════════════════
 

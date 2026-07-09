@@ -7,6 +7,8 @@ import { compareStudents } from '../utils/sortStudents'
 import LiveQuiz from '../components/LiveQuiz'
 import LearningIdentityWidget from '../components/LearningIdentityWidget'
 import LearningBadges from '../components/LearningBadges'
+import LearningRoutesTab from '../components/LearningRoutesTab'
+import { Route as RouteIcon } from 'lucide-react'
 import { CreateSelfAssessmentForm, StudentSelfAssessment, SelfAssessmentResults } from '../components/SelfAssessmentUI'
 const RichTextEditor = lazy(() => import('../components/RichTextEditor'))
 const LessonPlayer = lazy(() => import('../components/LessonPlayer'))
@@ -77,13 +79,14 @@ interface Announcement {
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316']
 
-type TabKey = 'home' | 'announcements' | 'content' | 'activities' | 'forum' | 'students' | 'grades'
+type TabKey = 'home' | 'announcements' | 'content' | 'activities' | 'routes' | 'forum' | 'students' | 'grades'
 
 const TEACHER_TABS: { key: TabKey; label: string; icon: any }[] = [
   { key: 'home', label: 'Inicio', icon: Home },
   { key: 'announcements', label: 'Anuncios', icon: Megaphone },
   { key: 'content', label: 'Contenidos', icon: FolderOpen },
   { key: 'activities', label: 'Actividades', icon: ClipboardList },
+  { key: 'routes', label: 'Rutas', icon: RouteIcon },
   { key: 'forum', label: 'Foro', icon: MessageSquare },
   { key: 'students', label: 'Estudiantes', icon: Users },
 ]
@@ -93,6 +96,7 @@ const STUDENT_TABS: { key: TabKey; label: string; icon: any }[] = [
   { key: 'announcements', label: 'Anuncios', icon: Megaphone },
   { key: 'content', label: 'Contenidos', icon: FolderOpen },
   { key: 'activities', label: 'Actividades', icon: ClipboardList },
+  { key: 'routes', label: 'Rutas', icon: RouteIcon },
   { key: 'forum', label: 'Foro', icon: MessageSquare },
   { key: 'grades', label: 'Mis Notas', icon: BarChart3 },
 ]
@@ -508,6 +512,7 @@ export default function Classroom() {
             {activeTab === 'announcements' && <AnnouncementsTab classroom={activeClassroom} isTeacher={!!isTeacher} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'content' && <ContentTab classroom={activeClassroom} isTeacher={!!isTeacher} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'activities' && <ActivitiesTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} onReload={reloadClassroom} setError={setError} />}
+            {activeTab === 'routes' && <LearningRoutesTab classroomId={activeClassroom.id} isTeacher={!!isTeacher} />}
             {activeTab === 'forum' && <ForumTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} user={user} setError={setError} />}
             {activeTab === 'students' && <StudentsTab classroomId={activeClassroom.id} />}
             {activeTab === 'grades' && <GradesTab classroomId={activeClassroom.id} />}
