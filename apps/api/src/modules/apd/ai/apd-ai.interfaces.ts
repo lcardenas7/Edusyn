@@ -215,6 +215,20 @@ export interface ApdAiLessonDraft {
   slides: ApdAiLessonSlideDraft[];
 }
 
+// ─── Plan de Ruta de Aprendizaje bilingüe (Valeria arma la ruta) ────────────
+export type ApdAiRouteSkill = 'READING' | 'LISTENING' | 'SPEAKING' | 'WRITING';
+export interface ApdAiRoutePlanStep {
+  title: string;
+  skill: ApdAiRouteSkill;
+}
+export interface ApdAiRoutePlan {
+  title: string;
+  description: string;
+  targetLevel: string; // "A1".."B2"
+  targetSkill: ApdAiRouteSkill;
+  steps: ApdAiRoutePlanStep[];
+}
+
 export interface ApdAiTeacherQuestionResponse {
   answer: string;
   keyPoints: string[];

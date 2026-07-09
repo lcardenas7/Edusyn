@@ -16,6 +16,8 @@ import {
   ApdAiQuestionDraft,
   ApdAiLessonDraft,
   ApdAiLessonSlideDraft,
+  ApdAiRoutePlan,
+  ApdAiRouteSkill,
   ApdAiServiceConfig,
 } from './apd-ai.interfaces';
 
@@ -1759,6 +1761,80 @@ export class ApdAiService implements IApdAiService {
       description: (typeof raw?.description === 'string' && raw.description.trim())
         || `Lección interactiva sobre ${topic || 'el tema'}`,
       slides,
+    };
+  }
+
+  /**
+   * Valeria arma una Ruta de Aprendizaje bilingüe a partir de un objetivo del
+   * docente: propone título, nivel/habilidad CEFR objetivo y una secuencia de
+   * pasos por habilidad (Reading/Listening/Speaking/Writing). No inventa códigos
+   * de competencia: solo nivel+habilidad; el servicio los mapea al grafo CEFR.
+   */
+  async generateRoutePlan(params: {
+    objective: string;
+    gradeName?: string;
+    targetLevel?: string;
+  }): Promise<ApdAiRoutePlan> {
+    if (!this.isEnabled()) {
+      throw new Error('La generación con IA no está habilitada (APD_AI_API_KEY ausente).');
+    }
+    const objective = (params.objective || '').trim();
+    if (!objective) throw new Error('Objetivo requerido');
+    const SKILLS = ['READING', 'LISTENING', 'SPEAKING', 'WRITING'];
+
+    const systemInstruction = [
+      'Eres Valeria, diseñadora de currículo bilingüe (inglés) alineada al CEFR (MCER).',
+      'Diseñas una Ruta de Aprendizaje: una secuencia corta de pasos que converge en una competencia comunicativa.',
+      'Responde EXCLUSIVAMENTE con un JSON válido, sin texto adicional, sin markdown, sin backticks.',
+      '',
+      'Reglas:',
+      '- Se puntúa por INTELIGIBILIDAD y can-do, no por acento nativo.',
+      '- La ruta tiene entre 4 y 6 pasos, en orden pedagógico (normalmente input primero: Reading/Listening; luego producción: Speaking/Writing).',
+      `- Cada paso usa exactamente una habilidad: ${SKILLS.join(', ')}.`,
+      '- El nivel objetivo (targetLevel) es uno de: A1, A2, B1, B2.',
+      '- La habilidad objetivo (targetSkill) suele ser SPEAKING o WRITING (producción).',
+      '- Títulos de paso cortos y concretos en español (máx 6 palabras).',
+      '',
+      'Esquema JSON exacto:',
+      '{',
+      '  "title": "Título atractivo de la ruta (puede incluir inglés)",',
+      '  "description": "1 frase de qué logrará el estudiante",',
+      '  "targetLevel": "A2",',
+      '  "targetSkill": "SPEAKING",',
+      '  "steps": [ { "title": "Lectura · My Family", "skill": "READING" } ]',
+      '}',
+      params.gradeName ? `Nivel escolar: ${params.gradeName}.` : '',
+      params.targetLevel ? `Usa como nivel objetivo: ${params.targetLevel}.` : '',
+    ].filter(Boolean).join('\n');
+
+    const userPrompt = `Objetivo del docente: ${objective}\n\nDiseña la ruta siguiendo el esquema JSON.`;
+
+    let raw: any;
+    try {
+      raw = await this.callLlmJson<any>(systemInstruction, userPrompt, 3000);
+    } catch (err: any) {
+      this.logger.error(`generateRoutePlan LLM error (${this.config.provider}): ${err?.message || err}`);
+      throw new Error(`El proveedor de IA (${this.config.provider}) no respondió: ${err?.message || 'error desconocido'}`);
+    }
+
+    const norm = (s: any): ApdAiRouteSkill => {
+      const u = String(s || '').toUpperCase();
+      return (SKILLS.includes(u) ? u : 'READING') as ApdAiRouteSkill;
+    };
+    const level = ['A1', 'A2', 'B1', 'B2'].includes(String(raw?.targetLevel).toUpperCase())
+      ? String(raw.targetLevel).toUpperCase() : (params.targetLevel || 'A2');
+    const steps: ApdAiRoutePlan['steps'] = (Array.isArray(raw?.steps) ? raw.steps : [])
+      .map((s: any) => ({ title: String(s?.title || '').trim(), skill: norm(s?.skill) }))
+      .filter((s: any) => s.title)
+      .slice(0, 8);
+    if (!steps.length) throw new Error('La IA no propuso pasos válidos.');
+
+    return {
+      title: String(raw?.title || objective).trim(),
+      description: String(raw?.description || '').trim(),
+      targetLevel: level,
+      targetSkill: norm(raw?.targetSkill || 'SPEAKING'),
+      steps,
     };
   }
 

@@ -2510,6 +2510,13 @@ export interface RouteSummary {
   stepsCount: number
 }
 
+export interface RoutePlan {
+  title: string
+  description: string
+  targetLevel: string
+  targetSkill: string
+  steps: { title: string; skill: string }[]
+}
 export interface RouteProgress {
   routeId: string
   targetMastery: number
@@ -2528,6 +2535,10 @@ export const learningRouteApi = {
   progress: (routeId: string) => api.get<RouteProgress>(`/learning-routes/${routeId}/progress`),
   create: (data: { classroomId: string; title: string; description?: string; targetCompetencyId?: string }) =>
     api.post<RouteView>(`/learning-routes`, data),
+  generate: (data: { objective: string; gradeName?: string; targetLevel?: string }) =>
+    api.post<RoutePlan>(`/learning-routes/generate`, data),
+  fromPlan: (data: { classroomId: string; plan: RoutePlan }) =>
+    api.post<RouteView>(`/learning-routes/from-plan`, data),
   update: (routeId: string, data: { title?: string; description?: string; isPublished?: boolean; targetCompetencyId?: string | null }) =>
     api.put(`/learning-routes/${routeId}`, data),
   remove: (routeId: string) => api.delete(`/learning-routes/${routeId}`),

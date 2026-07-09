@@ -57,6 +57,22 @@ export class LearningRouteController {
     return this.service.createRoute(institutionId, body);
   }
 
+  // Valeria arma la ruta: genera un plan (preview, no persiste)
+  @Post('generate')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async generate(@Body() body: { objective: string; gradeName?: string; targetLevel?: string }) {
+    return this.service.generatePlan(body.objective, body.gradeName, body.targetLevel);
+  }
+
+  // Crea la ruta a partir de un plan de Valeria (que el docente confirmó)
+  @Post('from-plan')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async fromPlan(@Request() req: any, @Body() body: { classroomId: string; plan: any }) {
+    const institutionId = await resolveInstitutionId(this.prisma as any, req);
+    if (!institutionId) throw new Error('No se pudo resolver la institución');
+    return this.service.createFromPlan(institutionId, body.classroomId, body.plan);
+  }
+
   @Put(':routeId')
   @Roles('DOCENTE', 'COORDINADOR')
   async update(@Param('routeId') routeId: string, @Body() body: any) {

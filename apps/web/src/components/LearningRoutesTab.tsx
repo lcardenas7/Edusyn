@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Route, Plus, Target, Trash2, X, BookOpen, Headphones, Mic, PenLine, Circle, ChevronLeft, Check, Loader2 } from 'lucide-react'
-import { learningRouteApi, classroomApi, type RouteSummary, type RouteView, type CompetencyView, type RouteProgress } from '../lib/api'
+import { Route, Plus, Target, Trash2, X, BookOpen, Headphones, Mic, PenLine, Circle, ChevronLeft, Check, Loader2, Sparkles } from 'lucide-react'
+import { learningRouteApi, classroomApi, type RouteSummary, type RouteView, type CompetencyView, type RouteProgress, type RoutePlan } from '../lib/api'
 
 const SKILL_ICON: Record<string, any> = { READING: BookOpen, LISTENING: Headphones, SPEAKING: Mic, WRITING: PenLine }
 const SKILL_LABEL: Record<string, string> = { READING: 'Lectura', LISTENING: 'Escucha', SPEAKING: 'Habla', WRITING: 'Escritura' }
@@ -15,6 +15,7 @@ export default function LearningRoutesTab({ classroomId, isTeacher }: { classroo
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showCreate, setShowCreate] = useState(false)
+  const [showValeria, setShowValeria] = useState(false)
 
   const loadRoutes = useCallback(async () => {
     try {
@@ -46,9 +47,14 @@ export default function LearningRoutesTab({ classroomId, isTeacher }: { classroo
           <p className="text-sm text-slate-500">Pasos que convergen en una competencia</p>
         </div>
         {isTeacher && (
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 text-sm font-medium">
-            <Plus className="w-4 h-4" /> Crear ruta
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowValeria(true)} className="flex items-center gap-2 px-4 py-2 border border-violet-300 text-violet-700 rounded-lg hover:bg-violet-50 text-sm font-medium">
+              <Sparkles className="w-4 h-4" /> Armar con Valeria
+            </button>
+            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 text-sm font-medium">
+              <Plus className="w-4 h-4" /> Crear ruta
+            </button>
+          </div>
         )}
       </div>
 
@@ -85,7 +91,68 @@ export default function LearningRoutesTab({ classroomId, isTeacher }: { classroo
       )}
 
       {showCreate && <CreateRouteModal classroomId={classroomId} onClose={() => setShowCreate(false)} onCreated={(r) => { setShowCreate(false); loadRoutes(); openRoute(r.id) }} />}
+      {showValeria && <ValeriaRouteModal classroomId={classroomId} onClose={() => setShowValeria(false)} onCreated={(r) => { setShowValeria(false); loadRoutes(); openRoute(r.id) }} />}
     </div>
+  )
+}
+
+// ─── Armar ruta con Valeria (IA) ─────────────────────────────────────────────
+function ValeriaRouteModal({ classroomId, onClose, onCreated }: { classroomId: string; onClose: () => void; onCreated: (r: RouteView) => void }) {
+  const [objective, setObjective] = useState('')
+  const [plan, setPlan] = useState<RoutePlan | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  const generate = async () => {
+    if (!objective.trim()) { setErr('Escribe qué quieres que logren'); return }
+    try { setErr(''); setLoading(true); const { data } = await learningRouteApi.generate({ objective: objective.trim() }); setPlan(data) }
+    catch { setErr('Valeria no pudo generar la ruta. Intenta de nuevo.') } finally { setLoading(false) }
+  }
+  const accept = async () => {
+    if (!plan) return
+    try { setSaving(true); const { data } = await learningRouteApi.fromPlan({ classroomId, plan }); onCreated(data) }
+    catch { setErr('No se pudo crear la ruta'); setSaving(false) }
+  }
+
+  return (
+    <ModalShell title="Armar ruta con Valeria" onClose={onClose}>
+      {!plan ? (
+        <div className="space-y-3">
+          <p className="text-sm text-slate-500">Describe qué quieres que logren tus estudiantes y Valeria propondrá una ruta alineada al CEFR.</p>
+          <textarea value={objective} onChange={e => setObjective(e.target.value)} rows={3} placeholder="Ej. Que puedan describir su familia y su rutina diaria en inglés" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+          {err && <p className="text-sm text-red-600">{err}</p>}
+          <button onClick={generate} disabled={loading} className="w-full bg-violet-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-violet-700 disabled:opacity-60 flex items-center justify-center gap-2">
+            {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Valeria está diseñando…</> : <><Sparkles className="w-4 h-4" /> Generar ruta</>}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div>
+            <div className="font-medium text-slate-800">{plan.title}</div>
+            {plan.description && <p className="text-xs text-slate-500">{plan.description}</p>}
+            <span className="inline-block mt-1 text-xs font-medium text-violet-700 bg-violet-50 px-2 py-0.5 rounded-full">Objetivo {plan.targetLevel} · {SKILL_LABEL[plan.targetSkill] || plan.targetSkill}</span>
+          </div>
+          <ol className="space-y-2">
+            {plan.steps.map((s, i) => {
+              const Icon = stepIcon(s.skill)
+              return (
+                <li key={i} className="flex items-center gap-2 text-sm">
+                  <div className="w-8 h-8 rounded-full bg-violet-50 border border-violet-200 flex items-center justify-center text-violet-600"><Icon className="w-4 h-4" /></div>
+                  <span className="text-slate-700">{s.title}</span>
+                  <span className="text-xs text-slate-400 ml-auto">{SKILL_LABEL[s.skill] || s.skill}</span>
+                </li>
+              )
+            })}
+          </ol>
+          {err && <p className="text-sm text-red-600">{err}</p>}
+          <div className="flex gap-2">
+            <button onClick={() => setPlan(null)} className="flex-1 border border-slate-200 text-slate-600 rounded-lg py-2 text-sm font-medium hover:bg-slate-50">Reintentar</button>
+            <button onClick={accept} disabled={saving} className="flex-1 bg-violet-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-violet-700 disabled:opacity-60">{saving ? 'Creando…' : 'Crear esta ruta'}</button>
+          </div>
+        </div>
+      )}
+    </ModalShell>
   )
 }
 

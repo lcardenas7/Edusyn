@@ -1,9 +1,46 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ApdAiService } from '../apd/ai/apd-ai.service';
+import type { ApdAiRoutePlan } from '../apd/ai/apd-ai.interfaces';
 
 @Injectable()
 export class LearningRouteService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly apdAi: ApdAiService,
+  ) {}
+
+  // ─── Valeria arma la ruta ───────────────────────────────────────────────────
+  /** Genera un plan de ruta con IA (no persiste). El docente lo revisa y confirma. */
+  async generatePlan(objective: string, gradeName?: string, targetLevel?: string): Promise<ApdAiRoutePlan> {
+    return this.apdAi.generateRoutePlan({ objective, gradeName, targetLevel });
+  }
+
+  /** Resuelve la primera competencia del grafo para (nivel, habilidad). */
+  private async resolveCompetencyId(level: string, skill: string): Promise<string | undefined> {
+    const c = await this.prisma.competency.findFirst({
+      where: { framework: 'CEFR', level, skill, isActive: true },
+      orderBy: { sortOrder: 'asc' }, select: { id: true },
+    });
+    return c?.id;
+  }
+
+  /** Crea una ruta completa (con pasos) a partir de un plan de Valeria. */
+  async createFromPlan(institutionId: string, classroomId: string, plan: ApdAiRoutePlan) {
+    const classroom = await this.prisma.classroom.findFirst({ where: { id: classroomId, institutionId }, select: { id: true } });
+    if (!classroom) throw new NotFoundException('Aula no encontrada');
+
+    const targetCompetencyId = await this.resolveCompetencyId(plan.targetLevel, plan.targetSkill);
+    const route = await this.createRoute(institutionId, {
+      classroomId, title: plan.title, description: plan.description,
+      targetCompetencyId, targetLevel: plan.targetLevel,
+    });
+    for (const step of plan.steps) {
+      const competencyId = await this.resolveCompetencyId(plan.targetLevel, step.skill);
+      await this.addStep(route.id, { title: step.title, competencyId });
+    }
+    return this.getRoute(route.id);
+  }
 
   // ─── Grafo de competencias (para el selector del docente) ──────────────────
   async listCompetencies(filters: { framework?: string; level?: string; skill?: string }) {
