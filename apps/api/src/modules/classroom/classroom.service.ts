@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LearningIdentityService } from '../gamification/learning-identity.service';
+import { CompetencyEvidenceService } from '../learning-route/competency-evidence.service';
 
 @Injectable()
 export class ClassroomService {
@@ -9,6 +10,7 @@ export class ClassroomService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly identity: LearningIdentityService,
+    private readonly evidence: CompetencyEvidenceService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -944,10 +946,19 @@ export class ClassroomService {
               idempotencyKey: `grade:activity:${submission.activityId}:enrollment:${submission.studentEnrollmentId}`,
             });
           }
+          // Evidencia de competencias (si la actividad es paso de una ruta con can-do).
+          await this.evidence.recordFromActivity({
+            institutionId: enrollment.institutionId,
+            studentId: enrollment.studentId,
+            studentEnrollmentId: submission.studentEnrollmentId,
+            activityId: submission.activityId,
+            scorePercent: Math.min(dto.score / maxScore, 1) * 100,
+            source: 'ACTIVITY', sourceRef: submissionId,
+          });
         }
       }
     } catch (err: any) {
-      this.logger.warn(`XP de calificación no concedido (no crítico): ${err?.message || err}`);
+      this.logger.warn(`XP/evidencia de calificación no concedido (no crítico): ${err?.message || err}`);
     }
 
     return this.prisma.activitySubmission.update({
@@ -1544,6 +1555,16 @@ export class ClassroomService {
     } catch (err: any) {
       this.logger.warn(`XP de quiz no concedido (no crítico): ${err?.message || err}`);
     }
+
+    // Evidencia de competencias: si esta actividad es paso de una ruta con can-do.
+    await this.evidence.recordFromActivity({
+      institutionId: sub.studentEnrollment.institutionId,
+      studentId: sub.studentEnrollment.studentId,
+      studentEnrollmentId: sub.studentEnrollmentId,
+      activityId: sub.activityId,
+      scorePercent: maxScore > 0 ? Math.min(normalizedScore / maxScore, 1) * 100 : 0,
+      source: 'QUIZ', sourceRef: submissionId,
+    });
 
     // Return result
     return this.prisma.activitySubmission.findUnique({

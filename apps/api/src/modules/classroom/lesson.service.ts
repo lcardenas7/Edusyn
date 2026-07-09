@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException,
 import { PrismaService } from '../../prisma/prisma.service';
 import { ApdAiService } from '../apd/ai/apd-ai.service';
 import { LearningIdentityService, GrantXpResult } from '../gamification/learning-identity.service';
+import { CompetencyEvidenceService } from '../learning-route/competency-evidence.service';
 
 @Injectable()
 export class LessonService {
@@ -14,6 +15,7 @@ export class LessonService {
     private readonly prisma: PrismaService,
     private readonly apdAi: ApdAiService,
     private readonly identity: LearningIdentityService,
+    private readonly evidence: CompetencyEvidenceService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -427,6 +429,8 @@ export class LessonService {
     const xp = await this.awardLessonXp({
       studentEnrollmentId, lessonId, lessonTitle: lesson.title,
       slideId: data.slideId, activityCorrect, activityPoints, isComplete,
+      activityId: lesson.activityId,
+      scorePercent: totalMaxScore > 0 ? Math.min(Number(updatedProgress.score) / totalMaxScore, 1) * 100 : 100,
     });
 
     return {
@@ -450,6 +454,8 @@ export class LessonService {
     activityCorrect: boolean;
     activityPoints: number;
     isComplete: boolean;
+    activityId: string;
+    scorePercent: number;
   }): Promise<{ awarded: number; leveledUp: boolean; level: number | null; currentStreak: number | null; newBadges: GrantXpResult['newBadges'] } | null> {
     if (!p.activityCorrect && !p.isComplete) return null;
     try {
@@ -458,6 +464,18 @@ export class LessonService {
         select: { studentId: true, institutionId: true },
       });
       if (!enrollment) return null;
+
+      // Evidencia de competencias al completar la lección (si es paso de una ruta con can-do).
+      if (p.isComplete) {
+        await this.evidence.recordFromActivity({
+          institutionId: enrollment.institutionId,
+          studentId: enrollment.studentId,
+          studentEnrollmentId: p.studentEnrollmentId,
+          activityId: p.activityId,
+          scorePercent: p.scorePercent,
+          source: 'LESSON', sourceRef: p.lessonId,
+        });
+      }
 
       // Materia (skill) para el desglose de XP por habilidad.
       const lessonSubject = await this.prisma.lesson.findUnique({

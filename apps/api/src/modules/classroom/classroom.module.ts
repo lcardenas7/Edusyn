@@ -7,9 +7,10 @@ import { LessonService } from './lesson.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { ApdModule } from '../apd/apd.module';
 import { GamificationModule } from '../gamification/gamification.module';
+import { LearningRouteModule } from '../learning-route/learning-route.module';
 
 @Module({
-  imports: [PrismaModule, ApdModule, GamificationModule],
+  imports: [PrismaModule, ApdModule, GamificationModule, LearningRouteModule],
   controllers: [ClassroomController],
   providers: [ClassroomService, ClassroomCronService, AttitudinalService, LessonService],
   exports: [ClassroomService, AttitudinalService, LessonService],

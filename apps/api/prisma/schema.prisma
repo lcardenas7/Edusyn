@@ -555,6 +555,7 @@ model Institution {
   rlsLearningBadgeAwards     LearningBadgeAward[]     @relation("RlsInstitutionLBA")
   rlsLearningRoutes          LearningRoute[]          @relation("RlsInstitutionLR")
   rlsLearningRouteSteps      LearningRouteStep[]      @relation("RlsInstitutionLRS")
+  rlsCompetencyEvidence      CompetencyEvidence[]     @relation("RlsInstitutionCEV")
   rlsObserverCommitments     ObserverCommitment[]     @relation("RlsInstitutionOC")
   rlsGuardianCitations       GuardianCitation[]       @relation("RlsInstitutionGC")
   rlsObserverReferrals       ObserverReferral[]       @relation("RlsInstitutionOR")
@@ -6360,6 +6361,33 @@ model Competency {
   // Rutas/pasos que apuntan a esta competencia (grafo → aprendizaje)
   targetedByRoutes LearningRoute[]     @relation("RouteTargetCompetency")
   routeSteps       LearningRouteStep[] @relation("StepCompetency")
+  evidence         CompetencyEvidence[] @relation("CompetencyEvidence")
+}
+
+// Evidencia de que un estudiante demostró (parcial o totalmente) un can-do.
+// El corazón de la tesis "todo genera evidencia": cada trabajo enganchado a una
+// competencia produce una fila aquí; el dominio (%) se deriva de la evidencia
+// acumulada. Tenant-scoped (RLS). docs/PROPUESTA_UNIFICADA_RUTAS_BILINGUE.md §4
+model CompetencyEvidence {
+  id                  String   @id @default(cuid())
+  institutionId       String
+  studentId           String
+  studentEnrollmentId String?
+  competencyId        String
+  source              String // "QUIZ" | "LESSON" | "ACTIVITY" | "WRITING" | "MANUAL"
+  sourceRef           String? // id de la actividad/entrega que la produjo
+  routeStepId         String? // paso de ruta que la originó (si aplica)
+  score               Int // 0-100: qué tan bien demostrada
+  idempotencyKey      String   @unique
+  createdAt           DateTime @default(now())
+
+  institution Institution @relation("RlsInstitutionCEV", fields: [institutionId], references: [id])
+  competency  Competency  @relation("CompetencyEvidence", fields: [competencyId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([studentId, competencyId])
+  @@index([competencyId])
+  @@index([routeStepId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

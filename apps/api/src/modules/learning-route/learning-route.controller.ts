@@ -5,12 +5,14 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
 import { resolveInstitutionId } from '../../common/utils/institution-resolver';
 import { LearningRouteService } from './learning-route.service';
+import { CompetencyEvidenceService } from './competency-evidence.service';
 
 @Controller('learning-routes')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class LearningRouteController {
   constructor(
     private readonly service: LearningRouteService,
+    private readonly evidence: CompetencyEvidenceService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -31,6 +33,18 @@ export class LearningRouteController {
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
   async getOne(@Param('routeId') routeId: string) {
     return this.service.getRoute(routeId);
+  }
+
+  // Progreso del estudiante autenticado en una ruta (% dominado + por paso)
+  @Get(':routeId/progress')
+  @Roles('ESTUDIANTE')
+  async myProgress(@Param('routeId') routeId: string, @Request() req: any) {
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: { student: { userId: req.user.id }, status: 'ACTIVE' },
+      orderBy: { createdAt: 'desc' }, select: { studentId: true },
+    });
+    if (!enrollment) throw new Error('No se encontró matrícula activa');
+    return this.evidence.getRouteProgress(routeId, enrollment.studentId);
   }
 
   @Post()
