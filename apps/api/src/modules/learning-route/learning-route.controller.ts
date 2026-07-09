@@ -93,6 +93,15 @@ export class LearningRouteController {
     return this.service.addStep(routeId, body);
   }
 
+  // Crea una actividad propia de la ruta (oculta de Actividades) + el paso
+  @Post(':routeId/steps/new-activity')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async addStepWithNewActivity(@Param('routeId') routeId: string, @Body() body: {
+    title: string; activityType?: string; description?: string; competencyId?: string; maxScore?: number;
+  }) {
+    return this.service.addStepWithNewActivity(routeId, body);
+  }
+
   @Put(':routeId/steps/reorder')
   @Roles('DOCENTE', 'COORDINADOR')
   async reorder(@Param('routeId') routeId: string, @Body() body: { stepIds: string[] }) {

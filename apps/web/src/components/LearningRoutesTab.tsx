@@ -352,6 +352,7 @@ function CreateRouteModal({ classroomId, onClose, onCreated }: { classroomId: st
 }
 
 function AddStepModal({ routeId, classroomId, onClose, onAdded }: { routeId: string; classroomId: string; onClose: () => void; onAdded: () => void }) {
+  const [mode, setMode] = useState<'new' | 'link'>('new')
   const [title, setTitle] = useState('')
   const [comp, setComp] = useState<CompetencyView | null>(null)
   const [activityId, setActivityId] = useState('')
@@ -360,13 +361,13 @@ function AddStepModal({ routeId, classroomId, onClose, onAdded }: { routeId: str
   const [err, setErr] = useState('')
 
   useEffect(() => {
+    if (mode !== 'link') return
     classroomApi.listActivities(classroomId).then(({ data }) => {
       const list = Array.isArray(data) ? data : []
       setActivities(list.map((a: any) => ({ id: a.id, title: a.title, type: a.type })))
     }).catch(() => setActivities([]))
-  }, [classroomId])
+  }, [classroomId, mode])
 
-  // Al elegir actividad, autocompletar el título del paso si está vacío
   const onPickActivity = (id: string) => {
     setActivityId(id)
     if (id && !title.trim()) { const a = activities.find(x => x.id === id); if (a) setTitle(a.title) }
@@ -376,7 +377,12 @@ function AddStepModal({ routeId, classroomId, onClose, onAdded }: { routeId: str
     if (!title.trim()) { setErr('El título del paso es obligatorio'); return }
     try {
       setSaving(true)
-      await learningRouteApi.addStep(routeId, { title: title.trim(), competencyId: comp?.id, activityId: activityId || undefined })
+      if (mode === 'new') {
+        // Crea una actividad propia de la ruta (no aparece en Actividades)
+        await learningRouteApi.addStepWithActivity(routeId, { title: title.trim(), activityType: 'TASK', competencyId: comp?.id })
+      } else {
+        await learningRouteApi.addStep(routeId, { title: title.trim(), competencyId: comp?.id, activityId: activityId || undefined })
+      }
       onAdded()
     } catch { setErr('No se pudo añadir el paso') } finally { setSaving(false) }
   }
@@ -384,14 +390,24 @@ function AddStepModal({ routeId, classroomId, onClose, onAdded }: { routeId: str
   return (
     <ModalShell title="Añadir paso" onClose={onClose}>
       <div className="space-y-3">
-        <div>
-          <label className="text-sm font-medium text-slate-600 mb-1 block">Actividad del aula (produce la evidencia)</label>
-          <select value={activityId} onChange={e => onPickActivity(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
-            <option value="">— Sin actividad (solo hito) —</option>
-            {activities.map(a => <option key={a.id} value={a.id}>{a.title}</option>)}
-          </select>
+        <div className="flex rounded-lg border border-slate-200 p-0.5 text-sm">
+          <button onClick={() => setMode('new')} className={`flex-1 py-1.5 rounded-md font-medium ${mode === 'new' ? 'bg-violet-600 text-white' : 'text-slate-600'}`}>Crear para la ruta</button>
+          <button onClick={() => setMode('link')} className={`flex-1 py-1.5 rounded-md font-medium ${mode === 'link' ? 'bg-violet-600 text-white' : 'text-slate-600'}`}>Enlazar existente</button>
         </div>
-        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título del paso (ej. Escucha · diálogo)" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+
+        {mode === 'new' ? (
+          <p className="text-xs text-slate-500">Se crea una actividad <strong>propia de esta ruta</strong> (no aparece en la pestaña Actividades). El estudiante la hace desde el mapa de la ruta.</p>
+        ) : (
+          <div>
+            <label className="text-sm font-medium text-slate-600 mb-1 block">Actividad del aula (produce la evidencia)</label>
+            <select value={activityId} onChange={e => onPickActivity(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
+              <option value="">— Sin actividad (solo hito) —</option>
+              {activities.map(a => <option key={a.id} value={a.id}>{a.title}</option>)}
+            </select>
+          </div>
+        )}
+
+        <input value={title} onChange={e => setTitle(e.target.value)} placeholder={mode === 'new' ? 'Consigna (ej. Describe tu familia en 80 palabras)' : 'Título del paso'} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
         <div>
           <label className="text-sm font-medium text-slate-600 mb-1 block">Competencia que trabaja (para medir el dominio)</label>
           <CompetencyPicker value={comp} onChange={setComp} />

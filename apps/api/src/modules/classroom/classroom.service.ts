@@ -540,9 +540,10 @@ export class ClassroomService {
 
   async listActivities(classroomId: string, userId: string, role: 'teacher' | 'student') {
     if (role === 'teacher') {
-      // Teachers see all activities
+      // Teachers see all activities EXCEPT las propias de una ruta (isRouteScoped),
+      // que se gestionan desde el mapa de la ruta, no en esta lista.
       const activities = await this.prisma.classroomActivity.findMany({
-        where: { classroomId },
+        where: { classroomId, isRouteScoped: false },
         include: {
           section: { select: { id: true, title: true } },
           _count: { select: { submissions: true } },
@@ -562,9 +563,10 @@ export class ClassroomService {
       return activities.map((a) => ({ ...a, gradingPending: pendingMap.get(a.id) || 0 }));
     }
 
-    // Students see only published activities — ordered by publication date (newest first)
+    // Students see only published activities — ordered by publication date (newest first).
+    // Las propias de una ruta se hacen desde el mapa de la ruta, no en esta lista.
     return this.prisma.classroomActivity.findMany({
-      where: { classroomId, isPublished: true, isVisible: true },
+      where: { classroomId, isPublished: true, isVisible: true, isRouteScoped: false },
       include: {
         section: { select: { id: true, title: true } },
         submissions: {

@@ -176,6 +176,36 @@ export class LearningRouteService {
     });
   }
 
+  /**
+   * Crea una actividad PROPIA de la ruta (isRouteScoped: oculta de la pestaña
+   * Actividades) y la añade como paso. Una Tarea de ruta es, de hecho, el
+   * componente Writing (consigna de texto libre). Se publica para que el
+   * estudiante pueda hacerla desde el mapa de la ruta.
+   */
+  async addStepWithNewActivity(routeId: string, dto: {
+    title: string; activityType?: string; description?: string; competencyId?: string; maxScore?: number;
+  }) {
+    const route = await this.prisma.learningRoute.findUnique({
+      where: { id: routeId }, select: { classroomId: true },
+    });
+    if (!route) throw new NotFoundException('Ruta no encontrada');
+    if (!dto.title?.trim()) throw new BadRequestException('El título es obligatorio');
+
+    const activity = await this.prisma.classroomActivity.create({
+      data: {
+        classroomId: route.classroomId,
+        type: (dto.activityType || 'TASK') as any,
+        title: dto.title.trim(),
+        description: dto.description,
+        maxScore: dto.maxScore ?? 100,
+        isRouteScoped: true,
+        isPublished: true,
+        isVisible: true,
+      },
+    });
+    return this.addStep(routeId, { title: dto.title.trim(), activityId: activity.id, competencyId: dto.competencyId });
+  }
+
   async deleteStep(stepId: string) {
     return this.prisma.learningRouteStep.delete({ where: { id: stepId } });
   }

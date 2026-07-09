@@ -2544,6 +2544,8 @@ export const learningRouteApi = {
   remove: (routeId: string) => api.delete(`/learning-routes/${routeId}`),
   addStep: (routeId: string, data: { title: string; activityId?: string; competencyId?: string }) =>
     api.post(`/learning-routes/${routeId}/steps`, data),
+  addStepWithActivity: (routeId: string, data: { title: string; activityType?: string; description?: string; competencyId?: string; maxScore?: number }) =>
+    api.post(`/learning-routes/${routeId}/steps/new-activity`, data),
   removeStep: (stepId: string) => api.delete(`/learning-routes/steps/${stepId}`),
   reorder: (routeId: string, stepIds: string[]) => api.put(`/learning-routes/${routeId}/steps/reorder`, { stepIds }),
 }

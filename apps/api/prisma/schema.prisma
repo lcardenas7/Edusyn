@@ -5688,6 +5688,9 @@ model ClassroomActivity {
   scheduledPublishAt DateTime?
   publishedAt        DateTime?
   sortOrder          Int       @default(0)
+  // Actividad "propia de una ruta": creada dentro de un paso, se OCULTA de la
+  // pestaña Actividades; el estudiante la hace desde el mapa de la ruta.
+  isRouteScoped      Boolean   @default(false)
   metadata           Json?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
