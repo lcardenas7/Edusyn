@@ -10,6 +10,12 @@
 > 1. `EDUSYN_LEARNING_ENGINE.md` — este (visión + principios).
 > 2. `LEARNING_ENGINE_ARCHITECTURE.md` — capas, eventos, flujos de datos, APIs internas, integración.
 > 3. `LEARNING_EXPERIENCE_SPEC.md` — cómo vive el estudiante cada experiencia: estados, transiciones, evidencia.
+> 4. `LEARNING_ENGINE_OPERATIONS.md` — economía, escala, observabilidad, latencia, presupuesto IA, resiliencia.
+> 5. `DESIGN_SYSTEM_LEARNING.md` — traducción a componentes, motion, accesibilidad y reglas de diseño.
+>
+> **Versión 1.0 · Estado: FUNDACIONAL — CONGELADO.** La visión (este doc) y la arquitectura son estables; no se
+> reescriben por sprint. Se extienden por **addenda** (ver §16). El esfuerzo futuro se concentra en la Spec de
+> Experiencia y el Design System, y en la implementación por fases (§14).
 
 ---
 
@@ -275,23 +281,72 @@ Especificación completa por escenario en `LEARNING_EXPERIENCE_SPEC.md` §.
 
 ---
 
-## 14. Roadmap evolutivo (5 años, sin romper lo actual)
+## 14. Roadmap por incrementos pequeños (no big-bang)
 
-Construir el lazo **por dentro, reusando lo que ya existe.** No es un big-bang.
+La visión es ambiciosa; el peligro es intentar construirla toda a la vez. Se construye en **incrementos muy
+pequeños que generan valor desde el principio**, cada uno sobre el estado que ya existe (Núcleo + grafo).
 
-- **Año 0–1 · Hacer real el Núcleo (cimiento):** consolidar `LearningIdentity` + `CompetencyEvidence` + `mastery`
-  en un **Learning Core** explícito con las 4 dimensiones (empezando por Dominio + Tiempo). Superficie F0
-  (canvas, contraste, medidor de dominio como héroe).
-- **Año 1–2 · Motor de Decisión v1 (reglas):** adaptación por heurísticas + repaso espaciado (Timeline). Valeria inline en el error.
-- **Año 2–3 · Banco de Experiencias + narrativa + ADN v1:** experiencias como misiones; el ADN empieza a observar rasgos.
-- **Año 3–4 · Adaptación profunda + Cerebro + social:** IA elige la próxima mejor experiencia; PEI/DBA moldean; experiencias colaborativas; Modo Exploración.
-- **Año 4–5 · El SO del aprendizaje:** todo el ecosistema lee/escribe el Núcleo; Memoria/portafolio longitudinal; Valeria proactiva institucional.
+- **Fase 1 · Cimiento:** Núcleo (**Dominio + Tiempo**) · Evidencia · Grafo · **nueva interfaz** (Superficie Viva F0:
+  canvas, contraste, medidor de dominio como héroe, Journey Rail).
+- **Fase 2 · Decisión básica:** Motor de decisión **por reglas** · **Valeria reactiva** (en el error) · **repaso espaciado**.
+- **Fase 3 · Adaptación:** **ADN** de Aprendizaje · adaptación de dificultad/ejemplos · **misiones** con narrativa.
+- **Fase 4 · Comunidad y proactividad:** **Modo Exploración** · **aprendizaje colaborativo** · **Valeria proactiva**.
+- **Fase 5 · Ecosistema:** optimización institucional · analítica avanzada · Memoria/portafolio longitudinal · el SO completo.
 
-Cada fase entrega valor sola y no rompe la anterior porque todas se apoyan en el mismo estado (Núcleo + grafo).
+Cada fase entrega valor sola y no rompe la anterior. El producto genera valor **mucho antes** de que toda la visión
+esté implementada.
 
 ---
 
-## 15. Cómo se usa este documento
+## 15. El Contrato de Aprendizaje (transparencia pedagógica)
+
+Al iniciar una experiencia, el sistema no solo *sabe qué enseñar*: **establece un contrato explícito** con el
+estudiante (y visible para el docente). Es metacognición y transparencia — pedagógicamente muy potente:
+
+```
+Objetivo:        Ser capaz de describir a tu familia (A2 · Speaking).
+Cómo lo demostrarás:  hablando/escribiendo 3 frases sin ayuda.
+Si ya lo dominas:     te propongo un reto y saltamos (test-out).
+Si necesitas ayuda:   Valeria te acompaña y bajo la dificultad.
+Qué evidencia cuenta: tus respuestas en la práctica y el reto final.
+```
+
+El estudiante **sabe las reglas del juego** antes de jugar → menos ansiedad, más autonomía, mejor autorregulación.
+(Estados y mecánica en `LEARNING_EXPERIENCE_SPEC.md` §11.)
+
+---
+
+## 16. Addendum v1.1 — Extensiones (sin reescribir el cuerpo)
+
+Refinamientos que **extienden** la v1.0 sin alterar su tesis:
+
+**16.1 El Núcleo modela TODA competencia, no solo la cognitiva-académica.** Edusyn administra colegios: el Dominio
+(§4.1) y el grafo (§10) deben soportar **competencias ciudadanas, socioemocionales, colaborativas, liderazgo,
+comunicación, creatividad, responsabilidad** — no solo inglés o matemáticas. No entran al ADN (que es *cómo*
+aprende); entran al **grafo como tipos de nodo** (16.3) y su evidencia se registra igual. El Núcleo nace preparado
+para el desarrollo integral, no solo el académico.
+
+**16.2 Contexto de la evidencia (Evidence Context).** No es lo mismo demostrar una competencia *individualmente* que
+*en grupo*, *con ayuda* que *sin ayuda*, *en un proyecto* que *en un examen*. Ese contexto **cambia la interpretación**
+de la evidencia. Toda evidencia lleva su contexto → el Motor y el docente la leen correctamente. (Modelo en
+`LEARNING_ENGINE_ARCHITECTURE.md` §2; medición en `LEARNING_EXPERIENCE_SPEC.md` §4.)
+
+**16.3 El grafo es del colegio, no solo académico.** Como Edusyn aspira a ser el SO de la institución, el grafo
+admite **tipos de nodo** que conviven sin romper el modelo: `academic` (DBA/CEFR) · `citizen` · `socioemotional` ·
+`project` (ABP) · `ODS` · `STEAM` · `transversal` · `club` · `entrepreneurship`. La transversalidad se expresa como
+**aristas** entre nodos de tipos distintos (un proyecto ABP conecta competencias de varias materias + ODS).
+
+**16.4 Valeria proactiva.** Además de reaccionar al error, Valeria tiene **iniciativa** (sobre la Memoria y el
+Timeline del Núcleo): *"hace tres semanas no practicas listening — ¿retomamos?"* o *"vienes mejorando mucho,
+¿intentamos un reto?"*. Eso la vuelve **profesora**, no IA reactiva. (Con presupuesto de intervención — §Operaciones.)
+
+**16.5 El docente como CREADOR.** Más allá de configurar/supervisar (§7), el docente es **diseñador de experiencias,
+curador, entrenador, narrador y mentor**. Edusyn le da herramientas para *crear*, no solo *cargar actividades*. Esa
+es la diferencia con las plataformas donde el profesor es un operario de contenidos. (El Workspace es su estudio de creación.)
+
+---
+
+## 17. Cómo se usa este documento
 
 - Toda decisión sobre aprendizaje responde: *¿sirve a un principio del §1? ¿respeta la soberanía del Núcleo (§4)?
   ¿el docente conserva el mando (§7)? ¿protege al estudiante (§8)?*

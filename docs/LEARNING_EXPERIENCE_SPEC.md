@@ -137,6 +137,9 @@ Evidence.record({ studentId, competencyId, source, score(0..100), routeStepId?, 
 - **Peso por momento:** Experimentar < Practicar < Reto (el Reto pesa más para `demonstrated`).
 - **Dominio** = promedio de las mejores-N evidencias (recientes), modulado por dificultad → sube **en vivo**.
 - **Confianza** sube con n y recencia; una competencia no es `demonstrated` sin confianza mínima (evita falsos positivos).
+- **Contexto de la evidencia** (obligatorio): cada evidencia registra `{ social, support, setting, difficulty }`
+  (ver arquitectura §2.5). El **peso** depende del contexto: `unaided | exam` pesa más que `with_help | practice`
+  para marcar `demonstrated`. Una competencia demostrada *solo con ayuda* aún no está dominada — el sistema lo sabe.
 
 ---
 
@@ -226,3 +229,31 @@ Ciudadanas de primera clase (Edusyn es escolar):
 
 > El resultado: el estudiante no siente que "usa una plataforma". Siente que **avanza en una misión donde su mente
 > crece a la vista, alguien lo acompaña justo cuando tropieza, y lo que logra queda en su historia.**
+
+---
+
+## 11. El Contrato de Aprendizaje (apertura de cada experiencia)
+
+Antes del primer Momento, el sistema presenta un **contrato** — corto, humano, visible — que hace explícitas las
+reglas del juego. Es metacognición pura (autorregulación) y baja la ansiedad.
+
+**Contenido del contrato:**
+```
+🎯 Objetivo        · Ser capaz de describir a tu familia (A2 · Speaking)
+✅ Cómo lo logras  · hablar/escribir 3 frases sin ayuda
+⏭️ Si ya lo dominas· te propongo un reto y saltamos (test-out)
+🤝 Si necesitas    · Valeria te acompaña y bajo la dificultad
+📊 Qué cuenta      · tus respuestas en la práctica y el reto final
+```
+
+**Mecánica / estados:**
+- Se muestra en el Momento **Descubrir** (no como pantalla legal aparte: integrado a la narrativa).
+- **Se puede renegociar en vivo:** si el estudiante pide más reto o más ayuda, el contrato (y el `EvidenceContext`
+  §4) se actualiza — el sistema es honesto sobre cómo eso afecta la evidencia.
+- **El docente ve y puede fijar** partes del contrato (objetivo obligatorio, evidencia mínima) desde su rol de
+  creador. El contrato es el punto donde **docente, estudiante y sistema comparten la misma verdad** sobre qué
+  significa "lograrlo".
+
+**Por qué importa:** transforma la evaluación de algo *opaco que te pasa* a un *acuerdo transparente que entiendes*.
+Ninguna plataforma de consumo lo hace, porque ninguna es, a la vez, el motor de aprendizaje y el sistema de
+evaluación del colegio.

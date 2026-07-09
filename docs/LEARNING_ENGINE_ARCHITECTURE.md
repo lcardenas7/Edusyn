@@ -7,6 +7,8 @@
 >
 > **Regla de oro:** este documento describe *contratos y responsabilidades*, no implementación. Debe seguir
 > siendo válido aunque cambien React, NestJS o la IA subyacente en 10 años.
+>
+> **Versión 1.0 · Estado: FUNDACIONAL — CONGELADO.** Se extiende por addenda, no se reescribe por sprint.
 
 ---
 
@@ -25,6 +27,19 @@
 
 **Invariante arquitectónico:** la lógica de aprendizaje vive en L2–L6. **L7 (interfaz) no decide nada** —
 solo proyecta el estado y emite intenciones. Cualquier tecnología de UI futura se conecta a los mismos contratos.
+
+### 1.1 El Grafo (L1) es del COLEGIO, no solo académico
+El grafo admite **tipos de nodo** que conviven sin romper el modelo (extiende la tabla de `Competency` con un
+campo `nodeType`):
+```
+nodeType ∈ { academic, citizen, socioemotional, project, ODS, STEAM,
+             transversal, club, entrepreneurship }
+```
+- `academic` (DBA/CEFR — ya sembrado) es solo uno más. Un proyecto ABP es un nodo `project` cuyas **aristas**
+  conectan competencias de varias materias + un ODS + habilidades socioemocionales → así se modela la
+  **transversalidad** sin un sub-sistema aparte.
+- La evidencia y el dominio funcionan igual para cualquier `nodeType`. El Núcleo nace preparado para el
+  **desarrollo integral** (ciudadanía, socioemocional, liderazgo, creatividad), no solo materias.
 
 ---
 
@@ -74,6 +89,20 @@ LearningEpisode { studentId, competencyId, kind, at, detail }
 Log **append-only** de eventos episódicos. Es el portafolio longitudinal y la fuente de la narrativa
 ("aprendió → dominó → olvidó → recuperó → conectó").
 
+### 2.5 Contexto de la Evidencia (Evidence Context) — *en qué condiciones lo demostró*
+Toda evidencia lleva su **contexto**, porque cambia radicalmente su interpretación (no es lo mismo demostrar
+algo en un examen individual sin ayuda que en un proyecto grupal con andamiaje):
+```
+EvidenceContext {
+  social: individual | pair | group,
+  support: unaided | scaffolded | with_help,   // nivel de andamiaje recibido
+  setting: practice | exam | project | exploration | review,
+  difficulty: 1..5 }
+```
+- El Motor y el docente **leen la evidencia con su contexto** (una demostración `unaided | exam` pesa más para
+  `demonstrated` que una `with_help | practice`).
+- Se adjunta a cada `EvidenceProduced` y se persiste con la evidencia. Ajusta el peso en la derivación del dominio (§2.1).
+
 ---
 
 ## 3. Modelo de eventos (el sistema es event-driven)
@@ -86,7 +115,7 @@ módulo (aula, seguimiento, reportes, Play) **reacciona** sin acoplarse al motor
 ExperienceRequested   { studentId, competencyId?, context }        → L3 responde
 ExperienceServed      { studentId, experienceId, moment, skill }   ← L4
 InteractionSubmitted  { studentId, experienceId, response, timing } → el estudiante actúa
-EvidenceProduced      { studentId, competencyId, score, source, routeStepId? }  ← L5
+EvidenceProduced      { studentId, competencyId, score, source, context, routeStepId? }  ← L5
 MasteryUpdated        { studentId, competencyId, from, to, status } ← L2
 DNAUpdated            { studentId, trait, from, to }               ← L2
 RetentionScheduled    { studentId, competencyId, nextReviewDueAt }  ← L2/L3
@@ -172,7 +201,7 @@ evidencia (ver `LEARNING_EXPERIENCE_SPEC.md`).
 ### 5.4 Motor de Evidencia (L5)
 ```
 Evidence.record(params): void      // idempotente; único escritor de Dominio
-   // params = { studentId, competencyId, source, score(0..100), routeStepId?, idempotencyKey }
+   // params = { studentId, competencyId, source, score(0..100), context(§2.5), routeStepId?, idempotencyKey }
 Evidence.mastery(studentId, competencyId): number
 Evidence.routeProgress(routeId, studentId): Progress
 ```
@@ -180,11 +209,15 @@ Evidence.routeProgress(routeId, studentId): Progress
 
 ### 5.5 Valeria (L6)
 ```
-Valeria.evaluate(studentId, momentContext): Intervention | null   // decide SI interviene
+Valeria.evaluate(studentId, momentContext): Intervention | null   // reactiva: decide SI interviene
 Valeria.explain(concept, error, DNA): Message                     // enseña el proceso
+Valeria.initiative(studentId): Nudge | null                       // PROACTIVA: sobre Memoria+Timeline
 Valeria.budget(studentId): int                                    // presupuesto de intervención
 ```
-Regla: `evaluate` puede devolver `null` **a propósito** (silencio pedagógico). Presupuesto por sesión.
+Regla: `evaluate`/`initiative` pueden devolver `null` **a propósito** (silencio pedagógico). Presupuesto por sesión.
+**Proactividad** (`initiative`): corre en segundo plano sobre la Memoria/Timeline del Núcleo y dispara mensajes con
+iniciativa — *"hace 3 semanas no practicas listening, ¿retomamos?"*, *"vienes mejorando, ¿un reto?"*. Detección
+barata (heurísticas sobre el Núcleo); genera el mensaje solo si hay presupuesto. La hace **profesora, no IA reactiva.**
 
 ---
 
