@@ -1864,10 +1864,9 @@ export class ApdAiService implements IApdAiService {
           slides.push({ type: 'ACTIVITY', title: typeof s?.title === 'string' ? s.title.trim() : undefined,
             activityData: { questionType: 'TRUE_FALSE', question, options: ['Verdadero', 'Falso'], correctAnswer: isTrue ? 'Verdadero' : 'Falso', ...common } });
         } else if (qType === 'ORDERING') {
-          const options = Array.isArray(ad?.options) ? ad.options.filter((o: any) => typeof o === 'string' && o.trim()).map((o: string) => o.trim()).slice(0, 10) : [];
-          if (options.length < 2) continue;
-          slides.push({ type: 'ACTIVITY', title: typeof s?.title === 'string' ? s.title.trim() : undefined,
-            activityData: { questionType: 'ORDERING' as any, question, options, correctAnswer: options.join(' '), ...common } });
+          // El reproductor de lecciones aún no renderiza ORDERING → se descarta
+          // para no dejar ejercicios sin input. (Reactivar cuando haya UI.)
+          continue;
         } else if (qType === 'FILL_BLANK') {
           if (!correct) continue;
           slides.push({ type: 'ACTIVITY', title: typeof s?.title === 'string' ? s.title.trim() : undefined,
@@ -1905,31 +1904,42 @@ export class ApdAiService implements IApdAiService {
     level: string; // A1..B2
     objective: string; // objetivo de la ruta
     title: string; // título del paso
+    gradeName?: string; // grado escolar, para ajustar tema/registro
   }): Promise<ApdAiLessonDraft> {
     if (!this.isEnabled()) throw new Error('La generación con IA no está habilitada.');
     const skill = params.skill;
     const level = params.level || 'A2';
 
+    // Descriptores explícitos por nivel → salida más consistente y apropiada.
+    const levelDescriptor: Record<string, string> = {
+      A1: 'A1 (principiante): frases MUY cortas, presente simple, vocabulario básico de alta frecuencia. Textos de 2-3 oraciones.',
+      A2: 'A2 (básico): oraciones simples conectadas (and/but/because), presente y pasado simple, temas cotidianos. Textos de 3-5 oraciones.',
+      B1: 'B1 (intermedio): párrafos con varios tiempos verbales, opiniones y experiencias. Textos de 5-8 oraciones.',
+      B2: 'B2 (intermedio-alto): lenguaje más matizado, argumentación, conectores variados. Textos de 8-12 oraciones.',
+    };
     const skillGuide: Record<string, string> = {
-      READING: 'Incluye un TEXTO corto en inglés (en el body del primer CONTENT, apropiado al nivel) y ejercicios de comprensión: elegir idea principal, completar huecos (FILL_BLANK), verdadero/falso sobre el texto.',
-      LISTENING: 'Como aún no hay audio, escribe un GUION corto de diálogo/narración en inglés (en el body del primer CONTENT, marcado como "🔊 Escucha:") y ejercicios: elegir lo que se dijo, completar lo que se oye (FILL_BLANK), ordenar la secuencia.',
-      WRITING: 'Ejercicios de construcción escrita: ORDERING para formar frases correctas, FILL_BLANK para completar con la palabra adecuada, y una pregunta SHORT_ANSWER breve. La consigna de texto libre extenso va aparte.',
-      SPEAKING: 'Prepara para hablar: ejercicios de vocabulario y frases útiles (MULTIPLE_CHOICE, FILL_BLANK) que el estudiante usará al grabar. La grabación va aparte.',
+      READING: 'Incluye un TEXTO corto en inglés (en el body del primer CONTENT, apropiado al nivel) y ejercicios de comprensión: elegir la idea principal (MULTIPLE_CHOICE), completar una palabra del texto (FILL_BLANK), verdadero/falso (TRUE_FALSE).',
+      LISTENING: 'Como aún no hay audio, escribe un GUION corto de diálogo/narración en inglés (en el body del primer CONTENT, marcado como "🔊 Escucha:") y ejercicios: elegir lo que se dijo (MULTIPLE_CHOICE), completar lo que se oye (FILL_BLANK), verdadero/falso (TRUE_FALSE).',
+      WRITING: 'Ejercicios de escritura guiada: completar la palabra correcta (FILL_BLANK), elegir la frase bien formada (MULTIPLE_CHOICE), y una respuesta breve escrita (FILL_BLANK con la palabra clave). La consigna de texto libre extenso va aparte.',
+      SPEAKING: 'Prepara para hablar: vocabulario y frases útiles con MULTIPLE_CHOICE y FILL_BLANK que el estudiante usará al grabar. La grabación va aparte.',
     };
 
     const systemInstruction = [
       'Eres Valeria, profesora de inglés experta, diseñando una lección interactiva estilo Duolingo/Nearpod.',
-      `Habilidad: ${skill}. Nivel CEFR objetivo: ${level}. Se puntúa por inteligibilidad y can-do, no por acento nativo.`,
+      `Habilidad: ${skill}. Nivel CEFR objetivo: ${levelDescriptor[level] || level}.`,
+      params.gradeName ? `Grado escolar del estudiante: ${params.gradeName} — ajusta el TEMA, los ejemplos y el registro a esa edad (no cambies el nivel CEFR, solo la cercanía del tema).` : '',
+      'Se puntúa por inteligibilidad y can-do, no por acento nativo. Respeta ESTRICTAMENTE el nivel CEFR indicado en vocabulario y longitud de frases.',
       'Responde EXCLUSIVAMENTE con un JSON válido, sin markdown, sin backticks.',
       '',
       'Diseño:',
-      '- Bloques cortos con feedback inmediato. El contenido puede ser bilingüe (inglés con apoyo en español).',
+      '- Bloques cortos con feedback inmediato. El contenido es en inglés con apoyo breve en español donde ayude.',
       `- ${skillGuide[skill]}`,
-      '- Inserta una slide ACTIVITY (ejercicio) cada 1-2 CONTENT. Entre 4 y 8 slides. Al menos 3 ACTIVITY.',
+      '- Inserta una slide ACTIVITY (ejercicio) cada 1-2 CONTENT. Entre 5 y 8 slides. Al menos 3 ACTIVITY con tipos VARIADOS.',
       '- Cierra con CHECKPOINT y luego BADGE_REVEAL.',
       '- NUNCA uses "Opción A/B/C/D": opciones reales y plausibles.',
       '',
-      'Tipos de ACTIVITY permitidos (questionType): MULTIPLE_CHOICE (4 opciones), TRUE_FALSE, FILL_BLANK (una palabra), ORDERING (options = palabras en el orden correcto).',
+      'Tipos de ACTIVITY permitidos (SOLO estos tres): MULTIPLE_CHOICE (4 opciones), TRUE_FALSE, FILL_BLANK (el estudiante escribe UNA palabra; en "question" marca el hueco con ___ y en "correctAnswer" la palabra exacta).',
+      'PROHIBIDO usar ORDERING u otros tipos.',
       '',
       'Esquema JSON exacto:',
       '{',
@@ -1942,9 +1952,9 @@ export class ApdAiService implements IApdAiService {
       '    { "type": "BADGE_REVEAL" }',
       '  ]',
       '}',
-    ].join('\n');
+    ].filter(Boolean).join('\n');
 
-    const userPrompt = `Objetivo de la ruta: ${params.objective}\nPaso: ${params.title}\n\nDiseña la lección interactiva de ${skill} (nivel ${level}) siguiendo el esquema JSON.`;
+    const userPrompt = `Objetivo de la ruta: ${params.objective}\nPaso: ${params.title}\n\nDiseña la lección interactiva de ${skill} (nivel ${level}${params.gradeName ? ', grado ' + params.gradeName : ''}) siguiendo el esquema JSON. Usa solo MULTIPLE_CHOICE, TRUE_FALSE y FILL_BLANK.`;
 
     let raw: any;
     try {

@@ -749,7 +749,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
     const hasVideo = !!slide.videoUrl
 
     return (
-      <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl">
+      <div className="bg-black/25 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-white/15 shadow-2xl">
         {slide.title && (
           <motion.h2
             initial={{ opacity: 0, y: 10 }}
@@ -767,7 +767,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className={`prose prose-invert prose-sm sm:prose-base max-w-none ${hasImage ? 'sm:flex-1' : ''}`}
+              className={`prose prose-invert prose-base sm:prose-lg max-w-none leading-relaxed ${hasImage ? 'sm:flex-1' : ''}`}
               dangerouslySetInnerHTML={{ __html: slide.body }}
             />
           )}
@@ -845,7 +845,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
 
         {/* Hint */}
         {act.hint && !answerSubmitted && !alreadyAnswered && (
-          <p className="text-white/40 text-sm mb-4 italic">💡 {act.hint}</p>
+          <p className="text-white/80 text-sm mb-4 italic">💡 {act.hint}</p>
         )}
 
         {/* Options */}
@@ -887,16 +887,17 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           </div>
         )}
 
-        {/* Short answer */}
-        {act.questionType === 'SHORT_ANSWER' && (
+        {/* Short answer / Fill in the blank (escribir la respuesta) */}
+        {(act.questionType === 'SHORT_ANSWER' || act.questionType === 'FILL_BLANK') && (
           <div>
             <input
               type="text"
-              value={selectedAnswer || previousAnswer?.answer || ''}
+              value={selectedAnswer ?? previousAnswer?.answer ?? ''}
               onChange={e => !answerSubmitted && !alreadyAnswered && setSelectedAnswer(e.target.value)}
               disabled={answerSubmitted || alreadyAnswered}
-              placeholder="Escribe tu respuesta..."
-              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/40 text-lg"
+              placeholder={act.questionType === 'FILL_BLANK' ? 'Completa la palabra…' : 'Escribe tu respuesta…'}
+              autoFocus
+              className="w-full bg-white/20 border border-white/40 rounded-xl px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/60 text-lg"
             />
           </div>
         )}

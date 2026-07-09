@@ -225,6 +225,13 @@ export class LearningRouteService {
     const skill = (step.competency?.skill as any) || 'READING';
     const level = step.competency?.level || 'A2';
 
+    // Grado escolar (para que Valeria ajuste tema/registro a la edad).
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: step.route.classroomId },
+      select: { teacherAssignment: { select: { group: { select: { grade: { select: { name: true } } } } } } },
+    });
+    const gradeName = classroom?.teacherAssignment?.group?.grade?.name;
+
     // Asegurar una actividad LESSON propia de la ruta para este paso.
     let activityId = step.activityId ?? undefined;
     const existingActivity = activityId
@@ -243,7 +250,7 @@ export class LearningRouteService {
 
     // Generar los ejercicios con Valeria.
     const draft = await this.apdAi.generateEnglishLessonSlides({
-      skill, level, objective: step.route.title, title: step.title,
+      skill, level, objective: step.route.title, title: step.title, gradeName,
     });
 
     // Reemplazar la lección (regenerable).
