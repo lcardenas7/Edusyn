@@ -266,6 +266,38 @@ export class LearningRouteService {
     return { activityId, slides: draft.slides.length };
   }
 
+  /** Actualiza un paso: enlazar/quitar actividad, cambiar competencia o título. */
+  async updateStep(stepId: string, dto: { title?: string; activityId?: string | null; competencyId?: string | null }) {
+    return this.prisma.learningRouteStep.update({
+      where: { id: stepId },
+      data: dto,
+      include: {
+        activity: { select: { id: true, title: true, type: true } },
+        competency: { select: { code: true, statement: true, level: true, skill: true } },
+      },
+    });
+  }
+
+  /** Crea una actividad propia de la ruta y la ADJUNTA a un paso existente (que no tenía). */
+  async createStepActivity(stepId: string, dto: { activityType?: string; description?: string; maxScore?: number }) {
+    const step = await this.prisma.learningRouteStep.findUnique({
+      where: { id: stepId }, include: { route: { select: { classroomId: true } } },
+    });
+    if (!step) throw new NotFoundException('Paso no encontrado');
+    const activity = await this.prisma.classroomActivity.create({
+      data: {
+        classroomId: step.route.classroomId,
+        type: (dto.activityType || 'TASK') as any,
+        title: step.title,
+        description: dto.description,
+        maxScore: dto.maxScore ?? 100,
+        isRouteScoped: true, isPublished: true, isVisible: true,
+      },
+    });
+    await this.prisma.learningRouteStep.update({ where: { id: stepId }, data: { activityId: activity.id } });
+    return { activityId: activity.id };
+  }
+
   async deleteStep(stepId: string) {
     return this.prisma.learningRouteStep.delete({ where: { id: stepId } });
   }

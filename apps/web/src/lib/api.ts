@@ -2547,6 +2547,10 @@ export const learningRouteApi = {
   addStepWithActivity: (routeId: string, data: { title: string; activityType?: string; description?: string; competencyId?: string; maxScore?: number }) =>
     api.post(`/learning-routes/${routeId}/steps/new-activity`, data),
   generateStepLesson: (stepId: string) => api.post<{ activityId: string; slides: number }>(`/learning-routes/steps/${stepId}/generate-lesson`, {}),
+  updateStep: (stepId: string, data: { title?: string; activityId?: string | null; competencyId?: string | null }) =>
+    api.put(`/learning-routes/steps/${stepId}`, data),
+  createStepActivity: (stepId: string, data: { activityType?: string; description?: string; maxScore?: number }) =>
+    api.post<{ activityId: string }>(`/learning-routes/steps/${stepId}/activity`, data),
   removeStep: (stepId: string) => api.delete(`/learning-routes/steps/${stepId}`),
   reorder: (routeId: string, stepIds: string[]) => api.put(`/learning-routes/${routeId}/steps/reorder`, { stepIds }),
 }

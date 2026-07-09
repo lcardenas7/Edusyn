@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Route, Plus, Target, Trash2, X, BookOpen, Headphones, Mic, PenLine, Circle, ChevronLeft, Check, Loader2, Sparkles } from 'lucide-react'
+import { Route, Plus, Target, Trash2, X, BookOpen, Headphones, Mic, PenLine, Circle, ChevronLeft, Check, Loader2, Sparkles, Eye } from 'lucide-react'
 import { learningRouteApi, classroomApi, type RouteSummary, type RouteView, type CompetencyView, type RouteProgress, type RoutePlan } from '../lib/api'
 import LessonPlayer from './LessonPlayer'
 
@@ -163,6 +163,7 @@ function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { rout
   const [progress, setProgress] = useState<RouteProgress | null>(null)
   const [doing, setDoing] = useState<{ id: string; type: string } | null>(null)
   const [generatingStep, setGeneratingStep] = useState<string | null>(null)
+  const [attachingStep, setAttachingStep] = useState<string | null>(null)
 
   // Estudiante: cargar su progreso (% dominado + estado por paso)
   const loadProgress = useCallback(() => {
@@ -268,11 +269,23 @@ function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { rout
                     )}
                     {isTeacher && (
                       <div className="flex items-center gap-1 shrink-0">
-                        <button onClick={() => generateLesson(s.id)} disabled={generatingStep === s.id} title="Generar ejercicios con Valeria"
+                        {s.activity && (
+                          <button onClick={() => setDoing({ id: s.activity!.id, type: s.activity!.type })} title="Previsualizar"
+                            className="text-xs font-medium px-2 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-1">
+                            <Eye className="w-3.5 h-3.5" /> Ver
+                          </button>
+                        )}
+                        <button onClick={() => generateLesson(s.id)} disabled={generatingStep === s.id} title="Generar ejercicios interactivos con Valeria"
                           className="text-xs font-medium px-2 py-1.5 rounded-lg border border-violet-200 text-violet-700 hover:bg-violet-50 disabled:opacity-60 flex items-center gap-1">
                           {generatingStep === s.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                          {s.activity?.type === 'LESSON' ? 'Regenerar' : 'Generar'}
+                          {s.activity?.type === 'LESSON' ? 'Regenerar' : 'Valeria'}
                         </button>
+                        {!s.activity && (
+                          <button onClick={() => setAttachingStep(s.id)} title="Añadir/enlazar actividad manualmente"
+                            className="text-xs font-medium px-2 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-1">
+                            <Plus className="w-3.5 h-3.5" /> Actividad
+                          </button>
+                        )}
                         <button onClick={() => removeStep(s.id)} className="text-slate-300 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     )}
@@ -290,17 +303,68 @@ function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { rout
 
       {showAddStep && <AddStepModal routeId={route.id} classroomId={classroomId} onClose={() => setShowAddStep(false)} onAdded={() => { setShowAddStep(false); onReload() }} />}
       {doing && doing.type === 'LESSON' && (
-        <LessonPlayer activityId={doing.id} onClose={() => { setDoing(null); loadProgress() }} />
+        <LessonPlayer activityId={doing.id} isTeacher={isTeacher} onClose={() => { setDoing(null); loadProgress() }} />
       )}
       {doing && doing.type !== 'LESSON' && (
-        <StepActivityModal activityId={doing.id} onClose={() => setDoing(null)} onSubmitted={() => { setDoing(null); loadProgress() }} />
+        <StepActivityModal activityId={doing.id} isTeacher={isTeacher} onClose={() => setDoing(null)} onSubmitted={() => { setDoing(null); loadProgress() }} />
+      )}
+      {attachingStep && (
+        <AttachActivityModal stepId={attachingStep} classroomId={classroomId} onClose={() => setAttachingStep(null)} onDone={() => { setAttachingStep(null); onReload() }} />
       )}
     </div>
   )
 }
 
+// ─── Adjuntar/enlazar una actividad a un paso existente (docente) ─────────────
+function AttachActivityModal({ stepId, classroomId, onClose, onDone }: { stepId: string; classroomId: string; onClose: () => void; onDone: () => void }) {
+  const [mode, setMode] = useState<'new' | 'link'>('new')
+  const [activityId, setActivityId] = useState('')
+  const [activities, setActivities] = useState<{ id: string; title: string }[]>([])
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  useEffect(() => {
+    if (mode !== 'link') return
+    classroomApi.listActivities(classroomId).then(({ data }) => {
+      setActivities((Array.isArray(data) ? data : []).map((a: any) => ({ id: a.id, title: a.title })))
+    }).catch(() => setActivities([]))
+  }, [classroomId, mode])
+
+  const save = async () => {
+    try {
+      setSaving(true)
+      if (mode === 'new') await learningRouteApi.createStepActivity(stepId, { activityType: 'TASK' })
+      else { if (!activityId) { setErr('Elige una actividad'); setSaving(false); return } await learningRouteApi.updateStep(stepId, { activityId }) }
+      onDone()
+    } catch { setErr('No se pudo adjuntar'); setSaving(false) }
+  }
+
+  return (
+    <ModalShell title="Añadir actividad al paso" onClose={onClose}>
+      <div className="space-y-3">
+        <div className="flex rounded-lg border border-slate-200 p-0.5 text-sm">
+          <button onClick={() => setMode('new')} className={`flex-1 py-1.5 rounded-md font-medium ${mode === 'new' ? 'bg-violet-600 text-white' : 'text-slate-600'}`}>Crear tarea</button>
+          <button onClick={() => setMode('link')} className={`flex-1 py-1.5 rounded-md font-medium ${mode === 'link' ? 'bg-violet-600 text-white' : 'text-slate-600'}`}>Enlazar existente</button>
+        </div>
+        {mode === 'new' ? (
+          <p className="text-xs text-slate-500">Crea una <strong>Tarea propia de la ruta</strong> (consigna de escritura) con el título del paso. No aparece en la pestaña Actividades. Para ejercicios interactivos, usa "Valeria".</p>
+        ) : (
+          <select value={activityId} onChange={e => setActivityId(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
+            <option value="">— Elige una actividad —</option>
+            {activities.map(a => <option key={a.id} value={a.id}>{a.title}</option>)}
+          </select>
+        )}
+        {err && <p className="text-sm text-red-600">{err}</p>}
+        <button onClick={save} disabled={saving} className="w-full bg-violet-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-violet-700 disabled:opacity-60">
+          {saving ? 'Guardando…' : 'Adjuntar al paso'}
+        </button>
+      </div>
+    </ModalShell>
+  )
+}
+
 // ─── El estudiante hace la actividad del paso (Writing/Tarea inline) ──────────
-function StepActivityModal({ activityId, onClose, onSubmitted }: { activityId: string; onClose: () => void; onSubmitted: () => void }) {
+function StepActivityModal({ activityId, isTeacher, onClose, onSubmitted }: { activityId: string; isTeacher?: boolean; onClose: () => void; onSubmitted: () => void }) {
   const [activity, setActivity] = useState<any>(null)
   const [submission, setSubmission] = useState<any>(null)
   const [content, setContent] = useState('')
@@ -333,6 +397,12 @@ function StepActivityModal({ activityId, onClose, onSubmitted }: { activityId: s
     <ModalShell title={activity?.title || 'Actividad'} onClose={onClose}>
       {loading ? (
         <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
+      ) : isTeacher ? (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Vista previa (docente)</p>
+          {activity?.description ? <p className="text-sm text-slate-600 whitespace-pre-wrap">{activity.description}</p> : <p className="text-sm text-slate-400">Consigna: {activity?.title}</p>}
+          <p className="text-xs text-slate-400">El estudiante escribe su respuesta y la envía desde la ruta.</p>
+        </div>
       ) : !isTask ? (
         <p className="text-sm text-slate-500">Este tipo de actividad se realiza desde la pestaña Actividades por ahora.</p>
       ) : (

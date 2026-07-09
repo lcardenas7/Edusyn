@@ -115,6 +115,20 @@ export class LearningRouteController {
     return this.service.generateStepLesson(stepId);
   }
 
+  // Actualizar un paso (enlazar/quitar actividad, competencia, título)
+  @Put('steps/:stepId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async updateStep(@Param('stepId') stepId: string, @Body() body: { title?: string; activityId?: string | null; competencyId?: string | null }) {
+    return this.service.updateStep(stepId, body);
+  }
+
+  // Crear una actividad propia de la ruta y adjuntarla a un paso existente
+  @Post('steps/:stepId/activity')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async createStepActivity(@Param('stepId') stepId: string, @Body() body: { activityType?: string; description?: string; maxScore?: number }) {
+    return this.service.createStepActivity(stepId, body);
+  }
+
   @Delete('steps/:stepId')
   @Roles('DOCENTE', 'COORDINADOR')
   async removeStep(@Param('stepId') stepId: string) {
