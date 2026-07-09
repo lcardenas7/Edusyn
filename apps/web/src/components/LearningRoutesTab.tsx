@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Route, Plus, Target, Trash2, X, BookOpen, Headphones, Mic, PenLine, Circle, ChevronLeft, Check, Loader2, Sparkles } from 'lucide-react'
 import { learningRouteApi, classroomApi, type RouteSummary, type RouteView, type CompetencyView, type RouteProgress, type RoutePlan } from '../lib/api'
+import LessonPlayer from './LessonPlayer'
 
 const SKILL_ICON: Record<string, any> = { READING: BookOpen, LISTENING: Headphones, SPEAKING: Mic, WRITING: PenLine }
 const SKILL_LABEL: Record<string, string> = { READING: 'Lectura', LISTENING: 'Escucha', SPEAKING: 'Habla', WRITING: 'Escritura' }
@@ -160,7 +161,8 @@ function ValeriaRouteModal({ classroomId, onClose, onCreated }: { classroomId: s
 function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { route: RouteView; classroomId: string; isTeacher: boolean; onBack: () => void; onReload: () => void }) {
   const [showAddStep, setShowAddStep] = useState(false)
   const [progress, setProgress] = useState<RouteProgress | null>(null)
-  const [doingActivityId, setDoingActivityId] = useState<string | null>(null)
+  const [doing, setDoing] = useState<{ id: string; type: string } | null>(null)
+  const [generatingStep, setGeneratingStep] = useState<string | null>(null)
 
   // Estudiante: cargar su progreso (% dominado + estado por paso)
   const loadProgress = useCallback(() => {
@@ -174,6 +176,10 @@ function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { rout
   const publish = async () => { await learningRouteApi.update(route.id, { isPublished: !route.isPublished }); onReload() }
   const removeRoute = async () => { if (confirm('¿Eliminar esta ruta y sus pasos?')) { await learningRouteApi.remove(route.id); onBack() } }
   const removeStep = async (stepId: string) => { await learningRouteApi.removeStep(stepId); onReload() }
+  const generateLesson = async (stepId: string) => {
+    try { setGeneratingStep(stepId); await learningRouteApi.generateStepLesson(stepId); onReload() }
+    catch { /* noop */ } finally { setGeneratingStep(null) }
+  }
 
   return (
     <div className="space-y-4">
@@ -256,11 +262,20 @@ function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { rout
                       </div>
                     </div>
                     {!isTeacher && s.activity && (
-                      <button onClick={() => setDoingActivityId(s.activity!.id)} className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg ${done ? 'text-slate-500 bg-slate-100' : 'text-white bg-violet-600 hover:bg-violet-700'}`}>
+                      <button onClick={() => setDoing({ id: s.activity!.id, type: s.activity!.type })} className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg ${done ? 'text-slate-500 bg-slate-100' : 'text-white bg-violet-600 hover:bg-violet-700'}`}>
                         {done ? 'Ver' : 'Hacer'}
                       </button>
                     )}
-                    {isTeacher && <button onClick={() => removeStep(s.id)} className="text-slate-300 hover:text-red-500 shrink-0"><Trash2 className="w-4 h-4" /></button>}
+                    {isTeacher && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button onClick={() => generateLesson(s.id)} disabled={generatingStep === s.id} title="Generar ejercicios con Valeria"
+                          className="text-xs font-medium px-2 py-1.5 rounded-lg border border-violet-200 text-violet-700 hover:bg-violet-50 disabled:opacity-60 flex items-center gap-1">
+                          {generatingStep === s.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                          {s.activity?.type === 'LESSON' ? 'Regenerar' : 'Generar'}
+                        </button>
+                        <button onClick={() => removeStep(s.id)} className="text-slate-300 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    )}
                   </div>
                 </li>
               )
@@ -274,7 +289,12 @@ function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { rout
       </div>
 
       {showAddStep && <AddStepModal routeId={route.id} classroomId={classroomId} onClose={() => setShowAddStep(false)} onAdded={() => { setShowAddStep(false); onReload() }} />}
-      {doingActivityId && <StepActivityModal activityId={doingActivityId} onClose={() => setDoingActivityId(null)} onSubmitted={() => { setDoingActivityId(null); loadProgress() }} />}
+      {doing && doing.type === 'LESSON' && (
+        <LessonPlayer activityId={doing.id} onClose={() => { setDoing(null); loadProgress() }} />
+      )}
+      {doing && doing.type !== 'LESSON' && (
+        <StepActivityModal activityId={doing.id} onClose={() => setDoing(null)} onSubmitted={() => { setDoing(null); loadProgress() }} />
+      )}
     </div>
   )
 }
