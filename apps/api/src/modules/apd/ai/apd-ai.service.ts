@@ -1838,6 +1838,124 @@ export class ApdAiService implements IApdAiService {
     };
   }
 
+  /** Normaliza el JSON de slides del LLM a un ApdAiLessonDraft válido (compartido). */
+  private parseLessonDraftPayload(raw: any, fallbackTitle: string, fallbackTopic: string): ApdAiLessonDraft {
+    const rawSlides: any[] = Array.isArray(raw?.slides) ? raw.slides : [];
+    const slides: ApdAiLessonSlideDraft[] = [];
+    for (const s of rawSlides) {
+      const rawType = (typeof s?.type === 'string' ? s.type : '').toUpperCase();
+      if (rawType === 'CONTENT') {
+        const body = typeof s?.body === 'string' ? s.body.trim() : '';
+        if (!body) continue;
+        slides.push({ type: 'CONTENT', title: typeof s?.title === 'string' ? s.title.trim() : undefined, body });
+      } else if (rawType === 'ACTIVITY') {
+        const ad = s?.activityData || {};
+        const question = typeof ad?.question === 'string' ? ad.question.trim() : '';
+        if (!question) continue;
+        const qType = String(ad?.questionType || 'MULTIPLE_CHOICE').toUpperCase();
+        const correct = typeof ad?.correctAnswer === 'string' ? ad.correctAnswer.trim() : '';
+        const common = {
+          explanation: typeof ad?.explanation === 'string' ? ad.explanation.trim() : undefined,
+          hint: typeof ad?.hint === 'string' ? ad.hint.trim() : undefined,
+          points: Number.isFinite(ad?.points) ? ad.points : 10,
+        };
+        if (qType === 'TRUE_FALSE') {
+          const isTrue = correct.toLowerCase().startsWith('v') || correct.toLowerCase() === 'true';
+          slides.push({ type: 'ACTIVITY', title: typeof s?.title === 'string' ? s.title.trim() : undefined,
+            activityData: { questionType: 'TRUE_FALSE', question, options: ['Verdadero', 'Falso'], correctAnswer: isTrue ? 'Verdadero' : 'Falso', ...common } });
+        } else if (qType === 'ORDERING') {
+          const options = Array.isArray(ad?.options) ? ad.options.filter((o: any) => typeof o === 'string' && o.trim()).map((o: string) => o.trim()).slice(0, 10) : [];
+          if (options.length < 2) continue;
+          slides.push({ type: 'ACTIVITY', title: typeof s?.title === 'string' ? s.title.trim() : undefined,
+            activityData: { questionType: 'ORDERING' as any, question, options, correctAnswer: options.join(' '), ...common } });
+        } else if (qType === 'FILL_BLANK') {
+          if (!correct) continue;
+          slides.push({ type: 'ACTIVITY', title: typeof s?.title === 'string' ? s.title.trim() : undefined,
+            activityData: { questionType: 'FILL_BLANK' as any, question, options: [], correctAnswer: correct, ...common } });
+        } else {
+          const options = Array.isArray(ad?.options) ? ad.options.filter((o: any) => typeof o === 'string' && o.trim()).map((o: string) => o.trim()).slice(0, 6) : [];
+          if (options.length < 2) continue;
+          slides.push({ type: 'ACTIVITY', title: typeof s?.title === 'string' ? s.title.trim() : undefined,
+            activityData: { questionType: 'MULTIPLE_CHOICE', question, options, correctAnswer: correct && options.includes(correct) ? correct : options[0], ...common } });
+        }
+      } else if (rawType === 'CHECKPOINT') {
+        slides.push({ type: 'CHECKPOINT', title: typeof s?.title === 'string' ? s.title.trim() : undefined });
+      } else if (rawType === 'BADGE_REVEAL') {
+        slides.push({ type: 'BADGE_REVEAL', badgeEmoji: typeof s?.badgeEmoji === 'string' ? s.badgeEmoji : undefined, badgeTitle: typeof s?.badgeTitle === 'string' ? s.badgeTitle : undefined });
+      }
+    }
+    if (!slides.some(s => s.type === 'CONTENT')) throw new Error('La IA respondió pero la lección no tenía contenido válido.');
+    if (!slides.some(s => s.type === 'BADGE_REVEAL')) slides.push({ type: 'BADGE_REVEAL' });
+    return {
+      title: (typeof raw?.title === 'string' && raw.title.trim()) || fallbackTitle || 'Nueva lección',
+      description: (typeof raw?.description === 'string' && raw.description.trim()) || `Lección interactiva sobre ${fallbackTopic || 'el tema'}`,
+      slides,
+    };
+  }
+
+  /**
+   * Genera una lección INTERACTIVA de inglés (estilo Duolingo) para una habilidad
+   * CEFR concreta: secuencia de micro-ejercicios con feedback inmediato. Reusa el
+   * motor de Lecciones (gamificación + evidencia ya cableadas). Sin motor de voz:
+   * Listening usa un guion textual (placeholder de audio hasta integrar TTS);
+   * Speaking se maneja como consigna de grabación fuera de este generador.
+   */
+  async generateEnglishLessonSlides(params: {
+    skill: 'READING' | 'LISTENING' | 'WRITING' | 'SPEAKING';
+    level: string; // A1..B2
+    objective: string; // objetivo de la ruta
+    title: string; // título del paso
+  }): Promise<ApdAiLessonDraft> {
+    if (!this.isEnabled()) throw new Error('La generación con IA no está habilitada.');
+    const skill = params.skill;
+    const level = params.level || 'A2';
+
+    const skillGuide: Record<string, string> = {
+      READING: 'Incluye un TEXTO corto en inglés (en el body del primer CONTENT, apropiado al nivel) y ejercicios de comprensión: elegir idea principal, completar huecos (FILL_BLANK), verdadero/falso sobre el texto.',
+      LISTENING: 'Como aún no hay audio, escribe un GUION corto de diálogo/narración en inglés (en el body del primer CONTENT, marcado como "🔊 Escucha:") y ejercicios: elegir lo que se dijo, completar lo que se oye (FILL_BLANK), ordenar la secuencia.',
+      WRITING: 'Ejercicios de construcción escrita: ORDERING para formar frases correctas, FILL_BLANK para completar con la palabra adecuada, y una pregunta SHORT_ANSWER breve. La consigna de texto libre extenso va aparte.',
+      SPEAKING: 'Prepara para hablar: ejercicios de vocabulario y frases útiles (MULTIPLE_CHOICE, FILL_BLANK) que el estudiante usará al grabar. La grabación va aparte.',
+    };
+
+    const systemInstruction = [
+      'Eres Valeria, profesora de inglés experta, diseñando una lección interactiva estilo Duolingo/Nearpod.',
+      `Habilidad: ${skill}. Nivel CEFR objetivo: ${level}. Se puntúa por inteligibilidad y can-do, no por acento nativo.`,
+      'Responde EXCLUSIVAMENTE con un JSON válido, sin markdown, sin backticks.',
+      '',
+      'Diseño:',
+      '- Bloques cortos con feedback inmediato. El contenido puede ser bilingüe (inglés con apoyo en español).',
+      `- ${skillGuide[skill]}`,
+      '- Inserta una slide ACTIVITY (ejercicio) cada 1-2 CONTENT. Entre 4 y 8 slides. Al menos 3 ACTIVITY.',
+      '- Cierra con CHECKPOINT y luego BADGE_REVEAL.',
+      '- NUNCA uses "Opción A/B/C/D": opciones reales y plausibles.',
+      '',
+      'Tipos de ACTIVITY permitidos (questionType): MULTIPLE_CHOICE (4 opciones), TRUE_FALSE, FILL_BLANK (una palabra), ORDERING (options = palabras en el orden correcto).',
+      '',
+      'Esquema JSON exacto:',
+      '{',
+      '  "title": "Título del paso",',
+      '  "description": "1 frase",',
+      '  "slides": [',
+      '    { "type": "CONTENT", "title": "…", "body": "<p>…</p>" },',
+      '    { "type": "ACTIVITY", "title": "…", "activityData": { "questionType": "MULTIPLE_CHOICE", "question": "…", "options": ["…"], "correctAnswer": "…", "explanation": "…", "hint": "…", "points": 10 } },',
+      '    { "type": "CHECKPOINT", "title": "…" },',
+      '    { "type": "BADGE_REVEAL" }',
+      '  ]',
+      '}',
+    ].join('\n');
+
+    const userPrompt = `Objetivo de la ruta: ${params.objective}\nPaso: ${params.title}\n\nDiseña la lección interactiva de ${skill} (nivel ${level}) siguiendo el esquema JSON.`;
+
+    let raw: any;
+    try {
+      raw = await this.callLlmJson<any>(systemInstruction, userPrompt, 8000);
+    } catch (err: any) {
+      this.logger.error(`generateEnglishLessonSlides LLM error: ${err?.message || err}`);
+      throw new Error(`El proveedor de IA no respondió: ${err?.message || 'error'}`);
+    }
+    return this.parseLessonDraftPayload(raw, params.title, params.title);
+  }
+
   async generateQuizQuestions(params: {
     topic: string;
     count: number;

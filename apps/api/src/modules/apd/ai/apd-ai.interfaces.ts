@@ -197,7 +197,7 @@ export interface ApdAiLessonSlideDraft {
   title?: string;
   body?: string; // HTML enriquecido para slides CONTENT
   activityData?: {
-    questionType: 'MULTIPLE_CHOICE' | 'TRUE_FALSE';
+    questionType: 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'FILL_BLANK' | 'ORDERING';
     question: string;
     options: string[];
     correctAnswer: string;

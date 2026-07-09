@@ -206,6 +206,66 @@ export class LearningRouteService {
     return this.addStep(routeId, { title: dto.title.trim(), activityId: activity.id, competencyId: dto.competencyId });
   }
 
+  /**
+   * Valeria genera la LECCIÓN INTERACTIVA de un paso (ejercicios estilo Duolingo
+   * de la habilidad/nivel del can-do del paso). Crea/asegura una actividad LESSON
+   * propia de la ruta y guarda las slides. El estudiante la hace desde el mapa;
+   * al completarla fluyen XP y evidencia (ya cableados).
+   */
+  async generateStepLesson(stepId: string) {
+    const step = await this.prisma.learningRouteStep.findUnique({
+      where: { id: stepId },
+      include: {
+        route: { select: { classroomId: true, title: true } },
+        competency: { select: { skill: true, level: true } },
+      },
+    });
+    if (!step) throw new NotFoundException('Paso no encontrado');
+
+    const skill = (step.competency?.skill as any) || 'READING';
+    const level = step.competency?.level || 'A2';
+
+    // Asegurar una actividad LESSON propia de la ruta para este paso.
+    let activityId = step.activityId ?? undefined;
+    const existingActivity = activityId
+      ? await this.prisma.classroomActivity.findUnique({ where: { id: activityId }, select: { id: true, type: true } })
+      : null;
+    if (!existingActivity || existingActivity.type !== 'LESSON') {
+      const created = await this.prisma.classroomActivity.create({
+        data: {
+          classroomId: step.route.classroomId, type: 'LESSON', title: step.title,
+          isRouteScoped: true, isPublished: true, isVisible: true, maxScore: 100,
+        },
+      });
+      activityId = created.id;
+      await this.prisma.learningRouteStep.update({ where: { id: stepId }, data: { activityId } });
+    }
+
+    // Generar los ejercicios con Valeria.
+    const draft = await this.apdAi.generateEnglishLessonSlides({
+      skill, level, objective: step.route.title, title: step.title,
+    });
+
+    // Reemplazar la lección (regenerable).
+    const existingLesson = await this.prisma.lesson.findUnique({ where: { activityId }, select: { id: true } });
+    if (existingLesson) await this.prisma.lesson.delete({ where: { id: existingLesson.id } });
+    await this.prisma.lesson.create({
+      data: {
+        activityId: activityId!,
+        title: draft.title,
+        description: draft.description,
+        slides: {
+          create: draft.slides.map((s, i) => ({
+            type: s.type as any, sortOrder: i, title: s.title, body: s.body,
+            activityData: s.activityData ? (s.activityData as any) : undefined,
+            badgeEmoji: s.badgeEmoji, badgeTitle: s.badgeTitle,
+          })),
+        },
+      },
+    });
+    return { activityId, slides: draft.slides.length };
+  }
+
   async deleteStep(stepId: string) {
     return this.prisma.learningRouteStep.delete({ where: { id: stepId } });
   }

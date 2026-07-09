@@ -108,6 +108,13 @@ export class LearningRouteController {
     return this.service.reorderSteps(routeId, body.stepIds);
   }
 
+  // Valeria genera la lección interactiva (ejercicios) del paso
+  @Post('steps/:stepId/generate-lesson')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async generateStepLesson(@Param('stepId') stepId: string) {
+    return this.service.generateStepLesson(stepId);
+  }
+
   @Delete('steps/:stepId')
   @Roles('DOCENTE', 'COORDINADOR')
   async removeStep(@Param('stepId') stepId: string) {
