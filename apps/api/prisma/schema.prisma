@@ -6328,6 +6328,31 @@ model LearningBadgeAward {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// GRAFO DE COMPETENCIAS — columna vertebral del aprendizaje (Paso 2)
+// Referencia GLOBAL y canónica (no tenant-scoped): el CEFR es el mismo para
+// todas las instituciones. Diseño agnóstico de framework para soportar CEFR
+// hoy y DBA/Saber (MEN) mañana. Resuelve el cold-start del grafo: viene
+// pre-cargado, el docente no lo construye.
+// docs/PROPUESTA_UNIFICADA_RUTAS_BILINGUE.md §1 y §13 (Paso 2)
+// ═══════════════════════════════════════════════════════════════════════════
+
+model Competency {
+  id        String  @id @default(cuid())
+  framework String // "CEFR" (futuro: "DBA", "SABER")
+  level     String? // CEFR: "A1".."C2"
+  skill     String? // CEFR: "READING"|"LISTENING"|"SPEAKING"|"WRITING"
+  code      String  @unique // ej. "CEFR.A2.SPEAKING.01"
+  statement String  @db.Text // can-do statement ("Puedo describir a mi familia…")
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([framework, level, skill])
+  @@index([framework])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // EDUSYN PLAY — Invitados, Lecciones Live, Reacciones y Conversión a nota
 // ═══════════════════════════════════════════════════════════════════════════
 
