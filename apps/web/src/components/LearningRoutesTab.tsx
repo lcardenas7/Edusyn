@@ -160,12 +160,14 @@ function ValeriaRouteModal({ classroomId, onClose, onCreated }: { classroomId: s
 function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { route: RouteView; classroomId: string; isTeacher: boolean; onBack: () => void; onReload: () => void }) {
   const [showAddStep, setShowAddStep] = useState(false)
   const [progress, setProgress] = useState<RouteProgress | null>(null)
+  const [doingActivityId, setDoingActivityId] = useState<string | null>(null)
 
   // Estudiante: cargar su progreso (% dominado + estado por paso)
-  useEffect(() => {
+  const loadProgress = useCallback(() => {
     if (isTeacher) return
     learningRouteApi.progress(route.id).then(({ data }) => setProgress(data)).catch(() => setProgress(null))
   }, [isTeacher, route.id])
+  useEffect(() => { loadProgress() }, [loadProgress])
 
   const stepProgress = (stepId: string) => progress?.steps.find(s => s.id === stepId)
 
@@ -253,6 +255,11 @@ function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { rout
                         {!isTeacher && sp && sp.mastery > 0 && <span className="text-violet-600">· {sp.mastery}%</span>}
                       </div>
                     </div>
+                    {!isTeacher && s.activity && (
+                      <button onClick={() => setDoingActivityId(s.activity!.id)} className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg ${done ? 'text-slate-500 bg-slate-100' : 'text-white bg-violet-600 hover:bg-violet-700'}`}>
+                        {done ? 'Ver' : 'Hacer'}
+                      </button>
+                    )}
                     {isTeacher && <button onClick={() => removeStep(s.id)} className="text-slate-300 hover:text-red-500 shrink-0"><Trash2 className="w-4 h-4" /></button>}
                   </div>
                 </li>
@@ -267,7 +274,71 @@ function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { rout
       </div>
 
       {showAddStep && <AddStepModal routeId={route.id} classroomId={classroomId} onClose={() => setShowAddStep(false)} onAdded={() => { setShowAddStep(false); onReload() }} />}
+      {doingActivityId && <StepActivityModal activityId={doingActivityId} onClose={() => setDoingActivityId(null)} onSubmitted={() => { setDoingActivityId(null); loadProgress() }} />}
     </div>
+  )
+}
+
+// ─── El estudiante hace la actividad del paso (Writing/Tarea inline) ──────────
+function StepActivityModal({ activityId, onClose, onSubmitted }: { activityId: string; onClose: () => void; onSubmitted: () => void }) {
+  const [activity, setActivity] = useState<any>(null)
+  const [submission, setSubmission] = useState<any>(null)
+  const [content, setContent] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  useEffect(() => {
+    Promise.all([
+      classroomApi.getActivity(activityId, 'student').then(r => r.data).catch(() => null),
+      classroomApi.getMySubmission(activityId).then(r => r.data).catch(() => null),
+    ]).then(([a, s]: any[]) => {
+      setActivity(a)
+      setSubmission(s)
+      if (s?.content) setContent(s.content)
+    }).finally(() => setLoading(false))
+  }, [activityId])
+
+  const isTask = (activity?.type || 'TASK') === 'TASK'
+  const graded = submission && (submission.status === 'GRADED' || submission.status === 'AUTO_GRADED')
+  const submitted = submission && submission.status && submission.status !== 'DRAFT'
+
+  const submit = async () => {
+    if (!content.trim()) { setErr('Escribe tu respuesta'); return }
+    try { setSaving(true); await classroomApi.submitTask(activityId, { content: content.trim() }); onSubmitted() }
+    catch { setErr('No se pudo enviar'); setSaving(false) }
+  }
+
+  return (
+    <ModalShell title={activity?.title || 'Actividad'} onClose={onClose}>
+      {loading ? (
+        <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
+      ) : !isTask ? (
+        <p className="text-sm text-slate-500">Este tipo de actividad se realiza desde la pestaña Actividades por ahora.</p>
+      ) : (
+        <div className="space-y-3">
+          {activity?.description && <p className="text-sm text-slate-600 whitespace-pre-wrap">{activity.description}</p>}
+          {graded ? (
+            <div className="space-y-2">
+              <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-800">
+                Calificada: <strong>{Number(submission.score)}</strong>{activity?.maxScore ? ` / ${Number(activity.maxScore)}` : ''}
+              </div>
+              {submission.feedback && <p className="text-sm text-slate-600"><strong>Retroalimentación:</strong> {submission.feedback}</p>}
+              <div className="text-sm text-slate-500 whitespace-pre-wrap border border-slate-100 rounded-lg p-3">{content}</div>
+            </div>
+          ) : (
+            <>
+              <textarea value={content} onChange={e => setContent(e.target.value)} rows={6} placeholder="Escribe tu respuesta aquí…" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              {submitted && <p className="text-xs text-amber-600">Ya enviaste esta actividad. Enviar de nuevo actualiza tu respuesta.</p>}
+              {err && <p className="text-sm text-red-600">{err}</p>}
+              <button onClick={submit} disabled={saving} className="w-full bg-violet-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-violet-700 disabled:opacity-60">
+                {saving ? 'Enviando…' : submitted ? 'Reenviar' : 'Enviar'}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </ModalShell>
   )
 }
 
