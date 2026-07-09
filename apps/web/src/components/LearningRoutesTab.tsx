@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Route, Plus, Target, Trash2, X, BookOpen, Headphones, Mic, PenLine, Circle, ChevronLeft, Check, Loader2 } from 'lucide-react'
-import { learningRouteApi, type RouteSummary, type RouteView, type CompetencyView } from '../lib/api'
+import { learningRouteApi, classroomApi, type RouteSummary, type RouteView, type CompetencyView, type RouteProgress } from '../lib/api'
 
 const SKILL_ICON: Record<string, any> = { READING: BookOpen, LISTENING: Headphones, SPEAKING: Mic, WRITING: PenLine }
 const SKILL_LABEL: Record<string, string> = { READING: 'Lectura', LISTENING: 'Escucha', SPEAKING: 'Habla', WRITING: 'Escritura' }
@@ -33,7 +33,7 @@ export default function LearningRoutesTab({ classroomId, isTeacher }: { classroo
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
 
   if (selected) {
-    return <RouteDetail route={selected} isTeacher={isTeacher} onBack={() => { setSelected(null); loadRoutes() }} onReload={() => openRoute(selected.id)} />
+    return <RouteDetail route={selected} classroomId={classroomId} isTeacher={isTeacher} onBack={() => { setSelected(null); loadRoutes() }} onReload={() => openRoute(selected.id)} />
   }
 
   const visible = isTeacher ? routes : routes.filter(r => r.isPublished)
@@ -90,8 +90,17 @@ export default function LearningRoutesTab({ classroomId, isTeacher }: { classroo
 }
 
 // ─── Detalle de la ruta (mapa de pasos) ──────────────────────────────────────
-function RouteDetail({ route, isTeacher, onBack, onReload }: { route: RouteView; isTeacher: boolean; onBack: () => void; onReload: () => void }) {
+function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { route: RouteView; classroomId: string; isTeacher: boolean; onBack: () => void; onReload: () => void }) {
   const [showAddStep, setShowAddStep] = useState(false)
+  const [progress, setProgress] = useState<RouteProgress | null>(null)
+
+  // Estudiante: cargar su progreso (% dominado + estado por paso)
+  useEffect(() => {
+    if (isTeacher) return
+    learningRouteApi.progress(route.id).then(({ data }) => setProgress(data)).catch(() => setProgress(null))
+  }, [isTeacher, route.id])
+
+  const stepProgress = (stepId: string) => progress?.steps.find(s => s.id === stepId)
 
   const publish = async () => { await learningRouteApi.update(route.id, { isPublished: !route.isPublished }); onReload() }
   const removeRoute = async () => { if (confirm('¿Eliminar esta ruta y sus pasos?')) { await learningRouteApi.remove(route.id); onBack() } }
@@ -119,6 +128,22 @@ function RouteDetail({ route, isTeacher, onBack, onReload }: { route: RouteView;
           </div>
         )}
 
+        {!isTeacher && progress && (
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-sm mb-1">
+              <span className="font-medium text-slate-700">Tu dominio</span>
+              <span className="flex items-center gap-2 text-slate-500">
+                {progress.demonstrated && <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-medium">¡Demostrado!</span>}
+                {progress.targetMastery}%
+              </span>
+            </div>
+            <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 transition-all duration-700" style={{ width: `${progress.targetMastery}%` }} />
+            </div>
+            <p className="text-xs text-slate-400 mt-1">{progress.completedSteps} de {progress.totalSteps} pasos con evidencia</p>
+          </div>
+        )}
+
         {isTeacher && (
           <div className="mt-4 flex items-center gap-2">
             <button onClick={publish} className={`text-sm font-medium px-3 py-1.5 rounded-lg ${route.isPublished ? 'bg-slate-100 text-slate-600' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
@@ -142,18 +167,23 @@ function RouteDetail({ route, isTeacher, onBack, onReload }: { route: RouteView;
           <ol className="relative space-y-3">
             {route.steps.map((s, i) => {
               const Icon = stepIcon(s.competency?.skill)
+              const sp = stepProgress(s.id)
+              const done = !isTeacher && sp?.done
               return (
                 <li key={s.id} className="flex items-center gap-3">
                   <div className="flex flex-col items-center">
-                    <div className="w-10 h-10 rounded-full bg-violet-50 border-2 border-violet-200 flex items-center justify-center text-violet-600"><Icon className="w-5 h-5" /></div>
-                    {i < route.steps.length - 1 && <div className="w-0.5 h-4 bg-slate-200 mt-1" />}
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${done ? 'bg-emerald-50 border-emerald-300 text-emerald-600' : 'bg-violet-50 border-violet-200 text-violet-600'}`}>
+                      {done ? <Check className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+                    </div>
+                    {i < route.steps.length - 1 && <div className={`w-0.5 h-4 mt-1 ${done ? 'bg-emerald-300' : 'bg-slate-200'}`} />}
                   </div>
                   <div className="flex-1 min-w-0 border border-slate-100 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-slate-700 truncate">{s.title}</div>
                       <div className="text-xs text-slate-400 flex items-center gap-2">
                         {s.competency && <span>{s.competency.level} {s.competency.skill && SKILL_LABEL[s.competency.skill]}</span>}
-                        {s.activity ? <span className="text-emerald-600">· {s.activity.title}</span> : <span className="text-slate-300">· sin actividad</span>}
+                        {isTeacher && (s.activity ? <span className="text-emerald-600">· {s.activity.title}</span> : <span className="text-slate-300">· sin actividad</span>)}
+                        {!isTeacher && sp && sp.mastery > 0 && <span className="text-violet-600">· {sp.mastery}%</span>}
                       </div>
                     </div>
                     {isTeacher && <button onClick={() => removeStep(s.id)} className="text-slate-300 hover:text-red-500 shrink-0"><Trash2 className="w-4 h-4" /></button>}
@@ -169,7 +199,7 @@ function RouteDetail({ route, isTeacher, onBack, onReload }: { route: RouteView;
         )}
       </div>
 
-      {showAddStep && <AddStepModal routeId={route.id} onClose={() => setShowAddStep(false)} onAdded={() => { setShowAddStep(false); onReload() }} />}
+      {showAddStep && <AddStepModal routeId={route.id} classroomId={classroomId} onClose={() => setShowAddStep(false)} onAdded={() => { setShowAddStep(false); onReload() }} />}
     </div>
   )
 }
@@ -254,17 +284,32 @@ function CreateRouteModal({ classroomId, onClose, onCreated }: { classroomId: st
   )
 }
 
-function AddStepModal({ routeId, onClose, onAdded }: { routeId: string; onClose: () => void; onAdded: () => void }) {
+function AddStepModal({ routeId, classroomId, onClose, onAdded }: { routeId: string; classroomId: string; onClose: () => void; onAdded: () => void }) {
   const [title, setTitle] = useState('')
   const [comp, setComp] = useState<CompetencyView | null>(null)
+  const [activityId, setActivityId] = useState('')
+  const [activities, setActivities] = useState<{ id: string; title: string; type: string }[]>([])
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
+
+  useEffect(() => {
+    classroomApi.listActivities(classroomId).then(({ data }) => {
+      const list = Array.isArray(data) ? data : []
+      setActivities(list.map((a: any) => ({ id: a.id, title: a.title, type: a.type })))
+    }).catch(() => setActivities([]))
+  }, [classroomId])
+
+  // Al elegir actividad, autocompletar el título del paso si está vacío
+  const onPickActivity = (id: string) => {
+    setActivityId(id)
+    if (id && !title.trim()) { const a = activities.find(x => x.id === id); if (a) setTitle(a.title) }
+  }
 
   const save = async () => {
     if (!title.trim()) { setErr('El título del paso es obligatorio'); return }
     try {
       setSaving(true)
-      await learningRouteApi.addStep(routeId, { title: title.trim(), competencyId: comp?.id })
+      await learningRouteApi.addStep(routeId, { title: title.trim(), competencyId: comp?.id, activityId: activityId || undefined })
       onAdded()
     } catch { setErr('No se pudo añadir el paso') } finally { setSaving(false) }
   }
@@ -272,9 +317,16 @@ function AddStepModal({ routeId, onClose, onAdded }: { routeId: string; onClose:
   return (
     <ModalShell title="Añadir paso" onClose={onClose}>
       <div className="space-y-3">
+        <div>
+          <label className="text-sm font-medium text-slate-600 mb-1 block">Actividad del aula (produce la evidencia)</label>
+          <select value={activityId} onChange={e => onPickActivity(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
+            <option value="">— Sin actividad (solo hito) —</option>
+            {activities.map(a => <option key={a.id} value={a.id}>{a.title}</option>)}
+          </select>
+        </div>
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título del paso (ej. Escucha · diálogo)" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
         <div>
-          <label className="text-sm font-medium text-slate-600 mb-1 block">Competencia que trabaja (opcional)</label>
+          <label className="text-sm font-medium text-slate-600 mb-1 block">Competencia que trabaja (para medir el dominio)</label>
           <CompetencyPicker value={comp} onChange={setComp} />
         </div>
         {err && <p className="text-sm text-red-600">{err}</p>}

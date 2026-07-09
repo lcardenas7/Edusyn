@@ -2510,12 +2510,22 @@ export interface RouteSummary {
   stepsCount: number
 }
 
+export interface RouteProgress {
+  routeId: string
+  targetMastery: number
+  demonstrated: boolean
+  completedSteps: number
+  totalSteps: number
+  steps: { id: string; title: string; done: boolean; mastery: number }[]
+}
+
 export const learningRouteApi = {
   competencies: (level?: string, skill?: string) =>
     api.get<CompetencyView[]>(`/learning-routes/competencies`, { params: { level, skill } }),
   listByClassroom: (classroomId: string) =>
     api.get<RouteSummary[]>(`/learning-routes/classroom/${classroomId}`),
   get: (routeId: string) => api.get<RouteView>(`/learning-routes/${routeId}`),
+  progress: (routeId: string) => api.get<RouteProgress>(`/learning-routes/${routeId}/progress`),
   create: (data: { classroomId: string; title: string; description?: string; targetCompetencyId?: string }) =>
     api.post<RouteView>(`/learning-routes`, data),
   update: (routeId: string, data: { title?: string; description?: string; isPublished?: boolean; targetCompetencyId?: string | null }) =>
