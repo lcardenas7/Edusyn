@@ -7,6 +7,8 @@ const SKILL_ICON: Record<string, any> = { READING: BookOpen, LISTENING: Headphon
 const SKILL_LABEL: Record<string, string> = { READING: 'Lectura', LISTENING: 'Escucha', SPEAKING: 'Habla', WRITING: 'Escritura' }
 const LEVELS = ['A1', 'A2', 'B1', 'B2']
 const SKILLS = ['READING', 'LISTENING', 'SPEAKING', 'WRITING']
+// Formato sugerido por Valeria según la habilidad (el docente puede cambiarlo)
+const SUGGESTED_FORMAT: Record<string, string> = { READING: 'Lección', LISTENING: 'Lección', WRITING: 'Tarea', SPEAKING: 'Grabación' }
 
 function stepIcon(skill?: string | null) { return (skill && SKILL_ICON[skill]) || Circle }
 
@@ -256,9 +258,11 @@ function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { rout
                   <div className="flex-1 min-w-0 border border-slate-100 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-slate-700 truncate">{s.title}</div>
-                      <div className="text-xs text-slate-400 flex items-center gap-2">
+                      <div className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
                         {s.competency && <span>{s.competency.level} {s.competency.skill && SKILL_LABEL[s.competency.skill]}</span>}
-                        {isTeacher && (s.activity ? <span className="text-emerald-600">· {s.activity.title}</span> : <span className="text-slate-300">· sin actividad</span>)}
+                        {isTeacher && (s.activity
+                          ? <span className="text-emerald-600">· {s.activity.type === 'LESSON' ? 'Lección' : s.activity.title}</span>
+                          : <span className="text-violet-400">· Valeria sugiere: {(s.competency?.skill && SUGGESTED_FORMAT[s.competency.skill]) || 'Lección'}</span>)}
                         {!isTeacher && sp && sp.mastery > 0 && <span className="text-violet-600">· {sp.mastery}%</span>}
                       </div>
                     </div>
