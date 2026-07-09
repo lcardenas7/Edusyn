@@ -553,6 +553,8 @@ model Institution {
   rlsLearningIdentities      LearningIdentity[]       @relation("RlsInstitutionLI")
   rlsXpEvents                XpEvent[]                @relation("RlsInstitutionXPE")
   rlsLearningBadgeAwards     LearningBadgeAward[]     @relation("RlsInstitutionLBA")
+  rlsLearningRoutes          LearningRoute[]          @relation("RlsInstitutionLR")
+  rlsLearningRouteSteps      LearningRouteStep[]      @relation("RlsInstitutionLRS")
   rlsObserverCommitments     ObserverCommitment[]     @relation("RlsInstitutionOC")
   rlsGuardianCitations       GuardianCitation[]       @relation("RlsInstitutionGC")
   rlsObserverReferrals       ObserverReferral[]       @relation("RlsInstitutionOR")
@@ -5602,6 +5604,7 @@ model Classroom {
   activities        ClassroomActivity[]
   forumPosts        ForumPost[]             @relation("ClassroomForumPosts")
   liveSessions      LiveSession[]
+  learningRoutes    LearningRoute[]
 
   @@index([institutionId])
   @@index([teacherAssignmentId])
@@ -5708,6 +5711,9 @@ model ClassroomActivity {
 
   // Lección interactiva
   lesson                  Lesson?
+
+  // Pasos de ruta que referencian esta actividad
+  routeSteps              LearningRouteStep[] @relation("ActivityRouteSteps")
 
   @@index([classroomId])
   @@index([sectionId])
@@ -6350,6 +6356,60 @@ model Competency {
 
   @@index([framework, level, skill])
   @@index([framework])
+
+  // Rutas/pasos que apuntan a esta competencia (grafo → aprendizaje)
+  targetedByRoutes LearningRoute[]     @relation("RouteTargetCompetency")
+  routeSteps       LearningRouteStep[] @relation("StepCompetency")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RUTAS DE APRENDIZAJE (Learning Journeys) — Paso 2, increment 2
+// La unidad de trabajo deja de ser la actividad suelta: es una RUTA de pasos
+// que converge en una competencia. Cada paso ES una ClassroomActivity existente.
+// Tenant-scoped (vive en un aula). docs/PROPUESTA_UNIFICADA_RUTAS_BILINGUE.md §2
+// ═══════════════════════════════════════════════════════════════════════════
+
+model LearningRoute {
+  id                 String   @id @default(cuid())
+  institutionId      String
+  classroomId        String
+  title              String
+  description        String?  @db.Text
+  targetCompetencyId String? // competencia CEFR objetivo (grafo global)
+  targetLevel        String? // "A2" (denormalizado para mostrar)
+  isPublished        Boolean  @default(false)
+  sortOrder          Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  institution      Institution         @relation("RlsInstitutionLR", fields: [institutionId], references: [id])
+  classroom        Classroom           @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  targetCompetency Competency?         @relation("RouteTargetCompetency", fields: [targetCompetencyId], references: [id], onDelete: SetNull)
+  steps            LearningRouteStep[]
+
+  @@index([institutionId])
+  @@index([classroomId])
+}
+
+model LearningRouteStep {
+  id            String   @id @default(cuid())
+  institutionId String
+  routeId       String
+  activityId    String? // el paso ES una actividad (ClassroomActivity)
+  competencyId  String? // competencia a la que contribuye este paso
+  title         String
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution Institution        @relation("RlsInstitutionLRS", fields: [institutionId], references: [id])
+  route       LearningRoute      @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  activity    ClassroomActivity? @relation("ActivityRouteSteps", fields: [activityId], references: [id], onDelete: SetNull)
+  competency  Competency?        @relation("StepCompetency", fields: [competencyId], references: [id], onDelete: SetNull)
+
+  @@index([institutionId])
+  @@index([routeId])
+  @@index([activityId])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
