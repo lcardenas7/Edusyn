@@ -389,6 +389,20 @@ function FlashcardsBlock({ act }: BlockProps) {
   )
 }
 
+// ─── Escuchar y seleccionar — LISTENING (§3.3) ─────────────────────────────
+// El alumno OYE la frase (TTS, texto oculto) y elige. Gradúa como MCQ.
+function ListeningBlock(props: BlockProps) {
+  return (
+    <div>
+      <div className="flex flex-col items-center gap-3 py-6 mb-4 rounded-2xl border border-hairline bg-surface-1">
+        <span className="text-ink-secondary text-sm">Escucha y elige la respuesta</span>
+        <SpeakButton text={props.act.question} label="Reproducir audio" className="px-4 py-2 text-sm" />
+      </div>
+      <ChoiceBlock {...props} />
+    </div>
+  )
+}
+
 // ─── Switch por tipo → bloque puro ─────────────────────────────────────────
 export function BlockRenderer(props: BlockProps) {
   switch (props.act.questionType) {
@@ -402,6 +416,8 @@ export function BlockRenderer(props: BlockProps) {
       return <MatchPairsBlock {...props} />
     case 'FLASHCARDS':
       return <FlashcardsBlock {...props} />
+    case 'LISTENING':
+      return <ListeningBlock {...props} />
     case 'MULTIPLE_CHOICE':
     case 'TRUE_FALSE':
     default:
@@ -418,5 +434,6 @@ export function requiresSubmission(questionType?: string): boolean {
 // El bloque inline aloja el enunciado dentro de sí (la frase con el hueco),
 // así el player no debe renderizar el <h3> de la pregunta por separado.
 export function blockHostsQuestion(questionType: string) {
-  return questionType === 'FILL_BLANK'
+  // FILL_BLANK aloja la frase con el hueco; LISTENING oculta el texto (se OYE).
+  return questionType === 'FILL_BLANK' || questionType === 'LISTENING'
 }

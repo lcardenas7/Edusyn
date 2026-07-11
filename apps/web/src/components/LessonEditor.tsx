@@ -765,12 +765,13 @@ export default function LessonEditor({
                 <option value="ORDERING">Ordenar palabras</option>
                 <option value="MATCHING">Emparejar</option>
                 <option value="FLASHCARDS">Flashcards</option>
+                <option value="LISTENING">Escuchar y seleccionar</option>
               </select>
             </div>
             <div>
               <label className="text-xs font-medium text-slate-500 mb-1 block">
-                {slide.activityData.questionType === 'ORDERING' ? 'Instrucción'
-                  : slide.activityData.questionType === 'MATCHING' ? 'Instrucción'
+                {slide.activityData.questionType === 'ORDERING' || slide.activityData.questionType === 'MATCHING' ? 'Instrucción'
+                  : slide.activityData.questionType === 'LISTENING' ? 'Texto que se escuchará (no se muestra)'
                   : 'Pregunta'}
               </label>
               <textarea
@@ -780,6 +781,7 @@ export default function LessonEditor({
                   slide.activityData.questionType === 'FILL_BLANK' ? 'My mother ___ dinner every day'
                   : slide.activityData.questionType === 'ORDERING' ? 'Ordena las palabras para formar la frase'
                   : slide.activityData.questionType === 'MATCHING' ? 'Empareja cada palabra con su significado'
+                  : slide.activityData.questionType === 'LISTENING' ? 'The girl is reading a book'
                   : '¿Cuál es...?'
                 }
                 rows={2}
@@ -788,10 +790,13 @@ export default function LessonEditor({
               {slide.activityData.questionType === 'FILL_BLANK' && (
                 <p className="text-xs text-slate-400 mt-1">Escribe <code className="text-violet-600">___</code> (2+ guiones) donde va el hueco.</p>
               )}
+              {slide.activityData.questionType === 'LISTENING' && (
+                <p className="text-xs text-slate-400 mt-1">El alumno lo oye con TTS (no lo ve) y elige entre las opciones.</p>
+              )}
             </div>
 
-            {/* Options for MC */}
-            {(slide.activityData.questionType === 'MULTIPLE_CHOICE' || slide.activityData.questionType === 'TRUE_FALSE') && (
+            {/* Options for MC / LISTENING */}
+            {(slide.activityData.questionType === 'MULTIPLE_CHOICE' || slide.activityData.questionType === 'TRUE_FALSE' || slide.activityData.questionType === 'LISTENING') && (
               <div>
                 <label className="text-xs font-medium text-slate-500 mb-1 block">Opciones</label>
                 <div className="space-y-2">
@@ -823,7 +828,7 @@ export default function LessonEditor({
                       )}
                     </div>
                   ))}
-                  {slide.activityData.questionType === 'MULTIPLE_CHOICE' && (
+                  {(slide.activityData.questionType === 'MULTIPLE_CHOICE' || slide.activityData.questionType === 'LISTENING') && (
                     <button
                       onClick={() => updateActivityData(index, { options: [...slide.activityData.options, ''] })}
                       className="text-xs text-violet-600 hover:text-violet-700 font-medium"
