@@ -7,7 +7,7 @@ import {
 import confetti from 'canvas-confetti'
 import { lessonApi, type Lesson, type LessonSlide, type LessonProgress } from '../lib/api'
 import { Stage } from './lesson/Stage'
-import { BlockRenderer, blockHostsQuestion, gradeAnswer, isAnswerComplete } from './lesson/InteractiveBlocks'
+import { BlockRenderer, blockHostsQuestion, gradeAnswer, isAnswerComplete, requiresSubmission } from './lesson/InteractiveBlocks'
 import { SpeakButton, stripHtml } from './lesson/SpeakButton'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -188,8 +188,13 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
 
     const timeSpent = Math.round((Date.now() - slideStartTime) / 1000)
 
-    // For ACTIVITY slides, must answer first
-    if (currentSlide.type === 'ACTIVITY' && !answerSubmitted && !hasAnswered && !isTeacher) return
+    // For ACTIVITY slides que requieren envío, hay que responder primero.
+    // Las flashcards (estudio) no requieren envío → se puede avanzar.
+    if (
+      currentSlide.type === 'ACTIVITY' &&
+      requiresSubmission(currentSlide.activityData?.questionType) &&
+      !answerSubmitted && !hasAnswered && !isTeacher
+    ) return
 
     if (!isTeacher) {
       try {
@@ -197,7 +202,9 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
         const { data } = await lessonApi.advance(lesson.id, {
           slideIndex: currentIndex,
           slideId: currentSlide.id,
-          answer: currentSlide.type === 'ACTIVITY' ? selectedAnswer : undefined,
+          answer: currentSlide.type === 'ACTIVITY' && requiresSubmission(currentSlide.activityData?.questionType)
+            ? selectedAnswer
+            : undefined,
           timeSpentDelta: timeSpent,
         })
         // Update local progress
@@ -561,7 +568,10 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
     if (isTeacher) return true
     if (currentSlide.type === 'CONTENT' || currentSlide.type === 'CHECKPOINT') return true
     if (currentSlide.type === 'BADGE_REVEAL') return true
-    if (currentSlide.type === 'ACTIVITY') return answerSubmitted || hasAnswered
+    if (currentSlide.type === 'ACTIVITY') {
+      if (!requiresSubmission(currentSlide.activityData?.questionType)) return true // flashcards
+      return answerSubmitted || hasAnswered
+    }
     return false
   })()
 
@@ -809,7 +819,9 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
             <Sparkles className="w-4 h-4 text-accent" />
           </div>
-          <span className="text-ink-muted text-sm font-medium">Actividad • {act.points || 10} pts</span>
+          <span className="text-ink-muted text-sm font-medium">
+            {act.questionType === 'FLASHCARDS' ? 'Tarjetas de estudio' : `Actividad • ${act.points || 10} pts`}
+          </span>
         </div>
 
         {/* El enunciado se muestra arriba salvo cuando el bloque lo aloja
@@ -833,8 +845,8 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           />
         </Stage>
 
-        {/* Submit button (only if not yet submitted) */}
-        {!answerSubmitted && !alreadyAnswered && (
+        {/* Submit button (solo si el tipo requiere envío y aún no se envió) */}
+        {requiresSubmission(act.questionType) && !answerSubmitted && !alreadyAnswered && (
           <motion.button
             onClick={handleSubmitAnswer}
             disabled={!isAnswerComplete(act, selectedAnswer)}

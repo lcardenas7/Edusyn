@@ -764,6 +764,7 @@ export default function LessonEditor({
                 <option value="FILL_BLANK">Completar en línea</option>
                 <option value="ORDERING">Ordenar palabras</option>
                 <option value="MATCHING">Emparejar</option>
+                <option value="FLASHCARDS">Flashcards</option>
               </select>
             </div>
             <div>
@@ -945,6 +946,53 @@ export default function LessonEditor({
                   className="text-xs text-violet-600 hover:text-violet-700 font-medium"
                 >
                   + Agregar par
+                </button>
+              </div>
+            )}
+
+            {/* FLASHCARDS — tarjetas frente ↔ reverso (se guardan como "frente::reverso") */}
+            {slide.activityData.questionType === 'FLASHCARDS' && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-500 block">Tarjetas (frente ↔ reverso)</label>
+                {slide.activityData.options.map((opt, oi) => {
+                  const parts = String(opt).split('::')
+                  const front = parts[0] || ''
+                  const back = parts[1] || ''
+                  const setCard = (f: string, b: string) => {
+                    const updated = [...slide.activityData.options]
+                    updated[oi] = `${f}::${b}`
+                    updateActivityData(index, { options: updated })
+                  }
+                  return (
+                    <div key={oi} className="flex items-center gap-2">
+                      <input
+                        value={front}
+                        onChange={e => setCard(e.target.value, back)}
+                        placeholder="Frente (p. ej. dog)"
+                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                      />
+                      <span className="text-slate-400">↔</span>
+                      <input
+                        value={back}
+                        onChange={e => setCard(front, e.target.value)}
+                        placeholder="Reverso (p. ej. perro)"
+                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                      />
+                      <button
+                        onClick={() => updateActivityData(index, { options: slide.activityData.options.filter((_, j) => j !== oi) })}
+                        className="text-slate-400 hover:text-red-500 px-1"
+                        title="Quitar"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )
+                })}
+                <button
+                  onClick={() => updateActivityData(index, { options: [...slide.activityData.options, '::'] })}
+                  className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                >
+                  + Agregar tarjeta
                 </button>
               </div>
             )}

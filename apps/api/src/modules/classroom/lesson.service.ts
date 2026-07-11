@@ -369,8 +369,13 @@ export class LessonService {
     let activityCorrect = false; // para XP por dominio (solo si acertó)
     let activityPoints = 0;
 
-    // If ACTIVITY slide, grade the answer
-    if (slide.type === 'ACTIVITY' && data.answer !== undefined && slide.activityData) {
+    // If ACTIVITY slide, grade the answer (las flashcards son estudio, no se puntúan)
+    if (
+      slide.type === 'ACTIVITY' &&
+      data.answer !== undefined &&
+      slide.activityData &&
+      (slide.activityData as any).questionType !== 'FLASHCARDS'
+    ) {
       const actData = slide.activityData as any;
       const points = actData.points || 10;
       maxScoreIncrement = points;
@@ -401,9 +406,9 @@ export class LessonService {
     const isComplete = completedSlides.length >= totalSlides;
     const nextSlideIndex = Math.min(data.slideIndex + 1, totalSlides - 1);
 
-    // Calculate total max score
+    // Calculate total max score (las flashcards no puntúan → fuera del denominador)
     const totalMaxScore = lesson.slides
-      .filter(s => s.type === 'ACTIVITY' && s.activityData)
+      .filter(s => s.type === 'ACTIVITY' && s.activityData && (s.activityData as any).questionType !== 'FLASHCARDS')
       .reduce((sum, s) => sum + ((s.activityData as any)?.points || 10), 0);
 
     const updatedProgress = await this.prisma.lessonProgress.update({
@@ -706,35 +711,48 @@ export class LessonService {
   // HELPERS
   // ═══════════════════════════════════════════════════════════════════════════
 
+  // Normalización espejo del frontend (grading.ts): trim + minúsculas + colapsa espacios.
+  private norm(s: any): string {
+    return String(s ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  // Pares de MATCHING en `options` como "izquierda::derecha" (camino A).
+  private parsePairs(options?: any[]): { left: string; right: string }[] {
+    return (options || [])
+      .map((o: any) => {
+        const [left, right] = String(o).split('::');
+        return { left: (left || '').trim(), right: (right || '').trim() };
+      })
+      .filter(p => p.left && p.right);
+  }
+
+  // IMPORTANTE: debe puntuar EXACTAMENTE igual que el frontend (grading.ts).
+  // Si divergen, el alumno ve "correcto" pero el score guardado dice otra cosa.
   private gradeAnswer(activityData: any, answer: any): boolean {
     const type = activityData.questionType;
     const correct = activityData.correctAnswer;
 
-    if (!correct) return false;
-
-    if (type === 'MULTIPLE_CHOICE' || type === 'TRUE_FALSE') {
-      return String(answer).trim().toLowerCase() === String(correct).trim().toLowerCase();
-    }
-
-    if (type === 'SHORT_ANSWER') {
-      return String(answer).trim().toLowerCase() === String(correct).trim().toLowerCase();
-    }
-
-    if (type === 'FILL_BLANK') {
-      if (Array.isArray(correct) && Array.isArray(answer)) {
-        return correct.every((c: string, i: number) =>
-          String(answer[i] || '').trim().toLowerCase() === String(c).trim().toLowerCase(),
-        );
-      }
-      return String(answer).trim().toLowerCase() === String(correct).trim().toLowerCase();
+    if (type === 'MATCHING') {
+      const pairs = this.parsePairs(activityData.options);
+      return pairs.length > 0 && !!answer && typeof answer === 'object' &&
+        pairs.every(p => this.norm(answer[p.left]) === this.norm(p.right));
     }
 
     if (type === 'ORDERING') {
+      // Forma legada: correctAnswer como array. Camino A: string (la frase).
       if (Array.isArray(correct) && Array.isArray(answer)) {
         return JSON.stringify(answer) === JSON.stringify(correct);
       }
+      return this.norm((Array.isArray(answer) ? answer : []).join(' ')) === this.norm(correct);
     }
 
-    return false;
+    if (type === 'FILL_BLANK' && Array.isArray(correct) && Array.isArray(answer)) {
+      // Forma legada multi-hueco.
+      return correct.every((c: string, i: number) => this.norm(answer[i]) === this.norm(c));
+    }
+
+    // MULTIPLE_CHOICE, TRUE_FALSE, SHORT_ANSWER, FILL_BLANK (hueco simple)
+    if (!correct) return false;
+    return this.norm(answer) === this.norm(correct);
   }
 }

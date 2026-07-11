@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { motion, Reorder } from 'framer-motion'
-import { CheckCircle2, GripVertical } from 'lucide-react'
+import { motion, AnimatePresence, Reorder } from 'framer-motion'
+import { CheckCircle2, GripVertical, ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react'
 import { type ActivityData, norm, parsePairs, gradeAnswer, isAnswerComplete } from './grading'
+import { SpeakButton } from './SpeakButton'
 
 export { gradeAnswer, isAnswerComplete }
 export type { ActivityData }
@@ -301,6 +302,93 @@ function MatchPairsBlock({ act, value, onChange, showResult }: BlockProps) {
   )
 }
 
+// ─── Flashcards — estudio con RECUERDO ACTIVO (no releer, §1.2) ─────────────
+// Frente → intenta recordar → voltea a comprobar → autoevalúa. Pares en
+// `options` como "frente::reverso". Sin calificación (es estudio).
+function FlashcardsBlock({ act }: BlockProps) {
+  const cards = useMemo(() => parsePairs(act.options), [act.options])
+  const [i, setI] = useState(0)
+  const [flipped, setFlipped] = useState(false)
+
+  if (cards.length === 0) return null
+  const card = cards[i]
+  const atEnd = i >= cards.length - 1
+
+  const go = (delta: number) => {
+    setFlipped(false)
+    setI(p => Math.min(cards.length - 1, Math.max(0, p + delta)))
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-ink-muted text-sm">Tarjeta {i + 1} de {cards.length}</span>
+        <SpeakButton text={card.left} label="Oír" />
+      </div>
+
+      {/* La tarjeta (voltea al tocar) */}
+      <AnimatePresence mode="wait">
+        <motion.button
+          key={`${i}-${flipped ? 'b' : 'f'}`}
+          onClick={() => setFlipped(f => !f)}
+          initial={{ opacity: 0, scale: 0.98, y: 6 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.98 }}
+          transition={{ duration: 0.18, ease: EASE }}
+          className={`w-full min-h-[168px] rounded-2xl border p-6 flex flex-col items-center justify-center gap-2 text-center ${
+            flipped ? 'border-accent bg-accent/5' : 'border-hairline bg-surface-1'
+          }`}
+        >
+          <span className="text-ink-muted text-xs uppercase tracking-wide">{flipped ? 'Reverso' : 'Frente'}</span>
+          <span className="text-2xl font-bold text-ink-primary">{flipped ? card.right : card.left}</span>
+          {!flipped && (
+            <span className="inline-flex items-center gap-1 text-ink-muted text-xs mt-2">
+              <RotateCcw className="w-3 h-3" /> Toca para voltear
+            </span>
+          )}
+        </motion.button>
+      </AnimatePresence>
+
+      {/* Autoevaluación (recuerdo activo) tras voltear */}
+      {flipped && !atEnd && (
+        <div className="flex items-center justify-center gap-3 mt-4">
+          <span className="text-ink-secondary text-sm">¿Lo recordaste?</span>
+          <button
+            onClick={() => go(1)}
+            className="px-4 py-1.5 rounded-lg border border-feedback-correct/40 text-feedback-correct text-sm font-medium hover:bg-feedback-correct/10 transition-colors"
+          >
+            Sí
+          </button>
+          <button
+            onClick={() => go(1)}
+            className="px-4 py-1.5 rounded-lg border border-hairline text-ink-secondary text-sm font-medium hover:bg-surface-2 transition-colors"
+          >
+            Todavía no
+          </button>
+        </div>
+      )}
+
+      {/* Navegación entre tarjetas */}
+      <div className="flex items-center justify-between mt-4">
+        <button
+          onClick={() => go(-1)}
+          disabled={i === 0}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-2 border border-hairline text-ink-secondary text-sm disabled:opacity-30 hover:bg-surface-3 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> Anterior
+        </button>
+        <button
+          onClick={() => go(1)}
+          disabled={atEnd}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-2 border border-hairline text-ink-secondary text-sm disabled:opacity-30 hover:bg-surface-3 transition-colors"
+        >
+          Siguiente <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Switch por tipo → bloque puro ─────────────────────────────────────────
 export function BlockRenderer(props: BlockProps) {
   switch (props.act.questionType) {
@@ -312,11 +400,18 @@ export function BlockRenderer(props: BlockProps) {
       return <OrderWordsBlock {...props} />
     case 'MATCHING':
       return <MatchPairsBlock {...props} />
+    case 'FLASHCARDS':
+      return <FlashcardsBlock {...props} />
     case 'MULTIPLE_CHOICE':
     case 'TRUE_FALSE':
     default:
       return <ChoiceBlock {...props} />
   }
+}
+
+// Las flashcards son estudio, no se "comprueban" → no requieren envío ni grading.
+export function requiresSubmission(questionType?: string): boolean {
+  return questionType !== 'FLASHCARDS'
 }
 
 
