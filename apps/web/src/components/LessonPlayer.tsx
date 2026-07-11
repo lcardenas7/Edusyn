@@ -8,6 +8,7 @@ import confetti from 'canvas-confetti'
 import { lessonApi, type Lesson, type LessonSlide, type LessonProgress } from '../lib/api'
 import { Stage } from './lesson/Stage'
 import { BlockRenderer, blockHostsQuestion, gradeAnswer, isAnswerComplete } from './lesson/InteractiveBlocks'
+import { SpeakButton, stripHtml } from './lesson/SpeakButton'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -721,6 +722,13 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           >
             {slide.title}
           </motion.h2>
+        )}
+
+        {/* Oír la lectura con TTS (§3.1 vocabulario/pronunciación) */}
+        {slide.body && (
+          <div className="mb-4">
+            <SpeakButton text={stripHtml(slide.body)} label="Escuchar la lectura" />
+          </div>
         )}
 
         <div className={`${hasImage && layout === 'text-left-image-right' ? 'flex flex-col sm:flex-row gap-6' : ''}`}>
