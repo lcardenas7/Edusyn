@@ -6,6 +6,8 @@ import {
 } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { lessonApi, type Lesson, type LessonSlide, type LessonProgress } from '../lib/api'
+import { Stage } from './lesson/Stage'
+import { BlockRenderer, blockHostsQuestion } from './lesson/InteractiveBlocks'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -801,73 +803,26 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           <span className="text-ink-muted text-sm font-medium">Actividad • {act.points || 10} pts</span>
         </div>
 
-        <h3 className="text-xl sm:text-2xl font-bold text-ink-primary mb-6">{act.question}</h3>
+        {/* El enunciado se muestra arriba salvo cuando el bloque lo aloja
+            dentro de sí (completar en línea: la frase con el hueco). */}
+        {!blockHostsQuestion(act.questionType) && (
+          <h3 className="text-xl sm:text-2xl font-bold text-ink-primary mb-6">{act.question}</h3>
+        )}
 
         {/* Hint */}
         {act.hint && !answerSubmitted && !alreadyAnswered && (
           <p className="text-ink-secondary text-sm mb-4 italic">💡 {act.hint}</p>
         )}
 
-        {/* Options — ChoiceCard neutra (sin look Kahoot) */}
-        {(act.questionType === 'MULTIPLE_CHOICE' || act.questionType === 'TRUE_FALSE') && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {(act.options || []).map((opt: string, i: number) => {
-              const isSelected = selectedAnswer === opt
-              const isCorrectOption = opt === act.correctAnswer
-              const showResult = answerSubmitted || alreadyAnswered
-
-              // Estados: idle · selected · correct · incorrect (color solo tras comprobar)
-              let cardClass = 'bg-surface-1 border-hairline'
-              let letterClass = 'bg-surface-3 text-ink-secondary'
-              if (showResult) {
-                if (isCorrectOption) {
-                  cardClass = 'bg-feedback-correct/10 border-feedback-correct'
-                  letterClass = 'bg-feedback-correct text-white'
-                } else if (isSelected && !isCorrectOption) {
-                  cardClass = 'bg-feedback-error/10 border-feedback-error opacity-70'
-                  letterClass = 'bg-feedback-error text-white'
-                }
-              } else if (isSelected) {
-                cardClass = 'bg-accent/5 border-accent ring-1 ring-accent'
-                letterClass = 'bg-accent text-white'
-              }
-
-              return (
-                <motion.button
-                  key={i}
-                  onClick={() => !showResult && setSelectedAnswer(opt)}
-                  disabled={!!showResult}
-                  whileHover={!showResult ? { scale: 1.01 } : undefined}
-                  whileTap={!showResult ? { scale: 0.99 } : undefined}
-                  className={`relative flex items-center gap-3 p-4 rounded-2xl border text-left text-ink-primary font-medium transition-colors ${cardClass} ${!showResult ? 'hover:border-accent/50 hover:bg-surface-2' : ''}`}
-                >
-                  <span className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold transition-colors ${letterClass}`}>
-                    {String.fromCharCode(65 + i)}
-                  </span>
-                  <span className="flex-1 text-sm sm:text-base">{opt}</span>
-                  {showResult && isCorrectOption && (
-                    <CheckCircle2 className="flex-shrink-0 w-5 h-5 text-feedback-correct" />
-                  )}
-                </motion.button>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Short answer / Fill in the blank (escribir la respuesta) */}
-        {(act.questionType === 'SHORT_ANSWER' || act.questionType === 'FILL_BLANK') && (
-          <div>
-            <input
-              type="text"
-              value={selectedAnswer ?? previousAnswer?.answer ?? ''}
-              onChange={e => !answerSubmitted && !alreadyAnswered && setSelectedAnswer(e.target.value)}
-              disabled={answerSubmitted || alreadyAnswered}
-              placeholder={act.questionType === 'FILL_BLANK' ? 'Completa la palabra…' : 'Escribe tu respuesta…'}
-              autoFocus
-              className="w-full bg-surface-1 border border-hairline rounded-xl px-4 py-3 text-ink-primary placeholder-ink-muted focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent text-lg disabled:opacity-70"
-            />
-          </div>
-        )}
+        {/* Interacción — Stage + BlockRenderer (arquitectura de bloques DS-1) */}
+        <Stage variant="question">
+          <BlockRenderer
+            act={act}
+            value={selectedAnswer ?? previousAnswer?.answer ?? ''}
+            onChange={setSelectedAnswer}
+            showResult={answerSubmitted || alreadyAnswered}
+          />
+        </Stage>
 
         {/* Submit button (only if not yet submitted) */}
         {!answerSubmitted && !alreadyAnswered && (
