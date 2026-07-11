@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
-import { CheckCircle2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { motion, Reorder } from 'framer-motion'
+import { CheckCircle2, GripVertical } from 'lucide-react'
 import { type ActivityData, norm, parsePairs, gradeAnswer, isAnswerComplete } from './grading'
 
 export { gradeAnswer, isAnswerComplete }
@@ -154,77 +154,82 @@ function ShortAnswerBlock({ value, onChange, showResult }: BlockProps) {
   )
 }
 
-// ─── Ordenar / banco de palabras — ORDERING (construir la frase) ───────────
+// ─── Ordenar secuencias — ORDERING (arrastrar para reordenar) ──────────────
+// Cada palabra/paso es una ficha con id único (tolera repetidas). Se arrastra
+// verticalmente (framer Reorder, táctil). value expuesto = array de palabras.
 function OrderWordsBlock({ act, value, onChange, showResult }: BlockProps) {
   const options = act.options || []
-  // Banco barajado y estable mientras dure este momento.
-  const shuffled = useMemo(() => shuffle(options), [act.question]) // eslint-disable-line react-hooks/exhaustive-deps
-  const placed: string[] = Array.isArray(value) ? value : []
 
-  // Banco = barajado menos las ocurrencias ya colocadas (multiset, tolera repetidas).
-  const remaining = useMemo(() => {
-    const rem = [...shuffled]
-    placed.forEach(w => {
-      const i = rem.indexOf(w)
-      if (i >= 0) rem.splice(i, 1)
-    })
-    return rem
-  }, [shuffled, placed])
+  // Orden inicial: el guardado (revisita) o uno barajado. Se calcula una vez.
+  const initial = useMemo<{ id: number; w: string }[]>(() => {
+    const base = Array.isArray(value) && value.length === options.length ? value : shuffle(options)
+    return base.map((w, i) => ({ id: i, w }))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const isCorrect = showResult && norm(placed.join(' ')) === norm(act.correctAnswer)
+  const [items, setItems] = useState(initial)
+
+  // Sincroniza el parent en el primer render si aún no hay respuesta.
+  useEffect(() => {
+    if (!Array.isArray(value)) onChange(initial.map(x => x.w))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const order = showResult && Array.isArray(value) && value.length ? value : items.map(x => x.w)
+  const isCorrect = showResult && norm(order.join(' ')) === norm(act.correctAnswer)
+
+  // Resultado: estático con color + sello táctil.
+  if (showResult) {
+    return (
+      <div>
+        <motion.ol
+          animate={isCorrect ? { scale: [1, 1.01, 1] } : { x: [0, -6, 6, -4, 4, 0] }}
+          transition={{ duration: 0.4, ease: EASE }}
+          className="space-y-2"
+        >
+          {order.map((w, i) => (
+            <li
+              key={`${w}-${i}`}
+              className={`flex items-center gap-3 p-3 rounded-xl border text-ink-primary ${
+                isCorrect ? 'border-feedback-correct bg-feedback-correct/10' : 'border-feedback-error bg-feedback-error/10'
+              }`}
+            >
+              <span className="text-ink-muted text-sm w-5 text-center">{i + 1}</span>
+              <span className="flex-1">{w}</span>
+            </li>
+          ))}
+        </motion.ol>
+        {!isCorrect && act.correctAnswer && (
+          <p className="text-ink-secondary text-sm mt-3">
+            Correcto: <span className="text-feedback-correct font-medium">{act.correctAnswer}</span>
+          </p>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div>
-      {/* Ranura: la frase que se construye */}
-      <motion.div
-        animate={showResult ? (isCorrect ? { scale: [1, 1.02, 1] } : { x: [0, -6, 6, -4, 4, 0] }) : {}}
-        transition={{ duration: 0.4, ease: EASE }}
-        className={`min-h-[56px] flex flex-wrap items-center gap-2 rounded-2xl border p-3 mb-4 ${
-          showResult
-            ? isCorrect
-              ? 'border-feedback-correct bg-feedback-correct/10'
-              : 'border-feedback-error bg-feedback-error/10'
-            : 'border-accent/40 bg-surface-1'
-        }`}
+      <p className="text-ink-muted text-sm mb-3">Arrastra para ordenar.</p>
+      <Reorder.Group
+        axis="y"
+        values={items}
+        onReorder={next => {
+          setItems(next)
+          onChange(next.map(x => x.w))
+        }}
+        className="space-y-2"
       >
-        {placed.length === 0 && (
-          <span className="text-ink-muted text-sm px-2">Toca las palabras para armar la frase…</span>
-        )}
-        {placed.map((w, i) => (
-          <button
-            key={`${w}-${i}`}
-            onClick={() => !showResult && onChange(placed.filter((_, j) => j !== i))}
-            disabled={showResult}
-            className="px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/40 text-ink-primary text-sm sm:text-base font-medium"
+        {items.map((item, i) => (
+          <Reorder.Item
+            key={item.id}
+            value={item}
+            className="flex items-center gap-3 p-3 rounded-xl border border-hairline bg-surface-1 text-ink-primary cursor-grab active:cursor-grabbing select-none"
           >
-            {w}
-          </button>
+            <GripVertical className="w-4 h-4 text-ink-muted flex-shrink-0" />
+            <span className="text-ink-muted text-sm w-5 text-center">{i + 1}</span>
+            <span className="flex-1 text-sm sm:text-base font-medium">{item.w}</span>
+          </Reorder.Item>
         ))}
-      </motion.div>
-
-      {/* Banco de palabras disponibles */}
-      {!showResult && remaining.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {remaining.map((w, i) => (
-            <motion.button
-              key={`${w}-${i}`}
-              onClick={() => onChange([...placed, w])}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              className="px-3 py-1.5 rounded-lg bg-surface-1 border border-hairline text-ink-primary text-sm sm:text-base font-medium hover:border-accent/50 hover:bg-surface-2 transition-colors"
-            >
-              {w}
-            </motion.button>
-          ))}
-        </div>
-      )}
-
-      {/* La frase correcta, solo si falló */}
-      {showResult && !isCorrect && act.correctAnswer && (
-        <p className="text-ink-secondary text-sm mt-3">
-          Correcto: <span className="text-feedback-correct font-medium">{act.correctAnswer}</span>
-        </p>
-      )}
+      </Reorder.Group>
     </div>
   )
 }
