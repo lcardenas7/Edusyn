@@ -2341,6 +2341,8 @@ export interface LessonSlide {
     explanation?: string
     points?: number
     hint?: string
+    feedbackCorrect?: string
+    feedbackIncorrect?: string
   }
   badgeEmoji?: string
   badgeTitle?: string

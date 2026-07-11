@@ -40,6 +40,8 @@ interface SlideForm {
     explanation: string
     points: number
     hint: string
+    feedbackCorrect: string
+    feedbackIncorrect: string
   }
   badgeEmoji: string
   badgeTitle: string
@@ -53,6 +55,8 @@ const EMPTY_ACTIVITY_DATA = {
   explanation: '',
   points: 10,
   hint: '',
+  feedbackCorrect: '',
+  feedbackIncorrect: '',
 }
 
 const SLIDE_TYPE_LABELS: Record<string, { label: string; icon: any; color: string }> = {
@@ -155,6 +159,8 @@ export default function LessonEditor({
         explanation: s.activityData.explanation || '',
         points: s.activityData.points || 10,
         hint: s.activityData.hint || '',
+        feedbackCorrect: (s.activityData as any).feedbackCorrect || '',
+        feedbackIncorrect: (s.activityData as any).feedbackIncorrect || '',
       } : { ...EMPTY_ACTIVITY_DATA },
       badgeEmoji: s.badgeEmoji || '',
       badgeTitle: s.badgeTitle || '',
@@ -259,6 +265,8 @@ export default function LessonEditor({
           explanation: s.activityData.explanation || undefined,
           points: s.activityData.points || 10,
           hint: s.activityData.hint || undefined,
+          feedbackCorrect: s.activityData.feedbackCorrect || undefined,
+          feedbackIncorrect: s.activityData.feedbackIncorrect || undefined,
         } : undefined,
         badgeEmoji: s.type === 'BADGE_REVEAL' ? (s.badgeEmoji || badgeEmoji) : undefined,
         badgeTitle: s.type === 'BADGE_REVEAL' ? (s.badgeTitle || badgeTitle) : undefined,
@@ -1033,6 +1041,30 @@ export default function LessonEditor({
                 className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none"
               />
             </div>
+
+            {/* Retroalimentación predefinida por resultado (setpoints del docente §7) */}
+            {slide.activityData.questionType !== 'FLASHCARDS' && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-emerald-600 mb-1 block">Feedback si acierta</label>
+                  <input
+                    value={slide.activityData.feedbackCorrect}
+                    onChange={e => updateActivityData(index, { feedbackCorrect: e.target.value })}
+                    placeholder="¡Muy bien! (opcional)"
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-rose-600 mb-1 block">Feedback si falla</label>
+                  <input
+                    value={slide.activityData.feedbackIncorrect}
+                    onChange={e => updateActivityData(index, { feedbackIncorrect: e.target.value })}
+                    placeholder="Casi… vuelve a leer (opcional)"
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         )}
 

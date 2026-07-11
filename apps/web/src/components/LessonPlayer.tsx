@@ -884,6 +884,12 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
                 </>
               )}
             </div>
+            {/* Retroalimentación predefinida por el docente (setpoint §7) */}
+            {(() => {
+              const correct = slideResult?.isCorrect ?? previousAnswer?.isCorrect
+              const msg = correct ? act.feedbackCorrect : act.feedbackIncorrect
+              return msg ? <p className="text-ink-primary text-sm mt-2 font-medium">{msg}</p> : null
+            })()}
             {act.explanation && (
               <p className="text-ink-secondary text-sm mt-2">{act.explanation}</p>
             )}
