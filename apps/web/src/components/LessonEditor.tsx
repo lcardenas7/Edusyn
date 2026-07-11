@@ -761,17 +761,32 @@ export default function LessonEditor({
                 <option value="MULTIPLE_CHOICE">Opción múltiple</option>
                 <option value="TRUE_FALSE">Verdadero / Falso</option>
                 <option value="SHORT_ANSWER">Respuesta corta</option>
+                <option value="FILL_BLANK">Completar en línea</option>
+                <option value="ORDERING">Ordenar palabras</option>
+                <option value="MATCHING">Emparejar</option>
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Pregunta</label>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">
+                {slide.activityData.questionType === 'ORDERING' ? 'Instrucción'
+                  : slide.activityData.questionType === 'MATCHING' ? 'Instrucción'
+                  : 'Pregunta'}
+              </label>
               <textarea
                 value={slide.activityData.question}
                 onChange={e => updateActivityData(index, { question: e.target.value })}
-                placeholder="¿Cuál es...?"
+                placeholder={
+                  slide.activityData.questionType === 'FILL_BLANK' ? 'My mother ___ dinner every day'
+                  : slide.activityData.questionType === 'ORDERING' ? 'Ordena las palabras para formar la frase'
+                  : slide.activityData.questionType === 'MATCHING' ? 'Empareja cada palabra con su significado'
+                  : '¿Cuál es...?'
+                }
                 rows={2}
                 className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none"
               />
+              {slide.activityData.questionType === 'FILL_BLANK' && (
+                <p className="text-xs text-slate-400 mt-1">Escribe <code className="text-violet-600">___</code> (2+ guiones) donde va el hueco.</p>
+              )}
             </div>
 
             {/* Options for MC */}
@@ -819,16 +834,118 @@ export default function LessonEditor({
               </div>
             )}
 
-            {/* Correct answer for SHORT_ANSWER */}
-            {slide.activityData.questionType === 'SHORT_ANSWER' && (
+            {/* Correct answer for SHORT_ANSWER / FILL_BLANK */}
+            {(slide.activityData.questionType === 'SHORT_ANSWER' || slide.activityData.questionType === 'FILL_BLANK') && (
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block">Respuesta correcta</label>
+                <label className="text-xs font-medium text-slate-500 mb-1 block">
+                  {slide.activityData.questionType === 'FILL_BLANK' ? 'Palabra del hueco' : 'Respuesta correcta'}
+                </label>
                 <input
                   value={slide.activityData.correctAnswer}
                   onChange={e => updateActivityData(index, { correctAnswer: e.target.value })}
-                  placeholder="Respuesta exacta"
+                  placeholder={slide.activityData.questionType === 'FILL_BLANK' ? 'cooks' : 'Respuesta exacta'}
                   className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
                 />
+              </div>
+            )}
+
+            {/* ORDERING — frase correcta + banco de palabras */}
+            {slide.activityData.questionType === 'ORDERING' && (
+              <div className="space-y-2">
+                <div>
+                  <label className="text-xs font-medium text-slate-500 mb-1 block">Frase correcta (en orden)</label>
+                  <input
+                    value={slide.activityData.correctAnswer}
+                    onChange={e => updateActivityData(index, { correctAnswer: e.target.value })}
+                    placeholder="My brother is a student"
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-slate-500 block">Palabras (banco)</label>
+                  <button
+                    onClick={() => updateActivityData(index, { options: (slide.activityData.correctAnswer || '').trim().split(/\s+/).filter(Boolean) })}
+                    className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                  >
+                    Generar desde la frase
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {slide.activityData.options.map((opt, oi) => (
+                    <div key={oi} className="flex items-center gap-2">
+                      <input
+                        value={opt}
+                        onChange={e => {
+                          const updated = [...slide.activityData.options]
+                          updated[oi] = e.target.value
+                          updateActivityData(index, { options: updated })
+                        }}
+                        placeholder={`Palabra ${oi + 1}`}
+                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                      />
+                      <button
+                        onClick={() => updateActivityData(index, { options: slide.activityData.options.filter((_, j) => j !== oi) })}
+                        className="text-slate-400 hover:text-red-500 px-1"
+                        title="Quitar"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => updateActivityData(index, { options: [...slide.activityData.options, ''] })}
+                    className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                  >
+                    + Agregar palabra
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* MATCHING — pares izquierda ↔ derecha (se guardan como "izq::der") */}
+            {slide.activityData.questionType === 'MATCHING' && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-500 block">Pares a emparejar</label>
+                {slide.activityData.options.map((opt, oi) => {
+                  const parts = String(opt).split('::')
+                  const left = parts[0] || ''
+                  const right = parts[1] || ''
+                  const setPair = (l: string, r: string) => {
+                    const updated = [...slide.activityData.options]
+                    updated[oi] = `${l}::${r}`
+                    updateActivityData(index, { options: updated })
+                  }
+                  return (
+                    <div key={oi} className="flex items-center gap-2">
+                      <input
+                        value={left}
+                        onChange={e => setPair(e.target.value, right)}
+                        placeholder="Izquierda"
+                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                      />
+                      <span className="text-slate-400">↔</span>
+                      <input
+                        value={right}
+                        onChange={e => setPair(left, e.target.value)}
+                        placeholder="Derecha"
+                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                      />
+                      <button
+                        onClick={() => updateActivityData(index, { options: slide.activityData.options.filter((_, j) => j !== oi) })}
+                        className="text-slate-400 hover:text-red-500 px-1"
+                        title="Quitar"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )
+                })}
+                <button
+                  onClick={() => updateActivityData(index, { options: [...slide.activityData.options, '::'] })}
+                  className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                >
+                  + Agregar par
+                </button>
               </div>
             )}
 
