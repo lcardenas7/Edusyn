@@ -7,7 +7,7 @@ import {
 import confetti from 'canvas-confetti'
 import { lessonApi, type Lesson, type LessonSlide, type LessonProgress } from '../lib/api'
 import { Stage } from './lesson/Stage'
-import { BlockRenderer, blockHostsQuestion } from './lesson/InteractiveBlocks'
+import { BlockRenderer, blockHostsQuestion, gradeAnswer, isAnswerComplete } from './lesson/InteractiveBlocks'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -283,12 +283,13 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
   // ─────────────────────────────────────────────────────────────────
 
   const handleSubmitAnswer = () => {
-    if (!currentSlide?.activityData || selectedAnswer === null || selectedAnswer === undefined) return
+    if (!currentSlide?.activityData) return
 
     const actData = currentSlide.activityData
-    const correct = String(actData.correctAnswer || '').trim().toLowerCase()
-    const given = String(selectedAnswer).trim().toLowerCase()
-    const isCorrect = correct === given
+    if (!isAnswerComplete(actData, selectedAnswer)) return
+
+    // Grading por tipo (MCQ, completar, ordenar, emparejar…) — un solo juez.
+    const isCorrect = gradeAnswer(actData, selectedAnswer)
     const points = actData.points || 10
 
     const result: SlideResult = {
@@ -828,7 +829,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
         {!answerSubmitted && !alreadyAnswered && (
           <motion.button
             onClick={handleSubmitAnswer}
-            disabled={selectedAnswer === null || selectedAnswer === undefined || selectedAnswer === ''}
+            disabled={!isAnswerComplete(act, selectedAnswer)}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className="mt-6 w-full py-3 bg-accent text-white font-bold rounded-xl shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
