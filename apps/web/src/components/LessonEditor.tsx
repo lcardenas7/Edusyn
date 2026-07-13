@@ -405,6 +405,110 @@ export default function LessonEditor({
     )
   }
 
+  // ─────────────────────────────────────────────────────────────────
+  // MODO JUEGO — editor enfocado para un juego SUELTO (sin andamiaje de
+  // lección). Se activa al crear (initialGameType) o al reabrir una actividad
+  // que es un único juego (una sola diapositiva de actividad WORDSEARCH/CROSSWORD).
+  // ─────────────────────────────────────────────────────────────────
+  const gameIdx = slides.findIndex(s => s.type === 'ACTIVITY' && (s.activityData.questionType === 'WORDSEARCH' || s.activityData.questionType === 'CROSSWORD'))
+  const derivedGame = gameIdx >= 0
+    && slides.filter(s => s.type === 'ACTIVITY').length === 1
+    && !slides.some(s => s.type === 'CONTENT' || s.type === 'CHECKPOINT')
+  const isGameMode = (!!initialGameType || derivedGame) && slides.length > 0
+
+  if (isGameMode) {
+    const gi = gameIdx >= 0 ? gameIdx : 0
+    const ad = slides[gi].activityData
+    const gtype = ad.questionType
+    const gname = gtype === 'CROSSWORD' ? 'Crucigrama' : 'Sopa de letras'
+    return (
+      <div className="flex flex-col h-full bg-slate-50">
+        {/* Header */}
+        <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3 flex-shrink-0">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-bold text-slate-800 truncate text-sm sm:text-base">{gtype === 'CROSSWORD' ? '🧩' : '🔲'} {gname}</h2>
+            <p className="text-xs text-slate-400 truncate">{classroomTitle}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={onPreview} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200">
+              <Eye className="w-4 h-4" /> Jugar
+            </button>
+            <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 disabled:opacity-50">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Guardar
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="max-w-2xl mx-auto space-y-5">
+            {error && <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm">{error}</div>}
+            {success && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">{success}</div>}
+
+            <div>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">Título</label>
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder={`Mi ${gname.toLowerCase()}`} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-base" />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">Instrucción</label>
+              <input value={ad.question} onChange={e => updateActivityData(gi, { question: e.target.value })} placeholder={gtype === 'CROSSWORD' ? 'Resuelve el crucigrama con las pistas' : 'Encuentra las palabras escondidas'} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm" />
+            </div>
+
+            {/* WORDSEARCH — lista de palabras */}
+            {gtype === 'WORDSEARCH' && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-500 block">Palabras a encontrar</label>
+                {ad.options.map((opt, oi) => (
+                  <div key={oi} className="flex items-center gap-2">
+                    <input value={opt} onChange={e => { const u = [...ad.options]; u[oi] = e.target.value; updateActivityData(gi, { options: u }) }} placeholder="p. ej. AMAZONAS" className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm" />
+                    {ad.options.length > 1 && (
+                      <button onClick={() => updateActivityData(gi, { options: ad.options.filter((_, k) => k !== oi) })} className="text-slate-400 hover:text-rose-500 text-lg leading-none px-1" title="Quitar">×</button>
+                    )}
+                  </div>
+                ))}
+                <button onClick={() => updateActivityData(gi, { options: [...ad.options, ''] })} className="text-xs text-amber-600 hover:text-amber-700 font-medium">+ Agregar palabra</button>
+                <p className="text-xs text-slate-400">Se ocultan en una rejilla generada automáticamente (horizontal, vertical y diagonal). Los acentos se ignoran. Se resuelve al encontrarlas todas.</p>
+              </div>
+            )}
+
+            {/* CROSSWORD — pares respuesta ↔ pista */}
+            {gtype === 'CROSSWORD' && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-500 block">Respuestas y pistas</label>
+                {ad.options.map((opt, oi) => {
+                  const parts = String(opt).split('::')
+                  const ans = parts[0] || ''
+                  const clue = parts[1] || ''
+                  const setPair = (a: string, c: string) => { const u = [...ad.options]; u[oi] = `${a}::${c}`; updateActivityData(gi, { options: u }) }
+                  return (
+                    <div key={oi} className="flex items-center gap-2">
+                      <input value={ans} onChange={e => setPair(e.target.value, clue)} placeholder="Respuesta (AMAZONAS)" className="w-40 border border-slate-200 rounded-lg px-3 py-1.5 text-sm" />
+                      <input value={clue} onChange={e => setPair(ans, e.target.value)} placeholder="Pista (El río más caudaloso)" className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm" />
+                      {ad.options.length > 1 && (
+                        <button onClick={() => updateActivityData(gi, { options: ad.options.filter((_, k) => k !== oi) })} className="text-slate-400 hover:text-rose-500 text-lg leading-none px-1" title="Quitar">×</button>
+                      )}
+                    </div>
+                  )
+                })}
+                <button onClick={() => updateActivityData(gi, { options: [...ad.options, '::'] })} className="text-xs text-amber-600 hover:text-amber-700 font-medium">+ Agregar palabra</button>
+                <p className="text-xs text-slate-400">El tablero se entrelaza automáticamente. Los acentos se ignoran. Se resuelve al completar todas.</p>
+              </div>
+            )}
+
+            <div className="w-32">
+              <label className="text-xs font-medium text-slate-500 mb-1 block">Puntos</label>
+              <input type="number" value={ad.points} onChange={e => updateActivityData(gi, { points: parseInt(e.target.value) || 10 })} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm" />
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const currentSlideData = slides[selectedSlideIndex]
 
   return (
