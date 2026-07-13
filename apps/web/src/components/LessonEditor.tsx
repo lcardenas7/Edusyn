@@ -775,6 +775,7 @@ export default function LessonEditor({
                 <option value="FLASHCARDS">Flashcards</option>
                 <option value="LISTENING">Escuchar y seleccionar</option>
                 <option value="WORDSEARCH">Sopa de letras</option>
+                <option value="CROSSWORD">Crucigrama</option>
               </select>
             </div>
             <div>
@@ -782,6 +783,7 @@ export default function LessonEditor({
                 {slide.activityData.questionType === 'ORDERING' || slide.activityData.questionType === 'MATCHING' ? 'Instrucción'
                   : slide.activityData.questionType === 'LISTENING' ? 'Texto que se escuchará (no se muestra)'
                   : slide.activityData.questionType === 'WORDSEARCH' ? 'Instrucción'
+                  : slide.activityData.questionType === 'CROSSWORD' ? 'Instrucción'
                   : 'Pregunta'}
               </label>
               <textarea
@@ -793,6 +795,7 @@ export default function LessonEditor({
                   : slide.activityData.questionType === 'MATCHING' ? 'Empareja cada palabra con su significado'
                   : slide.activityData.questionType === 'LISTENING' ? 'The girl is reading a book'
                   : slide.activityData.questionType === 'WORDSEARCH' ? 'Encuentra las palabras escondidas'
+                  : slide.activityData.questionType === 'CROSSWORD' ? 'Resuelve el crucigrama con las pistas'
                   : '¿Cuál es...?'
                 }
                 rows={2}
@@ -1047,6 +1050,55 @@ export default function LessonEditor({
                   + Agregar palabra
                 </button>
                 <p className="text-xs text-slate-400">Se ocultan en una rejilla generada automáticamente (horizontal, vertical y diagonal). Los acentos se ignoran. Se resuelve al encontrarlas todas.</p>
+              </div>
+            )}
+
+            {/* CROSSWORD — pares respuesta ↔ pista (se guardan como "RESPUESTA::pista") */}
+            {slide.activityData.questionType === 'CROSSWORD' && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-500 block">Respuestas y pistas</label>
+                {slide.activityData.options.map((opt, oi) => {
+                  const parts = String(opt).split('::')
+                  const ans = parts[0] || ''
+                  const clue = parts[1] || ''
+                  const setPair = (a: string, c: string) => {
+                    const updated = [...slide.activityData.options]
+                    updated[oi] = `${a}::${c}`
+                    updateActivityData(index, { options: updated })
+                  }
+                  return (
+                    <div key={oi} className="flex items-center gap-2">
+                      <input
+                        value={ans}
+                        onChange={e => setPair(e.target.value, clue)}
+                        placeholder="Respuesta (p. ej. AMAZONAS)"
+                        className="w-40 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                      />
+                      <input
+                        value={clue}
+                        onChange={e => setPair(ans, e.target.value)}
+                        placeholder="Pista (p. ej. El río más caudaloso)"
+                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                      />
+                      {slide.activityData.options.length > 1 && (
+                        <button
+                          onClick={() => updateActivityData(index, { options: slide.activityData.options.filter((_, k) => k !== oi) })}
+                          className="text-slate-400 hover:text-rose-500 text-lg leading-none px-1"
+                          title="Quitar"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+                <button
+                  onClick={() => updateActivityData(index, { options: [...slide.activityData.options, '::'] })}
+                  className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                >
+                  + Agregar palabra
+                </button>
+                <p className="text-xs text-slate-400">El tablero se entrelaza automáticamente. Los acentos se ignoran. Se resuelve al completar todas.</p>
               </div>
             )}
 

@@ -3,6 +3,7 @@ import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { CheckCircle2, GripVertical, ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react'
 import { type ActivityData, norm, parsePairs, gradeAnswer, isAnswerComplete } from './grading'
 import { type WSCell, wsBuild, wsLine, wsMatch } from './wordsearch'
+import { cwBuild, cwSolved } from './crossword'
 import { SpeakButton } from './SpeakButton'
 
 export { gradeAnswer, isAnswerComplete }
@@ -518,6 +519,149 @@ function WordSearchBlock({ act, value, onChange, showResult }: BlockProps) {
   )
 }
 
+// ─── Crucigrama — CROSSWORD (tablero entrelazado con pistas) ───────────────
+// Motor de layout en `crossword.ts` (puro). Pares "RESPUESTA::pista" en `options`.
+// El alumno teclea; se resuelve al completar todas. value = array de respuestas.
+function CrosswordBlock({ act, value, onChange, showResult }: BlockProps) {
+  const items = useMemo(() => parsePairs(act.options).map(p => ({ answer: p.left, clue: p.right })), [act.options])
+  const itemsKey = items.map(i => i.answer).join('|')
+  const { rows, cols, solution, entries } = useMemo(() => cwBuild(items), [itemsKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [letters, setLetters] = useState<Record<string, string>>({})
+  const [activeIdx, setActiveIdx] = useState<number | null>(entries.length ? 0 : null)
+  const inputs = useRef<Record<string, HTMLInputElement | null>>({})
+
+  const key = (r: number, c: number) => r + ',' + c
+
+  // Celda → nº de inicio y entradas que la contienen.
+  const startNum = useMemo(() => {
+    const m: Record<string, number> = {}
+    entries.forEach(e => { const k = key(e.r, e.c); if (m[k] == null) m[k] = e.num })
+    return m
+  }, [entries])
+  const cellEntries = useMemo(() => {
+    const m: Record<string, { across?: number; down?: number }> = {}
+    entries.forEach((e, idx) => e.cells.forEach(cell => {
+      const k = key(cell.r, cell.c); m[k] = m[k] || {}
+      m[k][e.dir] = idx
+    }))
+    return m
+  }, [entries])
+
+  const active = activeIdx != null ? entries[activeIdx] : null
+  const activeCellKeys = useMemo(() => new Set((active?.cells || []).map(c => key(c.r, c.c))), [active])
+
+  const solvedNow = showResult ? entries.map(e => e.answer) : cwSolved(entries, letters)
+  const solvedSet = new Set(solvedNow)
+
+  const setLetter = (r: number, c: number, ch: string) => {
+    const v = ch.toUpperCase().replace(/[^A-ZÑ]/g, '').slice(-1)
+    const next = { ...letters, [key(r, c)]: v }
+    setLetters(next)
+    onChange(cwSolved(entries, next))
+    // avanzar a la siguiente celda de la entrada activa
+    if (v && active) {
+      const i = active.cells.findIndex(cell => cell.r === r && cell.c === c)
+      const nxt = active.cells[i + 1]
+      if (nxt) inputs.current[key(nxt.r, nxt.c)]?.focus()
+    }
+  }
+
+  const onCellFocus = (r: number, c: number) => {
+    const k = key(r, c)
+    const ce = cellEntries[k]
+    if (!ce) return
+    // conservar dirección si la celda pertenece a la entrada activa; si no, across→down
+    if (active && activeCellKeys.has(k)) return
+    setActiveIdx(ce.across ?? ce.down ?? null)
+  }
+
+  const onCellKey = (e: React.KeyboardEvent, r: number, c: number) => {
+    if (e.key === 'Backspace' && !letters[key(r, c)] && active) {
+      const i = active.cells.findIndex(cell => cell.r === r && cell.c === c)
+      const prev = active.cells[i - 1]
+      if (prev) { e.preventDefault(); inputs.current[key(prev.r, prev.c)]?.focus() }
+    }
+  }
+
+  if (rows === 0) {
+    return <p className="text-ink-muted text-sm">Añade pares Respuesta::Pista a este crucigrama.</p>
+  }
+
+  const across = entries.filter(e => e.dir === 'across')
+  const down = entries.filter(e => e.dir === 'down')
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-6 items-start">
+      {/* Tablero */}
+      <div
+        className="grid gap-0.5 mx-auto flex-shrink-0"
+        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, width: `min(100%, ${cols * 34}px)` }}
+      >
+        {solution.map((row, r) => row.map((sol, c) => {
+          const k = key(r, c)
+          if (sol == null) return <div key={k} className="aspect-square" />
+          const num = startNum[k]
+          const inActive = activeCellKeys.has(k)
+          const shown = showResult ? sol : (letters[k] || '')
+          const cellSolved = showResult || (shown === sol && (cellEntries[k]?.across != null || cellEntries[k]?.down != null) && [cellEntries[k]?.across, cellEntries[k]?.down].some(idx => idx != null && solvedSet.has(entries[idx!].answer)))
+          return (
+            <div key={k} className="relative aspect-square">
+              {num != null && (
+                <span className="absolute top-0 left-0.5 text-[8px] leading-none text-ink-muted z-10 pointer-events-none">{num}</span>
+              )}
+              <input
+                ref={el => { inputs.current[k] = el }}
+                value={shown}
+                maxLength={1}
+                disabled={showResult}
+                onChange={e => setLetter(r, c, e.target.value)}
+                onFocus={() => onCellFocus(r, c)}
+                onKeyDown={e => onCellKey(e, r, c)}
+                className={`w-full h-full text-center uppercase font-bold rounded-[3px] border focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-100 ${
+                  showResult || cellSolved
+                    ? 'bg-feedback-correct/15 border-feedback-correct/40 text-feedback-correct'
+                    : inActive
+                      ? 'bg-accent/10 border-accent/50 text-ink-primary'
+                      : 'bg-surface-1 border-hairline text-ink-primary'
+                }`}
+                style={{ fontSize: 'clamp(11px, 3.5vw, 16px)' }}
+              />
+            </div>
+          )
+        }))}
+      </div>
+
+      {/* Pistas */}
+      <div className="flex-1 w-full grid sm:grid-cols-2 lg:grid-cols-1 gap-x-6 gap-y-4 min-w-0">
+        {[{ t: 'Horizontales', list: across }, { t: 'Verticales', list: down }].map(g => g.list.length > 0 && (
+          <div key={g.t}>
+            <h4 className="text-ink-muted text-xs uppercase tracking-wide mb-2">{g.t}</h4>
+            <ul className="space-y-1.5">
+              {g.list.map(e => {
+                const idx = entries.indexOf(e)
+                const done = solvedSet.has(e.answer)
+                return (
+                  <li key={`${e.num}-${e.dir}`}>
+                    <button
+                      onClick={() => { setActiveIdx(idx); const f = e.cells.find(cell => !letters[key(cell.r, cell.c)]) || e.cells[0]; inputs.current[key(f.r, f.c)]?.focus() }}
+                      className={`text-left text-sm w-full transition-colors ${done ? 'text-feedback-correct' : activeIdx === idx ? 'text-accent font-medium' : 'text-ink-secondary hover:text-ink-primary'}`}
+                    >
+                      <span className="font-semibold tabular-nums">{e.num}.</span>{' '}
+                      {done && <CheckCircle2 className="inline w-3.5 h-3.5 mr-0.5 -mt-0.5" />}
+                      {e.clue || '—'} <span className="text-ink-muted">({e.cl.length})</span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Switch por tipo → bloque puro ─────────────────────────────────────────
 export function BlockRenderer(props: BlockProps) {
   switch (props.act.questionType) {
@@ -535,6 +679,8 @@ export function BlockRenderer(props: BlockProps) {
       return <ListeningBlock {...props} />
     case 'WORDSEARCH':
       return <WordSearchBlock {...props} />
+    case 'CROSSWORD':
+      return <CrosswordBlock {...props} />
     case 'MULTIPLE_CHOICE':
     case 'TRUE_FALSE':
     default:

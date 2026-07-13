@@ -46,6 +46,11 @@ export function isAnswerComplete(act: ActivityData, value: any): boolean {
       const n = act.options?.length || 0
       return n > 0 && Array.isArray(value) && value.length >= n
     }
+    case 'CROSSWORD': {
+      // Completa cuando se han resuelto todas las palabras (pares "RESPUESTA::pista").
+      const n = parsePairs(act.options).length
+      return n > 0 && Array.isArray(value) && value.length >= n
+    }
     default:
       return value !== null && value !== undefined && value !== ''
   }
@@ -65,6 +70,12 @@ export function gradeAnswer(act: ActivityData, value: any): boolean {
       const target = (act.options || []).map(norm).filter(Boolean)
       const found = (Array.isArray(value) ? value : []).map(norm)
       return target.length > 0 && target.every(w => found.includes(w))
+    }
+    case 'CROSSWORD': {
+      // Correcto = todas las respuestas (izquierda de los pares) resueltas.
+      const target = parsePairs(act.options).map(p => norm(p.left)).filter(Boolean)
+      const solved = (Array.isArray(value) ? value : []).map(norm)
+      return target.length > 0 && target.every(w => solved.includes(w))
     }
     default:
       return norm(value) === norm(act.correctAnswer)

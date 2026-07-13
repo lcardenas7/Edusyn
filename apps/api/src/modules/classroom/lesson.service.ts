@@ -753,6 +753,13 @@ export class LessonService {
       return target.length > 0 && target.every((w: string) => found.includes(w));
     }
 
+    if (type === 'CROSSWORD') {
+      // Respuesta = array de palabras resueltas; correcto si están todas (izq de los pares).
+      const target = this.parsePairs(activityData.options).map(p => this.norm(p.left)).filter(Boolean);
+      const solved = (Array.isArray(answer) ? answer : []).map((o: any) => this.norm(o));
+      return target.length > 0 && target.every((w: string) => solved.includes(w));
+    }
+
     if (type === 'FILL_BLANK' && Array.isArray(correct) && Array.isArray(answer)) {
       // Forma legada multi-hueco.
       return correct.every((c: string, i: number) => this.norm(answer[i]) === this.norm(c));
