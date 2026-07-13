@@ -774,12 +774,14 @@ export default function LessonEditor({
                 <option value="MATCHING">Emparejar</option>
                 <option value="FLASHCARDS">Flashcards</option>
                 <option value="LISTENING">Escuchar y seleccionar</option>
+                <option value="WORDSEARCH">Sopa de letras</option>
               </select>
             </div>
             <div>
               <label className="text-xs font-medium text-slate-500 mb-1 block">
                 {slide.activityData.questionType === 'ORDERING' || slide.activityData.questionType === 'MATCHING' ? 'Instrucción'
                   : slide.activityData.questionType === 'LISTENING' ? 'Texto que se escuchará (no se muestra)'
+                  : slide.activityData.questionType === 'WORDSEARCH' ? 'Instrucción'
                   : 'Pregunta'}
               </label>
               <textarea
@@ -790,6 +792,7 @@ export default function LessonEditor({
                   : slide.activityData.questionType === 'ORDERING' ? 'Ordena las palabras para formar la frase'
                   : slide.activityData.questionType === 'MATCHING' ? 'Empareja cada palabra con su significado'
                   : slide.activityData.questionType === 'LISTENING' ? 'The girl is reading a book'
+                  : slide.activityData.questionType === 'WORDSEARCH' ? 'Encuentra las palabras escondidas'
                   : '¿Cuál es...?'
                 }
                 rows={2}
@@ -1007,6 +1010,43 @@ export default function LessonEditor({
                 >
                   + Agregar tarjeta
                 </button>
+              </div>
+            )}
+
+            {/* WORDSEARCH — lista de palabras a esconder en la sopa de letras */}
+            {slide.activityData.questionType === 'WORDSEARCH' && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-500 block">Palabras a encontrar</label>
+                {slide.activityData.options.map((opt, oi) => (
+                  <div key={oi} className="flex items-center gap-2">
+                    <input
+                      value={opt}
+                      onChange={e => {
+                        const updated = [...slide.activityData.options]
+                        updated[oi] = e.target.value
+                        updateActivityData(index, { options: updated })
+                      }}
+                      placeholder="p. ej. AMAZONAS"
+                      className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                    />
+                    {slide.activityData.options.length > 1 && (
+                      <button
+                        onClick={() => updateActivityData(index, { options: slide.activityData.options.filter((_, k) => k !== oi) })}
+                        className="text-slate-400 hover:text-rose-500 text-lg leading-none px-1"
+                        title="Quitar"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  onClick={() => updateActivityData(index, { options: [...slide.activityData.options, ''] })}
+                  className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                >
+                  + Agregar palabra
+                </button>
+                <p className="text-xs text-slate-400">Se ocultan en una rejilla generada automáticamente (horizontal, vertical y diagonal). Los acentos se ignoran. Se resuelve al encontrarlas todas.</p>
               </div>
             )}
 

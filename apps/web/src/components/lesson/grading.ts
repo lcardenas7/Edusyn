@@ -41,6 +41,11 @@ export function isAnswerComplete(act: ActivityData, value: any): boolean {
       const lefts = parsePairs(act.options).map(p => p.left)
       return lefts.length > 0 && !!value && typeof value === 'object' && lefts.every(l => value[l])
     }
+    case 'WORDSEARCH': {
+      // Completa cuando se han encontrado TODAS las palabras.
+      const n = act.options?.length || 0
+      return n > 0 && Array.isArray(value) && value.length >= n
+    }
     default:
       return value !== null && value !== undefined && value !== ''
   }
@@ -54,6 +59,12 @@ export function gradeAnswer(act: ActivityData, value: any): boolean {
     case 'MATCHING': {
       const pairs = parsePairs(act.options)
       return pairs.length > 0 && !!value && pairs.every(p => norm(value[p.left]) === norm(p.right))
+    }
+    case 'WORDSEARCH': {
+      // Correcto = todas las palabras objetivo aparecen entre las encontradas.
+      const target = (act.options || []).map(norm).filter(Boolean)
+      const found = (Array.isArray(value) ? value : []).map(norm)
+      return target.length > 0 && target.every(w => found.includes(w))
     }
     default:
       return norm(value) === norm(act.correctAnswer)

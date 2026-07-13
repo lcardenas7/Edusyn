@@ -746,6 +746,13 @@ export class LessonService {
       return this.norm((Array.isArray(answer) ? answer : []).join(' ')) === this.norm(correct);
     }
 
+    if (type === 'WORDSEARCH') {
+      // La respuesta es el array de palabras encontradas; correcto si están todas.
+      const target = (activityData.options || []).map((o: any) => this.norm(o)).filter(Boolean);
+      const found = (Array.isArray(answer) ? answer : []).map((o: any) => this.norm(o));
+      return target.length > 0 && target.every((w: string) => found.includes(w));
+    }
+
     if (type === 'FILL_BLANK' && Array.isArray(correct) && Array.isArray(answer)) {
       // Forma legada multi-hueco.
       return correct.every((c: string, i: number) => this.norm(answer[i]) === this.norm(c));

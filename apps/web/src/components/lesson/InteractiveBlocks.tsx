@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { CheckCircle2, GripVertical, ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react'
 import { type ActivityData, norm, parsePairs, gradeAnswer, isAnswerComplete } from './grading'
+import { type WSCell, wsBuild, wsLine, wsMatch } from './wordsearch'
 import { SpeakButton } from './SpeakButton'
 
 export { gradeAnswer, isAnswerComplete }
@@ -403,6 +404,120 @@ function ListeningBlock(props: BlockProps) {
   )
 }
 
+// ─── Sopa de letras — WORDSEARCH (rejilla de palabras, §juegos) ────────────
+// Motor genérico en `wordsearch.ts` (puro, testeable). El docente da la lista de
+// palabras (en `options`); el alumno arrastra sobre las letras. Es completa (y
+// correcta) cuando encuentra TODAS. value = array de palabras encontradas.
+function WordSearchBlock({ act, value, onChange, showResult }: BlockProps) {
+  const words = act.options || []
+  const wordsKey = words.join('|')
+  const { size, grid, placements } = useMemo(() => wsBuild(words), [wordsKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const initialFound = useMemo(
+    () => new Set<string>(Array.isArray(value) ? value.filter(v => words.includes(v)) : []),
+    [] // eslint-disable-line react-hooks/exhaustive-deps
+  )
+  const [found, setFound] = useState<Set<string>>(initialFound)
+  const [sel, setSel] = useState<{ start: WSCell; cur: WSCell } | null>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
+
+  // En modo resultado se muestran TODAS las palabras resaltadas.
+  const shownFound = showResult ? new Set(Object.keys(placements)) : found
+
+  const cellFromEvent = (e: React.PointerEvent): WSCell | null => {
+    const el = gridRef.current
+    if (!el) return null
+    const rect = el.getBoundingClientRect()
+    const c = Math.floor(((e.clientX - rect.left) / rect.width) * size)
+    const r = Math.floor(((e.clientY - rect.top) / rect.height) * size)
+    if (r < 0 || c < 0 || r >= size || c >= size) return null
+    return { r, c }
+  }
+
+  const selCells = sel ? wsLine(sel.start, sel.cur, size) : []
+  const selKey = new Set(selCells.map(c => `${c.r},${c.c}`))
+  const foundKey = useMemo(() => {
+    const s = new Set<string>()
+    shownFound.forEach(w => (placements[w] || []).forEach(c => s.add(`${c.r},${c.c}`)))
+    return s
+  }, [shownFound, placements])
+
+  const finishSel = () => {
+    if (!sel) return
+    const cells = wsLine(sel.start, sel.cur, size)
+    const hit = wsMatch(cells, grid, words, found)
+    if (hit) {
+      const next = new Set(found); next.add(hit)
+      setFound(next)
+      onChange(Array.from(next))
+    }
+    setSel(null)
+  }
+
+  if (grid.length === 0) {
+    return <p className="text-ink-muted text-sm">Añade palabras a esta sopa de letras.</p>
+  }
+
+  return (
+    <div className="flex flex-col sm:flex-row gap-5 items-start">
+      {/* Rejilla */}
+      <div
+        ref={gridRef}
+        className="grid gap-0.5 select-none touch-none mx-auto"
+        style={{ gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`, width: 'min(100%, 380px)', aspectRatio: '1 / 1' }}
+        onPointerDown={e => { if (showResult) return; e.preventDefault(); const c = cellFromEvent(e); if (c) { setSel({ start: c, cur: c }); (e.target as HTMLElement).setPointerCapture?.(e.pointerId) } }}
+        onPointerMove={e => { if (!sel || showResult) return; const c = cellFromEvent(e); if (c) setSel(s => (s ? { ...s, cur: c } : s)) }}
+        onPointerUp={() => finishSel()}
+        onPointerCancel={() => setSel(null)}
+      >
+        {grid.map((row, r) => row.map((ch, c) => {
+          const k = `${r},${c}`
+          const isSel = selKey.has(k)
+          const isFound = foundKey.has(k)
+          return (
+            <div
+              key={k}
+              className={`flex items-center justify-center aspect-square rounded-[4px] font-bold uppercase leading-none transition-colors ${
+                isSel ? 'bg-accent text-white'
+                  : isFound ? 'bg-accent/20 text-accent'
+                  : 'bg-surface-1 text-ink-primary'
+              }`}
+              style={{ fontSize: `clamp(10px, ${Math.floor(320 / size)}px, 18px)` }}
+            >
+              {ch}
+            </div>
+          )
+        }))}
+      </div>
+
+      {/* Lista de palabras */}
+      <div className="flex-shrink-0 w-full sm:w-40">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-ink-muted text-xs uppercase tracking-wide">Palabras</span>
+          <span className="text-ink-secondary text-xs font-semibold">{shownFound.size}/{words.length}</span>
+        </div>
+        <ul className="flex flex-wrap sm:flex-col gap-x-3 gap-y-1.5">
+          {words.map(w => {
+            const done = shownFound.has(w)
+            return (
+              <li
+                key={w}
+                className={`text-sm font-medium transition-colors ${done ? 'text-accent line-through' : 'text-ink-secondary'}`}
+              >
+                {done && <CheckCircle2 className="inline w-3.5 h-3.5 mr-1 -mt-0.5" />}
+                {w}
+              </li>
+            )
+          })}
+        </ul>
+        {!showResult && (
+          <p className="text-ink-muted text-xs mt-3">Arrastra sobre las letras para marcar cada palabra.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Switch por tipo → bloque puro ─────────────────────────────────────────
 export function BlockRenderer(props: BlockProps) {
   switch (props.act.questionType) {
@@ -418,6 +533,8 @@ export function BlockRenderer(props: BlockProps) {
       return <FlashcardsBlock {...props} />
     case 'LISTENING':
       return <ListeningBlock {...props} />
+    case 'WORDSEARCH':
+      return <WordSearchBlock {...props} />
     case 'MULTIPLE_CHOICE':
     case 'TRUE_FALSE':
     default:
