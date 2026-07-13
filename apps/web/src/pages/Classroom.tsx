@@ -5117,6 +5117,74 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
   const newActivityCount = isStudent ? filteredActivities.filter(isNewActivity).length : 0
 
+  // Tarjeta de actividad (reutilizable: lista plana del docente y misiones del alumno).
+  const renderActivityCard = (act: Activity) => {
+    const isNew = isNewActivity(act)
+    const statusInfo = act.isPublished ? { bg: 'bg-green-50', text: 'text-green-600', label: 'Publicada' } : { bg: 'bg-slate-100', text: 'text-slate-500', label: 'Borrador' }
+    const duePast = isDuePast(act.dueDate)
+    const studentStatus = isStudent ? getStudentTaskStatus(act) : null
+    const studentSub = isStudent ? act.submissions?.[0] : null
+    const workInfo = getWorkInfo(act)
+    return (
+      <button key={act.id} onClick={() => openActivity(act)} style={{ borderLeftColor: workInfo.border, borderLeftWidth: '4px' }} className={`w-full text-left bg-white rounded-2xl border-2 p-5 transition-all hover:shadow-sm group ${isNew ? 'border-yellow-300 hover:border-yellow-400' : 'border-slate-200 hover:border-blue-300'} ${workInfo.rank >= 6 ? 'opacity-70 hover:opacity-100' : ''}`}>
+        <div className="flex items-start gap-4">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : act.type === 'LIVE_QUIZ' ? 'bg-violet-100' : act.type === 'HOME_QUIZ' ? 'bg-pink-50' : act.type === 'EXAM' ? 'bg-red-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
+            {isLesson(act.type) ? <BookOpen className="w-6 h-6 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-6 h-6 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : act.type === 'LIVE_QUIZ' ? <Zap className="w-6 h-6 text-violet-700" /> : act.type === 'HOME_QUIZ' ? <Home className="w-6 h-6 text-pink-600" /> : act.type === 'EXAM' ? <Award className="w-6 h-6 text-red-500" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h3 className="text-base font-bold text-slate-800 group-hover:text-blue-700">{act.title}</h3>
+              {isNew && <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-yellow-100 text-yellow-800 border border-yellow-300">NUEVO</span>}
+              {!isStudent && <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>}
+              {isTeacher && (act.gradingPending || 0) > 0 && <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-orange-100 text-orange-700">🟠 {act.gradingPending} por calificar</span>}
+              {act.type === 'TASK' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700">Tarea</span>}
+              {act.type === 'QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-purple-50 text-purple-700">Quiz</span>}
+              {act.type === 'EXAM' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-red-50 text-red-700">Examen</span>}
+              {act.type === 'LIVE_QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-violet-100 text-violet-800">⚡ Live Quiz</span>}
+              {act.type === 'HOME_QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-pink-50 text-pink-700">🏠 En Casa</span>}
+              {isIcfes(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700">ICFES</span>}
+              {isLesson(act.type) && <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${gameLabelOf(act) ? 'bg-amber-50 text-amber-700' : 'bg-violet-50 text-violet-700'}`}>{gameLabelOf(act) || 'Lección'}</span>}
+              {isSelfAssessment(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-teal-50 text-teal-700">Autoevaluación</span>}
+              {studentStatus && (
+                <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${studentStatus.bg} ${studentStatus.text}`}>{studentStatus.label}</span>
+              )}
+            </div>
+            <p className="text-sm text-slate-500 mt-1">{act.section?.title || 'Sin sección'}</p>
+            <div className="flex items-center gap-4 mt-2 text-sm">
+              {act.dueDate && (
+                <span className={`flex items-center gap-1 ${duePast ? 'text-red-500' : 'text-slate-400'}`}>
+                  <Clock className="w-4 h-4" /> {formatDate(act.dueDate)}
+                </span>
+              )}
+              {act.maxScore && <span className="text-slate-400">Nota máx: {Number(act.maxScore)}</span>}
+              {isTeacher && act._count && <span className="text-slate-400">{act._count.submissions} entrega(s)</span>}
+              {studentSub?.score !== undefined && studentSub.score !== null && (
+                <span className="text-green-700 font-bold">{Number(studentSub.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
+              )}
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 shrink-0 mt-1" />
+        </div>
+      </button>
+    )
+  }
+
+  // Vista del alumno como "misiones": Para hoy / Próximamente / Completado (por fecha+estado, no por tipo).
+  const studentGroups = isStudent ? (() => {
+    const paraHoy: Activity[] = [], proximamente: Activity[] = [], completado: Activity[] = []
+    filteredActivities.forEach(a => {
+      const k = getWorkInfo(a).keys
+      if (k.has('OVERDUE') || k.has('DUE_SOON') || k.has('RETURNED')) paraHoy.push(a)
+      else if (k.has('SUBMITTED') || k.has('GRADED')) completado.push(a)
+      else proximamente.push(a)
+    })
+    return [
+      { key: 'hoy', label: 'Para hoy', emoji: '🔥', hint: 'Vencidas, próximas o para corregir', list: paraHoy },
+      { key: 'prox', label: 'Próximamente', emoji: '📅', hint: 'Aún tienes tiempo', list: proximamente },
+      { key: 'done', label: 'Completado', emoji: '✅', hint: 'Ya las hiciste', list: completado },
+    ].filter(g => g.list.length > 0)
+  })() : null
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -5133,8 +5201,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         )}
       </div>
 
-      {/* Activity type filter */}
-      {activities.length > 0 && (
+      {/* Activity type filter — solo docente; el alumno se organiza por misiones (§Fase 1). */}
+      {isTeacher && activities.length > 0 && (
         <div className="flex gap-2 flex-wrap">
           {([
             { value: 'ALL', label: 'Todas', count: activities.length, color: 'slate' },
@@ -5626,56 +5694,21 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               )}
             </div>
           )}
-          {filteredActivities.map(act => {
-            const isNew = isNewActivity(act)
-            const statusInfo = act.isPublished ? { bg: 'bg-green-50', text: 'text-green-600', label: 'Publicada' } : { bg: 'bg-slate-100', text: 'text-slate-500', label: 'Borrador' }
-            const duePast = isDuePast(act.dueDate)
-            const studentStatus = isStudent ? getStudentTaskStatus(act) : null
-            const studentSub = isStudent ? act.submissions?.[0] : null
-            const workInfo = getWorkInfo(act)
-            return (
-              <button key={act.id} onClick={() => openActivity(act)} style={{ borderLeftColor: workInfo.border, borderLeftWidth: '4px' }} className={`w-full text-left bg-white rounded-2xl border-2 p-5 transition-all hover:shadow-sm group ${isNew ? 'border-yellow-300 hover:border-yellow-400' : 'border-slate-200 hover:border-blue-300'} ${workInfo.rank >= 6 ? 'opacity-70 hover:opacity-100' : ''}`}>
-                <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : act.type === 'LIVE_QUIZ' ? 'bg-violet-100' : act.type === 'HOME_QUIZ' ? 'bg-pink-50' : act.type === 'EXAM' ? 'bg-red-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                    {isLesson(act.type) ? <BookOpen className="w-6 h-6 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-6 h-6 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : act.type === 'LIVE_QUIZ' ? <Zap className="w-6 h-6 text-violet-700" /> : act.type === 'HOME_QUIZ' ? <Home className="w-6 h-6 text-pink-600" /> : act.type === 'EXAM' ? <Award className="w-6 h-6 text-red-500" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2.5 flex-wrap">
-                      <h3 className="text-base font-bold text-slate-800 group-hover:text-blue-700">{act.title}</h3>
-                      {isNew && <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-yellow-100 text-yellow-800 border border-yellow-300">NUEVO</span>}
-                      {!isStudent && <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>}
-                      {isTeacher && (act.gradingPending || 0) > 0 && <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-orange-100 text-orange-700">🟠 {act.gradingPending} por calificar</span>}
-                      {act.type === 'TASK' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700">Tarea</span>}
-                      {act.type === 'QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-purple-50 text-purple-700">Quiz</span>}
-                      {act.type === 'EXAM' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-red-50 text-red-700">Examen</span>}
-                      {act.type === 'LIVE_QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-violet-100 text-violet-800">⚡ Live Quiz</span>}
-                      {act.type === 'HOME_QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-pink-50 text-pink-700">🏠 En Casa</span>}
-                      {isIcfes(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700">ICFES</span>}
-                      {isLesson(act.type) && <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${gameLabelOf(act) ? 'bg-amber-50 text-amber-700' : 'bg-violet-50 text-violet-700'}`}>{gameLabelOf(act) || 'Lección'}</span>}
-                      {isSelfAssessment(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-teal-50 text-teal-700">Autoevaluación</span>}
-                      {studentStatus && (
-                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${studentStatus.bg} ${studentStatus.text}`}>{studentStatus.label}</span>
-                      )}
-                    </div>
-                    <p className="text-sm text-slate-500 mt-1">{act.section?.title || 'Sin sección'}</p>
-                    <div className="flex items-center gap-4 mt-2 text-sm">
-                      {act.dueDate && (
-                        <span className={`flex items-center gap-1 ${duePast ? 'text-red-500' : 'text-slate-400'}`}>
-                          <Clock className="w-4 h-4" /> {formatDate(act.dueDate)}
-                        </span>
-                      )}
-                      {act.maxScore && <span className="text-slate-400">Nota máx: {Number(act.maxScore)}</span>}
-                      {isTeacher && act._count && <span className="text-slate-400">{act._count.submissions} entrega(s)</span>}
-                      {studentSub?.score !== undefined && studentSub.score !== null && (
-                        <span className="text-green-700 font-bold">{Number(studentSub.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
-                      )}
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 shrink-0 mt-1" />
+          {isStudent && studentGroups ? (
+            studentGroups.map(g => (
+              <div key={g.key} className="space-y-3">
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-base">{g.emoji}</span>
+                  <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">{g.label}</h3>
+                  <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full font-semibold tabular-nums">{g.list.length}</span>
+                  <span className="text-xs text-slate-400 hidden sm:inline">· {g.hint}</span>
                 </div>
-              </button>
-            )
-          })}
+                {g.list.map(renderActivityCard)}
+              </div>
+            ))
+          ) : (
+            filteredActivities.map(renderActivityCard)
+          )}
         </div>
       )}
 
