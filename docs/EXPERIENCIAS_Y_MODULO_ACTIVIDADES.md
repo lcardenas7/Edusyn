@@ -64,7 +64,45 @@ Ninguno toca backend ni el núcleo de notas.
    calificable. El modelo de 3 niveles ya lo respeta (paso → actividad).
 3. **Design-first para el Cubo B.** Es fundacional y toca el núcleo; no improvisar entre commits.
 
+## 3.bis Creación por INTENCIÓN pedagógica (modelo canónico — el diferenciador)
+
+Moodle/Classroom/Canvas organizan por **herramienta** ("crear tarea", "crear quiz").
+El docente debe conocer cada herramienta y elegir. Edusyn organiza por **intención**:
+el docente no piensa "quiero un Quiz", piensa "quiero que **practiquen**" o "quiero
+**evaluar**". El sistema deja de ser formularios y se comporta como asistente pedagógico.
+
+**Paso 1 — ¿Qué deseas construir?** (5 intenciones, no N herramientas):
+
+| Intención | Mecánicas que ofrece (paso 2) |
+|---|---|
+| 📚 **Aprender** | Lección, Video, Lectura, Presentación, Contenido IA |
+| 📝 **Evaluar** | Quiz, Examen, Simulacro ICFES, Autoevaluación, Diagnóstico |
+| 🎮 **Practicar** | Flashcards, Crucigrama, Sopa, Emparejar, Ordenar, Completar, Memorama, Opción múltiple… |
+| 🚀 **Proyecto** | Taller, Tarea, Proyecto, Laboratorio, Evidencia, Foro, Diario |
+| 🧪 **Experimentar** | Simulaciones / laboratorios (DS-4, futuro) |
+
+**Sinergia con Valeria:** la misma pregunta ("¿qué quieres crear? enseñar / evaluar /
+practicar / proyecto / juego") deja que la IA construya todo automáticamente según la
+intención. La intención es el prompt.
+
+**Dos observaciones de producto (del fundador, jul 2026):**
+- **Flashcards NO es un tipo de pregunta ni una actividad — es una mecánica de ESTUDIO.**
+  Va en "Herramientas de estudio" (Flashcards, Mapa conceptual, Resumen IA, Glosario,
+  Línea del tiempo, Fichas de vocabulario), no entre las evaluables. (En el código ya es
+  especial: `requiresSubmission=false`, no puntúa.)
+- Las intenciones y las mecánicas bajo cada una son **organización de UI**, NO tipos de
+  backend (ver restricción #1). "Taller/Proyecto/Laboratorio/Diario" = plantillas de TASK.
+
+**Estado actual (interino):** el picker "Actividad interactiva" (fila plana de mecánicas
+en Nueva Actividad, commit 7d4708f) es el **peldaño**, no la forma final. La plomería que
+habilita el modelo por intención YA existe: cada mecánica es una actividad `GAME` sobre el
+motor de lecciones, y el panel de autoría está factorizado (`renderActivityEditor`). El
+flujo por intención es una capa de UX encima de eso.
+
 ## 4. Diseño UX propuesto (Cubo A, detalle)
+
+> Nota: la §3.bis (creación por intención) es el modelo canónico. Las "4 categorías" de
+> abajo fueron una primera aproximación; se subsumen en las 5 intenciones.
 
 **Creación (paso 1 — 4 categorías, no 8 tipos):**
 `📄 Actividad` · `🧩 Evaluación` · `🎮 Experiencia` · `📚 Recurso`
