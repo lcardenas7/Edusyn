@@ -217,6 +217,7 @@ export class ClassroomController {
     attachmentUrl?: string;
     attachmentName?: string;
     rubricId?: string;
+    gameType?: string;
   }) {
     const { userId } = await this.resolveCtx(req);
     return this.service.createActivity(classroomId, userId, body);

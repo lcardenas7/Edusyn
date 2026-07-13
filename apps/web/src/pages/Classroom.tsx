@@ -2236,6 +2236,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       const realType = gameType ? 'LESSON' : form.type
       const { data: createdActivity } = await classroomApi.createActivity(classroom.id, {
         sectionId: form.sectionId, type: realType, title: form.title,
+        ...(gameType ? { gameType } : {}),
         description: form.description || undefined,
         maxScore: parseFloat(form.maxScore) || 5.0,
         dueDate: form.dueDate || undefined,
@@ -2505,6 +2506,11 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const isIcfes = (type: string) => type === 'ICFES_SIMULATOR'
   const isSelfAssessment = (type: string) => type === 'SELF_ASSESSMENT'
   const isLesson = (type: string) => type === 'LESSON'
+  // Juego suelto: rótulo derivado de metadata.gameType (una LESSON que es en realidad un juego).
+  const gameLabelOf = (act: any): string | null => {
+    const g = act?.metadata?.gameType
+    return g === 'WORDSEARCH' ? 'Sopa de letras' : g === 'CROSSWORD' ? 'Crucigrama' : null
+  }
 
   const getQuizTypeLabel = (type: string) => {
     if (type === 'LIVE_QUIZ') return 'Live Quiz'
@@ -3047,7 +3053,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-lg sm:text-xl font-bold text-slate-800 break-words">{act.title}</h2>
-                        {isLesson(act.type) && <span className="text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full font-medium whitespace-nowrap">Lección Interactiva</span>}
+                        {isLesson(act.type) && <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${gameLabelOf(act) ? 'bg-amber-100 text-amber-700' : 'bg-violet-100 text-violet-700'}`}>{gameLabelOf(act) || 'Lección Interactiva'}</span>}
                         {isSelfAssessment(act.type) && <span className="text-xs px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full font-medium whitespace-nowrap">Autoevaluación</span>}
                         {isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium whitespace-nowrap">Simulacro ICFES</span>}
                         {isQuizType(act.type) && !isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">{getQuizTypeLabel(act.type)}</span>}
@@ -4380,8 +4386,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 <BookOpen className="w-5 h-5 text-violet-600" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-800">Lección Interactiva</h3>
-                <p className="text-sm text-slate-500">Configura los slides, actividades y checkpoints de esta lección</p>
+                <h3 className="text-lg font-bold text-slate-800">{gameLabelOf(act) || 'Lección Interactiva'}</h3>
+                <p className="text-sm text-slate-500">{gameLabelOf(act) ? 'Edita las palabras y pistas de este juego' : 'Configura los slides, actividades y checkpoints de esta lección'}</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -4389,13 +4395,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 onClick={() => { setLessonActivityId(act.id); setShowLessonEditor(true) }}
                 className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 text-white rounded-xl font-medium hover:bg-violet-700 transition-colors"
               >
-                <Pencil className="w-4 h-4" /> Editar lección
+                <Pencil className="w-4 h-4" /> {gameLabelOf(act) ? 'Editar juego' : 'Editar lección'}
               </button>
               <button
                 onClick={() => { setLessonActivityId(act.id); setShowLessonPlayer(true) }}
                 className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
               >
-                <Eye className="w-4 h-4" /> Vista previa
+                <Eye className="w-4 h-4" /> {gameLabelOf(act) ? 'Jugar' : 'Vista previa'}
               </button>
             </div>
           </div>
@@ -4407,15 +4413,17 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             <div className="w-16 h-16 rounded-2xl bg-violet-100 flex items-center justify-center mx-auto">
               <BookOpen className="w-8 h-8 text-violet-600" />
             </div>
-            <h3 className="text-xl font-bold text-slate-800">Lección Interactiva</h3>
+            <h3 className="text-xl font-bold text-slate-800">{gameLabelOf(act) || 'Lección Interactiva'}</h3>
             <p className="text-sm text-slate-500 max-w-md mx-auto">
-              Avanza por los contenidos y actividades a tu ritmo. Tu progreso se guarda automáticamente.
+              {gameLabelOf(act)
+                ? 'Resuelve el juego. Tu progreso se guarda automáticamente.'
+                : 'Avanza por los contenidos y actividades a tu ritmo. Tu progreso se guarda automáticamente.'}
             </p>
             <button
               onClick={() => { setLessonActivityId(act.id); setShowLessonPlayer(true) }}
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl font-bold text-lg hover:from-violet-600 hover:to-purple-700 transition-all shadow-lg shadow-violet-200"
             >
-              <BookOpen className="w-5 h-5" /> Iniciar lección
+              <BookOpen className="w-5 h-5" /> {gameLabelOf(act) ? 'Jugar' : 'Iniciar lección'}
             </button>
           </div>
         )}
@@ -5643,7 +5651,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                       {act.type === 'LIVE_QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-violet-100 text-violet-800">⚡ Live Quiz</span>}
                       {act.type === 'HOME_QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-pink-50 text-pink-700">🏠 En Casa</span>}
                       {isIcfes(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700">ICFES</span>}
-                      {isLesson(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-violet-50 text-violet-700">Lección</span>}
+                      {isLesson(act.type) && <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${gameLabelOf(act) ? 'bg-amber-50 text-amber-700' : 'bg-violet-50 text-violet-700'}`}>{gameLabelOf(act) || 'Lección'}</span>}
                       {isSelfAssessment(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-teal-50 text-teal-700">Autoevaluación</span>}
                       {studentStatus && (
                         <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${studentStatus.bg} ${studentStatus.text}`}>{studentStatus.label}</span>

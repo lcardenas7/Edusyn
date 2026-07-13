@@ -498,6 +498,7 @@ export class ClassroomService {
     maxAttempts?: number;
     timeLimitMinutes?: number;
     rubricId?: string;
+    gameType?: string; // juego suelto (WORDSEARCH/CROSSWORD): marca para rotular sin abrir la lección
   }) {
     const classroom = await this.validateClassroomOwnership(classroomId, teacherId);
     // Validate section belongs to this classroom
@@ -510,6 +511,9 @@ export class ClassroomService {
     let metadata: any = undefined;
     if (dto.attachmentUrl) {
       metadata = { attachmentUrl: dto.attachmentUrl, attachmentName: dto.attachmentName };
+    }
+    if (dto.gameType) {
+      metadata = { ...(metadata || {}), gameType: dto.gameType };
     }
 
     return this.prisma.classroomActivity.create({
