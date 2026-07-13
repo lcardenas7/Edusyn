@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Route, Plus, Target, Trash2, X, BookOpen, Headphones, Mic, PenLine, Circle, ChevronLeft, Check, Loader2, Sparkles, Eye } from 'lucide-react'
+import { Route, Plus, Target, Trash2, X, BookOpen, Headphones, Mic, PenLine, Circle, ChevronLeft, Check, Loader2, Sparkles, Eye, Pencil } from 'lucide-react'
 import { learningRouteApi, classroomApi, type RouteSummary, type RouteView, type CompetencyView, type RouteProgress, type RoutePlan } from '../lib/api'
 import LessonPlayer from './LessonPlayer'
+import LessonEditor from './LessonEditor'
 
 const SKILL_ICON: Record<string, any> = { READING: BookOpen, LISTENING: Headphones, SPEAKING: Mic, WRITING: PenLine }
 const SKILL_LABEL: Record<string, string> = { READING: 'Lectura', LISTENING: 'Escucha', SPEAKING: 'Habla', WRITING: 'Escritura' }
@@ -166,6 +167,7 @@ function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { rout
   const [doing, setDoing] = useState<{ id: string; type: string } | null>(null)
   const [generatingStep, setGeneratingStep] = useState<string | null>(null)
   const [attachingStep, setAttachingStep] = useState<string | null>(null)
+  const [editingLesson, setEditingLesson] = useState<string | null>(null)
 
   // Estudiante: cargar su progreso (% dominado + estado por paso)
   const loadProgress = useCallback(() => {
@@ -279,6 +281,12 @@ function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { rout
                             <Eye className="w-3.5 h-3.5" /> Ver
                           </button>
                         )}
+                        {s.activity?.type === 'LESSON' && (
+                          <button onClick={() => setEditingLesson(s.activity!.id)} title="Editar la lección"
+                            className="text-xs font-medium px-2 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-1">
+                            <Pencil className="w-3.5 h-3.5" /> Editar
+                          </button>
+                        )}
                         <button onClick={() => generateLesson(s.id)} disabled={generatingStep === s.id} title="Generar ejercicios interactivos con Valeria"
                           className="text-xs font-medium px-2 py-1.5 rounded-lg border border-violet-200 text-violet-700 hover:bg-violet-50 disabled:opacity-60 flex items-center gap-1">
                           {generatingStep === s.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
@@ -314,6 +322,16 @@ function RouteDetail({ route, classroomId, isTeacher, onBack, onReload }: { rout
       )}
       {attachingStep && (
         <AttachActivityModal stepId={attachingStep} classroomId={classroomId} onClose={() => setAttachingStep(null)} onDone={() => { setAttachingStep(null); onReload() }} />
+      )}
+      {editingLesson && (
+        <div className="fixed inset-0 z-[100] bg-white">
+          <LessonEditor
+            activityId={editingLesson}
+            classroomTitle={route.title}
+            onClose={() => { setEditingLesson(null); onReload() }}
+            onPreview={() => { setDoing({ id: editingLesson, type: 'LESSON' }); setEditingLesson(null) }}
+          />
+        </div>
       )}
     </div>
   )
