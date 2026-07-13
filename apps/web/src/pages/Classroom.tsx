@@ -23,6 +23,7 @@ import {
   FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
   BarChart3, ChevronDown, ChevronUp, ChevronRight, Clock, CheckCircle2, AlertTriangle,
   CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check, Zap, RefreshCw, Sparkles,
+  Grid3x3, Puzzle,
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1985,6 +1986,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [showLessonPlayer, setShowLessonPlayer] = useState(false)
   const [showLessonEditor, setShowLessonEditor] = useState(false)
   const [lessonActivityId, setLessonActivityId] = useState('')
+  // Juego suelto: al crear una actividad de juego, el editor arranca con una sola
+  // diapositiva de actividad fijada a este tipo (WORDSEARCH/CROSSWORD). '' = lección normal.
+  const [lessonInitialGameType, setLessonInitialGameType] = useState('')
 
   // Valeria AI helper
   const [showValeriaModal, setShowValeriaModal] = useState(false)
@@ -2212,6 +2216,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     }).catch(() => {})
   }, [classroom.id])
 
+  // Juegos sueltos: pseudo-tipos del selector → actividad LESSON + questionType a sembrar.
+  const GAME_SUBTYPES: Record<string, string> = { GAME_WORDSEARCH: 'WORDSEARCH', GAME_CROSSWORD: 'CROSSWORD' }
+
   const handleCreate = async () => {
     if (!form.title.trim() || !form.sectionId) return
     try {
@@ -2224,8 +2231,11 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         attachmentUrl = data.data.path || data.data.url
         attachmentName = attachFile.name
       }
+      // Un juego suelto es una LESSON con una sola diapositiva de actividad.
+      const gameType = GAME_SUBTYPES[form.type]
+      const realType = gameType ? 'LESSON' : form.type
       const { data: createdActivity } = await classroomApi.createActivity(classroom.id, {
-        sectionId: form.sectionId, type: form.type, title: form.title,
+        sectionId: form.sectionId, type: realType, title: form.title,
         description: form.description || undefined,
         maxScore: parseFloat(form.maxScore) || 5.0,
         dueDate: form.dueDate || undefined,
@@ -2246,7 +2256,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       setShowCreate(false)
       loadActivities()
 
-      if (isQuizDraft) {
+      if (gameType) {
+        // Abrir el editor directo en el juego (una diapositiva ya fijada).
+        setLessonInitialGameType(gameType)
+        setLessonActivityId(createdActivity.id)
+        setShowLessonEditor(true)
+      } else if (isQuizDraft) {
         await openActivity(createdActivity)
       }
     } catch (err: any) {
@@ -4990,7 +5005,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 activityId={lessonActivityId}
                 activityTitle={act.title}
                 classroomTitle={classroom.title}
-                onClose={() => { setShowLessonEditor(false); setLessonActivityId('') }}
+                initialGameType={lessonInitialGameType}
+                onClose={() => { setShowLessonEditor(false); setLessonActivityId(''); setLessonInitialGameType('') }}
                 onPreview={() => { setShowLessonEditor(false); setShowLessonPlayer(true) }}
               />
             </div>
@@ -5363,8 +5379,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
           {/* Activity type selector */}
           <div className="flex gap-2 flex-wrap">
-            {[{ value: 'TASK', label: 'Tarea', icon: ClipboardList, color: 'blue' }, { value: 'QUIZ', label: 'Quiz', icon: HelpCircle, color: 'purple' }, { value: 'EXAM', label: 'Examen', icon: Award, color: 'red' }, { value: 'LIVE_QUIZ', label: 'Live Quiz', icon: Zap, color: 'violet' }, { value: 'HOME_QUIZ', label: 'Quiz en Casa', icon: Home, color: 'pink' }, { value: 'ICFES_SIMULATOR', label: 'Simulacro ICFES', icon: BarChart3, color: 'emerald' }, { value: 'SELF_ASSESSMENT', label: 'Autoevaluación', icon: Sparkles, color: 'teal' }, { value: 'LESSON', label: 'Lección Interactiva', icon: BookOpen, color: 'violet' }].map(t => (
-              <button key={t.value} onClick={() => setForm({ ...form, type: t.value })} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${form.type === t.value ? (t.color === 'blue' ? 'border-blue-500 bg-blue-50 text-blue-700' : t.color === 'purple' ? 'border-purple-500 bg-purple-50 text-purple-700' : t.color === 'emerald' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : t.color === 'teal' ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-red-500 bg-red-50 text-red-700') : 'border-slate-200 text-slate-500 hover:border-slate-300'}`} style={{ minHeight: '44px' }}>
+            {[{ value: 'TASK', label: 'Tarea', icon: ClipboardList, color: 'blue' }, { value: 'QUIZ', label: 'Quiz', icon: HelpCircle, color: 'purple' }, { value: 'EXAM', label: 'Examen', icon: Award, color: 'red' }, { value: 'LIVE_QUIZ', label: 'Live Quiz', icon: Zap, color: 'violet' }, { value: 'HOME_QUIZ', label: 'Quiz en Casa', icon: Home, color: 'pink' }, { value: 'ICFES_SIMULATOR', label: 'Simulacro ICFES', icon: BarChart3, color: 'emerald' }, { value: 'SELF_ASSESSMENT', label: 'Autoevaluación', icon: Sparkles, color: 'teal' }, { value: 'LESSON', label: 'Lección Interactiva', icon: BookOpen, color: 'violet' }, { value: 'GAME_WORDSEARCH', label: 'Sopa de letras', icon: Grid3x3, color: 'amber' }, { value: 'GAME_CROSSWORD', label: 'Crucigrama', icon: Puzzle, color: 'amber' }].map(t => (
+              <button key={t.value} onClick={() => setForm({ ...form, type: t.value })} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${form.type === t.value ? (t.color === 'blue' ? 'border-blue-500 bg-blue-50 text-blue-700' : t.color === 'purple' ? 'border-purple-500 bg-purple-50 text-purple-700' : t.color === 'emerald' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : t.color === 'teal' ? 'border-teal-500 bg-teal-50 text-teal-700' : t.color === 'amber' ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-red-500 bg-red-50 text-red-700') : 'border-slate-200 text-slate-500 hover:border-slate-300'}`} style={{ minHeight: '44px' }}>
                 <t.icon className="w-5 h-5" /> {t.label}
               </button>
             ))}
@@ -5456,7 +5472,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               <button onClick={() => { setShowCreate(false); setAttachFile(null); setPendingValeriaQuestions([]) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
               <button onClick={handleCreate} disabled={!form.title.trim() || !form.sectionId || creating} className={`px-5 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2 ${isQuizEditorType(form.type) ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`} style={{ minHeight: '44px' }}>
                 {creating && <Loader2 className="w-4 h-4 animate-spin" />}
-                {creating ? 'Creando...' : `Crear ${form.type === 'TASK' ? 'Tarea' : form.type === 'QUIZ' ? 'Quiz' : form.type === 'EXAM' ? 'Examen' : form.type === 'LIVE_QUIZ' ? 'Live Quiz' : form.type === 'HOME_QUIZ' ? 'Quiz en Casa' : form.type === 'ICFES_SIMULATOR' ? 'Simulacro' : 'Actividad'}`}
+                {creating ? 'Creando...' : `Crear ${form.type === 'TASK' ? 'Tarea' : form.type === 'QUIZ' ? 'Quiz' : form.type === 'EXAM' ? 'Examen' : form.type === 'LIVE_QUIZ' ? 'Live Quiz' : form.type === 'HOME_QUIZ' ? 'Quiz en Casa' : form.type === 'ICFES_SIMULATOR' ? 'Simulacro' : form.type === 'GAME_WORDSEARCH' ? 'Sopa de letras' : form.type === 'GAME_CROSSWORD' ? 'Crucigrama' : 'Actividad'}`}
               </button>
             </div>
           </div>
@@ -5551,7 +5567,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               activityId={lessonActivityId}
               activityTitle={activities.find(a => a.id === lessonActivityId)?.title}
               classroomTitle={classroom.title}
-              onClose={() => { setShowLessonEditor(false); setLessonActivityId('') }}
+              initialGameType={lessonInitialGameType}
+              onClose={() => { setShowLessonEditor(false); setLessonActivityId(''); setLessonInitialGameType('') }}
               onPreview={() => { setShowLessonEditor(false); setShowLessonPlayer(true) }}
             />
           </div>

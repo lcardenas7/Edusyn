@@ -18,6 +18,9 @@ interface LessonEditorProps {
   classroomTitle?: string
   gradeName?: string
   subjectName?: string
+  // Si se abre como "juego suelto": siembra una única diapositiva de actividad
+  // fijada a este tipo (WORDSEARCH / CROSSWORD) en vez de la plantilla normal.
+  initialGameType?: string
   onClose: () => void
   onPreview: () => void
 }
@@ -78,7 +81,7 @@ const LAYOUT_OPTIONS = [
 // ═══════════════════════════════════════════════════════════════════════════
 
 export default function LessonEditor({
-  activityId, activityTitle, classroomTitle, gradeName, subjectName, onClose, onPreview,
+  activityId, activityTitle, classroomTitle, gradeName, subjectName, initialGameType, onClose, onPreview,
 }: LessonEditorProps) {
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [loading, setLoading] = useState(true)
@@ -125,14 +128,28 @@ export default function LessonEditor({
       // No lesson exists yet — start fresh
       setTitle(activityTitle || classroomTitle || '')
       setShowMetadata(true)
-      setSlides([
-        createEmptySlide('CONTENT', 0),
-        createEmptySlide('BADGE_REVEAL', 1),
-      ])
+      if (initialGameType) {
+        // Juego suelto: una sola diapositiva de actividad ya fijada al juego.
+        const game = createEmptySlide('ACTIVITY', 0)
+        game.activityData.questionType = initialGameType
+        game.activityData.question = initialGameType === 'WORDSEARCH'
+          ? 'Encuentra las palabras escondidas'
+          : initialGameType === 'CROSSWORD'
+            ? 'Resuelve el crucigrama con las pistas'
+            : ''
+        game.activityData.options = initialGameType === 'CROSSWORD' ? ['::', '::', '::'] : ['', '', '', '']
+        setSlides([game, createEmptySlide('BADGE_REVEAL', 1)])
+        setSelectedSlideIndex(0)
+      } else {
+        setSlides([
+          createEmptySlide('CONTENT', 0),
+          createEmptySlide('BADGE_REVEAL', 1),
+        ])
+      }
     } finally {
       setLoading(false)
     }
-  }, [activityId])
+  }, [activityId, initialGameType])
 
   useEffect(() => { loadLesson() }, [loadLesson])
 
