@@ -23,7 +23,7 @@ import {
   FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
   BarChart3, ChevronDown, ChevronUp, ChevronRight, Clock, CheckCircle2, AlertTriangle,
   CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check, Zap, RefreshCw, Sparkles,
-  Grid3x3, Puzzle,
+  Puzzle,
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -79,6 +79,22 @@ interface Announcement {
 }
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316']
+
+// Bloques interactivos: pueden vivir sueltos (actividad tipo GAME) o dentro de una lección.
+// El pseudo-tipo del selector es 'BLOCK_<TYPE>'; se guarda como GAME + metadata.gameType=<TYPE>.
+const INTERACTIVE_BLOCKS: { type: string; label: string }[] = [
+  { type: 'MULTIPLE_CHOICE', label: 'Opción múltiple' },
+  { type: 'TRUE_FALSE', label: 'Verdadero / Falso' },
+  { type: 'SHORT_ANSWER', label: 'Respuesta corta' },
+  { type: 'FILL_BLANK', label: 'Completar' },
+  { type: 'ORDERING', label: 'Ordenar' },
+  { type: 'MATCHING', label: 'Emparejar' },
+  { type: 'FLASHCARDS', label: 'Flashcards' },
+  { type: 'LISTENING', label: 'Escuchar y elegir' },
+  { type: 'WORDSEARCH', label: 'Sopa de letras' },
+  { type: 'CROSSWORD', label: 'Crucigrama' },
+]
+const INTERACTIVE_BLOCK_LABELS: Record<string, string> = Object.fromEntries(INTERACTIVE_BLOCKS.map(b => [b.type, b.label]))
 
 type TabKey = 'home' | 'announcements' | 'content' | 'activities' | 'routes' | 'forum' | 'students' | 'grades'
 
@@ -2216,9 +2232,6 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     }).catch(() => {})
   }, [classroom.id])
 
-  // Juegos sueltos: pseudo-tipos del selector → actividad LESSON + questionType a sembrar.
-  const GAME_SUBTYPES: Record<string, string> = { GAME_WORDSEARCH: 'WORDSEARCH', GAME_CROSSWORD: 'CROSSWORD' }
-
   const handleCreate = async () => {
     if (!form.title.trim() || !form.sectionId) return
     try {
@@ -2231,9 +2244,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         attachmentUrl = data.data.path || data.data.url
         attachmentName = attachFile.name
       }
-      // Un juego suelto es una actividad tipo GAME con una sola diapositiva de actividad
-      // (se apoya en el motor de lecciones vía activityId).
-      const gameType = GAME_SUBTYPES[form.type]
+      // Bloque interactivo suelto = actividad tipo GAME con una sola diapositiva
+      // (se apoya en el motor de lecciones vía activityId). pseudo-tipo 'BLOCK_<TYPE>'.
+      const gameType = form.type.startsWith('BLOCK_') ? form.type.slice(6) : undefined
       const realType = gameType ? 'GAME' : form.type
       const { data: createdActivity } = await classroomApi.createActivity(classroom.id, {
         sectionId: form.sectionId, type: realType, title: form.title,
@@ -2510,11 +2523,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const isGame = (type: string) => type === 'GAME'
   // Ambos se apoyan en el motor de lecciones (van por activityId). GAME = juego suelto.
   const isLessonOrGame = (type: string) => type === 'LESSON' || type === 'GAME'
-  // Rótulo del juego derivado de metadata.gameType.
-  const gameLabelOf = (act: any): string | null => {
-    const g = act?.metadata?.gameType
-    return g === 'WORDSEARCH' ? 'Sopa de letras' : g === 'CROSSWORD' ? 'Crucigrama' : null
-  }
+  // Rótulo del bloque interactivo suelto (metadata.gameType = questionType).
+  const gameLabelOf = (act: any): string | null => INTERACTIVE_BLOCK_LABELS[act?.metadata?.gameType] || null
 
   const getQuizTypeLabel = (type: string) => {
     if (type === 'LIVE_QUIZ') return 'Live Quiz'
@@ -4391,7 +4401,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               </div>
               <div>
                 <h3 className="text-lg font-bold text-slate-800">{gameLabelOf(act) || 'Lección Interactiva'}</h3>
-                <p className="text-sm text-slate-500">{gameLabelOf(act) ? 'Edita las palabras y pistas de este juego' : 'Configura los slides, actividades y checkpoints de esta lección'}</p>
+                <p className="text-sm text-slate-500">{gameLabelOf(act) ? 'Edita el contenido de esta actividad interactiva' : 'Configura los slides, actividades y checkpoints de esta lección'}</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -4399,13 +4409,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 onClick={() => { setLessonActivityId(act.id); setShowLessonEditor(true) }}
                 className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 text-white rounded-xl font-medium hover:bg-violet-700 transition-colors"
               >
-                <Pencil className="w-4 h-4" /> {gameLabelOf(act) ? 'Editar juego' : 'Editar lección'}
+                <Pencil className="w-4 h-4" /> {gameLabelOf(act) ? 'Editar' : 'Editar lección'}
               </button>
               <button
                 onClick={() => { setLessonActivityId(act.id); setShowLessonPlayer(true) }}
                 className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
               >
-                <Eye className="w-4 h-4" /> {gameLabelOf(act) ? 'Jugar' : 'Vista previa'}
+                <Eye className="w-4 h-4" /> {'Vista previa'}
               </button>
             </div>
           </div>
@@ -4420,14 +4430,14 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             <h3 className="text-xl font-bold text-slate-800">{gameLabelOf(act) || 'Lección Interactiva'}</h3>
             <p className="text-sm text-slate-500 max-w-md mx-auto">
               {gameLabelOf(act)
-                ? 'Resuelve el juego. Tu progreso se guarda automáticamente.'
+                ? 'Resuelve esta actividad. Tu progreso se guarda automáticamente.'
                 : 'Avanza por los contenidos y actividades a tu ritmo. Tu progreso se guarda automáticamente.'}
             </p>
             <button
               onClick={() => { setLessonActivityId(act.id); setShowLessonPlayer(true) }}
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl font-bold text-lg hover:from-violet-600 hover:to-purple-700 transition-all shadow-lg shadow-violet-200"
             >
-              <BookOpen className="w-5 h-5" /> {gameLabelOf(act) ? 'Jugar' : 'Iniciar lección'}
+              <BookOpen className="w-5 h-5" /> {gameLabelOf(act) ? 'Comenzar' : 'Iniciar lección'}
             </button>
           </div>
         )}
@@ -5217,7 +5227,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             { value: 'HOME_QUIZ', label: 'En Casa', count: activities.filter(a => a.type === 'HOME_QUIZ').length, color: 'pink' },
             { value: 'ICFES_SIMULATOR', label: 'ICFES', count: activities.filter(a => a.type === 'ICFES_SIMULATOR').length, color: 'emerald' },
             { value: 'LESSON', label: 'Lecciones', count: activities.filter(a => a.type === 'LESSON').length, color: 'violet' },
-            { value: 'GAME', label: 'Juegos', count: activities.filter(a => a.type === 'GAME').length, color: 'amber' },
+            { value: 'GAME', label: 'Interactivas', count: activities.filter(a => a.type === 'GAME').length, color: 'amber' },
           ] as { value: string; label: string; count: number; color: string }[])
             .filter(t => t.value === 'ALL' || t.count > 0)
             .map(tab => {
@@ -5461,11 +5471,27 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
           {/* Activity type selector */}
           <div className="flex gap-2 flex-wrap">
-            {[{ value: 'TASK', label: 'Tarea', icon: ClipboardList, color: 'blue' }, { value: 'QUIZ', label: 'Quiz', icon: HelpCircle, color: 'purple' }, { value: 'EXAM', label: 'Examen', icon: Award, color: 'red' }, { value: 'LIVE_QUIZ', label: 'Live Quiz', icon: Zap, color: 'violet' }, { value: 'HOME_QUIZ', label: 'Quiz en Casa', icon: Home, color: 'pink' }, { value: 'ICFES_SIMULATOR', label: 'Simulacro ICFES', icon: BarChart3, color: 'emerald' }, { value: 'SELF_ASSESSMENT', label: 'Autoevaluación', icon: Sparkles, color: 'teal' }, { value: 'LESSON', label: 'Lección Interactiva', icon: BookOpen, color: 'violet' }, { value: 'GAME_WORDSEARCH', label: 'Sopa de letras', icon: Grid3x3, color: 'amber' }, { value: 'GAME_CROSSWORD', label: 'Crucigrama', icon: Puzzle, color: 'amber' }].map(t => (
+            {[{ value: 'TASK', label: 'Tarea', icon: ClipboardList, color: 'blue' }, { value: 'QUIZ', label: 'Quiz', icon: HelpCircle, color: 'purple' }, { value: 'EXAM', label: 'Examen', icon: Award, color: 'red' }, { value: 'LIVE_QUIZ', label: 'Live Quiz', icon: Zap, color: 'violet' }, { value: 'HOME_QUIZ', label: 'Quiz en Casa', icon: Home, color: 'pink' }, { value: 'ICFES_SIMULATOR', label: 'Simulacro ICFES', icon: BarChart3, color: 'emerald' }, { value: 'SELF_ASSESSMENT', label: 'Autoevaluación', icon: Sparkles, color: 'teal' }, { value: 'LESSON', label: 'Lección Interactiva', icon: BookOpen, color: 'violet' }].map(t => (
               <button key={t.value} onClick={() => setForm({ ...form, type: t.value })} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${form.type === t.value ? (t.color === 'blue' ? 'border-blue-500 bg-blue-50 text-blue-700' : t.color === 'purple' ? 'border-purple-500 bg-purple-50 text-purple-700' : t.color === 'emerald' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : t.color === 'teal' ? 'border-teal-500 bg-teal-50 text-teal-700' : t.color === 'amber' ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-red-500 bg-red-50 text-red-700') : 'border-slate-200 text-slate-500 hover:border-slate-300'}`} style={{ minHeight: '44px' }}>
                 <t.icon className="w-5 h-5" /> {t.label}
               </button>
             ))}
+          </div>
+
+          {/* Bloques interactivos — sueltos o dentro de una lección (misma mecánica) */}
+          <div>
+            <p className="text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5"><Puzzle className="w-3.5 h-3.5" /> Actividad interactiva</p>
+            <div className="flex gap-2 flex-wrap">
+              {INTERACTIVE_BLOCKS.map(b => {
+                const val = 'BLOCK_' + b.type
+                const active = form.type === val
+                return (
+                  <button key={b.type} onClick={() => setForm({ ...form, type: val })} className={`px-3 py-2 rounded-xl text-sm font-medium border-2 transition-all ${active ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-slate-200 text-slate-500 hover:border-amber-300'}`} style={{ minHeight: '40px' }}>
+                    {b.label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* Self-Assessment: delegate to specialized form */}
@@ -5554,7 +5580,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               <button onClick={() => { setShowCreate(false); setAttachFile(null); setPendingValeriaQuestions([]) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
               <button onClick={handleCreate} disabled={!form.title.trim() || !form.sectionId || creating} className={`px-5 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2 ${isQuizEditorType(form.type) ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`} style={{ minHeight: '44px' }}>
                 {creating && <Loader2 className="w-4 h-4 animate-spin" />}
-                {creating ? 'Creando...' : `Crear ${form.type === 'TASK' ? 'Tarea' : form.type === 'QUIZ' ? 'Quiz' : form.type === 'EXAM' ? 'Examen' : form.type === 'LIVE_QUIZ' ? 'Live Quiz' : form.type === 'HOME_QUIZ' ? 'Quiz en Casa' : form.type === 'ICFES_SIMULATOR' ? 'Simulacro' : form.type === 'GAME_WORDSEARCH' ? 'Sopa de letras' : form.type === 'GAME_CROSSWORD' ? 'Crucigrama' : 'Actividad'}`}
+                {creating ? 'Creando...' : `Crear ${form.type === 'TASK' ? 'Tarea' : form.type === 'QUIZ' ? 'Quiz' : form.type === 'EXAM' ? 'Examen' : form.type === 'LIVE_QUIZ' ? 'Live Quiz' : form.type === 'HOME_QUIZ' ? 'Quiz en Casa' : form.type === 'ICFES_SIMULATOR' ? 'Simulacro' : form.type.startsWith('BLOCK_') ? (INTERACTIVE_BLOCK_LABELS[form.type.slice(6)] || 'Actividad') : 'Actividad'}`}
               </button>
             </div>
           </div>

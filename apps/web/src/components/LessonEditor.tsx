@@ -62,6 +62,19 @@ const EMPTY_ACTIVITY_DATA = {
   feedbackIncorrect: '',
 }
 
+// Etiquetas de los bloques interactivos (editor enfocado / actividad suelta).
+const BLOCK_LABELS: Record<string, string> = {
+  MULTIPLE_CHOICE: 'Opción múltiple', TRUE_FALSE: 'Verdadero / Falso', SHORT_ANSWER: 'Respuesta corta',
+  FILL_BLANK: 'Completar', ORDERING: 'Ordenar palabras', MATCHING: 'Emparejar', FLASHCARDS: 'Flashcards',
+  LISTENING: 'Escuchar y elegir', WORDSEARCH: 'Sopa de letras', CROSSWORD: 'Crucigrama',
+}
+// Opciones por defecto al sembrar un bloque suelto según su tipo.
+function defaultBlockOptions(type: string): string[] {
+  if (type === 'MATCHING' || type === 'FLASHCARDS' || type === 'CROSSWORD') return ['::', '::']
+  if (type === 'ORDERING' || type === 'SHORT_ANSWER' || type === 'FILL_BLANK') return []
+  return ['', '', '', ''] // MCQ / TRUE_FALSE / LISTENING / WORDSEARCH
+}
+
 const SLIDE_TYPE_LABELS: Record<string, { label: string; icon: any; color: string }> = {
   CONTENT: { label: 'Contenido', icon: Type, color: 'bg-blue-500' },
   ACTIVITY: { label: 'Actividad', icon: Sparkles, color: 'bg-amber-500' },
@@ -129,16 +142,11 @@ export default function LessonEditor({
       setTitle(activityTitle || classroomTitle || '')
       setShowMetadata(true)
       if (initialGameType) {
-        // Juego suelto: una sola diapositiva de actividad ya fijada al juego.
-        const game = createEmptySlide('ACTIVITY', 0)
-        game.activityData.questionType = initialGameType
-        game.activityData.question = initialGameType === 'WORDSEARCH'
-          ? 'Encuentra las palabras escondidas'
-          : initialGameType === 'CROSSWORD'
-            ? 'Resuelve el crucigrama con las pistas'
-            : ''
-        game.activityData.options = initialGameType === 'CROSSWORD' ? ['::', '::', '::'] : ['', '', '', '']
-        setSlides([game, createEmptySlide('BADGE_REVEAL', 1)])
+        // Actividad interactiva suelta: una sola diapositiva de actividad ya fijada al tipo.
+        const block = createEmptySlide('ACTIVITY', 0)
+        block.activityData.questionType = initialGameType
+        block.activityData.options = defaultBlockOptions(initialGameType)
+        setSlides([block, createEmptySlide('BADGE_REVEAL', 1)])
         setSelectedSlideIndex(0)
       } else {
         setSlides([
@@ -406,21 +414,21 @@ export default function LessonEditor({
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // MODO JUEGO — editor enfocado para un juego SUELTO (sin andamiaje de
-  // lección). Se activa al crear (initialGameType) o al reabrir una actividad
-  // que es un único juego (una sola diapositiva de actividad WORDSEARCH/CROSSWORD).
+  // MODO BLOQUE — editor enfocado para una actividad interactiva SUELTA (un
+  // solo bloque, sin andamiaje de lección). Se activa al crear (initialGameType,
+  // que aquí es el tipo de bloque) o al reabrir una actividad de una sola
+  // diapositiva de actividad. Reutiliza renderActivityEditor → sirve a TODOS los
+  // tipos (opción múltiple, emparejar, ordenar, flashcards, sopa, crucigrama…).
   // ─────────────────────────────────────────────────────────────────
-  const gameIdx = slides.findIndex(s => s.type === 'ACTIVITY' && (s.activityData.questionType === 'WORDSEARCH' || s.activityData.questionType === 'CROSSWORD'))
-  const derivedGame = gameIdx >= 0
+  const blockIdx = slides.findIndex(s => s.type === 'ACTIVITY')
+  const isSingleBlock = blockIdx >= 0
     && slides.filter(s => s.type === 'ACTIVITY').length === 1
     && !slides.some(s => s.type === 'CONTENT' || s.type === 'CHECKPOINT')
-  const isGameMode = (!!initialGameType || derivedGame) && slides.length > 0
+  const isBlockMode = (!!initialGameType || isSingleBlock) && slides.length > 0
 
-  if (isGameMode) {
-    const gi = gameIdx >= 0 ? gameIdx : 0
-    const ad = slides[gi].activityData
-    const gtype = ad.questionType
-    const gname = gtype === 'CROSSWORD' ? 'Crucigrama' : 'Sopa de letras'
+  if (isBlockMode) {
+    const gi = blockIdx >= 0 ? blockIdx : 0
+    const bname = BLOCK_LABELS[slides[gi].activityData.questionType] || 'Actividad interactiva'
     return (
       <div className="flex flex-col h-full bg-slate-50">
         {/* Header */}
@@ -429,80 +437,31 @@ export default function LessonEditor({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex-1 min-w-0">
-            <h2 className="font-bold text-slate-800 truncate text-sm sm:text-base">{gtype === 'CROSSWORD' ? '🧩' : '🔲'} {gname}</h2>
+            <h2 className="font-bold text-slate-800 truncate text-sm sm:text-base">🧩 {bname}</h2>
             <p className="text-xs text-slate-400 truncate">{classroomTitle}</p>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={onPreview} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200">
-              <Eye className="w-4 h-4" /> Jugar
+              <Eye className="w-4 h-4" /> Vista previa
             </button>
-            <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 disabled:opacity-50">
+            <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-50">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Guardar
             </button>
           </div>
         </div>
 
-        {/* Body */}
+        {/* Body — reutiliza el mismo panel de autoría del editor de lección */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <div className="max-w-2xl mx-auto space-y-5">
+          <div className="max-w-2xl mx-auto space-y-4">
             {error && <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm">{error}</div>}
             {success && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">{success}</div>}
 
             <div>
               <label className="text-xs font-medium text-slate-500 mb-1 block">Título</label>
-              <input value={title} onChange={e => setTitle(e.target.value)} placeholder={`Mi ${gname.toLowerCase()}`} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-base" />
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder={`Mi ${bname.toLowerCase()}`} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-base" />
             </div>
 
-            <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Instrucción</label>
-              <input value={ad.question} onChange={e => updateActivityData(gi, { question: e.target.value })} placeholder={gtype === 'CROSSWORD' ? 'Resuelve el crucigrama con las pistas' : 'Encuentra las palabras escondidas'} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm" />
-            </div>
-
-            {/* WORDSEARCH — lista de palabras */}
-            {gtype === 'WORDSEARCH' && (
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-slate-500 block">Palabras a encontrar</label>
-                {ad.options.map((opt, oi) => (
-                  <div key={oi} className="flex items-center gap-2">
-                    <input value={opt} onChange={e => { const u = [...ad.options]; u[oi] = e.target.value; updateActivityData(gi, { options: u }) }} placeholder="p. ej. AMAZONAS" className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm" />
-                    {ad.options.length > 1 && (
-                      <button onClick={() => updateActivityData(gi, { options: ad.options.filter((_, k) => k !== oi) })} className="text-slate-400 hover:text-rose-500 text-lg leading-none px-1" title="Quitar">×</button>
-                    )}
-                  </div>
-                ))}
-                <button onClick={() => updateActivityData(gi, { options: [...ad.options, ''] })} className="text-xs text-amber-600 hover:text-amber-700 font-medium">+ Agregar palabra</button>
-                <p className="text-xs text-slate-400">Se ocultan en una rejilla generada automáticamente (horizontal, vertical y diagonal). Los acentos se ignoran. Se resuelve al encontrarlas todas.</p>
-              </div>
-            )}
-
-            {/* CROSSWORD — pares respuesta ↔ pista */}
-            {gtype === 'CROSSWORD' && (
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-slate-500 block">Respuestas y pistas</label>
-                {ad.options.map((opt, oi) => {
-                  const parts = String(opt).split('::')
-                  const ans = parts[0] || ''
-                  const clue = parts[1] || ''
-                  const setPair = (a: string, c: string) => { const u = [...ad.options]; u[oi] = `${a}::${c}`; updateActivityData(gi, { options: u }) }
-                  return (
-                    <div key={oi} className="flex items-center gap-2">
-                      <input value={ans} onChange={e => setPair(e.target.value, clue)} placeholder="Respuesta (AMAZONAS)" className="w-40 border border-slate-200 rounded-lg px-3 py-1.5 text-sm" />
-                      <input value={clue} onChange={e => setPair(ans, e.target.value)} placeholder="Pista (El río más caudaloso)" className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm" />
-                      {ad.options.length > 1 && (
-                        <button onClick={() => updateActivityData(gi, { options: ad.options.filter((_, k) => k !== oi) })} className="text-slate-400 hover:text-rose-500 text-lg leading-none px-1" title="Quitar">×</button>
-                      )}
-                    </div>
-                  )
-                })}
-                <button onClick={() => updateActivityData(gi, { options: [...ad.options, '::'] })} className="text-xs text-amber-600 hover:text-amber-700 font-medium">+ Agregar palabra</button>
-                <p className="text-xs text-slate-400">El tablero se entrelaza automáticamente. Los acentos se ignoran. Se resuelve al completar todas.</p>
-              </div>
-            )}
-
-            <div className="w-32">
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Puntos</label>
-              <input type="number" value={ad.points} onChange={e => updateActivityData(gi, { points: parseInt(e.target.value) || 10 })} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm" />
-            </div>
+            {renderActivityEditor(slides[gi], gi)}
           </div>
         </div>
       </div>
@@ -779,106 +738,8 @@ export default function LessonEditor({
   // SLIDE EDITORS
   // ─────────────────────────────────────────────────────────────────
 
-  function renderSlideEditor(slide: SlideForm, index: number) {
-    const typeInfo = SLIDE_TYPE_LABELS[slide.type] || SLIDE_TYPE_LABELS.CONTENT
-
+  function renderActivityEditor(slide: SlideForm, index: number) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        {/* Slide header */}
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl ${typeInfo.color} flex items-center justify-center`}>
-            <typeInfo.icon className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h3 className="font-bold text-slate-800">Slide {index + 1}: {typeInfo.label}</h3>
-            <select
-              value={slide.type}
-              onChange={e => updateSlide(index, { type: e.target.value as SlideForm['type'] })}
-              className="text-xs text-slate-500 bg-transparent border-none p-0 cursor-pointer"
-            >
-              {Object.entries(SLIDE_TYPE_LABELS).map(([val, info]) => (
-                <option key={val} value={val}>{info.label}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* CONTENT slide fields */}
-        {slide.type === 'CONTENT' && (
-          <div className="space-y-3 bg-white rounded-xl border border-slate-200 p-4">
-            <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Título</label>
-              <input
-                value={slide.title}
-                onChange={e => updateSlide(index, { title: e.target.value })}
-                placeholder="Título del slide"
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Contenido (HTML)</label>
-              <textarea
-                value={slide.body}
-                onChange={e => updateSlide(index, { body: e.target.value })}
-                placeholder="<p>Escribe el contenido aquí...</p>"
-                rows={6}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono resize-none"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block flex items-center gap-1">
-                  <Image className="w-3 h-3" /> URL imagen
-                </label>
-                <input
-                  value={slide.imageUrl}
-                  onChange={e => updateSlide(index, { imageUrl: e.target.value })}
-                  placeholder="https://..."
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block flex items-center gap-1">
-                  <Video className="w-3 h-3" /> URL video
-                </label>
-                <input
-                  value={slide.videoUrl}
-                  onChange={e => updateSlide(index, { videoUrl: e.target.value })}
-                  placeholder="https://youtube.com/..."
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block flex items-center gap-1">
-                  <Music className="w-3 h-3" /> URL audio
-                </label>
-                <input
-                  value={slide.audioUrl}
-                  onChange={e => updateSlide(index, { audioUrl: e.target.value })}
-                  placeholder="https://..."
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block">Layout</label>
-                <select
-                  value={slide.layout}
-                  onChange={e => updateSlide(index, { layout: e.target.value })}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
-                >
-                  {LAYOUT_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ACTIVITY slide fields */}
-        {slide.type === 'ACTIVITY' && (
           <div className="space-y-3 bg-white rounded-xl border border-slate-200 p-4">
             <div>
               <label className="text-xs font-medium text-slate-500 mb-1 block">Tipo de pregunta</label>
@@ -1279,7 +1140,109 @@ export default function LessonEditor({
               </div>
             )}
           </div>
+    )
+  }
+
+  function renderSlideEditor(slide: SlideForm, index: number) {
+    const typeInfo = SLIDE_TYPE_LABELS[slide.type] || SLIDE_TYPE_LABELS.CONTENT
+
+    return (
+      <div className="max-w-2xl mx-auto space-y-4">
+        {/* Slide header */}
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-xl ${typeInfo.color} flex items-center justify-center`}>
+            <typeInfo.icon className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-800">Slide {index + 1}: {typeInfo.label}</h3>
+            <select
+              value={slide.type}
+              onChange={e => updateSlide(index, { type: e.target.value as SlideForm['type'] })}
+              className="text-xs text-slate-500 bg-transparent border-none p-0 cursor-pointer"
+            >
+              {Object.entries(SLIDE_TYPE_LABELS).map(([val, info]) => (
+                <option key={val} value={val}>{info.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* CONTENT slide fields */}
+        {slide.type === 'CONTENT' && (
+          <div className="space-y-3 bg-white rounded-xl border border-slate-200 p-4">
+            <div>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">Título</label>
+              <input
+                value={slide.title}
+                onChange={e => updateSlide(index, { title: e.target.value })}
+                placeholder="Título del slide"
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">Contenido (HTML)</label>
+              <textarea
+                value={slide.body}
+                onChange={e => updateSlide(index, { body: e.target.value })}
+                placeholder="<p>Escribe el contenido aquí...</p>"
+                rows={6}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono resize-none"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1 block flex items-center gap-1">
+                  <Image className="w-3 h-3" /> URL imagen
+                </label>
+                <input
+                  value={slide.imageUrl}
+                  onChange={e => updateSlide(index, { imageUrl: e.target.value })}
+                  placeholder="https://..."
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1 block flex items-center gap-1">
+                  <Video className="w-3 h-3" /> URL video
+                </label>
+                <input
+                  value={slide.videoUrl}
+                  onChange={e => updateSlide(index, { videoUrl: e.target.value })}
+                  placeholder="https://youtube.com/..."
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1 block flex items-center gap-1">
+                  <Music className="w-3 h-3" /> URL audio
+                </label>
+                <input
+                  value={slide.audioUrl}
+                  onChange={e => updateSlide(index, { audioUrl: e.target.value })}
+                  placeholder="https://..."
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1 block">Layout</label>
+                <select
+                  value={slide.layout}
+                  onChange={e => updateSlide(index, { layout: e.target.value })}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                >
+                  {LAYOUT_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
         )}
+
+        {/* ACTIVITY slide fields */}
+        {slide.type === 'ACTIVITY' && renderActivityEditor(slide, index)}
 
         {/* CHECKPOINT slide */}
         {slide.type === 'CHECKPOINT' && (
