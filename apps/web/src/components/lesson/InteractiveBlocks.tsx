@@ -662,6 +662,81 @@ function CrosswordBlock({ act, value, onChange, showResult }: BlockProps) {
   )
 }
 
+// ─── Memory — MEMORY (parejas / concentración) ─────────────────────────────
+// Pares "izq::der" en `options` (como emparejar). Cada par = 2 cartas boca abajo;
+// el alumno voltea dos: si son pareja se quedan, si no se ocultan. Completa/correcta
+// al emparejar TODAS. value = izquierdas emparejadas (grading layout-independiente).
+type MemoryCard = { id: number; pair: number; text: string }
+function MemoryBlock({ act, value, onChange, showResult }: BlockProps) {
+  const pairs = useMemo(() => parsePairs(act.options), [act.options])
+  const deck = useMemo<MemoryCard[]>(
+    () => shuffle(pairs.flatMap((p, i) => [{ id: i * 2, pair: i, text: p.left }, { id: i * 2 + 1, pair: i, text: p.right }])),
+    [act.options] // eslint-disable-line react-hooks/exhaustive-deps
+  )
+  const [matched, setMatched] = useState<Set<number>>(() => {
+    const s = new Set<number>()
+    if (Array.isArray(value)) pairs.forEach((p, i) => { if (value.includes(p.left)) s.add(i) })
+    return s
+  })
+  const [flipped, setFlipped] = useState<number[]>([])
+  const [lock, setLock] = useState(false)
+
+  const shownMatched = showResult ? new Set(pairs.map((_, i) => i)) : matched
+
+  const clickCard = (card: MemoryCard) => {
+    if (showResult || lock) return
+    if (shownMatched.has(card.pair) || flipped.includes(card.id) || flipped.length >= 2) return
+    const next = [...flipped, card.id]
+    setFlipped(next)
+    if (next.length === 2) {
+      const a = deck.find(c => c.id === next[0])!, b = deck.find(c => c.id === next[1])!
+      if (a.pair === b.pair) {
+        const nm = new Set(matched); nm.add(a.pair)
+        setMatched(nm); setFlipped([])
+        onChange(Array.from(nm).map(i => pairs[i].left))
+      } else {
+        setLock(true)
+        setTimeout(() => { setFlipped([]); setLock(false) }, 850)
+      }
+    }
+  }
+
+  if (pairs.length === 0) return <p className="text-ink-muted text-sm">Añade parejas a este juego de memoria.</p>
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-ink-muted text-sm">Voltea dos cartas y encuentra las parejas.</span>
+        <span className="text-ink-secondary text-sm font-semibold tabular-nums">{shownMatched.size}/{pairs.length}</span>
+      </div>
+      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+        {deck.map(card => {
+          const up = showResult || shownMatched.has(card.pair) || flipped.includes(card.id)
+          const done = shownMatched.has(card.pair)
+          return (
+            <motion.button
+              key={card.id}
+              onClick={() => clickCard(card)}
+              disabled={showResult}
+              animate={done ? { scale: [1, 1.05, 1] } : {}}
+              transition={{ duration: 0.35, ease: EASE }}
+              className={`aspect-[3/4] rounded-xl border-2 flex items-center justify-center p-2 text-center text-sm font-semibold leading-tight transition-colors ${
+                up
+                  ? done
+                    ? 'bg-feedback-correct/10 border-feedback-correct text-feedback-correct'
+                    : 'bg-accent/5 border-accent text-ink-primary'
+                  : 'bg-surface-2 border-hairline text-ink-muted hover:border-accent/50'
+              }`}
+            >
+              {up ? <span>{card.text}</span> : <span className="text-xl text-ink-muted/60">?</span>}
+            </motion.button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ─── Switch por tipo → bloque puro ─────────────────────────────────────────
 export function BlockRenderer(props: BlockProps) {
   switch (props.act.questionType) {
@@ -681,6 +756,8 @@ export function BlockRenderer(props: BlockProps) {
       return <WordSearchBlock {...props} />
     case 'CROSSWORD':
       return <CrosswordBlock {...props} />
+    case 'MEMORY':
+      return <MemoryBlock {...props} />
     case 'MULTIPLE_CHOICE':
     case 'TRUE_FALSE':
     default:
