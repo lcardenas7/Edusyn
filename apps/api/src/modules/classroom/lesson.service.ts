@@ -49,7 +49,9 @@ export class LessonService {
       where: { id: activityId },
     });
     if (!activity) throw new NotFoundException('Actividad no encontrada');
-    if (activity.type !== 'LESSON') throw new BadRequestException('La actividad debe ser de tipo LESSON');
+    // LESSON = lección multi-diapositiva; GAME = juego suelto (sopa/crucigrama) que
+    // se apoya en el mismo motor de lecciones (una sola diapositiva de actividad).
+    if (activity.type !== 'LESSON' && activity.type !== 'GAME') throw new BadRequestException('La actividad debe ser de tipo LESSON o GAME');
 
     // Check no lesson already exists
     const existing = await this.prisma.lesson.findUnique({ where: { activityId } });

@@ -2231,9 +2231,10 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         attachmentUrl = data.data.path || data.data.url
         attachmentName = attachFile.name
       }
-      // Un juego suelto es una LESSON con una sola diapositiva de actividad.
+      // Un juego suelto es una actividad tipo GAME con una sola diapositiva de actividad
+      // (se apoya en el motor de lecciones vía activityId).
       const gameType = GAME_SUBTYPES[form.type]
-      const realType = gameType ? 'LESSON' : form.type
+      const realType = gameType ? 'GAME' : form.type
       const { data: createdActivity } = await classroomApi.createActivity(classroom.id, {
         sectionId: form.sectionId, type: realType, title: form.title,
         ...(gameType ? { gameType } : {}),
@@ -2506,7 +2507,10 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const isIcfes = (type: string) => type === 'ICFES_SIMULATOR'
   const isSelfAssessment = (type: string) => type === 'SELF_ASSESSMENT'
   const isLesson = (type: string) => type === 'LESSON'
-  // Juego suelto: rótulo derivado de metadata.gameType (una LESSON que es en realidad un juego).
+  const isGame = (type: string) => type === 'GAME'
+  // Ambos se apoyan en el motor de lecciones (van por activityId). GAME = juego suelto.
+  const isLessonOrGame = (type: string) => type === 'LESSON' || type === 'GAME'
+  // Rótulo del juego derivado de metadata.gameType.
   const gameLabelOf = (act: any): string | null => {
     const g = act?.metadata?.gameType
     return g === 'WORDSEARCH' ? 'Sopa de letras' : g === 'CROSSWORD' ? 'Crucigrama' : null
@@ -3047,13 +3051,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start gap-3 mb-2">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                      {isLesson(act.type) ? <BookOpen className="w-5 h-5 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-5 h-5 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-5 h-5 text-emerald-600" /> : isQuizType(act.type) ? <HelpCircle className="w-5 h-5 text-purple-600" /> : <ClipboardList className="w-5 h-5 text-blue-600" />}
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isGame(act.type) ? 'bg-amber-50' : isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                      {isGame(act.type) ? <Puzzle className="w-5 h-5 text-amber-600" /> : isLesson(act.type) ? <BookOpen className="w-5 h-5 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-5 h-5 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-5 h-5 text-emerald-600" /> : isQuizType(act.type) ? <HelpCircle className="w-5 h-5 text-purple-600" /> : <ClipboardList className="w-5 h-5 text-blue-600" />}
                     </div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-lg sm:text-xl font-bold text-slate-800 break-words">{act.title}</h2>
-                        {isLesson(act.type) && <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${gameLabelOf(act) ? 'bg-amber-100 text-amber-700' : 'bg-violet-100 text-violet-700'}`}>{gameLabelOf(act) || 'Lección Interactiva'}</span>}
+                        {isLessonOrGame(act.type) && <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${gameLabelOf(act) ? 'bg-amber-100 text-amber-700' : 'bg-violet-100 text-violet-700'}`}>{gameLabelOf(act) || 'Lección Interactiva'}</span>}
                         {isSelfAssessment(act.type) && <span className="text-xs px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full font-medium whitespace-nowrap">Autoevaluación</span>}
                         {isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium whitespace-nowrap">Simulacro ICFES</span>}
                         {isQuizType(act.type) && !isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">{getQuizTypeLabel(act.type)}</span>}
@@ -4379,7 +4383,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         )}
 
         {/* LESSON: Teacher controls */}
-        {isTeacher && isLesson(act.type) && (
+        {isTeacher && isLessonOrGame(act.type) && (
           <div className="bg-white rounded-2xl border-2 border-violet-200 p-6 space-y-4">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
@@ -4408,7 +4412,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         )}
 
         {/* LESSON: Student play button */}
-        {isStudent && isLesson(act.type) && (
+        {isStudent && isLessonOrGame(act.type) && (
           <div className="bg-white rounded-2xl border-2 border-violet-200 p-6 text-center space-y-4">
             <div className="w-16 h-16 rounded-2xl bg-violet-100 flex items-center justify-center mx-auto">
               <BookOpen className="w-8 h-8 text-violet-600" />
@@ -4429,7 +4433,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         )}
 
         {/* STUDENT: My submission / submit form (TASK only) */}
-        {isStudent && !isQuizType(act.type) && !isSelfAssessment(act.type) && !isLesson(act.type) && (
+        {isStudent && !isQuizType(act.type) && !isSelfAssessment(act.type) && !isLessonOrGame(act.type) && (
           <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
             <h3 className="text-lg font-bold text-slate-800">Tu entrega</h3>
             {mySubmission && !editingSubmission ? (
@@ -5128,8 +5132,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
     return (
       <button key={act.id} onClick={() => openActivity(act)} style={{ borderLeftColor: workInfo.border, borderLeftWidth: '4px' }} className={`w-full text-left bg-white rounded-2xl border-2 p-5 transition-all hover:shadow-sm group ${isNew ? 'border-yellow-300 hover:border-yellow-400' : 'border-slate-200 hover:border-blue-300'} ${workInfo.rank >= 6 ? 'opacity-70 hover:opacity-100' : ''}`}>
         <div className="flex items-start gap-4">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : act.type === 'LIVE_QUIZ' ? 'bg-violet-100' : act.type === 'HOME_QUIZ' ? 'bg-pink-50' : act.type === 'EXAM' ? 'bg-red-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
-            {isLesson(act.type) ? <BookOpen className="w-6 h-6 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-6 h-6 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : act.type === 'LIVE_QUIZ' ? <Zap className="w-6 h-6 text-violet-700" /> : act.type === 'HOME_QUIZ' ? <Home className="w-6 h-6 text-pink-600" /> : act.type === 'EXAM' ? <Award className="w-6 h-6 text-red-500" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isGame(act.type) ? 'bg-amber-50' : isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : act.type === 'LIVE_QUIZ' ? 'bg-violet-100' : act.type === 'HOME_QUIZ' ? 'bg-pink-50' : act.type === 'EXAM' ? 'bg-red-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
+            {isGame(act.type) ? <Puzzle className="w-6 h-6 text-amber-600" /> : isLesson(act.type) ? <BookOpen className="w-6 h-6 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-6 h-6 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : act.type === 'LIVE_QUIZ' ? <Zap className="w-6 h-6 text-violet-700" /> : act.type === 'HOME_QUIZ' ? <Home className="w-6 h-6 text-pink-600" /> : act.type === 'EXAM' ? <Award className="w-6 h-6 text-red-500" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap">
@@ -5143,7 +5147,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               {act.type === 'LIVE_QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-violet-100 text-violet-800">⚡ Live Quiz</span>}
               {act.type === 'HOME_QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-pink-50 text-pink-700">🏠 En Casa</span>}
               {isIcfes(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700">ICFES</span>}
-              {isLesson(act.type) && <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${gameLabelOf(act) ? 'bg-amber-50 text-amber-700' : 'bg-violet-50 text-violet-700'}`}>{gameLabelOf(act) || 'Lección'}</span>}
+              {isLessonOrGame(act.type) && <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${gameLabelOf(act) ? 'bg-amber-50 text-amber-700' : 'bg-violet-50 text-violet-700'}`}>{gameLabelOf(act) || 'Lección'}</span>}
               {isSelfAssessment(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-teal-50 text-teal-700">Autoevaluación</span>}
               {studentStatus && (
                 <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${studentStatus.bg} ${studentStatus.text}`}>{studentStatus.label}</span>
@@ -5213,6 +5217,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             { value: 'HOME_QUIZ', label: 'En Casa', count: activities.filter(a => a.type === 'HOME_QUIZ').length, color: 'pink' },
             { value: 'ICFES_SIMULATOR', label: 'ICFES', count: activities.filter(a => a.type === 'ICFES_SIMULATOR').length, color: 'emerald' },
             { value: 'LESSON', label: 'Lecciones', count: activities.filter(a => a.type === 'LESSON').length, color: 'violet' },
+            { value: 'GAME', label: 'Juegos', count: activities.filter(a => a.type === 'GAME').length, color: 'amber' },
           ] as { value: string; label: string; count: number; color: string }[])
             .filter(t => t.value === 'ALL' || t.count > 0)
             .map(tab => {
@@ -5225,6 +5230,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 violet: isActive ? 'border-violet-600 bg-violet-600 text-white' : 'border-slate-200 text-slate-500 hover:border-violet-300',
                 pink: isActive ? 'border-pink-600 bg-pink-600 text-white' : 'border-slate-200 text-slate-500 hover:border-pink-300',
                 emerald: isActive ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 text-slate-500 hover:border-emerald-300',
+                amber: isActive ? 'border-amber-500 bg-amber-500 text-white' : 'border-slate-200 text-slate-500 hover:border-amber-300',
               }
               return (
                 <button
