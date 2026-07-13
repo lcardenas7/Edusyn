@@ -45,6 +45,7 @@ interface SlideForm {
     hint: string
     feedbackCorrect: string
     feedbackIncorrect: string
+    imageUrl: string
   }
   badgeEmoji: string
   badgeTitle: string
@@ -60,6 +61,7 @@ const EMPTY_ACTIVITY_DATA = {
   hint: '',
   feedbackCorrect: '',
   feedbackIncorrect: '',
+  imageUrl: '',
 }
 
 // Etiquetas de los bloques interactivos (editor enfocado / actividad suelta).
@@ -67,11 +69,12 @@ const BLOCK_LABELS: Record<string, string> = {
   MULTIPLE_CHOICE: 'Opción múltiple', TRUE_FALSE: 'Verdadero / Falso', SHORT_ANSWER: 'Respuesta corta',
   FILL_BLANK: 'Completar', ORDERING: 'Ordenar palabras', MATCHING: 'Emparejar', FLASHCARDS: 'Flashcards',
   LISTENING: 'Escuchar y elegir', WORDSEARCH: 'Sopa de letras', CROSSWORD: 'Crucigrama', MEMORY: 'Memory',
+  LABEL_IMAGE: 'Etiquetar imagen',
 }
 // Opciones por defecto al sembrar un bloque suelto según su tipo.
 function defaultBlockOptions(type: string): string[] {
   if (type === 'MATCHING' || type === 'FLASHCARDS' || type === 'CROSSWORD' || type === 'MEMORY') return ['::', '::']
-  if (type === 'ORDERING' || type === 'SHORT_ANSWER' || type === 'FILL_BLANK') return []
+  if (type === 'ORDERING' || type === 'SHORT_ANSWER' || type === 'FILL_BLANK' || type === 'LABEL_IMAGE') return []
   return ['', '', '', ''] // MCQ / TRUE_FALSE / LISTENING / WORDSEARCH
 }
 
@@ -186,6 +189,7 @@ export default function LessonEditor({
         hint: s.activityData.hint || '',
         feedbackCorrect: (s.activityData as any).feedbackCorrect || '',
         feedbackIncorrect: (s.activityData as any).feedbackIncorrect || '',
+        imageUrl: (s.activityData as any).imageUrl || '',
       } : { ...EMPTY_ACTIVITY_DATA },
       badgeEmoji: s.badgeEmoji || '',
       badgeTitle: s.badgeTitle || '',
@@ -292,6 +296,7 @@ export default function LessonEditor({
           hint: s.activityData.hint || undefined,
           feedbackCorrect: s.activityData.feedbackCorrect || undefined,
           feedbackIncorrect: s.activityData.feedbackIncorrect || undefined,
+          imageUrl: s.activityData.imageUrl || undefined,
         } : undefined,
         badgeEmoji: s.type === 'BADGE_REVEAL' ? (s.badgeEmoji || badgeEmoji) : undefined,
         badgeTitle: s.type === 'BADGE_REVEAL' ? (s.badgeTitle || badgeTitle) : undefined,
@@ -759,6 +764,7 @@ export default function LessonEditor({
                 <option value="WORDSEARCH">Sopa de letras</option>
                 <option value="CROSSWORD">Crucigrama</option>
                 <option value="MEMORY">Memory (parejas)</option>
+                <option value="LABEL_IMAGE">Etiquetar sobre imagen</option>
               </select>
             </div>
             <div>
@@ -768,6 +774,7 @@ export default function LessonEditor({
                   : slide.activityData.questionType === 'WORDSEARCH' ? 'Instrucción'
                   : slide.activityData.questionType === 'CROSSWORD' ? 'Instrucción'
                   : slide.activityData.questionType === 'MEMORY' ? 'Instrucción'
+                  : slide.activityData.questionType === 'LABEL_IMAGE' ? 'Instrucción'
                   : 'Pregunta'}
               </label>
               <textarea
@@ -781,6 +788,7 @@ export default function LessonEditor({
                   : slide.activityData.questionType === 'WORDSEARCH' ? 'Encuentra las palabras escondidas'
                   : slide.activityData.questionType === 'CROSSWORD' ? 'Resuelve el crucigrama con las pistas'
                   : slide.activityData.questionType === 'MEMORY' ? 'Encuentra todas las parejas'
+                  : slide.activityData.questionType === 'LABEL_IMAGE' ? 'Arrastra cada etiqueta a su lugar'
                   : '¿Cuál es...?'
                 }
                 rows={2}
@@ -1136,6 +1144,64 @@ export default function LessonEditor({
                 <p className="text-xs text-slate-400">Cada pareja son dos cartas boca abajo. Se resuelve al emparejarlas todas.</p>
               </div>
             )}
+
+            {/* LABEL_IMAGE — imagen + puntos (se guardan como "etiqueta::x::y", x/y en %) */}
+            {slide.activityData.questionType === 'LABEL_IMAGE' && (() => {
+              const hotspots = slide.activityData.options.map(o => {
+                const p = String(o).split('::')
+                return { label: p[0] || '', x: parseFloat(p[1]) || 0, y: parseFloat(p[2]) || 0 }
+              })
+              const setHotspots = (hs: { label: string; x: number; y: number }[]) =>
+                updateActivityData(index, { options: hs.map(h => `${h.label}::${h.x}::${h.y}`) })
+              const addAt = (e: React.MouseEvent<HTMLDivElement>) => {
+                const r = e.currentTarget.getBoundingClientRect()
+                const x = Math.round(((e.clientX - r.left) / r.width) * 100)
+                const y = Math.round(((e.clientY - r.top) / r.height) * 100)
+                setHotspots([...hotspots, { label: '', x, y }])
+              }
+              return (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 mb-1 block">Imagen (URL)</label>
+                    <input
+                      value={slide.activityData.imageUrl}
+                      onChange={e => updateActivityData(index, { imageUrl: e.target.value })}
+                      placeholder="https://… (célula, mapa, cuerpo humano…)"
+                      className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                    />
+                  </div>
+                  {slide.activityData.imageUrl ? (
+                    <>
+                      <p className="text-xs text-slate-400">Haz clic sobre la imagen para marcar cada punto; luego escribe su etiqueta abajo.</p>
+                      <div className="relative inline-block border border-slate-200 rounded-lg overflow-hidden cursor-crosshair" onClick={addAt}>
+                        <img src={slide.activityData.imageUrl} alt="" className="block max-w-full max-h-72" draggable={false} />
+                        {hotspots.map((h, i) => (
+                          <span key={i} style={{ left: `${h.x}%`, top: `${h.y}%` }} className="absolute -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white shadow pointer-events-none">{i + 1}</span>
+                        ))}
+                      </div>
+                      <div className="space-y-1.5">
+                        {hotspots.map((h, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                            <input
+                              value={h.label}
+                              onChange={e => { const hs = [...hotspots]; hs[i] = { ...h, label: e.target.value }; setHotspots(hs) }}
+                              placeholder="Etiqueta (p. ej. Núcleo)"
+                              className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                            />
+                            <span className="text-xs text-slate-400 tabular-nums w-14 text-right">{h.x}%, {h.y}%</span>
+                            <button onClick={() => setHotspots(hotspots.filter((_, k) => k !== i))} className="text-slate-400 hover:text-rose-500 text-lg leading-none px-1" title="Quitar">×</button>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-slate-400">Se resuelve cuando el alumno etiqueta todos los puntos correctamente.</p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-slate-400">Pega la URL de una imagen para empezar a marcar puntos.</p>
+                  )}
+                </div>
+              )
+            })()}
 
             <div className="grid grid-cols-2 gap-3">
               <div>

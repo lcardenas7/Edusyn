@@ -2343,6 +2343,7 @@ export interface LessonSlide {
     hint?: string
     feedbackCorrect?: string
     feedbackIncorrect?: string
+    imageUrl?: string
   }
   badgeEmoji?: string
   badgeTitle?: string

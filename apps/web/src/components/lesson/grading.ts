@@ -15,6 +15,18 @@ export interface ActivityData {
   explanation?: string
   points?: number
   hint?: string
+  imageUrl?: string // LABEL_IMAGE: imagen de fondo sobre la que se etiqueta
+}
+
+// Punto a etiquetar (LABEL_IMAGE): vive en `options` como "etiqueta::x::y" (x,y en %).
+export interface Hotspot { label: string; x: number; y: number }
+export function parseHotspots(options?: string[]): Hotspot[] {
+  return (options || [])
+    .map(o => {
+      const p = String(o).split('::')
+      return { label: (p[0] || '').trim(), x: parseFloat(p[1]) || 0, y: parseFloat(p[2]) || 0 }
+    })
+    .filter(h => h.label)
 }
 
 // trim + minúsculas + colapsa espacios internos (clave para ORDERING).
@@ -52,6 +64,11 @@ export function isAnswerComplete(act: ActivityData, value: any): boolean {
       const n = parsePairs(act.options).length
       return n > 0 && Array.isArray(value) && value.length >= n
     }
+    case 'LABEL_IMAGE': {
+      // Completa cuando cada punto tiene una etiqueta asignada.
+      const n = parseHotspots(act.options).length
+      return n > 0 && Array.isArray(value) && value.filter(v => v).length >= n
+    }
     default:
       return value !== null && value !== undefined && value !== ''
   }
@@ -78,6 +95,11 @@ export function gradeAnswer(act: ActivityData, value: any): boolean {
       const target = parsePairs(act.options).map(p => norm(p.left)).filter(Boolean)
       const solved = (Array.isArray(value) ? value : []).map(norm)
       return target.length > 0 && target.every(w => solved.includes(w))
+    }
+    case 'LABEL_IMAGE': {
+      // Correcto = cada punto (en orden) tiene su etiqueta correcta.
+      const spots = parseHotspots(act.options)
+      return spots.length > 0 && Array.isArray(value) && spots.every((h, i) => norm(value[i]) === norm(h.label))
     }
     default:
       return norm(value) === norm(act.correctAnswer)

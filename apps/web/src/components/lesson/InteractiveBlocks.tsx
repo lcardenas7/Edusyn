@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { CheckCircle2, GripVertical, ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react'
-import { type ActivityData, norm, parsePairs, gradeAnswer, isAnswerComplete } from './grading'
+import { type ActivityData, norm, parsePairs, parseHotspots, gradeAnswer, isAnswerComplete } from './grading'
 import { type WSCell, wsBuild, wsLine, wsMatch } from './wordsearch'
 import { cwBuild, cwSolved } from './crossword'
 import { SpeakButton } from './SpeakButton'
@@ -737,6 +737,83 @@ function MemoryBlock({ act, value, onChange, showResult }: BlockProps) {
   )
 }
 
+// ─── Etiquetar sobre imagen — LABEL_IMAGE (Ciencias / Geografía) ────────────
+// Imagen de fondo (act.imageUrl) + puntos "etiqueta::x::y" en `options` (x,y en %).
+// El alumno toca una etiqueta y luego su punto. value = etiquetas por punto (orden).
+function LabelImageBlock({ act, value, onChange, showResult }: BlockProps) {
+  const spots = useMemo(() => parseHotspots(act.options), [act.options])
+  const labels = useMemo(() => shuffle(spots.map(s => s.label)), [act.options]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [assigned, setAssigned] = useState<string[]>(() => (Array.isArray(value) ? [...value] : spots.map(() => '')))
+  const [activeLabel, setActiveLabel] = useState<string | null>(null)
+
+  if (!act.imageUrl) return <p className="text-ink-muted text-sm">Añade una imagen y marca los puntos a etiquetar.</p>
+  if (spots.length === 0) return <p className="text-ink-muted text-sm">Marca al menos un punto en la imagen.</p>
+
+  const assign = (i: number) => {
+    if (showResult || !activeLabel) return
+    const next = assigned.map(a => (a === activeLabel ? '' : a)) // cada etiqueta una vez
+    while (next.length < spots.length) next.push('')
+    next[i] = activeLabel
+    setAssigned(next); setActiveLabel(null); onChange(next)
+  }
+
+  const used = new Set(assigned.filter(Boolean))
+
+  return (
+    <div>
+      <div className="relative inline-block max-w-full rounded-xl overflow-hidden border border-hairline bg-surface-2">
+        <img src={act.imageUrl} alt="" className="block max-w-full select-none" draggable={false} />
+        {spots.map((s, i) => {
+          const lbl = showResult ? s.label : assigned[i]
+          const ok = showResult && norm(assigned[i]) === norm(s.label)
+          const bad = showResult && !!assigned[i] && !ok
+          return (
+            <button
+              key={i}
+              onClick={() => assign(i)}
+              disabled={showResult}
+              style={{ left: `${s.x}%`, top: `${s.y}%` }}
+              className={`absolute -translate-x-1/2 -translate-y-1/2 min-w-[24px] h-6 px-1.5 rounded-full text-[11px] font-bold border-2 flex items-center justify-center whitespace-nowrap shadow ${
+                ok ? 'bg-feedback-correct text-white border-white'
+                  : bad ? 'bg-feedback-error text-white border-white'
+                    : lbl ? 'bg-accent text-white border-white'
+                      : 'bg-white text-accent border-accent'
+              }`}
+            >
+              {lbl || i + 1}
+            </button>
+          )
+        })}
+      </div>
+
+      {!showResult ? (
+        <div className="mt-4">
+          <p className="text-ink-muted text-sm mb-2">Toca una etiqueta y luego su punto en la imagen.</p>
+          <div className="flex flex-wrap gap-2">
+            {labels.map((l, k) => (
+              <button
+                key={`${l}-${k}`}
+                onClick={() => setActiveLabel(l)}
+                className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${
+                  activeLabel === l
+                    ? 'border-accent ring-1 ring-accent bg-accent/5 text-ink-primary'
+                    : used.has(l)
+                      ? 'border-hairline bg-surface-2 text-ink-muted opacity-50'
+                      : 'border-hairline bg-surface-1 text-ink-primary hover:border-accent/50'
+                }`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p className="text-ink-secondary text-sm mt-3">Se muestran las etiquetas correctas.</p>
+      )}
+    </div>
+  )
+}
+
 // ─── Switch por tipo → bloque puro ─────────────────────────────────────────
 export function BlockRenderer(props: BlockProps) {
   switch (props.act.questionType) {
@@ -758,6 +835,8 @@ export function BlockRenderer(props: BlockProps) {
       return <CrosswordBlock {...props} />
     case 'MEMORY':
       return <MemoryBlock {...props} />
+    case 'LABEL_IMAGE':
+      return <LabelImageBlock {...props} />
     case 'MULTIPLE_CHOICE':
     case 'TRUE_FALSE':
     default:

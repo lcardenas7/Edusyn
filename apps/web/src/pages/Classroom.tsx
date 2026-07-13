@@ -94,6 +94,7 @@ const INTERACTIVE_BLOCKS: { type: string; label: string }[] = [
   { type: 'WORDSEARCH', label: 'Sopa de letras' },
   { type: 'CROSSWORD', label: 'Crucigrama' },
   { type: 'MEMORY', label: 'Memory' },
+  { type: 'LABEL_IMAGE', label: 'Etiquetar imagen' },
 ]
 const INTERACTIVE_BLOCK_LABELS: Record<string, string> = Object.fromEntries(INTERACTIVE_BLOCKS.map(b => [b.type, b.label]))
 

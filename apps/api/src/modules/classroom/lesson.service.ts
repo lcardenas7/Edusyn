@@ -762,6 +762,12 @@ export class LessonService {
       return target.length > 0 && target.every((w: string) => solved.includes(w));
     }
 
+    if (type === 'LABEL_IMAGE') {
+      // Respuesta = etiquetas por punto (en orden); correcto si cada punto tiene la suya.
+      const labels = (activityData.options || []).map((o: any) => this.norm(String(o).split('::')[0]));
+      return labels.length > 0 && Array.isArray(answer) && labels.every((lbl: string, i: number) => this.norm(answer[i]) === lbl);
+    }
+
     if (type === 'FILL_BLANK' && Array.isArray(correct) && Array.isArray(answer)) {
       // Forma legada multi-hueco.
       return correct.every((c: string, i: number) => this.norm(answer[i]) === this.norm(c));
