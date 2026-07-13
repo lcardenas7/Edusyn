@@ -97,6 +97,27 @@ const INTERACTIVE_BLOCKS: { type: string; label: string }[] = [
 ]
 const INTERACTIVE_BLOCK_LABELS: Record<string, string> = Object.fromEntries(INTERACTIVE_BLOCKS.map(b => [b.type, b.label]))
 
+// Creación por INTENCIÓN pedagógica (no por herramienta). Paso 1 = intención,
+// paso 2 = mecánica (mapeada a los tipos/pseudo-tipos existentes). Ver
+// docs/EXPERIENCIAS_Y_MODULO_ACTIVIDADES.md §3.bis.
+const INTENTIONS: { key: string; label: string; emoji: string; hint: string; mechanics: { type: string; label: string }[] }[] = [
+  { key: 'aprender', label: 'Aprender', emoji: '📚', hint: 'Enseña un tema', mechanics: [
+    { type: 'LESSON', label: 'Lección Interactiva' },
+  ] },
+  { key: 'evaluar', label: 'Evaluar', emoji: '📝', hint: 'Mide conocimientos', mechanics: [
+    { type: 'QUIZ', label: 'Quiz' }, { type: 'EXAM', label: 'Examen' }, { type: 'LIVE_QUIZ', label: 'Live Quiz' },
+    { type: 'HOME_QUIZ', label: 'Quiz en Casa' }, { type: 'ICFES_SIMULATOR', label: 'Simulacro ICFES' },
+    { type: 'SELF_ASSESSMENT', label: 'Autoevaluación' },
+  ] },
+  { key: 'practicar', label: 'Practicar', emoji: '🎮', hint: 'Refuerza con juegos y ejercicios',
+    mechanics: INTERACTIVE_BLOCKS.map(b => ({ type: 'BLOCK_' + b.type, label: b.label })) },
+  { key: 'proyecto', label: 'Proyecto', emoji: '🚀', hint: 'Trabajo o entrega', mechanics: [
+    { type: 'TASK', label: 'Tarea / Entrega' },
+  ] },
+]
+const MECHANIC_LABEL = (type: string): string =>
+  INTENTIONS.flatMap(i => i.mechanics).find(m => m.type === type)?.label || 'Actividad'
+
 type TabKey = 'home' | 'announcements' | 'content' | 'activities' | 'routes' | 'forum' | 'students' | 'grades'
 
 const TEACHER_TABS: { key: TabKey; label: string; icon: any }[] = [
@@ -1929,6 +1950,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
   // Create form
   const [form, setForm] = useState({ title: '', description: '', sectionId: '', maxScore: '5.0', dueDate: '', allowLateSubmit: false, type: 'TASK' as string, shuffleQuestions: false, showResults: true, maxAttempts: '1', timeLimitMinutes: '' })
+  // Creación por intención: 'aprender'|'evaluar'|'practicar'|'proyecto' o null (paso 1).
+  const [intention, setIntention] = useState<string | null>(null)
   const [attachFile, setAttachFile] = useState<File | null>(null)
   const [creating, setCreating] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -5209,7 +5232,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             <button onClick={() => valeriaAssistantBridge.open(buildValeriaLaunchOptions())} className="flex items-center gap-2 px-4 py-2.5 bg-violet-100 text-violet-700 rounded-xl text-sm font-semibold hover:bg-violet-200 transition-colors" style={{ minHeight: '44px' }}>
               <Sparkles className="w-5 h-5" /> Valeria
             </button>
-            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
+            <button onClick={() => { setShowCreate(true); setIntention(null); setForm(f => ({ ...f, type: '' })) }} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
               <Plus className="w-5 h-5" /> Nueva Actividad
             </button>
           </div>
@@ -5470,33 +5493,49 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         <div className={`bg-white border-2 rounded-2xl p-6 space-y-4 ${isSelfAssessment(form.type) ? 'border-teal-200' : isQuizEditorType(form.type) ? 'border-purple-200' : 'border-blue-200'}`}>
           <h3 className="text-lg font-bold text-slate-800">Nueva Actividad</h3>
 
-          {/* Activity type selector */}
-          <div className="flex gap-2 flex-wrap">
-            {[{ value: 'TASK', label: 'Tarea', icon: ClipboardList, color: 'blue' }, { value: 'QUIZ', label: 'Quiz', icon: HelpCircle, color: 'purple' }, { value: 'EXAM', label: 'Examen', icon: Award, color: 'red' }, { value: 'LIVE_QUIZ', label: 'Live Quiz', icon: Zap, color: 'violet' }, { value: 'HOME_QUIZ', label: 'Quiz en Casa', icon: Home, color: 'pink' }, { value: 'ICFES_SIMULATOR', label: 'Simulacro ICFES', icon: BarChart3, color: 'emerald' }, { value: 'SELF_ASSESSMENT', label: 'Autoevaluación', icon: Sparkles, color: 'teal' }, { value: 'LESSON', label: 'Lección Interactiva', icon: BookOpen, color: 'violet' }].map(t => (
-              <button key={t.value} onClick={() => setForm({ ...form, type: t.value })} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${form.type === t.value ? (t.color === 'blue' ? 'border-blue-500 bg-blue-50 text-blue-700' : t.color === 'purple' ? 'border-purple-500 bg-purple-50 text-purple-700' : t.color === 'emerald' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : t.color === 'teal' ? 'border-teal-500 bg-teal-50 text-teal-700' : t.color === 'amber' ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-red-500 bg-red-50 text-red-700') : 'border-slate-200 text-slate-500 hover:border-slate-300'}`} style={{ minHeight: '44px' }}>
-                <t.icon className="w-5 h-5" /> {t.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Bloques interactivos — sueltos o dentro de una lección (misma mecánica) */}
-          <div>
-            <p className="text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5"><Puzzle className="w-3.5 h-3.5" /> Actividad interactiva</p>
-            <div className="flex gap-2 flex-wrap">
-              {INTERACTIVE_BLOCKS.map(b => {
-                const val = 'BLOCK_' + b.type
-                const active = form.type === val
-                return (
-                  <button key={b.type} onClick={() => setForm({ ...form, type: val })} className={`px-3 py-2 rounded-xl text-sm font-medium border-2 transition-all ${active ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-slate-200 text-slate-500 hover:border-amber-300'}`} style={{ minHeight: '40px' }}>
-                    {b.label}
-                  </button>
-                )
-              })}
+          {/* Creación por INTENCIÓN — paso 1 (intención) / paso 2 (mecánica), o cabecera si ya se eligió */}
+          {!form.type ? (
+            !intention ? (
+              <div>
+                <p className="text-sm font-medium text-slate-600 mb-2.5">¿Qué deseas construir?</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {INTENTIONS.map(it => (
+                    <button key={it.key} onClick={() => { setIntention(it.key); if (it.mechanics.length === 1) setForm(f => ({ ...f, type: it.mechanics[0].type })) }}
+                      className="flex flex-col items-start gap-0.5 p-4 rounded-2xl border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left">
+                      <span className="text-2xl mb-0.5">{it.emoji}</span>
+                      <span className="font-bold text-slate-800">{it.label}</span>
+                      <span className="text-xs text-slate-400">{it.hint}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <button onClick={() => { setIntention(null); setForm(f => ({ ...f, type: '' })) }} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-2.5">
+                  <ChevronLeft className="w-4 h-4" /> Cambiar intención
+                </button>
+                <p className="text-sm font-medium text-slate-600 mb-2.5">
+                  {INTENTIONS.find(i => i.key === intention)?.emoji} {INTENTIONS.find(i => i.key === intention)?.label} — elige una mecánica
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {INTENTIONS.find(i => i.key === intention)?.mechanics.map(m => (
+                    <button key={m.type} onClick={() => setForm({ ...form, type: m.type })}
+                      className={`px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${form.type === m.type ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-500 hover:border-blue-300'}`} style={{ minHeight: '44px' }}>
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          ) : (
+            <div className="flex items-center justify-between gap-2 pb-1">
+              <p className="text-sm font-semibold text-slate-700">{MECHANIC_LABEL(form.type)}</p>
+              <button onClick={() => { setForm(f => ({ ...f, type: '' })); setIntention(null) }} className="text-sm text-slate-500 hover:text-blue-600">Cambiar</button>
             </div>
-          </div>
+          )}
 
-          {/* Self-Assessment: delegate to specialized form */}
-          {isSelfAssessment(form.type) ? (
+          {/* Cuerpo del formulario — solo tras elegir una mecánica */}
+          {form.type && (isSelfAssessment(form.type) ? (
             <CreateSelfAssessmentForm
               classroomId={classroom.id}
               sectionId={form.sectionId || sections[0]?.id || ''}
@@ -5586,7 +5625,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             </div>
           </div>
           </>
-          )}
+          ))}
         </div>
       )}
 
