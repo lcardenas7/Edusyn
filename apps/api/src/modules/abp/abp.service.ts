@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { LearningIdentityService } from '../gamification/learning-identity.service';
 import { ABP_PHASE_COUNT, resolvePhaseConfig, ABP_BADGE_ON_PHASE, ABP_XP, CANVAS_CARDS, phaseCriteriaMet, ABP_COEVAL_CRITERIA, rubricFor } from './abp.constants';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -11,7 +12,18 @@ import { ABP_PHASE_COUNT, resolvePhaseConfig, ABP_BADGE_ON_PHASE, ABP_XP, CANVAS
 
 @Injectable()
 export class AbpService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly identity: LearningIdentityService,
+  ) {}
+
+  /** XP individual a la identidad de aprendizaje del alumno (idempotente, nunca rompe). */
+  private async awardStudentXp(institutionId: string, studentId: string | undefined, enrollmentId: string, amount: number, reason: string, key: string) {
+    if (!studentId || amount <= 0) return;
+    try {
+      await this.identity.grantXp({ institutionId, studentId, studentEnrollmentId: enrollmentId, source: 'ABP' as any, amount, reason, idempotencyKey: key });
+    } catch { /* la gamificación no puede romper el flujo del ABP */ }
+  }
 
   /** Valida que el aula exista en la institución y que el docente sea su dueño. */
   private async assertClassroomOwner(classroomId: string, institutionId: string, userId: string) {
@@ -200,7 +212,7 @@ export class AbpService {
       include: {
         members: {
           include: {
-            studentEnrollment: { include: { student: { select: { userId: true, user: { select: { firstName: true, lastName: true } } } } } },
+            studentEnrollment: { include: { student: { select: { id: true, userId: true, user: { select: { firstName: true, lastName: true } } } } } },
           },
         },
       },
@@ -214,12 +226,12 @@ export class AbpService {
     return team;
   }
 
-  /** El miembro (matrícula + nombre) que corresponde al usuario, o null si es docente. */
-  private memberOf(team: any, userId: string): { enrollmentId: string; name: string } | null {
+  /** El miembro (matrícula + nombre + studentId) que corresponde al usuario, o null si es docente. */
+  private memberOf(team: any, userId: string): { enrollmentId: string; name: string; studentId: string } | null {
     const m = (team.members || []).find((x: any) => x.studentEnrollment.student.userId === userId);
     if (!m) return null;
     const u = m.studentEnrollment.student.user;
-    return { enrollmentId: m.studentEnrollmentId, name: `${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim() || 'Estudiante' };
+    return { enrollmentId: m.studentEnrollmentId, studentId: m.studentEnrollment.student.id, name: `${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim() || 'Estudiante' };
   }
 
   // ─── FASE 1: Canvas del Problema ───────────────────────────────────────────
@@ -252,6 +264,7 @@ export class AbpService {
           data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 1, type: 'CANVAS_CARD', refId: String(cardIndex), detail: `Completó: ${CANVAS_CARDS[cardIndex].q}` },
         });
         await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.CANVAS_CARD } } });
+        await this.awardStudentXp(institutionId, me.studentId, me.enrollmentId, ABP_XP.CANVAS_CARD, 'ABP · tarjeta del reto', `abp:canvas:${teamId}:${cardIndex}:${me.enrollmentId}`);
       } catch { /* @@unique → ya contó, idempotente */ }
     }
     return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 1 } } });
@@ -281,6 +294,7 @@ export class AbpService {
           data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 2, type: 'IDEA', refId: idea.id, detail: t.slice(0, 80) },
         });
         await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.IDEA } } });
+        await this.awardStudentXp(institutionId, me.studentId, me.enrollmentId, ABP_XP.IDEA, 'ABP · idea publicada', `abp:idea:${idea.id}`);
       } catch { /* idempotente */ }
     }
     return this.getMyTeam(team.projectId, institutionId, userId);
@@ -317,6 +331,7 @@ export class AbpService {
     idea.votes = (idea.votes || 0) + 1;
     await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 2 } }, data: { data } });
     await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.VOTE } } });
+    await this.awardStudentXp(institutionId, me.studentId, me.enrollmentId, ABP_XP.VOTE, 'ABP · voto emitido', `abp:vote:${ideaId}:${me.enrollmentId}`);
     return this.getMyTeam(team.projectId, institutionId, userId);
   }
 
@@ -380,6 +395,8 @@ export class AbpService {
           data: { institutionId, teamId, studentEnrollmentId: task.owner, phase: 4, type: 'TASK_DONE', refId: taskId, detail: `Terminó: ${String(task.text).slice(0, 60)}` },
         });
         await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.TASK_DONE } } });
+        const ownerStudentId = (team.members as any[]).find(m => m.studentEnrollmentId === task.owner)?.studentEnrollment.student.id;
+        await this.awardStudentXp(institutionId, ownerStudentId, task.owner, ABP_XP.TASK_DONE, 'ABP · tarea terminada', `abp:task:${taskId}`);
       } catch { /* idempotente */ }
     }
     return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 4 } } });
@@ -421,6 +438,7 @@ export class AbpService {
           data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 5, type: 'EVIDENCE', refId: ev.id, detail: ev.label.slice(0, 80) },
         });
         await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.EVIDENCE } } });
+        await this.awardStudentXp(institutionId, me.studentId, me.enrollmentId, ABP_XP.EVIDENCE, 'ABP · evidencia subida', `abp:evidence:${ev.id}`);
       } catch { /* idempotente */ }
     }
     return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 5 } } });
@@ -575,6 +593,15 @@ export class AbpService {
         badges: badge && !vr.team.badges.includes(badge) ? { set: [...vr.team.badges, badge] } : undefined,
       },
     });
+    // Hito de equipo: XP individual a cada integrante por la fase validada.
+    const memberXp = Math.round(ABP_XP.PHASE_VALIDATED / 2);
+    const members = await this.prisma.abpTeamMember.findMany({
+      where: { teamId: vr.teamId },
+      select: { studentEnrollmentId: true, studentEnrollment: { select: { studentId: true } } },
+    });
+    for (const m of members) {
+      await this.awardStudentXp(institutionId, m.studentEnrollment.studentId, m.studentEnrollmentId, memberXp, `ABP · Fase ${vr.phase} validada`, `abp:phase:${vr.teamId}:${vr.phase}:${m.studentEnrollmentId}`);
+    }
     return this.prisma.abpValidationRequest.update({
       where: { id: vr.id },
       data: { status: 'APPROVED', resolvedAt: now, rubricScores: scores.slice(0, criteria.length), rubricComment: (rubricComment || '').trim() || null },
