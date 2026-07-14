@@ -38,6 +38,7 @@ import { PedagogicalDesignModule } from './modules/pedagogical-design/pedagogica
 import { ClassroomModule } from './modules/classroom/classroom.module';
 import { GamificationModule } from './modules/gamification/gamification.module';
 import { LearningRouteModule } from './modules/learning-route/learning-route.module';
+import { AbpModule } from './modules/abp/abp.module';
 import { LiveSessionModule } from './modules/live-session/live-session.module';
 import { StaffLeaveModule } from './modules/staff-leave/staff-leave.module';
 import { EdusynPlayModule } from './modules/edusyn-play/edusyn-play.module';
@@ -87,6 +88,7 @@ import { TenantGuard } from './modules/auth/guards/tenant.guard';
     ClassroomModule,
     GamificationModule,
     LearningRouteModule,
+    AbpModule,
     LiveSessionModule,
     StaffLeaveModule,
     EdusynPlayModule,
