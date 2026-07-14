@@ -2551,7 +2551,10 @@ export const abpApi = {
   coeval: (teamId: string, targetTeamId: string, scores: number[]) => api.post<any>(`/abp/teams/${teamId}/coeval`, { targetTeamId, scores }),
   requestValidation: (teamId: string) => api.post<any>(`/abp/teams/${teamId}/request-validation`, {}),
   queue: (classroomId?: string) => api.get<any[]>(`/abp/queue`, { params: { classroomId } }),
-  resolve: (validationId: string, data: { action: 'approve' | 'return'; feedback?: string }) => api.post<any>(`/abp/validations/${validationId}/resolve`, data),
+  resolve: (validationId: string, data: { action: 'approve' | 'return'; feedback?: string; rubricScores?: number[]; rubricComment?: string }) => api.post<any>(`/abp/validations/${validationId}/resolve`, data),
+  getReview: (validationId: string) => api.get<any>(`/abp/validations/${validationId}/review`),
+  addComment: (teamId: string, data: { phase: number; refType: string; refId?: string; content: string; parentId?: string }) => api.post<any>(`/abp/teams/${teamId}/comments`, data),
+  resolveComment: (commentId: string, resolved: boolean) => api.post<any>(`/abp/comments/${commentId}/resolve`, { resolved }),
 }
 
 export const learningRouteApi = {

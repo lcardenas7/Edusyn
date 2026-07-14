@@ -49,6 +49,21 @@ export const ABP_BADGE_ON_PHASE: Record<number, string> = {
   6: '🏆 Expedición completa',
 };
 
+// Rúbrica de cierre del DOCENTE por fase (3 criterios, escala 1–4). Defaults sensatos;
+// personalizables por proyecto vía phaseConfig.rubrics[phase].
+export const ABP_RUBRICS: Record<number, string[]> = {
+  1: ['Claridad del problema', 'Relevancia para la comunidad', 'Profundidad del análisis'],
+  2: ['Variedad de ideas', 'Creatividad', 'Proceso de selección'],
+  3: ['Especificidad', 'Medible y con plazo', 'Alineación al reto'],
+  4: ['Reparto de tareas', 'Viabilidad de la solución', 'Cumplimiento'],
+  5: ['Calidad de la solución', 'Evidencia del proceso', 'Presentación'],
+  6: ['Comunicación', 'Reflexión', 'Coevaluación justa'],
+};
+export function rubricFor(phase: number, phaseConfig: any): string[] {
+  const custom = phaseConfig?.rubrics?.[phase];
+  return Array.isArray(custom) && custom.length ? custom : (ABP_RUBRICS[phase] || []);
+}
+
 // Fase 6 — Rúbrica de coevaluación (cada equipo evalúa a los demás, escala 1–4).
 export const ABP_COEVAL_CRITERIA = [
   'Claridad de la presentación',

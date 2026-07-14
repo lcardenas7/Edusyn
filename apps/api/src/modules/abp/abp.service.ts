@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ABP_PHASE_COUNT, resolvePhaseConfig, ABP_BADGE_ON_PHASE, ABP_XP, CANVAS_CARDS, phaseCriteriaMet, ABP_COEVAL_CRITERIA } from './abp.constants';
+import { ABP_PHASE_COUNT, resolvePhaseConfig, ABP_BADGE_ON_PHASE, ABP_XP, CANVAS_CARDS, phaseCriteriaMet, ABP_COEVAL_CRITERIA, rubricFor } from './abp.constants';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EXPEDICIÓN ABP — servicio. Ticket 1: crear proyecto, roster, armar equipos.
@@ -525,9 +525,9 @@ export class AbpService {
     return requests;
   }
 
-  /** Docente resuelve una validación: aprueba (desbloquea siguiente + XP + insignia)
-   * o devuelve con retroalimentación (la fase vuelve a en curso mostrando el comentario). */
-  async resolveValidation(validationId: string, institutionId: string, userId: string, action: 'approve' | 'return', feedback?: string) {
+  /** Docente resuelve una validación: aprueba (rúbrica OBLIGATORIA → desbloquea siguiente +
+   * XP + insignia) o devuelve con retroalimentación (la fase vuelve a en curso). */
+  async resolveValidation(validationId: string, institutionId: string, userId: string, action: 'approve' | 'return', feedback?: string, rubricScores?: number[], rubricComment?: string) {
     const vr = await this.prisma.abpValidationRequest.findFirst({
       where: { id: validationId, institutionId, status: 'PENDING' },
       include: { team: { select: { id: true, projectId: true, currentPhase: true, xp: true, badges: true } } },
@@ -546,7 +546,14 @@ export class AbpService {
       });
     }
 
-    // approve
+    // approve — rúbrica obligatoria: todos los criterios de la fase puntuados 1–4.
+    const project = await this.prisma.abpProject.findUnique({ where: { id: vr.team.projectId }, select: { phaseConfig: true } });
+    const criteria = rubricFor(vr.phase, project?.phaseConfig);
+    const scores = (Array.isArray(rubricScores) ? rubricScores : []).map(n => Math.round(Number(n)));
+    if (scores.length < criteria.length || scores.some(n => !(n >= 1 && n <= 4))) {
+      throw new BadRequestException('Puntúa los criterios de la rúbrica (1–4) para aprobar');
+    }
+
     const now = new Date();
     await this.prisma.abpPhaseState.update({
       where: { teamId_phase: { teamId: vr.teamId, phase: vr.phase } },
@@ -569,8 +576,128 @@ export class AbpService {
       },
     });
     return this.prisma.abpValidationRequest.update({
-      where: { id: vr.id }, data: { status: 'APPROVED', resolvedAt: now },
+      where: { id: vr.id },
+      data: { status: 'APPROVED', resolvedAt: now, rubricScores: scores.slice(0, criteria.length), rubricComment: (rubricComment || '').trim() || null },
     });
+  }
+
+  // ─── PANTALLA DE REVISIÓN + COMENTARIOS (Ticket 9) ─────────────────────────
+
+  /** Descripción legible de los criterios automáticos de una fase (met + label). */
+  private criteriaDetails(phase: number, data: any, config: any, memberIds: string[]): { label: string; met: boolean }[] {
+    const d = data || {};
+    if (phase === 1) {
+      const filled = (d.canvas || []).filter((c: any) => c && String(c.value || '').trim()).length;
+      return [{ label: `Tarjetas completas ${filled}/${config.minCanvasCards}`, met: filled >= config.minCanvasCards }];
+    }
+    if (phase === 2) {
+      const ideas = d.ideas || []; const votes = ideas.reduce((s: number, i: any) => s + (i.votes || 0), 0);
+      const min = config.minIdeasPerMember * (memberIds.length || 1);
+      return [
+        { label: `Ideas ${ideas.length}/${min}`, met: ideas.length >= min },
+        { label: `Votos emitidos ${votes}`, met: votes >= (memberIds.length || 1) },
+      ];
+    }
+    if (phase === 3) {
+      const s = d.smart || {}; const ck = (s.checks || []).filter(Boolean).length;
+      return [
+        { label: `Criterios SMART ${ck}/${config.smartCriteria}`, met: ck >= config.smartCriteria },
+        { label: 'Objetivo redactado', met: String(s.text || '').trim().length >= config.minObjectiveLength },
+      ];
+    }
+    if (phase === 4) {
+      const tasks = d.tasks || []; const done = tasks.filter((t: any) => t.col === 2).length;
+      const owners = new Set(tasks.map((t: any) => t.owner));
+      return [
+        { label: `Tareas terminadas ${done}/${tasks.length}`, met: tasks.length > 0 && done === tasks.length },
+        { label: 'Cada integrante con tarea', met: memberIds.length > 0 && memberIds.every(id => owners.has(id)) },
+      ];
+    }
+    if (phase === 5) {
+      const ev = d.evidences || [];
+      return [{ label: `Evidencias ${ev.length}/${config.minEvidences}`, met: ev.length >= config.minEvidences }];
+    }
+    if (phase === 6) {
+      const co = Object.keys(d.coevals || {}).length;
+      return [{ label: `Equipos coevaluados ${co}`, met: true }];
+    }
+    return [];
+  }
+
+  /** Payload para la pantalla de revisión del docente (una validación pendiente). */
+  async getReview(validationId: string, institutionId: string, userId: string) {
+    const vr = await this.prisma.abpValidationRequest.findFirst({
+      where: { id: validationId, institutionId },
+      include: { team: { include: { ...this.teamInclude(), project: { select: { id: true, title: true, phaseConfig: true } } } } },
+    });
+    if (!vr) throw new NotFoundException('Solicitud no encontrada');
+    await this.assertProjectOwner(vr.team.projectId, institutionId, userId);
+    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId: vr.teamId, phase: vr.phase } } });
+    const config = resolvePhaseConfig(vr.team.project?.phaseConfig);
+    const memberIds = (vr.team.members as any[]).map(m => m.studentEnrollmentId);
+    const comments = await this.listComments(vr.teamId, vr.phase, institutionId, userId);
+    return {
+      validationId: vr.id,
+      status: vr.status,
+      team: { id: vr.team.id, name: vr.team.name, emoji: vr.team.emoji, color: vr.team.color, problem: vr.team.problem, members: (vr.team.members as any[]).map(m => this.memberName(m)) },
+      phase: vr.phase,
+      phaseData: ps?.data ?? {},
+      phaseStatus: ps?.status,
+      startedAt: ps?.startedAt, submittedAt: ps?.submittedAt,
+      criteria: this.criteriaDetails(vr.phase, ps?.data, config, memberIds),
+      rubricCriteria: rubricFor(vr.phase, vr.team.project?.phaseConfig),
+      comments,
+    };
+  }
+
+  private memberName(m: any): string {
+    const u = m.studentEnrollment?.student?.user;
+    return `${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim() || 'Integrante';
+  }
+
+  /** Comentarios de una fase (docente ↔ equipo). Docente dueño o miembro. */
+  async listComments(teamId: string, phase: number, institutionId: string, userId: string) {
+    await this.loadTeamForUser(teamId, institutionId, userId);
+    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase } }, select: { id: true } });
+    if (!ps) return [];
+    return this.prisma.abpComment.findMany({
+      where: { phaseStateId: ps.id, institutionId },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, refType: true, refId: true, authorName: true, authorRole: true, content: true, resolved: true, parentId: true, createdAt: true },
+    });
+  }
+
+  /** Agrega un comentario (docente o estudiante). Autor dual: estudiante o docente. */
+  async addComment(teamId: string, institutionId: string, userId: string, phase: number, refType: string, refId: string | null, content: string, parentId?: string) {
+    const c = (content || '').trim();
+    if (!c) throw new BadRequestException('El comentario no puede estar vacío');
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase } }, select: { id: true } });
+    if (!ps) throw new NotFoundException('Fase no encontrada');
+    const me = this.memberOf(team, userId);
+    const isTeacher = !me;
+    return this.prisma.abpComment.create({
+      data: {
+        institutionId, teamId, phaseStateId: ps.id,
+        refType: (['CANVAS_CARD', 'IDEA', 'TASK', 'EVIDENCE', 'COEVAL', 'PHASE'].includes(refType) ? refType : 'PHASE') as any,
+        refId: refId || null,
+        authorStudentEnrollmentId: me?.enrollmentId ?? null,
+        authorUserId: isTeacher ? userId : null,
+        authorName: me?.name ?? 'Docente',
+        authorRole: isTeacher ? 'DOCENTE' : 'ESTUDIANTE',
+        content: c,
+        parentId: parentId || null,
+      },
+      select: { id: true, refType: true, refId: true, authorName: true, authorRole: true, content: true, resolved: true, parentId: true, createdAt: true },
+    });
+  }
+
+  /** Marca un comentario como resuelto / sin resolver. */
+  async resolveComment(commentId: string, institutionId: string, userId: string, resolved: boolean) {
+    const cm = await this.prisma.abpComment.findFirst({ where: { id: commentId, institutionId }, select: { id: true, teamId: true } });
+    if (!cm) throw new NotFoundException('Comentario no encontrado');
+    await this.loadTeamForUser(cm.teamId, institutionId, userId);
+    return this.prisma.abpComment.update({ where: { id: commentId }, data: { resolved }, select: { id: true, resolved: true } });
   }
 
   private teamInclude() {

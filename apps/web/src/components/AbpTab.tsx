@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Rocket, Plus, Trash2, Check, Clock, Lock, Loader2, Users, Send, ChevronLeft, Paperclip, Link2 } from 'lucide-react'
 import { abpApi, classroomApi } from '../lib/api'
+import AbpReview from './AbpReview'
 
 // Metadatos de las 6 fases (nombre + icono). El motor real vive en el backend.
 const PHASES = [
@@ -554,6 +555,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
   const [project, setProject] = useState<any>(null)
   const [queue, setQueue] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [reviewingId, setReviewingId] = useState<string | null>(null)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -563,6 +565,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
   }, [projectId, classroomId])
   useEffect(() => { load() }, [load])
 
+  if (reviewingId) return <AbpReview validationId={reviewingId} onClose={(changed) => { setReviewingId(null); if (changed) load() }} />
   if (loading) return <Loading />
 
   return (
@@ -574,7 +577,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
       {queue.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <h4 className="font-bold text-slate-800 mb-3">🔔 Validaciones pendientes ({queue.length})</h4>
-          <div className="space-y-3">{queue.map(q => <QueueItem key={q.id} q={q} onDone={load} />)}</div>
+          <div className="space-y-3">{queue.map(q => <QueueItem key={q.id} q={q} onReview={setReviewingId} />)}</div>
         </div>
       )}
 
@@ -601,27 +604,13 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
   )
 }
 
-function QueueItem({ q, onDone }: { q: any; onDone: () => void }) {
-  const [returning, setReturning] = useState(false)
-  const [fb, setFb] = useState('')
-  const [busy, setBusy] = useState(false)
-  const resolve = async (action: 'approve' | 'return') => {
-    setBusy(true)
-    try { await abpApi.resolve(q.id, { action, feedback: action === 'return' ? fb : undefined }); onDone() } finally { setBusy(false) }
-  }
+function QueueItem({ q, onReview }: { q: any; onReview: (id: string) => void }) {
   return (
-    <div className="border-2 border-slate-200 rounded-xl p-4">
-      <p className="text-sm text-slate-700"><b>{q.team?.emoji} {q.team?.name}</b> solicita desbloquear la <b>Fase {q.phase + 1}</b> ({phaseName(q.phase)} lista)</p>
-      <div className="flex gap-2 mt-3 flex-wrap">
-        <button onClick={() => resolve('approve')} disabled={busy} className="px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg disabled:opacity-50">✅ Aprobar y desbloquear</button>
-        <button onClick={() => setReturning(v => !v)} className="px-4 py-2 bg-rose-50 text-rose-600 text-sm font-semibold rounded-lg">↩ Devolver</button>
+    <div className="border-2 border-slate-200 rounded-xl p-4 flex items-center gap-3 flex-wrap">
+      <div className="flex-1 min-w-[200px]">
+        <p className="text-sm text-slate-700"><b>{q.team?.emoji} {q.team?.name}</b> solicita validar la <b>Fase {q.phase}: {phaseName(q.phase)}</b></p>
       </div>
-      {returning && (
-        <div className="mt-3">
-          <textarea value={fb} onChange={e => setFb(e.target.value)} placeholder="Retroalimentación para el equipo…" rows={2} className="w-full border-2 border-slate-200 rounded-lg px-3 py-2 text-sm" />
-          <button onClick={() => resolve('return')} disabled={busy} className="mt-2 px-4 py-2 bg-rose-600 text-white text-sm font-semibold rounded-lg disabled:opacity-50">Enviar devolución</button>
-        </div>
-      )}
+      <button onClick={() => onReview(q.id)} className="px-4 py-2 bg-violet-600 text-white text-sm font-semibold rounded-lg hover:bg-violet-700">Revisar y decidir →</button>
     </div>
   )
 }

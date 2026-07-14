@@ -188,11 +188,41 @@ export class AbpController {
     return this.service.getQueue(institutionId, userId, classroomId);
   }
 
-  // Docente aprueba o devuelve una validación.
+  // Docente aprueba (rúbrica obligatoria) o devuelve una validación.
   @Post('validations/:validationId/resolve')
   @Roles('DOCENTE', 'COORDINADOR')
-  async resolveValidation(@Param('validationId') validationId: string, @Request() req: any, @Body() body: { action: 'approve' | 'return'; feedback?: string }) {
+  async resolveValidation(@Param('validationId') validationId: string, @Request() req: any, @Body() body: { action: 'approve' | 'return'; feedback?: string; rubricScores?: number[]; rubricComment?: string }) {
     const { institutionId, userId } = await this.ctx(req);
-    return this.service.resolveValidation(validationId, institutionId, userId, body.action, body.feedback);
+    return this.service.resolveValidation(validationId, institutionId, userId, body.action, body.feedback, body.rubricScores, body.rubricComment);
+  }
+
+  // Pantalla de revisión del docente (trabajo + criterios + rúbrica + comentarios).
+  @Get('validations/:validationId/review')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async getReview(@Param('validationId') validationId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.getReview(validationId, institutionId, userId);
+  }
+
+  // ─── Comentarios en línea ──────────────────────────────────────────────────
+  @Get('teams/:teamId/comments')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async listComments(@Param('teamId') teamId: string, @Query('phase') phase: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.listComments(teamId, parseInt(phase, 10), institutionId, userId);
+  }
+
+  @Post('teams/:teamId/comments')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async addComment(@Param('teamId') teamId: string, @Request() req: any, @Body() body: { phase: number; refType: string; refId?: string; content: string; parentId?: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addComment(teamId, institutionId, userId, body.phase, body.refType, body.refId ?? null, body.content, body.parentId);
+  }
+
+  @Post('comments/:commentId/resolve')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async resolveComment(@Param('commentId') commentId: string, @Request() req: any, @Body() body: { resolved: boolean }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.resolveComment(commentId, institutionId, userId, body.resolved);
   }
 }
