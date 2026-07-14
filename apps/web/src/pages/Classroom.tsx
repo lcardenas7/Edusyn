@@ -97,6 +97,7 @@ const INTERACTIVE_BLOCKS: { type: string; label: string; standalone?: boolean }[
   { type: 'CROSSWORD', label: 'Crucigrama', standalone: true },
   { type: 'MEMORY', label: 'Memory', standalone: true },
   { type: 'LABEL_IMAGE', label: 'Etiquetar imagen', standalone: true },
+  { type: 'PUZZLE', label: 'Rompecabezas', standalone: true },
   { type: 'FLASHCARDS', label: 'Flashcards', standalone: true },
 ]
 const INTERACTIVE_BLOCK_LABELS: Record<string, string> = Object.fromEntries(INTERACTIVE_BLOCKS.map(b => [b.type, b.label]))

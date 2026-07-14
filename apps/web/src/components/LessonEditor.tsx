@@ -69,11 +69,12 @@ const BLOCK_LABELS: Record<string, string> = {
   MULTIPLE_CHOICE: 'Opción múltiple', TRUE_FALSE: 'Verdadero / Falso', SHORT_ANSWER: 'Respuesta corta',
   FILL_BLANK: 'Completar', ORDERING: 'Ordenar palabras', MATCHING: 'Emparejar', FLASHCARDS: 'Flashcards',
   LISTENING: 'Escuchar y elegir', WORDSEARCH: 'Sopa de letras', CROSSWORD: 'Crucigrama', MEMORY: 'Memory',
-  LABEL_IMAGE: 'Etiquetar imagen',
+  LABEL_IMAGE: 'Etiquetar imagen', PUZZLE: 'Rompecabezas',
 }
 // Opciones por defecto al sembrar un bloque suelto según su tipo.
 function defaultBlockOptions(type: string): string[] {
   if (type === 'MATCHING' || type === 'FLASHCARDS' || type === 'CROSSWORD' || type === 'MEMORY') return ['::', '::']
+  if (type === 'PUZZLE') return ['3'] // tamaño de rejilla N×N
   if (type === 'ORDERING' || type === 'SHORT_ANSWER' || type === 'FILL_BLANK' || type === 'LABEL_IMAGE') return []
   return ['', '', '', ''] // MCQ / TRUE_FALSE / LISTENING / WORDSEARCH
 }
@@ -765,6 +766,7 @@ export default function LessonEditor({
                 <option value="CROSSWORD">Crucigrama</option>
                 <option value="MEMORY">Memory (parejas)</option>
                 <option value="LABEL_IMAGE">Etiquetar sobre imagen</option>
+                <option value="PUZZLE">Rompecabezas</option>
               </select>
             </div>
             <div>
@@ -775,6 +777,7 @@ export default function LessonEditor({
                   : slide.activityData.questionType === 'CROSSWORD' ? 'Instrucción'
                   : slide.activityData.questionType === 'MEMORY' ? 'Instrucción'
                   : slide.activityData.questionType === 'LABEL_IMAGE' ? 'Instrucción'
+                  : slide.activityData.questionType === 'PUZZLE' ? 'Instrucción'
                   : 'Pregunta'}
               </label>
               <textarea
@@ -789,6 +792,7 @@ export default function LessonEditor({
                   : slide.activityData.questionType === 'CROSSWORD' ? 'Resuelve el crucigrama con las pistas'
                   : slide.activityData.questionType === 'MEMORY' ? 'Encuentra todas las parejas'
                   : slide.activityData.questionType === 'LABEL_IMAGE' ? 'Arrastra cada etiqueta a su lugar'
+                  : slide.activityData.questionType === 'PUZZLE' ? 'Arma la imagen'
                   : '¿Cuál es...?'
                 }
                 rows={2}
@@ -1202,6 +1206,42 @@ export default function LessonEditor({
                 </div>
               )
             })()}
+
+            {/* PUZZLE — imagen + dificultad N×N (options[0] = N) */}
+            {slide.activityData.questionType === 'PUZZLE' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-slate-500 mb-1 block">Imagen (URL)</label>
+                  <input
+                    value={slide.activityData.imageUrl}
+                    onChange={e => updateActivityData(index, { imageUrl: e.target.value })}
+                    placeholder="https://… (paisaje, obra de arte, diagrama…)"
+                    className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 mb-1 block">Dificultad</label>
+                  <div className="flex gap-2">
+                    {[2, 3, 4].map(nn => {
+                      const active = (parseInt(slide.activityData.options[0] || '3') || 3) === nn
+                      return (
+                        <button key={nn} onClick={() => updateActivityData(index, { options: [String(nn)] })}
+                          className={`px-3 py-1.5 rounded-lg border text-sm font-medium ${active ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-slate-200 text-slate-500 hover:border-violet-300'}`}>
+                          {nn}×{nn}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+                {slide.activityData.imageUrl ? (
+                  <div className="inline-block border border-slate-200 rounded-lg overflow-hidden">
+                    <img src={slide.activityData.imageUrl} alt="" className="block max-w-full max-h-56" draggable={false} />
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400">Pega la URL de una imagen; se partirá en piezas automáticamente y el alumno la arma.</p>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>

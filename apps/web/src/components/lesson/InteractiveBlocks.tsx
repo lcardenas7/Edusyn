@@ -814,6 +814,67 @@ function LabelImageBlock({ act, value, onChange, showResult }: BlockProps) {
   )
 }
 
+// ─── Rompecabezas — PUZZLE (armar la imagen) ───────────────────────────────
+// Imagen (act.imageUrl) partida en rejilla N×N (options[0]=N). Se baraja; el alumno
+// intercambia piezas hasta reconstruirla. value = arreglo actual; resuelto = identidad.
+function PuzzleBlock({ act, value, onChange, showResult }: BlockProps) {
+  const n = parseInt(act.options?.[0] || '3') || 3
+  const total = n * n
+  const [arr, setArr] = useState<number[]>(() => {
+    if (Array.isArray(value) && value.length === total) return [...value]
+    let a = shuffle(Array.from({ length: total }, (_, i) => i))
+    let tries = 0
+    while (a.every((v, i) => v === i) && tries++ < 6) a = shuffle(a)
+    return a
+  })
+  const [sel, setSel] = useState<number | null>(null)
+
+  if (!act.imageUrl) return <p className="text-ink-muted text-sm">Añade una imagen para armar el rompecabezas.</p>
+
+  const shown = showResult ? Array.from({ length: total }, (_, i) => i) : arr
+  const solved = shown.every((v, i) => v === i)
+
+  const clickPos = (pos: number) => {
+    if (showResult) return
+    if (sel === null) { setSel(pos); return }
+    if (sel === pos) { setSel(null); return }
+    const next = [...arr]
+    const tmp = next[sel]; next[sel] = next[pos]; next[pos] = tmp
+    setArr(next); setSel(null); onChange(next)
+  }
+
+  return (
+    <div>
+      <div
+        className="grid gap-0.5 mx-auto rounded-xl overflow-hidden border border-hairline"
+        style={{ gridTemplateColumns: `repeat(${n}, 1fr)`, width: 'min(100%, 360px)', aspectRatio: '1 / 1' }}
+      >
+        {shown.map((tile, pos) => {
+          const r = Math.floor(tile / n), c = tile % n
+          return (
+            <button
+              key={pos}
+              onClick={() => clickPos(pos)}
+              disabled={showResult}
+              className={`aspect-square transition-all ${sel === pos ? 'ring-4 ring-accent ring-inset z-10' : ''} ${!showResult && !solved ? 'hover:brightness-110' : ''}`}
+              style={{
+                backgroundImage: `url(${act.imageUrl})`,
+                backgroundSize: `${n * 100}% ${n * 100}%`,
+                backgroundPosition: `${n > 1 ? (c / (n - 1)) * 100 : 0}% ${n > 1 ? (r / (n - 1)) * 100 : 0}%`,
+              }}
+            />
+          )
+        })}
+      </div>
+      {!showResult && (
+        <p className="text-ink-muted text-sm mt-3 text-center">
+          {solved ? '¡Completo! Pulsa Comprobar.' : 'Toca dos piezas para intercambiarlas.'}
+        </p>
+      )}
+    </div>
+  )
+}
+
 // ─── Switch por tipo → bloque puro ─────────────────────────────────────────
 export function BlockRenderer(props: BlockProps) {
   switch (props.act.questionType) {
@@ -837,6 +898,8 @@ export function BlockRenderer(props: BlockProps) {
       return <MemoryBlock {...props} />
     case 'LABEL_IMAGE':
       return <LabelImageBlock {...props} />
+    case 'PUZZLE':
+      return <PuzzleBlock {...props} />
     case 'MULTIPLE_CHOICE':
     case 'TRUE_FALSE':
     default:

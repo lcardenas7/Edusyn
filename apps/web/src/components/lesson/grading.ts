@@ -69,6 +69,11 @@ export function isAnswerComplete(act: ActivityData, value: any): boolean {
       const n = parseHotspots(act.options).length
       return n > 0 && Array.isArray(value) && value.filter(v => v).length >= n
     }
+    case 'PUZZLE': {
+      // Completa = resuelto: cada pieza en su lugar (arreglo identidad).
+      const n = parseInt(act.options?.[0] || '3') || 3
+      return Array.isArray(value) && value.length === n * n && value.every((v: number, i: number) => v === i)
+    }
     default:
       return value !== null && value !== undefined && value !== ''
   }
@@ -100,6 +105,11 @@ export function gradeAnswer(act: ActivityData, value: any): boolean {
       // Correcto = cada punto (en orden) tiene su etiqueta correcta.
       const spots = parseHotspots(act.options)
       return spots.length > 0 && Array.isArray(value) && spots.every((h, i) => norm(value[i]) === norm(h.label))
+    }
+    case 'PUZZLE': {
+      // Correcto = resuelto: cada pieza en su posición (arreglo identidad).
+      const n = parseInt(act.options?.[0] || '3') || 3
+      return Array.isArray(value) && value.length === n * n && value.every((v: number, i: number) => v === i)
     }
     default:
       return norm(value) === norm(act.correctAnswer)

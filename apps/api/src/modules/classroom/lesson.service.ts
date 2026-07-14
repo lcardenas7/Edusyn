@@ -768,6 +768,12 @@ export class LessonService {
       return labels.length > 0 && Array.isArray(answer) && labels.every((lbl: string, i: number) => this.norm(answer[i]) === lbl);
     }
 
+    if (type === 'PUZZLE') {
+      // Respuesta = arreglo de piezas; correcto = resuelto (identidad, tamaño N*N).
+      const n = parseInt((activityData.options?.[0]) || '3') || 3;
+      return Array.isArray(answer) && answer.length === n * n && answer.every((v: number, i: number) => v === i);
+    }
+
     if (type === 'FILL_BLANK' && Array.isArray(correct) && Array.isArray(answer)) {
       // Forma legada multi-hueco.
       return correct.every((c: string, i: number) => this.norm(answer[i]) === this.norm(c));
