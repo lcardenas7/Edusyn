@@ -80,21 +80,24 @@ interface Announcement {
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316']
 
-// Bloques interactivos: pueden vivir sueltos (actividad tipo GAME) o dentro de una lección.
+// Bloques interactivos. `standalone` = puede crearse como actividad SUELTA (tipo GAME).
+// Los tipos de PREGUNTA (MCQ, V/F, respuesta corta, completar, ordenar, emparejar, escuchar)
+// NO son sueltos: viven dentro de un quiz o una lección. Sueltos = juegos autocontenidos
+// (sopa, crucigrama, memory, etiquetar) + Flashcards (mecánica de estudio).
 // El pseudo-tipo del selector es 'BLOCK_<TYPE>'; se guarda como GAME + metadata.gameType=<TYPE>.
-const INTERACTIVE_BLOCKS: { type: string; label: string }[] = [
+const INTERACTIVE_BLOCKS: { type: string; label: string; standalone?: boolean }[] = [
   { type: 'MULTIPLE_CHOICE', label: 'Opción múltiple' },
   { type: 'TRUE_FALSE', label: 'Verdadero / Falso' },
   { type: 'SHORT_ANSWER', label: 'Respuesta corta' },
   { type: 'FILL_BLANK', label: 'Completar' },
   { type: 'ORDERING', label: 'Ordenar' },
   { type: 'MATCHING', label: 'Emparejar' },
-  { type: 'FLASHCARDS', label: 'Flashcards' },
   { type: 'LISTENING', label: 'Escuchar y elegir' },
-  { type: 'WORDSEARCH', label: 'Sopa de letras' },
-  { type: 'CROSSWORD', label: 'Crucigrama' },
-  { type: 'MEMORY', label: 'Memory' },
-  { type: 'LABEL_IMAGE', label: 'Etiquetar imagen' },
+  { type: 'WORDSEARCH', label: 'Sopa de letras', standalone: true },
+  { type: 'CROSSWORD', label: 'Crucigrama', standalone: true },
+  { type: 'MEMORY', label: 'Memory', standalone: true },
+  { type: 'LABEL_IMAGE', label: 'Etiquetar imagen', standalone: true },
+  { type: 'FLASHCARDS', label: 'Flashcards', standalone: true },
 ]
 const INTERACTIVE_BLOCK_LABELS: Record<string, string> = Object.fromEntries(INTERACTIVE_BLOCKS.map(b => [b.type, b.label]))
 
@@ -110,8 +113,8 @@ const INTENTIONS: { key: string; label: string; emoji: string; hint: string; mec
     { type: 'HOME_QUIZ', label: 'Quiz en Casa' }, { type: 'ICFES_SIMULATOR', label: 'Simulacro ICFES' },
     { type: 'SELF_ASSESSMENT', label: 'Autoevaluación' },
   ] },
-  { key: 'practicar', label: 'Practicar', emoji: '🎮', hint: 'Refuerza con juegos y ejercicios',
-    mechanics: INTERACTIVE_BLOCKS.map(b => ({ type: 'BLOCK_' + b.type, label: b.label })) },
+  { key: 'practicar', label: 'Practicar', emoji: '🎮', hint: 'Juegos y repaso autocontenidos',
+    mechanics: INTERACTIVE_BLOCKS.filter(b => b.standalone).map(b => ({ type: 'BLOCK_' + b.type, label: b.label })) },
   { key: 'proyecto', label: 'Proyecto', emoji: '🚀', hint: 'Trabajo o entrega', mechanics: [
     { type: 'TASK', label: 'Tarea / Entrega' },
   ] },
