@@ -114,6 +114,31 @@ export function phaseCriteriaMet(phase: number, data: any, config: AbpPhaseConfi
   return true; // fase 6: sin criterio automático (coevaluación, permisivo)
 }
 
+// Herramienta signature de cada fase (se convierte en la actividad de la misión por defecto).
+export const PHASE_TOOL: Record<number, string> = {
+  1: 'CANVAS', 2: 'IDEAS', 3: 'SMART', 4: 'KANBAN', 5: 'EVIDENCE', 6: 'COEVAL',
+};
+
+// Plantillas de misiones por fase (V1). La 1ª de cada fase es la misión-herramienta
+// (Opción A). El docente puede editar/borrar/agregar; en V2 Valeria las genera por equipo.
+export interface MissionTemplate { title: string; description?: string; required: boolean; tool?: string; activities?: { type: string; title: string }[] }
+export const MISSION_TEMPLATES: Record<number, MissionTemplate[]> = {
+  1: [
+    { title: 'Comprender el problema', description: 'Completen el Canvas del Problema con sus 4 preguntas.', required: true, tool: 'CANVAS' },
+    { title: 'Investigar el contexto', description: 'Salgan a recoger información real del problema.', required: false, activities: [{ type: 'READING', title: 'Leer una fuente sobre el tema' }, { type: 'UPLOAD', title: 'Subir una foto del problema en su entorno' }] },
+  ],
+  2: [{ title: 'Generar y priorizar ideas', description: 'Lluvia de ideas y votación en el muro.', required: true, tool: 'IDEAS' }],
+  3: [{ title: 'Definir el objetivo', description: 'Redacten su objetivo SMART.', required: true, tool: 'SMART' }],
+  4: [{ title: 'Planear las tareas', description: 'Repartan el trabajo en el tablero.', required: true, tool: 'KANBAN' }],
+  5: [{ title: 'Construir y evidenciar', description: 'Suban las evidencias del prototipo.', required: true, tool: 'EVIDENCE' }],
+  6: [{ title: 'Presentar y coevaluar', description: 'Presenten y evalúen a los demás equipos.', required: true, tool: 'COEVAL' }],
+};
+
+// ¿Está cumplido el criterio de la herramienta de una fase? (completa su actividad).
+export function toolCriterionMet(phase: number, data: any, config: AbpPhaseConfig, memberIds: string[] = []): boolean {
+  return phaseCriteriaMet(phase, data, config, memberIds);
+}
+
 // XP de equipo por evento (la barra denormalizada; el XP individual va por grantXp).
 export const ABP_XP = {
   CANVAS_CARD: 10,

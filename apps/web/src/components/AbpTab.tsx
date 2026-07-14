@@ -355,6 +355,127 @@ function CoevalPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
 // ═══════════════════════════════════════════════════════════════════════════
 // VISTA ESTUDIANTE — su expedición
 // ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// MISIONES — el trabajo real dentro de cada fase-hito (Opción A: herramienta = misión).
+// ═══════════════════════════════════════════════════════════════════════════
+const PHASE_TOOL_UI: Record<number, string> = { 1: 'CANVAS', 2: 'IDEAS', 3: 'SMART', 4: 'KANBAN', 5: 'EVIDENCE', 6: 'COEVAL' }
+const ACT_LABEL: Record<string, string> = { READING: '📖 Lectura', VIDEO: '🎬 Video', QUIZ: '❓ Quiz', INTERVIEW: '🎤 Entrevista', UPLOAD: '📤 Evidencia', LINK: '🔗 Enlace', CUSTOM: '✅ Tarea' }
+const ACT_TYPES = ['READING', 'VIDEO', 'INTERVIEW', 'UPLOAD', 'LINK', 'CUSTOM']
+
+function PhaseTool({ tool, team, onSaved }: { tool: string; team: any; onSaved: () => void }) {
+  switch (tool) {
+    case 'CANVAS': return <CanvasPhase team={team} onSaved={onSaved} />
+    case 'IDEAS': return <IdeasPhase team={team} onSaved={onSaved} />
+    case 'SMART': return <SmartPhase team={team} onSaved={onSaved} />
+    case 'KANBAN': return <KanbanPhase team={team} onSaved={onSaved} />
+    case 'EVIDENCE': return <EvidencePhase team={team} onSaved={onSaved} />
+    case 'COEVAL': return <CoevalPhase team={team} onSaved={onSaved} />
+    default: return null
+  }
+}
+
+function AddActivityForm({ mission, onSaved }: { mission: any; onSaved: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [type, setType] = useState('READING')
+  const [title, setTitle] = useState('')
+  const [busy, setBusy] = useState(false)
+  const save = async () => {
+    if (!title.trim()) return
+    setBusy(true)
+    try { await abpApi.addActivity(mission.id, { type, title: title.trim() }); setTitle(''); setOpen(false); onSaved() } finally { setBusy(false) }
+  }
+  if (!open) return <button onClick={() => setOpen(true)} className="mt-2 text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir actividad</button>
+  return (
+    <div className="mt-2 flex items-center gap-2 flex-wrap">
+      <select value={type} onChange={e => setType(e.target.value)} className="text-xs border border-slate-200 rounded-lg px-2 py-1.5">
+        {ACT_TYPES.map(t => <option key={t} value={t}>{ACT_LABEL[t]}</option>)}
+      </select>
+      <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Describe la actividad…" className="flex-1 min-w-[160px] text-sm border border-slate-200 rounded-lg px-2.5 py-1.5" />
+      <button onClick={save} disabled={busy || !title.trim()} className="text-xs font-bold bg-violet-600 text-white rounded-lg px-3 py-1.5 disabled:opacity-40">Añadir</button>
+      <button onClick={() => setOpen(false)} className="text-xs text-slate-400">Cancelar</button>
+    </div>
+  )
+}
+
+function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSaved: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const toolAct = (mission.activities || []).find((a: any) => a.content?.tool)
+  const tool = toolAct?.content?.tool
+  const acts = (mission.activities || []).filter((a: any) => !a.content?.tool)
+  const complete = !!mission.complete
+  const run = async (fn: () => Promise<any>) => { setBusy(true); try { await fn(); onSaved() } finally { setBusy(false) } }
+  return (
+    <div className={`rounded-xl border p-4 ${complete ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-200 bg-white'}`}>
+      <div className="flex items-start gap-2.5">
+        <div className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs shrink-0 ${complete ? 'bg-emerald-500' : 'bg-slate-300'}`}>{complete ? <Check className="w-3.5 h-3.5" /> : '○'}</div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="font-bold text-slate-800 text-sm">{mission.title}</h4>
+            {mission.required && <span className="text-[10px] font-bold uppercase tracking-wide bg-violet-100 text-violet-700 rounded-full px-1.5 py-0.5">Obligatoria</span>}
+            {!tool && <button onClick={() => run(() => abpApi.deleteMission(mission.id))} disabled={busy} className="ml-auto text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>}
+          </div>
+          {mission.description && <p className="text-xs text-slate-500 mt-0.5">{mission.description}</p>}
+
+          {tool ? (
+            <div className="mt-3">
+              <PhaseTool tool={tool} team={team} onSaved={onSaved} />
+            </div>
+          ) : (
+            <div className="mt-2 space-y-1.5">
+              {acts.map((a: any) => (
+                <div key={a.id} className="flex items-center gap-2 group">
+                  <input type="checkbox" checked={!!a.completed} disabled={busy} onChange={e => run(() => abpApi.completeActivity(a.id, e.target.checked))} className="w-4 h-4 accent-violet-600" />
+                  <span className={`text-sm ${a.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}><span className="text-slate-400 mr-1">{ACT_LABEL[a.type] || a.type}</span>{a.title}</span>
+                  <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} className="ml-auto opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                </div>
+              ))}
+              {acts.length === 0 && (
+                <label className="flex items-center gap-2 text-sm text-slate-600">
+                  <input type="checkbox" checked={complete} disabled={busy} onChange={e => run(() => abpApi.setMissionStatus(mission.id, e.target.checked))} className="w-4 h-4 accent-violet-600" />
+                  Marcar como completada
+                </label>
+              )}
+              <AddActivityForm mission={mission} onSaved={onSaved} />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AddMissionForm({ team, phase, onSaved }: { team: any; phase: number; onSaved: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [title, setTitle] = useState('')
+  const [busy, setBusy] = useState(false)
+  const save = async () => {
+    if (!title.trim()) return
+    setBusy(true)
+    try { await abpApi.addMission(team.id, phase, { title: title.trim(), required: false }); setTitle(''); setOpen(false); onSaved() } finally { setBusy(false) }
+  }
+  if (!open) return <button onClick={() => setOpen(true)} className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-sm font-semibold text-slate-400 hover:border-violet-300 hover:text-violet-600 flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" /> Añadir una misión propia</button>
+  return (
+    <div className="flex items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50">
+      <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título de la misión…" className="flex-1 text-sm border border-slate-200 rounded-lg px-2.5 py-1.5" />
+      <button onClick={save} disabled={busy || !title.trim()} className="text-sm font-bold bg-violet-600 text-white rounded-lg px-3 py-1.5 disabled:opacity-40">Crear</button>
+      <button onClick={() => setOpen(false)} className="text-sm text-slate-400">Cancelar</button>
+    </div>
+  )
+}
+
+function MissionsPanel({ team, onSaved }: { team: any; onSaved: () => void }) {
+  const cur = team.currentPhase
+  const missions = team.currentMissions || []
+  // Equipos previos (sin misiones sembradas): renderiza la herramienta directamente.
+  if (missions.length === 0) return <PhaseTool tool={PHASE_TOOL_UI[cur]} team={team} onSaved={onSaved} />
+  return (
+    <div className="space-y-3">
+      {missions.map((m: any) => <MissionCard key={m.id} mission={m} team={team} onSaved={onSaved} />)}
+      <AddMissionForm team={team} phase={cur} onSaved={onSaved} />
+    </div>
+  )
+}
+
 function StudentExpedition({ projects }: { projects: any[] }) {
   const [projectId, setProjectId] = useState<string>(projects[0]?.id || '')
   const [team, setTeam] = useState<any>(null)
@@ -386,30 +507,10 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const cur = team.currentPhase
   const curState = stateOf(team, cur)
   const curPs = (team.phaseStates || []).find((s: any) => s.phase === cur)
-  // Criterios automáticos para habilitar "Solicitar validación".
-  const members = team.members?.length || 1
-  const canvasFilled = ((curPs?.data?.canvas) || []).filter((c: any) => c && String(c.value || '').trim()).length
-  const ideas: any[] = (curPs?.data?.ideas) || []
-  const totalVotes = ideas.reduce((s: number, i: any) => s + (i.votes || 0), 0)
-  const minIdeas = (team.config?.minIdeasPerMember ?? 2) * members
-  const smart = (curPs?.data?.smart) || {}
-  const smartChecked = Array.isArray(smart.checks) ? smart.checks.filter(Boolean).length : 0
-  const tasks4: any[] = (curPs?.data?.tasks) || []
-  const memberIds = (team.members || []).map((m: any) => m.studentEnrollmentId)
-  const owners = new Set(tasks4.map((t: any) => t.owner))
-  const tasksDone = tasks4.filter((t: any) => t.col === 2).length
-  const kanbanOk = tasks4.length > 0 && tasksDone === tasks4.length && memberIds.length > 0 && memberIds.every((id: string) => owners.has(id))
-  const evidences5: any[] = (curPs?.data?.evidences) || []
-  const minEv = team.config?.minEvidences ?? 3
-  const siblings6 = team.siblings || []
-  const coevalsDone = Object.keys((curPs?.data?.coevals) || {}).length
-  const canRequest = cur === 1 ? canvasFilled >= 4
-    : cur === 2 ? (ideas.length >= minIdeas && totalVotes >= members)
-    : cur === 3 ? (smartChecked >= 5 && String(smart.text || '').trim().length >= 20)
-    : cur === 4 ? kanbanOk
-    : cur === 5 ? evidences5.length >= minEv
-    : cur === 6 ? (siblings6.length === 0 || coevalsDone >= siblings6.length)
-    : true
+  // Gating desde las misiones: todas las misiones obligatorias completas (lo calcula el backend).
+  const reqMissions = (team.currentMissions || []).filter((m: any) => m.required)
+  const reqDone = reqMissions.filter((m: any) => m.complete).length
+  const canRequest = !!team.readyForValidation
 
   return (
     <div className="space-y-4">
@@ -458,34 +559,12 @@ function StudentExpedition({ projects }: { projects: any[] }) {
           <div className="text-center py-6">🏆<p className="font-bold text-slate-800 mt-2">¡Llegaron a la cima de la expedición!</p></div>
         ) : (
           <>
-            {cur === 1 ? (
-              <CanvasPhase team={team} onSaved={load} />
-            ) : cur === 2 ? (
-              <IdeasPhase team={team} onSaved={load} />
-            ) : cur === 3 ? (
-              <SmartPhase team={team} onSaved={load} />
-            ) : cur === 4 ? (
-              <KanbanPhase team={team} onSaved={load} />
-            ) : cur === 5 ? (
-              <EvidencePhase team={team} onSaved={load} />
-            ) : cur === 6 ? (
-              <CoevalPhase team={team} onSaved={load} />
-            ) : (
-              <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 text-sm">
-                🛠️ La herramienta de esta fase ({phaseName(cur)}) se habilita en el siguiente ticket.
-                <br />Por ahora puedes solicitar la validación al docente.
-              </div>
-            )}
+            <MissionsPanel team={team} onSaved={load} />
             <div className="mt-4 flex items-center gap-3 flex-wrap">
-              {cur === 1 && <span className="text-sm text-slate-500">Tarjetas completas: <b className="text-slate-700">{canvasFilled}/4</b></span>}
-              {cur === 2 && <span className="text-sm text-slate-500">Ideas: <b className="text-slate-700">{ideas.length}/{minIdeas}</b> · Votos: <b className="text-slate-700">{totalVotes}</b></span>}
-              {cur === 3 && <span className="text-sm text-slate-500">Criterios SMART: <b className="text-slate-700">{smartChecked}/5</b></span>}
-              {cur === 4 && <span className="text-sm text-slate-500">Tareas hechas: <b className="text-slate-700">{tasksDone}/{tasks4.length}</b>{!owners.size || memberIds.some((id: string) => !owners.has(id)) ? ' · falta asignar a todos' : ''}</span>}
-              {cur === 5 && <span className="text-sm text-slate-500">Evidencias: <b className="text-slate-700">{evidences5.length}/{minEv}</b></span>}
-              {cur === 6 && siblings6.length > 0 && <span className="text-sm text-slate-500">Equipos evaluados: <b className="text-slate-700">{coevalsDone}/{siblings6.length}</b></span>}
+              {reqMissions.length > 0 && <span className="text-sm text-slate-500">Misiones obligatorias: <b className="text-slate-700">{reqDone}/{reqMissions.length}</b></span>}
               <button onClick={requestValidation} disabled={busy || !canRequest}
                 className="ml-auto py-3 px-6 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} {canRequest ? 'Solicitar validación' : 'Completa los criterios'}
+                {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} {canRequest ? 'Solicitar validación' : 'Completa las misiones'}
               </button>
             </div>
           </>

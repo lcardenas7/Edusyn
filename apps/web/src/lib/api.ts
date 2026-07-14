@@ -2555,6 +2555,14 @@ export const abpApi = {
   getReview: (validationId: string) => api.get<any>(`/abp/validations/${validationId}/review`),
   addComment: (teamId: string, data: { phase: number; refType: string; refId?: string; content: string; parentId?: string }) => api.post<any>(`/abp/teams/${teamId}/comments`, data),
   resolveComment: (commentId: string, resolved: boolean) => api.post<any>(`/abp/comments/${commentId}/resolve`, { resolved }),
+  // Misiones (Opción A: herramienta = misión por defecto de la fase)
+  listMissions: (teamId: string, phase: number) => api.get<any[]>(`/abp/teams/${teamId}/phases/${phase}/missions`),
+  addMission: (teamId: string, phase: number, data: { title: string; description?: string; required?: boolean }) => api.post<any>(`/abp/teams/${teamId}/phases/${phase}/missions`, data),
+  deleteMission: (missionId: string) => api.delete(`/abp/missions/${missionId}`),
+  setMissionStatus: (missionId: string, completed: boolean) => api.post<any>(`/abp/missions/${missionId}/status`, { completed }),
+  addActivity: (missionId: string, data: { type: string; title: string; content?: any }) => api.post<any>(`/abp/missions/${missionId}/activities`, data),
+  completeActivity: (activityId: string, completed: boolean) => api.post<any>(`/abp/activities/${activityId}/complete`, { completed }),
+  deleteActivity: (activityId: string) => api.delete(`/abp/activities/${activityId}`),
 }
 
 export const learningRouteApi = {

@@ -204,6 +204,56 @@ export class AbpController {
     return this.service.getReview(validationId, institutionId, userId);
   }
 
+  // ─── Misiones (el trabajo real dentro de cada fase-hito) ───────────────────
+  @Get('teams/:teamId/phases/:phase/missions')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async listMissions(@Param('teamId') teamId: string, @Param('phase') phase: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.listMissions(teamId, institutionId, userId, parseInt(phase, 10));
+  }
+
+  @Post('teams/:teamId/phases/:phase/missions')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async addMission(@Param('teamId') teamId: string, @Param('phase') phase: string, @Request() req: any, @Body() body: { title: string; description?: string; required?: boolean }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addMission(teamId, institutionId, userId, parseInt(phase, 10), body);
+  }
+
+  @Delete('missions/:missionId')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async deleteMission(@Param('missionId') missionId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.deleteMission(missionId, institutionId, userId);
+  }
+
+  @Post('missions/:missionId/status')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async setMissionStatus(@Param('missionId') missionId: string, @Request() req: any, @Body() body: { completed: boolean }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.setMissionStatus(missionId, institutionId, userId, !!body.completed);
+  }
+
+  @Post('missions/:missionId/activities')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async addActivity(@Param('missionId') missionId: string, @Request() req: any, @Body() body: { type: string; title: string; content?: any }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addActivity(missionId, institutionId, userId, body);
+  }
+
+  @Post('activities/:activityId/complete')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async completeActivity(@Param('activityId') activityId: string, @Request() req: any, @Body() body: { completed: boolean }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.completeActivity(activityId, institutionId, userId, !!body.completed);
+  }
+
+  @Delete('activities/:activityId')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async deleteActivity(@Param('activityId') activityId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.deleteActivity(activityId, institutionId, userId);
+  }
+
   // ─── Comentarios en línea ──────────────────────────────────────────────────
   @Get('teams/:teamId/comments')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
