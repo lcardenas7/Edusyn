@@ -389,6 +389,47 @@ export class AbpService {
     return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 4 } } });
   }
 
+  // ─── FASE 5: Prototipo y Evidencias ────────────────────────────────────────
+
+  /** Agrega una evidencia (enlace externo o archivo ya subido a storage). +15 XP +
+   * contribución EVIDENCE. `kind`: 'LINK' | 'FILE'; `url` = enlace o path de storage. */
+  async addEvidence(teamId: string, institutionId: string, userId: string, kind: string, url: string, label?: string) {
+    const u = (url || '').trim();
+    if (!u) throw new BadRequestException('Falta el enlace o archivo de la evidencia');
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 5 } } });
+    if (!ps || ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 5 no está en curso');
+
+    const me = this.memberOf(team, userId);
+    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
+    const evidences: any[] = Array.isArray(data.evidences) ? [...data.evidences] : [];
+    const ev = { id: randomUUID(), kind: kind === 'FILE' ? 'FILE' : 'LINK', url: u, label: (label || '').trim() || u, by: me?.enrollmentId ?? null, byName: me?.name ?? 'Docente' };
+    evidences.push(ev);
+    data.evidences = evidences;
+    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 5 } }, data: { data } });
+
+    if (me?.enrollmentId) {
+      try {
+        await this.prisma.abpContribution.create({
+          data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 5, type: 'EVIDENCE', refId: ev.id, detail: ev.label.slice(0, 80) },
+        });
+        await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.EVIDENCE } } });
+      } catch { /* idempotente */ }
+    }
+    return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 5 } } });
+  }
+
+  /** Elimina una evidencia del listado. */
+  async removeEvidence(teamId: string, institutionId: string, userId: string, evidenceId: string) {
+    await this.loadTeamForUser(teamId, institutionId, userId);
+    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 5 } } });
+    if (!ps) throw new NotFoundException('Fase no encontrada');
+    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
+    data.evidences = (Array.isArray(data.evidences) ? data.evidences : []).filter((e: any) => e.id !== evidenceId);
+    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 5 } }, data: { data } });
+    return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 5 } } });
+  }
+
   // ─── VALIDACIÓN (gating de fases) ──────────────────────────────────────────
 
   /** El equipo solicita validar su fase actual → AWAITING + solicitud PENDING.

@@ -157,6 +157,21 @@ export class AbpController {
     return this.service.removeTask(teamId, institutionId, userId, taskId);
   }
 
+  // Fase 5: evidencias.
+  @Post('teams/:teamId/evidences')
+  @Roles('ESTUDIANTE', 'DOCENTE')
+  async addEvidence(@Param('teamId') teamId: string, @Request() req: any, @Body() body: { kind: string; url: string; label?: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addEvidence(teamId, institutionId, userId, body.kind, body.url, body.label);
+  }
+
+  @Delete('teams/:teamId/evidences/:evidenceId')
+  @Roles('ESTUDIANTE', 'DOCENTE')
+  async removeEvidence(@Param('teamId') teamId: string, @Param('evidenceId') evidenceId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.removeEvidence(teamId, institutionId, userId, evidenceId);
+  }
+
   // Cola de validaciones pendientes del docente (opcional ?classroomId=).
   @Get('queue')
   @Roles('DOCENTE', 'COORDINADOR')

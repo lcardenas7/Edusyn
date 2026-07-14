@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Rocket, Plus, Trash2, Check, Clock, Lock, Loader2, Users, Send, ChevronLeft } from 'lucide-react'
-import { abpApi } from '../lib/api'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Rocket, Plus, Trash2, Check, Clock, Lock, Loader2, Users, Send, ChevronLeft, Paperclip, Link2 } from 'lucide-react'
+import { abpApi, classroomApi } from '../lib/api'
 
 // Metadatos de las 6 fases (nombre + icono). El motor real vive en el backend.
 const PHASES = [
@@ -252,6 +252,58 @@ function KanbanPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
   )
 }
 
+// Fase 5 — Prototipo y Evidencias (enlaces + archivos subidos a storage).
+function EvidencePhase({ team, onSaved }: { team: any; onSaved: () => void }) {
+  const evidences: any[] = phaseData(team, 5).evidences || []
+  const editable = stateOf(team, 5) === 'IN_PROGRESS'
+  const [link, setLink] = useState('')
+  const [busy, setBusy] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const addLink = async () => {
+    const u = link.trim()
+    if (!u || busy) return
+    setBusy(true)
+    try { await abpApi.addEvidence(team.id, 'LINK', u); setLink('') ; onSaved() } catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+  }
+  const upload = async (file: File) => {
+    setBusy(true)
+    try {
+      const { data } = await classroomApi.uploadMaterial(file)
+      const url = data?.data?.path || data?.data?.url
+      if (url) { await abpApi.addEvidence(team.id, 'FILE', url, file.name); onSaved() }
+    } catch { alert('No se pudo subir el archivo') } finally { setBusy(false) }
+  }
+  const remove = async (id: string) => { setBusy(true); try { await abpApi.removeEvidence(team.id, id); onSaved() } finally { setBusy(false) } }
+
+  return (
+    <div>
+      {editable && (
+        <div className="flex gap-2 mb-4 flex-wrap">
+          <input value={link} onChange={e => setLink(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addLink() }} placeholder="Pega un enlace (Canva, MakeCode, video…)" className="flex-1 min-w-[200px] border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm" />
+          <button onClick={addLink} disabled={!link.trim() || busy} className="px-4 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Link2 className="w-4 h-4" /> Enlace</button>
+          <input ref={fileRef} type="file" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); e.currentTarget.value = '' }} />
+          <button onClick={() => fileRef.current?.click()} disabled={busy} className="px-4 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Paperclip className="w-4 h-4" /> Archivo</button>
+        </div>
+      )}
+      {evidences.length === 0 ? (
+        <p className="text-sm text-slate-400 text-center py-6">Aún no hay evidencias. Sube fotos, videos o enlaces del prototipo.</p>
+      ) : (
+        <div className="space-y-2">
+          {evidences.map((e: any) => (
+            <div key={e.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-3">
+              <span>{e.kind === 'FILE' ? '📎' : '🔗'}</span>
+              <a href={e.url} target="_blank" rel="noreferrer" className="flex-1 text-sm text-violet-600 hover:underline truncate">{e.label}</a>
+              <span className="text-xs text-slate-400">{e.byName}</span>
+              {editable && <button onClick={() => remove(e.id)} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // VISTA ESTUDIANTE — su expedición
 // ═══════════════════════════════════════════════════════════════════════════
@@ -299,10 +351,13 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const owners = new Set(tasks4.map((t: any) => t.owner))
   const tasksDone = tasks4.filter((t: any) => t.col === 2).length
   const kanbanOk = tasks4.length > 0 && tasksDone === tasks4.length && memberIds.length > 0 && memberIds.every((id: string) => owners.has(id))
+  const evidences5: any[] = (curPs?.data?.evidences) || []
+  const minEv = team.config?.minEvidences ?? 3
   const canRequest = cur === 1 ? canvasFilled >= 4
     : cur === 2 ? (ideas.length >= minIdeas && totalVotes >= members)
     : cur === 3 ? (smartChecked >= 5 && String(smart.text || '').trim().length >= 20)
     : cur === 4 ? kanbanOk
+    : cur === 5 ? evidences5.length >= minEv
     : true
 
   return (
@@ -360,6 +415,8 @@ function StudentExpedition({ projects }: { projects: any[] }) {
               <SmartPhase team={team} onSaved={load} />
             ) : cur === 4 ? (
               <KanbanPhase team={team} onSaved={load} />
+            ) : cur === 5 ? (
+              <EvidencePhase team={team} onSaved={load} />
             ) : (
               <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 text-sm">
                 🛠️ La herramienta de esta fase ({phaseName(cur)}) se habilita en el siguiente ticket.
@@ -371,6 +428,7 @@ function StudentExpedition({ projects }: { projects: any[] }) {
               {cur === 2 && <span className="text-sm text-slate-500">Ideas: <b className="text-slate-700">{ideas.length}/{minIdeas}</b> · Votos: <b className="text-slate-700">{totalVotes}</b></span>}
               {cur === 3 && <span className="text-sm text-slate-500">Criterios SMART: <b className="text-slate-700">{smartChecked}/5</b></span>}
               {cur === 4 && <span className="text-sm text-slate-500">Tareas hechas: <b className="text-slate-700">{tasksDone}/{tasks4.length}</b>{!owners.size || memberIds.some((id: string) => !owners.has(id)) ? ' · falta asignar a todos' : ''}</span>}
+              {cur === 5 && <span className="text-sm text-slate-500">Evidencias: <b className="text-slate-700">{evidences5.length}/{minEv}</b></span>}
               <button onClick={requestValidation} disabled={busy || !canRequest}
                 className="ml-auto py-3 px-6 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} {canRequest ? 'Solicitar validación' : 'Completa los criterios'}

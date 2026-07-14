@@ -84,7 +84,11 @@ export function phaseCriteriaMet(phase: number, data: any, config: AbpPhaseConfi
     const everyoneHasTask = memberIds.length > 0 && memberIds.every(id => owners.has(id));
     return allDone && everyoneHasTask;
   }
-  return true; // fases 5–6: sin criterio automático aún (permisivo)
+  if (phase === 5) {
+    const evidences = Array.isArray(data?.evidences) ? data.evidences : [];
+    return evidences.length >= config.minEvidences;
+  }
+  return true; // fase 6: sin criterio automático (coevaluación, permisivo)
 }
 
 // XP de equipo por evento (la barra denormalizada; el XP individual va por grantXp).
