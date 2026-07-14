@@ -590,6 +590,10 @@ model Institution {
   rlsAbpValidations     AbpValidationRequest[] @relation("RlsInstitutionABPV")
   rlsAbpContributions   AbpContribution[]      @relation("RlsInstitutionABPC")
   rlsAbpComments        AbpComment[]           @relation("RlsInstitutionABPCM")
+  rlsAbpMissions        AbpMission[]           @relation("RlsInstitutionABPMI")
+  rlsAbpMissionActs     AbpMissionActivity[]   @relation("RlsInstitutionABPMA")
+  rlsAbpDiscoveries     AbpDiscovery[]         @relation("RlsInstitutionABPD")
+  rlsAbpLogEntries      AbpLogEntry[]          @relation("RlsInstitutionABPL")
 }
 
 // Módulos habilitados por institución
@@ -1660,6 +1664,9 @@ model StudentEnrollment {
   abpTeamMemberships AbpTeamMember[]
   abpContributions   AbpContribution[]
   abpComments        AbpComment[]
+  abpActivitiesDone  AbpMissionActivity[] @relation("AbpActivityCompletedBy")
+  abpDiscoveries     AbpDiscovery[]       @relation("AbpDiscoveryAuthor")
+  abpLogEntries      AbpLogEntry[]        @relation("AbpLogAuthor")
 
   @@unique([studentId, academicYearId])
 }
@@ -6650,6 +6657,8 @@ model AbpTeam {
   validations   AbpValidationRequest[]
   contributions AbpContribution[]
   comments      AbpComment[]
+  discoveries   AbpDiscovery[]
+  logEntries    AbpLogEntry[]
 
   @@index([institutionId])
   @@index([projectId])
@@ -6687,6 +6696,7 @@ model AbpPhaseState {
   institution Institution  @relation("RlsInstitutionABPS", fields: [institutionId], references: [id])
   team        AbpTeam      @relation(fields: [teamId], references: [id], onDelete: Cascade)
   comments    AbpComment[]
+  missions    AbpMission[]
 
   @@unique([teamId, phase])
   @@index([institutionId])
@@ -6774,4 +6784,121 @@ model AbpComment {
   @@index([teamId])
   @@index([phaseStateId, resolved, createdAt])
   @@index([refType, refId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXPEDICIÓN ABP V1 — Misiones (trabajo real dentro de las fases-hito),
+// Actividades, Descubrimientos y Bitácora. Las fases son hitos; el trabajo vive
+// en misiones (por equipo × fase). La herramienta de cada fase = misión por defecto.
+// ═══════════════════════════════════════════════════════════════════════════
+enum AbpMissionStatus {
+  LOCKED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum AbpGeneratedBy {
+  MANUAL
+  TEMPLATE
+  AI
+}
+
+enum AbpMissionActivityType {
+  READING
+  VIDEO
+  QUIZ
+  INTERVIEW
+  UPLOAD
+  LINK
+  CUSTOM
+}
+
+enum AbpImpact {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model AbpMission {
+  id                String           @id @default(cuid())
+  institutionId     String
+  phaseStateId      String
+  title             String
+  description       String?          @db.Text
+  sortOrder         Int              @default(0)
+  status            AbpMissionStatus @default(IN_PROGRESS)
+  required          Boolean          @default(true) // gating: obligatoria para validar la fase
+  xp                Int              @default(0)
+  generatedBy       AbpGeneratedBy   @default(MANUAL) // preparación Valeria V2
+  generationContext Json? // contexto que usó la IA (problemática, DBA, competencias) — V2
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  institution Institution          @relation("RlsInstitutionABPMI", fields: [institutionId], references: [id])
+  phaseState  AbpPhaseState        @relation(fields: [phaseStateId], references: [id], onDelete: Cascade)
+  activities  AbpMissionActivity[]
+
+  @@index([institutionId])
+  @@index([phaseStateId, sortOrder])
+}
+
+model AbpMissionActivity {
+  id                      String                 @id @default(cuid())
+  institutionId           String
+  missionId               String
+  type                    AbpMissionActivityType
+  title                   String
+  content                 Json? // config por tipo (url, texto, quizId, instrucciones…)
+  sortOrder               Int                    @default(0)
+  completed               Boolean                @default(false)
+  completedByEnrollmentId String? // quién la completó (participación)
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+
+  institution Institution        @relation("RlsInstitutionABPMA", fields: [institutionId], references: [id])
+  mission     AbpMission         @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  completedBy StudentEnrollment? @relation("AbpActivityCompletedBy", fields: [completedByEnrollmentId], references: [id], onDelete: SetNull)
+
+  @@index([institutionId])
+  @@index([missionId, sortOrder])
+}
+
+model AbpDiscovery {
+  id                        String    @id @default(cuid())
+  institutionId             String
+  teamId                    String
+  phase                     Int // fase donde ocurrió
+  authorStudentEnrollmentId String?
+  authorName                String
+  title                     String
+  description               String    @db.Text
+  evidenceKind              String? // 'LINK' | 'FILE'
+  evidenceUrl               String?
+  impact                    AbpImpact @default(MEDIUM)
+  createdAt                 DateTime  @default(now())
+
+  institution      Institution        @relation("RlsInstitutionABPD", fields: [institutionId], references: [id])
+  team             AbpTeam            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  authorEnrollment StudentEnrollment? @relation("AbpDiscoveryAuthor", fields: [authorStudentEnrollmentId], references: [id], onDelete: SetNull)
+
+  @@index([institutionId])
+  @@index([teamId, phase])
+}
+
+model AbpLogEntry {
+  id                        String   @id @default(cuid())
+  institutionId             String
+  teamId                    String
+  phase                     Int?
+  authorStudentEnrollmentId String?
+  authorName                String
+  content                   String   @db.Text
+  createdAt                 DateTime @default(now())
+
+  institution      Institution        @relation("RlsInstitutionABPL", fields: [institutionId], references: [id])
+  team             AbpTeam            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  authorEnrollment StudentEnrollment? @relation("AbpLogAuthor", fields: [authorStudentEnrollmentId], references: [id], onDelete: SetNull)
+
+  @@index([institutionId])
+  @@index([teamId])
 }
