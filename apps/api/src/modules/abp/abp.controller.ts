@@ -127,6 +127,14 @@ export class AbpController {
     return this.service.voteIdea(teamId, institutionId, userId, ideaId);
   }
 
+  // Fase 3: guardar objetivo SMART.
+  @Post('teams/:teamId/smart')
+  @Roles('ESTUDIANTE', 'DOCENTE')
+  async saveSmart(@Param('teamId') teamId: string, @Request() req: any, @Body() body: { text: string; checks: boolean[] }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.saveSmart(teamId, institutionId, userId, body.text ?? '', body.checks ?? []);
+  }
+
   // Cola de validaciones pendientes del docente (opcional ?classroomId=).
   @Get('queue')
   @Roles('DOCENTE', 'COORDINADOR')

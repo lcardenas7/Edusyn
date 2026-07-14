@@ -153,6 +153,44 @@ function IdeasPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
   )
 }
 
+// Fase 3 — Objetivo SMART (objetivo + 5 criterios).
+const SMART_CRITERIA = [
+  { k: 'S', t: 'Específico: dice exactamente qué harán' },
+  { k: 'M', t: 'Medible: se puede verificar con datos' },
+  { k: 'A', t: 'Alcanzable: es posible con sus recursos' },
+  { k: 'R', t: 'Relevante: responde a la problemática' },
+  { k: 'T', t: 'con Tiempo: tiene un plazo definido' },
+]
+function SmartPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
+  const smart = phaseData(team, 3).smart || {}
+  const editable = stateOf(team, 3) === 'IN_PROGRESS'
+  const [text, setText] = useState<string>(smart.text || '')
+  const [checks, setChecks] = useState<boolean[]>(() => SMART_CRITERIA.map((_, i) => !!smart.checks?.[i]))
+  const [busy, setBusy] = useState(false)
+
+  const save = async (nt: string, nc: boolean[]) => {
+    setBusy(true)
+    try { await abpApi.saveSmart(team.id, nt, nc); onSaved() } finally { setBusy(false) }
+  }
+  const toggle = (i: number) => { const nc = [...checks]; nc[i] = !nc[i]; setChecks(nc); if (editable) save(text, nc) }
+
+  return (
+    <div>
+      <textarea value={text} onChange={e => setText(e.target.value)} onBlur={() => editable && text !== (smart.text || '') && save(text, checks)}
+        disabled={!editable} rows={3} placeholder="Nuestro objetivo es… (específico, medible, con plazo)"
+        className="w-full border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm mb-3 disabled:opacity-70" />
+      <div className="grid sm:grid-cols-2 gap-2">
+        {SMART_CRITERIA.map((c, i) => (
+          <label key={c.k} className={`flex items-start gap-2.5 border-2 rounded-xl p-3 text-sm cursor-pointer ${checks[i] ? 'border-emerald-300 bg-emerald-50/50' : 'border-slate-200'} ${busy ? 'opacity-70' : ''}`}>
+            <input type="checkbox" checked={checks[i]} onChange={() => toggle(i)} disabled={!editable} className="mt-0.5 accent-emerald-600" />
+            <span><b>{c.k}</b> · {c.t}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // VISTA ESTUDIANTE — su expedición
 // ═══════════════════════════════════════════════════════════════════════════
@@ -193,8 +231,11 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const ideas: any[] = (curPs?.data?.ideas) || []
   const totalVotes = ideas.reduce((s: number, i: any) => s + (i.votes || 0), 0)
   const minIdeas = (team.config?.minIdeasPerMember ?? 2) * members
+  const smart = (curPs?.data?.smart) || {}
+  const smartChecked = Array.isArray(smart.checks) ? smart.checks.filter(Boolean).length : 0
   const canRequest = cur === 1 ? canvasFilled >= 4
     : cur === 2 ? (ideas.length >= minIdeas && totalVotes >= members)
+    : cur === 3 ? (smartChecked >= 5 && String(smart.text || '').trim().length >= 20)
     : true
 
   return (
@@ -248,6 +289,8 @@ function StudentExpedition({ projects }: { projects: any[] }) {
               <CanvasPhase team={team} onSaved={load} />
             ) : cur === 2 ? (
               <IdeasPhase team={team} onSaved={load} />
+            ) : cur === 3 ? (
+              <SmartPhase team={team} onSaved={load} />
             ) : (
               <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 text-sm">
                 🛠️ La herramienta de esta fase ({phaseName(cur)}) se habilita en el siguiente ticket.
@@ -257,6 +300,7 @@ function StudentExpedition({ projects }: { projects: any[] }) {
             <div className="mt-4 flex items-center gap-3 flex-wrap">
               {cur === 1 && <span className="text-sm text-slate-500">Tarjetas completas: <b className="text-slate-700">{canvasFilled}/4</b></span>}
               {cur === 2 && <span className="text-sm text-slate-500">Ideas: <b className="text-slate-700">{ideas.length}/{minIdeas}</b> · Votos: <b className="text-slate-700">{totalVotes}</b></span>}
+              {cur === 3 && <span className="text-sm text-slate-500">Criterios SMART: <b className="text-slate-700">{smartChecked}/5</b></span>}
               <button onClick={requestValidation} disabled={busy || !canRequest}
                 className="ml-auto py-3 px-6 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} {canRequest ? 'Solicitar validación' : 'Completa los criterios'}

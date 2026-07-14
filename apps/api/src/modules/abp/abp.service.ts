@@ -313,6 +313,26 @@ export class AbpService {
     return this.getMyTeam(team.projectId, institutionId, userId);
   }
 
+  // ─── FASE 3: Objetivo SMART ────────────────────────────────────────────────
+
+  /** Guarda el objetivo del equipo + los 5 criterios SMART (campo colaborativo). */
+  async saveSmart(teamId: string, institutionId: string, userId: string, text: string, checks: boolean[]) {
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 3 } } });
+    if (!ps || ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 3 no está en curso');
+    const me = this.memberOf(team, userId);
+    const prev: any = ps.data && typeof ps.data === 'object' ? (ps.data as any).smart : null;
+    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
+    data.smart = {
+      text: String(text || ''),
+      checks: Array.isArray(checks) ? checks.slice(0, 5).map(Boolean) : [],
+      by: me?.enrollmentId ?? prev?.by ?? null,
+      byName: me?.name ?? prev?.byName ?? null,
+    };
+    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 3 } }, data: { data } });
+    return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 3 } } });
+  }
+
   // ─── VALIDACIÓN (gating de fases) ──────────────────────────────────────────
 
   /** El equipo solicita validar su fase actual → AWAITING + solicitud PENDING.

@@ -70,7 +70,12 @@ export function phaseCriteriaMet(phase: number, data: any, config: AbpPhaseConfi
     const totalVotes = ideas.reduce((s: number, i: any) => s + (i.votes || 0), 0);
     return ideas.length >= config.minIdeasPerMember * memberCount && totalVotes >= memberCount;
   }
-  return true; // fases 3–6: sin criterio automático aún (permisivo)
+  if (phase === 3) {
+    const smart = data?.smart || {};
+    const checked = Array.isArray(smart.checks) ? smart.checks.filter(Boolean).length : 0;
+    return checked >= config.smartCriteria && String(smart.text || '').trim().length >= config.minObjectiveLength;
+  }
+  return true; // fases 4–6: sin criterio automático aún (permisivo)
 }
 
 // XP de equipo por evento (la barra denormalizada; el XP individual va por grantXp).
