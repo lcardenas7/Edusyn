@@ -191,6 +191,67 @@ function SmartPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
   )
 }
 
+// Fase 4 — Plan de Acción (Kanban).
+const KANBAN_COLS = ['📋 Por hacer', '⚙️ En proceso', '✅ Hecho']
+function teamMembers(team: any): { id: string; name: string }[] {
+  return (team.members || []).map((m: any) => ({
+    id: m.studentEnrollmentId,
+    name: `${m.studentEnrollment?.student?.user?.firstName ?? ''} ${m.studentEnrollment?.student?.user?.lastName ?? ''}`.trim() || 'Integrante',
+  }))
+}
+function KanbanPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
+  const tasks: any[] = phaseData(team, 4).tasks || []
+  const editable = stateOf(team, 4) === 'IN_PROGRESS'
+  const members = teamMembers(team)
+  const [text, setText] = useState('')
+  const [owner, setOwner] = useState(members[0]?.id || '')
+  const [busy, setBusy] = useState(false)
+
+  const add = async () => {
+    if (!text.trim() || !owner || busy) return
+    setBusy(true)
+    try { await abpApi.addTask(team.id, text.trim(), owner); setText(''); onSaved() } catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+  }
+  const act = async (fn: Promise<any>) => { setBusy(true); try { await fn; onSaved() } finally { setBusy(false) } }
+
+  return (
+    <div>
+      {editable && (
+        <div className="flex gap-2 mb-4 flex-wrap">
+          <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add() }} placeholder="Nueva tarea…" className="flex-1 min-w-[160px] border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm" />
+          <select value={owner} onChange={e => setOwner(e.target.value)} className="border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm">
+            {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+          <button onClick={add} disabled={!text.trim() || !owner || busy} className="px-4 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50">Agregar</button>
+        </div>
+      )}
+      <div className="grid sm:grid-cols-3 gap-3">
+        {KANBAN_COLS.map((c, ci) => {
+          const list = tasks.filter(t => t.col === ci)
+          return (
+            <div key={ci} className="bg-slate-50 rounded-xl p-3">
+              <h5 className="font-bold text-sm text-slate-700 flex justify-between mb-2">{c}<span className="text-slate-400">{list.length}</span></h5>
+              <div className="space-y-2">
+                {list.map(t => (
+                  <div key={t.id} className="bg-white rounded-lg p-2.5 text-sm shadow-sm">
+                    <div className={ci === 2 ? 'line-through text-slate-400' : 'text-slate-700'}>{t.text}</div>
+                    <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
+                      <span>👤 {t.ownerName}</span>
+                      {editable && <button onClick={() => act(abpApi.removeTask(team.id, t.id))} className="text-slate-300 hover:text-rose-500">✕</button>}
+                    </div>
+                    {editable && ci < 2 && <button onClick={() => act(abpApi.moveTask(team.id, t.id))} className="mt-1.5 text-xs bg-violet-600 text-white rounded px-2 py-1 font-medium">{ci === 0 ? 'Iniciar →' : 'Terminar ✔'}</button>}
+                  </div>
+                ))}
+                {list.length === 0 && <p className="text-xs text-slate-300 text-center py-2">Vacío</p>}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // VISTA ESTUDIANTE — su expedición
 // ═══════════════════════════════════════════════════════════════════════════
@@ -233,9 +294,15 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const minIdeas = (team.config?.minIdeasPerMember ?? 2) * members
   const smart = (curPs?.data?.smart) || {}
   const smartChecked = Array.isArray(smart.checks) ? smart.checks.filter(Boolean).length : 0
+  const tasks4: any[] = (curPs?.data?.tasks) || []
+  const memberIds = (team.members || []).map((m: any) => m.studentEnrollmentId)
+  const owners = new Set(tasks4.map((t: any) => t.owner))
+  const tasksDone = tasks4.filter((t: any) => t.col === 2).length
+  const kanbanOk = tasks4.length > 0 && tasksDone === tasks4.length && memberIds.length > 0 && memberIds.every((id: string) => owners.has(id))
   const canRequest = cur === 1 ? canvasFilled >= 4
     : cur === 2 ? (ideas.length >= minIdeas && totalVotes >= members)
     : cur === 3 ? (smartChecked >= 5 && String(smart.text || '').trim().length >= 20)
+    : cur === 4 ? kanbanOk
     : true
 
   return (
@@ -291,6 +358,8 @@ function StudentExpedition({ projects }: { projects: any[] }) {
               <IdeasPhase team={team} onSaved={load} />
             ) : cur === 3 ? (
               <SmartPhase team={team} onSaved={load} />
+            ) : cur === 4 ? (
+              <KanbanPhase team={team} onSaved={load} />
             ) : (
               <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 text-sm">
                 🛠️ La herramienta de esta fase ({phaseName(cur)}) se habilita en el siguiente ticket.
@@ -301,6 +370,7 @@ function StudentExpedition({ projects }: { projects: any[] }) {
               {cur === 1 && <span className="text-sm text-slate-500">Tarjetas completas: <b className="text-slate-700">{canvasFilled}/4</b></span>}
               {cur === 2 && <span className="text-sm text-slate-500">Ideas: <b className="text-slate-700">{ideas.length}/{minIdeas}</b> · Votos: <b className="text-slate-700">{totalVotes}</b></span>}
               {cur === 3 && <span className="text-sm text-slate-500">Criterios SMART: <b className="text-slate-700">{smartChecked}/5</b></span>}
+              {cur === 4 && <span className="text-sm text-slate-500">Tareas hechas: <b className="text-slate-700">{tasksDone}/{tasks4.length}</b>{!owners.size || memberIds.some((id: string) => !owners.has(id)) ? ' · falta asignar a todos' : ''}</span>}
               <button onClick={requestValidation} disabled={busy || !canRequest}
                 className="ml-auto py-3 px-6 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} {canRequest ? 'Solicitar validación' : 'Completa los criterios'}

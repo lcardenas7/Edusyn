@@ -59,7 +59,8 @@ export const CANVAS_CARDS = [
 
 // ¿Cumple la fase sus criterios automáticos para poder solicitar validación?
 // Se refina por fase conforme se construyen las herramientas (tickets 3–8).
-export function phaseCriteriaMet(phase: number, data: any, config: AbpPhaseConfig, memberCount = 1): boolean {
+export function phaseCriteriaMet(phase: number, data: any, config: AbpPhaseConfig, memberIds: string[] = []): boolean {
+  const n = memberIds.length || 1;
   if (phase === 1) {
     const canvas = Array.isArray(data?.canvas) ? data.canvas : [];
     const filled = canvas.filter((c: any) => c && String(c.value || '').trim()).length;
@@ -68,14 +69,22 @@ export function phaseCriteriaMet(phase: number, data: any, config: AbpPhaseConfi
   if (phase === 2) {
     const ideas = Array.isArray(data?.ideas) ? data.ideas : [];
     const totalVotes = ideas.reduce((s: number, i: any) => s + (i.votes || 0), 0);
-    return ideas.length >= config.minIdeasPerMember * memberCount && totalVotes >= memberCount;
+    return ideas.length >= config.minIdeasPerMember * n && totalVotes >= n;
   }
   if (phase === 3) {
     const smart = data?.smart || {};
     const checked = Array.isArray(smart.checks) ? smart.checks.filter(Boolean).length : 0;
     return checked >= config.smartCriteria && String(smart.text || '').trim().length >= config.minObjectiveLength;
   }
-  return true; // fases 4–6: sin criterio automático aún (permisivo)
+  if (phase === 4) {
+    const tasks = Array.isArray(data?.tasks) ? data.tasks : [];
+    if (tasks.length === 0) return false;
+    const allDone = tasks.every((t: any) => t.col === 2);
+    const owners = new Set(tasks.map((t: any) => t.owner).filter(Boolean));
+    const everyoneHasTask = memberIds.length > 0 && memberIds.every(id => owners.has(id));
+    return allDone && everyoneHasTask;
+  }
+  return true; // fases 5–6: sin criterio automático aún (permisivo)
 }
 
 // XP de equipo por evento (la barra denormalizada; el XP individual va por grantXp).

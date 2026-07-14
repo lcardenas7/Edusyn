@@ -333,6 +333,62 @@ export class AbpService {
     return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 3 } } });
   }
 
+  // ─── FASE 4: Plan de Acción (Kanban) ───────────────────────────────────────
+
+  /** Agrega una tarea al tablero, asignada a un integrante. Columna inicial = Por hacer. */
+  async addTask(teamId: string, institutionId: string, userId: string, text: string, ownerEnrollmentId: string) {
+    const t = (text || '').trim();
+    if (!t) throw new BadRequestException('La tarea no puede estar vacía');
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    const owner = (team.members as any[]).find(m => m.studentEnrollmentId === ownerEnrollmentId);
+    if (!owner) throw new BadRequestException('El responsable debe ser un integrante del equipo');
+    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 4 } } });
+    if (!ps || ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 4 no está en curso');
+
+    const ownerName = `${owner.studentEnrollment.student.user?.firstName ?? ''} ${owner.studentEnrollment.student.user?.lastName ?? ''}`.trim() || 'Integrante';
+    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
+    const tasks: any[] = Array.isArray(data.tasks) ? [...data.tasks] : [];
+    tasks.push({ id: randomUUID(), text: t, owner: ownerEnrollmentId, ownerName, col: 0 });
+    data.tasks = tasks;
+    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 4 } }, data: { data } });
+    return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 4 } } });
+  }
+
+  /** Avanza una tarea de columna (0→1→2). Al llegar a "Hecho" la 1ª vez: +20 XP +
+   * contribución TASK_DONE atribuida a su responsable (dato de participación). */
+  async moveTask(teamId: string, institutionId: string, userId: string, taskId: string) {
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 4 } } });
+    if (!ps || ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 4 no está en curso');
+    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
+    const tasks: any[] = Array.isArray(data.tasks) ? data.tasks : [];
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) throw new NotFoundException('Tarea no encontrada');
+    if (task.col >= 2) return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 4 } } });
+    task.col += 1;
+    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 4 } }, data: { data } });
+    if (task.col === 2 && task.owner) {
+      try {
+        await this.prisma.abpContribution.create({
+          data: { institutionId, teamId, studentEnrollmentId: task.owner, phase: 4, type: 'TASK_DONE', refId: taskId, detail: `Terminó: ${String(task.text).slice(0, 60)}` },
+        });
+        await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.TASK_DONE } } });
+      } catch { /* idempotente */ }
+    }
+    return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 4 } } });
+  }
+
+  /** Elimina una tarea del tablero. */
+  async removeTask(teamId: string, institutionId: string, userId: string, taskId: string) {
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 4 } } });
+    if (!ps) throw new NotFoundException('Fase no encontrada');
+    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
+    data.tasks = (Array.isArray(data.tasks) ? data.tasks : []).filter((t: any) => t.id !== taskId);
+    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 4 } }, data: { data } });
+    return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 4 } } });
+  }
+
   // ─── VALIDACIÓN (gating de fases) ──────────────────────────────────────────
 
   /** El equipo solicita validar su fase actual → AWAITING + solicitud PENDING.
@@ -345,7 +401,8 @@ export class AbpService {
       throw new BadRequestException('La fase actual no está en curso');
     }
     const project = await this.prisma.abpProject.findUnique({ where: { id: team.projectId }, select: { phaseConfig: true } });
-    if (!phaseCriteriaMet(phase, ps.data, resolvePhaseConfig(project?.phaseConfig), team.members.length)) {
+    const memberIds = (team.members as any[]).map(m => m.studentEnrollmentId);
+    if (!phaseCriteriaMet(phase, ps.data, resolvePhaseConfig(project?.phaseConfig), memberIds)) {
       throw new BadRequestException('Aún no se cumplen los criterios de esta fase');
     }
     await this.prisma.abpPhaseState.update({

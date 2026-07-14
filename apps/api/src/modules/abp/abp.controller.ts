@@ -135,6 +135,28 @@ export class AbpController {
     return this.service.saveSmart(teamId, institutionId, userId, body.text ?? '', body.checks ?? []);
   }
 
+  // Fase 4: Kanban.
+  @Post('teams/:teamId/tasks')
+  @Roles('ESTUDIANTE', 'DOCENTE')
+  async addTask(@Param('teamId') teamId: string, @Request() req: any, @Body() body: { text: string; ownerEnrollmentId: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addTask(teamId, institutionId, userId, body.text, body.ownerEnrollmentId);
+  }
+
+  @Post('teams/:teamId/tasks/:taskId/move')
+  @Roles('ESTUDIANTE', 'DOCENTE')
+  async moveTask(@Param('teamId') teamId: string, @Param('taskId') taskId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.moveTask(teamId, institutionId, userId, taskId);
+  }
+
+  @Delete('teams/:teamId/tasks/:taskId')
+  @Roles('ESTUDIANTE', 'DOCENTE')
+  async removeTask(@Param('teamId') teamId: string, @Param('taskId') taskId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.removeTask(teamId, institutionId, userId, taskId);
+  }
+
   // Cola de validaciones pendientes del docente (opcional ?classroomId=).
   @Get('queue')
   @Roles('DOCENTE', 'COORDINADOR')
