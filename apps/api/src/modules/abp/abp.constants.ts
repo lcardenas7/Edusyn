@@ -49,6 +49,14 @@ export const ABP_BADGE_ON_PHASE: Record<number, string> = {
   6: '🏆 Expedición completa',
 };
 
+// Fase 6 — Rúbrica de coevaluación (cada equipo evalúa a los demás, escala 1–4).
+export const ABP_COEVAL_CRITERIA = [
+  'Claridad de la presentación',
+  'Creatividad de la solución',
+  'Trabajo en equipo',
+  'Impacto en la comunidad',
+] as const;
+
 // Fase 1 — Canvas del Problema: las 4 tarjetas colaborativas (pregunta + icono).
 export const CANVAS_CARDS = [
   { q: '¿Qué está pasando?', icon: '🔍' },

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ABP_PHASE_COUNT, resolvePhaseConfig, ABP_BADGE_ON_PHASE, ABP_XP, CANVAS_CARDS, phaseCriteriaMet } from './abp.constants';
+import { ABP_PHASE_COUNT, resolvePhaseConfig, ABP_BADGE_ON_PHASE, ABP_XP, CANVAS_CARDS, phaseCriteriaMet, ABP_COEVAL_CRITERIA } from './abp.constants';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EXPEDICIÓN ABP — servicio. Ticket 1: crear proyecto, roster, armar equipos.
@@ -178,12 +178,19 @@ export class AbpService {
       myVotesUsed = votes.length;
       myVotedIds = votes.map(v => v.refId).filter(Boolean) as string[];
     }
+    // Otros equipos del proyecto (para la coevaluación de la Fase 6).
+    const siblings = await this.prisma.abpTeam.findMany({
+      where: { projectId, institutionId, id: { not: team.id } },
+      select: { id: true, name: true, emoji: true },
+      orderBy: { createdAt: 'asc' },
+    });
     return {
       ...team,
       config: resolvePhaseConfig(team.project?.phaseConfig),
       myEnrollmentId: me?.enrollmentId ?? null,
       myVotesUsed,
       myVotedIds,
+      siblings,
     };
   }
 
@@ -430,6 +437,37 @@ export class AbpService {
     return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 5 } } });
   }
 
+  // ─── FASE 6: Coevaluación ──────────────────────────────────────────────────
+
+  /** El equipo evalúa a OTRO equipo del proyecto con la rúbrica (escala 1–4).
+   * Una coevaluación por (equipo evaluador → equipo evaluado); se puede reeditar. */
+  async submitCoeval(teamId: string, institutionId: string, userId: string, targetTeamId: string, scores: number[]) {
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    if (targetTeamId === teamId) throw new BadRequestException('Un equipo no se evalúa a sí mismo');
+    const target = await this.prisma.abpTeam.findFirst({ where: { id: targetTeamId, institutionId, projectId: team.projectId }, select: { id: true } });
+    if (!target) throw new BadRequestException('Equipo a evaluar no encontrado en este proyecto');
+    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 6 } } });
+    if (!ps || ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 6 no está en curso');
+
+    const clean = (Array.isArray(scores) ? scores : []).slice(0, ABP_COEVAL_CRITERIA.length).map(n => Math.max(1, Math.min(4, Math.round(Number(n) || 1))));
+    if (clean.length < ABP_COEVAL_CRITERIA.length) throw new BadRequestException('Faltan criterios por calificar');
+    const me = this.memberOf(team, userId);
+    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
+    const coevals: any = { ...(data.coevals || {}) };
+    coevals[targetTeamId] = { scores: clean, by: me?.enrollmentId ?? null, byName: me?.name ?? 'Docente' };
+    data.coevals = coevals;
+    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 6 } }, data: { data } });
+
+    if (me?.enrollmentId) {
+      try {
+        await this.prisma.abpContribution.create({
+          data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 6, type: 'COEVAL', refId: targetTeamId, detail: `Coevaluó a un equipo (${clean.join('/')})` },
+        });
+      } catch { /* idempotente: ya coevaluó a ese equipo */ }
+    }
+    return this.getMyTeam(team.projectId, institutionId, userId);
+  }
+
   // ─── VALIDACIÓN (gating de fases) ──────────────────────────────────────────
 
   /** El equipo solicita validar su fase actual → AWAITING + solicitud PENDING.
@@ -445,6 +483,14 @@ export class AbpService {
     const memberIds = (team.members as any[]).map(m => m.studentEnrollmentId);
     if (!phaseCriteriaMet(phase, ps.data, resolvePhaseConfig(project?.phaseConfig), memberIds)) {
       throw new BadRequestException('Aún no se cumplen los criterios de esta fase');
+    }
+    // Fase 6: debe haber coevaluado a todos los demás equipos del proyecto.
+    if (phase === 6) {
+      const siblings = await this.prisma.abpTeam.count({ where: { projectId: team.projectId, institutionId, id: { not: teamId } } });
+      const done = Object.keys(((ps.data as any)?.coevals) || {}).length;
+      if (siblings > 0 && done < siblings) {
+        throw new BadRequestException('Faltan equipos por coevaluar');
+      }
     }
     await this.prisma.abpPhaseState.update({
       where: { teamId_phase: { teamId, phase } },

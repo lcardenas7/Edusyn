@@ -5,7 +5,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
 import { resolveInstitutionId } from '../../common/utils/institution-resolver';
 import { AbpService } from './abp.service';
-import { ABP_PHASES } from './abp.constants';
+import { ABP_PHASES, ABP_COEVAL_CRITERIA } from './abp.constants';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EXPEDICIÓN ABP — controller. Ticket 1: crear proyecto, roster, armar equipos.
@@ -26,11 +26,19 @@ export class AbpController {
     return { userId, institutionId };
   }
 
-  // Catálogo de las 6 fases (para el front).
+  // Catálogo de las 6 fases + rúbrica de coevaluación (para el front).
   @Get('phases')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
   phases() {
-    return ABP_PHASES;
+    return { phases: ABP_PHASES, coevalCriteria: ABP_COEVAL_CRITERIA };
+  }
+
+  // Fase 6: coevaluar a otro equipo.
+  @Post('teams/:teamId/coeval')
+  @Roles('ESTUDIANTE', 'DOCENTE')
+  async coeval(@Param('teamId') teamId: string, @Request() req: any, @Body() body: { targetTeamId: string; scores: number[] }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.submitCoeval(teamId, institutionId, userId, body.targetTeamId, body.scores);
   }
 
   // Proyectos ABP de un aula.

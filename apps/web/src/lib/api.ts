@@ -2548,6 +2548,7 @@ export const abpApi = {
   removeTask: (teamId: string, taskId: string) => api.delete(`/abp/teams/${teamId}/tasks/${taskId}`),
   addEvidence: (teamId: string, kind: 'LINK' | 'FILE', url: string, label?: string) => api.post<any>(`/abp/teams/${teamId}/evidences`, { kind, url, label }),
   removeEvidence: (teamId: string, evidenceId: string) => api.delete(`/abp/teams/${teamId}/evidences/${evidenceId}`),
+  coeval: (teamId: string, targetTeamId: string, scores: number[]) => api.post<any>(`/abp/teams/${teamId}/coeval`, { targetTeamId, scores }),
   requestValidation: (teamId: string) => api.post<any>(`/abp/teams/${teamId}/request-validation`, {}),
   queue: (classroomId?: string) => api.get<any[]>(`/abp/queue`, { params: { classroomId } }),
   resolve: (validationId: string, data: { action: 'approve' | 'return'; feedback?: string }) => api.post<any>(`/abp/validations/${validationId}/resolve`, data),

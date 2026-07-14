@@ -304,6 +304,53 @@ function EvidencePhase({ team, onSaved }: { team: any; onSaved: () => void }) {
   )
 }
 
+// Fase 6 — Socialización y Coevaluación (cada equipo evalúa a los demás, 1–4).
+const COEVAL_CRITERIA = ['Claridad de la presentación', 'Creatividad de la solución', 'Trabajo en equipo', 'Impacto en la comunidad']
+function CoevalCard({ team, sibling, existing, editable, onSaved }: { team: any; sibling: any; existing: any; editable: boolean; onSaved: () => void }) {
+  const [scores, setScores] = useState<number[]>(() => COEVAL_CRITERIA.map((_, i) => existing?.scores?.[i] || 0))
+  const [busy, setBusy] = useState(false)
+  const done = !!existing
+  const complete = scores.every(s => s >= 1)
+  const submit = async () => {
+    if (!complete || busy) return
+    setBusy(true)
+    try { await abpApi.coeval(team.id, sibling.id, scores); onSaved() } catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+  }
+  return (
+    <div className={`border-2 rounded-xl p-4 ${done ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-200'}`}>
+      <div className="flex justify-between items-center mb-2">
+        <h5 className="font-bold text-slate-800">{sibling.emoji} {sibling.name}</h5>
+        {done && <span className="text-xs text-emerald-600 font-semibold">✓ Evaluado</span>}
+      </div>
+      <div className="space-y-2">
+        {COEVAL_CRITERIA.map((c, i) => (
+          <div key={i} className="flex items-center justify-between gap-2">
+            <span className="text-sm text-slate-600">{c}</span>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4].map(n => (
+                <button key={n} onClick={() => editable && setScores(s => { const x = [...s]; x[i] = n; return x })} disabled={!editable}
+                  className={`w-8 h-8 rounded-lg text-sm font-bold ${scores[i] === n ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-500'}`}>{n}</button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {editable && <button onClick={submit} disabled={!complete || busy} className="mt-3 w-full py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">{done ? 'Actualizar' : 'Enviar evaluación'}</button>}
+    </div>
+  )
+}
+function CoevalPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
+  const siblings = team.siblings || []
+  const coevals = phaseData(team, 6).coevals || {}
+  const editable = stateOf(team, 6) === 'IN_PROGRESS'
+  if (siblings.length === 0) return <p className="text-sm text-slate-400 text-center py-6">Son el único equipo del proyecto: no hay coevaluación. Presenten su solución y soliciten la validación para cerrar la expedición.</p>
+  return (
+    <div className="grid sm:grid-cols-2 gap-3">
+      {siblings.map((s: any) => <CoevalCard key={s.id} team={team} sibling={s} existing={coevals[s.id]} editable={editable} onSaved={onSaved} />)}
+    </div>
+  )
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // VISTA ESTUDIANTE — su expedición
 // ═══════════════════════════════════════════════════════════════════════════
@@ -353,11 +400,14 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const kanbanOk = tasks4.length > 0 && tasksDone === tasks4.length && memberIds.length > 0 && memberIds.every((id: string) => owners.has(id))
   const evidences5: any[] = (curPs?.data?.evidences) || []
   const minEv = team.config?.minEvidences ?? 3
+  const siblings6 = team.siblings || []
+  const coevalsDone = Object.keys((curPs?.data?.coevals) || {}).length
   const canRequest = cur === 1 ? canvasFilled >= 4
     : cur === 2 ? (ideas.length >= minIdeas && totalVotes >= members)
     : cur === 3 ? (smartChecked >= 5 && String(smart.text || '').trim().length >= 20)
     : cur === 4 ? kanbanOk
     : cur === 5 ? evidences5.length >= minEv
+    : cur === 6 ? (siblings6.length === 0 || coevalsDone >= siblings6.length)
     : true
 
   return (
@@ -417,6 +467,8 @@ function StudentExpedition({ projects }: { projects: any[] }) {
               <KanbanPhase team={team} onSaved={load} />
             ) : cur === 5 ? (
               <EvidencePhase team={team} onSaved={load} />
+            ) : cur === 6 ? (
+              <CoevalPhase team={team} onSaved={load} />
             ) : (
               <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 text-sm">
                 🛠️ La herramienta de esta fase ({phaseName(cur)}) se habilita en el siguiente ticket.
@@ -429,6 +481,7 @@ function StudentExpedition({ projects }: { projects: any[] }) {
               {cur === 3 && <span className="text-sm text-slate-500">Criterios SMART: <b className="text-slate-700">{smartChecked}/5</b></span>}
               {cur === 4 && <span className="text-sm text-slate-500">Tareas hechas: <b className="text-slate-700">{tasksDone}/{tasks4.length}</b>{!owners.size || memberIds.some((id: string) => !owners.has(id)) ? ' · falta asignar a todos' : ''}</span>}
               {cur === 5 && <span className="text-sm text-slate-500">Evidencias: <b className="text-slate-700">{evidences5.length}/{minEv}</b></span>}
+              {cur === 6 && siblings6.length > 0 && <span className="text-sm text-slate-500">Equipos evaluados: <b className="text-slate-700">{coevalsDone}/{siblings6.length}</b></span>}
               <button onClick={requestValidation} disabled={busy || !canRequest}
                 className="ml-auto py-3 px-6 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} {canRequest ? 'Solicitar validación' : 'Completa los criterios'}
