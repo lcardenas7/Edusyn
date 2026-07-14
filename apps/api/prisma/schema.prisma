@@ -589,6 +589,7 @@ model Institution {
   rlsAbpPhaseStates     AbpPhaseState[]        @relation("RlsInstitutionABPS")
   rlsAbpValidations     AbpValidationRequest[] @relation("RlsInstitutionABPV")
   rlsAbpContributions   AbpContribution[]      @relation("RlsInstitutionABPC")
+  rlsAbpComments        AbpComment[]           @relation("RlsInstitutionABPCM")
 }
 
 // Módulos habilitados por institución
@@ -1658,6 +1659,7 @@ model StudentEnrollment {
   // Expedición ABP
   abpTeamMemberships AbpTeamMember[]
   abpContributions   AbpContribution[]
+  abpComments        AbpComment[]
 
   @@unique([studentId, academicYearId])
 }
@@ -6647,6 +6649,7 @@ model AbpTeam {
   phaseStates   AbpPhaseState[]
   validations   AbpValidationRequest[]
   contributions AbpContribution[]
+  comments      AbpComment[]
 
   @@index([institutionId])
   @@index([projectId])
@@ -6681,8 +6684,9 @@ model AbpPhaseState {
   validatedAt   DateTime? // al aprobar (VALIDATED)
   updatedAt     DateTime       @updatedAt
 
-  institution Institution @relation("RlsInstitutionABPS", fields: [institutionId], references: [id])
-  team        AbpTeam     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  institution Institution  @relation("RlsInstitutionABPS", fields: [institutionId], references: [id])
+  team        AbpTeam      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  comments    AbpComment[]
 
   @@unique([teamId, phase])
   @@index([institutionId])
@@ -6697,6 +6701,8 @@ model AbpValidationRequest {
   status        AbpValidationStatus @default(PENDING)
   note          String?             @db.Text // nota del equipo al solicitar
   feedback      String?             @db.Text // feedback del docente al devolver
+  rubricScores  Json? // { "0": 1-4, ... } por criterio de la fase (obligatoria al aprobar, en el servicio)
+  rubricComment String?             @db.Text // comentario global de la valoración (opcional)
   createdAt     DateTime            @default(now())
   resolvedAt    DateTime?
 
@@ -6728,4 +6734,44 @@ model AbpContribution {
   @@index([teamId, phase])
   @@index([studentEnrollmentId])
   @@index([type])
+}
+
+// Comentarios en línea (docente ↔ equipo) sobre cualquier objeto de una fase.
+enum AbpCommentRefType {
+  CANVAS_CARD
+  IDEA
+  TASK
+  EVIDENCE
+  COEVAL
+  PHASE
+}
+
+model AbpComment {
+  id                        String            @id @default(cuid())
+  institutionId             String
+  teamId                    String
+  phaseStateId              String
+  refType                   AbpCommentRefType
+  refId                     String? // id del objeto comentado; null si refType=PHASE
+  authorStudentEnrollmentId String? // autor estudiante (cruza con AbpContribution)
+  authorUserId              String? // autor docente
+  authorName                String // denormalizado para pintar sin join
+  authorRole                String // 'DOCENTE' | 'ESTUDIANTE'
+  content                   String            @db.Text
+  resolved                  Boolean           @default(false)
+  parentId                  String? // respuesta a otro comentario (hilo)
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+
+  institution      Institution        @relation("RlsInstitutionABPCM", fields: [institutionId], references: [id])
+  team             AbpTeam            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  phaseState       AbpPhaseState      @relation(fields: [phaseStateId], references: [id], onDelete: Cascade)
+  authorEnrollment StudentEnrollment? @relation(fields: [authorStudentEnrollmentId], references: [id], onDelete: SetNull)
+  parent           AbpComment?        @relation("AbpCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies          AbpComment[]       @relation("AbpCommentReplies")
+
+  @@index([institutionId])
+  @@index([teamId])
+  @@index([phaseStateId, resolved, createdAt])
+  @@index([refType, refId])
 }
