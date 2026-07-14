@@ -49,6 +49,25 @@ export const ABP_BADGE_ON_PHASE: Record<number, string> = {
   6: '🏆 Expedición completa',
 };
 
+// Fase 1 — Canvas del Problema: las 4 tarjetas colaborativas (pregunta + icono).
+export const CANVAS_CARDS = [
+  { q: '¿Qué está pasando?', icon: '🔍' },
+  { q: '¿A quiénes afecta?', icon: '👥' },
+  { q: '¿Por qué es importante?', icon: '⭐' },
+  { q: '¿Qué pasa si nadie lo resuelve?', icon: '⚠️' },
+] as const;
+
+// ¿Cumple la fase sus criterios automáticos para poder solicitar validación?
+// Se refina por fase conforme se construyen las herramientas (tickets 3–8).
+export function phaseCriteriaMet(phase: number, data: any, config: AbpPhaseConfig): boolean {
+  if (phase === 1) {
+    const canvas = Array.isArray(data?.canvas) ? data.canvas : [];
+    const filled = canvas.filter((c: any) => c && String(c.value || '').trim()).length;
+    return filled >= config.minCanvasCards;
+  }
+  return true; // fases 2–6: sin criterio automático aún (permisivo)
+}
+
 // XP de equipo por evento (la barra denormalizada; el XP individual va por grantXp).
 export const ABP_XP = {
   CANVAS_CARD: 10,

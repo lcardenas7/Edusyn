@@ -13,6 +13,50 @@ const PHASES = [
 ]
 const phaseName = (n: number) => PHASES.find(p => p.n === n)?.name || `Fase ${n}`
 const stateOf = (team: any, n: number) => (team?.phaseStates || []).find((s: any) => s.phase === n)?.status || 'LOCKED'
+const phaseData = (team: any, n: number) => (team?.phaseStates || []).find((s: any) => s.phase === n)?.data || {}
+
+// Fase 1 — Canvas del Problema (4 tarjetas colaborativas).
+const CANVAS_CARDS = [
+  { q: '¿Qué está pasando?', icon: '🔍' },
+  { q: '¿A quiénes afecta?', icon: '👥' },
+  { q: '¿Por qué es importante?', icon: '⭐' },
+  { q: '¿Qué pasa si nadie lo resuelve?', icon: '⚠️' },
+]
+
+function CanvasPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
+  const data = phaseData(team, 1)
+  const canvas: any[] = data.canvas || []
+  const editable = stateOf(team, 1) === 'IN_PROGRESS'
+  const [local, setLocal] = useState<string[]>(() => CANVAS_CARDS.map((_, i) => canvas[i]?.value || ''))
+
+  const save = async (i: number) => {
+    if (local[i] === (canvas[i]?.value || '')) return
+    try { await abpApi.saveCanvas(team.id, i, local[i]); onSaved() } catch {}
+  }
+
+  return (
+    <div className="grid sm:grid-cols-2 gap-3">
+      {CANVAS_CARDS.map((c, i) => {
+        const filled = !!local[i].trim()
+        return (
+          <div key={i} className={`rounded-xl border-2 p-3 ${filled ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-200'}`}>
+            <h5 className="font-bold text-sm text-slate-700 flex items-center gap-1.5 mb-2">{c.icon} {c.q}</h5>
+            <textarea
+              value={local[i]}
+              disabled={!editable}
+              onChange={e => setLocal(v => { const n = [...v]; n[i] = e.target.value; return n })}
+              onBlur={() => editable && save(i)}
+              rows={3}
+              placeholder="Escribe aquí…"
+              className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm resize-none disabled:opacity-70"
+            />
+            <p className="text-xs text-slate-400 mt-1">{filled ? `✍️ ${canvas[i]?.byName || 'Aportó'}` : 'Tarjeta pendiente'}</p>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 // ─── Sendero de 6 fases (nodos hecho / actual / bloqueado) ────────────────────
 function Trail({ team, mini = false }: { team: any; mini?: boolean }) {
@@ -85,6 +129,9 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const cur = team.currentPhase
   const curState = stateOf(team, cur)
   const curPs = (team.phaseStates || []).find((s: any) => s.phase === cur)
+  // Criterios automáticos para habilitar "Solicitar validación".
+  const canvasFilled = ((curPs?.data?.canvas) || []).filter((c: any) => c && String(c.value || '').trim()).length
+  const canRequest = cur === 1 ? canvasFilled >= 4 : true
 
   return (
     <div className="space-y-4">
@@ -133,14 +180,21 @@ function StudentExpedition({ projects }: { projects: any[] }) {
           <div className="text-center py-6">🏆<p className="font-bold text-slate-800 mt-2">¡Llegaron a la cima de la expedición!</p></div>
         ) : (
           <>
-            <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 text-sm">
-              🛠️ La herramienta de esta fase ({phaseName(cur)}) se habilita en el siguiente ticket.
-              <br />Por ahora puedes solicitar la validación al docente.
+            {cur === 1 ? (
+              <CanvasPhase team={team} onSaved={load} />
+            ) : (
+              <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 text-sm">
+                🛠️ La herramienta de esta fase ({phaseName(cur)}) se habilita en el siguiente ticket.
+                <br />Por ahora puedes solicitar la validación al docente.
+              </div>
+            )}
+            <div className="mt-4 flex items-center gap-3 flex-wrap">
+              {cur === 1 && <span className="text-sm text-slate-500">Tarjetas completas: <b className="text-slate-700">{canvasFilled}/4</b></span>}
+              <button onClick={requestValidation} disabled={busy || !canRequest}
+                className="ml-auto py-3 px-6 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} {canRequest ? 'Solicitar validación' : 'Completa los criterios'}
+              </button>
             </div>
-            <button onClick={requestValidation} disabled={busy}
-              className="mt-4 w-full py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 disabled:opacity-50 flex items-center justify-center gap-2">
-              {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} Solicitar validación
-            </button>
           </>
         )}
       </div>

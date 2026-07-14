@@ -2539,6 +2539,7 @@ export const abpApi = {
   createTeam: (data: { projectId: string; name: string; emoji?: string; color?: string; problem?: string; memberEnrollmentIds: string[] }) => api.post<any>(`/abp/teams`, data),
   deleteTeam: (teamId: string) => api.delete(`/abp/teams/${teamId}`),
   myTeam: (projectId: string) => api.get<any>(`/abp/projects/${projectId}/my-team`),
+  saveCanvas: (teamId: string, cardIndex: number, value: string) => api.post<any>(`/abp/teams/${teamId}/canvas`, { cardIndex, value }),
   requestValidation: (teamId: string) => api.post<any>(`/abp/teams/${teamId}/request-validation`, {}),
   queue: (classroomId?: string) => api.get<any[]>(`/abp/queue`, { params: { classroomId } }),
   resolve: (validationId: string, data: { action: 'approve' | 'return'; feedback?: string }) => api.post<any>(`/abp/validations/${validationId}/resolve`, data),

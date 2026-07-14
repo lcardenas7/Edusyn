@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ABP_PHASE_COUNT, resolvePhaseConfig, ABP_BADGE_ON_PHASE, ABP_XP } from './abp.constants';
+import { ABP_PHASE_COUNT, resolvePhaseConfig, ABP_BADGE_ON_PHASE, ABP_XP, CANVAS_CARDS, phaseCriteriaMet } from './abp.constants';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EXPEDICIÓN ABP — servicio. Ticket 1: crear proyecto, roster, armar equipos.
@@ -169,7 +169,13 @@ export class AbpService {
   private async loadTeamForUser(teamId: string, institutionId: string, userId: string) {
     const team = await this.prisma.abpTeam.findFirst({
       where: { id: teamId, institutionId },
-      include: { members: { include: { studentEnrollment: { include: { student: { select: { userId: true } } } } } } },
+      include: {
+        members: {
+          include: {
+            studentEnrollment: { include: { student: { select: { userId: true, user: { select: { firstName: true, lastName: true } } } } } },
+          },
+        },
+      },
     });
     if (!team) throw new NotFoundException('Equipo no encontrado');
     const isMember = team.members.some(m => m.studentEnrollment.student.userId === userId);
@@ -180,16 +186,63 @@ export class AbpService {
     return team;
   }
 
+  /** El miembro (matrícula + nombre) que corresponde al usuario, o null si es docente. */
+  private memberOf(team: any, userId: string): { enrollmentId: string; name: string } | null {
+    const m = (team.members || []).find((x: any) => x.studentEnrollment.student.userId === userId);
+    if (!m) return null;
+    const u = m.studentEnrollment.student.user;
+    return { enrollmentId: m.studentEnrollmentId, name: `${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim() || 'Estudiante' };
+  }
+
+  // ─── FASE 1: Canvas del Problema ───────────────────────────────────────────
+
+  /** Guarda una tarjeta del canvas (0–3). Registra autor + contribución + XP la
+   * primera vez que se llena. Editar después no re-registra (el autor es el primero). */
+  async saveCanvasCard(teamId: string, institutionId: string, userId: string, cardIndex: number, value: string) {
+    if (cardIndex < 0 || cardIndex >= CANVAS_CARDS.length) throw new BadRequestException('Tarjeta inválida');
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 1 } } });
+    if (!ps || ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 1 no está en curso');
+
+    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
+    const canvas: any[] = Array.isArray(data.canvas) ? [...data.canvas] : [];
+    while (canvas.length < CANVAS_CARDS.length) canvas.push(null);
+    const prev = canvas[cardIndex];
+    const wasFilled = !!(prev && String(prev.value || '').trim());
+    const me = this.memberOf(team, userId);
+
+    canvas[cardIndex] = wasFilled
+      ? { value, by: prev.by ?? null, byName: prev.byName ?? null } // conserva el autor original
+      : { value, by: me?.enrollmentId ?? null, byName: me?.name ?? 'Docente' };
+    data.canvas = canvas;
+    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 1 } }, data: { data } });
+
+    // Primera vez que se llena, con autor estudiante → contribución + XP de equipo.
+    if (!wasFilled && value.trim() && me?.enrollmentId) {
+      try {
+        await this.prisma.abpContribution.create({
+          data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 1, type: 'CANVAS_CARD', refId: String(cardIndex), detail: `Completó: ${CANVAS_CARDS[cardIndex].q}` },
+        });
+        await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.CANVAS_CARD } } });
+      } catch { /* @@unique → ya contó, idempotente */ }
+    }
+    return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 1 } } });
+  }
+
   // ─── VALIDACIÓN (gating de fases) ──────────────────────────────────────────
 
   /** El equipo solicita validar su fase actual → AWAITING + solicitud PENDING.
-   * (Ticket 2: permisivo; los criterios automáticos por fase llegan en tickets 3–8.) */
+   * Se exige que se cumplan los criterios automáticos de la fase. */
   async requestValidation(teamId: string, institutionId: string, userId: string) {
     const team = await this.loadTeamForUser(teamId, institutionId, userId);
     const phase = team.currentPhase;
     const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase } } });
     if (!ps || ps.status !== 'IN_PROGRESS') {
       throw new BadRequestException('La fase actual no está en curso');
+    }
+    const project = await this.prisma.abpProject.findUnique({ where: { id: team.projectId }, select: { phaseConfig: true } });
+    if (!phaseCriteriaMet(phase, ps.data, resolvePhaseConfig(project?.phaseConfig))) {
+      throw new BadRequestException('Aún no se cumplen los criterios de esta fase');
     }
     await this.prisma.abpPhaseState.update({
       where: { teamId_phase: { teamId, phase } },

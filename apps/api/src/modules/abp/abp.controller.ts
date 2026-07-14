@@ -103,6 +103,14 @@ export class AbpController {
     return this.service.requestValidation(teamId, institutionId, userId);
   }
 
+  // Fase 1: guardar una tarjeta del canvas.
+  @Post('teams/:teamId/canvas')
+  @Roles('ESTUDIANTE', 'DOCENTE')
+  async saveCanvas(@Param('teamId') teamId: string, @Request() req: any, @Body() body: { cardIndex: number; value: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.saveCanvasCard(teamId, institutionId, userId, body.cardIndex, body.value ?? '');
+  }
+
   // Cola de validaciones pendientes del docente (opcional ?classroomId=).
   @Get('queue')
   @Roles('DOCENTE', 'COORDINADOR')
