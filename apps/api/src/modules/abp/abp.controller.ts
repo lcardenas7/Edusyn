@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -83,5 +83,39 @@ export class AbpController {
   async deleteTeam(@Param('teamId') teamId: string, @Request() req: any) {
     const { institutionId, userId } = await this.ctx(req);
     return this.service.deleteTeam(teamId, institutionId, userId);
+  }
+
+  // ─── Sendero + validaciones (Ticket 2) ─────────────────────────────────────
+
+  // El equipo del estudiante en un proyecto (su expedición).
+  @Get('projects/:projectId/my-team')
+  @Roles('ESTUDIANTE')
+  async myTeam(@Param('projectId') projectId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.getMyTeam(projectId, institutionId, userId);
+  }
+
+  // El equipo solicita validar su fase actual.
+  @Post('teams/:teamId/request-validation')
+  @Roles('ESTUDIANTE', 'DOCENTE')
+  async requestValidation(@Param('teamId') teamId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.requestValidation(teamId, institutionId, userId);
+  }
+
+  // Cola de validaciones pendientes del docente (opcional ?classroomId=).
+  @Get('queue')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async queue(@Request() req: any, @Query('classroomId') classroomId?: string) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.getQueue(institutionId, userId, classroomId);
+  }
+
+  // Docente aprueba o devuelve una validación.
+  @Post('validations/:validationId/resolve')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async resolveValidation(@Param('validationId') validationId: string, @Request() req: any, @Body() body: { action: 'approve' | 'return'; feedback?: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.resolveValidation(validationId, institutionId, userId, body.action, body.feedback);
   }
 }

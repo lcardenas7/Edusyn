@@ -2529,6 +2529,21 @@ export interface RouteProgress {
   steps: { id: string; title: string; done: boolean; mastery: number }[]
 }
 
+// ─── Expedición ABP ──────────────────────────────────────────────────────────
+export const abpApi = {
+  phases: () => api.get<any[]>(`/abp/phases`),
+  listByClassroom: (classroomId: string) => api.get<any[]>(`/abp/classroom/${classroomId}/projects`),
+  roster: (classroomId: string) => api.get<{ enrollmentId: string; studentId: string; name: string }[]>(`/abp/classroom/${classroomId}/roster`),
+  getProject: (projectId: string) => api.get<any>(`/abp/projects/${projectId}`),
+  createProject: (data: { classroomId: string; title: string; challenge?: string }) => api.post<any>(`/abp/projects`, data),
+  createTeam: (data: { projectId: string; name: string; emoji?: string; color?: string; problem?: string; memberEnrollmentIds: string[] }) => api.post<any>(`/abp/teams`, data),
+  deleteTeam: (teamId: string) => api.delete(`/abp/teams/${teamId}`),
+  myTeam: (projectId: string) => api.get<any>(`/abp/projects/${projectId}/my-team`),
+  requestValidation: (teamId: string) => api.post<any>(`/abp/teams/${teamId}/request-validation`, {}),
+  queue: (classroomId?: string) => api.get<any[]>(`/abp/queue`, { params: { classroomId } }),
+  resolve: (validationId: string, data: { action: 'approve' | 'return'; feedback?: string }) => api.post<any>(`/abp/validations/${validationId}/resolve`, data),
+}
+
 export const learningRouteApi = {
   competencies: (level?: string, skill?: string) =>
     api.get<CompetencyView[]>(`/learning-routes/competencies`, { params: { level, skill } }),

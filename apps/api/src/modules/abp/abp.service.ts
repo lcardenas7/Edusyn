@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ABP_PHASE_COUNT, resolvePhaseConfig } from './abp.constants';
+import { ABP_PHASE_COUNT, resolvePhaseConfig, ABP_BADGE_ON_PHASE, ABP_XP } from './abp.constants';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EXPEDICIÓN ABP — servicio. Ticket 1: crear proyecto, roster, armar equipos.
@@ -154,6 +154,122 @@ export class AbpService {
     await this.assertProjectOwner(team.projectId, institutionId, userId);
     await this.prisma.abpTeam.delete({ where: { id: teamId } });
     return { ok: true };
+  }
+
+  // ─── ESTUDIANTE: su equipo ─────────────────────────────────────────────────
+
+  /** El equipo del estudiante autenticado en un proyecto (o null si no tiene). */
+  async getMyTeam(projectId: string, institutionId: string, userId: string) {
+    return this.prisma.abpTeam.findFirst({
+      where: { projectId, institutionId, members: { some: { studentEnrollment: { student: { userId } } } } },
+      include: { ...this.teamInclude(), project: { select: { id: true, title: true, challenge: true } } },
+    });
+  }
+
+  private async loadTeamForUser(teamId: string, institutionId: string, userId: string) {
+    const team = await this.prisma.abpTeam.findFirst({
+      where: { id: teamId, institutionId },
+      include: { members: { include: { studentEnrollment: { include: { student: { select: { userId: true } } } } } } },
+    });
+    if (!team) throw new NotFoundException('Equipo no encontrado');
+    const isMember = team.members.some(m => m.studentEnrollment.student.userId === userId);
+    if (!isMember) {
+      // Permitir también al docente dueño (para pruebas/gestión).
+      await this.assertProjectOwner(team.projectId, institutionId, userId);
+    }
+    return team;
+  }
+
+  // ─── VALIDACIÓN (gating de fases) ──────────────────────────────────────────
+
+  /** El equipo solicita validar su fase actual → AWAITING + solicitud PENDING.
+   * (Ticket 2: permisivo; los criterios automáticos por fase llegan en tickets 3–8.) */
+  async requestValidation(teamId: string, institutionId: string, userId: string) {
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    const phase = team.currentPhase;
+    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase } } });
+    if (!ps || ps.status !== 'IN_PROGRESS') {
+      throw new BadRequestException('La fase actual no está en curso');
+    }
+    await this.prisma.abpPhaseState.update({
+      where: { teamId_phase: { teamId, phase } },
+      data: { status: 'AWAITING', submittedAt: new Date(), feedback: null },
+    });
+    // Evita duplicar solicitud pendiente.
+    const existing = await this.prisma.abpValidationRequest.findFirst({ where: { teamId, phase, status: 'PENDING' } });
+    if (existing) return existing;
+    return this.prisma.abpValidationRequest.create({
+      data: { institutionId, teamId, phase, status: 'PENDING' },
+    });
+  }
+
+  /** Cola de validaciones pendientes de las aulas del docente (opcional: por aula). */
+  async getQueue(institutionId: string, userId: string, classroomId?: string) {
+    const requests = await this.prisma.abpValidationRequest.findMany({
+      where: {
+        institutionId,
+        status: 'PENDING',
+        team: {
+          project: {
+            classroomId: classroomId || undefined,
+            classroom: { teacherAssignment: { teacherId: userId } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        team: { select: { id: true, name: true, emoji: true, color: true, projectId: true } },
+      },
+    });
+    return requests;
+  }
+
+  /** Docente resuelve una validación: aprueba (desbloquea siguiente + XP + insignia)
+   * o devuelve con retroalimentación (la fase vuelve a en curso mostrando el comentario). */
+  async resolveValidation(validationId: string, institutionId: string, userId: string, action: 'approve' | 'return', feedback?: string) {
+    const vr = await this.prisma.abpValidationRequest.findFirst({
+      where: { id: validationId, institutionId, status: 'PENDING' },
+      include: { team: { select: { id: true, projectId: true, currentPhase: true, xp: true, badges: true } } },
+    });
+    if (!vr) throw new NotFoundException('Solicitud no encontrada');
+    await this.assertProjectOwner(vr.team.projectId, institutionId, userId);
+
+    if (action === 'return') {
+      const fb = (feedback || '').trim() || 'Revisen los criterios de la fase y vuelvan a enviar.';
+      await this.prisma.abpPhaseState.update({
+        where: { teamId_phase: { teamId: vr.teamId, phase: vr.phase } },
+        data: { status: 'IN_PROGRESS', feedback: fb, submittedAt: null },
+      });
+      return this.prisma.abpValidationRequest.update({
+        where: { id: vr.id }, data: { status: 'RETURNED', feedback: fb, resolvedAt: new Date() },
+      });
+    }
+
+    // approve
+    const now = new Date();
+    await this.prisma.abpPhaseState.update({
+      where: { teamId_phase: { teamId: vr.teamId, phase: vr.phase } },
+      data: { status: 'VALIDATED', validatedAt: now, feedback: null },
+    });
+    const badge = ABP_BADGE_ON_PHASE[vr.phase];
+    const nextPhase = vr.phase < ABP_PHASE_COUNT ? vr.phase + 1 : vr.phase;
+    if (vr.phase < ABP_PHASE_COUNT) {
+      await this.prisma.abpPhaseState.update({
+        where: { teamId_phase: { teamId: vr.teamId, phase: nextPhase } },
+        data: { status: 'IN_PROGRESS', startedAt: now },
+      });
+    }
+    await this.prisma.abpTeam.update({
+      where: { id: vr.teamId },
+      data: {
+        currentPhase: nextPhase,
+        xp: { increment: ABP_XP.PHASE_VALIDATED },
+        badges: badge && !vr.team.badges.includes(badge) ? { set: [...vr.team.badges, badge] } : undefined,
+      },
+    });
+    return this.prisma.abpValidationRequest.update({
+      where: { id: vr.id }, data: { status: 'APPROVED', resolvedAt: now },
+    });
   }
 
   private teamInclude() {

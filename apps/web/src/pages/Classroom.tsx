@@ -8,6 +8,7 @@ import LiveQuiz from '../components/LiveQuiz'
 import LearningIdentityWidget from '../components/LearningIdentityWidget'
 import LearningBadges from '../components/LearningBadges'
 import LearningRoutesTab from '../components/LearningRoutesTab'
+import AbpTab from '../components/AbpTab'
 import { Route as RouteIcon } from 'lucide-react'
 import { CreateSelfAssessmentForm, StudentSelfAssessment, SelfAssessmentResults } from '../components/SelfAssessmentUI'
 const RichTextEditor = lazy(() => import('../components/RichTextEditor'))
@@ -23,7 +24,7 @@ import {
   FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
   BarChart3, ChevronDown, ChevronUp, ChevronRight, Clock, CheckCircle2, AlertTriangle,
   CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check, Zap, RefreshCw, Sparkles,
-  Puzzle,
+  Puzzle, Rocket,
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -123,7 +124,7 @@ const INTENTIONS: { key: string; label: string; emoji: string; hint: string; mec
 const MECHANIC_LABEL = (type: string): string =>
   INTENTIONS.flatMap(i => i.mechanics).find(m => m.type === type)?.label || 'Actividad'
 
-type TabKey = 'home' | 'announcements' | 'content' | 'activities' | 'routes' | 'forum' | 'students' | 'grades'
+type TabKey = 'home' | 'announcements' | 'content' | 'activities' | 'routes' | 'abp' | 'forum' | 'students' | 'grades'
 
 const TEACHER_TABS: { key: TabKey; label: string; icon: any }[] = [
   { key: 'home', label: 'Inicio', icon: Home },
@@ -131,6 +132,7 @@ const TEACHER_TABS: { key: TabKey; label: string; icon: any }[] = [
   { key: 'content', label: 'Contenidos', icon: FolderOpen },
   { key: 'activities', label: 'Actividades', icon: ClipboardList },
   { key: 'routes', label: 'Rutas', icon: RouteIcon },
+  { key: 'abp', label: 'Expedición ABP', icon: Rocket },
   { key: 'forum', label: 'Foro', icon: MessageSquare },
   { key: 'students', label: 'Estudiantes', icon: Users },
 ]
@@ -141,6 +143,7 @@ const STUDENT_TABS: { key: TabKey; label: string; icon: any }[] = [
   { key: 'content', label: 'Contenidos', icon: FolderOpen },
   { key: 'activities', label: 'Actividades', icon: ClipboardList },
   { key: 'routes', label: 'Rutas', icon: RouteIcon },
+  { key: 'abp', label: 'Expedición ABP', icon: Rocket },
   { key: 'forum', label: 'Foro', icon: MessageSquare },
   { key: 'grades', label: 'Mis Notas', icon: BarChart3 },
 ]
@@ -557,6 +560,7 @@ export default function Classroom() {
             {activeTab === 'content' && <ContentTab classroom={activeClassroom} isTeacher={!!isTeacher} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'activities' && <ActivitiesTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'routes' && <LearningRoutesTab classroomId={activeClassroom.id} isTeacher={!!isTeacher} />}
+            {activeTab === 'abp' && <AbpTab classroomId={activeClassroom.id} isTeacher={!!isTeacher} />}
             {activeTab === 'forum' && <ForumTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} user={user} setError={setError} />}
             {activeTab === 'students' && <StudentsTab classroomId={activeClassroom.id} />}
             {activeTab === 'grades' && <GradesTab classroomId={activeClassroom.id} />}
