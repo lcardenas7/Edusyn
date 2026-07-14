@@ -95,6 +95,64 @@ function Trail({ team, mini = false }: { team: any; mini?: boolean }) {
   )
 }
 
+// Fase 2 — Tormenta de Ideas (muro de notas + votación).
+const STICKY_COLORS = ['#FEF3C7', '#D1FAE5', '#FCE7F3', '#DBEAFE', '#EDE9FE']
+function IdeasPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
+  const ideas: any[] = phaseData(team, 2).ideas || []
+  const editable = stateOf(team, 2) === 'IN_PROGRESS'
+  const votesPerStudent = team.config?.votesPerStudent ?? 3
+  const votesLeft = Math.max(0, votesPerStudent - (team.myVotesUsed ?? 0))
+  const myEnrollment = team.myEnrollmentId
+  const votedIds = new Set<string>(team.myVotedIds || [])
+  const maxVotes = ideas.reduce((m: number, i: any) => Math.max(m, i.votes || 0), 0)
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const add = async () => {
+    if (!text.trim() || busy) return
+    setBusy(true)
+    try { await abpApi.addIdea(team.id, text.trim()); setText(''); onSaved() } finally { setBusy(false) }
+  }
+  const vote = async (id: string) => {
+    setBusy(true)
+    try { await abpApi.voteIdea(team.id, id); onSaved() } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo votar') } finally { setBusy(false) }
+  }
+
+  return (
+    <div>
+      <div className="flex gap-2 mb-4 flex-wrap">
+        <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add() }} disabled={!editable}
+          placeholder="Escribe tu idea y presiona Enter…" className="flex-1 min-w-[200px] border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm" />
+        <span className="flex items-center gap-1.5 font-bold text-violet-700 bg-amber-50 rounded-xl px-4 text-sm">🗳️ {votesLeft} votos</span>
+      </div>
+      {ideas.length === 0 ? (
+        <p className="text-sm text-slate-400 text-center py-6">Aún no hay ideas. ¡Sé el primero!</p>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {ideas.map((i: any, ix: number) => {
+            const mine = i.by === myEnrollment
+            const voted = votedIds.has(i.id)
+            const top = (i.votes || 0) === maxVotes && maxVotes > 0
+            return (
+              <div key={i.id} className={`rounded-lg p-3 shadow-sm relative flex flex-col gap-2 min-h-[100px] ${top ? 'ring-2 ring-amber-400' : ''}`} style={{ background: STICKY_COLORS[ix % STICKY_COLORS.length] }}>
+                {top && <span className="absolute -top-2 right-2 bg-amber-400 text-white text-[10px] font-bold rounded-full px-2 py-0.5">⭐ favorita</span>}
+                <div className="text-sm text-slate-800">{i.text}</div>
+                <div className="mt-auto flex items-center justify-between text-xs text-slate-500 font-medium">
+                  <span>— {i.byName}</span>
+                  <button onClick={() => vote(i.id)} disabled={mine || voted || votesLeft <= 0 || !editable || !myEnrollment || busy}
+                    className="bg-white/70 rounded-full px-3 py-1 font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed">
+                    👍 {i.votes || 0}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // VISTA ESTUDIANTE — su expedición
 // ═══════════════════════════════════════════════════════════════════════════
@@ -130,8 +188,14 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const curState = stateOf(team, cur)
   const curPs = (team.phaseStates || []).find((s: any) => s.phase === cur)
   // Criterios automáticos para habilitar "Solicitar validación".
+  const members = team.members?.length || 1
   const canvasFilled = ((curPs?.data?.canvas) || []).filter((c: any) => c && String(c.value || '').trim()).length
-  const canRequest = cur === 1 ? canvasFilled >= 4 : true
+  const ideas: any[] = (curPs?.data?.ideas) || []
+  const totalVotes = ideas.reduce((s: number, i: any) => s + (i.votes || 0), 0)
+  const minIdeas = (team.config?.minIdeasPerMember ?? 2) * members
+  const canRequest = cur === 1 ? canvasFilled >= 4
+    : cur === 2 ? (ideas.length >= minIdeas && totalVotes >= members)
+    : true
 
   return (
     <div className="space-y-4">
@@ -182,6 +246,8 @@ function StudentExpedition({ projects }: { projects: any[] }) {
           <>
             {cur === 1 ? (
               <CanvasPhase team={team} onSaved={load} />
+            ) : cur === 2 ? (
+              <IdeasPhase team={team} onSaved={load} />
             ) : (
               <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 text-sm">
                 🛠️ La herramienta de esta fase ({phaseName(cur)}) se habilita en el siguiente ticket.
@@ -190,6 +256,7 @@ function StudentExpedition({ projects }: { projects: any[] }) {
             )}
             <div className="mt-4 flex items-center gap-3 flex-wrap">
               {cur === 1 && <span className="text-sm text-slate-500">Tarjetas completas: <b className="text-slate-700">{canvasFilled}/4</b></span>}
+              {cur === 2 && <span className="text-sm text-slate-500">Ideas: <b className="text-slate-700">{ideas.length}/{minIdeas}</b> · Votos: <b className="text-slate-700">{totalVotes}</b></span>}
               <button onClick={requestValidation} disabled={busy || !canRequest}
                 className="ml-auto py-3 px-6 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} {canRequest ? 'Solicitar validación' : 'Completa los criterios'}

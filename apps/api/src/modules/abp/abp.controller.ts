@@ -111,6 +111,22 @@ export class AbpController {
     return this.service.saveCanvasCard(teamId, institutionId, userId, body.cardIndex, body.value ?? '');
   }
 
+  // Fase 2: publicar idea.
+  @Post('teams/:teamId/ideas')
+  @Roles('ESTUDIANTE', 'DOCENTE')
+  async addIdea(@Param('teamId') teamId: string, @Request() req: any, @Body() body: { text: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addIdea(teamId, institutionId, userId, body.text);
+  }
+
+  // Fase 2: votar una idea.
+  @Post('teams/:teamId/ideas/:ideaId/vote')
+  @Roles('ESTUDIANTE')
+  async voteIdea(@Param('teamId') teamId: string, @Param('ideaId') ideaId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.voteIdea(teamId, institutionId, userId, ideaId);
+  }
+
   // Cola de validaciones pendientes del docente (opcional ?classroomId=).
   @Get('queue')
   @Roles('DOCENTE', 'COORDINADOR')

@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ABP_PHASE_COUNT, resolvePhaseConfig, ABP_BADGE_ON_PHASE, ABP_XP, CANVAS_CARDS, phaseCriteriaMet } from './abp.constants';
 
@@ -158,12 +159,32 @@ export class AbpService {
 
   // ─── ESTUDIANTE: su equipo ─────────────────────────────────────────────────
 
-  /** El equipo del estudiante autenticado en un proyecto (o null si no tiene). */
+  /** El equipo del estudiante autenticado en un proyecto (enriquecido con su config
+   * y los votos que ya usó en la Fase 2), o null si no tiene equipo. */
   async getMyTeam(projectId: string, institutionId: string, userId: string) {
-    return this.prisma.abpTeam.findFirst({
+    const team = await this.prisma.abpTeam.findFirst({
       where: { projectId, institutionId, members: { some: { studentEnrollment: { student: { userId } } } } },
-      include: { ...this.teamInclude(), project: { select: { id: true, title: true, challenge: true } } },
+      include: { ...this.teamInclude(), project: { select: { id: true, title: true, challenge: true, phaseConfig: true } } },
     });
+    if (!team) return null;
+    const me = this.memberOf(team, userId);
+    let myVotesUsed = 0;
+    let myVotedIds: string[] = [];
+    if (me?.enrollmentId) {
+      const votes = await this.prisma.abpContribution.findMany({
+        where: { teamId: team.id, phase: 2, type: 'VOTE', studentEnrollmentId: me.enrollmentId },
+        select: { refId: true },
+      });
+      myVotesUsed = votes.length;
+      myVotedIds = votes.map(v => v.refId).filter(Boolean) as string[];
+    }
+    return {
+      ...team,
+      config: resolvePhaseConfig(team.project?.phaseConfig),
+      myEnrollmentId: me?.enrollmentId ?? null,
+      myVotesUsed,
+      myVotedIds,
+    };
   }
 
   private async loadTeamForUser(teamId: string, institutionId: string, userId: string) {
@@ -229,6 +250,69 @@ export class AbpService {
     return this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 1 } } });
   }
 
+  // ─── FASE 2: Tormenta de Ideas ─────────────────────────────────────────────
+
+  /** Publica una idea en el muro → +15 XP + contribución IDEA. */
+  async addIdea(teamId: string, institutionId: string, userId: string, text: string) {
+    const t = (text || '').trim();
+    if (!t) throw new BadRequestException('La idea no puede estar vacía');
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 2 } } });
+    if (!ps || ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 2 no está en curso');
+
+    const me = this.memberOf(team, userId);
+    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
+    const ideas: any[] = Array.isArray(data.ideas) ? [...data.ideas] : [];
+    const idea = { id: randomUUID(), text: t, by: me?.enrollmentId ?? null, byName: me?.name ?? 'Docente', votes: 0 };
+    ideas.push(idea);
+    data.ideas = ideas;
+    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 2 } }, data: { data } });
+
+    if (me?.enrollmentId) {
+      try {
+        await this.prisma.abpContribution.create({
+          data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 2, type: 'IDEA', refId: idea.id, detail: t.slice(0, 80) },
+        });
+        await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.IDEA } } });
+      } catch { /* idempotente */ }
+    }
+    return this.getMyTeam(team.projectId, institutionId, userId);
+  }
+
+  /** Vota una idea. Cada voto = UNA fila AbpContribution(VOTE) (dato de participación).
+   * Reglas: no votar la propia; máximo config.votesPerStudent; no votar dos veces la misma. */
+  async voteIdea(teamId: string, institutionId: string, userId: string, ideaId: string) {
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    const me = this.memberOf(team, userId);
+    if (!me?.enrollmentId) throw new ForbiddenException('Solo los integrantes del equipo pueden votar');
+    const ps = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 2 } } });
+    if (!ps || ps.status !== 'IN_PROGRESS') throw new BadRequestException('La Fase 2 no está en curso');
+
+    const data: any = ps.data && typeof ps.data === 'object' ? { ...(ps.data as any) } : {};
+    const ideas: any[] = Array.isArray(data.ideas) ? data.ideas : [];
+    const idea = ideas.find(i => i.id === ideaId);
+    if (!idea) throw new NotFoundException('Idea no encontrada');
+    if (idea.by === me.enrollmentId) throw new BadRequestException('No puedes votar tu propia idea');
+
+    const project = await this.prisma.abpProject.findUnique({ where: { id: team.projectId }, select: { phaseConfig: true } });
+    const config = resolvePhaseConfig(project?.phaseConfig);
+    const used = await this.prisma.abpContribution.count({ where: { teamId, phase: 2, type: 'VOTE', studentEnrollmentId: me.enrollmentId } });
+    if (used >= config.votesPerStudent) throw new BadRequestException('Ya usaste todos tus votos');
+
+    // El @@unique(studentEnrollmentId,type,refId) impide votar dos veces la misma idea.
+    try {
+      await this.prisma.abpContribution.create({
+        data: { institutionId, teamId, studentEnrollmentId: me.enrollmentId, phase: 2, type: 'VOTE', refId: ideaId, detail: `Votó: ${String(idea.text).slice(0, 60)}` },
+      });
+    } catch {
+      throw new BadRequestException('Ya votaste esta idea');
+    }
+    idea.votes = (idea.votes || 0) + 1;
+    await this.prisma.abpPhaseState.update({ where: { teamId_phase: { teamId, phase: 2 } }, data: { data } });
+    await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.VOTE } } });
+    return this.getMyTeam(team.projectId, institutionId, userId);
+  }
+
   // ─── VALIDACIÓN (gating de fases) ──────────────────────────────────────────
 
   /** El equipo solicita validar su fase actual → AWAITING + solicitud PENDING.
@@ -241,7 +325,7 @@ export class AbpService {
       throw new BadRequestException('La fase actual no está en curso');
     }
     const project = await this.prisma.abpProject.findUnique({ where: { id: team.projectId }, select: { phaseConfig: true } });
-    if (!phaseCriteriaMet(phase, ps.data, resolvePhaseConfig(project?.phaseConfig))) {
+    if (!phaseCriteriaMet(phase, ps.data, resolvePhaseConfig(project?.phaseConfig), team.members.length)) {
       throw new BadRequestException('Aún no se cumplen los criterios de esta fase');
     }
     await this.prisma.abpPhaseState.update({

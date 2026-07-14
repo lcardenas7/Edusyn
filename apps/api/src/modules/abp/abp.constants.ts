@@ -59,13 +59,18 @@ export const CANVAS_CARDS = [
 
 // ¿Cumple la fase sus criterios automáticos para poder solicitar validación?
 // Se refina por fase conforme se construyen las herramientas (tickets 3–8).
-export function phaseCriteriaMet(phase: number, data: any, config: AbpPhaseConfig): boolean {
+export function phaseCriteriaMet(phase: number, data: any, config: AbpPhaseConfig, memberCount = 1): boolean {
   if (phase === 1) {
     const canvas = Array.isArray(data?.canvas) ? data.canvas : [];
     const filled = canvas.filter((c: any) => c && String(c.value || '').trim()).length;
     return filled >= config.minCanvasCards;
   }
-  return true; // fases 2–6: sin criterio automático aún (permisivo)
+  if (phase === 2) {
+    const ideas = Array.isArray(data?.ideas) ? data.ideas : [];
+    const totalVotes = ideas.reduce((s: number, i: any) => s + (i.votes || 0), 0);
+    return ideas.length >= config.minIdeasPerMember * memberCount && totalVotes >= memberCount;
+  }
+  return true; // fases 3–6: sin criterio automático aún (permisivo)
 }
 
 // XP de equipo por evento (la barra denormalizada; el XP individual va por grantXp).
