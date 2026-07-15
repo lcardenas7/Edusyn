@@ -15,6 +15,8 @@ const RichTextEditor = lazy(() => import('../components/RichTextEditor'))
 const LessonPlayer = lazy(() => import('../components/LessonPlayer'))
 const LessonEditor = lazy(() => import('../components/LessonEditor'))
 import { RichContent, isRichTextEmpty } from '../components/RichTextEditor'
+import { FilterChip, FilterStrip } from '../components/ui/FilterChip'
+import { ClassroomPicker } from '../components/ui/ClassroomPicker'
 import {
   Plus, Loader2, AlertCircle, ChevronLeft, Users, Megaphone,
   FolderOpen, FileText, Video, Link2, ImageIcon, Type, Eye, EyeOff,
@@ -1644,7 +1646,7 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
       {/* ── COPY SECTION MODAL ── */}
       {copySectionModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md">
+          <div className="bg-white rounded-2xl w-full max-w-lg">
             <div className="p-5 border-b border-slate-200 flex items-center justify-between">
               <h3 className="font-bold text-slate-800">Copiar sección a otra aula</h3>
               <button onClick={() => setCopySectionModal(null)} className="p-1 hover:bg-slate-100 rounded-lg">
@@ -1655,33 +1657,12 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
               <p className="text-sm text-slate-600 mb-4">
                 Copiando: <span className="font-medium text-slate-800">{copySectionModal.sectionTitle}</span>
               </p>
-              {loadingClassrooms ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
-                </div>
-              ) : availableClassrooms.length === 0 ? (
-                <p className="text-sm text-slate-500 text-center py-8">No hay otras aulas disponibles</p>
-              ) : (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {availableClassrooms.map((c: any) => (
-                    <button
-                      key={c.id}
-                      onClick={() => handleCopySectionToClassroom(c.id)}
-                      disabled={copyingSection}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-violet-300 hover:bg-violet-50 transition-colors text-left disabled:opacity-50"
-                    >
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: c.color || '#6366f1' }}>
-                        {c.title?.charAt(0) || 'A'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-800 truncate">{c.title}</p>
-                        <p className="text-xs text-slate-500 truncate">{c.groupName} • {c.subjectName}</p>
-                      </div>
-                      {copyingSection && <Loader2 className="w-4 h-4 animate-spin text-violet-600" />}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <ClassroomPicker
+                classrooms={availableClassrooms}
+                loading={loadingClassrooms}
+                busyId={copyingSection ? copySectionModal.sectionId : null}
+                onPick={c => handleCopySectionToClassroom(c.id)}
+              />
             </div>
           </div>
         </div>
@@ -2063,7 +2044,25 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [selectedTermId, setSelectedTermId] = useState<string | null>(null)
   const [previousVisitAt, setPreviousVisitAt] = useState<Date | null>(null)
 
-  const sections: Section[] = classroom.sections || []
+  // Secciones creadas al vuelo desde el formulario (§AUDITORIA_VISUAL_AULA H3a).
+  // NO se recarga el aula aquí: onReload() activa `loading` en el padre y desmontaría
+  // este tab, perdiendo el borrador (incluidas las preguntas de Valeria). Se sincroniza
+  // sola al crear la actividad.
+  const [extraSections, setExtraSections] = useState<Section[]>([])
+  const baseSections: Section[] = classroom.sections || []
+  const sections: Section[] = [...baseSections, ...extraSections.filter(e => !baseSections.some(s => s.id === e.id))]
+
+  const quickCreateSection = async () => {
+    const title = window.prompt('Nombre de la nueva sección (p. ej. "Unidad 1" o "Semana 3"):')?.trim()
+    if (!title) return
+    try {
+      const { data } = await classroomApi.createSection(classroom.id, { title })
+      setExtraSections(prev => [...prev, data])
+      setForm(prev => ({ ...prev, sectionId: data.id }))
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'No se pudo crear la sección')
+    }
+  }
 
   const loadActivities = useCallback(async () => {
     try {
@@ -2303,6 +2302,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       setPendingValeriaQuestions([])
       setShowCreate(false)
       loadActivities()
+      // Con el formulario ya cerrado es seguro recargar el aula para que las
+      // secciones creadas al vuelo entren en Contenido.
+      if (extraSections.length > 0) { setExtraSections([]); onReload() }
 
       if (gameType) {
         // Abrir el editor directo en el juego (una diapositiva ya fijada).
@@ -4630,32 +4632,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                     {!selectedTargetClassroom ? (
                       <>
                         <p className="text-xs text-slate-500 mb-3">Selecciona el aula destino:</p>
-                        {loadingClassroomsForDup ? (
-                          <div className="flex items-center justify-center py-8">
-                            <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
-                          </div>
-                        ) : availableClassroomsForDup.length === 0 ? (
-                          <p className="text-sm text-slate-500 text-center py-8">No hay otras aulas disponibles</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {availableClassroomsForDup.map((c: any) => (
-                              <button
-                                key={c.id}
-                                onClick={() => handleSelectTargetClassroom(c)}
-                                className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-violet-300 hover:bg-violet-50 transition-colors text-left"
-                              >
-                                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: c.color || '#6366f1' }}>
-                                  {c.title?.charAt(0) || 'A'}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-slate-800 truncate">{c.title}</p>
-                                  <p className="text-xs text-slate-500 truncate">{c.groupName} • {c.subjectName}</p>
-                                </div>
-                                <ChevronRight className="w-4 h-4 text-slate-400" />
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                        <ClassroomPicker
+                          classrooms={availableClassroomsForDup}
+                          loading={loadingClassroomsForDup}
+                          onPick={c => handleSelectTargetClassroom(c)}
+                          trailing={() => <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 mt-1" />}
+                        />
                       </>
                     ) : (
                       <>
@@ -5248,71 +5230,64 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         )}
       </div>
 
-      {/* Activity type filter — solo docente; el alumno se organiza por misiones (§Fase 1). */}
+      {/* Filtros del docente (§AUDITORIA_VISUAL_AULA H1). Una sola tira que scrollea en
+          móvil; chips neutros del DS y color solo en el activo. El alumno se organiza
+          por misiones (§Fase 1). */}
       {isTeacher && activities.length > 0 && (
-        <div className="flex gap-2 flex-wrap">
+        <FilterStrip>
           {([
-            { value: 'ALL', label: 'Todas', count: activities.length, color: 'slate' },
-            { value: 'TASK', label: 'Tareas', count: activities.filter(a => a.type === 'TASK').length, color: 'blue' },
-            { value: 'QUIZ', label: 'Quiz', count: activities.filter(a => a.type === 'QUIZ').length, color: 'purple' },
-            { value: 'EXAM', label: 'Examen', count: activities.filter(a => a.type === 'EXAM').length, color: 'red' },
-            { value: 'LIVE_QUIZ', label: 'En Línea', count: activities.filter(a => a.type === 'LIVE_QUIZ').length, color: 'violet' },
-            { value: 'HOME_QUIZ', label: 'En Casa', count: activities.filter(a => a.type === 'HOME_QUIZ').length, color: 'pink' },
-            { value: 'ICFES_SIMULATOR', label: 'ICFES', count: activities.filter(a => a.type === 'ICFES_SIMULATOR').length, color: 'emerald' },
-            { value: 'LESSON', label: 'Lecciones', count: activities.filter(a => a.type === 'LESSON').length, color: 'violet' },
-            { value: 'GAME', label: 'Interactivas', count: activities.filter(a => a.type === 'GAME').length, color: 'amber' },
-          ] as { value: string; label: string; count: number; color: string }[])
+            { value: 'ALL', label: 'Todas', count: activities.length },
+            { value: 'TASK', label: 'Tareas', count: activities.filter(a => a.type === 'TASK').length },
+            { value: 'QUIZ', label: 'Quiz', count: activities.filter(a => a.type === 'QUIZ').length },
+            { value: 'EXAM', label: 'Examen', count: activities.filter(a => a.type === 'EXAM').length },
+            { value: 'LIVE_QUIZ', label: 'En Línea', count: activities.filter(a => a.type === 'LIVE_QUIZ').length },
+            { value: 'HOME_QUIZ', label: 'En Casa', count: activities.filter(a => a.type === 'HOME_QUIZ').length },
+            { value: 'ICFES_SIMULATOR', label: 'ICFES', count: activities.filter(a => a.type === 'ICFES_SIMULATOR').length },
+            { value: 'LESSON', label: 'Lecciones', count: activities.filter(a => a.type === 'LESSON').length },
+            { value: 'GAME', label: 'Interactivas', count: activities.filter(a => a.type === 'GAME').length },
+          ] as { value: string; label: string; count: number }[])
             .filter(t => t.value === 'ALL' || t.count > 0)
-            .map(tab => {
-              const isActive = activityTypeFilter === tab.value
-              const colorStyles: Record<string, string> = {
-                slate: isActive ? 'border-slate-600 bg-slate-600 text-white' : 'border-slate-200 text-slate-500 hover:border-slate-400',
-                blue: isActive ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 text-slate-500 hover:border-blue-300',
-                purple: isActive ? 'border-purple-600 bg-purple-600 text-white' : 'border-slate-200 text-slate-500 hover:border-purple-300',
-                red: isActive ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200 text-slate-500 hover:border-red-300',
-                violet: isActive ? 'border-violet-600 bg-violet-600 text-white' : 'border-slate-200 text-slate-500 hover:border-violet-300',
-                pink: isActive ? 'border-pink-600 bg-pink-600 text-white' : 'border-slate-200 text-slate-500 hover:border-pink-300',
-                emerald: isActive ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 text-slate-500 hover:border-emerald-300',
-                amber: isActive ? 'border-amber-500 bg-amber-500 text-white' : 'border-slate-200 text-slate-500 hover:border-amber-300',
-              }
-              return (
-                <button
-                  key={tab.value}
-                  onClick={() => setActivityTypeFilter(tab.value)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all ${colorStyles[tab.color] || colorStyles.slate}`}
-                >
-                  {tab.label}
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>{tab.count}</span>
-                </button>
-              )
-            })}
-        </div>
+            .map(tab => (
+              <FilterChip
+                key={tab.value}
+                label={tab.label}
+                count={tab.count}
+                active={activityTypeFilter === tab.value}
+                onClick={() => setActivityTypeFilter(tab.value)}
+              />
+            ))}
+        </FilterStrip>
       )}
 
-      {/* Centro de control del docente — widgets accionables que filtran por estado de trabajo */}
-      {isTeacher && activities.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {([
-            { key: 'GRADING', label: 'Por calificar', icon: '🟠', active: 'bg-orange-500 border-orange-500 text-white', idle: 'border-orange-200 text-orange-700 hover:border-orange-400' },
-            { key: 'DUE_TODAY', label: 'Vence hoy', icon: '⏰', active: 'bg-amber-500 border-amber-500 text-white', idle: 'border-amber-200 text-amber-700 hover:border-amber-400' },
-            { key: 'NO_SUBMISSIONS', label: 'Sin entregas', icon: '📭', active: 'bg-slate-700 border-slate-700 text-white', idle: 'border-slate-200 text-slate-600 hover:border-slate-400' },
-            { key: 'DRAFT', label: 'Borradores', icon: '✍️', active: 'bg-slate-700 border-slate-700 text-white', idle: 'border-slate-200 text-slate-600 hover:border-slate-400' },
-          ] as { key: string; label: string; icon: string; active: string; idle: string }[]).map(w => {
-            const count = workCount(w.key)
-            const isOn = workFilter === w.key
-            return (
-              <button key={w.key} onClick={() => setWorkFilter(isOn ? 'ALL' : w.key)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${isOn ? w.active : `bg-white ${w.idle}`}`}>
-                <span>{w.icon}</span> {w.label}
-                <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${isOn ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-600'}`}>{count}</span>
-              </button>
-            )
-          })}
-          {workFilter !== 'ALL' && (
-            <button onClick={() => setWorkFilter('ALL')} className="px-3 py-2.5 rounded-xl text-sm text-slate-500 hover:text-slate-700">Ver todas</button>
-          )}
-        </div>
-      )}
+      {/* Centro de control — solo lo accionable: los estados en cero no ocupan sitio.
+          La urgencia va en un punto de color, no tiñendo el chip entero. */}
+      {isTeacher && activities.length > 0 && (() => {
+        const widgets = ([
+          { key: 'GRADING', label: 'Por calificar', dot: 'bg-orange-500' },
+          { key: 'DUE_TODAY', label: 'Vence hoy', dot: 'bg-amber-500' },
+          { key: 'NO_SUBMISSIONS', label: 'Sin entregas', dot: 'bg-slate-400' },
+          { key: 'DRAFT', label: 'Borradores', dot: 'bg-slate-400' },
+        ] as { key: string; label: string; dot: string }[])
+          .filter(w => workCount(w.key) > 0 || workFilter === w.key)
+        if (widgets.length === 0) return null
+        return (
+          <FilterStrip>
+            {widgets.map(w => (
+              <FilterChip
+                key={w.key}
+                label={w.label}
+                count={workCount(w.key)}
+                dot={w.dot}
+                active={workFilter === w.key}
+                onClick={() => setWorkFilter(workFilter === w.key ? 'ALL' : w.key)}
+              />
+            ))}
+            {workFilter !== 'ALL' && (
+              <button onClick={() => setWorkFilter('ALL')} className="shrink-0 px-2 text-sm text-ink-muted hover:text-ink-primary">Ver todas</button>
+            )}
+          </FilterStrip>
+        )
+      })()}
 
       {/* Chips de estado para el estudiante — qué hacer primero */}
       {isStudent && activities.length > 0 && (
@@ -5559,11 +5534,22 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
           </Suspense>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Sección</label>
-              <select value={form.sectionId} onChange={e => setForm({ ...form, sectionId: e.target.value })} className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base">
-                <option value="">Seleccionar sección...</option>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-slate-700">Sección</label>
+                <button type="button" onClick={quickCreateSection} className="text-xs font-semibold text-blue-600 hover:text-blue-700">+ Nueva</button>
+              </div>
+              <select
+                value={form.sectionId}
+                onChange={e => { if (e.target.value === '__new__') { quickCreateSection(); return } setForm({ ...form, sectionId: e.target.value }) }}
+                className="w-full border border-slate-300 rounded-xl px-4 py-3 text-base"
+              >
+                <option value="">{sections.length ? 'Seleccionar sección...' : 'Aún no hay secciones'}</option>
                 {sections.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
+                <option value="__new__">➕ Crear sección nueva…</option>
               </select>
+              {sections.length === 0 && (
+                <p className="text-xs text-slate-500 mt-1">Crea una sección sin salir de aquí; no perderás lo que llevas.</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Nota máxima</label>
@@ -5851,32 +5837,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                   {!selectedTargetClassroom ? (
                     <>
                       <p className="text-xs text-slate-500 mb-3">Selecciona el aula destino:</p>
-                      {loadingClassroomsForDup ? (
-                        <div className="flex items-center justify-center py-8">
-                          <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
-                        </div>
-                      ) : availableClassroomsForDup.length === 0 ? (
-                        <p className="text-sm text-slate-500 text-center py-8">No hay otras aulas disponibles</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {availableClassroomsForDup.map((c: any) => (
-                            <button
-                              key={c.id}
-                              onClick={() => handleSelectTargetClassroom(c)}
-                              className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-violet-300 hover:bg-violet-50 transition-colors text-left"
-                            >
-                              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: c.color || '#6366f1' }}>
-                                {c.title?.charAt(0) || 'A'}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-slate-800 truncate">{c.title}</p>
-                                <p className="text-xs text-slate-500 truncate">{c.groupName} • {c.subjectName}</p>
-                              </div>
-                              <ChevronRight className="w-4 h-4 text-slate-400" />
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      <ClassroomPicker
+                        classrooms={availableClassroomsForDup}
+                        loading={loadingClassroomsForDup}
+                        onPick={c => handleSelectTargetClassroom(c)}
+                        trailing={() => <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 mt-1" />}
+                      />
                     </>
                   ) : (
                     <>
