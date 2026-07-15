@@ -86,6 +86,46 @@ export class AbpService {
     return { ...project, phaseConfig: resolvePhaseConfig(project.phaseConfig), teams };
   }
 
+  // ─── PORTADA / PRESENTACIÓN (Nivel 1) ──────────────────────────────────────
+
+  private normalizePresentation(p: any) {
+    if (!p || typeof p !== 'object') return null;
+    const str = (v: any) => (typeof v === 'string' ? v.trim() : '');
+    const arr = (v: any) => (Array.isArray(v) ? v.map((x: any) => str(x)).filter(Boolean) : []);
+    return {
+      banner: str(p.banner),
+      videoUrl: str(p.videoUrl),
+      teacherMessage: str(p.teacherMessage),
+      context: str(p.context),
+      why: str(p.why),
+      skills: arr(p.skills),
+      rules: arr(p.rules),
+      timeline: Array.isArray(p.timeline)
+        ? p.timeline.map((t: any) => ({ label: str(t?.label), detail: str(t?.detail) })).filter((t: any) => t.label || t.detail)
+        : [],
+    };
+  }
+
+  /** Docente actualiza la portada del proyecto (y opcionalmente el reto general). */
+  async updatePresentation(projectId: string, institutionId: string, userId: string, dto: { challenge?: string; presentation?: any }) {
+    await this.assertProjectOwner(projectId, institutionId, userId);
+    const data: any = {};
+    if (dto.challenge !== undefined) data.challenge = dto.challenge?.trim() || null;
+    if (dto.presentation !== undefined) data.presentation = this.normalizePresentation(dto.presentation);
+    const p = await this.prisma.abpProject.update({ where: { id: projectId }, data });
+    return { ...p, phaseConfig: resolvePhaseConfig(p.phaseConfig) };
+  }
+
+  /** Lectura de la portada para el alumno (campos públicos del proyecto). */
+  async getProjectForStudent(projectId: string, institutionId: string) {
+    const p = await this.prisma.abpProject.findFirst({
+      where: { id: projectId, institutionId },
+      select: { id: true, title: true, challenge: true, presentation: true, startDate: true, endDate: true, status: true },
+    });
+    if (!p) throw new NotFoundException('Proyecto no encontrado');
+    return p;
+  }
+
   // ─── CENTRO DE OPERACIONES (docente) ───────────────────────────────────────
 
   /** Panel de progreso del proyecto: una fila por equipo + contadores globales.

@@ -476,16 +476,224 @@ function MissionsPanel({ team, onSaved }: { team: any; onSaved: () => void }) {
   )
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PORTADA / PRESENTACIÓN (Nivel 1) — vista compartida + editor del docente.
+// ═══════════════════════════════════════════════════════════════════════════
+function videoEmbed(url: string): string | null {
+  if (!url) return null
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{11})/)
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}`
+  const vm = url.match(/vimeo\.com\/(\d+)/)
+  if (vm) return `https://player.vimeo.com/video/${vm[1]}`
+  return null
+}
+
+function PresentationView({ project }: { project: any }) {
+  const p = project?.presentation || {}
+  const embed = videoEmbed(p.videoUrl || '')
+  return (
+    <div className="space-y-4">
+      {/* Portada / hero */}
+      <div className="relative rounded-2xl overflow-hidden">
+        {p.banner
+          ? <img src={p.banner} alt="" className="w-full h-44 sm:h-56 object-cover" />
+          : <div className="w-full h-44 sm:h-56 bg-gradient-to-br from-violet-500 to-fuchsia-500" />}
+        <div className="absolute inset-0 bg-black/35 flex items-end p-5">
+          <div>
+            <div className="text-white/80 text-xs font-bold uppercase tracking-wide">Expedición ABP</div>
+            <h2 className="text-2xl sm:text-3xl font-black text-white drop-shadow">{project.title}</h2>
+          </div>
+        </div>
+      </div>
+
+      {p.teacherMessage && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="text-xs font-bold uppercase tracking-wide text-violet-600 mb-1">Mensaje del docente</div>
+          <p className="text-slate-700 whitespace-pre-line">{p.teacherMessage}</p>
+        </div>
+      )}
+
+      {embed
+        ? <div className="rounded-2xl overflow-hidden border border-slate-200 aspect-video"><iframe src={embed} className="w-full h-full" allowFullScreen title="Video de bienvenida" /></div>
+        : p.videoUrl ? <a href={p.videoUrl} target="_blank" rel="noreferrer" className="block bg-white rounded-2xl border border-slate-200 p-4 font-semibold text-violet-600 hover:bg-violet-50">▶ Ver video de bienvenida</a> : null}
+
+      {project.challenge && (
+        <div className="bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-2xl p-6 text-white">
+          <div className="text-xs font-bold uppercase tracking-wide opacity-80 mb-1">🎯 El gran reto</div>
+          <p className="text-lg font-bold">{project.challenge}</p>
+          <p className="text-sm opacity-80 mt-2">Cada equipo encontrará SU propia problemática dentro de este reto.</p>
+        </div>
+      )}
+
+      {(p.context || p.why) && (
+        <div className="grid sm:grid-cols-2 gap-3">
+          {p.context && <div className="bg-white rounded-2xl border border-slate-200 p-5"><div className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-1">Contexto</div><p className="text-sm text-slate-700 whitespace-pre-line">{p.context}</p></div>}
+          {p.why && <div className="bg-white rounded-2xl border border-slate-200 p-5"><div className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-1">¿Por qué es importante?</div><p className="text-sm text-slate-700 whitespace-pre-line">{p.why}</p></div>}
+        </div>
+      )}
+
+      {p.skills?.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h4 className="font-bold text-slate-800 mb-3">📚 Lo que aprenderás</h4>
+          <div className="grid sm:grid-cols-2 gap-2">{p.skills.map((s: string, i: number) => <div key={i} className="flex items-center gap-2 text-sm text-slate-700"><Check className="w-4 h-4 text-emerald-500 shrink-0" />{s}</div>)}</div>
+        </div>
+      )}
+
+      {/* Cómo funciona — estático desde las 6 fases */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <h4 className="font-bold text-slate-800 mb-3">🧭 Cómo funciona la expedición</h4>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {PHASES.map(ph => (
+            <div key={ph.n} className="rounded-xl border border-slate-200 p-3">
+              <div className="text-2xl">{ph.icon}</div>
+              <div className="text-xs font-bold text-violet-600 mt-1">Paso {ph.n}</div>
+              <div className="text-sm font-semibold text-slate-700">{ph.name}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {p.rules?.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h4 className="font-bold text-slate-800 mb-3">📋 Reglas del proyecto</h4>
+          <ul className="space-y-1.5">{p.rules.map((r: string, i: number) => <li key={i} className="flex items-start gap-2 text-sm text-slate-700"><span className="text-violet-500 mt-0.5">•</span>{r}</li>)}</ul>
+        </div>
+      )}
+
+      {p.timeline?.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h4 className="font-bold text-slate-800 mb-3">📅 Cronograma</h4>
+          <div className="space-y-2">{p.timeline.map((t: any, i: number) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="w-28 shrink-0 text-xs font-bold text-violet-600">{t.label}</div>
+              <div className="flex-1 h-3 bg-violet-500 rounded-full" />
+              <div className="text-xs text-slate-600 w-40 truncate text-right">{t.detail}</div>
+            </div>
+          ))}</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function LineListInput({ label, value, onChange, placeholder }: { label: string; value: string[]; onChange: (v: string[]) => void; placeholder: string }) {
+  return (
+    <div>
+      <label className="text-xs font-semibold text-slate-500">{label} <span className="text-slate-300">(uno por línea)</span></label>
+      <textarea value={(value || []).join('\n')} onChange={e => onChange(e.target.value.split('\n'))} rows={4} placeholder={placeholder} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
+    </div>
+  )
+}
+
+function PresentationEditor({ project, onClose, onSaved }: { project: any; onClose: () => void; onSaved: () => void }) {
+  const init = project?.presentation || {}
+  const [challenge, setChallenge] = useState(project?.challenge || '')
+  const [banner, setBanner] = useState(init.banner || '')
+  const [videoUrl, setVideoUrl] = useState(init.videoUrl || '')
+  const [teacherMessage, setTeacherMessage] = useState(init.teacherMessage || '')
+  const [context, setContext] = useState(init.context || '')
+  const [why, setWhy] = useState(init.why || '')
+  const [skills, setSkills] = useState<string[]>(init.skills || [])
+  const [rules, setRules] = useState<string[]>(init.rules || [])
+  const [timeline, setTimeline] = useState<{ label: string; detail: string }[]>(init.timeline || [])
+  const [busy, setBusy] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const uploadBanner = async (file: File) => {
+    setBusy(true)
+    try {
+      const { data } = await classroomApi.uploadMaterial(file)
+      const url = data?.data?.path || data?.data?.url
+      if (url) setBanner(url)
+    } catch { alert('No se pudo subir la imagen') } finally { setBusy(false) }
+  }
+  const save = async () => {
+    setBusy(true)
+    try {
+      await abpApi.updatePresentation(project.id, {
+        challenge,
+        presentation: { banner, videoUrl, teacherMessage, context, why, skills: skills.filter(Boolean), rules: rules.filter(Boolean), timeline: timeline.filter(t => t.label || t.detail) },
+      })
+      onSaved()
+    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo guardar') } finally { setBusy(false) }
+  }
+
+  return (
+    <div className="space-y-4">
+      <button onClick={onClose} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ChevronLeft className="w-4 h-4" /> Volver</button>
+      <h3 className="text-xl font-bold text-slate-800">✏️ Editar portada</h3>
+
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+        <div>
+          <label className="text-xs font-semibold text-slate-500">Reto general</label>
+          <textarea value={challenge} onChange={e => setChallenge(e.target.value)} rows={2} placeholder="¿Cómo puede la tecnología mejorar un problema de nuestra institución?" className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-500">Banner (URL de imagen o subir)</label>
+          <div className="flex gap-2 mt-1">
+            <input value={banner} onChange={e => setBanner(e.target.value)} placeholder="https://…" className="flex-1 border border-slate-300 rounded-xl px-3 py-2 text-sm" />
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadBanner(f); e.currentTarget.value = '' }} />
+            <button onClick={() => fileRef.current?.click()} disabled={busy} className="px-3 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Paperclip className="w-4 h-4" /> Subir</button>
+          </div>
+          {banner && <img src={banner} alt="" className="mt-2 w-full h-32 object-cover rounded-xl" />}
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-500">Video de bienvenida (YouTube/Vimeo, opcional)</label>
+          <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtu.be/…" className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm mt-1" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-500">Mensaje del docente</label>
+          <textarea value={teacherMessage} onChange={e => setTeacherMessage(e.target.value)} rows={3} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
+        </div>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-semibold text-slate-500">Contexto</label>
+            <textarea value={context} onChange={e => setContext(e.target.value)} rows={3} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-500">¿Por qué es importante?</label>
+            <textarea value={why} onChange={e => setWhy(e.target.value)} rows={3} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
+          </div>
+        </div>
+        <LineListInput label="Lo que aprenderán" value={skills} onChange={setSkills} placeholder={'Investigación\nTrabajo colaborativo\nPython'} />
+        <LineListInput label="Reglas del proyecto" value={rules} onChange={setRules} placeholder={'Todos participan.\nLa bitácora se mantiene actualizada.'} />
+        <div>
+          <label className="text-xs font-semibold text-slate-500">Cronograma</label>
+          <div className="space-y-2 mt-1">
+            {timeline.map((t, i) => (
+              <div key={i} className="flex gap-2">
+                <input value={t.label} onChange={e => setTimeline(ts => ts.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} placeholder="Semana 1" className="w-32 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
+                <input value={t.detail} onChange={e => setTimeline(ts => ts.map((x, j) => j === i ? { ...x, detail: e.target.value } : x))} placeholder="Problema" className="flex-1 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
+                <button onClick={() => setTimeline(ts => ts.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+              </div>
+            ))}
+            <button onClick={() => setTimeline(ts => [...ts, { label: '', detail: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir fila</button>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+          <button onClick={save} disabled={busy} className="px-5 py-2 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Guardar portada</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function StudentExpedition({ projects }: { projects: any[] }) {
   const [projectId, setProjectId] = useState<string>(projects[0]?.id || '')
   const [team, setTeam] = useState<any>(null)
+  const [pres, setPres] = useState<any>(null)
+  const [view, setView] = useState<'home' | 'expedition'>('home')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(() => {
     if (!projectId) { setLoading(false); return }
     setLoading(true)
-    abpApi.myTeam(projectId).then(({ data }) => setTeam(data)).catch(() => setTeam(null)).finally(() => setLoading(false))
+    Promise.all([
+      abpApi.myTeam(projectId).catch(() => ({ data: null })),
+      abpApi.projectPresentation(projectId).catch(() => ({ data: null })),
+    ]).then(([t, p]) => { setTeam(t.data); setPres(p.data) }).finally(() => setLoading(false))
   }, [projectId])
   useEffect(() => { load() }, [load])
 
@@ -497,10 +705,25 @@ function StudentExpedition({ projects }: { projects: any[] }) {
 
   if (projects.length === 0) return <Empty msg="Tu docente aún no ha creado una Expedición ABP en esta aula." />
   if (loading) return <Loading />
-  if (!team) return (
+
+  // Sub-navegación estilo expedición: Presentación (todos) + Mi Expedición (si hay equipo).
+  const nav = (
+    <div className="flex items-center gap-2 flex-wrap">
+      {projects.length > 1 && <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} />}
+      <div className="ml-auto flex bg-slate-100 rounded-xl p-1">
+        <button onClick={() => setView('home')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${view === 'home' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>🏠 Presentación</button>
+        <button onClick={() => setView('expedition')} disabled={!team} className={`px-3 py-1.5 rounded-lg text-sm font-semibold disabled:opacity-40 ${view === 'expedition' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>🚀 Mi Expedición</button>
+      </div>
+    </div>
+  )
+
+  if (view === 'home' || !team) return (
     <div className="space-y-4">
-      <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} />
-      <Empty msg="Aún no estás en un equipo de este proyecto. Tu docente te asignará a uno." />
+      {nav}
+      {pres && <PresentationView project={pres} />}
+      {!team
+        ? <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">Aún no estás en un equipo de este proyecto. Tu docente te asignará a uno para empezar tu expedición.</div>
+        : <button onClick={() => setView('expedition')} className="w-full py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700">🚀 Ir a mi expedición →</button>}
     </div>
   )
 
@@ -514,7 +737,7 @@ function StudentExpedition({ projects }: { projects: any[] }) {
 
   return (
     <div className="space-y-4">
-      {projects.length > 1 && <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} />}
+      {nav}
 
       {/* Cabecera del equipo */}
       <div className="bg-white rounded-2xl border-2 border-violet-200 p-5" style={{ borderTopColor: team.color, borderTopWidth: 6 }}>
@@ -759,6 +982,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
   const [loading, setLoading] = useState(true)
   const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [previewTeamId, setPreviewTeamId] = useState<string | null>(null)
+  const [editingPres, setEditingPres] = useState(false)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -770,13 +994,17 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
 
   if (reviewingId) return <AbpReview validationId={reviewingId} onClose={(changed) => { setReviewingId(null); if (changed) load() }} />
   if (previewTeamId) return <TeamPreview teamId={previewTeamId} onBack={() => setPreviewTeamId(null)} />
+  if (editingPres && project) return <PresentationEditor project={project} onClose={() => setEditingPres(false)} onSaved={() => { setEditingPres(false); load() }} />
   if (loading) return <Loading />
 
   const teams = project?.teams || []
   return (
     <div className="space-y-4">
       <button onClick={onBack} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ChevronLeft className="w-4 h-4" /> Todas las expediciones</button>
-      <h3 className="text-xl font-bold text-slate-800">🧭 {project?.title || projectTitle}</h3>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h3 className="text-xl font-bold text-slate-800">🧭 {project?.title || projectTitle}</h3>
+        <button onClick={() => setEditingPres(true)} className="text-sm font-semibold text-violet-600 hover:text-violet-700 border border-violet-200 rounded-lg px-3 py-1.5">✏️ Editar portada</button>
+      </div>
       {project?.challenge && <div className="bg-violet-50 border-l-4 border-violet-400 rounded-r-xl p-3 text-sm text-violet-900">🎯 <b>El reto:</b> {project.challenge}</div>}
 
       {/* Cola de validaciones */}

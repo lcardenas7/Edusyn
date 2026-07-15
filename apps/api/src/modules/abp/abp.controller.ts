@@ -65,6 +65,22 @@ export class AbpController {
     return this.service.getProject(projectId, institutionId, userId);
   }
 
+  // Portada del proyecto para el alumno (lectura).
+  @Get('projects/:projectId/presentation')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async projectPresentation(@Param('projectId') projectId: string, @Request() req: any) {
+    const { institutionId } = await this.ctx(req);
+    return this.service.getProjectForStudent(projectId, institutionId);
+  }
+
+  // Docente edita la portada (y opcionalmente el reto general).
+  @Post('projects/:projectId/presentation')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async updatePresentation(@Param('projectId') projectId: string, @Request() req: any, @Body() body: { challenge?: string; presentation?: any }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.updatePresentation(projectId, institutionId, userId, body);
+  }
+
   // Panel de progreso del proyecto (Centro de Operaciones) — docente.
   @Get('projects/:projectId/dashboard')
   @Roles('DOCENTE', 'COORDINADOR')

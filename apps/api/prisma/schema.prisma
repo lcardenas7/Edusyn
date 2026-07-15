@@ -6621,6 +6621,7 @@ model AbpProject {
   classroomId   String
   title         String
   challenge     String?          @db.Text // reto general del proyecto
+  presentation  Json? // portada Nivel 1: banner/video/mensaje/contexto/why/skills/rules/timeline
   status        AbpProjectStatus @default(ACTIVE)
   phaseConfig   Json? // mínimos por fase; defaults sensatos en código si null
   startDate     DateTime?
