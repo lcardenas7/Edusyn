@@ -362,6 +362,14 @@ export class AbpController {
     return this.service.completeActivity(activityId, institutionId, userId, !!body.completed);
   }
 
+  // Valeria genera el contenido jugable de una actividad-lección (docente).
+  @Post('activities/:activityId/generate-lesson')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async generateLessonContent(@Param('activityId') activityId: string, @Request() req: any, @Body() body: { instructions?: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.generateLessonContent(activityId, institutionId, userId, body?.instructions);
+  }
+
   @Delete('activities/:activityId')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
   async deleteActivity(@Param('activityId') activityId: string, @Request() req: any) {

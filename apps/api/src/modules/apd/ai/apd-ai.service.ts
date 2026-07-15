@@ -916,6 +916,70 @@ export class ApdAiService implements IApdAiService {
     return { activities };
   }
 
+  /** Valeria diseña la LECCIÓN INTERACTIVA jugable de una misión ABP, anclada a la
+   * problemática real del equipo. Mismo esquema de slides que el resto del aula. */
+  async generateAbpLessonSlides(
+    params: {
+      title: string; challenge?: string; problem?: string; canvas?: string[]; smart?: string;
+      phase: number; phaseName: string; gradeName?: string; instructions?: string;
+    },
+    route?: { provider?: string; model?: string },
+  ): Promise<ApdAiLessonDraft> {
+    if (!this.isEnabled()) throw new Error('La generación con IA no está habilitada.');
+    const canvasTxt = (params.canvas || []).filter(Boolean).map(c => `  - ${c}`).join('\n');
+
+    const systemInstruction = [
+      'Eres Valeria, docente experta, diseñando una lección interactiva estilo Duolingo/Nearpod EN ESPAÑOL.',
+      'La lección es parte de un proyecto ABP (Aprendizaje Basado en Proyectos) y DEBE girar en torno a la problemática real del equipo.',
+      params.gradeName ? `Grado escolar: ${params.gradeName} — ajusta el tema, los ejemplos y el registro a esa edad.` : '',
+      `Fase del proyecto: ${params.phase} — ${params.phaseName}. Los ejercicios deben ayudar al equipo a avanzar en ESTA fase.`,
+      'Responde EXCLUSIVAMENTE con un JSON válido, sin markdown, sin backticks.',
+      '',
+      'Diseño en FASES, en este orden exacto:',
+      '  FASE 1 · Presentación: 1-2 CONTENT que explican el concepto clave aplicado a la problemática del equipo.',
+      '  FASE 2 · Práctica guiada: 2-3 ACTIVITY CON "hint" y explicación, con tipos VARIADOS.',
+      '  FASE 3 · Mini-quiz final: una CONTENT breve titulada "🎯 Mini-quiz" y luego 3 ACTIVITY SIN "hint".',
+      '  CIERRE: CHECKPOINT y luego BADGE_REVEAL.',
+      '- Entre 8 y 12 slides en total. Bloques cortos y feedback inmediato.',
+      '- NUNCA uses "Opción A/B/C/D": las opciones deben ser reales y plausibles.',
+      '',
+      'Tipos de ACTIVITY permitidos (SOLO estos tres): MULTIPLE_CHOICE (4 opciones), TRUE_FALSE, FILL_BLANK (el estudiante escribe UNA palabra; marca el hueco con ___ en "question" y la palabra exacta en "correctAnswer").',
+      'PROHIBIDO usar ORDERING u otros tipos.',
+      '',
+      'Esquema JSON exacto:',
+      '{',
+      '  "title": "Título de la lección",',
+      '  "description": "1 frase",',
+      '  "slides": [',
+      '    { "type": "CONTENT", "title": "…", "body": "<p>…</p>" },',
+      '    { "type": "ACTIVITY", "title": "…", "activityData": { "questionType": "MULTIPLE_CHOICE", "question": "…", "options": ["…"], "correctAnswer": "…", "explanation": "…", "hint": "…", "points": 10 } },',
+      '    { "type": "CHECKPOINT", "title": "…" },',
+      '    { "type": "BADGE_REVEAL" }',
+      '  ]',
+      '}',
+      params.instructions ? `\nINDICACIONES DEL DOCENTE (tienen PRIORIDAD; respétalas al pie de la letra):\n${params.instructions.trim()}` : '',
+    ].filter(Boolean).join('\n');
+
+    const userPrompt = [
+      `Título de la lección: ${params.title}`,
+      `Reto general del proyecto: ${params.challenge || '(no definido)'}`,
+      `Problemática del equipo: ${params.problem || '(aún no especificada)'}`,
+      canvasTxt ? `Canvas del problema:\n${canvasTxt}` : '',
+      params.smart ? `Objetivo SMART del equipo: ${params.smart}` : '',
+      '',
+      'Diseña la lección interactiva siguiendo el esquema JSON. TODO el contenido debe estar anclado a la problemática del equipo. Usa solo MULTIPLE_CHOICE, TRUE_FALSE y FILL_BLANK.',
+    ].filter(Boolean).join('\n');
+
+    let raw: any;
+    try {
+      raw = await this.callLlmJson<any>(systemInstruction, userPrompt, 8000, route);
+    } catch (err: any) {
+      this.logger.error(`generateAbpLessonSlides LLM error: ${err?.message || err}`);
+      throw new Error(`El proveedor de IA no respondió: ${err?.message || 'error'}`);
+    }
+    return this.parseLessonDraftPayload(raw, params.title, params.title);
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // GENERAR ESTRATEGIA DE APOYO
   // ═══════════════════════════════════════════════════════════════════════════

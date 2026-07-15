@@ -2575,6 +2575,7 @@ export const abpApi = {
   suggestActivities: (teamId: string, missionId: string, count?: number) => api.post<{ configured: boolean; model?: string; activities: { type: string; title: string; description: string }[] }>(`/abp/teams/${teamId}/missions/${missionId}/suggest`, { count }),
   addActivitiesBulk: (missionId: string, items: { type: string; title: string }[]) => api.post<any[]>(`/abp/missions/${missionId}/activities/bulk`, { items }),
   addLessonActivity: (missionId: string, title: string) => api.post<any>(`/abp/missions/${missionId}/lesson-activity`, { title }),
+  generateLessonContent: (activityId: string, instructions?: string) => api.post<{ ok: boolean; title: string; slides: number; model?: string }>(`/abp/activities/${activityId}/generate-lesson`, { instructions }),
   deleteMission: (missionId: string) => api.delete(`/abp/missions/${missionId}`),
   setMissionStatus: (missionId: string, completed: boolean) => api.post<any>(`/abp/missions/${missionId}/status`, { completed }),
   addActivity: (missionId: string, data: { type: string; title: string; content?: any }) => api.post<any>(`/abp/missions/${missionId}/activities`, data),

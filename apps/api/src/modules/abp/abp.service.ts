@@ -857,6 +857,62 @@ export class AbpService {
     });
   }
 
+  /** Valeria genera el CONTENIDO jugable de una actividad-lección, anclado a la
+   * problemática del equipo. Reemplaza la lección (es regenerable). */
+  async generateLessonContent(activityId: string, institutionId: string, userId: string, instructions?: string) {
+    const a = await this.prisma.abpMissionActivity.findFirst({
+      where: { id: activityId, institutionId },
+      include: { mission: { include: { phaseState: { select: { phase: true, teamId: true } } } } },
+    });
+    if (!a) throw new NotFoundException('Actividad no encontrada');
+    if (!a.classroomActivityId) throw new BadRequestException('Esta actividad no es una lección/juego');
+    const teamId = a.mission.phaseState.teamId;
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    if (!this.apdAi.isEnabled()) throw new BadRequestException('Valeria no está configurada (falta la API key de IA).');
+    if (!(await this.orchestrator.withinQuota(institutionId))) throw new BadRequestException('Se alcanzó la cuota mensual de IA de la institución.');
+
+    const phase = a.mission.phaseState.phase;
+    const project = await this.prisma.abpProject.findUnique({ where: { id: team.projectId }, select: { challenge: true, classroomId: true } });
+    const ps1 = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 1 } }, select: { data: true } });
+    const canvas = Array.isArray((ps1?.data as any)?.canvas) ? (ps1!.data as any).canvas.map((c: any) => c?.value).filter(Boolean) : [];
+    const ps3 = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 3 } }, select: { data: true } });
+    const smart = (ps3?.data as any)?.smart?.text || '';
+    const phaseName = ABP_PHASES.find(p => p.n === phase)?.name || `Fase ${phase}`;
+    const classroom = project?.classroomId
+      ? await this.prisma.classroom.findUnique({ where: { id: project.classroomId }, select: { teacherAssignment: { select: { group: { select: { grade: { select: { name: true } } } } } } } })
+      : null;
+    const gradeName = classroom?.teacherAssignment?.group?.grade?.name;
+
+    const route = this.orchestrator.chooseRoute(await this.orchestrator.getPlan(institutionId));
+    if (route.provider === 'OPENROUTER' && !(route.model || '').includes('qwen')) {
+      route.model = 'qwen/qwen3-next-80b-a3b-instruct:free';
+    }
+    const draft = await this.apdAi.generateAbpLessonSlides(
+      { title: a.title, challenge: project?.challenge || undefined, problem: (team as any).problem || undefined, canvas, smart, phase, phaseName, gradeName, instructions },
+      route,
+    );
+
+    // Reemplaza la lección (regenerable), igual que en las Rutas.
+    const existing = await this.prisma.lesson.findUnique({ where: { activityId: a.classroomActivityId }, select: { id: true } });
+    if (existing) await this.prisma.lesson.delete({ where: { id: existing.id } });
+    await this.prisma.lesson.create({
+      data: {
+        activityId: a.classroomActivityId,
+        title: draft.title,
+        description: draft.description,
+        slides: {
+          create: draft.slides.map((s, i) => ({
+            type: s.type as any, sortOrder: i, title: s.title, body: s.body,
+            activityData: s.activityData ? (s.activityData as any) : undefined,
+            badgeEmoji: s.badgeEmoji, badgeTitle: s.badgeTitle,
+          })),
+        },
+      },
+    });
+    await this.orchestrator.recordUsage(institutionId, this.orchestrator.estimateTokens(JSON.stringify(draft)));
+    return { ok: true, title: draft.title, slides: draft.slides.length, model: route.model };
+  }
+
   /** Marca como completas las actividades-lección cuya ClassroomActivity ya fue
    * entregada por algún integrante del equipo (cálculo on-demand, sin estado nuevo). */
   private async markLessonCompletion(missions: any[], memberEnrollmentIds: string[]) {

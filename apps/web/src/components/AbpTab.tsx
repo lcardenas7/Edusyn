@@ -1358,6 +1358,7 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
   const [picked, setPicked] = useState<Set<number>>(new Set())
   const [notConfigured, setNotConfigured] = useState(false)
   const [editing, setEditing] = useState<{ activityId: string; title: string } | null>(null)
+  const [genActId, setGenActId] = useState<string | null>(null)
   const acts = (mission.activities || []).filter((a: any) => !a.content?.tool)
   const run = async (fn: () => Promise<any>) => { setBusy(true); try { await fn(); onChanged() } finally { setBusy(false) } }
   const addLesson = async () => {
@@ -1366,6 +1367,18 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
     setBusy(true)
     try { const { data } = await abpApi.addLessonActivity(mission.id, title); onChanged(); setEditing({ activityId: data.classroomActivityId, title }) }
     catch (e: any) { alert(e?.response?.data?.message || 'No se pudo crear la lección') } finally { setBusy(false) }
+  }
+  // Valeria escribe el contenido jugable, anclado a la problemática del equipo.
+  const genLesson = async (a: any) => {
+    const instructions = window.prompt('¿Alguna indicación para Valeria? (opcional)\nEj: enfócate en el reciclaje de plásticos y usa ejemplos del barrio.')
+    if (instructions === null) return
+    setGenActId(a.id)
+    try {
+      const { data } = await abpApi.generateLessonContent(a.id, instructions.trim() || undefined)
+      onChanged()
+      setEditing({ activityId: a.classroomActivityId, title: data.title || a.title })
+    } catch (e: any) { alert(e?.response?.data?.message || 'Valeria no pudo generar la lección') }
+    finally { setGenActId(null) }
   }
   const suggest = async () => {
     setSuggesting(true); setSuggestions(null); setNotConfigured(false); setPicked(new Set())
@@ -1398,8 +1411,13 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
               <span className={`text-xs ${a.completed ? 'text-emerald-500' : 'text-slate-400'}`}>🎮</span>
               <span className={`text-xs ${a.completed ? 'text-slate-400' : 'text-slate-600'}`}>{a.title}</span>
               <span className="text-[10px] font-semibold text-violet-500">lección/juego{a.completed ? ' · hecha' : ''}</span>
-              <button onClick={() => setEditing({ activityId: a.classroomActivityId, title: a.title })} className="ml-auto text-[11px] font-semibold text-violet-600 hover:text-violet-700">✏️ Editar</button>
-              <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
+              <div className="ml-auto flex items-center gap-2 shrink-0">
+                <button onClick={() => genLesson(a)} disabled={genActId === a.id} className="text-[11px] font-semibold text-fuchsia-600 hover:text-fuchsia-700 flex items-center gap-1 disabled:opacity-50">
+                  {genActId === a.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '✨'} Generar
+                </button>
+                <button onClick={() => setEditing({ activityId: a.classroomActivityId, title: a.title })} className="text-[11px] font-semibold text-violet-600 hover:text-violet-700">✏️ Editar</button>
+                <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
+              </div>
             </div>
           ) : (
             <div key={a.id} className="flex items-center gap-2 group">
