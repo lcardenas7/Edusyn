@@ -1242,6 +1242,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
   const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [previewTeamId, setPreviewTeamId] = useState<string | null>(null)
   const [editingPres, setEditingPres] = useState(false)
+  const [showManual, setShowManual] = useState(false) // NUEVO: Estado del Side Peek
 
   const load = useCallback(() => {
     setLoading(true)
@@ -1257,80 +1258,202 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
   if (loading) return <Loading />
 
   const teams = project?.teams || []
+  
+  // Agrupamos equipos por fase para el Mapa Vivo
+  const teamsByPhase: Record<number, any[]> = {}
+  PHASES.forEach(p => teamsByPhase[p.n] = [])
+  ;(dash?.teams || []).forEach((t: any) => {
+    if (teamsByPhase[t.currentPhase]) {
+      teamsByPhase[t.currentPhase].push(t)
+    }
+  })
+
+  const pendingValidations = queue.length
+  const behindTeams = dash?.summary?.behind || 0
+  const everythingOk = pendingValidations === 0 && behindTeams === 0
+
   return (
     <div className="space-y-4">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ChevronLeft className="w-4 h-4" /> Todas las expediciones</button>
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h3 className="text-xl font-bold text-slate-800">🧭 {project?.title || projectTitle}</h3>
-        <button onClick={() => setEditingPres(true)} className="text-sm font-semibold text-violet-600 hover:text-violet-700 border border-violet-200 rounded-lg px-3 py-1.5">✏️ Editar portada</button>
+      {/* HEADER ESTÁTICO (LOE Vision) */}
+      <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+        <button onClick={onBack} className="flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-slate-700">
+          <ChevronLeft className="w-4 h-4" /> Todas las expediciones
+        </button>
+        <button onClick={() => setEditingPres(true)} className="text-sm font-semibold text-slate-500 hover:text-slate-800">
+          ⚙️ Editar portada
+        </button>
       </div>
-      {project?.challenge && <div className="bg-violet-50 border-l-4 border-violet-400 rounded-r-xl p-3 text-sm text-violet-900">🎯 <b>El reto:</b> {project.challenge}</div>}
 
-      {/* Cola de validaciones */}
-      {queue.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <h4 className="font-bold text-slate-800 mb-3">🔔 Validaciones pendientes ({queue.length})</h4>
-          <div className="space-y-3">{queue.map(q => <QueueItem key={q.id} q={q} onReview={setReviewingId} />)}</div>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h3 className="text-2xl font-black text-slate-800 tracking-tight">🧭 {project?.title || projectTitle}</h3>
+          {dash && (
+            <div className="flex items-center gap-3 mt-1.5 text-sm font-medium text-slate-500">
+              <span className="flex items-center gap-1"><Users className="w-4 h-4" /> {dash.summary.teams} Equipos</span>
+              <span className="text-slate-300">|</span>
+              <span>👨‍🎓 {dash.summary.students} Estudiantes</span>
+            </div>
+          )}
         </div>
-      )}
+        <button onClick={() => setShowManual(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-colors">
+          📖 Ver Manual de Expedición
+        </button>
+      </div>
 
-      {/* Panel de progreso (Centro de Operaciones) */}
-      {dash && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <h4 className="font-bold text-slate-800 mb-3">📊 Panel de progreso</h4>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-            <Stat n={dash.summary.teams} label="Equipos" />
-            <Stat n={dash.summary.students} label="Estudiantes" />
-            <Stat n={dash.summary.pendingValidations} label="Validaciones" accent={dash.summary.pendingValidations > 0} />
-            <Stat n={dash.summary.behind} label="Atrasados" warn={dash.summary.behind > 0} />
-          </div>
-          {dash.teams.length === 0 ? (
-            <p className="text-sm text-slate-400">Aún no hay equipos. Arma el primero abajo.</p>
-          ) : (
-            <div className="space-y-1">
-              {dash.teams.map((t: any) => (
-                <button key={t.id} onClick={() => setPreviewTeamId(t.id)} className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 text-left">
-                  <span className="text-lg">{t.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-700 truncate">{t.name}</span>
-                      {t.done && <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full px-1.5">🏆 completa</span>}
-                      {t.awaitingValidation && <span className="text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full px-1.5">valida F{t.currentPhase}</span>}
-                    </div>
-                    <div className="mt-1 h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${t.progress}%`, background: t.color }} /></div>
-                  </div>
-                  <div className="text-xs text-slate-400 w-24 text-right shrink-0">Fase {t.currentPhase}/6 · {t.progress}%</div>
-                </button>
+      {/* PROPÓSITO PEDAGÓGICO */}
+      {project?.challenge && (
+        <div className="mt-2 text-sm text-slate-700 max-w-3xl">
+          <p className="font-semibold text-violet-700 mb-1">🎯 EL RETO (PROPÓSITO)</p>
+          <p className="text-lg leading-relaxed">{project.challenge}</p>
+          {project?.presentation?.skills?.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {project.presentation.skills.map((s: string, idx: number) => (
+                <span key={idx} className="bg-violet-50 border border-violet-100 text-violet-700 text-xs font-bold px-2.5 py-1 rounded-md">
+                  {s}
+                </span>
               ))}
             </div>
           )}
         </div>
       )}
 
-      {/* Anuncios + Recursos (Centro de Operaciones) */}
-      <AnnouncementsView projectId={projectId} canManage />
-      <ResourcesView projectId={projectId} canManage />
-
-      {/* Equipos (gestión) */}
-      <div className="flex items-center justify-between">
-        <h4 className="font-bold text-slate-700">Equipos ({teams.length})</h4>
-      </div>
-      <div className="grid sm:grid-cols-2 gap-3">
-        {teams.map((t: any) => (
-          <div key={t.id} className="bg-white rounded-2xl border border-slate-200 p-4" style={{ borderTopColor: t.color, borderTopWidth: 4 }}>
-            <div className="flex items-start justify-between">
-              <h5 className="font-bold text-slate-800">{t.emoji} {t.name}</h5>
-              <button onClick={async () => { if (confirm('¿Eliminar equipo?')) { await abpApi.deleteTeam(t.id); load() } }} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+      {/* SALA DE OPERACIONES: TRIAJE */}
+      <div className="mt-8">
+        <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">📥 ¿Dónde necesitas estar hoy?</h4>
+        
+        <div className="space-y-3">
+          {everythingOk ? (
+            <div className="bg-emerald-50 border-2 border-emerald-100 rounded-2xl p-5 flex items-start gap-4">
+              <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
+                <Check className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <h5 className="font-bold text-emerald-800">✔ Todo fluye correctamente</h5>
+                <p className="text-sm text-emerald-700/80 mt-1">No tienes validaciones pendientes y ningún equipo reporta atrasos. Tus estudiantes están trabajando de forma autónoma.</p>
+              </div>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">Fase {t.currentPhase}: {phaseName(t.currentPhase)} · ⭐ {t.xp} XP</p>
-            <div className="my-2"><Trail team={t} mini /></div>
-            <div className="text-xs text-slate-500">{(t.members || []).map((m: any) => `${m.studentEnrollment?.student?.user?.firstName ?? ''}`).filter(Boolean).join(', ')}</div>
-            <button onClick={() => setPreviewTeamId(t.id)} className="mt-3 w-full text-sm font-semibold text-violet-600 hover:text-violet-700 border border-violet-200 rounded-lg py-1.5">Ver expedición →</button>
-          </div>
-        ))}
+          ) : (
+            <>
+              {behindTeams > 0 && (
+                <div className="bg-rose-50 border-2 border-rose-100 rounded-2xl p-5 flex items-start gap-4">
+                  <div className="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center shrink-0">
+                    <Clock className="w-5 h-5 text-rose-600" />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-rose-800">🔴 Intervención Crítica</h5>
+                    <p className="text-sm text-rose-700/80 mt-1">Tienes <b>{behindTeams} equipo(s)</b> con progreso atrasado que necesitan tu apoyo para avanzar.</p>
+                  </div>
+                </div>
+              )}
+              {pendingValidations > 0 && (
+                <div className="bg-amber-50 border-2 border-amber-100 rounded-2xl p-5">
+                  <div className="flex items-start gap-4 mb-3">
+                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
+                      <Lock className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-amber-800">🟠 Requiere Aprobación</h5>
+                      <p className="text-sm text-amber-700/80 mt-1">Hay {pendingValidations} equipo(s) esperando validación para pasar a la siguiente fase.</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2 ml-14">
+                    {queue.map(q => (
+                      <div key={q.id} className="bg-white/60 border border-amber-200/50 rounded-xl p-3 flex items-center justify-between gap-3">
+                        <span className="text-sm text-amber-900"><b>{q.team?.emoji} {q.team?.name}</b> envió la Fase {q.phase}</span>
+                        <button onClick={() => setReviewingId(q.id)} className="px-3 py-1.5 bg-amber-500 text-white text-xs font-bold rounded-lg hover:bg-amber-600 shadow-sm">Revisar</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
-      <CreateTeam classroomId={classroomId} projectId={projectId} onCreated={load} />
+      {/* MAPA VIVO (RUTA ESTRATÉGICA) */}
+      <div className="mt-8">
+        <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">🗺️ Mapa de la Expedición</h4>
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 overflow-x-auto">
+          <div className="flex gap-4 min-w-[800px]">
+            {PHASES.map((ph, idx) => {
+              const pts = teamsByPhase[ph.n] || []
+              return (
+                <div key={ph.n} className="flex-1 relative">
+                  {/* Línea conectora */}
+                  {idx < PHASES.length - 1 && <div className="absolute top-4 left-1/2 w-full h-1 bg-slate-100 -z-10" />}
+                  
+                  {/* Nodo de Fase */}
+                  <div className="flex flex-col items-center">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 bg-white ${pts.length > 0 ? 'border-violet-500 text-violet-600' : 'border-slate-200 text-slate-400'}`}>
+                      {ph.n}
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mt-2 text-center h-8">{ph.name}</span>
+                    
+                    {/* Equipos en esta fase */}
+                    <div className="w-full mt-3 space-y-2">
+                      {pts.map(t => (
+                        <button key={t.id} onClick={() => setPreviewTeamId(t.id)} className="w-full bg-slate-50 hover:bg-violet-50 border border-slate-100 hover:border-violet-200 rounded-lg p-2 text-left transition-colors group">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm">{t.emoji}</span>
+                            <span className="text-xs font-semibold text-slate-700 group-hover:text-violet-700 truncate">{t.name}</span>
+                          </div>
+                          {t.awaitingValidation && <div className="text-[9px] font-bold text-amber-600 mt-1 uppercase tracking-wide">Espera validación</div>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* BUROCRACIA COLAPSADA (Anuncios y Recursos) */}
+      <div className="mt-8 grid sm:grid-cols-2 gap-4">
+        <AnnouncementsView projectId={projectId} canManage />
+        <ResourcesView projectId={projectId} canManage />
+      </div>
+
+      {/* EQUIPOS GESTIÓN RÁPIDA */}
+      <div className="mt-12 pt-6 border-t border-slate-200">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-sm font-bold text-slate-400">Directorio de Equipos</h4>
+          <CreateTeam classroomId={classroomId} projectId={projectId} onCreated={load} />
+        </div>
+        {teams.length === 0 ? (
+          <p className="text-sm text-slate-400">Aún no hay equipos.</p>
+        ) : (
+          <div className="grid sm:grid-cols-3 gap-3">
+            {teams.map((t: any) => (
+              <div key={t.id} className="bg-white rounded-xl border border-slate-200 p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2 truncate">
+                  <span>{t.emoji}</span>
+                  <span className="text-sm font-semibold text-slate-700 truncate">{t.name}</span>
+                </div>
+                <button onClick={async () => { if (confirm('¿Eliminar equipo?')) { await abpApi.deleteTeam(t.id); load() } }} className="text-slate-300 hover:text-rose-500 shrink-0"><Trash2 className="w-4 h-4" /></button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* SIDE PEEK MANUAL DE EXPEDICIÓN */}
+      {showManual && (
+        <div className="fixed inset-0 z-[100] flex justify-end">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowManual(false)} />
+          <div className="relative w-full max-w-md bg-slate-50 h-full shadow-2xl overflow-y-auto border-l border-slate-200 animate-in slide-in-from-right duration-300">
+            <div className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex items-center justify-between z-10">
+              <h3 className="font-black text-slate-800 text-lg">Manual de Expedición</h3>
+              <button onClick={() => setShowManual(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+            </div>
+            <div className="p-6">
+              <PresentationView project={project} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
