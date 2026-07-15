@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Rocket, Plus, Trash2, Check, Clock, Lock, Loader2, Users, Send, ChevronLeft, Paperclip, Link2 } from 'lucide-react'
-import { abpApi, classroomApi } from '../lib/api'
+import { abpApi, classroomApi, storageApi } from '../lib/api'
 import AbpReview from './AbpReview'
 
 // Metadatos de las 6 fases (nombre + icono). El motor real vive en el backend.
@@ -294,7 +294,7 @@ function EvidencePhase({ team, onSaved }: { team: any; onSaved: () => void }) {
           {evidences.map((e: any) => (
             <div key={e.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-3">
               <span>{e.kind === 'FILE' ? '📎' : '🔗'}</span>
-              <a href={e.url} target="_blank" rel="noreferrer" className="flex-1 text-sm text-violet-600 hover:underline truncate">{e.label}</a>
+              <button onClick={() => openStoredFile(e.url)} className="flex-1 text-left text-sm text-violet-600 hover:underline truncate">{e.label}</button>
               <span className="text-xs text-slate-400">{e.byName}</span>
               {editable && <button onClick={() => remove(e.id)} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>}
             </div>
@@ -488,6 +488,58 @@ function videoEmbed(url: string): string | null {
   return null
 }
 
+// ─── Apertura y visualización de archivos de storage ───────────────────────────
+const isHttp = (v: string) => /^https?:\/\//i.test(v || '')
+const isImageUrl = (v: string) => /\.(png|jpe?g|gif|webp|svg|bmp)(\?|$)/i.test(v || '')
+const isPdfUrl = (v: string) => /\.pdf(\?|$)/i.test(v || '')
+
+/** Resuelve una key de storage a URL firmada (si hace falta) y la abre en pestaña nueva. */
+async function openStoredFile(value: string) {
+  if (!value) return
+  if (isHttp(value)) { window.open(value, '_blank', 'noopener'); return }
+  try { const { data } = await storageApi.resolveUrl(value); window.open(data.url, '_blank', 'noopener') }
+  catch { window.open(value, '_blank', 'noopener') }
+}
+
+/** Modal visor: resuelve la URL y muestra PDF/imagen/video en línea; el resto, botón de abrir. */
+function FileViewerModal({ file, onClose }: { file: { title: string; url: string; type?: string }; onClose: () => void }) {
+  const [url, setUrl] = useState('')
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    const v = file.url
+    if (isHttp(v)) { setUrl(v); setLoading(false) }
+    else storageApi.resolveUrl(v).then(({ data }) => setUrl(data.url)).catch(() => setUrl(v)).finally(() => setLoading(false))
+  }, [file])
+  const embed = videoEmbed(url)
+  const img = file.type === 'IMAGE' || isImageUrl(url) || isImageUrl(file.url)
+  // PDF explícito, o un archivo subido a storage (key sin http) que no es imagen/video:
+  // lo intentamos en iframe (el navegador renderiza PDF; otros formatos ofrecen descarga).
+  const pdf = !img && !embed && (file.type === 'PDF' || isPdfUrl(url) || isPdfUrl(file.url) || !isHttp(file.url))
+  return (
+    <div className="fixed inset-0 z-[110] flex flex-col bg-slate-900/70 backdrop-blur-sm" onClick={onClose}>
+      <div className="flex items-center justify-between px-4 py-3 bg-white/95 border-b border-slate-200" onClick={e => e.stopPropagation()}>
+        <h3 className="font-bold text-slate-800 text-sm truncate">{file.title}</h3>
+        <div className="flex items-center gap-2 shrink-0">
+          {url && <button onClick={() => window.open(url, '_blank', 'noopener')} className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200">Abrir en pestaña ↗</button>}
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+        </div>
+      </div>
+      <div className="flex-1 p-3 sm:p-6 overflow-auto flex items-center justify-center" onClick={e => e.stopPropagation()}>
+        {loading ? <Loader2 className="w-8 h-8 animate-spin text-white" />
+          : embed ? <iframe src={embed} className="w-full max-w-4xl aspect-video rounded-xl bg-black" allowFullScreen title={file.title} />
+          : img ? <img src={url} alt={file.title} className="max-w-full max-h-full rounded-xl bg-white" />
+          : pdf ? <iframe src={url} className="w-full h-full min-h-[70vh] max-w-5xl rounded-xl bg-white" title={file.title} />
+          : (
+            <div className="bg-white rounded-2xl p-8 text-center max-w-sm">
+              <p className="text-slate-600 text-sm mb-4">Este tipo de archivo no se puede previsualizar aquí.</p>
+              <button onClick={() => window.open(url, '_blank', 'noopener')} className="px-5 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-bold">Abrir / descargar</button>
+            </div>
+          )}
+      </div>
+    </div>
+  )
+}
+
 function PresentationView({ project }: { project: any }) {
   const p = project?.presentation || {}
   const embed = videoEmbed(p.videoUrl || '')
@@ -522,6 +574,18 @@ function PresentationView({ project }: { project: any }) {
           <div className="text-xs font-bold uppercase tracking-wide opacity-80 mb-1">🎯 El gran reto</div>
           <p className="text-lg font-bold">{project.challenge}</p>
           <p className="text-sm opacity-80 mt-2">Cada equipo encontrará SU propia problemática dentro de este reto.</p>
+        </div>
+      )}
+
+      {p.instructions?.length > 0 && (
+        <div className="bg-white rounded-2xl border-2 border-violet-200 p-5">
+          <h4 className="font-bold text-slate-800 mb-3">📋 ¿Qué deben hacer?</h4>
+          <ol className="space-y-2">{p.instructions.map((s: string, i: number) => (
+            <li key={i} className="flex items-start gap-3 text-sm text-slate-700">
+              <span className="w-6 h-6 shrink-0 rounded-full bg-violet-100 text-violet-700 font-bold flex items-center justify-center text-xs">{i + 1}</span>
+              <span className="pt-0.5">{s}</span>
+            </li>
+          ))}</ol>
         </div>
       )}
 
@@ -605,6 +669,7 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
   const [teacherMessage, setTeacherMessage] = useState(init.teacherMessage || '')
   const [context, setContext] = useState(init.context || '')
   const [why, setWhy] = useState(init.why || '')
+  const [instructions, setInstructions] = useState<string[]>(init.instructions || [])
   const [skills, setSkills] = useState<string[]>(init.skills || [])
   const [rules, setRules] = useState<string[]>(init.rules || [])
   const [timeline, setTimeline] = useState<{ label: string; detail: string }[]>(init.timeline || [])
@@ -625,7 +690,7 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
     try {
       await abpApi.updatePresentation(project.id, {
         challenge,
-        presentation: { banner, videoUrl, teacherMessage, context, why, skills: skills.filter(Boolean), rules: rules.filter(Boolean), timeline: timeline.filter(t => t.label || t.detail), faq: faq.filter(f => f.q || f.a) },
+        presentation: { banner, videoUrl, teacherMessage, context, why, instructions: instructions.filter(Boolean), skills: skills.filter(Boolean), rules: rules.filter(Boolean), timeline: timeline.filter(t => t.label || t.detail), faq: faq.filter(f => f.q || f.a) },
       })
       onSaved()
     } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo guardar') } finally { setBusy(false) }
@@ -635,6 +700,7 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
   const [openSection, setOpenSection] = useState<string>('reto')
   const sections: { key: string; icon: string; title: string; hint: string; filled: boolean }[] = [
     { key: 'reto', icon: '🎯', title: 'El reto y su propósito', hint: 'El gran reto, contexto y por qué importa', filled: !!(challenge.trim() || context.trim() || why.trim()) },
+    { key: 'instrucciones', icon: '📋', title: 'Qué deben hacer los estudiantes', hint: 'Los pasos o tareas concretas de esta expedición', filled: instructions.some(s => s.trim()) },
     { key: 'portada', icon: '🖼️', title: 'Portada y bienvenida', hint: 'Banner, video y tu mensaje', filled: !!(banner.trim() || videoUrl.trim() || teacherMessage.trim()) },
     { key: 'aprendizajes', icon: '📚', title: 'Aprendizajes y reglas', hint: 'Qué aprenderán y las reglas del juego', filled: skills.some(s => s.trim()) || rules.some(r => r.trim()) },
     { key: 'cronograma', icon: '📅', title: 'Cronograma', hint: 'La línea de tiempo de la expedición', filled: timeline.some(t => t.label || t.detail) },
@@ -684,6 +750,13 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
                         <textarea value={why} onChange={e => setWhy(e.target.value)} rows={3} placeholder="Qué cambia si lo resuelven…" className={`${inputCls} resize-none mt-1`} />
                       </div>
                     </div>
+                  </>
+                )}
+
+                {s.key === 'instrucciones' && (
+                  <>
+                    <p className="text-xs text-slate-400 -mt-1">Escribe en pasos lo que cada equipo debe hacer en esta expedición. Aparecerá numerado en la portada del estudiante.</p>
+                    <LineListInput label="Pasos / tareas" value={instructions} onChange={setInstructions} placeholder={'Formen su equipo y elijan un nombre.\nInvestiguen un problema real de la institución.\nDiseñen y construyan un prototipo.\nPreparen la presentación final.'} />
                   </>
                 )}
 
@@ -767,6 +840,7 @@ const RES_TYPES = ['LINK', 'PDF', 'VIDEO', 'DOC', 'OTHER']
 function ResourcesView({ projectId, canManage }: { projectId: string; canManage?: boolean }) {
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [viewer, setViewer] = useState<{ title: string; url: string; type?: string } | null>(null)
   const [type, setType] = useState('LINK')
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
@@ -780,20 +854,27 @@ function ResourcesView({ projectId, canManage }: { projectId: string; canManage?
     catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
   }
   const del = async (id: string) => { if (!confirm('¿Eliminar recurso?')) return; await abpApi.deleteResource(id); load() }
+  // Enlace externo "normal" (no video/pdf/imagen) → pestaña nueva; el resto → visor.
+  const open = (r: any) => {
+    const viewable = r.type === 'PDF' || r.type === 'VIDEO' || !isHttp(r.url) || isPdfUrl(r.url) || isImageUrl(r.url) || videoEmbed(r.url)
+    if (viewable) setViewer({ title: r.title, url: r.url, type: r.type })
+    else openStoredFile(r.url)
+  }
   if (loading) return <Loading />
   return (
     <div className="space-y-3">
+      {viewer && <FileViewerModal file={viewer} onClose={() => setViewer(null)} />}
       <div className="bg-white rounded-2xl border border-slate-200 p-5">
         <h4 className="font-bold text-slate-800 mb-3">📚 Recursos del proyecto</h4>
         {items.length === 0 ? <p className="text-sm text-slate-400">Aún no hay recursos.</p> : (
           <div className="space-y-2">{items.map(r => (
-            <div key={r.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-3">
+            <div key={r.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-3 hover:border-violet-200 transition-colors">
               <span className="text-lg">{RES_ICON[r.type] || '📎'}</span>
-              <div className="flex-1 min-w-0">
-                <a href={r.url} target="_blank" rel="noreferrer" className="text-sm font-semibold text-violet-600 hover:underline truncate block">{r.title}</a>
+              <button onClick={() => open(r)} className="flex-1 min-w-0 text-left">
+                <span className="text-sm font-semibold text-violet-600 hover:underline truncate block">{r.title}</span>
                 {r.description && <p className="text-xs text-slate-400 truncate">{r.description}</p>}
-              </div>
-              {canManage && <button onClick={() => del(r.id)} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>}
+              </button>
+              {canManage && <button onClick={() => del(r.id)} className="text-slate-300 hover:text-rose-500 shrink-0"><Trash2 className="w-4 h-4" /></button>}
             </div>
           ))}</div>
         )}
@@ -962,7 +1043,7 @@ function DiscoveriesView({ teamId, currentPhase, readOnly }: { teamId: string; c
               <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0 ${IMPACT_META[d.impact]?.[1] || ''}`}>Impacto {IMPACT_META[d.impact]?.[0] || d.impact}</span>
             </div>
             <p className="text-sm text-slate-600 mt-1 whitespace-pre-line">{d.description}</p>
-            {d.evidenceUrl && <a href={d.evidenceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-violet-600 hover:underline mt-2">{d.evidenceKind === 'FILE' ? '📎' : '🔗'} Ver evidencia</a>}
+            {d.evidenceUrl && <button onClick={() => openStoredFile(d.evidenceUrl)} className="inline-flex items-center gap-1 text-xs text-violet-600 hover:underline mt-2">{d.evidenceKind === 'FILE' ? '📎' : '🔗'} Ver evidencia</button>}
             <div className="flex items-center gap-2 mt-2 text-[11px] text-slate-400">
               <span className="font-semibold">{d.authorName}</span><span>· Fase {d.phase}</span>
               {!readOnly && <button onClick={() => del(d.id)} className="ml-auto text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>}
@@ -1357,7 +1438,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
               <ChevronLeft className="w-4 h-4" /> Todas las expediciones
             </button>
             <div className="flex items-center gap-2">
-              <button onClick={() => setShowManual(true)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-semibold transition-colors">📖 Manual</button>
+              <button onClick={() => setShowManual(true)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-semibold transition-colors">👁️ Vista del alumno</button>
               <button onClick={() => setEditingPres(true)} className="px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-lg text-sm font-semibold transition-colors">✏️ Editar portada</button>
             </div>
           </div>
@@ -1514,13 +1595,26 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
       {showManual && (
         <div className="fixed inset-0 z-[100] flex justify-end">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowManual(false)} />
-          <div className="relative w-full max-w-md bg-slate-50 h-full shadow-2xl overflow-y-auto border-l border-slate-200 animate-in slide-in-from-right duration-300">
-            <div className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex items-center justify-between z-10">
-              <h3 className="font-black text-slate-800 text-lg">Manual de Expedición</h3>
-              <button onClick={() => setShowManual(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+          <div className="relative w-full max-w-lg bg-slate-50 h-full shadow-2xl overflow-y-auto border-l border-slate-200 animate-in slide-in-from-right duration-300">
+            <div className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-slate-200 px-5 py-3 flex items-center justify-between z-10">
+              <div>
+                <h3 className="font-black text-slate-800">👁️ Así lo ven tus estudiantes</h3>
+                <p className="text-xs text-slate-400">Vista previa de la portada de la expedición</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button onClick={() => { setShowManual(false); setEditingPres(true) }} className="px-3 py-1.5 bg-violet-600 text-white rounded-lg text-sm font-semibold hover:bg-violet-700">✏️ Editar</button>
+                <button onClick={() => setShowManual(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+              </div>
             </div>
-            <div className="p-6">
-              <PresentationView project={project} />
+            <div className="p-5">
+              {project?.presentation || project?.challenge
+                ? <PresentationView project={project} />
+                : (
+                  <div className="text-center py-12">
+                    <p className="text-slate-500 text-sm mb-4">Aún no has creado la portada de esta expedición. Tus estudiantes verán una pantalla vacía.</p>
+                    <button onClick={() => { setShowManual(false); setEditingPres(true) }} className="px-5 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-bold">Crear portada ahora</button>
+                  </div>
+                )}
             </div>
           </div>
         </div>

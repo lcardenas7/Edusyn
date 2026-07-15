@@ -98,6 +98,7 @@ export class AbpService {
       teacherMessage: str(p.teacherMessage),
       context: str(p.context),
       why: str(p.why),
+      instructions: arr(p.instructions),
       skills: arr(p.skills),
       rules: arr(p.rules),
       timeline: Array.isArray(p.timeline)
