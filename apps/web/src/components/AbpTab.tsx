@@ -750,11 +750,21 @@ function ResourcesView({ projectId, canManage }: { projectId: string; canManage?
           <h5 className="font-bold text-slate-700 text-sm">Añadir recurso</h5>
           <div className="flex gap-2 flex-wrap">
             <select value={type} onChange={e => setType(e.target.value)} className="border border-slate-300 rounded-lg px-2 py-2 text-sm">{RES_TYPES.map(t => <option key={t} value={t}>{RES_ICON[t]} {t}</option>)}</select>
-            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título" className="flex-1 min-w-[140px] border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título del recurso" className="flex-1 min-w-[140px] border border-slate-300 rounded-lg px-3 py-2 text-sm" />
           </div>
           <div className="flex gap-2">
-            <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" />
-            <button onClick={add} disabled={busy || !title.trim() || !url.trim()} className="px-4 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">Añadir</button>
+            <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://… (Enlace o Video)" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+            <button onClick={add} disabled={busy || !title.trim() || !url.trim()} className="px-4 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">Añadir enlace</button>
+            <input type="file" id={`res-file-${projectId}`} className="hidden" onChange={async (e) => {
+              const f = e.target.files?.[0]; if (!f || !title.trim()) return;
+              setBusy(true);
+              try {
+                const { data } = await classroomApi.uploadMaterial(f);
+                const fileUrl = data?.data?.path || data?.data?.url;
+                if (fileUrl) { await abpApi.addResource(projectId, { type, title: title.trim(), url: fileUrl }); setTitle(''); setUrl(''); load(); }
+              } catch { alert('No se pudo subir el archivo'); } finally { setBusy(false); e.target.value = ''; }
+            }} />
+            <button onClick={() => { if (!title.trim()) alert('Ingresa un título primero'); else document.getElementById(`res-file-${projectId}`)?.click() }} disabled={busy || !title.trim()} className="px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 transition-colors"><Paperclip className="w-4 h-4" /> Subir archivo</button>
           </div>
         </div>
       )}
@@ -915,10 +925,10 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const [projectId, setProjectId] = useState<string>(projects[0]?.id || '')
   const [team, setTeam] = useState<any>(null)
   const [pres, setPres] = useState<any>(null)
-  const [view, setView] = useState<'home' | 'resources' | 'announcements' | 'expedition'>('home')
   const [expTab, setExpTab] = useState<'phases' | 'log' | 'discoveries'>('phases')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [showManual, setShowManual] = useState(false)
 
   const load = useCallback(() => {
     if (!projectId) { setLoading(false); return }
@@ -939,31 +949,16 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   if (projects.length === 0) return <Empty msg="Tu docente aún no ha creado una Expedición ABP en esta aula." />
   if (loading) return <Loading />
 
-  // Sub-navegación estilo expedición: Presentación (todos) + Mi Expedición (si hay equipo).
-  const nav = (
-    <div className="flex items-center gap-2 flex-wrap">
-      {projects.length > 1 && <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} />}
-      <div className="ml-auto flex bg-slate-100 rounded-xl p-1 flex-wrap">
-        <button onClick={() => setView('home')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${view === 'home' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>🏠 Presentación</button>
-        <button onClick={() => setView('resources')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${view === 'resources' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>📚 Recursos</button>
-        <button onClick={() => setView('announcements')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${view === 'announcements' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>📢 Anuncios</button>
-        <button onClick={() => setView('expedition')} disabled={!team} className={`px-3 py-1.5 rounded-lg text-sm font-semibold disabled:opacity-40 ${view === 'expedition' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>🚀 Mi Expedición</button>
+  // Si no tiene equipo
+  if (!team) {
+    return (
+      <div className="space-y-4">
+        {projects.length > 1 && <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} />}
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800 font-medium">Aún no estás en un equipo de este proyecto. Tu docente te asignará a uno para empezar tu expedición.</div>
+        {pres && <PresentationView project={pres} />}
       </div>
-    </div>
-  )
-
-  if (view === 'resources') return <div className="space-y-4">{nav}<ResourcesView projectId={projectId} /></div>
-  if (view === 'announcements') return <div className="space-y-4">{nav}<AnnouncementsView projectId={projectId} /></div>
-
-  if (view === 'home' || !team) return (
-    <div className="space-y-4">
-      {nav}
-      {pres && <PresentationView project={pres} />}
-      {!team
-        ? <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">Aún no estás en un equipo de este proyecto. Tu docente te asignará a uno para empezar tu expedición.</div>
-        : <button onClick={() => setView('expedition')} className="w-full py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700">🚀 Ir a mi expedición →</button>}
-    </div>
-  )
+    )
+  }
 
   const cur = team.currentPhase
   const curState = stateOf(team, cur)
@@ -975,7 +970,13 @@ function StudentExpedition({ projects }: { projects: any[] }) {
 
   return (
     <div className="space-y-4">
-      {nav}
+      {/* HEADER ESTÁTICO ESTUDIANTE */}
+      <div className="flex items-center justify-between border-b border-slate-200 pb-3 flex-wrap gap-2">
+        {projects.length > 1 ? <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} /> : <h3 className="font-bold text-slate-800">🚀 Expedición Activa</h3>}
+        <button onClick={() => setShowManual(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-colors">
+          📖 Ver Manual de Expedición
+        </button>
+      </div>
 
       {/* Cabecera del equipo */}
       <div className="bg-white rounded-2xl border-2 border-violet-200 p-5" style={{ borderTopColor: team.color, borderTopWidth: 6 }}>
@@ -1042,6 +1043,28 @@ function StudentExpedition({ projects }: { projects: any[] }) {
           </>
         )}
       </div>
+      )}
+
+      {/* Anuncios y Recursos (al fondo, igual que el docente) */}
+      <div className="mt-8 grid sm:grid-cols-2 gap-4 border-t border-slate-200 pt-8">
+        <AnnouncementsView projectId={projectId} />
+        <ResourcesView projectId={projectId} />
+      </div>
+
+      {/* SIDE PEEK MANUAL DE EXPEDICIÓN */}
+      {showManual && (
+        <div className="fixed inset-0 z-[100] flex justify-end">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowManual(false)} />
+          <div className="relative w-full max-w-md bg-slate-50 h-full shadow-2xl overflow-y-auto border-l border-slate-200 animate-in slide-in-from-right duration-300">
+            <div className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex items-center justify-between z-10">
+              <h3 className="font-black text-slate-800 text-lg">Manual de Expedición</h3>
+              <button onClick={() => setShowManual(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+            </div>
+            <div className="p-6">
+              <PresentationView project={pres} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
