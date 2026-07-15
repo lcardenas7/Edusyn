@@ -801,6 +801,11 @@ export class AbpService {
     const phaseName = ABP_PHASES.find(p => p.n === phase)?.name || `Fase ${phase}`;
 
     const route = this.orchestrator.chooseRoute(await this.orchestrator.getPlan(institutionId));
+    // En el free tier preferimos Qwen3 para misiones (buen español + JSON). Si está
+    // saturado, la cascada de OpenRouter cae al siguiente modelo automáticamente.
+    if (route.provider === 'OPENROUTER' && !(route.model || '').includes('qwen')) {
+      route.model = 'qwen/qwen3-next-80b-a3b-instruct:free';
+    }
     const result = await this.apdAi.generateAbpActivities(
       { challenge: project?.challenge || undefined, teamName: team.name, problem: (team as any).problem || undefined, phase, phaseName, canvas, smart, count },
       route,
