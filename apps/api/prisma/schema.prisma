@@ -5738,6 +5738,9 @@ model ClassroomActivity {
   // Lección interactiva
   lesson Lesson?
 
+  // Actividades de misión ABP que usan esta actividad como lección/juego jugable
+  abpMissionActivities AbpMissionActivity[] @relation("AbpMissionActivityLesson")
+
   // Pasos de ruta que referencian esta actividad
   routeSteps LearningRouteStep[] @relation("ActivityRouteSteps")
 
@@ -6902,15 +6905,18 @@ model AbpMissionActivity {
   sortOrder               Int                    @default(0)
   completed               Boolean                @default(false)
   completedByEnrollmentId String? // quién la completó (participación)
+  classroomActivityId     String? // si es una lección/juego jugable, apunta a la ClassroomActivity
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt
 
-  institution Institution        @relation("RlsInstitutionABPMA", fields: [institutionId], references: [id])
-  mission     AbpMission         @relation(fields: [missionId], references: [id], onDelete: Cascade)
-  completedBy StudentEnrollment? @relation("AbpActivityCompletedBy", fields: [completedByEnrollmentId], references: [id], onDelete: SetNull)
+  institution       Institution        @relation("RlsInstitutionABPMA", fields: [institutionId], references: [id])
+  mission           AbpMission         @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  completedBy       StudentEnrollment? @relation("AbpActivityCompletedBy", fields: [completedByEnrollmentId], references: [id], onDelete: SetNull)
+  classroomActivity ClassroomActivity? @relation("AbpMissionActivityLesson", fields: [classroomActivityId], references: [id], onDelete: SetNull)
 
   @@index([institutionId])
   @@index([missionId, sortOrder])
+  @@index([classroomActivityId])
 }
 
 model AbpDiscovery {

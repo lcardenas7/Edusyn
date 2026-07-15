@@ -318,6 +318,14 @@ export class AbpController {
     return this.service.suggestActivities(teamId, missionId, institutionId, userId, body?.count);
   }
 
+  // Añade una actividad jugable (lección/juego) enlazada a una ClassroomActivity.
+  @Post('missions/:missionId/lesson-activity')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async addLessonActivity(@Param('missionId') missionId: string, @Request() req: any, @Body() body: { title: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addLessonActivity(missionId, institutionId, userId, body);
+  }
+
   // Alta en lote de actividades (aplicar sugerencias de Valeria).
   @Post('missions/:missionId/activities/bulk')
   @Roles('DOCENTE', 'COORDINADOR')

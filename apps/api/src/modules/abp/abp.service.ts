@@ -255,6 +255,7 @@ export class AbpService {
       orderBy: { phase: 'asc' },
       include: { missions: { include: { activities: { orderBy: { sortOrder: 'asc' } } }, orderBy: { sortOrder: 'asc' } } },
     });
+    for (const ps of phaseStates) await this.markLessonCompletion(ps.missions as any[], memberIds);
     const enrichedPhases = phaseStates.map(ps => {
       const missions = (ps.missions as any[]).map(m => ({ ...m, complete: this.missionComplete(m, ps.phase, ps.data, config, memberIds) }));
       const ready = missions.length > 0
@@ -389,6 +390,7 @@ export class AbpService {
       where: { teamId_phase: { teamId: team.id, phase: team.currentPhase } },
       include: { missions: { include: { activities: { orderBy: { sortOrder: 'asc' } } }, orderBy: { sortOrder: 'asc' } } },
     });
+    await this.markLessonCompletion((curPs?.missions as any[]) || [], memberIds);
     const currentMissions = ((curPs?.missions as any[]) || []).map(m => ({ ...m, complete: this.missionComplete(m, team.currentPhase, curPs!.data, config, memberIds) }));
     const readyForValidation = currentMissions.length > 0
       ? currentMissions.filter(m => m.required).every(m => m.complete)
@@ -731,6 +733,7 @@ export class AbpService {
     const members = await this.prisma.abpTeamMember.findMany({ where: { teamId }, select: { studentEnrollmentId: true } });
     const memberIds = members.map(m => m.studentEnrollmentId);
     if ((ps.missions as any[]).length === 0) return toolCriterionMet(phase, ps.data, config, memberIds); // equipos previos sin misiones
+    await this.markLessonCompletion(ps.missions as any[], memberIds);
     const required = (ps.missions as any[]).filter(m => m.required);
     return required.every(m => this.missionComplete(m, phase, ps.data, config, memberIds));
   }
@@ -743,6 +746,7 @@ export class AbpService {
     const project = await this.prisma.abpProject.findUnique({ where: { id: team.projectId }, select: { phaseConfig: true } });
     const config = resolvePhaseConfig(project?.phaseConfig);
     const memberIds = (team.members as any[]).map(m => m.studentEnrollmentId);
+    await this.markLessonCompletion(ps.missions as any[], memberIds);
     return (ps.missions as any[]).map(m => ({ ...m, complete: this.missionComplete(m, phase, ps.data, config, memberIds) }));
   }
 
@@ -834,6 +838,40 @@ export class AbpService {
     return created;
   }
 
+  /** Añade una actividad JUGABLE (lección/juego): crea una ClassroomActivity LESSON
+   * oculta de la pestaña Actividades y la enlaza. El contenido se edita con el
+   * LessonEditor del aula (activityId = classroomActivity). */
+  async addLessonActivity(missionId: string, institutionId: string, userId: string, dto: { title: string }) {
+    const m = await this.prisma.abpMission.findFirst({ where: { id: missionId, institutionId }, include: { phaseState: { select: { teamId: true } } } });
+    if (!m) throw new NotFoundException('Misión no encontrada');
+    const team = await this.loadTeamForUser(m.phaseState.teamId, institutionId, userId);
+    const project = await this.prisma.abpProject.findUnique({ where: { id: team.projectId }, select: { classroomId: true } });
+    if (!project) throw new NotFoundException('Proyecto no encontrado');
+    const title = (dto.title || '').trim() || 'Lección';
+    const activity = await this.prisma.classroomActivity.create({
+      data: { classroomId: project.classroomId, type: 'LESSON', title, isRouteScoped: true, isPublished: true, isVisible: true, maxScore: 100, metadata: { abp: true } as any },
+    });
+    const max = await this.prisma.abpMissionActivity.aggregate({ where: { missionId }, _max: { sortOrder: true } });
+    return this.prisma.abpMissionActivity.create({
+      data: { institutionId, missionId, type: 'CUSTOM' as any, title, classroomActivityId: activity.id, sortOrder: (max._max.sortOrder ?? 0) + 100 },
+    });
+  }
+
+  /** Marca como completas las actividades-lección cuya ClassroomActivity ya fue
+   * entregada por algún integrante del equipo (cálculo on-demand, sin estado nuevo). */
+  private async markLessonCompletion(missions: any[], memberEnrollmentIds: string[]) {
+    const lessonActs: any[] = [];
+    for (const m of missions || []) for (const a of (m.activities || [])) if (a.classroomActivityId) lessonActs.push(a);
+    if (lessonActs.length === 0 || memberEnrollmentIds.length === 0) return;
+    const actIds = [...new Set(lessonActs.map(a => a.classroomActivityId))];
+    const subs = await this.prisma.activitySubmission.findMany({
+      where: { activityId: { in: actIds }, studentEnrollmentId: { in: memberEnrollmentIds }, submittedAt: { not: null } },
+      select: { activityId: true },
+    });
+    const done = new Set(subs.map(s => s.activityId));
+    for (const a of lessonActs) if (done.has(a.classroomActivityId)) a.completed = true;
+  }
+
   async deleteMission(missionId: string, institutionId: string, userId: string) {
     const m = await this.prisma.abpMission.findFirst({ where: { id: missionId, institutionId }, include: { phaseState: { select: { teamId: true } } } });
     if (!m) throw new NotFoundException('Misión no encontrada');
@@ -872,6 +910,10 @@ export class AbpService {
     if (!a) throw new NotFoundException('Actividad no encontrada');
     await this.loadTeamForUser(a.mission.phaseState.teamId, institutionId, userId);
     await this.prisma.abpMissionActivity.delete({ where: { id: activityId } });
+    // Si era una lección/juego, elimina también su ClassroomActivity (cascada limpia lección/submissions).
+    if (a.classroomActivityId) {
+      await this.prisma.classroomActivity.delete({ where: { id: a.classroomActivityId } }).catch(() => { /* ya no existe */ });
+    }
     return { ok: true };
   }
 

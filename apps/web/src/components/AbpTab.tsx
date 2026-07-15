@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Rocket, Plus, Trash2, Check, Clock, Lock, Loader2, Users, Send, ChevronLeft, Paperclip, Link2 } from 'lucide-react'
 import { abpApi, classroomApi, storageApi } from '../lib/api'
 import AbpReview from './AbpReview'
+import LessonEditor from './LessonEditor'
+import LessonPlayer from './LessonPlayer'
 
 // Metadatos de las 6 fases (nombre + icono). El motor real vive en el backend.
 const PHASES = [
@@ -399,6 +401,7 @@ function AddActivityForm({ mission, onSaved }: { mission: any; onSaved: () => vo
 
 function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSaved: () => void }) {
   const [busy, setBusy] = useState(false)
+  const [playing, setPlaying] = useState<string | null>(null)
   const toolAct = (mission.activities || []).find((a: any) => a.content?.tool)
   const tool = toolAct?.content?.tool
   const acts = (mission.activities || []).filter((a: any) => !a.content?.tool)
@@ -416,30 +419,42 @@ function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSa
           </div>
           {mission.description && <p className="text-xs text-slate-500 mt-0.5">{mission.description}</p>}
 
-          {tool ? (
+          {tool && (
             <div className="mt-3">
               <PhaseTool tool={tool} team={team} onSaved={onSaved} />
             </div>
-          ) : (
-            <div className="mt-2 space-y-1.5">
-              {acts.map((a: any) => (
-                <div key={a.id} className="flex items-center gap-2 group">
-                  <input type="checkbox" checked={!!a.completed} disabled={busy} onChange={e => run(() => abpApi.completeActivity(a.id, e.target.checked))} className="w-4 h-4 accent-violet-600" />
-                  <span className={`text-sm ${a.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}><span className="text-slate-400 mr-1">{ACT_LABEL[a.type] || a.type}</span>{a.title}</span>
-                  <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} className="ml-auto opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
-                </div>
-              ))}
-              {acts.length === 0 && (
-                <label className="flex items-center gap-2 text-sm text-slate-600">
-                  <input type="checkbox" checked={complete} disabled={busy} onChange={e => run(() => abpApi.setMissionStatus(mission.id, e.target.checked))} className="w-4 h-4 accent-violet-600" />
-                  Marcar como completada
-                </label>
-              )}
-              <AddActivityForm mission={mission} onSaved={onSaved} />
-            </div>
           )}
+
+          <div className="mt-2 space-y-1.5">
+            {acts.map((a: any) => a.classroomActivityId ? (
+              <div key={a.id} className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5">
+                <span className="text-base">{a.completed ? '✅' : '🎮'}</span>
+                <span className={`text-sm ${a.completed ? 'text-slate-400' : 'text-slate-700'}`}>{a.title}</span>
+                <button onClick={() => setPlaying(a.classroomActivityId)} className="ml-auto text-xs font-bold bg-violet-600 text-white rounded-lg px-3 py-1.5 hover:bg-violet-700">▶ {a.completed ? 'Repetir' : 'Jugar'}</button>
+              </div>
+            ) : (
+              <div key={a.id} className="flex items-center gap-2 group">
+                <input type="checkbox" checked={!!a.completed} disabled={busy} onChange={e => run(() => abpApi.completeActivity(a.id, e.target.checked))} className="w-4 h-4 accent-violet-600" />
+                <span className={`text-sm ${a.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}><span className="text-slate-400 mr-1">{ACT_LABEL[a.type] || a.type}</span>{a.title}</span>
+                <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} className="ml-auto opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
+              </div>
+            ))}
+            {!tool && acts.length === 0 && (
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input type="checkbox" checked={complete} disabled={busy} onChange={e => run(() => abpApi.setMissionStatus(mission.id, e.target.checked))} className="w-4 h-4 accent-violet-600" />
+                Marcar como completada
+              </label>
+            )}
+            <AddActivityForm mission={mission} onSaved={onSaved} />
+          </div>
         </div>
       </div>
+
+      {playing && (
+        <div className="fixed inset-0 z-[120]">
+          <LessonPlayer activityId={playing} onClose={() => { setPlaying(null); onSaved() }} />
+        </div>
+      )}
     </div>
   )
 }
@@ -1342,8 +1357,16 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
   const [suggestions, setSuggestions] = useState<{ type: string; title: string; description: string }[] | null>(null)
   const [picked, setPicked] = useState<Set<number>>(new Set())
   const [notConfigured, setNotConfigured] = useState(false)
+  const [editing, setEditing] = useState<{ activityId: string; title: string } | null>(null)
   const acts = (mission.activities || []).filter((a: any) => !a.content?.tool)
   const run = async (fn: () => Promise<any>) => { setBusy(true); try { await fn(); onChanged() } finally { setBusy(false) } }
+  const addLesson = async () => {
+    const title = window.prompt('Título de la lección o juego:')?.trim()
+    if (!title) return
+    setBusy(true)
+    try { const { data } = await abpApi.addLessonActivity(mission.id, title); onChanged(); setEditing({ activityId: data.classroomActivityId, title }) }
+    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo crear la lección') } finally { setBusy(false) }
+  }
   const suggest = async () => {
     setSuggesting(true); setSuggestions(null); setNotConfigured(false); setPicked(new Set())
     try {
@@ -1370,7 +1393,15 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
 
       {acts.length > 0 && (
         <div className="mt-2 space-y-1 pl-6">
-          {acts.map((a: any) => (
+          {acts.map((a: any) => a.classroomActivityId ? (
+            <div key={a.id} className="flex items-center gap-2 group">
+              <span className={`text-xs ${a.completed ? 'text-emerald-500' : 'text-slate-400'}`}>🎮</span>
+              <span className={`text-xs ${a.completed ? 'text-slate-400' : 'text-slate-600'}`}>{a.title}</span>
+              <span className="text-[10px] font-semibold text-violet-500">lección/juego{a.completed ? ' · hecha' : ''}</span>
+              <button onClick={() => setEditing({ activityId: a.classroomActivityId, title: a.title })} className="ml-auto text-[11px] font-semibold text-violet-600 hover:text-violet-700">✏️ Editar</button>
+              <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
+            </div>
+          ) : (
             <div key={a.id} className="flex items-center gap-2 group">
               <input type="checkbox" checked={!!a.completed} disabled={busy} onChange={e => run(() => abpApi.completeActivity(a.id, e.target.checked))} className="w-3.5 h-3.5 accent-violet-600" />
               <span className={`text-xs ${a.completed ? 'line-through text-slate-400' : 'text-slate-600'}`}><span className="text-slate-400 mr-1">{ACT_LABEL[a.type] || a.type}</span>{a.title}</span>
@@ -1382,10 +1413,17 @@ function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; te
 
       <div className="mt-2 pl-6 flex items-center gap-3 flex-wrap">
         <AddActivityForm mission={mission} onSaved={onChanged} />
+        <button onClick={addLesson} disabled={busy} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1 disabled:opacity-50"><Plus className="w-3.5 h-3.5" /> 🎮 Lección/Juego</button>
         <button onClick={suggest} disabled={suggesting} className="text-xs font-semibold text-fuchsia-600 hover:text-fuchsia-700 flex items-center gap-1 disabled:opacity-50">
           {suggesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '✨'} Sugerir con Valeria
         </button>
       </div>
+
+      {editing && (
+        <div className="fixed inset-0 z-[120] bg-white overflow-auto">
+          <LessonEditor activityId={editing.activityId} activityTitle={editing.title} onClose={() => { setEditing(null); onChanged() }} onPreview={() => { /* sin preview aquí */ }} />
+        </div>
+      )}
 
       {notConfigured && <p className="mt-2 pl-6 text-xs text-amber-600">Valeria no está configurada (falta la API key de IA). Puedes añadir actividades manualmente.</p>}
 

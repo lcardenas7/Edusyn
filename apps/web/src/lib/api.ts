@@ -2572,6 +2572,7 @@ export const abpApi = {
   broadcastMission: (projectId: string, data: { phase: number; title: string; description?: string; required?: boolean; activities?: { type: string; title: string }[] }) => api.post<{ ok: boolean; count: number }>(`/abp/projects/${projectId}/broadcast-mission`, data),
   suggestActivities: (teamId: string, missionId: string, count?: number) => api.post<{ configured: boolean; model?: string; activities: { type: string; title: string; description: string }[] }>(`/abp/teams/${teamId}/missions/${missionId}/suggest`, { count }),
   addActivitiesBulk: (missionId: string, items: { type: string; title: string }[]) => api.post<any[]>(`/abp/missions/${missionId}/activities/bulk`, { items }),
+  addLessonActivity: (missionId: string, title: string) => api.post<any>(`/abp/missions/${missionId}/lesson-activity`, { title }),
   deleteMission: (missionId: string) => api.delete(`/abp/missions/${missionId}`),
   setMissionStatus: (missionId: string, completed: boolean) => api.post<any>(`/abp/missions/${missionId}/status`, { completed }),
   addActivity: (missionId: string, data: { type: string; title: string; content?: any }) => api.post<any>(`/abp/missions/${missionId}/activities`, data),
