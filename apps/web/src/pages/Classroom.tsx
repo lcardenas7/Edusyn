@@ -5,6 +5,11 @@ import { type ValeriaActivityDraft, type ValeriaQuestionDraft, valeriaAssistantB
 import { classroomApi, storageApi, liveSessionApi, apdApi, lessonApi } from '../lib/api'
 import { compareStudents } from '../utils/sortStudents'
 import LiveQuiz from '../components/LiveQuiz'
+import LearningIdentityWidget from '../components/LearningIdentityWidget'
+import LearningBadges from '../components/LearningBadges'
+import LearningRoutesTab from '../components/LearningRoutesTab'
+import AbpTab from '../components/AbpTab'
+import { Route as RouteIcon } from 'lucide-react'
 import { CreateSelfAssessmentForm, StudentSelfAssessment, SelfAssessmentResults } from '../components/SelfAssessmentUI'
 const RichTextEditor = lazy(() => import('../components/RichTextEditor'))
 const LessonPlayer = lazy(() => import('../components/LessonPlayer'))
@@ -18,7 +23,8 @@ import {
   Bold, Italic, Underline, List, ListOrdered, Youtube,
   FileUp, Image, Search, Paperclip, File, Home, MessageSquare,
   BarChart3, ChevronDown, ChevronUp, ChevronRight, Clock, CheckCircle2, AlertTriangle,
-  CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check, Zap, RefreshCw, Sparkles, Gamepad2,
+  CircleDot, HelpCircle, Award, RotateCcw, CircleCheck, CircleX, Copy, Check, Zap, RefreshCw, Sparkles,
+  Puzzle, Rocket,
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -75,13 +81,58 @@ interface Announcement {
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316']
 
-type TabKey = 'home' | 'announcements' | 'content' | 'activities' | 'forum' | 'students' | 'grades'
+// Bloques interactivos. `standalone` = puede crearse como actividad SUELTA (tipo GAME).
+// Los tipos de PREGUNTA (MCQ, V/F, respuesta corta, completar, ordenar, emparejar, escuchar)
+// NO son sueltos: viven dentro de un quiz o una lección. Sueltos = juegos autocontenidos
+// (sopa, crucigrama, memory, etiquetar) + Flashcards (mecánica de estudio).
+// El pseudo-tipo del selector es 'BLOCK_<TYPE>'; se guarda como GAME + metadata.gameType=<TYPE>.
+const INTERACTIVE_BLOCKS: { type: string; label: string; standalone?: boolean }[] = [
+  { type: 'MULTIPLE_CHOICE', label: 'Opción múltiple' },
+  { type: 'TRUE_FALSE', label: 'Verdadero / Falso' },
+  { type: 'SHORT_ANSWER', label: 'Respuesta corta' },
+  { type: 'FILL_BLANK', label: 'Completar' },
+  { type: 'ORDERING', label: 'Ordenar' },
+  { type: 'MATCHING', label: 'Emparejar' },
+  { type: 'LISTENING', label: 'Escuchar y elegir' },
+  { type: 'WORDSEARCH', label: 'Sopa de letras', standalone: true },
+  { type: 'CROSSWORD', label: 'Crucigrama', standalone: true },
+  { type: 'MEMORY', label: 'Memory', standalone: true },
+  { type: 'LABEL_IMAGE', label: 'Etiquetar imagen', standalone: true },
+  { type: 'PUZZLE', label: 'Rompecabezas', standalone: true },
+  { type: 'FLASHCARDS', label: 'Flashcards', standalone: true },
+]
+const INTERACTIVE_BLOCK_LABELS: Record<string, string> = Object.fromEntries(INTERACTIVE_BLOCKS.map(b => [b.type, b.label]))
+
+// Creación por INTENCIÓN pedagógica (no por herramienta). Paso 1 = intención,
+// paso 2 = mecánica (mapeada a los tipos/pseudo-tipos existentes). Ver
+// docs/EXPERIENCIAS_Y_MODULO_ACTIVIDADES.md §3.bis.
+const INTENTIONS: { key: string; label: string; emoji: string; hint: string; mechanics: { type: string; label: string }[] }[] = [
+  { key: 'aprender', label: 'Aprender', emoji: '📚', hint: 'Enseña un tema', mechanics: [
+    { type: 'LESSON', label: 'Lección Interactiva' },
+  ] },
+  { key: 'evaluar', label: 'Evaluar', emoji: '📝', hint: 'Mide conocimientos', mechanics: [
+    { type: 'QUIZ', label: 'Quiz' }, { type: 'EXAM', label: 'Examen' }, { type: 'LIVE_QUIZ', label: 'Live Quiz' },
+    { type: 'HOME_QUIZ', label: 'Quiz en Casa' }, { type: 'ICFES_SIMULATOR', label: 'Simulacro ICFES' },
+    { type: 'SELF_ASSESSMENT', label: 'Autoevaluación' },
+  ] },
+  { key: 'practicar', label: 'Practicar', emoji: '🎮', hint: 'Juegos y repaso autocontenidos',
+    mechanics: INTERACTIVE_BLOCKS.filter(b => b.standalone).map(b => ({ type: 'BLOCK_' + b.type, label: b.label })) },
+  { key: 'proyecto', label: 'Proyecto', emoji: '🚀', hint: 'Trabajo o entrega', mechanics: [
+    { type: 'TASK', label: 'Tarea / Entrega' },
+  ] },
+]
+const MECHANIC_LABEL = (type: string): string =>
+  INTENTIONS.flatMap(i => i.mechanics).find(m => m.type === type)?.label || 'Actividad'
+
+type TabKey = 'home' | 'announcements' | 'content' | 'activities' | 'routes' | 'abp' | 'forum' | 'students' | 'grades'
 
 const TEACHER_TABS: { key: TabKey; label: string; icon: any }[] = [
   { key: 'home', label: 'Inicio', icon: Home },
   { key: 'announcements', label: 'Anuncios', icon: Megaphone },
   { key: 'content', label: 'Contenidos', icon: FolderOpen },
   { key: 'activities', label: 'Actividades', icon: ClipboardList },
+  { key: 'routes', label: 'Rutas', icon: RouteIcon },
+  { key: 'abp', label: 'Expedición ABP', icon: Rocket },
   { key: 'forum', label: 'Foro', icon: MessageSquare },
   { key: 'students', label: 'Estudiantes', icon: Users },
 ]
@@ -91,6 +142,8 @@ const STUDENT_TABS: { key: TabKey; label: string; icon: any }[] = [
   { key: 'announcements', label: 'Anuncios', icon: Megaphone },
   { key: 'content', label: 'Contenidos', icon: FolderOpen },
   { key: 'activities', label: 'Actividades', icon: ClipboardList },
+  { key: 'routes', label: 'Rutas', icon: RouteIcon },
+  { key: 'abp', label: 'Expedición ABP', icon: Rocket },
   { key: 'forum', label: 'Foro', icon: MessageSquare },
   { key: 'grades', label: 'Mis Notas', icon: BarChart3 },
 ]
@@ -275,26 +328,14 @@ export default function Classroom() {
           )}
         </div>
 
-        {/* F0.3: Banner contextual Edusyn Play */}
-        {isTeacher && (
-          <div className="mb-5 flex items-center justify-between gap-4 rounded-xl bg-violet-50 border border-violet-200 px-5 py-3">
-            <div className="flex items-center gap-3">
-              <Gamepad2 className="w-5 h-5 text-violet-600 flex-shrink-0" />
-              <p className="text-sm text-violet-800">
-                <strong>¿Quieres jugar este contenido en vivo?</strong> Usa{' '}
-                <strong>Edusyn Play</strong> para quizzes y lecciones tipo Kahoot.
-              </p>
-            </div>
-            <a
-              href="/play-landing"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-shrink-0 text-sm font-bold text-violet-600 hover:text-violet-800 underline"
-            >
-              Ir a Play →
-            </a>
+        {/* Identidad de aprendizaje del estudiante (XP / nivel / racha + insignias) */}
+        {isStudent && (
+          <div className="mb-5 space-y-3">
+            <LearningIdentityWidget />
+            <LearningBadges />
           </div>
         )}
+
 
         {error && (
           <div className="flex items-center gap-2 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -518,6 +559,8 @@ export default function Classroom() {
             {activeTab === 'announcements' && <AnnouncementsTab classroom={activeClassroom} isTeacher={!!isTeacher} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'content' && <ContentTab classroom={activeClassroom} isTeacher={!!isTeacher} onReload={reloadClassroom} setError={setError} />}
             {activeTab === 'activities' && <ActivitiesTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} onReload={reloadClassroom} setError={setError} />}
+            {activeTab === 'routes' && <LearningRoutesTab classroomId={activeClassroom.id} isTeacher={!!isTeacher} />}
+            {activeTab === 'abp' && <AbpTab classroomId={activeClassroom.id} isTeacher={!!isTeacher} />}
             {activeTab === 'forum' && <ForumTab classroom={activeClassroom} isTeacher={!!isTeacher} isStudent={!!isStudent} user={user} setError={setError} />}
             {activeTab === 'students' && <StudentsTab classroomId={activeClassroom.id} />}
             {activeTab === 'grades' && <GradesTab classroomId={activeClassroom.id} />}
@@ -645,6 +688,9 @@ function HomeTab({ classroom, isTeacher, isStudent, user, onReload, setError, se
           <h2 className="text-2xl font-bold text-slate-800">Bienvenido, {firstName}</h2>
           <p className="text-base text-slate-500 mt-1">Curso: {classroom.title}</p>
         </div>
+
+        {/* Identidad de aprendizaje (XP / nivel / racha) también dentro del aula */}
+        <LearningIdentityWidget />
 
         {/* Dashboard cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -1913,6 +1959,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
   // Create form
   const [form, setForm] = useState({ title: '', description: '', sectionId: '', maxScore: '5.0', dueDate: '', allowLateSubmit: false, type: 'TASK' as string, shuffleQuestions: false, showResults: true, maxAttempts: '1', timeLimitMinutes: '' })
+  // Creación por intención: 'aprender'|'evaluar'|'practicar'|'proyecto' o null (paso 1).
+  const [intention, setIntention] = useState<string | null>(null)
   const [attachFile, setAttachFile] = useState<File | null>(null)
   const [creating, setCreating] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -1987,6 +2035,9 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const [showLessonPlayer, setShowLessonPlayer] = useState(false)
   const [showLessonEditor, setShowLessonEditor] = useState(false)
   const [lessonActivityId, setLessonActivityId] = useState('')
+  // Juego suelto: al crear una actividad de juego, el editor arranca con una sola
+  // diapositiva de actividad fijada a este tipo (WORDSEARCH/CROSSWORD). '' = lección normal.
+  const [lessonInitialGameType, setLessonInitialGameType] = useState('')
 
   // Valeria AI helper
   const [showValeriaModal, setShowValeriaModal] = useState(false)
@@ -2226,8 +2277,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         attachmentUrl = data.data.path || data.data.url
         attachmentName = attachFile.name
       }
+      // Bloque interactivo suelto = actividad tipo GAME con una sola diapositiva
+      // (se apoya en el motor de lecciones vía activityId). pseudo-tipo 'BLOCK_<TYPE>'.
+      const gameType = form.type.startsWith('BLOCK_') ? form.type.slice(6) : undefined
+      const realType = gameType ? 'GAME' : form.type
       const { data: createdActivity } = await classroomApi.createActivity(classroom.id, {
-        sectionId: form.sectionId, type: form.type, title: form.title,
+        sectionId: form.sectionId, type: realType, title: form.title,
+        ...(gameType ? { gameType } : {}),
         description: form.description || undefined,
         maxScore: parseFloat(form.maxScore) || 5.0,
         dueDate: form.dueDate || undefined,
@@ -2248,7 +2304,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
       setShowCreate(false)
       loadActivities()
 
-      if (isQuizDraft) {
+      if (gameType) {
+        // Abrir el editor directo en el juego (una diapositiva ya fijada).
+        setLessonInitialGameType(gameType)
+        setLessonActivityId(createdActivity.id)
+        setShowLessonEditor(true)
+      } else if (isQuizDraft) {
         await openActivity(createdActivity)
       }
     } catch (err: any) {
@@ -2492,6 +2553,11 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
   const isIcfes = (type: string) => type === 'ICFES_SIMULATOR'
   const isSelfAssessment = (type: string) => type === 'SELF_ASSESSMENT'
   const isLesson = (type: string) => type === 'LESSON'
+  const isGame = (type: string) => type === 'GAME'
+  // Ambos se apoyan en el motor de lecciones (van por activityId). GAME = juego suelto.
+  const isLessonOrGame = (type: string) => type === 'LESSON' || type === 'GAME'
+  // Rótulo del bloque interactivo suelto (metadata.gameType = questionType).
+  const gameLabelOf = (act: any): string | null => INTERACTIVE_BLOCK_LABELS[act?.metadata?.gameType] || null
 
   const getQuizTypeLabel = (type: string) => {
     if (type === 'LIVE_QUIZ') return 'Live Quiz'
@@ -3028,13 +3094,13 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start gap-3 mb-2">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                      {isLesson(act.type) ? <BookOpen className="w-5 h-5 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-5 h-5 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-5 h-5 text-emerald-600" /> : isQuizType(act.type) ? <HelpCircle className="w-5 h-5 text-purple-600" /> : <ClipboardList className="w-5 h-5 text-blue-600" />}
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isGame(act.type) ? 'bg-amber-50' : isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                      {isGame(act.type) ? <Puzzle className="w-5 h-5 text-amber-600" /> : isLesson(act.type) ? <BookOpen className="w-5 h-5 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-5 h-5 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-5 h-5 text-emerald-600" /> : isQuizType(act.type) ? <HelpCircle className="w-5 h-5 text-purple-600" /> : <ClipboardList className="w-5 h-5 text-blue-600" />}
                     </div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-lg sm:text-xl font-bold text-slate-800 break-words">{act.title}</h2>
-                        {isLesson(act.type) && <span className="text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full font-medium whitespace-nowrap">Lección Interactiva</span>}
+                        {isLessonOrGame(act.type) && <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${gameLabelOf(act) ? 'bg-amber-100 text-amber-700' : 'bg-violet-100 text-violet-700'}`}>{gameLabelOf(act) || 'Lección Interactiva'}</span>}
                         {isSelfAssessment(act.type) && <span className="text-xs px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full font-medium whitespace-nowrap">Autoevaluación</span>}
                         {isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium whitespace-nowrap">Simulacro ICFES</span>}
                         {isQuizType(act.type) && !isIcfes(act.type) && <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">{getQuizTypeLabel(act.type)}</span>}
@@ -4360,15 +4426,15 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         )}
 
         {/* LESSON: Teacher controls */}
-        {isTeacher && isLesson(act.type) && (
+        {isTeacher && isLessonOrGame(act.type) && (
           <div className="bg-white rounded-2xl border-2 border-violet-200 p-6 space-y-4">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
                 <BookOpen className="w-5 h-5 text-violet-600" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-800">Lección Interactiva</h3>
-                <p className="text-sm text-slate-500">Configura los slides, actividades y checkpoints de esta lección</p>
+                <h3 className="text-lg font-bold text-slate-800">{gameLabelOf(act) || 'Lección Interactiva'}</h3>
+                <p className="text-sm text-slate-500">{gameLabelOf(act) ? 'Edita el contenido de esta actividad interactiva' : 'Configura los slides, actividades y checkpoints de esta lección'}</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -4376,39 +4442,41 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 onClick={() => { setLessonActivityId(act.id); setShowLessonEditor(true) }}
                 className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 text-white rounded-xl font-medium hover:bg-violet-700 transition-colors"
               >
-                <Pencil className="w-4 h-4" /> Editar lección
+                <Pencil className="w-4 h-4" /> {gameLabelOf(act) ? 'Editar' : 'Editar lección'}
               </button>
               <button
                 onClick={() => { setLessonActivityId(act.id); setShowLessonPlayer(true) }}
                 className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
               >
-                <Eye className="w-4 h-4" /> Vista previa
+                <Eye className="w-4 h-4" /> {'Vista previa'}
               </button>
             </div>
           </div>
         )}
 
         {/* LESSON: Student play button */}
-        {isStudent && isLesson(act.type) && (
+        {isStudent && isLessonOrGame(act.type) && (
           <div className="bg-white rounded-2xl border-2 border-violet-200 p-6 text-center space-y-4">
             <div className="w-16 h-16 rounded-2xl bg-violet-100 flex items-center justify-center mx-auto">
               <BookOpen className="w-8 h-8 text-violet-600" />
             </div>
-            <h3 className="text-xl font-bold text-slate-800">Lección Interactiva</h3>
+            <h3 className="text-xl font-bold text-slate-800">{gameLabelOf(act) || 'Lección Interactiva'}</h3>
             <p className="text-sm text-slate-500 max-w-md mx-auto">
-              Avanza por los contenidos y actividades a tu ritmo. Tu progreso se guarda automáticamente.
+              {gameLabelOf(act)
+                ? 'Resuelve esta actividad. Tu progreso se guarda automáticamente.'
+                : 'Avanza por los contenidos y actividades a tu ritmo. Tu progreso se guarda automáticamente.'}
             </p>
             <button
               onClick={() => { setLessonActivityId(act.id); setShowLessonPlayer(true) }}
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl font-bold text-lg hover:from-violet-600 hover:to-purple-700 transition-all shadow-lg shadow-violet-200"
             >
-              <BookOpen className="w-5 h-5" /> Iniciar lección
+              <BookOpen className="w-5 h-5" /> {gameLabelOf(act) ? 'Comenzar' : 'Iniciar lección'}
             </button>
           </div>
         )}
 
         {/* STUDENT: My submission / submit form (TASK only) */}
-        {isStudent && !isQuizType(act.type) && !isSelfAssessment(act.type) && !isLesson(act.type) && (
+        {isStudent && !isQuizType(act.type) && !isSelfAssessment(act.type) && !isLessonOrGame(act.type) && (
           <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
             <h3 className="text-lg font-bold text-slate-800">Tu entrega</h3>
             {mySubmission && !editingSubmission ? (
@@ -4992,7 +5060,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 activityId={lessonActivityId}
                 activityTitle={act.title}
                 classroomTitle={classroom.title}
-                onClose={() => { setShowLessonEditor(false); setLessonActivityId('') }}
+                initialGameType={lessonInitialGameType}
+                onClose={() => { setShowLessonEditor(false); setLessonActivityId(''); setLessonInitialGameType('') }}
                 onPreview={() => { setShowLessonEditor(false); setShowLessonPlayer(true) }}
               />
             </div>
@@ -5095,6 +5164,74 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
 
   const newActivityCount = isStudent ? filteredActivities.filter(isNewActivity).length : 0
 
+  // Tarjeta de actividad (reutilizable: lista plana del docente y misiones del alumno).
+  const renderActivityCard = (act: Activity) => {
+    const isNew = isNewActivity(act)
+    const statusInfo = act.isPublished ? { bg: 'bg-green-50', text: 'text-green-600', label: 'Publicada' } : { bg: 'bg-slate-100', text: 'text-slate-500', label: 'Borrador' }
+    const duePast = isDuePast(act.dueDate)
+    const studentStatus = isStudent ? getStudentTaskStatus(act) : null
+    const studentSub = isStudent ? act.submissions?.[0] : null
+    const workInfo = getWorkInfo(act)
+    return (
+      <button key={act.id} onClick={() => openActivity(act)} style={{ borderLeftColor: workInfo.border, borderLeftWidth: '4px' }} className={`w-full text-left bg-white rounded-2xl border-2 p-5 transition-all hover:shadow-sm group ${isNew ? 'border-yellow-300 hover:border-yellow-400' : 'border-slate-200 hover:border-blue-300'} ${workInfo.rank >= 6 ? 'opacity-70 hover:opacity-100' : ''}`}>
+        <div className="flex items-start gap-4">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isGame(act.type) ? 'bg-amber-50' : isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : act.type === 'LIVE_QUIZ' ? 'bg-violet-100' : act.type === 'HOME_QUIZ' ? 'bg-pink-50' : act.type === 'EXAM' ? 'bg-red-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
+            {isGame(act.type) ? <Puzzle className="w-6 h-6 text-amber-600" /> : isLesson(act.type) ? <BookOpen className="w-6 h-6 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-6 h-6 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : act.type === 'LIVE_QUIZ' ? <Zap className="w-6 h-6 text-violet-700" /> : act.type === 'HOME_QUIZ' ? <Home className="w-6 h-6 text-pink-600" /> : act.type === 'EXAM' ? <Award className="w-6 h-6 text-red-500" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h3 className="text-base font-bold text-slate-800 group-hover:text-blue-700">{act.title}</h3>
+              {isNew && <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-yellow-100 text-yellow-800 border border-yellow-300">NUEVO</span>}
+              {!isStudent && <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>}
+              {isTeacher && (act.gradingPending || 0) > 0 && <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-orange-100 text-orange-700">🟠 {act.gradingPending} por calificar</span>}
+              {act.type === 'TASK' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700">Tarea</span>}
+              {act.type === 'QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-purple-50 text-purple-700">Quiz</span>}
+              {act.type === 'EXAM' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-red-50 text-red-700">Examen</span>}
+              {act.type === 'LIVE_QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-violet-100 text-violet-800">⚡ Live Quiz</span>}
+              {act.type === 'HOME_QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-pink-50 text-pink-700">🏠 En Casa</span>}
+              {isIcfes(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700">ICFES</span>}
+              {isLessonOrGame(act.type) && <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${gameLabelOf(act) ? 'bg-amber-50 text-amber-700' : 'bg-violet-50 text-violet-700'}`}>{gameLabelOf(act) || 'Lección'}</span>}
+              {isSelfAssessment(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-teal-50 text-teal-700">Autoevaluación</span>}
+              {studentStatus && (
+                <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${studentStatus.bg} ${studentStatus.text}`}>{studentStatus.label}</span>
+              )}
+            </div>
+            <p className="text-sm text-slate-500 mt-1">{act.section?.title || 'Sin sección'}</p>
+            <div className="flex items-center gap-4 mt-2 text-sm">
+              {act.dueDate && (
+                <span className={`flex items-center gap-1 ${duePast ? 'text-red-500' : 'text-slate-400'}`}>
+                  <Clock className="w-4 h-4" /> {formatDate(act.dueDate)}
+                </span>
+              )}
+              {act.maxScore && <span className="text-slate-400">Nota máx: {Number(act.maxScore)}</span>}
+              {isTeacher && act._count && <span className="text-slate-400">{act._count.submissions} entrega(s)</span>}
+              {studentSub?.score !== undefined && studentSub.score !== null && (
+                <span className="text-green-700 font-bold">{Number(studentSub.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
+              )}
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 shrink-0 mt-1" />
+        </div>
+      </button>
+    )
+  }
+
+  // Vista del alumno como "misiones": Para hoy / Próximamente / Completado (por fecha+estado, no por tipo).
+  const studentGroups = isStudent ? (() => {
+    const paraHoy: Activity[] = [], proximamente: Activity[] = [], completado: Activity[] = []
+    filteredActivities.forEach(a => {
+      const k = getWorkInfo(a).keys
+      if (k.has('OVERDUE') || k.has('DUE_SOON') || k.has('RETURNED')) paraHoy.push(a)
+      else if (k.has('SUBMITTED') || k.has('GRADED')) completado.push(a)
+      else proximamente.push(a)
+    })
+    return [
+      { key: 'hoy', label: 'Para hoy', emoji: '🔥', hint: 'Vencidas, próximas o para corregir', list: paraHoy },
+      { key: 'prox', label: 'Próximamente', emoji: '📅', hint: 'Aún tienes tiempo', list: proximamente },
+      { key: 'done', label: 'Completado', emoji: '✅', hint: 'Ya las hiciste', list: completado },
+    ].filter(g => g.list.length > 0)
+  })() : null
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -5104,15 +5241,15 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             <button onClick={() => valeriaAssistantBridge.open(buildValeriaLaunchOptions())} className="flex items-center gap-2 px-4 py-2.5 bg-violet-100 text-violet-700 rounded-xl text-sm font-semibold hover:bg-violet-200 transition-colors" style={{ minHeight: '44px' }}>
               <Sparkles className="w-5 h-5" /> Valeria
             </button>
-            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
+            <button onClick={() => { setShowCreate(true); setIntention(null); setForm(f => ({ ...f, type: '' })) }} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors" style={{ minHeight: '44px' }}>
               <Plus className="w-5 h-5" /> Nueva Actividad
             </button>
           </div>
         )}
       </div>
 
-      {/* Activity type filter */}
-      {activities.length > 0 && (
+      {/* Activity type filter — solo docente; el alumno se organiza por misiones (§Fase 1). */}
+      {isTeacher && activities.length > 0 && (
         <div className="flex gap-2 flex-wrap">
           {([
             { value: 'ALL', label: 'Todas', count: activities.length, color: 'slate' },
@@ -5123,6 +5260,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             { value: 'HOME_QUIZ', label: 'En Casa', count: activities.filter(a => a.type === 'HOME_QUIZ').length, color: 'pink' },
             { value: 'ICFES_SIMULATOR', label: 'ICFES', count: activities.filter(a => a.type === 'ICFES_SIMULATOR').length, color: 'emerald' },
             { value: 'LESSON', label: 'Lecciones', count: activities.filter(a => a.type === 'LESSON').length, color: 'violet' },
+            { value: 'GAME', label: 'Interactivas', count: activities.filter(a => a.type === 'GAME').length, color: 'amber' },
           ] as { value: string; label: string; count: number; color: string }[])
             .filter(t => t.value === 'ALL' || t.count > 0)
             .map(tab => {
@@ -5135,6 +5273,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 violet: isActive ? 'border-violet-600 bg-violet-600 text-white' : 'border-slate-200 text-slate-500 hover:border-violet-300',
                 pink: isActive ? 'border-pink-600 bg-pink-600 text-white' : 'border-slate-200 text-slate-500 hover:border-pink-300',
                 emerald: isActive ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 text-slate-500 hover:border-emerald-300',
+                amber: isActive ? 'border-amber-500 bg-amber-500 text-white' : 'border-slate-200 text-slate-500 hover:border-amber-300',
               }
               return (
                 <button
@@ -5363,17 +5502,49 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
         <div className={`bg-white border-2 rounded-2xl p-6 space-y-4 ${isSelfAssessment(form.type) ? 'border-teal-200' : isQuizEditorType(form.type) ? 'border-purple-200' : 'border-blue-200'}`}>
           <h3 className="text-lg font-bold text-slate-800">Nueva Actividad</h3>
 
-          {/* Activity type selector */}
-          <div className="flex gap-2 flex-wrap">
-            {[{ value: 'TASK', label: 'Tarea', icon: ClipboardList, color: 'blue' }, { value: 'QUIZ', label: 'Quiz', icon: HelpCircle, color: 'purple' }, { value: 'EXAM', label: 'Examen', icon: Award, color: 'red' }, { value: 'LIVE_QUIZ', label: 'Live Quiz', icon: Zap, color: 'violet' }, { value: 'HOME_QUIZ', label: 'Quiz en Casa', icon: Home, color: 'pink' }, { value: 'ICFES_SIMULATOR', label: 'Simulacro ICFES', icon: BarChart3, color: 'emerald' }, { value: 'SELF_ASSESSMENT', label: 'Autoevaluación', icon: Sparkles, color: 'teal' }, { value: 'LESSON', label: 'Lección Interactiva', icon: BookOpen, color: 'violet' }].map(t => (
-              <button key={t.value} onClick={() => setForm({ ...form, type: t.value })} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${form.type === t.value ? (t.color === 'blue' ? 'border-blue-500 bg-blue-50 text-blue-700' : t.color === 'purple' ? 'border-purple-500 bg-purple-50 text-purple-700' : t.color === 'emerald' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : t.color === 'teal' ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-red-500 bg-red-50 text-red-700') : 'border-slate-200 text-slate-500 hover:border-slate-300'}`} style={{ minHeight: '44px' }}>
-                <t.icon className="w-5 h-5" /> {t.label}
-              </button>
-            ))}
-          </div>
+          {/* Creación por INTENCIÓN — paso 1 (intención) / paso 2 (mecánica), o cabecera si ya se eligió */}
+          {!form.type ? (
+            !intention ? (
+              <div>
+                <p className="text-sm font-medium text-slate-600 mb-2.5">¿Qué deseas construir?</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {INTENTIONS.map(it => (
+                    <button key={it.key} onClick={() => { setIntention(it.key); if (it.mechanics.length === 1) setForm(f => ({ ...f, type: it.mechanics[0].type })) }}
+                      className="flex flex-col items-start gap-0.5 p-4 rounded-2xl border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left">
+                      <span className="text-2xl mb-0.5">{it.emoji}</span>
+                      <span className="font-bold text-slate-800">{it.label}</span>
+                      <span className="text-xs text-slate-400">{it.hint}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <button onClick={() => { setIntention(null); setForm(f => ({ ...f, type: '' })) }} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-2.5">
+                  <ChevronLeft className="w-4 h-4" /> Cambiar intención
+                </button>
+                <p className="text-sm font-medium text-slate-600 mb-2.5">
+                  {INTENTIONS.find(i => i.key === intention)?.emoji} {INTENTIONS.find(i => i.key === intention)?.label} — elige una mecánica
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {INTENTIONS.find(i => i.key === intention)?.mechanics.map(m => (
+                    <button key={m.type} onClick={() => setForm({ ...form, type: m.type })}
+                      className={`px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${form.type === m.type ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-500 hover:border-blue-300'}`} style={{ minHeight: '44px' }}>
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          ) : (
+            <div className="flex items-center justify-between gap-2 pb-1">
+              <p className="text-sm font-semibold text-slate-700">{MECHANIC_LABEL(form.type)}</p>
+              <button onClick={() => { setForm(f => ({ ...f, type: '' })); setIntention(null) }} className="text-sm text-slate-500 hover:text-blue-600">Cambiar</button>
+            </div>
+          )}
 
-          {/* Self-Assessment: delegate to specialized form */}
-          {isSelfAssessment(form.type) ? (
+          {/* Cuerpo del formulario — solo tras elegir una mecánica */}
+          {form.type && (isSelfAssessment(form.type) ? (
             <CreateSelfAssessmentForm
               classroomId={classroom.id}
               sectionId={form.sectionId || sections[0]?.id || ''}
@@ -5458,12 +5629,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               <button onClick={() => { setShowCreate(false); setAttachFile(null); setPendingValeriaQuestions([]) }} className="px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 rounded-xl" style={{ minHeight: '44px' }}>Cancelar</button>
               <button onClick={handleCreate} disabled={!form.title.trim() || !form.sectionId || creating} className={`px-5 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2 ${isQuizEditorType(form.type) ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`} style={{ minHeight: '44px' }}>
                 {creating && <Loader2 className="w-4 h-4 animate-spin" />}
-                {creating ? 'Creando...' : `Crear ${form.type === 'TASK' ? 'Tarea' : form.type === 'QUIZ' ? 'Quiz' : form.type === 'EXAM' ? 'Examen' : form.type === 'LIVE_QUIZ' ? 'Live Quiz' : form.type === 'HOME_QUIZ' ? 'Quiz en Casa' : form.type === 'ICFES_SIMULATOR' ? 'Simulacro' : 'Actividad'}`}
+                {creating ? 'Creando...' : `Crear ${form.type === 'TASK' ? 'Tarea' : form.type === 'QUIZ' ? 'Quiz' : form.type === 'EXAM' ? 'Examen' : form.type === 'LIVE_QUIZ' ? 'Live Quiz' : form.type === 'HOME_QUIZ' ? 'Quiz en Casa' : form.type === 'ICFES_SIMULATOR' ? 'Simulacro' : form.type.startsWith('BLOCK_') ? (INTERACTIVE_BLOCK_LABELS[form.type.slice(6)] || 'Actividad') : 'Actividad'}`}
               </button>
             </div>
           </div>
           </>
-          )}
+          ))}
         </div>
       )}
 
@@ -5553,7 +5724,8 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               activityId={lessonActivityId}
               activityTitle={activities.find(a => a.id === lessonActivityId)?.title}
               classroomTitle={classroom.title}
-              onClose={() => { setShowLessonEditor(false); setLessonActivityId('') }}
+              initialGameType={lessonInitialGameType}
+              onClose={() => { setShowLessonEditor(false); setLessonActivityId(''); setLessonInitialGameType('') }}
               onPreview={() => { setShowLessonEditor(false); setShowLessonPlayer(true) }}
             />
           </div>
@@ -5603,56 +5775,21 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               )}
             </div>
           )}
-          {filteredActivities.map(act => {
-            const isNew = isNewActivity(act)
-            const statusInfo = act.isPublished ? { bg: 'bg-green-50', text: 'text-green-600', label: 'Publicada' } : { bg: 'bg-slate-100', text: 'text-slate-500', label: 'Borrador' }
-            const duePast = isDuePast(act.dueDate)
-            const studentStatus = isStudent ? getStudentTaskStatus(act) : null
-            const studentSub = isStudent ? act.submissions?.[0] : null
-            const workInfo = getWorkInfo(act)
-            return (
-              <button key={act.id} onClick={() => openActivity(act)} style={{ borderLeftColor: workInfo.border, borderLeftWidth: '4px' }} className={`w-full text-left bg-white rounded-2xl border-2 p-5 transition-all hover:shadow-sm group ${isNew ? 'border-yellow-300 hover:border-yellow-400' : 'border-slate-200 hover:border-blue-300'} ${workInfo.rank >= 6 ? 'opacity-70 hover:opacity-100' : ''}`}>
-                <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isLesson(act.type) ? 'bg-violet-50' : isSelfAssessment(act.type) ? 'bg-teal-50' : isIcfes(act.type) ? 'bg-emerald-50' : act.type === 'LIVE_QUIZ' ? 'bg-violet-100' : act.type === 'HOME_QUIZ' ? 'bg-pink-50' : act.type === 'EXAM' ? 'bg-red-50' : isQuizType(act.type) ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                    {isLesson(act.type) ? <BookOpen className="w-6 h-6 text-violet-600" /> : isSelfAssessment(act.type) ? <Sparkles className="w-6 h-6 text-teal-600" /> : isIcfes(act.type) ? <BarChart3 className="w-6 h-6 text-emerald-600" /> : act.type === 'LIVE_QUIZ' ? <Zap className="w-6 h-6 text-violet-700" /> : act.type === 'HOME_QUIZ' ? <Home className="w-6 h-6 text-pink-600" /> : act.type === 'EXAM' ? <Award className="w-6 h-6 text-red-500" /> : isQuizType(act.type) ? <HelpCircle className="w-6 h-6 text-purple-600" /> : <ClipboardList className="w-6 h-6 text-blue-600" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2.5 flex-wrap">
-                      <h3 className="text-base font-bold text-slate-800 group-hover:text-blue-700">{act.title}</h3>
-                      {isNew && <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-yellow-100 text-yellow-800 border border-yellow-300">NUEVO</span>}
-                      {!isStudent && <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusInfo.bg} ${statusInfo.text}`}>{statusInfo.label}</span>}
-                      {isTeacher && (act.gradingPending || 0) > 0 && <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-orange-100 text-orange-700">🟠 {act.gradingPending} por calificar</span>}
-                      {act.type === 'TASK' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700">Tarea</span>}
-                      {act.type === 'QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-purple-50 text-purple-700">Quiz</span>}
-                      {act.type === 'EXAM' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-red-50 text-red-700">Examen</span>}
-                      {act.type === 'LIVE_QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-violet-100 text-violet-800">⚡ Live Quiz</span>}
-                      {act.type === 'HOME_QUIZ' && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-pink-50 text-pink-700">🏠 En Casa</span>}
-                      {isIcfes(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700">ICFES</span>}
-                      {isLesson(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-violet-50 text-violet-700">Lección</span>}
-                      {isSelfAssessment(act.type) && <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-teal-50 text-teal-700">Autoevaluación</span>}
-                      {studentStatus && (
-                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${studentStatus.bg} ${studentStatus.text}`}>{studentStatus.label}</span>
-                      )}
-                    </div>
-                    <p className="text-sm text-slate-500 mt-1">{act.section?.title || 'Sin sección'}</p>
-                    <div className="flex items-center gap-4 mt-2 text-sm">
-                      {act.dueDate && (
-                        <span className={`flex items-center gap-1 ${duePast ? 'text-red-500' : 'text-slate-400'}`}>
-                          <Clock className="w-4 h-4" /> {formatDate(act.dueDate)}
-                        </span>
-                      )}
-                      {act.maxScore && <span className="text-slate-400">Nota máx: {Number(act.maxScore)}</span>}
-                      {isTeacher && act._count && <span className="text-slate-400">{act._count.submissions} entrega(s)</span>}
-                      {studentSub?.score !== undefined && studentSub.score !== null && (
-                        <span className="text-green-700 font-bold">{Number(studentSub.score)}/{act.maxScore ? Number(act.maxScore) : '?'}</span>
-                      )}
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 shrink-0 mt-1" />
+          {isStudent && studentGroups ? (
+            studentGroups.map(g => (
+              <div key={g.key} className="space-y-3">
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-base">{g.emoji}</span>
+                  <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">{g.label}</h3>
+                  <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full font-semibold tabular-nums">{g.list.length}</span>
+                  <span className="text-xs text-slate-400 hidden sm:inline">· {g.hint}</span>
                 </div>
-              </button>
-            )
-          })}
+                {g.list.map(renderActivityCard)}
+              </div>
+            ))
+          ) : (
+            filteredActivities.map(renderActivityCard)
+          )}
         </div>
       )}
 

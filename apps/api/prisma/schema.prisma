@@ -251,7 +251,7 @@ model User {
   isSuperAdmin       Boolean       @default(false) // SuperAdmin del sistema
   accountMode        AccountMode   @default(INSTITUTIONAL) // Modo de cuenta (Edusyn Play)
   googleId           String?       @unique // Google OAuth sub ID
-  photo              String?       // URL de foto de perfil (Google o subida)
+  photo              String? // URL de foto de perfil (Google o subida)
   mustChangePassword Boolean       @default(false) // Forzar cambio de contraseña en primer login
   signatureImageUrl  String? // URL de imagen de firma (subida por el usuario)
   createdAt          DateTime      @default(now())
@@ -315,14 +315,14 @@ model User {
   achievementBankEntries AchievementBank[]    @relation("AchievementBankAuthor")
 
   // Documentos institucionales y Gestión de tareas
-  documentsUploaded            InstitutionalDocument[]    @relation("DocumentUploader")
-  managementLeaderRoles        ManagementLeader[]         @relation("ManagementLeaderUser")
-  managementLeadersAssigned    ManagementLeader[]         @relation("ManagementLeaderAssigner")
-  managementAreaMemberships    ManagementAreaMember[]     @relation("ManagementAreaMemberUser")
-  managementAreaMembersAssigned ManagementAreaMember[]    @relation("ManagementAreaMemberAssigner")
-  tasksCreated                 ManagementTask[]           @relation("TaskCreatedBy")
-  taskAssignments              TaskAssignment[]           @relation("TaskAssignee")
-  taskVerifications            TaskAssignment[]           @relation("TaskVerifier")
+  documentsUploaded             InstitutionalDocument[] @relation("DocumentUploader")
+  managementLeaderRoles         ManagementLeader[]      @relation("ManagementLeaderUser")
+  managementLeadersAssigned     ManagementLeader[]      @relation("ManagementLeaderAssigner")
+  managementAreaMemberships     ManagementAreaMember[]  @relation("ManagementAreaMemberUser")
+  managementAreaMembersAssigned ManagementAreaMember[]  @relation("ManagementAreaMemberAssigner")
+  tasksCreated                  ManagementTask[]        @relation("TaskCreatedBy")
+  taskAssignments               TaskAssignment[]        @relation("TaskAssignee")
+  taskVerifications             TaskAssignment[]        @relation("TaskVerifier")
 
   // Snapshot de docentes en matrículas (histórico)
   enrollmentSubjectsAsTeacher EnrollmentSubject[] @relation("EnrollmentSubjectTeacher")
@@ -355,9 +355,9 @@ model User {
   measuresApplied     PedagogicalMeasure[]
 
   // Snapshot legal de boletines
-  snapshotsGenerated       TermReportCardSnapshot[] @relation("SnapshotGeneratedBy")
-  termsReopened            TermReopeningRecord[]    @relation("TermReopenedBy")
-  recoveryWindowsClosed    RecoveryPeriodConfig[]   @relation("RecoveryClosedBy")
+  snapshotsGenerated    TermReportCardSnapshot[] @relation("SnapshotGeneratedBy")
+  termsReopened         TermReopeningRecord[]    @relation("TermReopenedBy")
+  recoveryWindowsClosed RecoveryPeriodConfig[]   @relation("RecoveryClosedBy")
 
   // Acompañamiento pedagógico
   pedagogicalSupportsCompleted PedagogicalSupportPlan[] @relation("PedagogicalSupportCompletedBy")
@@ -412,26 +412,26 @@ model UserRole {
 }
 
 model Institution {
-  id          String            @id @default(cuid())
-  name        String
-  daneCode    String?           @unique
-  nit         String?
-  slug        String            @unique // URL amigable para login (ej: "colegio-san-jose")
-  logo        String? // URL del logo (fuente única del escudo: boletín, corte, facturas…)
-  primaryColor String?          @default("#1E3A8A") // Color de marca institucional (branding único: PDFs y formatos)
-  city        String? // Ciudad de la institución
-  address     String? // Dirección de la institución
-  phone       String? // Teléfono de contacto
-  email       String? // Email institucional
-  website     String? // Sitio web
-  status      InstitutionStatus @default(TRIAL)
-  type        InstitutionType   @default(SCHOOL) // SCHOOL | UNIVERSITY | PERSONAL (Edusyn Play)
-  isHidden    Boolean           @default(false) // No aparece en selectores públicos
-  ownerUserId String? // Dueño (si type=PERSONAL pero multi-tenant; en workspace compartido es null)
-  trialEndsAt DateTime? // Fecha fin del período de prueba
-  createdById String? // SuperAdmin que creó la institución
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id           String            @id @default(cuid())
+  name         String
+  daneCode     String?           @unique
+  nit          String?
+  slug         String            @unique // URL amigable para login (ej: "colegio-san-jose")
+  logo         String? // URL del logo (fuente única del escudo: boletín, corte, facturas…)
+  primaryColor String?           @default("#1E3A8A") // Color de marca institucional (branding único: PDFs y formatos)
+  city         String? // Ciudad de la institución
+  address      String? // Dirección de la institución
+  phone        String? // Teléfono de contacto
+  email        String? // Email institucional
+  website      String? // Sitio web
+  status       InstitutionStatus @default(TRIAL)
+  type         InstitutionType   @default(SCHOOL) // SCHOOL | UNIVERSITY | PERSONAL (Edusyn Play)
+  isHidden     Boolean           @default(false) // No aparece en selectores públicos
+  ownerUserId  String? // Dueño (si type=PERSONAL pero multi-tenant; en workspace compartido es null)
+  trialEndsAt  DateTime? // Fecha fin del período de prueba
+  createdById  String? // SuperAdmin que creó la institución
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CONFIGURACIÓN INSTITUCIONAL (persistida en BD)
@@ -494,10 +494,10 @@ model Institution {
   paymentEvents   PaymentEvent[]
 
   // Documentos y Gestión
-  institutionalDocuments  InstitutionalDocument[]
-  managementLeaders       ManagementLeader[]
-  managementAreaMembers   ManagementAreaMember[]
-  managementTasks         ManagementTask[]
+  institutionalDocuments InstitutionalDocument[]
+  managementLeaders      ManagementLeader[]
+  managementAreaMembers  ManagementAreaMember[]
+  managementTasks        ManagementTask[]
   storageUsage           InstitutionStorageUsage?
 
   // Módulo Financiero
@@ -550,6 +550,12 @@ model Institution {
   rlsPeriodRecoveries        PeriodRecovery[]         @relation("RlsInstitutionPR")
   rlsFinalRecoveryPlans      FinalRecoveryPlan[]      @relation("RlsInstitutionFRP")
   rlsRoomRestrictions        RoomRestriction[]        @relation("RlsInstitutionRR")
+  rlsLearningIdentities      LearningIdentity[]       @relation("RlsInstitutionLI")
+  rlsXpEvents                XpEvent[]                @relation("RlsInstitutionXPE")
+  rlsLearningBadgeAwards     LearningBadgeAward[]     @relation("RlsInstitutionLBA")
+  rlsLearningRoutes          LearningRoute[]          @relation("RlsInstitutionLR")
+  rlsLearningRouteSteps      LearningRouteStep[]      @relation("RlsInstitutionLRS")
+  rlsCompetencyEvidence      CompetencyEvidence[]     @relation("RlsInstitutionCEV")
   rlsObserverCommitments     ObserverCommitment[]     @relation("RlsInstitutionOC")
   rlsGuardianCitations       GuardianCitation[]       @relation("RlsInstitutionGC")
   rlsObserverReferrals       ObserverReferral[]       @relation("RlsInstitutionOR")
@@ -576,7 +582,20 @@ model Institution {
   attitudinalRubrics AttitudinalRubric[] @relation("InstitutionAttitudinalRubrics")
 
   // Permisos de personal
-  rlsStaffLeaveRequests StaffLeaveRequest[] @relation("RlsInstitutionSLR")
+  rlsStaffLeaveRequests StaffLeaveRequest[]    @relation("RlsInstitutionSLR")
+  rlsAbpProjects        AbpProject[]           @relation("RlsInstitutionABPP")
+  rlsAbpTeams           AbpTeam[]              @relation("RlsInstitutionABPT")
+  rlsAbpTeamMembers     AbpTeamMember[]        @relation("RlsInstitutionABPM")
+  rlsAbpPhaseStates     AbpPhaseState[]        @relation("RlsInstitutionABPS")
+  rlsAbpValidations     AbpValidationRequest[] @relation("RlsInstitutionABPV")
+  rlsAbpContributions   AbpContribution[]      @relation("RlsInstitutionABPC")
+  rlsAbpComments        AbpComment[]           @relation("RlsInstitutionABPCM")
+  rlsAbpMissions        AbpMission[]           @relation("RlsInstitutionABPMI")
+  rlsAbpMissionActs     AbpMissionActivity[]   @relation("RlsInstitutionABPMA")
+  rlsAbpDiscoveries     AbpDiscovery[]         @relation("RlsInstitutionABPD")
+  rlsAbpLogEntries      AbpLogEntry[]          @relation("RlsInstitutionABPL")
+  rlsAbpResources       AbpResource[]          @relation("RlsInstitutionABPR")
+  rlsAbpAnnouncements   AbpAnnouncement[]      @relation("RlsInstitutionABPAN")
 }
 
 // Módulos habilitados por institución
@@ -605,10 +624,10 @@ model InstitutionUser {
 
   // Permisos delegados (asignados por Admin/Coordinador)
   canManageCredentials      Boolean   @default(false) // Puede gestionar credenciales de estudiantes
-  credentialsPermissionById String?   // Quién asignó el permiso (auditoría)
+  credentialsPermissionById String? // Quién asignó el permiso (auditoría)
   credentialsPermissionAt   DateTime? // Cuándo se asignó
   canManageStudents         Boolean   @default(false) // Puede crear/editar estudiantes (temporal para pruebas)
-  studentsPermissionById    String?   // Quién asignó el permiso
+  studentsPermissionById    String? // Quién asignó el permiso
   studentsPermissionAt      DateTime? // Cuándo se asignó
 
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -681,7 +700,7 @@ model Grade {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  institution          Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  institution          Institution           @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   groups               Group[]
   elections            Election[] // Elecciones de representante de grado
   gradeTemplates       GradeTemplate[] // Plantillas académicas por año (una por año académico)
@@ -1112,12 +1131,12 @@ model AcademicTerm {
 // ═══════════════════════════════════════════════════════════════════════════
 
 model TermReportCardSnapshot {
-  id                  String             @id @default(cuid())
+  id                  String                 @id @default(cuid())
   academicTermId      String
   studentEnrollmentId String
   version             Int
   snapshotType        ReportCardSnapshotType @default(INITIAL_CLOSE)
-  generatedAt         DateTime           @default(now())
+  generatedAt         DateTime               @default(now())
   generatedById       String?
   data                Json // Boletín completo congelado (mismo DTO de buildGroupReportCards)
   recoveryChanges     Json? // Cambios aplicados por recuperación (solo para POST_RECOVERY)
@@ -1134,10 +1153,10 @@ model TermReportCardSnapshot {
 
 // Tipo de snapshot de boletín
 enum ReportCardSnapshotType {
-  INITIAL_CLOSE    // Cierre inicial del período (antes de recuperación)
-  POST_RECOVERY    // Después de aplicar recuperaciones
-  FINAL_CLOSE      // Cierre definitivo del período
-  REOPENED         // Reapertura por corrección
+  INITIAL_CLOSE // Cierre inicial del período (antes de recuperación)
+  POST_RECOVERY // Después de aplicar recuperaciones
+  FINAL_CLOSE // Cierre definitivo del período
+  REOPENED // Reapertura por corrección
 }
 
 model TermReopeningRecord {
@@ -1171,19 +1190,19 @@ model GradingPeriodConfig {
 
 // Configuración de ventana de recuperaciones por período
 model RecoveryPeriodConfig {
-  id                  String                    @id @default(cuid())
-  academicTermId      String                    @unique
-  isOpen              Boolean                   @default(false)
+  id                  String              @id @default(cuid())
+  academicTermId      String              @unique
+  isOpen              Boolean             @default(false)
   openDate            DateTime?
   closeDate           DateTime?
-  allowLateEntry      Boolean                   @default(false)
-  lateEntryDays       Int                       @default(0)
-  recoveryPhaseStatus RecoveryPhaseStatus       @default(NOT_STARTED)
+  allowLateEntry      Boolean             @default(false)
+  lateEntryDays       Int                 @default(0)
+  recoveryPhaseStatus RecoveryPhaseStatus @default(NOT_STARTED)
   snapshotCreatedAt   DateTime? // Fecha en que se creó el snapshot POST_RECOVERY
   closedById          String? // Usuario que cerró la ventana
   closedAt            DateTime? // Fecha de cierre manual
-  createdAt           DateTime                  @default(now())
-  updatedAt           DateTime                  @updatedAt
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
 
   academicTerm AcademicTerm @relation("RecoveryPeriodConfig", fields: [academicTermId], references: [id], onDelete: Cascade)
   closedBy     User?        @relation("RecoveryClosedBy", fields: [closedById], references: [id])
@@ -1191,11 +1210,11 @@ model RecoveryPeriodConfig {
 
 // Estado del proceso de recuperación del período
 enum RecoveryPhaseStatus {
-  NOT_STARTED      // Ventana no ha abierto
-  IN_PROGRESS      // Ventana abierta, recuperaciones en curso
+  NOT_STARTED // Ventana no ha abierto
+  IN_PROGRESS // Ventana abierta, recuperaciones en curso
   PENDING_SNAPSHOT // Ventana cerrada, pendiente crear snapshot
   SNAPSHOT_CREATED // Snapshot POST_RECOVERY creado
-  FINALIZED        // Proceso completamente finalizado
+  FINALIZED // Proceso completamente finalizado
 }
 
 model TeacherAssignment {
@@ -1242,10 +1261,10 @@ model PerformanceScale {
   minScore      Decimal
   maxScore      Decimal
   // Q-1: enriquecimiento de la escala (nullable → default derivado del enum en código)
-  label       String? // Nombre visible del nivel (default = nombre del enum)
-  descriptor  String? @db.Text // Descriptor pedagógico del nivel (IB / standards-based)
-  order       Int? // Orden canónico (default código: SUP=4, ALT=3, BAS=2, BAJO=1)
-  isApproved  Boolean? // ¿Aprueba? (default código: BAJO=false, resto=true)
+  label         String? // Nombre visible del nivel (default = nombre del enum)
+  descriptor    String?          @db.Text // Descriptor pedagógico del nivel (IB / standards-based)
+  order         Int? // Orden canónico (default código: SUP=4, ALT=3, BAS=2, BAJO=1)
+  isApproved    Boolean? // ¿Aprueba? (default código: BAJO=false, resto=true)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
@@ -1404,6 +1423,9 @@ model Student {
 
   // APD (Acompañamiento Pedagógico Diferencial)
   educationalSupportProfiles EducationalSupportProfile[]
+
+  // Gamificación — identidad de aprendizaje (persiste entre años/matrículas)
+  learningIdentity LearningIdentity?
 
   @@unique([institutionId, documentNumber])
 }
@@ -1564,8 +1586,8 @@ model StudentEnrollment {
   withdrawalReason String? // Motivo del retiro
 
   // Trazabilidad de promoción
-  promotedFromId  String?          @unique // Matrícula del año anterior (1:1)
-  promotionStatus PromotionStatus  @default(IN_PROGRESS)
+  promotedFromId  String?         @unique // Matrícula del año anterior (1:1)
+  promotionStatus PromotionStatus @default(IN_PROGRESS)
 
   // Observaciones y auditoría
   observations String? // Observaciones de matrícula
@@ -1623,12 +1645,12 @@ model StudentEnrollment {
 
   // Aula Virtual
   classroomSubmissions ActivitySubmission[] @relation("ClassroomSubmissions")
-  liveSessions          LiveSession[]
+  liveSessions         LiveSession[]
   activityAssignments  ActivityAssignment[]
 
   // Live Quiz
-  liveSessionAnswers   LiveSessionAnswer[]
-  liveTeamMembers      LiveSessionTeamMember[]
+  liveSessionAnswers      LiveSessionAnswer[]
+  liveTeamMembers         LiveSessionTeamMember[]
   liveSessionParticipants LiveSessionParticipant[]
 
   // Evaluación Actitudinal
@@ -1638,7 +1660,15 @@ model StudentEnrollment {
   peerAsTarget           PeerAssessmentPair[]    @relation("PeerTarget")
 
   // Lecciones interactivas
-  lessonProgress         LessonProgress[]        @relation("LessonProgressEnrollment")
+  lessonProgress LessonProgress[] @relation("LessonProgressEnrollment")
+
+  // Expedición ABP
+  abpTeamMemberships AbpTeamMember[]
+  abpContributions   AbpContribution[]
+  abpComments        AbpComment[]
+  abpActivitiesDone  AbpMissionActivity[] @relation("AbpActivityCompletedBy")
+  abpDiscoveries     AbpDiscovery[]       @relation("AbpDiscoveryAuthor")
+  abpLogEntries      AbpLogEntry[]        @relation("AbpLogAuthor")
 
   @@unique([studentId, academicYearId])
 }
@@ -2108,7 +2138,7 @@ model StudentObservation {
   date                DateTime            @db.Date
   type                ObservationType
   category            ObservationCategory
-  subcategory         String?             // Subcategoría granular: UNIFORME, CUTTING, SEXTING, EVASION, PELEA, SUSTANCIAS, CELULAR, TARDANZA, etc.
+  subcategory         String? // Subcategoría granular: UNIFORME, CUTTING, SEXTING, EVASION, PELEA, SUSTANCIAS, CELULAR, TARDANZA, etc.
   status              ObserverEntryStatus @default(OPEN)
   description         String
   actionTaken         String?
@@ -2512,19 +2542,19 @@ model RecoveryConfig {
   minPassingScore Decimal @default(3.0) @db.Decimal(5, 2)
 
   // Recuperación por período
-  periodRecoveryEnabled    Boolean            @default(true)
-  periodMaxScore           Decimal            @default(3.0) @db.Decimal(5, 2)
-  periodImpactType         RecoveryImpactType @default(ADJUST_TO_MINIMUM)
-  periodRecoveryMaxAttempts Int               @default(1)
-  periodRequiresReviewApproval Boolean        @default(true)
+  periodRecoveryEnabled        Boolean            @default(true)
+  periodMaxScore               Decimal            @default(3.0) @db.Decimal(5, 2)
+  periodImpactType             RecoveryImpactType @default(ADJUST_TO_MINIMUM)
+  periodRecoveryMaxAttempts    Int                @default(1)
+  periodRequiresReviewApproval Boolean            @default(true)
 
   // Recuperación final
-  finalRecoveryEnabled    Boolean            @default(true)
-  finalMaxScore           Decimal            @default(3.0) @db.Decimal(5, 2)
-  finalImpactType         RecoveryImpactType @default(ADJUST_TO_MINIMUM)
-  finalRecoveryMaxAttempts Int               @default(1)
-  maxAreasRecoverable     Int                @default(2)
-  maxSubjectsRecoverable  Int?               // Máx. asignaturas recuperables (null = sin límite)
+  finalRecoveryEnabled     Boolean            @default(true)
+  finalMaxScore            Decimal            @default(3.0) @db.Decimal(5, 2)
+  finalImpactType          RecoveryImpactType @default(ADJUST_TO_MINIMUM)
+  finalRecoveryMaxAttempts Int                @default(1)
+  maxAreasRecoverable      Int                @default(2)
+  maxSubjectsRecoverable   Int? // Máx. asignaturas recuperables (null = sin límite)
 
   // Umbrales de reprobación automática
   autoRetainAreas    Int? // Si pierde >= N áreas → repite automáticamente
@@ -2595,12 +2625,12 @@ model PeriodRecovery {
   originalScore Decimal @db.Decimal(5, 2)
 
   // Información de la recuperación
-  status              RecoveryStatus       @default(PENDING)
+  status              RecoveryStatus        @default(PENDING)
   activityType        RecoveryActivityType? // Tipo de actividad de recuperación
-  activityDescription String?              @db.Text
+  activityDescription String?               @db.Text
   scheduledDate       DateTime?
   completedDate       DateTime?
-  attemptNumber       Int                  @default(1)
+  attemptNumber       Int                   @default(1)
 
   // Dimensión reforzada
   reinforcedDimension String? @default("COGNITIVA")
@@ -2647,7 +2677,7 @@ model FinalRecoveryPlan {
   originalAreaScore Decimal @db.Decimal(5, 2)
 
   // Estado del plan
-  status       RecoveryStatus       @default(PENDING)
+  status       RecoveryStatus        @default(PENDING)
   activityType RecoveryActivityType? // Tipo de actividad de recuperación final
 
   // Plan de actividades
@@ -2714,8 +2744,8 @@ model AcademicAct {
   attendees String? @db.Text
 
   // Participantes y adjuntos estructurados
-  participants Json?  // [{name, role, document, signature?}]
-  attachments  Json?  // [{name, url, type}]
+  participants Json? // [{name, role, document, signature?}]
+  attachments  Json? // [{name, url, type}]
   notes        String? @db.Text
 
   // Relaciones opcionales
@@ -5021,35 +5051,35 @@ model WorkspaceBoard {
   updatedAt      DateTime            @updatedAt
 
   // WORKSPACE_V2 — campos de personalización visual y organización
-  emoji          String?             // Emoji/icono del espacio (📐, 🚀, etc.)
-  coverImage     String?             // URL de portada opcional
-  bannerColor    String?             // Color secundario para gradiente con `color`
-  isPinned       Boolean             @default(false) // Fijado en home del docente
-  isPersonal     Boolean             @default(false) // True para el "Espacio personal" (uno por docente)
-  linkedClassId  String?             // Vínculo con horario oficial (clase/materia)
-  hiddenSections String[]            @default([])    // Pestañas ocultas por desuso
-  lastAccessedAt DateTime?           // Para sort por reciente en home
+  emoji          String? // Emoji/icono del espacio (📐, 🚀, etc.)
+  coverImage     String? // URL de portada opcional
+  bannerColor    String? // Color secundario para gradiente con `color`
+  isPinned       Boolean   @default(false) // Fijado en home del docente
+  isPersonal     Boolean   @default(false) // True para el "Espacio personal" (uno por docente)
+  linkedClassId  String? // Vínculo con horario oficial (clase/materia)
+  hiddenSections String[]  @default([]) // Pestañas ocultas por desuso
+  lastAccessedAt DateTime? // Para sort por reciente en home
 
   // F0 — espacio como contenedor de curso con módulos bajo demanda
-  enabledModules String[]            @default([])    // módulos activados manualmente
-  isCourseSpace  Boolean             @default(false) // marca de espacio-curso (multi-módulo)
+  enabledModules String[] @default([]) // módulos activados manualmente
+  isCourseSpace  Boolean  @default(false) // marca de espacio-curso (multi-módulo)
 
-  teacher      User              @relation("WorkspaceBoards", fields: [teacherId], references: [id], onDelete: Cascade)
-  institution  Institution       @relation("RlsInstitutionWB", fields: [institutionId], references: [id], onDelete: Cascade)
-  academicYear AcademicYear?     @relation(fields: [academicYearId], references: [id])
-  group        Group?            @relation(fields: [groupId], references: [id])
-  grade        Grade?            @relation("WorkspaceBoardGrade", fields: [gradeId], references: [id])
-  columns      WorkspaceColumn[]
-  items        WorkspaceItem[]
-  events       WorkspaceEvent[]
-  followUps    WorkspaceFollowUp[]
-  activities   WorkspaceActivity[]
-  collections  WorkspaceCollection[]
-  roles        WorkspaceRole[]
-  resources    WorkspaceResource[]
-  resourceFolders WorkspaceResourceFolder[]
-  projects     WorkspaceProject[]
-  pedagogicalDesigns PedagogicalDesign[] @relation("BoardPedagogicalDesigns")
+  teacher            User                      @relation("WorkspaceBoards", fields: [teacherId], references: [id], onDelete: Cascade)
+  institution        Institution               @relation("RlsInstitutionWB", fields: [institutionId], references: [id], onDelete: Cascade)
+  academicYear       AcademicYear?             @relation(fields: [academicYearId], references: [id])
+  group              Group?                    @relation(fields: [groupId], references: [id])
+  grade              Grade?                    @relation("WorkspaceBoardGrade", fields: [gradeId], references: [id])
+  columns            WorkspaceColumn[]
+  items              WorkspaceItem[]
+  events             WorkspaceEvent[]
+  followUps          WorkspaceFollowUp[]
+  activities         WorkspaceActivity[]
+  collections        WorkspaceCollection[]
+  roles              WorkspaceRole[]
+  resources          WorkspaceResource[]
+  resourceFolders    WorkspaceResourceFolder[]
+  projects           WorkspaceProject[]
+  pedagogicalDesigns PedagogicalDesign[]       @relation("BoardPedagogicalDesigns")
 
   @@index([teacherId, institutionId])
   @@index([teacherId, type])
@@ -5090,14 +5120,14 @@ model WorkspaceItem {
   updatedAt  DateTime            @updatedAt
 
   // WORKSPACE_V2 — modelo polimórfico de elementos de organización
-  kind            WorkspaceItemKind?       // NOTE | TASK | OBSERVATION | LOG | COLLECTION | IDEA | LIST | FILE | EVENT
-  completedAt     DateTime?                // Cuando se cierra/marca como hecho
-  amount          Decimal?  @db.Decimal(12, 2) // Meta de recaudo (si kind=COLLECTION)
-  amountCollected Decimal?  @db.Decimal(12, 2) // Monto efectivamente recaudado
-  tags            String[]  @default([])   // Tags libres
+  kind            WorkspaceItemKind? // NOTE | TASK | OBSERVATION | LOG | COLLECTION | IDEA | LIST | FILE | EVENT
+  completedAt     DateTime? // Cuando se cierra/marca como hecho
+  amount          Decimal?           @db.Decimal(12, 2) // Meta de recaudo (si kind=COLLECTION)
+  amountCollected Decimal?           @db.Decimal(12, 2) // Monto efectivamente recaudado
+  tags            String[]           @default([]) // Tags libres
   // F5 — Bitácora: tipo de entrada y destacado
-  entryType       String?                  // clase|reunion|idea|llamada|incidente|otro
-  isImportant     Boolean   @default(false)
+  entryType       String? // clase|reunion|idea|llamada|incidente|otro
+  isImportant     Boolean            @default(false)
 
   board   WorkspaceBoard   @relation(fields: [boardId], references: [id], onDelete: Cascade)
   column  WorkspaceColumn? @relation(fields: [columnId], references: [id], onDelete: SetNull)
@@ -5155,7 +5185,7 @@ model WorkspaceEvent {
   institutionId String
   teacherId     String
   boardId       String?
-  itemId        String?            // referencia blanda al registro de origen
+  itemId        String? // referencia blanda al registro de origen
   title         String
   date          DateTime
   allDay        Boolean            @default(true)
@@ -5179,7 +5209,7 @@ model WorkspaceFollowUp {
   teacherId     String
   boardId       String?
   sourceType    WorkspaceFollowUpSource @default(MANUAL)
-  sourceItemId  String?                 // referencia blanda al origen
+  sourceItemId  String? // referencia blanda al origen
   studentId     String?
   title         String
   notes         String?
@@ -5205,8 +5235,8 @@ model WorkspaceActivity {
   institutionId String
   teacherId     String
   boardId       String?
-  verb          String   // created | updated | completed | paid | assigned | archived
-  entityType    String   // ENTRY | TASK | EVENT | FOLLOWUP | COLLECTION | ROLE | RESOURCE | PROJECT | BOARD
+  verb          String // created | updated | completed | paid | assigned | archived
+  entityType    String // ENTRY | TASK | EVENT | FOLLOWUP | COLLECTION | ROLE | RESOURCE | PROJECT | BOARD
   entityId      String?
   summary       String
   createdAt     DateTime @default(now())
@@ -5233,7 +5263,7 @@ model WorkspaceFavorite {
 model WorkspaceDashboardConfig {
   id        String   @id @default(cuid())
   teacherId String   @unique
-  widgets   Json     // [{ key, visible, order, size }]
+  widgets   Json // [{ key, visible, order, size }]
   updatedAt DateTime @updatedAt
 }
 
@@ -5264,8 +5294,8 @@ model WorkspaceCollection {
 model WorkspaceCollectionCharge {
   id           String   @id @default(cuid())
   collectionId String
-  studentId    String   // Student.id — sin FK forzada (workspace desacoplado), solo índice
-  studentName  String   // denormalizado para mostrar sin joins al core
+  studentId    String // Student.id — sin FK forzada (workspace desacoplado), solo índice
+  studentName  String // denormalizado para mostrar sin joins al core
   status       String   @default("PENDING") // PENDING | PARTIAL | PAID (derivado, se persiste para consulta)
   createdAt    DateTime @default(now())
 
@@ -5381,7 +5411,7 @@ model WorkspaceProject {
   objective     String?
   competencies  String?
   status        String    @default("PLANNING") // PLANNING | ACTIVE | DONE | ARCHIVED
-  progress      Int       @default(0)           // 0–100
+  progress      Int       @default(0) // 0–100
   startDate     DateTime?
   endDate       DateTime?
   isFavorite    Boolean   @default(false)
@@ -5389,7 +5419,7 @@ model WorkspaceProject {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  board   WorkspaceBoard          @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  board   WorkspaceBoard           @relation(fields: [boardId], references: [id], onDelete: Cascade)
   tasks   WorkspaceProjectTask[]
   members WorkspaceProjectMember[]
 
@@ -5431,15 +5461,15 @@ model WorkspaceProjectMember {
 enum PedagogicalExperienceType {
   LESSON_PLAN
   SEQUENCE
-  PBL                 // Proyecto ABP
+  PBL // Proyecto ABP
   STEAM
-  FLIPPED             // Clase invertida
-  CHALLENGE           // Aprendizaje basado en retos
-  WORKSHOP            // Taller
-  LAB                 // Laboratorio
+  FLIPPED // Clase invertida
+  CHALLENGE // Aprendizaje basado en retos
+  WORKSHOP // Taller
+  LAB // Laboratorio
   EVALUATION
-  INTERACTIVE_LESSON  // Lección interactiva
-  UNIT                // Unidad completa
+  INTERACTIVE_LESSON // Lección interactiva
+  UNIT // Unidad completa
 }
 
 enum PedagogicalDesignStatus {
@@ -5457,27 +5487,27 @@ enum PedagogicalVisibility {
 }
 
 model PedagogicalDesign {
-  id             String   @id @default(cuid())
-  teacherId      String
-  institutionId  String
-  boardId        String?  // Curso (WorkspaceBoard) donde vive; null = personal
-  subjectId      String?
-  gradeId        String?
-  groupId        String?
-  experienceType PedagogicalExperienceType @default(LESSON_PLAN)
-  title          String
-  summary        String?  @db.Text
-  status         PedagogicalDesignStatus   @default(DRAFT)
-  visibility     PedagogicalVisibility     @default(PRIVATE)
-  dna            Json?    // ADN pedagógico (§24): tema, competencias, bloom, metodología…
-  sourceDesignId String?  // Linaje si fue clonado de otro diseño
-  aiProviderUsed String?  // Trazabilidad de costo de IA
-  aiModelUsed    String?
-  aiTokens       Int?
-  currentVersionNumber Int @default(1)
-  isArchived     Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                   String                    @id @default(cuid())
+  teacherId            String
+  institutionId        String
+  boardId              String? // Curso (WorkspaceBoard) donde vive; null = personal
+  subjectId            String?
+  gradeId              String?
+  groupId              String?
+  experienceType       PedagogicalExperienceType @default(LESSON_PLAN)
+  title                String
+  summary              String?                   @db.Text
+  status               PedagogicalDesignStatus   @default(DRAFT)
+  visibility           PedagogicalVisibility     @default(PRIVATE)
+  dna                  Json? // ADN pedagógico (§24): tema, competencias, bloom, metodología…
+  sourceDesignId       String? // Linaje si fue clonado de otro diseño
+  aiProviderUsed       String? // Trazabilidad de costo de IA
+  aiModelUsed          String?
+  aiTokens             Int?
+  currentVersionNumber Int                       @default(1)
+  isArchived           Boolean                   @default(false)
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
 
   board    WorkspaceBoard?            @relation("BoardPedagogicalDesigns", fields: [boardId], references: [id], onDelete: Cascade)
   versions PedagogicalDesignVersion[]
@@ -5491,10 +5521,10 @@ model PedagogicalDesignVersion {
   id               String   @id @default(cuid())
   designId         String
   versionNumber    Int
-  content          Json     // Objeto estructurado del APV (momentos, actividades, evaluación…)
+  content          Json // Objeto estructurado del APV (momentos, actividades, evaluación…)
   changeNote       String?  @db.Text
-  createdByAi       Boolean  @default(false)
-  evidenceSnapshot Json?    // Señales que motivaron esta versión (ciclo de evidencia)
+  createdByAi      Boolean  @default(false)
+  evidenceSnapshot Json? // Señales que motivaron esta versión (ciclo de evidencia)
   createdAt        DateTime @default(now())
 
   design PedagogicalDesign @relation(fields: [designId], references: [id], onDelete: Cascade)
@@ -5509,20 +5539,20 @@ model PedagogicalDesignVersion {
 // ═══════════════════════════════════════════════════════════════════════════
 
 enum AiTier {
-  FREE      // modelos gratis (OpenRouter cascade) — validación / plan básico
-  PREMIUM   // modelo de pago (ej. Gemini Flash) — instituciones que pagan
-  BYOK      // la institución trae su propia API key
+  FREE // modelos gratis (OpenRouter cascade) — validación / plan básico
+  PREMIUM // modelo de pago (ej. Gemini Flash) — instituciones que pagan
+  BYOK // la institución trae su propia API key
 }
 
 model InstitutionAiPlan {
   id                  String   @id @default(cuid())
   institutionId       String   @unique
   tier                AiTier   @default(FREE)
-  modelOverride       String?            // forzar un modelo concreto (opcional)
+  modelOverride       String? // forzar un modelo concreto (opcional)
   monthlyTokenQuota   Int      @default(2000000) // tope mensual de tokens
   tokensUsedThisMonth Int      @default(0)
-  periodResetAt       DateTime @default(now())   // inicio del período de cuota
-  byokApiKeyRef       String?            // referencia a key propia (futuro)
+  periodResetAt       DateTime @default(now()) // inicio del período de cuota
+  byokApiKeyRef       String? // referencia a key propia (futuro)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -5553,7 +5583,7 @@ enum ClassroomActivityType {
   ICFES_SIMULATOR
   SELF_ASSESSMENT // Autoevaluación actitudinal
   PEER_ASSESSMENT // Coevaluación actitudinal
-  LESSON          // Lección interactiva con slides y actividades
+  LESSON // Lección interactiva con slides y actividades
 }
 
 enum QuestionType {
@@ -5584,7 +5614,7 @@ model Classroom {
   coverImage          String?
   color               String?
   isActive            Boolean  @default(true)
-  ownerUserId         String?  // Edusyn Play: dueño personal (null en modo institucional)
+  ownerUserId         String? // Edusyn Play: dueño personal (null en modo institucional)
   isPersonal          Boolean  @default(false) // Shortcut para queries de Edusyn Play
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -5596,6 +5626,8 @@ model Classroom {
   activities        ClassroomActivity[]
   forumPosts        ForumPost[]             @relation("ClassroomForumPosts")
   liveSessions      LiveSession[]
+  learningRoutes    LearningRoute[]
+  abpProjects       AbpProject[]
 
   @@index([institutionId])
   @@index([teacherAssignmentId])
@@ -5678,6 +5710,9 @@ model ClassroomActivity {
   scheduledPublishAt DateTime?
   publishedAt        DateTime?
   sortOrder          Int       @default(0)
+  // Actividad "propia de una ruta": creada dentro de un paso, se OCULTA de la
+  // pestaña Actividades; el estudiante la hace desde el mapa de la ruta.
+  isRouteScoped      Boolean   @default(false)
   metadata           Json?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
@@ -5695,13 +5730,16 @@ model ClassroomActivity {
   liveSessions           LiveSession[]
 
   // Evaluación Actitudinal
-  rubricId                String? // Rúbrica asociada (para SELF_ASSESSMENT, PEER_ASSESSMENT)
-  rubric                  AttitudinalRubric?      @relation("ActivityRubric", fields: [rubricId], references: [id], onDelete: SetNull)
-  attitudinalSubmissions  AttitudinalSubmission[]
-  peerAssessmentPairs     PeerAssessmentPair[]
+  rubricId               String? // Rúbrica asociada (para SELF_ASSESSMENT, PEER_ASSESSMENT)
+  rubric                 AttitudinalRubric?      @relation("ActivityRubric", fields: [rubricId], references: [id], onDelete: SetNull)
+  attitudinalSubmissions AttitudinalSubmission[]
+  peerAssessmentPairs    PeerAssessmentPair[]
 
   // Lección interactiva
-  lesson                  Lesson?
+  lesson Lesson?
+
+  // Pasos de ruta que referencian esta actividad
+  routeSteps LearningRouteStep[] @relation("ActivityRouteSteps")
 
   @@index([classroomId])
   @@index([sectionId])
@@ -5756,7 +5794,7 @@ model ActivityQuestion {
   sortOrder         Int          @default(0)
 
   // Per-question time limit (seconds). If null, uses session-level timeLimitOverride.
-  timeLimitSeconds  Int?
+  timeLimitSeconds Int?
 
   activity    ClassroomActivity   @relation(fields: [activityId], references: [id], onDelete: Cascade)
   context     QuestionContext?    @relation(fields: [contextId], references: [id], onDelete: SetNull)
@@ -5862,41 +5900,41 @@ enum LiveSessionDeliveryMode {
 
 // Modo de invitados para sesiones en vivo (Edusyn Play)
 enum GuestMode {
-  DISABLED      // Solo matriculados (comportamiento actual)
-  MIXED         // Matriculados + invitados con código
-  GUESTS_ONLY   // Solo invitados (modo Edusyn Play puro)
+  DISABLED // Solo matriculados (comportamiento actual)
+  MIXED // Matriculados + invitados con código
+  GUESTS_ONLY // Solo invitados (modo Edusyn Play puro)
 }
 
 model LiveSession {
-  id                 String            @id @default(cuid())
-  classroomId        String
-  teacherId          String
-  activityId         String
-  status             LiveSessionStatus @default(WAITING)
-  mode               LiveSessionMode   @default(INDIVIDUAL)
-  deliveryMode       LiveSessionDeliveryMode @default(SYNC)
-  parentSessionId    String?
+  id                  String                  @id @default(cuid())
+  classroomId         String
+  teacherId           String
+  activityId          String
+  status              LiveSessionStatus       @default(WAITING)
+  mode                LiveSessionMode         @default(INDIVIDUAL)
+  deliveryMode        LiveSessionDeliveryMode @default(SYNC)
+  parentSessionId     String?
   studentEnrollmentId String?
-  currentQuestionIdx Int               @default(-1)
-  config             Json? // { bonusQuestions: [idx], multipliers: {idx: 2}, timeLimitOverride: 15 }
+  currentQuestionIdx  Int                     @default(-1)
+  config              Json? // { bonusQuestions: [idx], multipliers: {idx: 2}, timeLimitOverride: 15 }
   // Edusyn Play: invitados vía código público
-  joinCode           String?           @unique // Código de 6 dígitos para /join
-  guestMode          GuestMode         @default(DISABLED)
-  publicUrl          String?           // URL pública para compartir
-  guestsCount        Int               @default(0) // Contador rápido
-  createdAt          DateTime          @default(now())
-  startedAt          DateTime?
-  finishedAt         DateTime?
+  joinCode            String?                 @unique // Código de 6 dígitos para /join
+  guestMode           GuestMode               @default(DISABLED)
+  publicUrl           String? // URL pública para compartir
+  guestsCount         Int                     @default(0) // Contador rápido
+  createdAt           DateTime                @default(now())
+  startedAt           DateTime?
+  finishedAt          DateTime?
 
-  classroom Classroom           @relation(fields: [classroomId], references: [id], onDelete: Cascade)
-  teacher   User                @relation("LiveSessionTeacher", fields: [teacherId], references: [id])
-  activity  ClassroomActivity   @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  parentSession LiveSession?    @relation("LiveSessionParent", fields: [parentSessionId], references: [id], onDelete: SetNull)
-  childSessions  LiveSession[]   @relation("LiveSessionParent")
-  studentEnrollment StudentEnrollment? @relation(fields: [studentEnrollmentId], references: [id], onDelete: SetNull)
-  answers      LiveSessionAnswer[]
-  teams        LiveSessionTeam[]
-  participants LiveSessionParticipant[]
+  classroom         Classroom                @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  teacher           User                     @relation("LiveSessionTeacher", fields: [teacherId], references: [id])
+  activity          ClassroomActivity        @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  parentSession     LiveSession?             @relation("LiveSessionParent", fields: [parentSessionId], references: [id], onDelete: SetNull)
+  childSessions     LiveSession[]            @relation("LiveSessionParent")
+  studentEnrollment StudentEnrollment?       @relation(fields: [studentEnrollmentId], references: [id], onDelete: SetNull)
+  answers           LiveSessionAnswer[]
+  teams             LiveSessionTeam[]
+  participants      LiveSessionParticipant[]
 
   @@index([classroomId, status])
   @@index([teacherId])
@@ -5982,22 +6020,22 @@ enum AttitudinalRubricType {
 
 // Rúbrica institucional para evaluación actitudinal
 model AttitudinalRubric {
-  id            String               @id @default(cuid())
+  id            String                @id @default(cuid())
   institutionId String
   name          String // "Rúbrica de Autoevaluación P1", "Coevaluación Trabajo en Equipo"
   description   String?
   type          AttitudinalRubricType
   targetProcess String? // Nombre del subproceso actitudinal al que aplica (ej: "Autoevaluación")
-  isDefault     Boolean              @default(false) // Rúbrica por defecto para este tipo
-  isActive      Boolean              @default(true)
+  isDefault     Boolean               @default(false) // Rúbrica por defecto para este tipo
+  isActive      Boolean               @default(true)
   createdById   String?
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
 
-  institution Institution              @relation("InstitutionAttitudinalRubrics", fields: [institutionId], references: [id], onDelete: Cascade)
-  createdBy   User?                    @relation("AttitudinalRubricCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  institution Institution             @relation("InstitutionAttitudinalRubrics", fields: [institutionId], references: [id], onDelete: Cascade)
+  createdBy   User?                   @relation("AttitudinalRubricCreator", fields: [createdById], references: [id], onDelete: SetNull)
   criteria    AttitudinalCriterion[]
-  activities  ClassroomActivity[]      @relation("ActivityRubric")
+  activities  ClassroomActivity[]     @relation("ActivityRubric")
   submissions AttitudinalSubmission[]
 
   @@unique([institutionId, name])
@@ -6014,7 +6052,7 @@ model AttitudinalCriterion {
   weight      Int     @default(100) // Peso porcentual (suma de todos = 100)
   order       Int     @default(0)
 
-  rubric    AttitudinalRubric          @relation(fields: [rubricId], references: [id], onDelete: Cascade)
+  rubric    AttitudinalRubric              @relation(fields: [rubricId], references: [id], onDelete: Cascade)
   levels    CriterionLevel[]
   responses AttitudinalCriterionResponse[]
 
@@ -6038,21 +6076,21 @@ model CriterionLevel {
 
 // Envío de evaluación actitudinal (autoevaluación o coevaluación)
 model AttitudinalSubmission {
-  id                    String   @id @default(cuid())
+  id                    String    @id @default(cuid())
   activityId            String
   rubricId              String
   evaluatorEnrollmentId String // Quien evalúa
   targetEnrollmentId    String? // A quien evalúa (null si es autoevaluación)
-  reflection            String?  @db.Text // Reflexión o justificación del estudiante
-  calculatedScore       Decimal? @db.Decimal(3, 2) // Nota calculada según pesos
-  syncedToGradebook     Boolean  @default(false)
+  reflection            String?   @db.Text // Reflexión o justificación del estudiante
+  calculatedScore       Decimal?  @db.Decimal(3, 2) // Nota calculada según pesos
+  syncedToGradebook     Boolean   @default(false)
   syncedAt              DateTime?
-  submittedAt           DateTime @default(now())
+  submittedAt           DateTime  @default(now())
 
-  activity            ClassroomActivity                @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  rubric              AttitudinalRubric                @relation(fields: [rubricId], references: [id], onDelete: Restrict)
-  evaluatorEnrollment StudentEnrollment                @relation("AttitudinalEvaluator", fields: [evaluatorEnrollmentId], references: [id], onDelete: Cascade)
-  targetEnrollment    StudentEnrollment?               @relation("AttitudinalTarget", fields: [targetEnrollmentId], references: [id], onDelete: Cascade)
+  activity            ClassroomActivity              @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  rubric              AttitudinalRubric              @relation(fields: [rubricId], references: [id], onDelete: Restrict)
+  evaluatorEnrollment StudentEnrollment              @relation("AttitudinalEvaluator", fields: [evaluatorEnrollmentId], references: [id], onDelete: Cascade)
+  targetEnrollment    StudentEnrollment?             @relation("AttitudinalTarget", fields: [targetEnrollmentId], references: [id], onDelete: Cascade)
   responses           AttitudinalCriterionResponse[]
 
   @@unique([activityId, evaluatorEnrollmentId, targetEnrollmentId])
@@ -6098,36 +6136,36 @@ model PeerAssessmentPair {
 // ==================== STAFF LEAVE REQUESTS (PERMISOS) ====================
 
 enum StaffLeaveType {
-  AUSENCIA          // Día completo
-  SALIDA_TEMPRANA   // Sale antes de hora
-  LLEGADA_TARDE     // Llega después de hora
-  PERMISO_ESPECIAL  // Cita médica, calamidad, etc.
+  AUSENCIA // Día completo
+  SALIDA_TEMPRANA // Sale antes de hora
+  LLEGADA_TARDE // Llega después de hora
+  PERMISO_ESPECIAL // Cita médica, calamidad, etc.
 }
 
 enum StaffLeaveStatus {
-  PENDING   // Pendiente de revisión
-  APPROVED  // Aprobado
-  REJECTED  // Rechazado
+  PENDING // Pendiente de revisión
+  APPROVED // Aprobado
+  REJECTED // Rechazado
   CANCELLED // Cancelado por el solicitante
 }
 
 model StaffLeaveRequest {
-  id              String           @id @default(cuid())
-  institutionId   String
-  requesterId     String
-  type            StaffLeaveType
-  startDate       DateTime         @db.Date
-  endDate         DateTime?        @db.Date
-  startTime       String?          // HH:mm para SALIDA_TEMPRANA/LLEGADA_TARDE
-  endTime         String?          // HH:mm para SALIDA_TEMPRANA/LLEGADA_TARDE
-  reason          String
-  attachmentUrl   String?          // Soporte adjunto (key de R2)
-  status          StaffLeaveStatus @default(PENDING)
-  reviewedById    String?
-  reviewedAt      DateTime?
-  reviewerNote    String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id            String           @id @default(cuid())
+  institutionId String
+  requesterId   String
+  type          StaffLeaveType
+  startDate     DateTime         @db.Date
+  endDate       DateTime?        @db.Date
+  startTime     String? // HH:mm para SALIDA_TEMPRANA/LLEGADA_TARDE
+  endTime       String? // HH:mm para SALIDA_TEMPRANA/LLEGADA_TARDE
+  reason        String
+  attachmentUrl String? // Soporte adjunto (key de R2)
+  status        StaffLeaveStatus @default(PENDING)
+  reviewedById  String?
+  reviewedAt    DateTime?
+  reviewerNote  String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   institution Institution @relation("RlsInstitutionSLR", fields: [institutionId], references: [id])
   requester   User        @relation("LeaveRequester", fields: [requesterId], references: [id], onDelete: Restrict)
@@ -6143,10 +6181,10 @@ model StaffLeaveRequest {
 // ═══════════════════════════════════════════════════════════════════════════
 
 enum LessonSlideType {
-  CONTENT        // Texto rico + multimedia
-  ACTIVITY       // Mini-quiz embebido
-  CHECKPOINT     // Marcador de progreso seguro
-  BADGE_REVEAL   // Último slide: insignia + celebración
+  CONTENT // Texto rico + multimedia
+  ACTIVITY // Mini-quiz embebido
+  CHECKPOINT // Marcador de progreso seguro
+  BADGE_REVEAL // Último slide: insignia + celebración
 }
 
 enum LessonProgressStatus {
@@ -6158,24 +6196,24 @@ enum LessonProgressStatus {
 // Modo de reproducción de Lección
 enum LessonPlayMode {
   SCORM // Auto-avance, cada estudiante a su ritmo (actual)
-  LIVE  // Presentación sincronizada estilo Nearpod (Edusyn Play)
+  LIVE // Presentación sincronizada estilo Nearpod (Edusyn Play)
 }
 
 model Lesson {
-  id          String   @id @default(cuid())
-  activityId  String   @unique  // 1:1 con ClassroomActivity tipo LESSON
-  title       String
-  description String?  @db.Text
-  coverImage  String?
-  badgeEmoji  String?  @default("🏆")
-  badgeTitle  String?  @default("Lección completada")
-  badgeColor  String?  @default("#8B5CF6")
+  id               String         @id @default(cuid())
+  activityId       String         @unique // 1:1 con ClassroomActivity tipo LESSON
+  title            String
+  description      String?        @db.Text
+  coverImage       String?
+  badgeEmoji       String?        @default("🏆")
+  badgeTitle       String?        @default("Lección completada")
+  badgeColor       String?        @default("#8B5CF6")
   estimatedMinutes Int? // Tiempo estimado de la lección
-  playMode    LessonPlayMode @default(SCORM) // SCORM auto-avance o LIVE sincronizada
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  playMode         LessonPlayMode @default(SCORM) // SCORM auto-avance o LIVE sincronizada
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
-  activity     ClassroomActivity    @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  activity     ClassroomActivity   @relation(fields: [activityId], references: [id], onDelete: Cascade)
   slides       LessonSlide[]
   progress     LessonProgress[]
   liveSessions LiveLessonSession[]
@@ -6184,29 +6222,29 @@ model Lesson {
 }
 
 model LessonSlide {
-  id           String          @id @default(cuid())
-  lessonId     String
-  type         LessonSlideType
-  sortOrder    Int             @default(0)
+  id        String          @id @default(cuid())
+  lessonId  String
+  type      LessonSlideType
+  sortOrder Int             @default(0)
 
   // CONTENT slide data
-  title        String?
-  body         String?         @db.Text   // HTML rico
-  imageUrl     String?
-  videoUrl     String?
-  audioUrl     String?
-  layout       String?         @default("text-left-image-right") // layout hint
+  title    String?
+  body     String? @db.Text // HTML rico
+  imageUrl String?
+  videoUrl String?
+  audioUrl String?
+  layout   String? @default("text-left-image-right") // layout hint
 
   // ACTIVITY slide data (JSON con pregunta embebida)
   activityData Json?
   // { questionType, question, options[], correctAnswer, explanation, points, hint }
 
   // BADGE_REVEAL data
-  badgeEmoji   String?
-  badgeTitle   String?
+  badgeEmoji String?
+  badgeTitle String?
 
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
@@ -6220,8 +6258,8 @@ model LessonProgress {
   studentEnrollmentId String
   status              LessonProgressStatus @default(NOT_STARTED)
   currentSlideIndex   Int                  @default(0)
-  completedSlides     Json?                // Array de slide IDs completados
-  answers             Json?                // { slideId: { answer, isCorrect, points } }
+  completedSlides     Json? // Array de slide IDs completados
+  answers             Json? // { slideId: { answer, isCorrect, points } }
   score               Decimal              @default(0) @db.Decimal(7, 2)
   maxScore            Decimal              @default(0) @db.Decimal(7, 2)
   badgeEarned         Boolean              @default(false)
@@ -6241,40 +6279,228 @@ model LessonProgress {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// GAMIFICACIÓN — Identidad de Aprendizaje (LearningIdentity)
+// Capa transversal y agnóstica de materia. XP por DOMINIO (no por clics):
+// se gana al demostrar aprendizaje (completar lección, acertar checkpoint…),
+// nunca por avanzar. Anclada en Student para persistir entre años/matrículas
+// (portafolio longitudinal). Progreso privado por defecto.
+// docs/PROPUESTA_UNIFICADA_RUTAS_BILINGUE.md §13 (Paso 1)
+// ═══════════════════════════════════════════════════════════════════════════
+
+model LearningIdentity {
+  id               String    @id @default(cuid())
+  institutionId    String
+  studentId        String    @unique
+  totalXp          Int       @default(0)
+  level            Int       @default(1)
+  currentStreak    Int       @default(0) // días consecutivos con actividad
+  longestStreak    Int       @default(0)
+  lastActivityDate DateTime? // fecha (día) de la última actividad, para la racha
+  skillXp          Json? // XP agregado por habilidad/materia: { "Matemáticas": 120 }
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  institution Institution          @relation("RlsInstitutionLI", fields: [institutionId], references: [id])
+  student     Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  xpEvents    XpEvent[]
+  badgeAwards LearningBadgeAward[]
+
+  @@index([institutionId])
+  @@index([studentId])
+}
+
+// Ledger append-only de concesiones de XP. Idempotente por idempotencyKey
+// (ej. "lesson:<lessonId>:complete:<enrollmentId>") para no conceder dos veces.
+model XpEvent {
+  id                  String   @id @default(cuid())
+  institutionId       String
+  identityId          String
+  studentId           String
+  studentEnrollmentId String? // contexto de la matrícula donde ocurrió (opcional)
+  source              XpSource
+  skill               String? // materia/habilidad; CEFR en el futuro (Paso 2)
+  amount              Int
+  reason              String? // texto legible: "Lección completada: El ciclo del agua"
+  idempotencyKey      String   @unique
+  createdAt           DateTime @default(now())
+
+  institution Institution      @relation("RlsInstitutionXPE", fields: [institutionId], references: [id])
+  identity    LearningIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId, createdAt])
+  @@index([identityId])
+  @@index([studentId])
+}
+
+enum XpSource {
+  LESSON_COMPLETE // completar una lección
+  LESSON_ACTIVITY // acertar una actividad/checkpoint dentro de una lección
+  QUIZ_GRADED // quiz calificado
+  PLAY // EdusynPlay
+  MANUAL // ajuste manual del docente
+  ABP // aporte/avance en una Expedición ABP
+}
+
+// Insignia ganada por un estudiante. El catálogo de insignias vive en código
+// (badge-catalog.ts) — aquí solo se registra qué código ganó y cuándo. Progreso
+// privado (nunca ranking público). Permanente: una vez ganada, no se pierde.
+model LearningBadgeAward {
+  id            String   @id @default(cuid())
+  institutionId String
+  identityId    String
+  studentId     String
+  badgeCode     String // referencia al catálogo estático de insignias
+  earnedAt      DateTime @default(now())
+
+  institution Institution      @relation("RlsInstitutionLBA", fields: [institutionId], references: [id])
+  identity    LearningIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, badgeCode]) // idempotente: una insignia por estudiante
+  @@index([institutionId])
+  @@index([identityId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GRAFO DE COMPETENCIAS — columna vertebral del aprendizaje (Paso 2)
+// Referencia GLOBAL y canónica (no tenant-scoped): el CEFR es el mismo para
+// todas las instituciones. Diseño agnóstico de framework para soportar CEFR
+// hoy y DBA/Saber (MEN) mañana. Resuelve el cold-start del grafo: viene
+// pre-cargado, el docente no lo construye.
+// docs/PROPUESTA_UNIFICADA_RUTAS_BILINGUE.md §1 y §13 (Paso 2)
+// ═══════════════════════════════════════════════════════════════════════════
+
+model Competency {
+  id        String   @id @default(cuid())
+  framework String // "CEFR" (futuro: "DBA", "SABER")
+  level     String? // CEFR: "A1".."C2"
+  skill     String? // CEFR: "READING"|"LISTENING"|"SPEAKING"|"WRITING"
+  code      String   @unique // ej. "CEFR.A2.SPEAKING.01"
+  statement String   @db.Text // can-do statement ("Puedo describir a mi familia…")
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Rutas/pasos que apuntan a esta competencia (grafo → aprendizaje)
+  targetedByRoutes LearningRoute[]      @relation("RouteTargetCompetency")
+  routeSteps       LearningRouteStep[]  @relation("StepCompetency")
+  evidence         CompetencyEvidence[] @relation("CompetencyEvidence")
+
+  @@index([framework, level, skill])
+  @@index([framework])
+}
+
+// Evidencia de que un estudiante demostró (parcial o totalmente) un can-do.
+// El corazón de la tesis "todo genera evidencia": cada trabajo enganchado a una
+// competencia produce una fila aquí; el dominio (%) se deriva de la evidencia
+// acumulada. Tenant-scoped (RLS). docs/PROPUESTA_UNIFICADA_RUTAS_BILINGUE.md §4
+model CompetencyEvidence {
+  id                  String   @id @default(cuid())
+  institutionId       String
+  studentId           String
+  studentEnrollmentId String?
+  competencyId        String
+  source              String // "QUIZ" | "LESSON" | "ACTIVITY" | "WRITING" | "MANUAL"
+  sourceRef           String? // id de la actividad/entrega que la produjo
+  routeStepId         String? // paso de ruta que la originó (si aplica)
+  score               Int // 0-100: qué tan bien demostrada
+  idempotencyKey      String   @unique
+  createdAt           DateTime @default(now())
+
+  institution Institution @relation("RlsInstitutionCEV", fields: [institutionId], references: [id])
+  competency  Competency  @relation("CompetencyEvidence", fields: [competencyId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([studentId, competencyId])
+  @@index([competencyId])
+  @@index([routeStepId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RUTAS DE APRENDIZAJE (Learning Journeys) — Paso 2, increment 2
+// La unidad de trabajo deja de ser la actividad suelta: es una RUTA de pasos
+// que converge en una competencia. Cada paso ES una ClassroomActivity existente.
+// Tenant-scoped (vive en un aula). docs/PROPUESTA_UNIFICADA_RUTAS_BILINGUE.md §2
+// ═══════════════════════════════════════════════════════════════════════════
+
+model LearningRoute {
+  id                 String   @id @default(cuid())
+  institutionId      String
+  classroomId        String
+  title              String
+  description        String?  @db.Text
+  targetCompetencyId String? // competencia CEFR objetivo (grafo global)
+  targetLevel        String? // "A2" (denormalizado para mostrar)
+  isPublished        Boolean  @default(false)
+  sortOrder          Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  institution      Institution         @relation("RlsInstitutionLR", fields: [institutionId], references: [id])
+  classroom        Classroom           @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  targetCompetency Competency?         @relation("RouteTargetCompetency", fields: [targetCompetencyId], references: [id], onDelete: SetNull)
+  steps            LearningRouteStep[]
+
+  @@index([institutionId])
+  @@index([classroomId])
+}
+
+model LearningRouteStep {
+  id            String   @id @default(cuid())
+  institutionId String
+  routeId       String
+  activityId    String? // el paso ES una actividad (ClassroomActivity)
+  competencyId  String? // competencia a la que contribuye este paso
+  title         String
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution Institution        @relation("RlsInstitutionLRS", fields: [institutionId], references: [id])
+  route       LearningRoute      @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  activity    ClassroomActivity? @relation("ActivityRouteSteps", fields: [activityId], references: [id], onDelete: SetNull)
+  competency  Competency?        @relation("StepCompetency", fields: [competencyId], references: [id], onDelete: SetNull)
+
+  @@index([institutionId])
+  @@index([routeId])
+  @@index([activityId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // EDUSYN PLAY — Invitados, Lecciones Live, Reacciones y Conversión a nota
 // ═══════════════════════════════════════════════════════════════════════════
 
 // Invitado (sin cuenta) que entró a una LiveSession (quiz) o LiveLessonSession vía código
 model LiveSessionGuest {
-  id              String        @id @default(cuid())
-  sessionId       String        // Polimórfico: LiveSession.id o LiveLessonSession.id (sin FK para permitir ambos)
-  sessionKind     String        @default("QUIZ")  // QUIZ | LESSON
+  id          String @id @default(cuid())
+  sessionId   String // Polimórfico: LiveSession.id o LiveLessonSession.id (sin FK para permitir ambos)
+  sessionKind String @default("QUIZ") // QUIZ | LESSON
 
-  nickname        String
-  avatarEmoji     String?       // 🦊 🐼 🐧 🦄 🐵 🐙 🦁 🐯
-  guestToken      String        @unique
+  nickname    String
+  avatarEmoji String? // 🦊 🐼 🐧 🦄 🐵 🐙 🦁 🐯
+  guestToken  String  @unique
 
   // Antiabuso (hashes, nunca IP cruda)
-  ipHash          String?
-  userAgent       String?       @db.Text
-  fingerprint     String?
+  ipHash      String?
+  userAgent   String? @db.Text
+  fingerprint String?
 
-  score           Int           @default(0)
-  correctAnswers  Int           @default(0)
-  totalAnswers    Int           @default(0)
-  finalRank       Int?
-  percent         Float?        // % final de aciertos
+  score          Int    @default(0)
+  correctAnswers Int    @default(0)
+  totalAnswers   Int    @default(0)
+  finalRank      Int?
+  percent        Float? // % final de aciertos
 
-  joinedAt        DateTime      @default(now())
-  lastSeenAt      DateTime      @default(now())
-  finishedAt      DateTime?
+  joinedAt   DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  finishedAt DateTime?
 
   // Fase 2: reclamar resultado (vincular a cuenta real al loguearse)
   claimedByUserId String?
   claimedAt       DateTime?
 
-  answers         LiveSessionGuestAnswer[]
-  reactions       LiveSessionReaction[]
+  answers   LiveSessionGuestAnswer[]
+  reactions LiveSessionReaction[]
 
   @@unique([sessionId, nickname])
   @@index([sessionId])
@@ -6282,18 +6508,18 @@ model LiveSessionGuest {
 }
 
 model LiveSessionGuestAnswer {
-  id              String            @id @default(cuid())
-  guestId         String
-  guest           LiveSessionGuest  @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  id      String           @id @default(cuid())
+  guestId String
+  guest   LiveSessionGuest @relation(fields: [guestId], references: [id], onDelete: Cascade)
 
-  questionId      String?           // FK lógica a ActivityQuestion (sin constraint para soportar slides)
-  slideId         String?           // FK lógica a LessonSlide
-  selectedOption  String?
-  answerText      String?           @db.Text
-  isCorrect       Boolean           @default(false)
-  pointsAwarded   Int               @default(0)
-  timeTakenMs     Int?
-  answeredAt      DateTime          @default(now())
+  questionId     String? // FK lógica a ActivityQuestion (sin constraint para soportar slides)
+  slideId        String? // FK lógica a LessonSlide
+  selectedOption String?
+  answerText     String?  @db.Text
+  isCorrect      Boolean  @default(false)
+  pointsAwarded  Int      @default(0)
+  timeTakenMs    Int?
+  answeredAt     DateTime @default(now())
 
   @@index([guestId])
   @@index([questionId])
@@ -6302,24 +6528,24 @@ model LiveSessionGuestAnswer {
 
 // Sesión de Lección Live (estilo Nearpod/Pear Deck) — presentación sincronizada
 model LiveLessonSession {
-  id                String        @id @default(cuid())
-  lessonId          String
-  activityId        String
-  classroomId       String
-  teacherId         String
+  id          String @id @default(cuid())
+  lessonId    String
+  activityId  String
+  classroomId String
+  teacherId   String
 
-  joinCode          String        @unique
-  guestMode         GuestMode     @default(GUESTS_ONLY)
-  currentSlideIndex Int           @default(0)
-  status            String        @default("LOBBY")  // LOBBY | RUNNING | PAUSED | FINISHED
+  joinCode          String    @unique
+  guestMode         GuestMode @default(GUESTS_ONLY)
+  currentSlideIndex Int       @default(0)
+  status            String    @default("LOBBY") // LOBBY | RUNNING | PAUSED | FINISHED
   publicUrl         String?
-  guestsCount       Int           @default(0)
+  guestsCount       Int       @default(0)
 
-  startedAt         DateTime?
-  endedAt           DateTime?
-  createdAt         DateTime      @default(now())
+  startedAt DateTime?
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
 
-  lesson            Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@index([joinCode])
   @@index([activityId])
@@ -6329,13 +6555,13 @@ model LiveLessonSession {
 
 // Reacciones en vivo (💡 🤔 ❤ 👏) durante una Lección Live
 model LiveSessionReaction {
-  id              String              @id @default(cuid())
-  sessionId       String              // LiveSession.id o LiveLessonSession.id
-  slideIndex      Int?
-  guestId         String?
-  guest           LiveSessionGuest?   @relation(fields: [guestId], references: [id], onDelete: SetNull)
-  emoji           String              // 💡 🤔 ❤ 👏
-  createdAt       DateTime            @default(now())
+  id         String            @id @default(cuid())
+  sessionId  String // LiveSession.id o LiveLessonSession.id
+  slideIndex Int?
+  guestId    String?
+  guest      LiveSessionGuest? @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  emoji      String // 💡 🤔 ❤ 👏
+  createdAt  DateTime          @default(now())
 
   @@index([sessionId, slideIndex])
   @@index([guestId])
@@ -6343,16 +6569,386 @@ model LiveSessionReaction {
 
 // Histórico de conversiones a nota (para que el docente pueda reimprimir la planilla)
 model GuestGradeConversion {
-  id              String        @id @default(cuid())
-  sessionId       String        // LiveSession.id o LiveLessonSession.id
+  id              String   @id @default(cuid())
+  sessionId       String // LiveSession.id o LiveLessonSession.id
   createdByUserId String
-  maxScore        Float         @default(5)
-  minScore        Float         @default(1)
-  passingScore    Float         @default(3)
-  method          String        @default("PROPORTIONAL")
-  payload         Json          // Snapshot de nicknames + notas calculadas
-  createdAt       DateTime      @default(now())
+  maxScore        Float    @default(5)
+  minScore        Float    @default(1)
+  passingScore    Float    @default(3)
+  method          String   @default("PROPORTIONAL")
+  payload         Json // Snapshot de nicknames + notas calculadas
+  createdAt       DateTime @default(now())
 
   @@index([sessionId])
   @@index([createdByUserId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXPEDICIÓN ABP — Aprendizaje Basado en Proyectos gamificado por equipos.
+// Cada equipo avanza independiente por 6 fases con gating + validación docente.
+// Multi-tenant: TODA tabla lleva institutionId (policy RLS por tabla).
+// ═══════════════════════════════════════════════════════════════════════════
+enum AbpProjectStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum AbpPhaseStatus {
+  LOCKED
+  IN_PROGRESS
+  AWAITING
+  VALIDATED
+  RETURNED
+}
+
+enum AbpValidationStatus {
+  PENDING
+  APPROVED
+  RETURNED
+}
+
+enum AbpContributionType {
+  CANVAS_CARD
+  IDEA
+  VOTE
+  TASK_DONE
+  EVIDENCE
+  COEVAL
+}
+
+enum AbpResourceType {
+  PDF
+  VIDEO
+  LINK
+  DOC
+  OTHER
+}
+
+model AbpProject {
+  id            String           @id @default(cuid())
+  institutionId String
+  classroomId   String
+  title         String
+  challenge     String?          @db.Text // reto general del proyecto
+  presentation  Json? // portada Nivel 1: banner/video/mensaje/contexto/why/skills/rules/timeline
+  status        AbpProjectStatus @default(ACTIVE)
+  phaseConfig   Json? // mínimos por fase; defaults sensatos en código si null
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  institution   Institution       @relation("RlsInstitutionABPP", fields: [institutionId], references: [id])
+  classroom     Classroom         @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  teams         AbpTeam[]
+  resources     AbpResource[]
+  announcements AbpAnnouncement[]
+
+  @@index([institutionId])
+  @@index([classroomId])
+}
+
+// Recursos generales del proyecto (Nivel 1): PDFs, videos, enlaces, tutoriales.
+model AbpResource {
+  id            String          @id @default(cuid())
+  institutionId String
+  projectId     String
+  type          AbpResourceType @default(LINK)
+  title         String
+  url           String          @db.Text
+  description   String?         @db.Text
+  sortOrder     Int             @default(0)
+  createdAt     DateTime        @default(now())
+
+  institution Institution @relation("RlsInstitutionABPR", fields: [institutionId], references: [id])
+  project     AbpProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([projectId])
+}
+
+// Anuncios del proyecto (Nivel 1): mensajes del docente que no se pierden en el foro.
+model AbpAnnouncement {
+  id            String   @id @default(cuid())
+  institutionId String
+  projectId     String
+  content       String   @db.Text
+  pinned        Boolean  @default(false)
+  authorUserId  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution Institution @relation("RlsInstitutionABPAN", fields: [institutionId], references: [id])
+  project     AbpProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([projectId])
+}
+
+model AbpTeam {
+  id            String   @id @default(cuid())
+  institutionId String
+  projectId     String
+  name          String
+  emoji         String   @default("🚀")
+  color         String   @default("#0E4A5A")
+  currentPhase  Int      @default(1) // 1–6
+  xp            Int      @default(0) // XP de equipo (barra denormalizada)
+  problem       String?  @db.Text // el reto propio del equipo
+  badges        String[] @default([]) // insignias de equipo (códigos)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution   Institution            @relation("RlsInstitutionABPT", fields: [institutionId], references: [id])
+  project       AbpProject             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  members       AbpTeamMember[]
+  phaseStates   AbpPhaseState[]
+  validations   AbpValidationRequest[]
+  contributions AbpContribution[]
+  comments      AbpComment[]
+  discoveries   AbpDiscovery[]
+  logEntries    AbpLogEntry[]
+
+  @@index([institutionId])
+  @@index([projectId])
+}
+
+model AbpTeamMember {
+  id                  String   @id @default(cuid())
+  institutionId       String
+  teamId              String
+  studentEnrollmentId String
+  createdAt           DateTime @default(now())
+
+  institution       Institution       @relation("RlsInstitutionABPM", fields: [institutionId], references: [id])
+  team              AbpTeam           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, studentEnrollmentId])
+  @@index([institutionId])
+  @@index([studentEnrollmentId])
+}
+
+model AbpPhaseState {
+  id            String         @id @default(cuid())
+  institutionId String
+  teamId        String
+  phase         Int // 1–6
+  status        AbpPhaseStatus @default(LOCKED)
+  data          Json? // datos de la fase (canvas/ideas/smart/kanban/evidencias/coeval)
+  feedback      String?        @db.Text // feedback del docente al devolver
+  startedAt     DateTime? // al entrar a IN_PROGRESS
+  submittedAt   DateTime? // al solicitar validación (AWAITING)
+  validatedAt   DateTime? // al aprobar (VALIDATED)
+  updatedAt     DateTime       @updatedAt
+
+  institution Institution  @relation("RlsInstitutionABPS", fields: [institutionId], references: [id])
+  team        AbpTeam      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  comments    AbpComment[]
+  missions    AbpMission[]
+
+  @@unique([teamId, phase])
+  @@index([institutionId])
+  @@index([teamId])
+}
+
+model AbpValidationRequest {
+  id            String              @id @default(cuid())
+  institutionId String
+  teamId        String
+  phase         Int
+  status        AbpValidationStatus @default(PENDING)
+  note          String?             @db.Text // nota del equipo al solicitar
+  feedback      String?             @db.Text // feedback del docente al devolver
+  rubricScores  Json? // { "0": 1-4, ... } por criterio de la fase (obligatoria al aprobar, en el servicio)
+  rubricComment String?             @db.Text // comentario global de la valoración (opcional)
+  createdAt     DateTime            @default(now())
+  resolvedAt    DateTime?
+
+  institution Institution @relation("RlsInstitutionABPV", fields: [institutionId], references: [id])
+  team        AbpTeam     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([teamId])
+  @@index([status])
+}
+
+model AbpContribution {
+  id                  String              @id @default(cuid())
+  institutionId       String
+  teamId              String
+  studentEnrollmentId String
+  phase               Int
+  type                AbpContributionType
+  refId               String? // id lógico del objeto (idea, tarea, tarjeta, evidencia)
+  detail              String? // texto legible ("votó: sensor de fugas")
+  createdAt           DateTime            @default(now())
+
+  institution       Institution       @relation("RlsInstitutionABPC", fields: [institutionId], references: [id])
+  team              AbpTeam           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentEnrollmentId, type, refId]) // idempotencia: 1 voto por idea, 1 tarjeta, etc.
+  @@index([institutionId])
+  @@index([teamId, phase])
+  @@index([studentEnrollmentId])
+  @@index([type])
+}
+
+// Comentarios en línea (docente ↔ equipo) sobre cualquier objeto de una fase.
+enum AbpCommentRefType {
+  CANVAS_CARD
+  IDEA
+  TASK
+  EVIDENCE
+  COEVAL
+  PHASE
+}
+
+model AbpComment {
+  id                        String            @id @default(cuid())
+  institutionId             String
+  teamId                    String
+  phaseStateId              String
+  refType                   AbpCommentRefType
+  refId                     String? // id del objeto comentado; null si refType=PHASE
+  authorStudentEnrollmentId String? // autor estudiante (cruza con AbpContribution)
+  authorUserId              String? // autor docente
+  authorName                String // denormalizado para pintar sin join
+  authorRole                String // 'DOCENTE' | 'ESTUDIANTE'
+  content                   String            @db.Text
+  resolved                  Boolean           @default(false)
+  parentId                  String? // respuesta a otro comentario (hilo)
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+
+  institution      Institution        @relation("RlsInstitutionABPCM", fields: [institutionId], references: [id])
+  team             AbpTeam            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  phaseState       AbpPhaseState      @relation(fields: [phaseStateId], references: [id], onDelete: Cascade)
+  authorEnrollment StudentEnrollment? @relation(fields: [authorStudentEnrollmentId], references: [id], onDelete: SetNull)
+  parent           AbpComment?        @relation("AbpCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies          AbpComment[]       @relation("AbpCommentReplies")
+
+  @@index([institutionId])
+  @@index([teamId])
+  @@index([phaseStateId, resolved, createdAt])
+  @@index([refType, refId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXPEDICIÓN ABP V1 — Misiones (trabajo real dentro de las fases-hito),
+// Actividades, Descubrimientos y Bitácora. Las fases son hitos; el trabajo vive
+// en misiones (por equipo × fase). La herramienta de cada fase = misión por defecto.
+// ═══════════════════════════════════════════════════════════════════════════
+enum AbpMissionStatus {
+  LOCKED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum AbpGeneratedBy {
+  MANUAL
+  TEMPLATE
+  AI
+}
+
+enum AbpMissionActivityType {
+  READING
+  VIDEO
+  QUIZ
+  INTERVIEW
+  UPLOAD
+  LINK
+  CUSTOM
+}
+
+enum AbpImpact {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model AbpMission {
+  id                String           @id @default(cuid())
+  institutionId     String
+  phaseStateId      String
+  title             String
+  description       String?          @db.Text
+  sortOrder         Int              @default(0)
+  status            AbpMissionStatus @default(IN_PROGRESS)
+  required          Boolean          @default(true) // gating: obligatoria para validar la fase
+  xp                Int              @default(0)
+  generatedBy       AbpGeneratedBy   @default(MANUAL) // preparación Valeria V2
+  generationContext Json? // contexto que usó la IA (problemática, DBA, competencias) — V2
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  institution Institution          @relation("RlsInstitutionABPMI", fields: [institutionId], references: [id])
+  phaseState  AbpPhaseState        @relation(fields: [phaseStateId], references: [id], onDelete: Cascade)
+  activities  AbpMissionActivity[]
+
+  @@index([institutionId])
+  @@index([phaseStateId, sortOrder])
+}
+
+model AbpMissionActivity {
+  id                      String                 @id @default(cuid())
+  institutionId           String
+  missionId               String
+  type                    AbpMissionActivityType
+  title                   String
+  content                 Json? // config por tipo (url, texto, quizId, instrucciones…)
+  sortOrder               Int                    @default(0)
+  completed               Boolean                @default(false)
+  completedByEnrollmentId String? // quién la completó (participación)
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+
+  institution Institution        @relation("RlsInstitutionABPMA", fields: [institutionId], references: [id])
+  mission     AbpMission         @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  completedBy StudentEnrollment? @relation("AbpActivityCompletedBy", fields: [completedByEnrollmentId], references: [id], onDelete: SetNull)
+
+  @@index([institutionId])
+  @@index([missionId, sortOrder])
+}
+
+model AbpDiscovery {
+  id                        String    @id @default(cuid())
+  institutionId             String
+  teamId                    String
+  phase                     Int // fase donde ocurrió
+  authorStudentEnrollmentId String?
+  authorName                String
+  title                     String
+  description               String    @db.Text
+  evidenceKind              String? // 'LINK' | 'FILE'
+  evidenceUrl               String?
+  impact                    AbpImpact @default(MEDIUM)
+  createdAt                 DateTime  @default(now())
+
+  institution      Institution        @relation("RlsInstitutionABPD", fields: [institutionId], references: [id])
+  team             AbpTeam            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  authorEnrollment StudentEnrollment? @relation("AbpDiscoveryAuthor", fields: [authorStudentEnrollmentId], references: [id], onDelete: SetNull)
+
+  @@index([institutionId])
+  @@index([teamId, phase])
+}
+
+model AbpLogEntry {
+  id                        String   @id @default(cuid())
+  institutionId             String
+  teamId                    String
+  phase                     Int?
+  authorStudentEnrollmentId String?
+  authorName                String
+  content                   String   @db.Text
+  createdAt                 DateTime @default(now())
+
+  institution      Institution        @relation("RlsInstitutionABPL", fields: [institutionId], references: [id])
+  team             AbpTeam            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  authorEnrollment StudentEnrollment? @relation("AbpLogAuthor", fields: [authorStudentEnrollmentId], references: [id], onDelete: SetNull)
+
+  @@index([institutionId])
+  @@index([teamId])
 }

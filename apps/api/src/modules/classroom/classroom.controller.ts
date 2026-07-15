@@ -217,6 +217,7 @@ export class ClassroomController {
     attachmentUrl?: string;
     attachmentName?: string;
     rubricId?: string;
+    gameType?: string;
   }) {
     const { userId } = await this.resolveCtx(req);
     return this.service.createActivity(classroomId, userId, body);
@@ -989,10 +990,15 @@ export class ClassroomController {
     return this.lessonService.getAllProgress(lessonId);
   }
 
-  // AI: generate lesson structure from text
+  // AI: generate lesson structure from text (usa el LLM real; cae a plantilla si no hay IA)
   @Post('lessons/generate-ai')
   @Roles('DOCENTE', 'COORDINADOR')
-  async generateLessonAI(@Body() body: { topic: string; content: string; gradeName?: string }) {
-    return this.lessonService.generateLessonStructure(body.topic, body.content, body.gradeName);
+  async generateLessonAI(@Body() body: { topic: string; content?: string; gradeName?: string; subjectName?: string }) {
+    return this.lessonService.generateLesson({
+      topic: body.topic,
+      content: body.content,
+      gradeName: body.gradeName,
+      subjectName: body.subjectName,
+    });
   }
 }

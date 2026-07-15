@@ -14,6 +14,10 @@ import {
   ApdAiTeacherQuestionRequest,
   ApdAiTeacherQuestionResponse,
   ApdAiQuestionDraft,
+  ApdAiLessonDraft,
+  ApdAiLessonSlideDraft,
+  ApdAiRoutePlan,
+  ApdAiRouteSkill,
   ApdAiServiceConfig,
 } from './apd-ai.interfaces';
 
@@ -83,15 +87,20 @@ export class ApdAiService implements IApdAiService {
   }
 
   // Modelos de OpenRouter en orden de prioridad para cascada de reintentos.
-  // Si un modelo ya no existe / dejó de ser gratis (404), se cae al siguiente.
+  // Si un modelo ya no existe / dejó de ser gratis (404) o está saturado (429),
+  // se cae al siguiente. TODOS deben ser slugs ":free" vigentes (verificado contra
+  // https://openrouter.ai/api/v1/models) — un slug muerto desperdicia una llamada
+  // y encarece la latencia. Solo modelos "instruct/it" (no "reasoning/thinking",
+  // que rompen el JSON-only). Revisar esta lista cada pocos meses.
+  // Última verificación: 2026-07.
   private static readonly OPENROUTER_MODEL_CASCADE = [
-    'meta-llama/llama-3.3-70b-instruct:free',
-    'z-ai/glm-4.5-air:free',
-    'deepseek/deepseek-chat-v3-0324:free',
-    'qwen/qwen-2.5-72b-instruct:free',
-    'nvidia/nemotron-nano-9b-v2:free',
+    'meta-llama/llama-3.3-70b-instruct:free', // fuerte; a veces 429 transitorio → cae rápido al siguiente
+    'openai/gpt-oss-120b:free',
+    'qwen/qwen3-next-80b-a3b-instruct:free',
     'openai/gpt-oss-20b:free',
-    'mistralai/mistral-7b-instruct:free',
+    'google/gemma-4-31b-it:free',
+    'nvidia/nemotron-nano-9b-v2:free', // verificado funcionando; fallback rápido
+    'meta-llama/llama-3.2-3b-instruct:free', // último recurso, ligero
   ];
 
   private getDefaultModel(provider: string): string {
@@ -1607,6 +1616,357 @@ export class ApdAiService implements IApdAiService {
    * - NO hace fallback silencioso: si falla, lanza Error para que el caller decida.
    * - Valida estructura básica antes de retornar.
    */
+  /**
+   * Genera la estructura de una Lección Interactiva viva usando el LLM real (Valeria),
+   * a partir de un tema y/o material del docente. Reemplaza al generador de plantilla
+   * de LessonService (que queda como fallback cuando la IA no está habilitada).
+   *
+   * Produce una secuencia pedagógica: introducción → contenido intercalado con preguntas
+   * embebidas (con opciones reales, respuesta y explicación) → checkpoints → insignia final.
+   * Nunca puntúa notas críticas: el grading de las respuestas lo hace LessonService.
+   */
+  async generateLessonSlides(params: {
+    topic: string;
+    content?: string;
+    gradeName?: string;
+    subjectName?: string;
+    language?: string;
+  }): Promise<ApdAiLessonDraft> {
+    if (!this.isEnabled()) {
+      throw new Error('La generación con IA no está habilitada (APD_AI_API_KEY ausente).');
+    }
+    const topic = (params.topic || '').trim();
+    const content = (params.content || '').trim();
+    if (!topic && !content) throw new Error('Tema o contenido requerido');
+    const lang = params.language || 'español';
+
+    const systemInstruction = [
+      'Eres Valeria, diseñadora pedagógica experta del sistema educativo colombiano (MEN).',
+      `Diseñas Lecciones Interactivas vivas (estilo Nearpod/Brilliant) en ${lang}, para consumo autónomo del estudiante.`,
+      'Responde EXCLUSIVAMENTE con un JSON válido, sin texto adicional, sin markdown, sin backticks.',
+      '',
+      'Principios de diseño de la lección:',
+      '- Bloques cortos: cada slide CONTENT explica UNA idea, en 2-4 frases, lenguaje claro y cercano al nivel del estudiante.',
+      '- Interacción frecuente: inserta una slide ACTIVITY (pregunta embebida) cada 1-2 slides de contenido.',
+      '- Las preguntas evalúan comprensión real, no memoria trivial. Distractores plausibles del mismo dominio.',
+      '- Usa CHECKPOINT como pausa de consolidación tras cada bloque temático (2-3 en total).',
+      '- Termina SIEMPRE con una slide BADGE_REVEAL.',
+      '- NUNCA generes contenido genérico tipo "Opción A/B/C/D" ni "¿Qué aprendiste?". Todo debe ser específico y verificable.',
+      '- El body de CONTENT es HTML simple (usa <p>, <strong>, <ul><li>). Sin estilos inline ni scripts.',
+      '',
+      'Esquema JSON exacto a producir:',
+      '{',
+      '  "title": "Título atractivo de la lección",',
+      '  "description": "1 frase que resume qué aprenderá el estudiante",',
+      '  "slides": [',
+      '    { "type": "CONTENT", "title": "…", "body": "<p>…</p>" },',
+      '    { "type": "ACTIVITY", "title": "…", "activityData": {',
+      '        "questionType": "MULTIPLE_CHOICE" | "TRUE_FALSE",',
+      '        "question": "Enunciado específico",',
+      '        "options": ["…","…","…","…"],',
+      '        "correctAnswer": "Texto EXACTO de la opción correcta (o \\"Verdadero\\"/\\"Falso\\")",',
+      '        "explanation": "Por qué es correcta (1-2 frases)",',
+      '        "hint": "Pista breve sin revelar la respuesta",',
+      '        "points": 10 } },',
+      '    { "type": "CHECKPOINT", "title": "…" },',
+      '    { "type": "BADGE_REVEAL" }',
+      '  ]',
+      '}',
+      '',
+      'Genera entre 6 y 12 slides en total, con al menos 3 slides ACTIVITY.',
+      params.gradeName ? `Nivel educativo objetivo: ${params.gradeName}.` : '',
+      params.subjectName ? `Asignatura: ${params.subjectName}.` : '',
+    ].filter(Boolean).join('\n');
+
+    const materialBlock = content
+      ? `\n\nMaterial base del docente (fundamenta la lección en este contenido, no lo contradigas):\n"""\n${content.slice(0, 6000)}\n"""`
+      : '';
+    const userPrompt = `Tema de la lección: ${topic || '(deriva un título del material)'}\n\nDiseña la lección interactiva siguiendo el esquema JSON indicado.${materialBlock}`;
+
+    let raw: any;
+    try {
+      raw = await this.callLlmJson<{ title?: string; description?: string; slides?: any[] }>(
+        systemInstruction,
+        userPrompt,
+        8000,
+      );
+    } catch (err: any) {
+      this.logger.error(`generateLessonSlides LLM error (${this.config.provider}): ${err?.message || err}`);
+      throw new Error(`El proveedor de IA (${this.config.provider}) no respondió: ${err?.message || 'error desconocido'}`);
+    }
+
+    const rawSlides: any[] = Array.isArray(raw?.slides) ? raw.slides : [];
+    const slides: ApdAiLessonSlideDraft[] = [];
+    for (const s of rawSlides) {
+      const rawType = (typeof s?.type === 'string' ? s.type : '').toUpperCase();
+      if (rawType === 'CONTENT') {
+        const body = typeof s?.body === 'string' ? s.body.trim() : '';
+        if (!body) continue;
+        slides.push({ type: 'CONTENT', title: typeof s?.title === 'string' ? s.title.trim() : undefined, body });
+      } else if (rawType === 'ACTIVITY') {
+        const ad = s?.activityData || {};
+        const question = typeof ad?.question === 'string' ? ad.question.trim() : '';
+        if (!question) continue;
+        const qType = String(ad?.questionType || 'MULTIPLE_CHOICE').toUpperCase() === 'TRUE_FALSE'
+          ? 'TRUE_FALSE' : 'MULTIPLE_CHOICE';
+        const correct = typeof ad?.correctAnswer === 'string' ? ad.correctAnswer.trim() : '';
+        if (qType === 'TRUE_FALSE') {
+          const isTrue = correct.toLowerCase().startsWith('v') || correct.toLowerCase() === 'true';
+          slides.push({
+            type: 'ACTIVITY',
+            title: typeof s?.title === 'string' ? s.title.trim() : undefined,
+            activityData: {
+              questionType: 'TRUE_FALSE', question, options: ['Verdadero', 'Falso'],
+              correctAnswer: isTrue ? 'Verdadero' : 'Falso',
+              explanation: typeof ad?.explanation === 'string' ? ad.explanation.trim() : undefined,
+              hint: typeof ad?.hint === 'string' ? ad.hint.trim() : undefined,
+              points: Number.isFinite(ad?.points) ? ad.points : 10,
+            },
+          });
+        } else {
+          const options = Array.isArray(ad?.options)
+            ? ad.options.filter((o: any) => typeof o === 'string' && o.trim()).map((o: string) => o.trim()).slice(0, 6)
+            : [];
+          if (options.length < 2) continue;
+          slides.push({
+            type: 'ACTIVITY',
+            title: typeof s?.title === 'string' ? s.title.trim() : undefined,
+            activityData: {
+              questionType: 'MULTIPLE_CHOICE', question, options,
+              correctAnswer: correct && options.includes(correct) ? correct : options[0],
+              explanation: typeof ad?.explanation === 'string' ? ad.explanation.trim() : undefined,
+              hint: typeof ad?.hint === 'string' ? ad.hint.trim() : undefined,
+              points: Number.isFinite(ad?.points) ? ad.points : 10,
+            },
+          });
+        }
+      } else if (rawType === 'CHECKPOINT') {
+        slides.push({ type: 'CHECKPOINT', title: typeof s?.title === 'string' ? s.title.trim() : undefined });
+      } else if (rawType === 'BADGE_REVEAL') {
+        slides.push({ type: 'BADGE_REVEAL', badgeEmoji: typeof s?.badgeEmoji === 'string' ? s.badgeEmoji : undefined, badgeTitle: typeof s?.badgeTitle === 'string' ? s.badgeTitle : undefined });
+      }
+    }
+
+    // Garantías mínimas de estructura: al menos 1 contenido y cierre con insignia.
+    const hasContent = slides.some(s => s.type === 'CONTENT');
+    if (!hasContent) {
+      throw new Error('La IA respondió pero la lección no tenía contenido válido.');
+    }
+    if (!slides.some(s => s.type === 'BADGE_REVEAL')) {
+      slides.push({ type: 'BADGE_REVEAL' });
+    }
+
+    return {
+      title: (typeof raw?.title === 'string' && raw.title.trim()) || topic || 'Nueva lección',
+      description: (typeof raw?.description === 'string' && raw.description.trim())
+        || `Lección interactiva sobre ${topic || 'el tema'}`,
+      slides,
+    };
+  }
+
+  /**
+   * Valeria arma una Ruta de Aprendizaje bilingüe a partir de un objetivo del
+   * docente: propone título, nivel/habilidad CEFR objetivo y una secuencia de
+   * pasos por habilidad (Reading/Listening/Speaking/Writing). No inventa códigos
+   * de competencia: solo nivel+habilidad; el servicio los mapea al grafo CEFR.
+   */
+  async generateRoutePlan(params: {
+    objective: string;
+    gradeName?: string;
+    targetLevel?: string;
+  }): Promise<ApdAiRoutePlan> {
+    if (!this.isEnabled()) {
+      throw new Error('La generación con IA no está habilitada (APD_AI_API_KEY ausente).');
+    }
+    const objective = (params.objective || '').trim();
+    if (!objective) throw new Error('Objetivo requerido');
+    const SKILLS = ['READING', 'LISTENING', 'SPEAKING', 'WRITING'];
+
+    const systemInstruction = [
+      'Eres Valeria, diseñadora de currículo bilingüe (inglés) alineada al CEFR (MCER).',
+      'Diseñas una Ruta de Aprendizaje: una secuencia corta de pasos que converge en una competencia comunicativa.',
+      'Responde EXCLUSIVAMENTE con un JSON válido, sin texto adicional, sin markdown, sin backticks.',
+      '',
+      'Reglas:',
+      '- Se puntúa por INTELIGIBILIDAD y can-do, no por acento nativo.',
+      '- La ruta tiene entre 4 y 6 pasos, en orden pedagógico (normalmente input primero: Reading/Listening; luego producción: Speaking/Writing).',
+      `- Cada paso usa exactamente una habilidad: ${SKILLS.join(', ')}.`,
+      '- El nivel objetivo (targetLevel) es uno de: A1, A2, B1, B2.',
+      '- La habilidad objetivo (targetSkill) suele ser SPEAKING o WRITING (producción).',
+      '- Títulos de paso cortos y concretos en español (máx 6 palabras).',
+      '',
+      'Esquema JSON exacto:',
+      '{',
+      '  "title": "Título atractivo de la ruta (puede incluir inglés)",',
+      '  "description": "1 frase de qué logrará el estudiante",',
+      '  "targetLevel": "A2",',
+      '  "targetSkill": "SPEAKING",',
+      '  "steps": [ { "title": "Lectura · My Family", "skill": "READING" } ]',
+      '}',
+      params.gradeName ? `Nivel escolar: ${params.gradeName}.` : '',
+      params.targetLevel ? `Usa como nivel objetivo: ${params.targetLevel}.` : '',
+    ].filter(Boolean).join('\n');
+
+    const userPrompt = `Objetivo del docente: ${objective}\n\nDiseña la ruta siguiendo el esquema JSON.`;
+
+    let raw: any;
+    try {
+      raw = await this.callLlmJson<any>(systemInstruction, userPrompt, 3000);
+    } catch (err: any) {
+      this.logger.error(`generateRoutePlan LLM error (${this.config.provider}): ${err?.message || err}`);
+      throw new Error(`El proveedor de IA (${this.config.provider}) no respondió: ${err?.message || 'error desconocido'}`);
+    }
+
+    const norm = (s: any): ApdAiRouteSkill => {
+      const u = String(s || '').toUpperCase();
+      return (SKILLS.includes(u) ? u : 'READING') as ApdAiRouteSkill;
+    };
+    const level = ['A1', 'A2', 'B1', 'B2'].includes(String(raw?.targetLevel).toUpperCase())
+      ? String(raw.targetLevel).toUpperCase() : (params.targetLevel || 'A2');
+    const steps: ApdAiRoutePlan['steps'] = (Array.isArray(raw?.steps) ? raw.steps : [])
+      .map((s: any) => ({ title: String(s?.title || '').trim(), skill: norm(s?.skill) }))
+      .filter((s: any) => s.title)
+      .slice(0, 8);
+    if (!steps.length) throw new Error('La IA no propuso pasos válidos.');
+
+    return {
+      title: String(raw?.title || objective).trim(),
+      description: String(raw?.description || '').trim(),
+      targetLevel: level,
+      targetSkill: norm(raw?.targetSkill || 'SPEAKING'),
+      steps,
+    };
+  }
+
+  /** Normaliza el JSON de slides del LLM a un ApdAiLessonDraft válido (compartido). */
+  private parseLessonDraftPayload(raw: any, fallbackTitle: string, fallbackTopic: string): ApdAiLessonDraft {
+    const rawSlides: any[] = Array.isArray(raw?.slides) ? raw.slides : [];
+    const slides: ApdAiLessonSlideDraft[] = [];
+    for (const s of rawSlides) {
+      const rawType = (typeof s?.type === 'string' ? s.type : '').toUpperCase();
+      if (rawType === 'CONTENT') {
+        const body = typeof s?.body === 'string' ? s.body.trim() : '';
+        if (!body) continue;
+        slides.push({ type: 'CONTENT', title: typeof s?.title === 'string' ? s.title.trim() : undefined, body });
+      } else if (rawType === 'ACTIVITY') {
+        const ad = s?.activityData || {};
+        const question = typeof ad?.question === 'string' ? ad.question.trim() : '';
+        if (!question) continue;
+        const qType = String(ad?.questionType || 'MULTIPLE_CHOICE').toUpperCase();
+        const correct = typeof ad?.correctAnswer === 'string' ? ad.correctAnswer.trim() : '';
+        const common = {
+          explanation: typeof ad?.explanation === 'string' ? ad.explanation.trim() : undefined,
+          hint: typeof ad?.hint === 'string' ? ad.hint.trim() : undefined,
+          points: Number.isFinite(ad?.points) ? ad.points : 10,
+        };
+        if (qType === 'TRUE_FALSE') {
+          const isTrue = correct.toLowerCase().startsWith('v') || correct.toLowerCase() === 'true';
+          slides.push({ type: 'ACTIVITY', title: typeof s?.title === 'string' ? s.title.trim() : undefined,
+            activityData: { questionType: 'TRUE_FALSE', question, options: ['Verdadero', 'Falso'], correctAnswer: isTrue ? 'Verdadero' : 'Falso', ...common } });
+        } else if (qType === 'ORDERING') {
+          // El reproductor de lecciones aún no renderiza ORDERING → se descarta
+          // para no dejar ejercicios sin input. (Reactivar cuando haya UI.)
+          continue;
+        } else if (qType === 'FILL_BLANK') {
+          if (!correct) continue;
+          slides.push({ type: 'ACTIVITY', title: typeof s?.title === 'string' ? s.title.trim() : undefined,
+            activityData: { questionType: 'FILL_BLANK' as any, question, options: [], correctAnswer: correct, ...common } });
+        } else {
+          const options = Array.isArray(ad?.options) ? ad.options.filter((o: any) => typeof o === 'string' && o.trim()).map((o: string) => o.trim()).slice(0, 6) : [];
+          if (options.length < 2) continue;
+          slides.push({ type: 'ACTIVITY', title: typeof s?.title === 'string' ? s.title.trim() : undefined,
+            activityData: { questionType: 'MULTIPLE_CHOICE', question, options, correctAnswer: correct && options.includes(correct) ? correct : options[0], ...common } });
+        }
+      } else if (rawType === 'CHECKPOINT') {
+        slides.push({ type: 'CHECKPOINT', title: typeof s?.title === 'string' ? s.title.trim() : undefined });
+      } else if (rawType === 'BADGE_REVEAL') {
+        slides.push({ type: 'BADGE_REVEAL', badgeEmoji: typeof s?.badgeEmoji === 'string' ? s.badgeEmoji : undefined, badgeTitle: typeof s?.badgeTitle === 'string' ? s.badgeTitle : undefined });
+      }
+    }
+    if (!slides.some(s => s.type === 'CONTENT')) throw new Error('La IA respondió pero la lección no tenía contenido válido.');
+    if (!slides.some(s => s.type === 'BADGE_REVEAL')) slides.push({ type: 'BADGE_REVEAL' });
+    return {
+      title: (typeof raw?.title === 'string' && raw.title.trim()) || fallbackTitle || 'Nueva lección',
+      description: (typeof raw?.description === 'string' && raw.description.trim()) || `Lección interactiva sobre ${fallbackTopic || 'el tema'}`,
+      slides,
+    };
+  }
+
+  /**
+   * Genera una lección INTERACTIVA de inglés (estilo Duolingo) para una habilidad
+   * CEFR concreta: secuencia de micro-ejercicios con feedback inmediato. Reusa el
+   * motor de Lecciones (gamificación + evidencia ya cableadas). Sin motor de voz:
+   * Listening usa un guion textual (placeholder de audio hasta integrar TTS);
+   * Speaking se maneja como consigna de grabación fuera de este generador.
+   */
+  async generateEnglishLessonSlides(params: {
+    skill: 'READING' | 'LISTENING' | 'WRITING' | 'SPEAKING';
+    level: string; // A1..B2
+    objective: string; // objetivo de la ruta
+    title: string; // título del paso
+    gradeName?: string; // grado escolar, para ajustar tema/registro
+  }): Promise<ApdAiLessonDraft> {
+    if (!this.isEnabled()) throw new Error('La generación con IA no está habilitada.');
+    const skill = params.skill;
+    const level = params.level || 'A2';
+
+    // Descriptores explícitos por nivel → salida más consistente y apropiada.
+    const levelDescriptor: Record<string, string> = {
+      A1: 'A1 (principiante): frases MUY cortas, presente simple, vocabulario básico de alta frecuencia. Textos de 2-3 oraciones.',
+      A2: 'A2 (básico): oraciones simples conectadas (and/but/because), presente y pasado simple, temas cotidianos. Textos de 3-5 oraciones.',
+      B1: 'B1 (intermedio): párrafos con varios tiempos verbales, opiniones y experiencias. Textos de 5-8 oraciones.',
+      B2: 'B2 (intermedio-alto): lenguaje más matizado, argumentación, conectores variados. Textos de 8-12 oraciones.',
+    };
+    const skillGuide: Record<string, string> = {
+      READING: 'Incluye un TEXTO corto en inglés (en el body del primer CONTENT, apropiado al nivel) y ejercicios de comprensión: elegir la idea principal (MULTIPLE_CHOICE), completar una palabra del texto (FILL_BLANK), verdadero/falso (TRUE_FALSE).',
+      LISTENING: 'Como aún no hay audio, escribe un GUION corto de diálogo/narración en inglés (en el body del primer CONTENT, marcado como "🔊 Escucha:") y ejercicios: elegir lo que se dijo (MULTIPLE_CHOICE), completar lo que se oye (FILL_BLANK), verdadero/falso (TRUE_FALSE).',
+      WRITING: 'Ejercicios de escritura guiada: completar la palabra correcta (FILL_BLANK), elegir la frase bien formada (MULTIPLE_CHOICE), y una respuesta breve escrita (FILL_BLANK con la palabra clave). La consigna de texto libre extenso va aparte.',
+      SPEAKING: 'Prepara para hablar: vocabulario y frases útiles con MULTIPLE_CHOICE y FILL_BLANK que el estudiante usará al grabar. La grabación va aparte.',
+    };
+
+    const systemInstruction = [
+      'Eres Valeria, profesora de inglés experta, diseñando una lección interactiva estilo Duolingo/Nearpod.',
+      `Habilidad: ${skill}. Nivel CEFR objetivo: ${levelDescriptor[level] || level}.`,
+      params.gradeName ? `Grado escolar del estudiante: ${params.gradeName} — ajusta el TEMA, los ejemplos y el registro a esa edad (no cambies el nivel CEFR, solo la cercanía del tema).` : '',
+      'Se puntúa por inteligibilidad y can-do, no por acento nativo. Respeta ESTRICTAMENTE el nivel CEFR indicado en vocabulario y longitud de frases.',
+      'Responde EXCLUSIVAMENTE con un JSON válido, sin markdown, sin backticks.',
+      '',
+      'Diseño en FASES (multi-fase), en este orden exacto:',
+      '  FASE 1 · Presentación: 1-2 CONTENT que presentan el material (texto/guion + vocabulario clave).',
+      `  FASE 2 · Práctica guiada: 2-3 ACTIVITY CON "hint" y feedback, tipos VARIADOS. ${skillGuide[skill]}`,
+      '  FASE 3 · Mini-quiz final: una CONTENT breve titulada "🎯 Mini-quiz" y luego 3 ACTIVITY SIN "hint" que evalúan lo aprendido en toda la lección.',
+      '  CIERRE: CHECKPOINT y luego BADGE_REVEAL.',
+      '- Entre 8 y 12 slides en total. Bloques cortos, feedback inmediato. Inglés con apoyo breve en español donde ayude.',
+      '- Mezcla los tres tipos de ejercicio a lo largo de la lección. NUNCA uses "Opción A/B/C/D": opciones reales y plausibles.',
+      '',
+      'Tipos de ACTIVITY permitidos (SOLO estos tres): MULTIPLE_CHOICE (4 opciones), TRUE_FALSE, FILL_BLANK (el estudiante escribe UNA palabra; en "question" marca el hueco con ___ y en "correctAnswer" la palabra exacta).',
+      'PROHIBIDO usar ORDERING u otros tipos.',
+      '',
+      'Esquema JSON exacto:',
+      '{',
+      '  "title": "Título del paso",',
+      '  "description": "1 frase",',
+      '  "slides": [',
+      '    { "type": "CONTENT", "title": "…", "body": "<p>…</p>" },',
+      '    { "type": "ACTIVITY", "title": "…", "activityData": { "questionType": "MULTIPLE_CHOICE", "question": "…", "options": ["…"], "correctAnswer": "…", "explanation": "…", "hint": "…", "points": 10 } },',
+      '    { "type": "CHECKPOINT", "title": "…" },',
+      '    { "type": "BADGE_REVEAL" }',
+      '  ]',
+      '}',
+    ].filter(Boolean).join('\n');
+
+    const userPrompt = `Objetivo de la ruta: ${params.objective}\nPaso: ${params.title}\n\nDiseña la lección interactiva de ${skill} (nivel ${level}${params.gradeName ? ', grado ' + params.gradeName : ''}) siguiendo el esquema JSON. Usa solo MULTIPLE_CHOICE, TRUE_FALSE y FILL_BLANK.`;
+
+    let raw: any;
+    try {
+      raw = await this.callLlmJson<any>(systemInstruction, userPrompt, 8000);
+    } catch (err: any) {
+      this.logger.error(`generateEnglishLessonSlides LLM error: ${err?.message || err}`);
+      throw new Error(`El proveedor de IA no respondió: ${err?.message || 'error'}`);
+    }
+    return this.parseLessonDraftPayload(raw, params.title, params.title);
+  }
+
   async generateQuizQuestions(params: {
     topic: string;
     count: number;

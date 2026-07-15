@@ -18,6 +18,9 @@ interface LessonEditorProps {
   classroomTitle?: string
   gradeName?: string
   subjectName?: string
+  // Si se abre como "juego suelto": siembra una única diapositiva de actividad
+  // fijada a este tipo (WORDSEARCH / CROSSWORD) en vez de la plantilla normal.
+  initialGameType?: string
   onClose: () => void
   onPreview: () => void
 }
@@ -40,6 +43,9 @@ interface SlideForm {
     explanation: string
     points: number
     hint: string
+    feedbackCorrect: string
+    feedbackIncorrect: string
+    imageUrl: string
   }
   badgeEmoji: string
   badgeTitle: string
@@ -53,6 +59,24 @@ const EMPTY_ACTIVITY_DATA = {
   explanation: '',
   points: 10,
   hint: '',
+  feedbackCorrect: '',
+  feedbackIncorrect: '',
+  imageUrl: '',
+}
+
+// Etiquetas de los bloques interactivos (editor enfocado / actividad suelta).
+const BLOCK_LABELS: Record<string, string> = {
+  MULTIPLE_CHOICE: 'Opción múltiple', TRUE_FALSE: 'Verdadero / Falso', SHORT_ANSWER: 'Respuesta corta',
+  FILL_BLANK: 'Completar', ORDERING: 'Ordenar palabras', MATCHING: 'Emparejar', FLASHCARDS: 'Flashcards',
+  LISTENING: 'Escuchar y elegir', WORDSEARCH: 'Sopa de letras', CROSSWORD: 'Crucigrama', MEMORY: 'Memory',
+  LABEL_IMAGE: 'Etiquetar imagen', PUZZLE: 'Rompecabezas',
+}
+// Opciones por defecto al sembrar un bloque suelto según su tipo.
+function defaultBlockOptions(type: string): string[] {
+  if (type === 'MATCHING' || type === 'FLASHCARDS' || type === 'CROSSWORD' || type === 'MEMORY') return ['::', '::']
+  if (type === 'PUZZLE') return ['3'] // tamaño de rejilla N×N
+  if (type === 'ORDERING' || type === 'SHORT_ANSWER' || type === 'FILL_BLANK' || type === 'LABEL_IMAGE') return []
+  return ['', '', '', ''] // MCQ / TRUE_FALSE / LISTENING / WORDSEARCH
 }
 
 const SLIDE_TYPE_LABELS: Record<string, { label: string; icon: any; color: string }> = {
@@ -74,7 +98,7 @@ const LAYOUT_OPTIONS = [
 // ═══════════════════════════════════════════════════════════════════════════
 
 export default function LessonEditor({
-  activityId, activityTitle, classroomTitle, gradeName, subjectName, onClose, onPreview,
+  activityId, activityTitle, classroomTitle, gradeName, subjectName, initialGameType, onClose, onPreview,
 }: LessonEditorProps) {
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [loading, setLoading] = useState(true)
@@ -121,14 +145,23 @@ export default function LessonEditor({
       // No lesson exists yet — start fresh
       setTitle(activityTitle || classroomTitle || '')
       setShowMetadata(true)
-      setSlides([
-        createEmptySlide('CONTENT', 0),
-        createEmptySlide('BADGE_REVEAL', 1),
-      ])
+      if (initialGameType) {
+        // Actividad interactiva suelta: una sola diapositiva de actividad ya fijada al tipo.
+        const block = createEmptySlide('ACTIVITY', 0)
+        block.activityData.questionType = initialGameType
+        block.activityData.options = defaultBlockOptions(initialGameType)
+        setSlides([block, createEmptySlide('BADGE_REVEAL', 1)])
+        setSelectedSlideIndex(0)
+      } else {
+        setSlides([
+          createEmptySlide('CONTENT', 0),
+          createEmptySlide('BADGE_REVEAL', 1),
+        ])
+      }
     } finally {
       setLoading(false)
     }
-  }, [activityId])
+  }, [activityId, initialGameType])
 
   useEffect(() => { loadLesson() }, [loadLesson])
 
@@ -155,6 +188,9 @@ export default function LessonEditor({
         explanation: s.activityData.explanation || '',
         points: s.activityData.points || 10,
         hint: s.activityData.hint || '',
+        feedbackCorrect: (s.activityData as any).feedbackCorrect || '',
+        feedbackIncorrect: (s.activityData as any).feedbackIncorrect || '',
+        imageUrl: (s.activityData as any).imageUrl || '',
       } : { ...EMPTY_ACTIVITY_DATA },
       badgeEmoji: s.badgeEmoji || '',
       badgeTitle: s.badgeTitle || '',
@@ -259,6 +295,9 @@ export default function LessonEditor({
           explanation: s.activityData.explanation || undefined,
           points: s.activityData.points || 10,
           hint: s.activityData.hint || undefined,
+          feedbackCorrect: s.activityData.feedbackCorrect || undefined,
+          feedbackIncorrect: s.activityData.feedbackIncorrect || undefined,
+          imageUrl: s.activityData.imageUrl || undefined,
         } : undefined,
         badgeEmoji: s.type === 'BADGE_REVEAL' ? (s.badgeEmoji || badgeEmoji) : undefined,
         badgeTitle: s.type === 'BADGE_REVEAL' ? (s.badgeTitle || badgeTitle) : undefined,
@@ -315,6 +354,7 @@ export default function LessonEditor({
         topic: aiTopic.trim(),
         content: aiContent.trim(),
         gradeName,
+        subjectName,
       })
       if (data) {
         setTitle(data.title || aiTopic)
@@ -335,6 +375,13 @@ export default function LessonEditor({
           })))
           setSelectedSlideIndex(0)
         }
+        // Avisar qué motor produjo la lección: IA real vs plantilla base.
+        if (data.source === 'TEMPLATE') {
+          setSuccess('Se creó una estructura base (IA no disponible). Revísala y enriquécela antes de publicar.')
+        } else {
+          setSuccess('Valeria generó tu lección. Revisa y ajusta cada slide antes de publicar.')
+        }
+        setTimeout(() => setSuccess(''), 5000)
       }
       setShowAIModal(false)
       setAiTopic('')
@@ -368,6 +415,61 @@ export default function LessonEditor({
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
+      </div>
+    )
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // MODO BLOQUE — editor enfocado para una actividad interactiva SUELTA (un
+  // solo bloque, sin andamiaje de lección). Se activa al crear (initialGameType,
+  // que aquí es el tipo de bloque) o al reabrir una actividad de una sola
+  // diapositiva de actividad. Reutiliza renderActivityEditor → sirve a TODOS los
+  // tipos (opción múltiple, emparejar, ordenar, flashcards, sopa, crucigrama…).
+  // ─────────────────────────────────────────────────────────────────
+  const blockIdx = slides.findIndex(s => s.type === 'ACTIVITY')
+  const isSingleBlock = blockIdx >= 0
+    && slides.filter(s => s.type === 'ACTIVITY').length === 1
+    && !slides.some(s => s.type === 'CONTENT' || s.type === 'CHECKPOINT')
+  const isBlockMode = (!!initialGameType || isSingleBlock) && slides.length > 0
+
+  if (isBlockMode) {
+    const gi = blockIdx >= 0 ? blockIdx : 0
+    const bname = BLOCK_LABELS[slides[gi].activityData.questionType] || 'Actividad interactiva'
+    return (
+      <div className="flex flex-col h-full bg-slate-50">
+        {/* Header */}
+        <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3 flex-shrink-0">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-bold text-slate-800 truncate text-sm sm:text-base">🧩 {bname}</h2>
+            <p className="text-xs text-slate-400 truncate">{classroomTitle}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={onPreview} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200">
+              <Eye className="w-4 h-4" /> Vista previa
+            </button>
+            <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-50">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Guardar
+            </button>
+          </div>
+        </div>
+
+        {/* Body — reutiliza el mismo panel de autoría del editor de lección */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="max-w-2xl mx-auto space-y-4">
+            {error && <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm">{error}</div>}
+            {success && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">{success}</div>}
+
+            <div>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">Título</label>
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder={`Mi ${bname.toLowerCase()}`} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-base" />
+            </div>
+
+            {renderActivityEditor(slides[gi], gi)}
+          </div>
+        </div>
       </div>
     )
   }
@@ -642,6 +744,564 @@ export default function LessonEditor({
   // SLIDE EDITORS
   // ─────────────────────────────────────────────────────────────────
 
+  function renderActivityEditor(slide: SlideForm, index: number) {
+    return (
+          <div className="space-y-3 bg-white rounded-xl border border-slate-200 p-4">
+            <div>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">Tipo de pregunta</label>
+              <select
+                value={slide.activityData.questionType}
+                onChange={e => updateActivityData(index, { questionType: e.target.value })}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
+              >
+                <option value="MULTIPLE_CHOICE">Opción múltiple</option>
+                <option value="TRUE_FALSE">Verdadero / Falso</option>
+                <option value="SHORT_ANSWER">Respuesta corta</option>
+                <option value="FILL_BLANK">Completar en línea</option>
+                <option value="ORDERING">Ordenar palabras</option>
+                <option value="MATCHING">Emparejar</option>
+                <option value="FLASHCARDS">Flashcards</option>
+                <option value="LISTENING">Escuchar y seleccionar</option>
+                <option value="WORDSEARCH">Sopa de letras</option>
+                <option value="CROSSWORD">Crucigrama</option>
+                <option value="MEMORY">Memory (parejas)</option>
+                <option value="LABEL_IMAGE">Etiquetar sobre imagen</option>
+                <option value="PUZZLE">Rompecabezas</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">
+                {slide.activityData.questionType === 'ORDERING' || slide.activityData.questionType === 'MATCHING' ? 'Instrucción'
+                  : slide.activityData.questionType === 'LISTENING' ? 'Texto que se escuchará (no se muestra)'
+                  : slide.activityData.questionType === 'WORDSEARCH' ? 'Instrucción'
+                  : slide.activityData.questionType === 'CROSSWORD' ? 'Instrucción'
+                  : slide.activityData.questionType === 'MEMORY' ? 'Instrucción'
+                  : slide.activityData.questionType === 'LABEL_IMAGE' ? 'Instrucción'
+                  : slide.activityData.questionType === 'PUZZLE' ? 'Instrucción'
+                  : 'Pregunta'}
+              </label>
+              <textarea
+                value={slide.activityData.question}
+                onChange={e => updateActivityData(index, { question: e.target.value })}
+                placeholder={
+                  slide.activityData.questionType === 'FILL_BLANK' ? 'My mother ___ dinner every day'
+                  : slide.activityData.questionType === 'ORDERING' ? 'Ordena las palabras para formar la frase'
+                  : slide.activityData.questionType === 'MATCHING' ? 'Empareja cada palabra con su significado'
+                  : slide.activityData.questionType === 'LISTENING' ? 'The girl is reading a book'
+                  : slide.activityData.questionType === 'WORDSEARCH' ? 'Encuentra las palabras escondidas'
+                  : slide.activityData.questionType === 'CROSSWORD' ? 'Resuelve el crucigrama con las pistas'
+                  : slide.activityData.questionType === 'MEMORY' ? 'Encuentra todas las parejas'
+                  : slide.activityData.questionType === 'LABEL_IMAGE' ? 'Arrastra cada etiqueta a su lugar'
+                  : slide.activityData.questionType === 'PUZZLE' ? 'Arma la imagen'
+                  : '¿Cuál es...?'
+                }
+                rows={2}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none"
+              />
+              {slide.activityData.questionType === 'FILL_BLANK' && (
+                <p className="text-xs text-slate-400 mt-1">Escribe <code className="text-violet-600">___</code> (2+ guiones) donde va el hueco.</p>
+              )}
+              {slide.activityData.questionType === 'LISTENING' && (
+                <p className="text-xs text-slate-400 mt-1">El alumno lo oye con TTS (no lo ve) y elige entre las opciones.</p>
+              )}
+            </div>
+
+            {/* Options for MC / LISTENING */}
+            {(slide.activityData.questionType === 'MULTIPLE_CHOICE' || slide.activityData.questionType === 'TRUE_FALSE' || slide.activityData.questionType === 'LISTENING') && (
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1 block">Opciones</label>
+                <div className="space-y-2">
+                  {(slide.activityData.questionType === 'TRUE_FALSE'
+                    ? ['Verdadero', 'Falso']
+                    : slide.activityData.options
+                  ).map((opt, oi) => (
+                    <div key={oi} className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name={`correct-${index}`}
+                        checked={slide.activityData.correctAnswer === opt}
+                        onChange={() => updateActivityData(index, { correctAnswer: opt })}
+                        className="accent-emerald-500"
+                      />
+                      {slide.activityData.questionType === 'TRUE_FALSE' ? (
+                        <span className="text-sm text-slate-700">{opt}</span>
+                      ) : (
+                        <input
+                          value={opt}
+                          onChange={e => {
+                            const updated = [...slide.activityData.options]
+                            updated[oi] = e.target.value
+                            updateActivityData(index, { options: updated })
+                          }}
+                          placeholder={`Opción ${oi + 1}`}
+                          className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                        />
+                      )}
+                    </div>
+                  ))}
+                  {(slide.activityData.questionType === 'MULTIPLE_CHOICE' || slide.activityData.questionType === 'LISTENING') && (
+                    <button
+                      onClick={() => updateActivityData(index, { options: [...slide.activityData.options, ''] })}
+                      className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                    >
+                      + Agregar opción
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Correct answer for SHORT_ANSWER / FILL_BLANK */}
+            {(slide.activityData.questionType === 'SHORT_ANSWER' || slide.activityData.questionType === 'FILL_BLANK') && (
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1 block">
+                  {slide.activityData.questionType === 'FILL_BLANK' ? 'Palabra del hueco' : 'Respuesta correcta'}
+                </label>
+                <input
+                  value={slide.activityData.correctAnswer}
+                  onChange={e => updateActivityData(index, { correctAnswer: e.target.value })}
+                  placeholder={slide.activityData.questionType === 'FILL_BLANK' ? 'cooks' : 'Respuesta exacta'}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
+                />
+              </div>
+            )}
+
+            {/* ORDERING — frase correcta + banco de palabras */}
+            {slide.activityData.questionType === 'ORDERING' && (
+              <div className="space-y-2">
+                <div>
+                  <label className="text-xs font-medium text-slate-500 mb-1 block">Frase correcta (en orden)</label>
+                  <input
+                    value={slide.activityData.correctAnswer}
+                    onChange={e => updateActivityData(index, { correctAnswer: e.target.value })}
+                    placeholder="My brother is a student"
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-slate-500 block">Palabras (banco)</label>
+                  <button
+                    onClick={() => updateActivityData(index, { options: (slide.activityData.correctAnswer || '').trim().split(/\s+/).filter(Boolean) })}
+                    className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                  >
+                    Generar desde la frase
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {slide.activityData.options.map((opt, oi) => (
+                    <div key={oi} className="flex items-center gap-2">
+                      <input
+                        value={opt}
+                        onChange={e => {
+                          const updated = [...slide.activityData.options]
+                          updated[oi] = e.target.value
+                          updateActivityData(index, { options: updated })
+                        }}
+                        placeholder={`Palabra ${oi + 1}`}
+                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                      />
+                      <button
+                        onClick={() => updateActivityData(index, { options: slide.activityData.options.filter((_, j) => j !== oi) })}
+                        className="text-slate-400 hover:text-red-500 px-1"
+                        title="Quitar"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => updateActivityData(index, { options: [...slide.activityData.options, ''] })}
+                    className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                  >
+                    + Agregar palabra
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* MATCHING — pares izquierda ↔ derecha (se guardan como "izq::der") */}
+            {slide.activityData.questionType === 'MATCHING' && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-500 block">Pares a emparejar</label>
+                {slide.activityData.options.map((opt, oi) => {
+                  const parts = String(opt).split('::')
+                  const left = parts[0] || ''
+                  const right = parts[1] || ''
+                  const setPair = (l: string, r: string) => {
+                    const updated = [...slide.activityData.options]
+                    updated[oi] = `${l}::${r}`
+                    updateActivityData(index, { options: updated })
+                  }
+                  return (
+                    <div key={oi} className="flex items-center gap-2">
+                      <input
+                        value={left}
+                        onChange={e => setPair(e.target.value, right)}
+                        placeholder="Izquierda"
+                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                      />
+                      <span className="text-slate-400">↔</span>
+                      <input
+                        value={right}
+                        onChange={e => setPair(left, e.target.value)}
+                        placeholder="Derecha"
+                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                      />
+                      <button
+                        onClick={() => updateActivityData(index, { options: slide.activityData.options.filter((_, j) => j !== oi) })}
+                        className="text-slate-400 hover:text-red-500 px-1"
+                        title="Quitar"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )
+                })}
+                <button
+                  onClick={() => updateActivityData(index, { options: [...slide.activityData.options, '::'] })}
+                  className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                >
+                  + Agregar par
+                </button>
+              </div>
+            )}
+
+            {/* FLASHCARDS — tarjetas frente ↔ reverso (se guardan como "frente::reverso") */}
+            {slide.activityData.questionType === 'FLASHCARDS' && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-500 block">Tarjetas (frente ↔ reverso)</label>
+                {slide.activityData.options.map((opt, oi) => {
+                  const parts = String(opt).split('::')
+                  const front = parts[0] || ''
+                  const back = parts[1] || ''
+                  const setCard = (f: string, b: string) => {
+                    const updated = [...slide.activityData.options]
+                    updated[oi] = `${f}::${b}`
+                    updateActivityData(index, { options: updated })
+                  }
+                  return (
+                    <div key={oi} className="flex items-center gap-2">
+                      <input
+                        value={front}
+                        onChange={e => setCard(e.target.value, back)}
+                        placeholder="Frente (p. ej. dog)"
+                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                      />
+                      <span className="text-slate-400">↔</span>
+                      <input
+                        value={back}
+                        onChange={e => setCard(front, e.target.value)}
+                        placeholder="Reverso (p. ej. perro)"
+                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                      />
+                      <button
+                        onClick={() => updateActivityData(index, { options: slide.activityData.options.filter((_, j) => j !== oi) })}
+                        className="text-slate-400 hover:text-red-500 px-1"
+                        title="Quitar"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )
+                })}
+                <button
+                  onClick={() => updateActivityData(index, { options: [...slide.activityData.options, '::'] })}
+                  className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                >
+                  + Agregar tarjeta
+                </button>
+              </div>
+            )}
+
+            {/* WORDSEARCH — lista de palabras a esconder en la sopa de letras */}
+            {slide.activityData.questionType === 'WORDSEARCH' && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-500 block">Palabras a encontrar</label>
+                {slide.activityData.options.map((opt, oi) => (
+                  <div key={oi} className="flex items-center gap-2">
+                    <input
+                      value={opt}
+                      onChange={e => {
+                        const updated = [...slide.activityData.options]
+                        updated[oi] = e.target.value
+                        updateActivityData(index, { options: updated })
+                      }}
+                      placeholder="p. ej. AMAZONAS"
+                      className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                    />
+                    {slide.activityData.options.length > 1 && (
+                      <button
+                        onClick={() => updateActivityData(index, { options: slide.activityData.options.filter((_, k) => k !== oi) })}
+                        className="text-slate-400 hover:text-rose-500 text-lg leading-none px-1"
+                        title="Quitar"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  onClick={() => updateActivityData(index, { options: [...slide.activityData.options, ''] })}
+                  className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                >
+                  + Agregar palabra
+                </button>
+                <p className="text-xs text-slate-400">Se ocultan en una rejilla generada automáticamente (horizontal, vertical y diagonal). Los acentos se ignoran. Se resuelve al encontrarlas todas.</p>
+              </div>
+            )}
+
+            {/* CROSSWORD — pares respuesta ↔ pista (se guardan como "RESPUESTA::pista") */}
+            {slide.activityData.questionType === 'CROSSWORD' && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-500 block">Respuestas y pistas</label>
+                {slide.activityData.options.map((opt, oi) => {
+                  const parts = String(opt).split('::')
+                  const ans = parts[0] || ''
+                  const clue = parts[1] || ''
+                  const setPair = (a: string, c: string) => {
+                    const updated = [...slide.activityData.options]
+                    updated[oi] = `${a}::${c}`
+                    updateActivityData(index, { options: updated })
+                  }
+                  return (
+                    <div key={oi} className="flex items-center gap-2">
+                      <input
+                        value={ans}
+                        onChange={e => setPair(e.target.value, clue)}
+                        placeholder="Respuesta (p. ej. AMAZONAS)"
+                        className="w-40 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                      />
+                      <input
+                        value={clue}
+                        onChange={e => setPair(ans, e.target.value)}
+                        placeholder="Pista (p. ej. El río más caudaloso)"
+                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                      />
+                      {slide.activityData.options.length > 1 && (
+                        <button
+                          onClick={() => updateActivityData(index, { options: slide.activityData.options.filter((_, k) => k !== oi) })}
+                          className="text-slate-400 hover:text-rose-500 text-lg leading-none px-1"
+                          title="Quitar"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+                <button
+                  onClick={() => updateActivityData(index, { options: [...slide.activityData.options, '::'] })}
+                  className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                >
+                  + Agregar palabra
+                </button>
+                <p className="text-xs text-slate-400">El tablero se entrelaza automáticamente. Los acentos se ignoran. Se resuelve al completar todas.</p>
+              </div>
+            )}
+
+            {/* MEMORY — parejas de cartas (se guardan como "carta::pareja") */}
+            {slide.activityData.questionType === 'MEMORY' && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-500 block">Parejas (carta ↔ pareja)</label>
+                {slide.activityData.options.map((opt, oi) => {
+                  const parts = String(opt).split('::')
+                  const a = parts[0] || ''
+                  const b = parts[1] || ''
+                  const setPair = (x: string, y: string) => {
+                    const updated = [...slide.activityData.options]
+                    updated[oi] = `${x}::${y}`
+                    updateActivityData(index, { options: updated })
+                  }
+                  return (
+                    <div key={oi} className="flex items-center gap-2">
+                      <input
+                        value={a}
+                        onChange={e => setPair(e.target.value, b)}
+                        placeholder="Carta (p. ej. dog)"
+                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                      />
+                      <span className="text-slate-400">↔</span>
+                      <input
+                        value={b}
+                        onChange={e => setPair(a, e.target.value)}
+                        placeholder="Pareja (p. ej. perro)"
+                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                      />
+                      {slide.activityData.options.length > 1 && (
+                        <button
+                          onClick={() => updateActivityData(index, { options: slide.activityData.options.filter((_, k) => k !== oi) })}
+                          className="text-slate-400 hover:text-rose-500 text-lg leading-none px-1"
+                          title="Quitar"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+                <button
+                  onClick={() => updateActivityData(index, { options: [...slide.activityData.options, '::'] })}
+                  className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                >
+                  + Agregar pareja
+                </button>
+                <p className="text-xs text-slate-400">Cada pareja son dos cartas boca abajo. Se resuelve al emparejarlas todas.</p>
+              </div>
+            )}
+
+            {/* LABEL_IMAGE — imagen + puntos (se guardan como "etiqueta::x::y", x/y en %) */}
+            {slide.activityData.questionType === 'LABEL_IMAGE' && (() => {
+              const hotspots = slide.activityData.options.map(o => {
+                const p = String(o).split('::')
+                return { label: p[0] || '', x: parseFloat(p[1]) || 0, y: parseFloat(p[2]) || 0 }
+              })
+              const setHotspots = (hs: { label: string; x: number; y: number }[]) =>
+                updateActivityData(index, { options: hs.map(h => `${h.label}::${h.x}::${h.y}`) })
+              const addAt = (e: React.MouseEvent<HTMLDivElement>) => {
+                const r = e.currentTarget.getBoundingClientRect()
+                const x = Math.round(((e.clientX - r.left) / r.width) * 100)
+                const y = Math.round(((e.clientY - r.top) / r.height) * 100)
+                setHotspots([...hotspots, { label: '', x, y }])
+              }
+              return (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 mb-1 block">Imagen (URL)</label>
+                    <input
+                      value={slide.activityData.imageUrl}
+                      onChange={e => updateActivityData(index, { imageUrl: e.target.value })}
+                      placeholder="https://… (célula, mapa, cuerpo humano…)"
+                      className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                    />
+                  </div>
+                  {slide.activityData.imageUrl ? (
+                    <>
+                      <p className="text-xs text-slate-400">Haz clic sobre la imagen para marcar cada punto; luego escribe su etiqueta abajo.</p>
+                      <div className="relative inline-block border border-slate-200 rounded-lg overflow-hidden cursor-crosshair" onClick={addAt}>
+                        <img src={slide.activityData.imageUrl} alt="" className="block max-w-full max-h-72" draggable={false} />
+                        {hotspots.map((h, i) => (
+                          <span key={i} style={{ left: `${h.x}%`, top: `${h.y}%` }} className="absolute -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white shadow pointer-events-none">{i + 1}</span>
+                        ))}
+                      </div>
+                      <div className="space-y-1.5">
+                        {hotspots.map((h, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                            <input
+                              value={h.label}
+                              onChange={e => { const hs = [...hotspots]; hs[i] = { ...h, label: e.target.value }; setHotspots(hs) }}
+                              placeholder="Etiqueta (p. ej. Núcleo)"
+                              className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                            />
+                            <span className="text-xs text-slate-400 tabular-nums w-14 text-right">{h.x}%, {h.y}%</span>
+                            <button onClick={() => setHotspots(hotspots.filter((_, k) => k !== i))} className="text-slate-400 hover:text-rose-500 text-lg leading-none px-1" title="Quitar">×</button>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-slate-400">Se resuelve cuando el alumno etiqueta todos los puntos correctamente.</p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-slate-400">Pega la URL de una imagen para empezar a marcar puntos.</p>
+                  )}
+                </div>
+              )
+            })()}
+
+            {/* PUZZLE — imagen + dificultad N×N (options[0] = N) */}
+            {slide.activityData.questionType === 'PUZZLE' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-slate-500 mb-1 block">Imagen (URL)</label>
+                  <input
+                    value={slide.activityData.imageUrl}
+                    onChange={e => updateActivityData(index, { imageUrl: e.target.value })}
+                    placeholder="https://… (paisaje, obra de arte, diagrama…)"
+                    className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 mb-1 block">Dificultad</label>
+                  <div className="flex gap-2">
+                    {[2, 3, 4].map(nn => {
+                      const active = (parseInt(slide.activityData.options[0] || '3') || 3) === nn
+                      return (
+                        <button key={nn} onClick={() => updateActivityData(index, { options: [String(nn)] })}
+                          className={`px-3 py-1.5 rounded-lg border text-sm font-medium ${active ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-slate-200 text-slate-500 hover:border-violet-300'}`}>
+                          {nn}×{nn}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+                {slide.activityData.imageUrl ? (
+                  <div className="inline-block border border-slate-200 rounded-lg overflow-hidden">
+                    <img src={slide.activityData.imageUrl} alt="" className="block max-w-full max-h-56" draggable={false} />
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400">Pega la URL de una imagen; se partirá en piezas automáticamente y el alumno la arma.</p>
+                )}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1 block">Puntos</label>
+                <input
+                  type="number"
+                  value={slide.activityData.points}
+                  onChange={e => updateActivityData(index, { points: parseInt(e.target.value) || 10 })}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1 block">Pista</label>
+                <input
+                  value={slide.activityData.hint}
+                  onChange={e => updateActivityData(index, { hint: e.target.value })}
+                  placeholder="Pista opcional..."
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">Explicación</label>
+              <textarea
+                value={slide.activityData.explanation}
+                onChange={e => updateActivityData(index, { explanation: e.target.value })}
+                placeholder="Explica por qué esta es la respuesta correcta..."
+                rows={2}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none"
+              />
+            </div>
+
+            {/* Retroalimentación predefinida por resultado (setpoints del docente §7) */}
+            {slide.activityData.questionType !== 'FLASHCARDS' && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-emerald-600 mb-1 block">Feedback si acierta</label>
+                  <input
+                    value={slide.activityData.feedbackCorrect}
+                    onChange={e => updateActivityData(index, { feedbackCorrect: e.target.value })}
+                    placeholder="¡Muy bien! (opcional)"
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-rose-600 mb-1 block">Feedback si falla</label>
+                  <input
+                    value={slide.activityData.feedbackIncorrect}
+                    onChange={e => updateActivityData(index, { feedbackIncorrect: e.target.value })}
+                    placeholder="Casi… vuelve a leer (opcional)"
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+    )
+  }
+
   function renderSlideEditor(slide: SlideForm, index: number) {
     const typeInfo = SLIDE_TYPE_LABELS[slide.type] || SLIDE_TYPE_LABELS.CONTENT
 
@@ -741,122 +1401,7 @@ export default function LessonEditor({
         )}
 
         {/* ACTIVITY slide fields */}
-        {slide.type === 'ACTIVITY' && (
-          <div className="space-y-3 bg-white rounded-xl border border-slate-200 p-4">
-            <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Tipo de pregunta</label>
-              <select
-                value={slide.activityData.questionType}
-                onChange={e => updateActivityData(index, { questionType: e.target.value })}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
-              >
-                <option value="MULTIPLE_CHOICE">Opción múltiple</option>
-                <option value="TRUE_FALSE">Verdadero / Falso</option>
-                <option value="SHORT_ANSWER">Respuesta corta</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Pregunta</label>
-              <textarea
-                value={slide.activityData.question}
-                onChange={e => updateActivityData(index, { question: e.target.value })}
-                placeholder="¿Cuál es...?"
-                rows={2}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none"
-              />
-            </div>
-
-            {/* Options for MC */}
-            {(slide.activityData.questionType === 'MULTIPLE_CHOICE' || slide.activityData.questionType === 'TRUE_FALSE') && (
-              <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block">Opciones</label>
-                <div className="space-y-2">
-                  {(slide.activityData.questionType === 'TRUE_FALSE'
-                    ? ['Verdadero', 'Falso']
-                    : slide.activityData.options
-                  ).map((opt, oi) => (
-                    <div key={oi} className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name={`correct-${index}`}
-                        checked={slide.activityData.correctAnswer === opt}
-                        onChange={() => updateActivityData(index, { correctAnswer: opt })}
-                        className="accent-emerald-500"
-                      />
-                      {slide.activityData.questionType === 'TRUE_FALSE' ? (
-                        <span className="text-sm text-slate-700">{opt}</span>
-                      ) : (
-                        <input
-                          value={opt}
-                          onChange={e => {
-                            const updated = [...slide.activityData.options]
-                            updated[oi] = e.target.value
-                            updateActivityData(index, { options: updated })
-                          }}
-                          placeholder={`Opción ${oi + 1}`}
-                          className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
-                        />
-                      )}
-                    </div>
-                  ))}
-                  {slide.activityData.questionType === 'MULTIPLE_CHOICE' && (
-                    <button
-                      onClick={() => updateActivityData(index, { options: [...slide.activityData.options, ''] })}
-                      className="text-xs text-violet-600 hover:text-violet-700 font-medium"
-                    >
-                      + Agregar opción
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Correct answer for SHORT_ANSWER */}
-            {slide.activityData.questionType === 'SHORT_ANSWER' && (
-              <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block">Respuesta correcta</label>
-                <input
-                  value={slide.activityData.correctAnswer}
-                  onChange={e => updateActivityData(index, { correctAnswer: e.target.value })}
-                  placeholder="Respuesta exacta"
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
-                />
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block">Puntos</label>
-                <input
-                  type="number"
-                  value={slide.activityData.points}
-                  onChange={e => updateActivityData(index, { points: parseInt(e.target.value) || 10 })}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block">Pista</label>
-                <input
-                  value={slide.activityData.hint}
-                  onChange={e => updateActivityData(index, { hint: e.target.value })}
-                  placeholder="Pista opcional..."
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Explicación</label>
-              <textarea
-                value={slide.activityData.explanation}
-                onChange={e => updateActivityData(index, { explanation: e.target.value })}
-                placeholder="Explica por qué esta es la respuesta correcta..."
-                rows={2}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none"
-              />
-            </div>
-          </div>
-        )}
+        {slide.type === 'ACTIVITY' && renderActivityEditor(slide, index)}
 
         {/* CHECKPOINT slide */}
         {slide.type === 'CHECKPOINT' && (

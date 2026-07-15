@@ -6,6 +6,9 @@ import {
 } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { lessonApi, type Lesson, type LessonSlide, type LessonProgress } from '../lib/api'
+import { Stage } from './lesson/Stage'
+import { BlockRenderer, blockHostsQuestion, gradeAnswer, isAnswerComplete, requiresSubmission } from './lesson/InteractiveBlocks'
+import { SpeakButton, stripHtml } from './lesson/SpeakButton'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -25,30 +28,6 @@ interface SlideResult {
   points: number
   maxPoints: number
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// GRADIENT BACKGROUNDS
-// ═══════════════════════════════════════════════════════════════════════════
-
-const SLIDE_GRADIENTS = [
-  'from-violet-600 via-purple-600 to-indigo-700',
-  'from-blue-600 via-cyan-600 to-teal-600',
-  'from-emerald-600 via-green-600 to-lime-600',
-  'from-amber-500 via-orange-500 to-red-500',
-  'from-pink-500 via-rose-500 to-red-500',
-  'from-indigo-600 via-blue-600 to-cyan-600',
-  'from-teal-500 via-emerald-500 to-green-500',
-  'from-fuchsia-500 via-purple-500 to-violet-500',
-]
-
-const OPTION_COLORS = [
-  { bg: 'bg-[#FF6B6B]', hover: 'hover:bg-[#E85555]', shape: '▲' },
-  { bg: 'bg-[#4ECDC4]', hover: 'hover:bg-[#3BA89F]', shape: '◆' },
-  { bg: 'bg-[#FFE66D]', hover: 'hover:bg-[#FFD93D]', textClass: '!text-amber-800', shape: '●' },
-  { bg: 'bg-[#95E1D3]', hover: 'hover:bg-[#7DCFC0]', shape: '■' },
-  { bg: 'bg-[#FF8E72]', hover: 'hover:bg-[#E87A60]', shape: '★' },
-  { bg: 'bg-[#A8E6CF]', hover: 'hover:bg-[#8DD4B8]', textClass: '!text-emerald-800', shape: '♥' },
-]
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SOUNDS
@@ -121,6 +100,13 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
   // Loading states
   const [advancing, setAdvancing] = useState(false)
 
+  // Gamificación: toast flotante de XP ganado / subida de nivel
+  const [xpToast, setXpToast] = useState<{ awarded: number; leveledUp: boolean; level: number | null } | null>(null)
+  const xpToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Insignias recién ganadas (celebración destacada)
+  const [badgeToast, setBadgeToast] = useState<{ emoji: string; name: string; description: string } | null>(null)
+  const badgeToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const containerRef = useRef<HTMLDivElement>(null)
 
   // ─────────────────────────────────────────────────────────────────
@@ -172,7 +158,6 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
     (progress?.answers || {}) as Record<string, SlideResult>,
   [progress?.answers])
   const progressPercent = totalSlides > 0 ? Math.round(completedSlides.length / totalSlides * 100) : 0
-  const gradient = SLIDE_GRADIENTS[currentIndex % SLIDE_GRADIENTS.length]
 
   const isSlideCompleted = currentSlide ? completedSlides.includes(currentSlide.id) : false
   const hasAnswered = currentSlide ? !!answers[currentSlide.id] : false
@@ -203,8 +188,13 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
 
     const timeSpent = Math.round((Date.now() - slideStartTime) / 1000)
 
-    // For ACTIVITY slides, must answer first
-    if (currentSlide.type === 'ACTIVITY' && !answerSubmitted && !hasAnswered && !isTeacher) return
+    // For ACTIVITY slides que requieren envío, hay que responder primero.
+    // Las flashcards (estudio) no requieren envío → se puede avanzar.
+    if (
+      currentSlide.type === 'ACTIVITY' &&
+      requiresSubmission(currentSlide.activityData?.questionType) &&
+      !answerSubmitted && !hasAnswered && !isTeacher
+    ) return
 
     if (!isTeacher) {
       try {
@@ -212,7 +202,9 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
         const { data } = await lessonApi.advance(lesson.id, {
           slideIndex: currentIndex,
           slideId: currentSlide.id,
-          answer: currentSlide.type === 'ACTIVITY' ? selectedAnswer : undefined,
+          answer: currentSlide.type === 'ACTIVITY' && requiresSubmission(currentSlide.activityData?.questionType)
+            ? selectedAnswer
+            : undefined,
           timeSpentDelta: timeSpent,
         })
         // Update local progress
@@ -229,6 +221,22 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
             badgeEarned: data.badgeEarned ?? false,
             status: data.status ?? prev?.status ?? 'IN_PROGRESS',
           } as LessonProgress))
+
+          // Gamificación: mostrar XP ganado (dominio/completar) y subida de nivel
+          if (data.xp && data.xp.awarded > 0) {
+            setXpToast({ awarded: data.xp.awarded, leveledUp: !!data.xp.leveledUp, level: data.xp.level ?? null })
+            if (data.xp.leveledUp) confetti({ particleCount: 120, spread: 90, origin: { y: 0.3 } })
+            if (xpToastTimer.current) clearTimeout(xpToastTimer.current)
+            xpToastTimer.current = setTimeout(() => setXpToast(null), 2600)
+          }
+          // Insignias recién ganadas: celebración destacada (una a la vez)
+          if (data.xp?.newBadges && data.xp.newBadges.length > 0) {
+            const b = data.xp.newBadges[0]
+            setBadgeToast({ emoji: b.emoji, name: b.name, description: b.description })
+            confetti({ particleCount: 160, spread: 100, origin: { y: 0.4 } })
+            if (badgeToastTimer.current) clearTimeout(badgeToastTimer.current)
+            badgeToastTimer.current = setTimeout(() => setBadgeToast(null), 4200)
+          }
 
           if (data.isComplete) {
             if (soundEnabled) playSound('complete')
@@ -283,12 +291,13 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
   // ─────────────────────────────────────────────────────────────────
 
   const handleSubmitAnswer = () => {
-    if (!currentSlide?.activityData || selectedAnswer === null || selectedAnswer === undefined) return
+    if (!currentSlide?.activityData) return
 
     const actData = currentSlide.activityData
-    const correct = String(actData.correctAnswer || '').trim().toLowerCase()
-    const given = String(selectedAnswer).trim().toLowerCase()
-    const isCorrect = correct === given
+    if (!isAnswerComplete(actData, selectedAnswer)) return
+
+    // Grading por tipo (MCQ, completar, ordenar, emparejar…) — un solo juez.
+    const isCorrect = gradeAnswer(actData, selectedAnswer)
     const points = actData.points || 10
 
     const result: SlideResult = {
@@ -320,20 +329,26 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
     return () => window.removeEventListener('beforeunload', handler)
   }, [phase, isTeacher])
 
+  // Limpiar timers de toasts al desmontar
+  useEffect(() => () => {
+    if (xpToastTimer.current) clearTimeout(xpToastTimer.current)
+    if (badgeToastTimer.current) clearTimeout(badgeToastTimer.current)
+  }, [])
+
   // ─────────────────────────────────────────────────────────────────
   // RENDER: LOADING
   // ─────────────────────────────────────────────────────────────────
 
   if (phase === 'loading') {
     return (
-      <div className="fixed inset-0 z-[100] bg-gradient-to-br from-violet-900 via-purple-900 to-indigo-900 flex items-center justify-center">
+      <div data-skill="reading" className="fixed inset-0 z-[100] bg-canvas flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="text-center text-white"
+          className="text-center text-ink-secondary"
         >
-          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
-          <p className="text-lg font-medium">Cargando lección...</p>
+          <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4 text-accent" />
+          <p className="text-base font-medium">Cargando lección...</p>
         </motion.div>
       </div>
     )
@@ -345,14 +360,14 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
 
   if (phase === 'intro') {
     return (
-      <div className="fixed inset-0 z-[100] bg-gradient-to-br from-violet-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4 overflow-y-auto">
+      <div data-skill="reading" className="fixed inset-0 z-[100] bg-canvas flex items-center justify-center p-4 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           className="max-w-lg w-full"
         >
           {/* Close button */}
-          <button onClick={onClose} className="absolute top-4 right-4 text-white/60 hover:text-white p-2">
+          <button onClick={onClose} className="absolute top-4 right-4 text-ink-muted hover:text-ink-primary p-2">
             <X className="w-6 h-6" />
           </button>
 
@@ -361,24 +376,24 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', bounce: 0.5, delay: 0.2 }}
-            className="w-24 h-24 mx-auto mb-6 rounded-3xl flex items-center justify-center text-5xl shadow-2xl"
+            className="w-24 h-24 mx-auto mb-6 rounded-3xl flex items-center justify-center text-5xl shadow-lg"
             style={{ backgroundColor: lesson?.badgeColor || '#8B5CF6' }}
           >
             {lesson?.badgeEmoji || '🏆'}
           </motion.div>
 
-          <h1 className="text-3xl font-black text-white text-center mb-2">
+          <h1 className="text-3xl font-black text-ink-primary text-center mb-2">
             {lesson?.title || 'Lección'}
           </h1>
 
           {lesson?.description && (
-            <p className="text-white/70 text-center mb-6 text-sm leading-relaxed">
+            <p className="text-ink-secondary text-center mb-6 text-sm leading-relaxed">
               {lesson.description}
             </p>
           )}
 
           {error && (
-            <div className="bg-red-500/20 border border-red-400/30 rounded-xl p-3 mb-4 text-red-200 text-sm flex items-center gap-2">
+            <div className="bg-feedback-error/10 border border-feedback-error/30 rounded-xl p-3 mb-4 text-feedback-error text-sm flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
               {error}
             </div>
@@ -386,28 +401,28 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
-              <BookOpen className="w-5 h-5 text-violet-300 mx-auto mb-1" />
-              <p className="text-white font-bold text-lg">{totalSlides}</p>
-              <p className="text-white/50 text-xs">Slides</p>
+            <div className="bg-surface-2 border border-hairline rounded-xl p-3 text-center">
+              <BookOpen className="w-5 h-5 text-skill-reading mx-auto mb-1" />
+              <p className="text-ink-primary font-bold text-lg">{totalSlides}</p>
+              <p className="text-ink-muted text-xs">Slides</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
-              <Sparkles className="w-5 h-5 text-amber-300 mx-auto mb-1" />
-              <p className="text-white font-bold text-lg">
+            <div className="bg-surface-2 border border-hairline rounded-xl p-3 text-center">
+              <Sparkles className="w-5 h-5 text-skill-writing mx-auto mb-1" />
+              <p className="text-ink-primary font-bold text-lg">
                 {slides.filter(s => s.type === 'ACTIVITY').length}
               </p>
-              <p className="text-white/50 text-xs">Actividades</p>
+              <p className="text-ink-muted text-xs">Actividades</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
-              <Clock className="w-5 h-5 text-emerald-300 mx-auto mb-1" />
-              <p className="text-white font-bold text-lg">{lesson?.estimatedMinutes || '~5'}</p>
-              <p className="text-white/50 text-xs">Minutos</p>
+            <div className="bg-surface-2 border border-hairline rounded-xl p-3 text-center">
+              <Clock className="w-5 h-5 text-skill-listening mx-auto mb-1" />
+              <p className="text-ink-primary font-bold text-lg">{lesson?.estimatedMinutes || '~5'}</p>
+              <p className="text-ink-muted text-xs">Minutos</p>
             </div>
           </div>
 
           {/* Resume info */}
           {progress && progress.status === 'IN_PROGRESS' && (
-            <div className="bg-amber-500/20 border border-amber-400/30 rounded-xl p-3 mb-4 text-amber-200 text-sm text-center">
+            <div className="bg-feedback-warn/10 border border-feedback-warn/30 rounded-xl p-3 mb-4 text-feedback-warn text-sm text-center">
               <Flag className="w-4 h-4 inline mr-1" />
               Tienes progreso guardado ({progressPercent}%). Continuarás desde el último punto de control.
             </div>
@@ -416,16 +431,16 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           {/* Start button */}
           <motion.button
             onClick={handleStart}
-            whileHover={{ scale: 1.03, y: -2 }}
-            whileTap={{ scale: 0.97 }}
-            className="w-full py-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold text-lg rounded-2xl shadow-xl shadow-purple-500/30 flex items-center justify-center gap-3"
+            whileHover={{ scale: 1.02, y: -1 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full py-4 bg-accent text-white font-bold text-lg rounded-2xl shadow-lg flex items-center justify-center gap-3"
           >
             <Play className="w-6 h-6" />
             {progress?.status === 'IN_PROGRESS' ? 'Continuar lección' : isTeacher ? 'Vista previa' : 'Iniciar lección'}
           </motion.button>
 
           {isTeacher && (
-            <p className="text-white/40 text-xs text-center mt-3">
+            <p className="text-ink-muted text-xs text-center mt-3">
               Modo vista previa — el progreso no se guardará
             </p>
           )}
@@ -444,7 +459,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
     const scorePercent = maxScore > 0 ? Math.round(score / maxScore * 100) : 100
 
     return (
-      <div className="fixed inset-0 z-[100] bg-gradient-to-br from-violet-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4 overflow-y-auto">
+      <div data-skill="reading" className="fixed inset-0 z-[100] bg-canvas flex items-center justify-center p-4 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -456,7 +471,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
             initial={{ scale: 0, rotate: -180 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: 'spring', bounce: 0.6, delay: 0.3 }}
-            className="w-32 h-32 mx-auto mb-6 rounded-3xl flex items-center justify-center text-7xl shadow-2xl ring-4 ring-white/20"
+            className="w-32 h-32 mx-auto mb-6 rounded-3xl flex items-center justify-center text-7xl shadow-xl ring-4 ring-hairline"
             style={{ backgroundColor: lesson?.badgeColor || '#8B5CF6' }}
           >
             {lesson?.badgeEmoji || '🏆'}
@@ -466,7 +481,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="text-3xl font-black text-white mb-2"
+            className="text-3xl font-black text-ink-primary mb-2"
           >
             {isTeacher ? 'Vista previa completada' : '¡Lección completada!'}
           </motion.h1>
@@ -475,7 +490,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
-            className="text-white/60 mb-6"
+            className="text-ink-secondary mb-6"
           >
             {lesson?.badgeTitle || 'Has desbloqueado una insignia'}
           </motion.p>
@@ -486,20 +501,20 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.7 }}
-              className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-6"
+              className="bg-surface-2 border border-hairline rounded-2xl p-6 mb-6"
             >
-              <div className="text-5xl font-black text-white mb-2">
-                {score}<span className="text-2xl text-white/50">/{maxScore}</span>
+              <div className="text-5xl font-black text-ink-primary mb-2">
+                {score}<span className="text-2xl text-ink-muted">/{maxScore}</span>
               </div>
-              <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden mb-2">
+              <div className="w-full h-3 bg-surface-3 rounded-full overflow-hidden mb-2">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${scorePercent}%` }}
                   transition={{ duration: 1, delay: 0.8 }}
-                  className={`h-full rounded-full ${scorePercent >= 80 ? 'bg-emerald-400' : scorePercent >= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
+                  className={`h-full rounded-full ${scorePercent >= 80 ? 'bg-feedback-correct' : scorePercent >= 50 ? 'bg-feedback-warn' : 'bg-feedback-error'}`}
                 />
               </div>
-              <p className="text-white/50 text-sm">
+              <p className="text-ink-muted text-sm">
                 {scorePercent >= 80 ? '¡Excelente trabajo!' : scorePercent >= 50 ? '¡Buen esfuerzo!' : 'Sigue practicando'}
               </p>
             </motion.div>
@@ -513,15 +528,15 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
               transition={{ delay: 0.9 }}
               className="grid grid-cols-2 gap-3 mb-6"
             >
-              <div className="bg-white/10 rounded-xl p-3">
-                <p className="text-white/50 text-xs">Tiempo</p>
-                <p className="text-white font-bold">
+              <div className="bg-surface-2 border border-hairline rounded-xl p-3">
+                <p className="text-ink-muted text-xs">Tiempo</p>
+                <p className="text-ink-primary font-bold">
                   {Math.floor((progress.timeSpentSeconds || 0) / 60)}m {(progress.timeSpentSeconds || 0) % 60}s
                 </p>
               </div>
-              <div className="bg-white/10 rounded-xl p-3">
-                <p className="text-white/50 text-xs">Actividades</p>
-                <p className="text-white font-bold">
+              <div className="bg-surface-2 border border-hairline rounded-xl p-3">
+                <p className="text-ink-muted text-xs">Actividades</p>
+                <p className="text-ink-primary font-bold">
                   {slides.filter(s => s.type === 'ACTIVITY').length} completadas
                 </p>
               </div>
@@ -533,9 +548,9 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
             animate={{ opacity: 1 }}
             transition={{ delay: 1 }}
             onClick={onClose}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            className="w-full py-4 bg-white text-violet-700 font-bold text-lg rounded-2xl shadow-xl"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full py-4 bg-accent text-white font-bold text-lg rounded-2xl shadow-lg"
           >
             Volver al aula
           </motion.button>
@@ -553,7 +568,10 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
     if (isTeacher) return true
     if (currentSlide.type === 'CONTENT' || currentSlide.type === 'CHECKPOINT') return true
     if (currentSlide.type === 'BADGE_REVEAL') return true
-    if (currentSlide.type === 'ACTIVITY') return answerSubmitted || hasAnswered
+    if (currentSlide.type === 'ACTIVITY') {
+      if (!requiresSubmission(currentSlide.activityData?.questionType)) return true // flashcards
+      return answerSubmitted || hasAnswered
+    }
     return false
   })()
 
@@ -562,8 +580,33 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
   return (
     <div
       ref={containerRef}
-      className={`fixed inset-0 z-[100] bg-gradient-to-br ${gradient} transition-all duration-700 flex flex-col select-none`}
+      data-skill="reading"
+      className="fixed inset-0 z-[100] bg-canvas flex flex-col select-none"
     >
+      {/* XP TOAST (gamificación) */}
+      {xpToast && (
+        <div className="pointer-events-none fixed top-20 left-1/2 -translate-x-1/2 z-[120] animate-bounce">
+          <div className={`flex flex-col items-center gap-1 rounded-2xl px-6 py-3 shadow-xl border ${xpToast.leveledUp ? 'bg-feedback-warn/15 border-feedback-warn/40 text-feedback-warn' : 'bg-surface-1 border-hairline text-accent'}`}>
+            <span className="text-2xl font-black tracking-tight">+{xpToast.awarded} XP</span>
+            {xpToast.leveledUp && (
+              <span className="text-sm font-bold uppercase tracking-wide">¡Subiste a nivel {xpToast.level ?? ''}! 🎉</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* BADGE TOAST (insignia recién ganada) */}
+      {badgeToast && (
+        <div className="pointer-events-none fixed top-1/3 left-1/2 -translate-x-1/2 z-[121]">
+          <div className="flex flex-col items-center gap-2 rounded-3xl bg-surface-1 px-8 py-5 shadow-2xl border border-feedback-warn/40 animate-[bounce_1s_ease-in-out_2]">
+            <span className="text-5xl drop-shadow">{badgeToast.emoji}</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-feedback-warn">¡Insignia desbloqueada!</span>
+            <span className="text-lg font-black text-ink-primary">{badgeToast.name}</span>
+            <span className="text-xs text-ink-secondary">{badgeToast.description}</span>
+          </div>
+        </div>
+      )}
+
       {/* TOP BAR */}
       <div className="flex items-center gap-3 px-4 py-3 relative z-10">
         {/* Exit warning */}
@@ -574,30 +617,27 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
                 onClose()
               }
             }}
-            className="p-2 rounded-xl bg-black/20 text-white/70 hover:text-white hover:bg-black/30 transition-colors"
+            className="p-2 rounded-xl bg-surface-2 border border-hairline text-ink-secondary hover:text-ink-primary hover:bg-surface-3 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         )}
         {isTeacher && (
-          <button onClick={onClose} className="p-2 rounded-xl bg-black/20 text-white/70 hover:text-white">
+          <button onClick={onClose} className="p-2 rounded-xl bg-surface-2 border border-hairline text-ink-secondary hover:text-ink-primary">
             <X className="w-5 h-5" />
           </button>
         )}
 
-        {/* Progress bar */}
+        {/* Progress bar — barra fina de avance (sin contador "1/11") */}
         <div className="flex-1 mx-2">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-white/60 text-xs font-medium">
-              {currentIndex + 1} / {totalSlides}
-            </span>
-            <span className="text-white/60 text-xs font-medium">
+          <div className="flex items-center justify-end mb-1">
+            <span className="text-ink-muted text-xs font-medium">
               {progressPercent}%
             </span>
           </div>
-          <div className="w-full h-2 bg-black/20 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-surface-3 rounded-full overflow-hidden">
             <motion.div
-              className="h-full bg-white/80 rounded-full"
+              className="h-full bg-accent rounded-full"
               initial={false}
               animate={{ width: `${totalSlides > 0 ? ((currentIndex + 1) / totalSlides * 100) : 0}%` }}
               transition={{ duration: 0.4 }}
@@ -607,7 +647,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
 
         {/* Score */}
         {Number(progress?.maxScore || 0) > 0 && (
-          <div className="bg-black/20 px-3 py-1.5 rounded-xl text-white text-sm font-bold">
+          <div className="bg-surface-2 border border-hairline px-3 py-1.5 rounded-xl text-ink-primary text-sm font-bold">
             ⭐ {Number(progress?.score || 0)}/{Number(progress?.maxScore || 0)}
           </div>
         )}
@@ -615,22 +655,22 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
         {/* Sound toggle */}
         <button
           onClick={() => setSoundEnabled(!soundEnabled)}
-          className="p-2 rounded-xl bg-black/20 text-white/70 hover:text-white transition-colors"
+          className="p-2 rounded-xl bg-surface-2 border border-hairline text-ink-secondary hover:text-ink-primary transition-colors"
         >
           {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
         </button>
       </div>
 
       {/* SLIDE CONTENT */}
-      <div className="flex-1 flex items-center justify-center px-4 pb-24 overflow-y-auto">
+      <div className="flex-1 flex items-start sm:items-center justify-center px-4 py-6 pb-28 overflow-y-auto">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentSlide?.id || currentIndex}
-            initial={{ opacity: 0, x: 60 }}
+            initial={{ opacity: 0, x: 12 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -60 }}
-            transition={{ duration: 0.3 }}
-            className="w-full max-w-2xl"
+            exit={{ opacity: 0, x: -12 }}
+            transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
+            className="w-full max-w-[720px]"
           >
             {currentSlide?.type === 'CONTENT' && renderContentSlide(currentSlide)}
             {currentSlide?.type === 'ACTIVITY' && renderActivitySlide(currentSlide)}
@@ -641,37 +681,24 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
       </div>
 
       {/* BOTTOM NAV */}
-      <div className="fixed bottom-0 left-0 right-0 bg-black/20 backdrop-blur-md border-t border-white/10 px-4 py-3 flex items-center justify-between z-10">
+      <div className="fixed bottom-0 left-0 right-0 bg-surface-1/95 backdrop-blur-md border-t border-hairline px-4 py-3 flex items-center justify-between z-10">
         <button
           onClick={handleGoBack}
           disabled={!canGoBack}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 text-white font-medium disabled:opacity-30 hover:bg-white/20 transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-2 border border-hairline text-ink-secondary font-medium disabled:opacity-30 hover:bg-surface-3 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" /> Anterior
         </button>
 
-        {/* Slide type indicator */}
-        <div className="flex items-center gap-2">
-          {slides.map((s, i) => (
-            <div
-              key={s.id}
-              className={`w-2 h-2 rounded-full transition-all ${
-                i === currentIndex ? 'bg-white w-6' :
-                completedSlides.includes(s.id) ? 'bg-white/60' : 'bg-white/20'
-              }`}
-            />
-          ))}
-        </div>
-
         <motion.button
           onClick={handleAdvance}
           disabled={!canAdvance || advancing}
-          whileHover={canAdvance ? { scale: 1.05 } : undefined}
-          whileTap={canAdvance ? { scale: 0.95 } : undefined}
+          whileHover={canAdvance ? { scale: 1.03 } : undefined}
+          whileTap={canAdvance ? { scale: 0.97 } : undefined}
           className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all ${
             canAdvance
-              ? 'bg-white text-violet-700 shadow-xl shadow-white/20'
-              : 'bg-white/10 text-white/40 cursor-not-allowed'
+              ? 'bg-accent text-white shadow-lg'
+              : 'bg-surface-2 text-ink-muted cursor-not-allowed'
           }`}
         >
           {advancing ? (
@@ -696,15 +723,22 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
     const hasVideo = !!slide.videoUrl
 
     return (
-      <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl">
+      <div>
         {slide.title && (
           <motion.h2
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-2xl sm:text-3xl font-black text-white mb-4"
+            className="text-2xl sm:text-3xl font-black text-ink-primary mb-4"
           >
             {slide.title}
           </motion.h2>
+        )}
+
+        {/* Oír la lectura con TTS (§3.1 vocabulario/pronunciación) */}
+        {slide.body && (
+          <div className="mb-4">
+            <SpeakButton text={stripHtml(slide.body)} label="Escuchar la lectura" />
+          </div>
         )}
 
         <div className={`${hasImage && layout === 'text-left-image-right' ? 'flex flex-col sm:flex-row gap-6' : ''}`}>
@@ -714,7 +748,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className={`prose prose-invert prose-sm sm:prose-base max-w-none ${hasImage ? 'sm:flex-1' : ''}`}
+              className={`prose prose-neutral prose-base sm:prose-lg max-w-none leading-relaxed text-ink-primary ${hasImage ? 'sm:flex-1' : ''}`}
               dangerouslySetInnerHTML={{ __html: slide.body }}
             />
           )}
@@ -722,7 +756,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           {/* Image */}
           {hasImage && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 }}
               className={`${layout === 'text-left-image-right' ? 'sm:w-2/5' : 'w-full mt-4'}`}
@@ -730,7 +764,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
               <img
                 src={slide.imageUrl!}
                 alt={slide.title || 'Imagen'}
-                className="w-full rounded-2xl shadow-xl object-contain max-h-64 sm:max-h-80"
+                className="w-full rounded-2xl border border-hairline shadow-sm object-contain max-h-64 sm:max-h-80"
               />
             </motion.div>
           )}
@@ -779,116 +813,85 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
     const previousAnswer = answers[slide.id]
 
     return (
-      <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl">
+      <div>
         {/* Question header */}
         <div className="flex items-center gap-2 mb-4">
-          <div className="w-8 h-8 rounded-lg bg-amber-400 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-amber-800" />
+          <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-accent" />
           </div>
-          <span className="text-white/60 text-sm font-medium">Actividad • {act.points || 10} pts</span>
+          <span className="text-ink-muted text-sm font-medium">
+            {act.questionType === 'FLASHCARDS' ? 'Tarjetas de estudio' : `Actividad • ${act.points || 10} pts`}
+          </span>
         </div>
 
-        <h3 className="text-xl sm:text-2xl font-bold text-white mb-6">{act.question}</h3>
+        {/* El enunciado se muestra arriba salvo cuando el bloque lo aloja
+            dentro de sí (completar en línea: la frase con el hueco). */}
+        {!blockHostsQuestion(act.questionType) && (
+          <h3 className="text-xl sm:text-2xl font-bold text-ink-primary mb-6">{act.question}</h3>
+        )}
 
         {/* Hint */}
         {act.hint && !answerSubmitted && !alreadyAnswered && (
-          <p className="text-white/40 text-sm mb-4 italic">💡 {act.hint}</p>
+          <p className="text-ink-secondary text-sm mb-4 italic">💡 {act.hint}</p>
         )}
 
-        {/* Options */}
-        {(act.questionType === 'MULTIPLE_CHOICE' || act.questionType === 'TRUE_FALSE') && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {(act.options || []).map((opt: string, i: number) => {
-              const style = OPTION_COLORS[i % OPTION_COLORS.length]
-              const isSelected = selectedAnswer === opt
-              const wasCorrect = previousAnswer?.isCorrect
-              const isCorrectOption = opt === act.correctAnswer
-              const showResult = answerSubmitted || alreadyAnswered
+        {/* Interacción — Stage + BlockRenderer (arquitectura de bloques DS-1) */}
+        <Stage variant="question">
+          <BlockRenderer
+            act={act}
+            value={selectedAnswer ?? previousAnswer?.answer ?? ''}
+            onChange={setSelectedAnswer}
+            showResult={answerSubmitted || alreadyAnswered}
+          />
+        </Stage>
 
-              let borderClass = ''
-              if (showResult) {
-                if (isCorrectOption) borderClass = 'ring-4 ring-emerald-400 ring-offset-2 ring-offset-transparent'
-                else if (isSelected && !isCorrectOption) borderClass = 'ring-4 ring-red-400 ring-offset-2 ring-offset-transparent opacity-60'
-              } else if (isSelected) {
-                borderClass = 'ring-4 ring-white/50 ring-offset-2 ring-offset-transparent scale-[1.02]'
-              }
-
-              return (
-                <motion.button
-                  key={i}
-                  onClick={() => !showResult && setSelectedAnswer(opt)}
-                  disabled={!!showResult}
-                  whileHover={!showResult ? { scale: 1.03, y: -2 } : undefined}
-                  whileTap={!showResult ? { scale: 0.97 } : undefined}
-                  className={`relative p-4 sm:p-5 rounded-2xl text-white font-bold text-left transition-all ${style.bg} ${style.hover} ${style.textClass || ''} shadow-xl overflow-hidden ${borderClass}`}
-                >
-                  <span className="absolute top-3 left-3 text-white/30 text-xl">{style.shape}</span>
-                  <span className="relative z-10 block pl-7 text-sm sm:text-base">{opt}</span>
-                  {showResult && isCorrectOption && (
-                    <CheckCircle2 className="absolute top-3 right-3 w-5 h-5 text-emerald-300" />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
-                </motion.button>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Short answer */}
-        {act.questionType === 'SHORT_ANSWER' && (
-          <div>
-            <input
-              type="text"
-              value={selectedAnswer || previousAnswer?.answer || ''}
-              onChange={e => !answerSubmitted && !alreadyAnswered && setSelectedAnswer(e.target.value)}
-              disabled={answerSubmitted || alreadyAnswered}
-              placeholder="Escribe tu respuesta..."
-              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/40 text-lg"
-            />
-          </div>
-        )}
-
-        {/* Submit button (only if not yet submitted) */}
-        {!answerSubmitted && !alreadyAnswered && (
+        {/* Submit button (solo si el tipo requiere envío y aún no se envió) */}
+        {requiresSubmission(act.questionType) && !answerSubmitted && !alreadyAnswered && (
           <motion.button
             onClick={handleSubmitAnswer}
-            disabled={selectedAnswer === null || selectedAnswer === undefined || selectedAnswer === ''}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            className="mt-6 w-full py-3 bg-white text-violet-700 font-bold rounded-xl shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled={!isAnswerComplete(act, selectedAnswer)}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="mt-6 w-full py-3 bg-accent text-white font-bold rounded-xl shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Confirmar respuesta
+            Comprobar
           </motion.button>
         )}
 
         {/* Result feedback */}
         {(answerSubmitted || alreadyAnswered) && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`mt-6 p-4 rounded-2xl ${
-              (slideResult?.isCorrect ?? previousAnswer?.isCorrect) 
-                ? 'bg-emerald-500/20 border border-emerald-400/30' 
-                : 'bg-red-500/20 border border-red-400/30'
+            className={`mt-6 p-4 rounded-2xl border ${
+              (slideResult?.isCorrect ?? previousAnswer?.isCorrect)
+                ? 'bg-feedback-correct/10 border-feedback-correct/30'
+                : 'bg-feedback-error/10 border-feedback-error/30'
             }`}
           >
             <div className="flex items-center gap-2 mb-1">
               {(slideResult?.isCorrect ?? previousAnswer?.isCorrect) ? (
                 <>
-                  <CheckCircle2 className="w-5 h-5 text-emerald-300" />
-                  <span className="text-emerald-200 font-bold">¡Correcto!</span>
-                  <span className="text-emerald-300 text-sm ml-auto">+{slideResult?.points ?? previousAnswer?.points} pts</span>
+                  <CheckCircle2 className="w-5 h-5 text-feedback-correct" />
+                  <span className="text-feedback-correct font-bold">¡Correcto!</span>
+                  <span className="text-feedback-correct text-sm ml-auto">+{slideResult?.points ?? previousAnswer?.points} pts</span>
                 </>
               ) : (
                 <>
-                  <X className="w-5 h-5 text-red-300" />
-                  <span className="text-red-200 font-bold">Incorrecto</span>
-                  <span className="text-red-300 text-sm ml-auto">0 pts</span>
+                  <X className="w-5 h-5 text-feedback-error" />
+                  <span className="text-feedback-error font-bold">Incorrecto</span>
+                  <span className="text-feedback-error text-sm ml-auto">0 pts</span>
                 </>
               )}
             </div>
+            {/* Retroalimentación predefinida por el docente (setpoint §7) */}
+            {(() => {
+              const correct = slideResult?.isCorrect ?? previousAnswer?.isCorrect
+              const msg = correct ? act.feedbackCorrect : act.feedbackIncorrect
+              return msg ? <p className="text-ink-primary text-sm mt-2 font-medium">{msg}</p> : null
+            })()}
             {act.explanation && (
-              <p className="text-white/70 text-sm mt-2">{act.explanation}</p>
+              <p className="text-ink-secondary text-sm mt-2">{act.explanation}</p>
             )}
           </motion.div>
         )}
@@ -899,7 +902,7 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
   function renderCheckpointSlide() {
     return (
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
+        initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         className="text-center"
       >
@@ -907,23 +910,23 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', bounce: 0.5 }}
-          className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-emerald-500/30 backdrop-blur-md flex items-center justify-center"
+          className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-feedback-correct/10 border border-feedback-correct/30 flex items-center justify-center"
         >
-          <Flag className="w-10 h-10 text-emerald-300" />
+          <Flag className="w-10 h-10 text-feedback-correct" />
         </motion.div>
-        <h2 className="text-2xl font-black text-white mb-2">Punto de control</h2>
-        <p className="text-white/60 mb-4">Tu progreso se ha guardado aquí. ¡Sigue adelante!</p>
-        <div className="bg-white/10 rounded-xl p-4 max-w-xs mx-auto">
-          <p className="text-white/50 text-xs mb-1">Progreso</p>
-          <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden">
+        <h2 className="text-2xl font-black text-ink-primary mb-2">Punto de control</h2>
+        <p className="text-ink-secondary mb-4">Tu progreso se ha guardado aquí. ¡Sigue adelante!</p>
+        <div className="bg-surface-2 border border-hairline rounded-xl p-4 max-w-xs mx-auto">
+          <p className="text-ink-muted text-xs mb-1">Progreso</p>
+          <div className="w-full h-3 bg-surface-3 rounded-full overflow-hidden">
             <motion.div
-              className="h-full bg-emerald-400 rounded-full"
+              className="h-full bg-feedback-correct rounded-full"
               initial={{ width: 0 }}
               animate={{ width: `${progressPercent}%` }}
               transition={{ duration: 0.6 }}
             />
           </div>
-          <p className="text-emerald-300 font-bold text-lg mt-1">{progressPercent}%</p>
+          <p className="text-feedback-correct font-bold text-lg mt-1">{progressPercent}%</p>
         </div>
       </motion.div>
     )
@@ -940,15 +943,15 @@ export default function LessonPlayer({ activityId, onClose, isTeacher = false }:
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ type: 'spring', bounce: 0.5, delay: 0.2 }}
-          className="w-28 h-28 mx-auto mb-6 rounded-3xl flex items-center justify-center text-6xl shadow-2xl ring-4 ring-white/20"
+          className="w-28 h-28 mx-auto mb-6 rounded-3xl flex items-center justify-center text-6xl shadow-xl ring-4 ring-hairline"
           style={{ backgroundColor: lesson?.badgeColor || '#8B5CF6' }}
         >
           {currentSlide?.badgeEmoji || lesson?.badgeEmoji || '🏆'}
         </motion.div>
-        <h2 className="text-3xl font-black text-white mb-2">
+        <h2 className="text-3xl font-black text-ink-primary mb-2">
           {currentSlide?.badgeTitle || lesson?.badgeTitle || '¡Felicitaciones!'}
         </h2>
-        <p className="text-white/60 mb-4">
+        <p className="text-ink-secondary mb-4">
           Has completado todos los contenidos. Presiona "Finalizar" para obtener tu insignia.
         </p>
       </motion.div>

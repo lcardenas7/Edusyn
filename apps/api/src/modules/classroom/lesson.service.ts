@@ -1,9 +1,22 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ApdAiService } from '../apd/ai/apd-ai.service';
+import { LearningIdentityService, GrantXpResult } from '../gamification/learning-identity.service';
+import { CompetencyEvidenceService } from '../learning-route/competency-evidence.service';
 
 @Injectable()
 export class LessonService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(LessonService.name);
+
+  // XP por completar una lección (además del XP por cada acierto).
+  private static readonly LESSON_COMPLETE_XP = 50;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly apdAi: ApdAiService,
+    private readonly identity: LearningIdentityService,
+    private readonly evidence: CompetencyEvidenceService,
+  ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // TEACHER: CRUD
@@ -36,7 +49,9 @@ export class LessonService {
       where: { id: activityId },
     });
     if (!activity) throw new NotFoundException('Actividad no encontrada');
-    if (activity.type !== 'LESSON') throw new BadRequestException('La actividad debe ser de tipo LESSON');
+    // LESSON = lección multi-diapositiva; GAME = juego suelto (sopa/crucigrama) que
+    // se apoya en el mismo motor de lecciones (una sola diapositiva de actividad).
+    if (activity.type !== 'LESSON' && activity.type !== 'GAME') throw new BadRequestException('La actividad debe ser de tipo LESSON o GAME');
 
     // Check no lesson already exists
     const existing = await this.prisma.lesson.findUnique({ where: { activityId } });
@@ -353,16 +368,25 @@ export class LessonService {
 
     let scoreIncrement = 0;
     let maxScoreIncrement = 0;
+    let activityCorrect = false; // para XP por dominio (solo si acertó)
+    let activityPoints = 0;
 
-    // If ACTIVITY slide, grade the answer
-    if (slide.type === 'ACTIVITY' && data.answer !== undefined && slide.activityData) {
+    // If ACTIVITY slide, grade the answer (las flashcards son estudio, no se puntúan)
+    if (
+      slide.type === 'ACTIVITY' &&
+      data.answer !== undefined &&
+      slide.activityData &&
+      (slide.activityData as any).questionType !== 'FLASHCARDS'
+    ) {
       const actData = slide.activityData as any;
       const points = actData.points || 10;
       maxScoreIncrement = points;
+      activityPoints = points;
 
       const isCorrect = this.gradeAnswer(actData, data.answer);
       if (isCorrect) {
         scoreIncrement = points;
+        activityCorrect = true;
       }
 
       answers[data.slideId] = {
@@ -384,9 +408,9 @@ export class LessonService {
     const isComplete = completedSlides.length >= totalSlides;
     const nextSlideIndex = Math.min(data.slideIndex + 1, totalSlides - 1);
 
-    // Calculate total max score
+    // Calculate total max score (las flashcards no puntúan → fuera del denominador)
     const totalMaxScore = lesson.slides
-      .filter(s => s.type === 'ACTIVITY' && s.activityData)
+      .filter(s => s.type === 'ACTIVITY' && s.activityData && (s.activityData as any).questionType !== 'FLASHCARDS')
       .reduce((sum, s) => sum + ((s.activityData as any)?.points || 10), 0);
 
     const updatedProgress = await this.prisma.lessonProgress.update({
@@ -407,11 +431,110 @@ export class LessonService {
       },
     });
 
+    // Gamificación: XP por DOMINIO (acertar) y por completar la lección. Idempotente
+    // por slide/lección para que reintentos no dupliquen XP. Nunca rompe el flujo.
+    const xp = await this.awardLessonXp({
+      studentEnrollmentId, lessonId, lessonTitle: lesson.title,
+      slideId: data.slideId, activityCorrect, activityPoints, isComplete,
+      activityId: lesson.activityId,
+      scorePercent: totalMaxScore > 0 ? Math.min(Number(updatedProgress.score) / totalMaxScore, 1) * 100 : 100,
+    });
+
     return {
       ...updatedProgress,
       isComplete,
+      xp,
       slideResult: slide.type === 'ACTIVITY' ? answers[data.slideId] : null,
     };
+  }
+
+  /**
+   * Concede el XP de una lección: por acertar la actividad (dominio) y por
+   * completarla. Idempotente. Devuelve un resumen para que la UI muestre el XP
+   * ganado / subida de nivel. Nunca lanza: la gamificación no puede romper el flujo.
+   */
+  private async awardLessonXp(p: {
+    studentEnrollmentId: string;
+    lessonId: string;
+    lessonTitle: string;
+    slideId: string;
+    activityCorrect: boolean;
+    activityPoints: number;
+    isComplete: boolean;
+    activityId: string;
+    scorePercent: number;
+  }): Promise<{ awarded: number; leveledUp: boolean; level: number | null; currentStreak: number | null; newBadges: GrantXpResult['newBadges'] } | null> {
+    if (!p.activityCorrect && !p.isComplete) return null;
+    try {
+      const enrollment = await this.prisma.studentEnrollment.findUnique({
+        where: { id: p.studentEnrollmentId },
+        select: { studentId: true, institutionId: true },
+      });
+      if (!enrollment) return null;
+
+      // Evidencia de competencias al completar la lección (si es paso de una ruta con can-do).
+      if (p.isComplete) {
+        await this.evidence.recordFromActivity({
+          institutionId: enrollment.institutionId,
+          studentId: enrollment.studentId,
+          studentEnrollmentId: p.studentEnrollmentId,
+          activityId: p.activityId,
+          scorePercent: p.scorePercent,
+          source: 'LESSON', sourceRef: p.lessonId,
+        });
+      }
+
+      // Materia (skill) para el desglose de XP por habilidad.
+      const lessonSubject = await this.prisma.lesson.findUnique({
+        where: { id: p.lessonId },
+        select: { activity: { select: { classroom: { select: { teacherAssignment: { select: { subject: { select: { name: true } } } } } } } } },
+      });
+      const skill = lessonSubject?.activity?.classroom?.teacherAssignment?.subject?.name ?? null;
+
+      let awarded = 0;
+      let leveledUp = false;
+      let last: GrantXpResult['identity'] = null;
+      const newBadges: GrantXpResult['newBadges'] = [];
+
+      if (p.activityCorrect) {
+        const r = await this.identity.grantXp({
+          institutionId: enrollment.institutionId,
+          studentId: enrollment.studentId,
+          studentEnrollmentId: p.studentEnrollmentId,
+          source: 'LESSON_ACTIVITY',
+          amount: p.activityPoints,
+          skill,
+          reason: `Acierto en lección: ${p.lessonTitle}`,
+          idempotencyKey: `lesson:${p.lessonId}:slide:${p.slideId}:correct:${p.studentEnrollmentId}`,
+        });
+        awarded += r.awarded;
+        leveledUp = leveledUp || r.leveledUp;
+        last = r.identity ?? last;
+        newBadges.push(...r.newBadges);
+      }
+
+      if (p.isComplete) {
+        const r = await this.identity.grantXp({
+          institutionId: enrollment.institutionId,
+          studentId: enrollment.studentId,
+          studentEnrollmentId: p.studentEnrollmentId,
+          source: 'LESSON_COMPLETE',
+          amount: LessonService.LESSON_COMPLETE_XP,
+          skill,
+          reason: `Lección completada: ${p.lessonTitle}`,
+          idempotencyKey: `lesson:${p.lessonId}:complete:${p.studentEnrollmentId}`,
+        });
+        awarded += r.awarded;
+        leveledUp = leveledUp || r.leveledUp;
+        last = r.identity ?? last;
+        newBadges.push(...r.newBadges);
+      }
+
+      return { awarded, leveledUp, level: last?.level ?? null, currentStreak: last?.currentStreak ?? null, newBadges };
+    } catch (err: any) {
+      this.logger.warn(`awardLessonXp falló (no crítico): ${err?.message || err}`);
+      return null;
+    }
   }
 
   // Teacher: get all students' progress
@@ -459,6 +582,54 @@ export class LessonService {
   // AI: Generate lesson from text/topic
   // ═══════════════════════════════════════════════════════════════════════════
 
+  /**
+   * Genera una lección con IA real (Valeria) cuando está habilitada. Si la IA no
+   * está configurada o falla, cae con gracia al generador de plantilla local
+   * (`generateLessonStructure`) para no romper nunca el flujo del docente.
+   * El campo `source` indica qué motor produjo el resultado, para avisar en UI.
+   */
+  async generateLesson(params: {
+    topic: string;
+    content?: string;
+    gradeName?: string;
+    subjectName?: string;
+  }): Promise<{
+    title: string;
+    description: string;
+    slides: Array<{ type: string; sortOrder: number; title?: string; body?: string; activityData?: any; badgeEmoji?: string; badgeTitle?: string }>;
+    source: 'AI' | 'TEMPLATE';
+  }> {
+    if (this.apdAi.isEnabled()) {
+      try {
+        const draft = await this.apdAi.generateLessonSlides({
+          topic: params.topic,
+          content: params.content,
+          gradeName: params.gradeName,
+          subjectName: params.subjectName,
+        });
+        return {
+          title: draft.title,
+          description: draft.description,
+          slides: draft.slides.map((s, i) => ({
+            type: s.type,
+            sortOrder: i,
+            title: s.title,
+            body: s.body,
+            activityData: s.activityData,
+            badgeEmoji: s.badgeEmoji,
+            badgeTitle: s.badgeTitle,
+          })),
+          source: 'AI',
+        };
+      } catch (err: any) {
+        // No romper: registrar y caer al fallback de plantilla.
+        this.logger.warn(`generateLesson: IA falló, usando plantilla. ${err?.message || err}`);
+      }
+    }
+    const template = this.generateLessonStructure(params.topic, params.content || '', params.gradeName);
+    return { ...template, source: 'TEMPLATE' };
+  }
+
   generateLessonStructure(topic: string, content: string, gradeName?: string): {
     title: string;
     description: string;
@@ -470,8 +641,8 @@ export class LessonService {
       activityData?: any;
     }>;
   } {
-    // This is a template generator. The actual AI generation happens via Valeria API
-    // which will call this structure format. Here we provide a fallback structure.
+    // Fallback de plantilla: se usa cuando la IA (Valeria) no está habilitada o falla.
+    // La generación real con LLM vive en ApdAiService.generateLessonSlides (ver generateLesson()).
     const paragraphs = content.split(/\n\n+/).filter(p => p.trim().length > 20);
 
     if (paragraphs.length === 0) {
@@ -542,35 +713,74 @@ export class LessonService {
   // HELPERS
   // ═══════════════════════════════════════════════════════════════════════════
 
+  // Normalización espejo del frontend (grading.ts): trim + minúsculas + colapsa espacios.
+  private norm(s: any): string {
+    return String(s ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  // Pares de MATCHING en `options` como "izquierda::derecha" (camino A).
+  private parsePairs(options?: any[]): { left: string; right: string }[] {
+    return (options || [])
+      .map((o: any) => {
+        const [left, right] = String(o).split('::');
+        return { left: (left || '').trim(), right: (right || '').trim() };
+      })
+      .filter(p => p.left && p.right);
+  }
+
+  // IMPORTANTE: debe puntuar EXACTAMENTE igual que el frontend (grading.ts).
+  // Si divergen, el alumno ve "correcto" pero el score guardado dice otra cosa.
   private gradeAnswer(activityData: any, answer: any): boolean {
     const type = activityData.questionType;
     const correct = activityData.correctAnswer;
 
-    if (!correct) return false;
-
-    if (type === 'MULTIPLE_CHOICE' || type === 'TRUE_FALSE') {
-      return String(answer).trim().toLowerCase() === String(correct).trim().toLowerCase();
-    }
-
-    if (type === 'SHORT_ANSWER') {
-      return String(answer).trim().toLowerCase() === String(correct).trim().toLowerCase();
-    }
-
-    if (type === 'FILL_BLANK') {
-      if (Array.isArray(correct) && Array.isArray(answer)) {
-        return correct.every((c: string, i: number) =>
-          String(answer[i] || '').trim().toLowerCase() === String(c).trim().toLowerCase(),
-        );
-      }
-      return String(answer).trim().toLowerCase() === String(correct).trim().toLowerCase();
+    if (type === 'MATCHING') {
+      const pairs = this.parsePairs(activityData.options);
+      return pairs.length > 0 && !!answer && typeof answer === 'object' &&
+        pairs.every(p => this.norm(answer[p.left]) === this.norm(p.right));
     }
 
     if (type === 'ORDERING') {
+      // Forma legada: correctAnswer como array. Camino A: string (la frase).
       if (Array.isArray(correct) && Array.isArray(answer)) {
         return JSON.stringify(answer) === JSON.stringify(correct);
       }
+      return this.norm((Array.isArray(answer) ? answer : []).join(' ')) === this.norm(correct);
     }
 
-    return false;
+    if (type === 'WORDSEARCH') {
+      // La respuesta es el array de palabras encontradas; correcto si están todas.
+      const target = (activityData.options || []).map((o: any) => this.norm(o)).filter(Boolean);
+      const found = (Array.isArray(answer) ? answer : []).map((o: any) => this.norm(o));
+      return target.length > 0 && target.every((w: string) => found.includes(w));
+    }
+
+    if (type === 'CROSSWORD' || type === 'MEMORY') {
+      // Respuesta = array de parejas resueltas; correcto si están todas (izq de los pares).
+      const target = this.parsePairs(activityData.options).map(p => this.norm(p.left)).filter(Boolean);
+      const solved = (Array.isArray(answer) ? answer : []).map((o: any) => this.norm(o));
+      return target.length > 0 && target.every((w: string) => solved.includes(w));
+    }
+
+    if (type === 'LABEL_IMAGE') {
+      // Respuesta = etiquetas por punto (en orden); correcto si cada punto tiene la suya.
+      const labels = (activityData.options || []).map((o: any) => this.norm(String(o).split('::')[0]));
+      return labels.length > 0 && Array.isArray(answer) && labels.every((lbl: string, i: number) => this.norm(answer[i]) === lbl);
+    }
+
+    if (type === 'PUZZLE') {
+      // Respuesta = arreglo de piezas; correcto = resuelto (identidad, tamaño N*N).
+      const n = parseInt((activityData.options?.[0]) || '3') || 3;
+      return Array.isArray(answer) && answer.length === n * n && answer.every((v: number, i: number) => v === i);
+    }
+
+    if (type === 'FILL_BLANK' && Array.isArray(correct) && Array.isArray(answer)) {
+      // Forma legada multi-hueco.
+      return correct.every((c: string, i: number) => this.norm(answer[i]) === this.norm(c));
+    }
+
+    // MULTIPLE_CHOICE, TRUE_FALSE, SHORT_ANSWER, FILL_BLANK (hueco simple)
+    if (!correct) return false;
+    return this.norm(answer) === this.norm(correct);
   }
 }

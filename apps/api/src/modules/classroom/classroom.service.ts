@@ -1,9 +1,17 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { LearningIdentityService } from '../gamification/learning-identity.service';
+import { CompetencyEvidenceService } from '../learning-route/competency-evidence.service';
 
 @Injectable()
 export class ClassroomService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ClassroomService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly identity: LearningIdentityService,
+    private readonly evidence: CompetencyEvidenceService,
+  ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CLASSROOMS
@@ -490,6 +498,7 @@ export class ClassroomService {
     maxAttempts?: number;
     timeLimitMinutes?: number;
     rubricId?: string;
+    gameType?: string; // juego suelto (WORDSEARCH/CROSSWORD): marca para rotular sin abrir la lección
   }) {
     const classroom = await this.validateClassroomOwnership(classroomId, teacherId);
     // Validate section belongs to this classroom
@@ -502,6 +511,9 @@ export class ClassroomService {
     let metadata: any = undefined;
     if (dto.attachmentUrl) {
       metadata = { attachmentUrl: dto.attachmentUrl, attachmentName: dto.attachmentName };
+    }
+    if (dto.gameType) {
+      metadata = { ...(metadata || {}), gameType: dto.gameType };
     }
 
     return this.prisma.classroomActivity.create({
@@ -532,9 +544,10 @@ export class ClassroomService {
 
   async listActivities(classroomId: string, userId: string, role: 'teacher' | 'student') {
     if (role === 'teacher') {
-      // Teachers see all activities
+      // Teachers see all activities EXCEPT las propias de una ruta (isRouteScoped),
+      // que se gestionan desde el mapa de la ruta, no en esta lista.
       const activities = await this.prisma.classroomActivity.findMany({
-        where: { classroomId },
+        where: { classroomId, isRouteScoped: false },
         include: {
           section: { select: { id: true, title: true } },
           _count: { select: { submissions: true } },
@@ -554,9 +567,10 @@ export class ClassroomService {
       return activities.map((a) => ({ ...a, gradingPending: pendingMap.get(a.id) || 0 }));
     }
 
-    // Students see only published activities — ordered by publication date (newest first)
+    // Students see only published activities — ordered by publication date (newest first).
+    // Las propias de una ruta se hacen desde el mapa de la ruta, no en esta lista.
     return this.prisma.classroomActivity.findMany({
-      where: { classroomId, isPublished: true, isVisible: true },
+      where: { classroomId, isPublished: true, isVisible: true, isRouteScoped: false },
       include: {
         section: { select: { id: true, title: true } },
         submissions: {
@@ -897,7 +911,7 @@ export class ClassroomService {
       include: {
         activity: {
           include: {
-            classroom: { select: { teacherAssignment: { select: { teacherId: true } } } },
+            classroom: { select: { teacherAssignment: { select: { teacherId: true, subject: { select: { name: true } } } } } },
           },
         },
       },
@@ -913,6 +927,44 @@ export class ClassroomService {
     }
     if (maxScore !== null && dto.score > maxScore) {
       throw new BadRequestException(`La nota no puede ser mayor a ${maxScore}`);
+    }
+
+    // Gamificación: XP por DOMINIO al calificar (proporcional a la nota, hasta 30 XP),
+    // una sola vez por actividad y estudiante. Cubre tareas calificadas a mano (no solo
+    // lecciones/quizzes). Nunca rompe el flujo del docente.
+    try {
+      if (maxScore && maxScore > 0 && dto.score > 0) {
+        const enrollment = await this.prisma.studentEnrollment.findUnique({
+          where: { id: submission.studentEnrollmentId },
+          select: { studentId: true, institutionId: true },
+        });
+        if (enrollment) {
+          const xpAmount = Math.round(Math.min(dto.score / maxScore, 1) * 30);
+          if (xpAmount > 0) {
+            await this.identity.grantXp({
+              institutionId: enrollment.institutionId,
+              studentId: enrollment.studentId,
+              studentEnrollmentId: submission.studentEnrollmentId,
+              source: 'QUIZ_GRADED',
+              amount: xpAmount,
+              skill: submission.activity.classroom.teacherAssignment.subject?.name ?? null,
+              reason: `Actividad calificada: ${submission.activity.title}`,
+              idempotencyKey: `grade:activity:${submission.activityId}:enrollment:${submission.studentEnrollmentId}`,
+            });
+          }
+          // Evidencia de competencias (si la actividad es paso de una ruta con can-do).
+          await this.evidence.recordFromActivity({
+            institutionId: enrollment.institutionId,
+            studentId: enrollment.studentId,
+            studentEnrollmentId: submission.studentEnrollmentId,
+            activityId: submission.activityId,
+            scorePercent: Math.min(dto.score / maxScore, 1) * 100,
+            source: 'ACTIVITY', sourceRef: submissionId,
+          });
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`XP/evidencia de calificación no concedido (no crítico): ${err?.message || err}`);
     }
 
     return this.prisma.activitySubmission.update({
@@ -941,7 +993,7 @@ export class ClassroomService {
       include: {
         activity: {
           include: {
-            classroom: { select: { teacherAssignment: { select: { teacherId: true } } } },
+            classroom: { select: { teacherAssignment: { select: { teacherId: true, subject: { select: { name: true } } } } } },
           },
         },
       },
@@ -1091,7 +1143,7 @@ export class ClassroomService {
       include: {
         activity: {
           include: {
-            classroom: { select: { teacherAssignment: { select: { teacherId: true } } } },
+            classroom: { select: { teacherAssignment: { select: { teacherId: true, subject: { select: { name: true } } } } } },
           },
         },
         studentEnrollment: {
@@ -1375,7 +1427,11 @@ export class ClassroomService {
       where: { id: submissionId },
       include: {
         studentEnrollment: { include: { student: true } },
-        activity: true,
+        activity: {
+          include: {
+            classroom: { select: { teacherAssignment: { select: { subject: { select: { name: true } } } } } },
+          },
+        },
       },
     });
     if (!sub || sub.studentEnrollment.student.userId !== userId) throw new ForbiddenException('No autorizado');
@@ -1484,6 +1540,37 @@ export class ClassroomService {
         },
       }),
     ]);
+
+    // Gamificación: XP por DOMINIO normalizado (hasta 30 XP según % de acierto),
+    // una sola vez por actividad y estudiante (anti-farming). Nunca rompe el flujo.
+    try {
+      const fraction = maxScore > 0 ? Math.min(normalizedScore / maxScore, 1) : 0;
+      const xpAmount = Math.round(fraction * 30);
+      if (xpAmount > 0) {
+        await this.identity.grantXp({
+          institutionId: sub.studentEnrollment.institutionId,
+          studentId: sub.studentEnrollment.studentId,
+          studentEnrollmentId: sub.studentEnrollmentId,
+          source: 'QUIZ_GRADED',
+          amount: xpAmount,
+          skill: sub.activity.classroom.teacherAssignment.subject?.name ?? null,
+          reason: `Quiz: ${sub.activity.title}`,
+          idempotencyKey: `quiz:activity:${sub.activityId}:enrollment:${sub.studentEnrollmentId}`,
+        });
+      }
+    } catch (err: any) {
+      this.logger.warn(`XP de quiz no concedido (no crítico): ${err?.message || err}`);
+    }
+
+    // Evidencia de competencias: si esta actividad es paso de una ruta con can-do.
+    await this.evidence.recordFromActivity({
+      institutionId: sub.studentEnrollment.institutionId,
+      studentId: sub.studentEnrollment.studentId,
+      studentEnrollmentId: sub.studentEnrollmentId,
+      activityId: sub.activityId,
+      scorePercent: maxScore > 0 ? Math.min(normalizedScore / maxScore, 1) * 100 : 0,
+      source: 'QUIZ', sourceRef: submissionId,
+    });
 
     // Return result
     return this.prisma.activitySubmission.findUnique({

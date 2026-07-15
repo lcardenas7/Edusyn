@@ -2341,6 +2341,9 @@ export interface LessonSlide {
     explanation?: string
     points?: number
     hint?: string
+    feedbackCorrect?: string
+    feedbackIncorrect?: string
+    imageUrl?: string
   }
   badgeEmoji?: string
   badgeTitle?: string
@@ -2422,15 +2425,184 @@ export const lessonApi = {
   start: (lessonId: string) =>
     api.post<LessonProgress>(`/classrooms/lessons/${lessonId}/start`),
   advance: (lessonId: string, data: { slideIndex: number; slideId: string; answer?: any; timeSpentDelta?: number }) =>
-    api.post(`/classrooms/lessons/${lessonId}/advance`, data),
+    api.post<LessonProgress & {
+      isComplete?: boolean
+      slideResult?: { answer: any; isCorrect: boolean; points: number; maxPoints: number } | null
+      xp?: {
+        awarded: number; leveledUp: boolean; level: number | null; currentStreak: number | null
+        newBadges: { code: string; name: string; description: string; emoji: string; tier: string }[]
+      } | null
+    }>(`/classrooms/lessons/${lessonId}/advance`, data),
 
   // Teacher progress overview
   getAllProgress: (lessonId: string) =>
     api.get<LessonStudentProgress[]>(`/classrooms/lessons/${lessonId}/progress`),
 
   // AI generation
-  generateAI: (data: { topic: string; content: string; gradeName?: string }) =>
-    api.post(`/classrooms/lessons/generate-ai`, data),
+  generateAI: (data: { topic: string; content: string; gradeName?: string; subjectName?: string }) =>
+    api.post<{ title: string; description: string; slides: any[]; source: 'AI' | 'TEMPLATE' }>(`/classrooms/lessons/generate-ai`, data),
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GAMIFICACIÓN — Identidad de Aprendizaje (XP / nivel / racha)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface LearningIdentityView {
+  totalXp: number
+  level: number
+  currentStreak: number
+  longestStreak: number
+  skillXp: Record<string, number>
+  levelFloorXp: number
+  levelCeilXp: number
+  lastActivityDate: string | null
+}
+
+export interface BadgeView {
+  code: string
+  name: string
+  description: string
+  emoji: string
+  tier: string
+  earned: boolean
+  earnedAt: string | null
+}
+
+export const gamificationApi = {
+  // Identidad del estudiante autenticado
+  me: () => api.get<LearningIdentityView>(`/gamification/me`),
+  // Catálogo de insignias con estado ganado/bloqueado
+  badges: () => api.get<{ total: number; earned: number; badges: BadgeView[] }>(`/gamification/badges`),
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RUTAS DE APRENDIZAJE (Learning Journeys) + grafo de competencias CEFR
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface CompetencyView {
+  id: string
+  framework: string
+  level: string | null
+  skill: string | null
+  code: string
+  statement: string
+}
+export interface RouteStepView {
+  id: string
+  title: string
+  sortOrder: number
+  activity?: { id: string; title: string; type: string; isPublished?: boolean } | null
+  competency?: CompetencyView | null
+}
+export interface RouteView {
+  id: string
+  title: string
+  description?: string | null
+  isPublished: boolean
+  targetLevel?: string | null
+  targetCompetency?: { code: string; statement: string; level: string | null; skill: string | null } | null
+  steps: RouteStepView[]
+}
+export interface RouteSummary {
+  id: string
+  title: string
+  description?: string | null
+  isPublished: boolean
+  targetLevel?: string | null
+  targetCompetency?: { code: string; statement: string; level: string | null; skill: string | null } | null
+  stepsCount: number
+}
+
+export interface RoutePlan {
+  title: string
+  description: string
+  targetLevel: string
+  targetSkill: string
+  steps: { title: string; skill: string }[]
+}
+export interface RouteProgress {
+  routeId: string
+  targetMastery: number
+  demonstrated: boolean
+  completedSteps: number
+  totalSteps: number
+  steps: { id: string; title: string; done: boolean; mastery: number }[]
+}
+
+// ─── Expedición ABP ──────────────────────────────────────────────────────────
+export const abpApi = {
+  phases: () => api.get<any[]>(`/abp/phases`),
+  listByClassroom: (classroomId: string) => api.get<any[]>(`/abp/classroom/${classroomId}/projects`),
+  roster: (classroomId: string) => api.get<{ enrollmentId: string; studentId: string; name: string }[]>(`/abp/classroom/${classroomId}/roster`),
+  getProject: (projectId: string) => api.get<any>(`/abp/projects/${projectId}`),
+  dashboard: (projectId: string) => api.get<any>(`/abp/projects/${projectId}/dashboard`),
+  projectPresentation: (projectId: string) => api.get<any>(`/abp/projects/${projectId}/presentation`),
+  updatePresentation: (projectId: string, data: { challenge?: string; presentation?: any }) => api.post<any>(`/abp/projects/${projectId}/presentation`, data),
+  listResources: (projectId: string) => api.get<any[]>(`/abp/projects/${projectId}/resources`),
+  addResource: (projectId: string, data: { type?: string; title: string; url: string; description?: string }) => api.post<any>(`/abp/projects/${projectId}/resources`, data),
+  deleteResource: (resourceId: string) => api.delete(`/abp/resources/${resourceId}`),
+  listAnnouncements: (projectId: string) => api.get<any[]>(`/abp/projects/${projectId}/announcements`),
+  addAnnouncement: (projectId: string, data: { content: string; pinned?: boolean }) => api.post<any>(`/abp/projects/${projectId}/announcements`, data),
+  pinAnnouncement: (announcementId: string, pinned: boolean) => api.post<any>(`/abp/announcements/${announcementId}/pin`, { pinned }),
+  deleteAnnouncement: (announcementId: string) => api.delete(`/abp/announcements/${announcementId}`),
+  teamExpedition: (teamId: string) => api.get<any>(`/abp/teams/${teamId}/expedition`),
+  createProject: (data: { classroomId: string; title: string; challenge?: string }) => api.post<any>(`/abp/projects`, data),
+  createTeam: (data: { projectId: string; name: string; emoji?: string; color?: string; problem?: string; memberEnrollmentIds: string[] }) => api.post<any>(`/abp/teams`, data),
+  deleteTeam: (teamId: string) => api.delete(`/abp/teams/${teamId}`),
+  myTeam: (projectId: string) => api.get<any>(`/abp/projects/${projectId}/my-team`),
+  saveCanvas: (teamId: string, cardIndex: number, value: string) => api.post<any>(`/abp/teams/${teamId}/canvas`, { cardIndex, value }),
+  addIdea: (teamId: string, text: string) => api.post<any>(`/abp/teams/${teamId}/ideas`, { text }),
+  voteIdea: (teamId: string, ideaId: string) => api.post<any>(`/abp/teams/${teamId}/ideas/${ideaId}/vote`),
+  saveSmart: (teamId: string, text: string, checks: boolean[]) => api.post<any>(`/abp/teams/${teamId}/smart`, { text, checks }),
+  addTask: (teamId: string, text: string, ownerEnrollmentId: string) => api.post<any>(`/abp/teams/${teamId}/tasks`, { text, ownerEnrollmentId }),
+  moveTask: (teamId: string, taskId: string) => api.post<any>(`/abp/teams/${teamId}/tasks/${taskId}/move`),
+  removeTask: (teamId: string, taskId: string) => api.delete(`/abp/teams/${teamId}/tasks/${taskId}`),
+  addEvidence: (teamId: string, kind: 'LINK' | 'FILE', url: string, label?: string) => api.post<any>(`/abp/teams/${teamId}/evidences`, { kind, url, label }),
+  removeEvidence: (teamId: string, evidenceId: string) => api.delete(`/abp/teams/${teamId}/evidences/${evidenceId}`),
+  coeval: (teamId: string, targetTeamId: string, scores: number[]) => api.post<any>(`/abp/teams/${teamId}/coeval`, { targetTeamId, scores }),
+  requestValidation: (teamId: string) => api.post<any>(`/abp/teams/${teamId}/request-validation`, {}),
+  queue: (classroomId?: string) => api.get<any[]>(`/abp/queue`, { params: { classroomId } }),
+  resolve: (validationId: string, data: { action: 'approve' | 'return'; feedback?: string; rubricScores?: number[]; rubricComment?: string }) => api.post<any>(`/abp/validations/${validationId}/resolve`, data),
+  getReview: (validationId: string) => api.get<any>(`/abp/validations/${validationId}/review`),
+  addComment: (teamId: string, data: { phase: number; refType: string; refId?: string; content: string; parentId?: string }) => api.post<any>(`/abp/teams/${teamId}/comments`, data),
+  resolveComment: (commentId: string, resolved: boolean) => api.post<any>(`/abp/comments/${commentId}/resolve`, { resolved }),
+  // Misiones (Opción A: herramienta = misión por defecto de la fase)
+  listMissions: (teamId: string, phase: number) => api.get<any[]>(`/abp/teams/${teamId}/phases/${phase}/missions`),
+  addMission: (teamId: string, phase: number, data: { title: string; description?: string; required?: boolean }) => api.post<any>(`/abp/teams/${teamId}/phases/${phase}/missions`, data),
+  deleteMission: (missionId: string) => api.delete(`/abp/missions/${missionId}`),
+  setMissionStatus: (missionId: string, completed: boolean) => api.post<any>(`/abp/missions/${missionId}/status`, { completed }),
+  addActivity: (missionId: string, data: { type: string; title: string; content?: any }) => api.post<any>(`/abp/missions/${missionId}/activities`, data),
+  completeActivity: (activityId: string, completed: boolean) => api.post<any>(`/abp/activities/${activityId}/complete`, { completed }),
+  deleteActivity: (activityId: string) => api.delete(`/abp/activities/${activityId}`),
+}
+
+export const learningRouteApi = {
+  competencies: (level?: string, skill?: string) =>
+    api.get<CompetencyView[]>(`/learning-routes/competencies`, { params: { level, skill } }),
+  listByClassroom: (classroomId: string) =>
+    api.get<RouteSummary[]>(`/learning-routes/classroom/${classroomId}`),
+  get: (routeId: string) => api.get<RouteView>(`/learning-routes/${routeId}`),
+  progress: (routeId: string) => api.get<RouteProgress>(`/learning-routes/${routeId}/progress`),
+  create: (data: { classroomId: string; title: string; description?: string; targetCompetencyId?: string }) =>
+    api.post<RouteView>(`/learning-routes`, data),
+  generate: (data: { objective: string; gradeName?: string; targetLevel?: string }) =>
+    api.post<RoutePlan>(`/learning-routes/generate`, data),
+  fromPlan: (data: { classroomId: string; plan: RoutePlan }) =>
+    api.post<RouteView>(`/learning-routes/from-plan`, data),
+  update: (routeId: string, data: { title?: string; description?: string; isPublished?: boolean; targetCompetencyId?: string | null }) =>
+    api.put(`/learning-routes/${routeId}`, data),
+  remove: (routeId: string) => api.delete(`/learning-routes/${routeId}`),
+  addStep: (routeId: string, data: { title: string; activityId?: string; competencyId?: string }) =>
+    api.post(`/learning-routes/${routeId}/steps`, data),
+  addStepWithActivity: (routeId: string, data: { title: string; activityType?: string; description?: string; competencyId?: string; maxScore?: number }) =>
+    api.post(`/learning-routes/${routeId}/steps/new-activity`, data),
+  generateStepLesson: (stepId: string) => api.post<{ activityId: string; slides: number }>(`/learning-routes/steps/${stepId}/generate-lesson`, {}),
+  updateStep: (stepId: string, data: { title?: string; activityId?: string | null; competencyId?: string | null }) =>
+    api.put(`/learning-routes/steps/${stepId}`, data),
+  createStepActivity: (stepId: string, data: { activityType?: string; description?: string; maxScore?: number }) =>
+    api.post<{ activityId: string }>(`/learning-routes/steps/${stepId}/activity`, data),
+  removeStep: (stepId: string) => api.delete(`/learning-routes/steps/${stepId}`),
+  reorder: (routeId: string, stepIds: string[]) => api.put(`/learning-routes/${routeId}/steps/reorder`, { stepIds }),
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

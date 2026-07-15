@@ -1,0 +1,1295 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Rocket, Plus, Trash2, Check, Clock, Lock, Loader2, Users, Send, ChevronLeft, Paperclip, Link2 } from 'lucide-react'
+import { abpApi, classroomApi } from '../lib/api'
+import AbpReview from './AbpReview'
+
+// Metadatos de las 6 fases (nombre + icono). El motor real vive en el backend.
+const PHASES = [
+  { n: 1, name: 'El Reto', icon: '🧭' },
+  { n: 2, name: 'Tormenta de Ideas', icon: '⚡' },
+  { n: 3, name: 'Objetivos', icon: '🎯' },
+  { n: 4, name: 'Plan de Acción', icon: '🛠️' },
+  { n: 5, name: 'Prototipo', icon: '🚀' },
+  { n: 6, name: 'Socialización', icon: '🏆' },
+]
+const phaseName = (n: number) => PHASES.find(p => p.n === n)?.name || `Fase ${n}`
+const stateOf = (team: any, n: number) => (team?.phaseStates || []).find((s: any) => s.phase === n)?.status || 'LOCKED'
+const phaseData = (team: any, n: number) => (team?.phaseStates || []).find((s: any) => s.phase === n)?.data || {}
+
+// Fase 1 — Canvas del Problema (4 tarjetas colaborativas).
+const CANVAS_CARDS = [
+  { q: '¿Qué está pasando?', icon: '🔍' },
+  { q: '¿A quiénes afecta?', icon: '👥' },
+  { q: '¿Por qué es importante?', icon: '⭐' },
+  { q: '¿Qué pasa si nadie lo resuelve?', icon: '⚠️' },
+]
+
+function CanvasPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
+  const data = phaseData(team, 1)
+  const canvas: any[] = data.canvas || []
+  const editable = stateOf(team, 1) === 'IN_PROGRESS'
+  const [local, setLocal] = useState<string[]>(() => CANVAS_CARDS.map((_, i) => canvas[i]?.value || ''))
+
+  const save = async (i: number) => {
+    if (local[i] === (canvas[i]?.value || '')) return
+    try { await abpApi.saveCanvas(team.id, i, local[i]); onSaved() } catch {}
+  }
+
+  return (
+    <div className="grid sm:grid-cols-2 gap-3">
+      {CANVAS_CARDS.map((c, i) => {
+        const filled = !!local[i].trim()
+        return (
+          <div key={i} className={`rounded-xl border-2 p-3 ${filled ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-200'}`}>
+            <h5 className="font-bold text-sm text-slate-700 flex items-center gap-1.5 mb-2">{c.icon} {c.q}</h5>
+            <textarea
+              value={local[i]}
+              disabled={!editable}
+              onChange={e => setLocal(v => { const n = [...v]; n[i] = e.target.value; return n })}
+              onBlur={() => editable && save(i)}
+              rows={3}
+              placeholder="Escribe aquí…"
+              className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm resize-none disabled:opacity-70"
+            />
+            <p className="text-xs text-slate-400 mt-1">{filled ? `✍️ ${canvas[i]?.byName || 'Aportó'}` : 'Tarjeta pendiente'}</p>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Sendero de 6 fases (nodos hecho / actual / bloqueado) ────────────────────
+function Trail({ team, mini = false }: { team: any; mini?: boolean }) {
+  if (mini) {
+    return (
+      <div className="flex gap-1">
+        {PHASES.map(p => {
+          const st = stateOf(team, p.n)
+          const cls = st === 'VALIDATED' ? 'bg-emerald-500' : st === 'IN_PROGRESS' || st === 'AWAITING' ? 'bg-amber-400' : 'bg-slate-200'
+          return <div key={p.n} className={`flex-1 h-2 rounded-full ${cls}`} title={`Fase ${p.n}: ${p.name}`} />
+        })}
+      </div>
+    )
+  }
+  return (
+    <div className="flex items-start justify-between gap-1 py-2">
+      {PHASES.map((p, i) => {
+        const st = stateOf(team, p.n)
+        const done = st === 'VALIDATED'
+        const current = st === 'IN_PROGRESS' || st === 'AWAITING'
+        return (
+          <div key={p.n} className="flex flex-col items-center gap-1.5 flex-1 min-w-0 relative">
+            {i < PHASES.length - 1 && <div className={`absolute top-6 left-1/2 w-full h-0.5 ${done ? 'bg-emerald-300' : 'bg-slate-200'}`} />}
+            <div className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center text-xl border-2 ${
+              done ? 'bg-emerald-50 border-emerald-400' : current ? 'bg-amber-50 border-amber-400 ring-4 ring-amber-100' : 'bg-slate-50 border-slate-200'
+            }`}>
+              {done ? <Check className="w-6 h-6 text-emerald-600" /> : st === 'LOCKED' ? <Lock className="w-4 h-4 text-slate-300" /> : p.icon}
+            </div>
+            <span className={`text-[11px] text-center leading-tight font-medium ${current ? 'text-amber-700' : done ? 'text-emerald-700' : 'text-slate-400'}`}>
+              Fase {p.n}<br />{p.name}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// Fase 2 — Tormenta de Ideas (muro de notas + votación).
+const STICKY_COLORS = ['#FEF3C7', '#D1FAE5', '#FCE7F3', '#DBEAFE', '#EDE9FE']
+function IdeasPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
+  const ideas: any[] = phaseData(team, 2).ideas || []
+  const editable = stateOf(team, 2) === 'IN_PROGRESS'
+  const votesPerStudent = team.config?.votesPerStudent ?? 3
+  const votesLeft = Math.max(0, votesPerStudent - (team.myVotesUsed ?? 0))
+  const myEnrollment = team.myEnrollmentId
+  const votedIds = new Set<string>(team.myVotedIds || [])
+  const maxVotes = ideas.reduce((m: number, i: any) => Math.max(m, i.votes || 0), 0)
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const add = async () => {
+    if (!text.trim() || busy) return
+    setBusy(true)
+    try { await abpApi.addIdea(team.id, text.trim()); setText(''); onSaved() } finally { setBusy(false) }
+  }
+  const vote = async (id: string) => {
+    setBusy(true)
+    try { await abpApi.voteIdea(team.id, id); onSaved() } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo votar') } finally { setBusy(false) }
+  }
+
+  return (
+    <div>
+      <div className="flex gap-2 mb-4 flex-wrap">
+        <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add() }} disabled={!editable}
+          placeholder="Escribe tu idea y presiona Enter…" className="flex-1 min-w-[200px] border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm" />
+        <span className="flex items-center gap-1.5 font-bold text-violet-700 bg-amber-50 rounded-xl px-4 text-sm">🗳️ {votesLeft} votos</span>
+      </div>
+      {ideas.length === 0 ? (
+        <p className="text-sm text-slate-400 text-center py-6">Aún no hay ideas. ¡Sé el primero!</p>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {ideas.map((i: any, ix: number) => {
+            const mine = i.by === myEnrollment
+            const voted = votedIds.has(i.id)
+            const top = (i.votes || 0) === maxVotes && maxVotes > 0
+            return (
+              <div key={i.id} className={`rounded-lg p-3 shadow-sm relative flex flex-col gap-2 min-h-[100px] ${top ? 'ring-2 ring-amber-400' : ''}`} style={{ background: STICKY_COLORS[ix % STICKY_COLORS.length] }}>
+                {top && <span className="absolute -top-2 right-2 bg-amber-400 text-white text-[10px] font-bold rounded-full px-2 py-0.5">⭐ favorita</span>}
+                <div className="text-sm text-slate-800">{i.text}</div>
+                <div className="mt-auto flex items-center justify-between text-xs text-slate-500 font-medium">
+                  <span>— {i.byName}</span>
+                  <button onClick={() => vote(i.id)} disabled={mine || voted || votesLeft <= 0 || !editable || !myEnrollment || busy}
+                    className="bg-white/70 rounded-full px-3 py-1 font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed">
+                    👍 {i.votes || 0}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Fase 3 — Objetivo SMART (objetivo + 5 criterios).
+const SMART_CRITERIA = [
+  { k: 'S', t: 'Específico: dice exactamente qué harán' },
+  { k: 'M', t: 'Medible: se puede verificar con datos' },
+  { k: 'A', t: 'Alcanzable: es posible con sus recursos' },
+  { k: 'R', t: 'Relevante: responde a la problemática' },
+  { k: 'T', t: 'con Tiempo: tiene un plazo definido' },
+]
+function SmartPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
+  const smart = phaseData(team, 3).smart || {}
+  const editable = stateOf(team, 3) === 'IN_PROGRESS'
+  const [text, setText] = useState<string>(smart.text || '')
+  const [checks, setChecks] = useState<boolean[]>(() => SMART_CRITERIA.map((_, i) => !!smart.checks?.[i]))
+  const [busy, setBusy] = useState(false)
+
+  const save = async (nt: string, nc: boolean[]) => {
+    setBusy(true)
+    try { await abpApi.saveSmart(team.id, nt, nc); onSaved() } finally { setBusy(false) }
+  }
+  const toggle = (i: number) => { const nc = [...checks]; nc[i] = !nc[i]; setChecks(nc); if (editable) save(text, nc) }
+
+  return (
+    <div>
+      <textarea value={text} onChange={e => setText(e.target.value)} onBlur={() => editable && text !== (smart.text || '') && save(text, checks)}
+        disabled={!editable} rows={3} placeholder="Nuestro objetivo es… (específico, medible, con plazo)"
+        className="w-full border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm mb-3 disabled:opacity-70" />
+      <div className="grid sm:grid-cols-2 gap-2">
+        {SMART_CRITERIA.map((c, i) => (
+          <label key={c.k} className={`flex items-start gap-2.5 border-2 rounded-xl p-3 text-sm cursor-pointer ${checks[i] ? 'border-emerald-300 bg-emerald-50/50' : 'border-slate-200'} ${busy ? 'opacity-70' : ''}`}>
+            <input type="checkbox" checked={checks[i]} onChange={() => toggle(i)} disabled={!editable} className="mt-0.5 accent-emerald-600" />
+            <span><b>{c.k}</b> · {c.t}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Fase 4 — Plan de Acción (Kanban).
+const KANBAN_COLS = ['📋 Por hacer', '⚙️ En proceso', '✅ Hecho']
+function teamMembers(team: any): { id: string; name: string }[] {
+  return (team.members || []).map((m: any) => ({
+    id: m.studentEnrollmentId,
+    name: `${m.studentEnrollment?.student?.user?.firstName ?? ''} ${m.studentEnrollment?.student?.user?.lastName ?? ''}`.trim() || 'Integrante',
+  }))
+}
+function KanbanPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
+  const tasks: any[] = phaseData(team, 4).tasks || []
+  const editable = stateOf(team, 4) === 'IN_PROGRESS'
+  const members = teamMembers(team)
+  const [text, setText] = useState('')
+  const [owner, setOwner] = useState(members[0]?.id || '')
+  const [busy, setBusy] = useState(false)
+
+  const add = async () => {
+    if (!text.trim() || !owner || busy) return
+    setBusy(true)
+    try { await abpApi.addTask(team.id, text.trim(), owner); setText(''); onSaved() } catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+  }
+  const act = async (fn: Promise<any>) => { setBusy(true); try { await fn; onSaved() } finally { setBusy(false) } }
+
+  return (
+    <div>
+      {editable && (
+        <div className="flex gap-2 mb-4 flex-wrap">
+          <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add() }} placeholder="Nueva tarea…" className="flex-1 min-w-[160px] border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm" />
+          <select value={owner} onChange={e => setOwner(e.target.value)} className="border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm">
+            {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+          <button onClick={add} disabled={!text.trim() || !owner || busy} className="px-4 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50">Agregar</button>
+        </div>
+      )}
+      <div className="grid sm:grid-cols-3 gap-3">
+        {KANBAN_COLS.map((c, ci) => {
+          const list = tasks.filter(t => t.col === ci)
+          return (
+            <div key={ci} className="bg-slate-50 rounded-xl p-3">
+              <h5 className="font-bold text-sm text-slate-700 flex justify-between mb-2">{c}<span className="text-slate-400">{list.length}</span></h5>
+              <div className="space-y-2">
+                {list.map(t => (
+                  <div key={t.id} className="bg-white rounded-lg p-2.5 text-sm shadow-sm">
+                    <div className={ci === 2 ? 'line-through text-slate-400' : 'text-slate-700'}>{t.text}</div>
+                    <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
+                      <span>👤 {t.ownerName}</span>
+                      {editable && <button onClick={() => act(abpApi.removeTask(team.id, t.id))} className="text-slate-300 hover:text-rose-500">✕</button>}
+                    </div>
+                    {editable && ci < 2 && <button onClick={() => act(abpApi.moveTask(team.id, t.id))} className="mt-1.5 text-xs bg-violet-600 text-white rounded px-2 py-1 font-medium">{ci === 0 ? 'Iniciar →' : 'Terminar ✔'}</button>}
+                  </div>
+                ))}
+                {list.length === 0 && <p className="text-xs text-slate-300 text-center py-2">Vacío</p>}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// Fase 5 — Prototipo y Evidencias (enlaces + archivos subidos a storage).
+function EvidencePhase({ team, onSaved }: { team: any; onSaved: () => void }) {
+  const evidences: any[] = phaseData(team, 5).evidences || []
+  const editable = stateOf(team, 5) === 'IN_PROGRESS'
+  const [link, setLink] = useState('')
+  const [busy, setBusy] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const addLink = async () => {
+    const u = link.trim()
+    if (!u || busy) return
+    setBusy(true)
+    try { await abpApi.addEvidence(team.id, 'LINK', u); setLink('') ; onSaved() } catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+  }
+  const upload = async (file: File) => {
+    setBusy(true)
+    try {
+      const { data } = await classroomApi.uploadMaterial(file)
+      const url = data?.data?.path || data?.data?.url
+      if (url) { await abpApi.addEvidence(team.id, 'FILE', url, file.name); onSaved() }
+    } catch { alert('No se pudo subir el archivo') } finally { setBusy(false) }
+  }
+  const remove = async (id: string) => { setBusy(true); try { await abpApi.removeEvidence(team.id, id); onSaved() } finally { setBusy(false) } }
+
+  return (
+    <div>
+      {editable && (
+        <div className="flex gap-2 mb-4 flex-wrap">
+          <input value={link} onChange={e => setLink(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addLink() }} placeholder="Pega un enlace (Canva, MakeCode, video…)" className="flex-1 min-w-[200px] border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm" />
+          <button onClick={addLink} disabled={!link.trim() || busy} className="px-4 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Link2 className="w-4 h-4" /> Enlace</button>
+          <input ref={fileRef} type="file" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); e.currentTarget.value = '' }} />
+          <button onClick={() => fileRef.current?.click()} disabled={busy} className="px-4 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Paperclip className="w-4 h-4" /> Archivo</button>
+        </div>
+      )}
+      {evidences.length === 0 ? (
+        <p className="text-sm text-slate-400 text-center py-6">Aún no hay evidencias. Sube fotos, videos o enlaces del prototipo.</p>
+      ) : (
+        <div className="space-y-2">
+          {evidences.map((e: any) => (
+            <div key={e.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-3">
+              <span>{e.kind === 'FILE' ? '📎' : '🔗'}</span>
+              <a href={e.url} target="_blank" rel="noreferrer" className="flex-1 text-sm text-violet-600 hover:underline truncate">{e.label}</a>
+              <span className="text-xs text-slate-400">{e.byName}</span>
+              {editable && <button onClick={() => remove(e.id)} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Fase 6 — Socialización y Coevaluación (cada equipo evalúa a los demás, 1–4).
+const COEVAL_CRITERIA = ['Claridad de la presentación', 'Creatividad de la solución', 'Trabajo en equipo', 'Impacto en la comunidad']
+function CoevalCard({ team, sibling, existing, editable, onSaved }: { team: any; sibling: any; existing: any; editable: boolean; onSaved: () => void }) {
+  const [scores, setScores] = useState<number[]>(() => COEVAL_CRITERIA.map((_, i) => existing?.scores?.[i] || 0))
+  const [busy, setBusy] = useState(false)
+  const done = !!existing
+  const complete = scores.every(s => s >= 1)
+  const submit = async () => {
+    if (!complete || busy) return
+    setBusy(true)
+    try { await abpApi.coeval(team.id, sibling.id, scores); onSaved() } catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+  }
+  return (
+    <div className={`border-2 rounded-xl p-4 ${done ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-200'}`}>
+      <div className="flex justify-between items-center mb-2">
+        <h5 className="font-bold text-slate-800">{sibling.emoji} {sibling.name}</h5>
+        {done && <span className="text-xs text-emerald-600 font-semibold">✓ Evaluado</span>}
+      </div>
+      <div className="space-y-2">
+        {COEVAL_CRITERIA.map((c, i) => (
+          <div key={i} className="flex items-center justify-between gap-2">
+            <span className="text-sm text-slate-600">{c}</span>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4].map(n => (
+                <button key={n} onClick={() => editable && setScores(s => { const x = [...s]; x[i] = n; return x })} disabled={!editable}
+                  className={`w-8 h-8 rounded-lg text-sm font-bold ${scores[i] === n ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-500'}`}>{n}</button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {editable && <button onClick={submit} disabled={!complete || busy} className="mt-3 w-full py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">{done ? 'Actualizar' : 'Enviar evaluación'}</button>}
+    </div>
+  )
+}
+function CoevalPhase({ team, onSaved }: { team: any; onSaved: () => void }) {
+  const siblings = team.siblings || []
+  const coevals = phaseData(team, 6).coevals || {}
+  const editable = stateOf(team, 6) === 'IN_PROGRESS'
+  if (siblings.length === 0) return <p className="text-sm text-slate-400 text-center py-6">Son el único equipo del proyecto: no hay coevaluación. Presenten su solución y soliciten la validación para cerrar la expedición.</p>
+  return (
+    <div className="grid sm:grid-cols-2 gap-3">
+      {siblings.map((s: any) => <CoevalCard key={s.id} team={team} sibling={s} existing={coevals[s.id]} editable={editable} onSaved={onSaved} />)}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VISTA ESTUDIANTE — su expedición
+// ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// MISIONES — el trabajo real dentro de cada fase-hito (Opción A: herramienta = misión).
+// ═══════════════════════════════════════════════════════════════════════════
+const PHASE_TOOL_UI: Record<number, string> = { 1: 'CANVAS', 2: 'IDEAS', 3: 'SMART', 4: 'KANBAN', 5: 'EVIDENCE', 6: 'COEVAL' }
+const ACT_LABEL: Record<string, string> = { READING: '📖 Lectura', VIDEO: '🎬 Video', QUIZ: '❓ Quiz', INTERVIEW: '🎤 Entrevista', UPLOAD: '📤 Evidencia', LINK: '🔗 Enlace', CUSTOM: '✅ Tarea' }
+const ACT_TYPES = ['READING', 'VIDEO', 'INTERVIEW', 'UPLOAD', 'LINK', 'CUSTOM']
+
+function PhaseTool({ tool, team, onSaved }: { tool: string; team: any; onSaved: () => void }) {
+  switch (tool) {
+    case 'CANVAS': return <CanvasPhase team={team} onSaved={onSaved} />
+    case 'IDEAS': return <IdeasPhase team={team} onSaved={onSaved} />
+    case 'SMART': return <SmartPhase team={team} onSaved={onSaved} />
+    case 'KANBAN': return <KanbanPhase team={team} onSaved={onSaved} />
+    case 'EVIDENCE': return <EvidencePhase team={team} onSaved={onSaved} />
+    case 'COEVAL': return <CoevalPhase team={team} onSaved={onSaved} />
+    default: return null
+  }
+}
+
+function AddActivityForm({ mission, onSaved }: { mission: any; onSaved: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [type, setType] = useState('READING')
+  const [title, setTitle] = useState('')
+  const [busy, setBusy] = useState(false)
+  const save = async () => {
+    if (!title.trim()) return
+    setBusy(true)
+    try { await abpApi.addActivity(mission.id, { type, title: title.trim() }); setTitle(''); setOpen(false); onSaved() } finally { setBusy(false) }
+  }
+  if (!open) return <button onClick={() => setOpen(true)} className="mt-2 text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir actividad</button>
+  return (
+    <div className="mt-2 flex items-center gap-2 flex-wrap">
+      <select value={type} onChange={e => setType(e.target.value)} className="text-xs border border-slate-200 rounded-lg px-2 py-1.5">
+        {ACT_TYPES.map(t => <option key={t} value={t}>{ACT_LABEL[t]}</option>)}
+      </select>
+      <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Describe la actividad…" className="flex-1 min-w-[160px] text-sm border border-slate-200 rounded-lg px-2.5 py-1.5" />
+      <button onClick={save} disabled={busy || !title.trim()} className="text-xs font-bold bg-violet-600 text-white rounded-lg px-3 py-1.5 disabled:opacity-40">Añadir</button>
+      <button onClick={() => setOpen(false)} className="text-xs text-slate-400">Cancelar</button>
+    </div>
+  )
+}
+
+function MissionCard({ mission, team, onSaved }: { mission: any; team: any; onSaved: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const toolAct = (mission.activities || []).find((a: any) => a.content?.tool)
+  const tool = toolAct?.content?.tool
+  const acts = (mission.activities || []).filter((a: any) => !a.content?.tool)
+  const complete = !!mission.complete
+  const run = async (fn: () => Promise<any>) => { setBusy(true); try { await fn(); onSaved() } finally { setBusy(false) } }
+  return (
+    <div className={`rounded-xl border p-4 ${complete ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-200 bg-white'}`}>
+      <div className="flex items-start gap-2.5">
+        <div className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs shrink-0 ${complete ? 'bg-emerald-500' : 'bg-slate-300'}`}>{complete ? <Check className="w-3.5 h-3.5" /> : '○'}</div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="font-bold text-slate-800 text-sm">{mission.title}</h4>
+            {mission.required && <span className="text-[10px] font-bold uppercase tracking-wide bg-violet-100 text-violet-700 rounded-full px-1.5 py-0.5">Obligatoria</span>}
+            {!tool && <button onClick={() => run(() => abpApi.deleteMission(mission.id))} disabled={busy} className="ml-auto text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>}
+          </div>
+          {mission.description && <p className="text-xs text-slate-500 mt-0.5">{mission.description}</p>}
+
+          {tool ? (
+            <div className="mt-3">
+              <PhaseTool tool={tool} team={team} onSaved={onSaved} />
+            </div>
+          ) : (
+            <div className="mt-2 space-y-1.5">
+              {acts.map((a: any) => (
+                <div key={a.id} className="flex items-center gap-2 group">
+                  <input type="checkbox" checked={!!a.completed} disabled={busy} onChange={e => run(() => abpApi.completeActivity(a.id, e.target.checked))} className="w-4 h-4 accent-violet-600" />
+                  <span className={`text-sm ${a.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}><span className="text-slate-400 mr-1">{ACT_LABEL[a.type] || a.type}</span>{a.title}</span>
+                  <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} className="ml-auto opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                </div>
+              ))}
+              {acts.length === 0 && (
+                <label className="flex items-center gap-2 text-sm text-slate-600">
+                  <input type="checkbox" checked={complete} disabled={busy} onChange={e => run(() => abpApi.setMissionStatus(mission.id, e.target.checked))} className="w-4 h-4 accent-violet-600" />
+                  Marcar como completada
+                </label>
+              )}
+              <AddActivityForm mission={mission} onSaved={onSaved} />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AddMissionForm({ team, phase, onSaved }: { team: any; phase: number; onSaved: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [title, setTitle] = useState('')
+  const [busy, setBusy] = useState(false)
+  const save = async () => {
+    if (!title.trim()) return
+    setBusy(true)
+    try { await abpApi.addMission(team.id, phase, { title: title.trim(), required: false }); setTitle(''); setOpen(false); onSaved() } finally { setBusy(false) }
+  }
+  if (!open) return <button onClick={() => setOpen(true)} className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-sm font-semibold text-slate-400 hover:border-violet-300 hover:text-violet-600 flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" /> Añadir una misión propia</button>
+  return (
+    <div className="flex items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50">
+      <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título de la misión…" className="flex-1 text-sm border border-slate-200 rounded-lg px-2.5 py-1.5" />
+      <button onClick={save} disabled={busy || !title.trim()} className="text-sm font-bold bg-violet-600 text-white rounded-lg px-3 py-1.5 disabled:opacity-40">Crear</button>
+      <button onClick={() => setOpen(false)} className="text-sm text-slate-400">Cancelar</button>
+    </div>
+  )
+}
+
+function MissionsPanel({ team, onSaved }: { team: any; onSaved: () => void }) {
+  const cur = team.currentPhase
+  const missions = team.currentMissions || []
+  // Equipos previos (sin misiones sembradas): renderiza la herramienta directamente.
+  if (missions.length === 0) return <PhaseTool tool={PHASE_TOOL_UI[cur]} team={team} onSaved={onSaved} />
+  return (
+    <div className="space-y-3">
+      {missions.map((m: any) => <MissionCard key={m.id} mission={m} team={team} onSaved={onSaved} />)}
+      <AddMissionForm team={team} phase={cur} onSaved={onSaved} />
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PORTADA / PRESENTACIÓN (Nivel 1) — vista compartida + editor del docente.
+// ═══════════════════════════════════════════════════════════════════════════
+function videoEmbed(url: string): string | null {
+  if (!url) return null
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{11})/)
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}`
+  const vm = url.match(/vimeo\.com\/(\d+)/)
+  if (vm) return `https://player.vimeo.com/video/${vm[1]}`
+  return null
+}
+
+function PresentationView({ project }: { project: any }) {
+  const p = project?.presentation || {}
+  const embed = videoEmbed(p.videoUrl || '')
+  return (
+    <div className="space-y-4">
+      {/* Portada / hero */}
+      <div className="relative rounded-2xl overflow-hidden">
+        {p.banner
+          ? <img src={p.banner} alt="" className="w-full h-44 sm:h-56 object-cover" />
+          : <div className="w-full h-44 sm:h-56 bg-gradient-to-br from-violet-500 to-fuchsia-500" />}
+        <div className="absolute inset-0 bg-black/35 flex items-end p-5">
+          <div>
+            <div className="text-white/80 text-xs font-bold uppercase tracking-wide">Expedición ABP</div>
+            <h2 className="text-2xl sm:text-3xl font-black text-white drop-shadow">{project.title}</h2>
+          </div>
+        </div>
+      </div>
+
+      {p.teacherMessage && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="text-xs font-bold uppercase tracking-wide text-violet-600 mb-1">Mensaje del docente</div>
+          <p className="text-slate-700 whitespace-pre-line">{p.teacherMessage}</p>
+        </div>
+      )}
+
+      {embed
+        ? <div className="rounded-2xl overflow-hidden border border-slate-200 aspect-video"><iframe src={embed} className="w-full h-full" allowFullScreen title="Video de bienvenida" /></div>
+        : p.videoUrl ? <a href={p.videoUrl} target="_blank" rel="noreferrer" className="block bg-white rounded-2xl border border-slate-200 p-4 font-semibold text-violet-600 hover:bg-violet-50">▶ Ver video de bienvenida</a> : null}
+
+      {project.challenge && (
+        <div className="bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-2xl p-6 text-white">
+          <div className="text-xs font-bold uppercase tracking-wide opacity-80 mb-1">🎯 El gran reto</div>
+          <p className="text-lg font-bold">{project.challenge}</p>
+          <p className="text-sm opacity-80 mt-2">Cada equipo encontrará SU propia problemática dentro de este reto.</p>
+        </div>
+      )}
+
+      {(p.context || p.why) && (
+        <div className="grid sm:grid-cols-2 gap-3">
+          {p.context && <div className="bg-white rounded-2xl border border-slate-200 p-5"><div className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-1">Contexto</div><p className="text-sm text-slate-700 whitespace-pre-line">{p.context}</p></div>}
+          {p.why && <div className="bg-white rounded-2xl border border-slate-200 p-5"><div className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-1">¿Por qué es importante?</div><p className="text-sm text-slate-700 whitespace-pre-line">{p.why}</p></div>}
+        </div>
+      )}
+
+      {p.skills?.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h4 className="font-bold text-slate-800 mb-3">📚 Lo que aprenderás</h4>
+          <div className="grid sm:grid-cols-2 gap-2">{p.skills.map((s: string, i: number) => <div key={i} className="flex items-center gap-2 text-sm text-slate-700"><Check className="w-4 h-4 text-emerald-500 shrink-0" />{s}</div>)}</div>
+        </div>
+      )}
+
+      {/* Cómo funciona — estático desde las 6 fases */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <h4 className="font-bold text-slate-800 mb-3">🧭 Cómo funciona la expedición</h4>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {PHASES.map(ph => (
+            <div key={ph.n} className="rounded-xl border border-slate-200 p-3">
+              <div className="text-2xl">{ph.icon}</div>
+              <div className="text-xs font-bold text-violet-600 mt-1">Paso {ph.n}</div>
+              <div className="text-sm font-semibold text-slate-700">{ph.name}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {p.rules?.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h4 className="font-bold text-slate-800 mb-3">📋 Reglas del proyecto</h4>
+          <ul className="space-y-1.5">{p.rules.map((r: string, i: number) => <li key={i} className="flex items-start gap-2 text-sm text-slate-700"><span className="text-violet-500 mt-0.5">•</span>{r}</li>)}</ul>
+        </div>
+      )}
+
+      {p.timeline?.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h4 className="font-bold text-slate-800 mb-3">📅 Cronograma</h4>
+          <div className="space-y-2">{p.timeline.map((t: any, i: number) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="w-28 shrink-0 text-xs font-bold text-violet-600">{t.label}</div>
+              <div className="flex-1 h-3 bg-violet-500 rounded-full" />
+              <div className="text-xs text-slate-600 w-40 truncate text-right">{t.detail}</div>
+            </div>
+          ))}</div>
+        </div>
+      )}
+
+      {p.faq?.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h4 className="font-bold text-slate-800 mb-3">❓ Preguntas frecuentes</h4>
+          <div className="space-y-3">{p.faq.map((f: any, i: number) => (
+            <div key={i}>
+              <p className="text-sm font-semibold text-slate-700">{f.q}</p>
+              <p className="text-sm text-slate-500 whitespace-pre-line">{f.a}</p>
+            </div>
+          ))}</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function LineListInput({ label, value, onChange, placeholder }: { label: string; value: string[]; onChange: (v: string[]) => void; placeholder: string }) {
+  return (
+    <div>
+      <label className="text-xs font-semibold text-slate-500">{label} <span className="text-slate-300">(uno por línea)</span></label>
+      <textarea value={(value || []).join('\n')} onChange={e => onChange(e.target.value.split('\n'))} rows={4} placeholder={placeholder} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
+    </div>
+  )
+}
+
+function PresentationEditor({ project, onClose, onSaved }: { project: any; onClose: () => void; onSaved: () => void }) {
+  const init = project?.presentation || {}
+  const [challenge, setChallenge] = useState(project?.challenge || '')
+  const [banner, setBanner] = useState(init.banner || '')
+  const [videoUrl, setVideoUrl] = useState(init.videoUrl || '')
+  const [teacherMessage, setTeacherMessage] = useState(init.teacherMessage || '')
+  const [context, setContext] = useState(init.context || '')
+  const [why, setWhy] = useState(init.why || '')
+  const [skills, setSkills] = useState<string[]>(init.skills || [])
+  const [rules, setRules] = useState<string[]>(init.rules || [])
+  const [timeline, setTimeline] = useState<{ label: string; detail: string }[]>(init.timeline || [])
+  const [faq, setFaq] = useState<{ q: string; a: string }[]>(init.faq || [])
+  const [busy, setBusy] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const uploadBanner = async (file: File) => {
+    setBusy(true)
+    try {
+      const { data } = await classroomApi.uploadMaterial(file)
+      const url = data?.data?.path || data?.data?.url
+      if (url) setBanner(url)
+    } catch { alert('No se pudo subir la imagen') } finally { setBusy(false) }
+  }
+  const save = async () => {
+    setBusy(true)
+    try {
+      await abpApi.updatePresentation(project.id, {
+        challenge,
+        presentation: { banner, videoUrl, teacherMessage, context, why, skills: skills.filter(Boolean), rules: rules.filter(Boolean), timeline: timeline.filter(t => t.label || t.detail), faq: faq.filter(f => f.q || f.a) },
+      })
+      onSaved()
+    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo guardar') } finally { setBusy(false) }
+  }
+
+  return (
+    <div className="space-y-4">
+      <button onClick={onClose} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ChevronLeft className="w-4 h-4" /> Volver</button>
+      <h3 className="text-xl font-bold text-slate-800">✏️ Editar portada</h3>
+
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+        <div>
+          <label className="text-xs font-semibold text-slate-500">Reto general</label>
+          <textarea value={challenge} onChange={e => setChallenge(e.target.value)} rows={2} placeholder="¿Cómo puede la tecnología mejorar un problema de nuestra institución?" className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-500">Banner (URL de imagen o subir)</label>
+          <div className="flex gap-2 mt-1">
+            <input value={banner} onChange={e => setBanner(e.target.value)} placeholder="https://…" className="flex-1 border border-slate-300 rounded-xl px-3 py-2 text-sm" />
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadBanner(f); e.currentTarget.value = '' }} />
+            <button onClick={() => fileRef.current?.click()} disabled={busy} className="px-3 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Paperclip className="w-4 h-4" /> Subir</button>
+          </div>
+          {banner && <img src={banner} alt="" className="mt-2 w-full h-32 object-cover rounded-xl" />}
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-500">Video de bienvenida (YouTube/Vimeo, opcional)</label>
+          <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtu.be/…" className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm mt-1" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-500">Mensaje del docente</label>
+          <textarea value={teacherMessage} onChange={e => setTeacherMessage(e.target.value)} rows={3} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
+        </div>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-semibold text-slate-500">Contexto</label>
+            <textarea value={context} onChange={e => setContext(e.target.value)} rows={3} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-500">¿Por qué es importante?</label>
+            <textarea value={why} onChange={e => setWhy(e.target.value)} rows={3} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
+          </div>
+        </div>
+        <LineListInput label="Lo que aprenderán" value={skills} onChange={setSkills} placeholder={'Investigación\nTrabajo colaborativo\nPython'} />
+        <LineListInput label="Reglas del proyecto" value={rules} onChange={setRules} placeholder={'Todos participan.\nLa bitácora se mantiene actualizada.'} />
+        <div>
+          <label className="text-xs font-semibold text-slate-500">Cronograma</label>
+          <div className="space-y-2 mt-1">
+            {timeline.map((t, i) => (
+              <div key={i} className="flex gap-2">
+                <input value={t.label} onChange={e => setTimeline(ts => ts.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} placeholder="Semana 1" className="w-32 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
+                <input value={t.detail} onChange={e => setTimeline(ts => ts.map((x, j) => j === i ? { ...x, detail: e.target.value } : x))} placeholder="Problema" className="flex-1 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
+                <button onClick={() => setTimeline(ts => ts.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+              </div>
+            ))}
+            <button onClick={() => setTimeline(ts => [...ts, { label: '', detail: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir fila</button>
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-500">Preguntas frecuentes</label>
+          <div className="space-y-2 mt-1">
+            {faq.map((f, i) => (
+              <div key={i} className="flex gap-2 items-start">
+                <div className="flex-1 space-y-1">
+                  <input value={f.q} onChange={e => setFaq(fs => fs.map((x, j) => j === i ? { ...x, q: e.target.value } : x))} placeholder="¿Puedo cambiar de equipo?" className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
+                  <textarea value={f.a} onChange={e => setFaq(fs => fs.map((x, j) => j === i ? { ...x, a: e.target.value } : x))} rows={2} placeholder="Respuesta…" className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm resize-none" />
+                </div>
+                <button onClick={() => setFaq(fs => fs.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500 mt-1"><Trash2 className="w-4 h-4" /></button>
+              </div>
+            ))}
+            <button onClick={() => setFaq(fs => [...fs, { q: '', a: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir pregunta</button>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+          <button onClick={save} disabled={busy} className="px-5 py-2 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Guardar portada</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Recursos + Anuncios (Nivel 1) — compartidos alumno/docente ────────────────
+const RES_ICON: Record<string, string> = { PDF: '📄', VIDEO: '🎬', LINK: '🔗', DOC: '📝', OTHER: '📎' }
+const RES_TYPES = ['LINK', 'PDF', 'VIDEO', 'DOC', 'OTHER']
+
+function ResourcesView({ projectId, canManage }: { projectId: string; canManage?: boolean }) {
+  const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [type, setType] = useState('LINK')
+  const [title, setTitle] = useState('')
+  const [url, setUrl] = useState('')
+  const [busy, setBusy] = useState(false)
+  const load = useCallback(() => { abpApi.listResources(projectId).then(({ data }) => setItems(data || [])).finally(() => setLoading(false)) }, [projectId])
+  useEffect(() => { load() }, [load])
+  const add = async () => {
+    if (!title.trim() || !url.trim()) return
+    setBusy(true)
+    try { await abpApi.addResource(projectId, { type, title: title.trim(), url: url.trim() }); setTitle(''); setUrl(''); load() }
+    catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+  }
+  const del = async (id: string) => { if (!confirm('¿Eliminar recurso?')) return; await abpApi.deleteResource(id); load() }
+  if (loading) return <Loading />
+  return (
+    <div className="space-y-3">
+      <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <h4 className="font-bold text-slate-800 mb-3">📚 Recursos del proyecto</h4>
+        {items.length === 0 ? <p className="text-sm text-slate-400">Aún no hay recursos.</p> : (
+          <div className="space-y-2">{items.map(r => (
+            <div key={r.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-3">
+              <span className="text-lg">{RES_ICON[r.type] || '📎'}</span>
+              <div className="flex-1 min-w-0">
+                <a href={r.url} target="_blank" rel="noreferrer" className="text-sm font-semibold text-violet-600 hover:underline truncate block">{r.title}</a>
+                {r.description && <p className="text-xs text-slate-400 truncate">{r.description}</p>}
+              </div>
+              {canManage && <button onClick={() => del(r.id)} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>}
+            </div>
+          ))}</div>
+        )}
+      </div>
+      {canManage && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2">
+          <h5 className="font-bold text-slate-700 text-sm">Añadir recurso</h5>
+          <div className="flex gap-2 flex-wrap">
+            <select value={type} onChange={e => setType(e.target.value)} className="border border-slate-300 rounded-lg px-2 py-2 text-sm">{RES_TYPES.map(t => <option key={t} value={t}>{RES_ICON[t]} {t}</option>)}</select>
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título" className="flex-1 min-w-[140px] border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div className="flex gap-2">
+            <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+            <button onClick={add} disabled={busy || !title.trim() || !url.trim()} className="px-4 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">Añadir</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AnnouncementsView({ projectId, canManage }: { projectId: string; canManage?: boolean }) {
+  const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [content, setContent] = useState('')
+  const [busy, setBusy] = useState(false)
+  const load = useCallback(() => { abpApi.listAnnouncements(projectId).then(({ data }) => setItems(data || [])).finally(() => setLoading(false)) }, [projectId])
+  useEffect(() => { load() }, [load])
+  const add = async () => { if (!content.trim()) return; setBusy(true); try { await abpApi.addAnnouncement(projectId, { content: content.trim() }); setContent(''); load() } finally { setBusy(false) } }
+  const pin = async (a: any) => { await abpApi.pinAnnouncement(a.id, !a.pinned); load() }
+  const del = async (id: string) => { if (!confirm('¿Eliminar anuncio?')) return; await abpApi.deleteAnnouncement(id); load() }
+  if (loading) return <Loading />
+  return (
+    <div className="space-y-3">
+      {canManage && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h5 className="font-bold text-slate-700 text-sm mb-2">📢 Publicar anuncio</h5>
+          <textarea value={content} onChange={e => setContent(e.target.value)} rows={2} placeholder="Recuerden que el viernes se revisa la Fase 2…" className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none" />
+          <div className="flex justify-end mt-2"><button onClick={add} disabled={busy || !content.trim()} className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">Publicar</button></div>
+        </div>
+      )}
+      {items.length === 0 ? <Empty msg="No hay anuncios todavía." /> : (
+        <div className="space-y-2">{items.map(a => (
+          <div key={a.id} className={`rounded-2xl border p-4 ${a.pinned ? 'border-amber-300 bg-amber-50/50' : 'border-slate-200 bg-white'}`}>
+            <div className="flex items-start gap-2">
+              {a.pinned && <span className="text-amber-500">📌</span>}
+              <p className="flex-1 text-sm text-slate-700 whitespace-pre-line">{a.content}</p>
+              {canManage && (
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={() => pin(a)} title={a.pinned ? 'Quitar fijado' : 'Fijar'} className={`text-sm ${a.pinned ? 'text-amber-500' : 'text-slate-300 hover:text-amber-500'}`}>📌</button>
+                  <button onClick={() => del(a.id)} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              )}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-1">{new Date(a.createdAt).toLocaleDateString()}</div>
+          </div>
+        ))}</div>
+      )}
+    </div>
+  )
+}
+
+function StudentExpedition({ projects }: { projects: any[] }) {
+  const [projectId, setProjectId] = useState<string>(projects[0]?.id || '')
+  const [team, setTeam] = useState<any>(null)
+  const [pres, setPres] = useState<any>(null)
+  const [view, setView] = useState<'home' | 'resources' | 'announcements' | 'expedition'>('home')
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(() => {
+    if (!projectId) { setLoading(false); return }
+    setLoading(true)
+    Promise.all([
+      abpApi.myTeam(projectId).catch(() => ({ data: null })),
+      abpApi.projectPresentation(projectId).catch(() => ({ data: null })),
+    ]).then(([t, p]) => { setTeam(t.data); setPres(p.data) }).finally(() => setLoading(false))
+  }, [projectId])
+  useEffect(() => { load() }, [load])
+
+  const requestValidation = async () => {
+    if (!team) return
+    setBusy(true)
+    try { await abpApi.requestValidation(team.id); load() } finally { setBusy(false) }
+  }
+
+  if (projects.length === 0) return <Empty msg="Tu docente aún no ha creado una Expedición ABP en esta aula." />
+  if (loading) return <Loading />
+
+  // Sub-navegación estilo expedición: Presentación (todos) + Mi Expedición (si hay equipo).
+  const nav = (
+    <div className="flex items-center gap-2 flex-wrap">
+      {projects.length > 1 && <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} />}
+      <div className="ml-auto flex bg-slate-100 rounded-xl p-1 flex-wrap">
+        <button onClick={() => setView('home')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${view === 'home' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>🏠 Presentación</button>
+        <button onClick={() => setView('resources')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${view === 'resources' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>📚 Recursos</button>
+        <button onClick={() => setView('announcements')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${view === 'announcements' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>📢 Anuncios</button>
+        <button onClick={() => setView('expedition')} disabled={!team} className={`px-3 py-1.5 rounded-lg text-sm font-semibold disabled:opacity-40 ${view === 'expedition' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>🚀 Mi Expedición</button>
+      </div>
+    </div>
+  )
+
+  if (view === 'resources') return <div className="space-y-4">{nav}<ResourcesView projectId={projectId} /></div>
+  if (view === 'announcements') return <div className="space-y-4">{nav}<AnnouncementsView projectId={projectId} /></div>
+
+  if (view === 'home' || !team) return (
+    <div className="space-y-4">
+      {nav}
+      {pres && <PresentationView project={pres} />}
+      {!team
+        ? <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">Aún no estás en un equipo de este proyecto. Tu docente te asignará a uno para empezar tu expedición.</div>
+        : <button onClick={() => setView('expedition')} className="w-full py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700">🚀 Ir a mi expedición →</button>}
+    </div>
+  )
+
+  const cur = team.currentPhase
+  const curState = stateOf(team, cur)
+  const curPs = (team.phaseStates || []).find((s: any) => s.phase === cur)
+  // Gating desde las misiones: todas las misiones obligatorias completas (lo calcula el backend).
+  const reqMissions = (team.currentMissions || []).filter((m: any) => m.required)
+  const reqDone = reqMissions.filter((m: any) => m.complete).length
+  const canRequest = !!team.readyForValidation
+
+  return (
+    <div className="space-y-4">
+      {nav}
+
+      {/* Cabecera del equipo */}
+      <div className="bg-white rounded-2xl border-2 border-violet-200 p-5" style={{ borderTopColor: team.color, borderTopWidth: 6 }}>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="text-xl font-bold text-slate-800">{team.emoji} {team.name}</h3>
+            {team.problem && <p className="text-sm text-slate-500 mt-0.5">Reto: {team.problem}</p>}
+            {team.badges?.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {team.badges.map((b: string) => <span key={b} className="text-xs font-medium bg-amber-50 text-amber-700 rounded-full px-2.5 py-0.5">{b}</span>)}
+              </div>
+            )}
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-black text-violet-600">⭐ {team.xp}</div>
+            <div className="text-xs text-slate-400 font-semibold">XP de expedición</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sendero */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-4">
+        <Trail team={team} />
+      </div>
+
+      {/* Panel de la fase actual */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <div className="text-xs font-bold uppercase tracking-wide text-violet-600 mb-1">Fase {cur} de 6</div>
+        <h3 className="text-lg font-bold text-slate-800 mb-3">{PHASES.find(p => p.n === cur)?.icon} {phaseName(cur)}</h3>
+
+        {curPs?.feedback && (
+          <div className="mb-4 p-3 rounded-xl bg-rose-50 border-l-4 border-rose-400 text-sm text-rose-800">
+            🧑‍🏫 <b>Retroalimentación del docente:</b> {curPs.feedback}
+          </div>
+        )}
+
+        {curState === 'AWAITING' ? (
+          <div className="p-4 rounded-xl bg-amber-50 text-amber-800 font-semibold flex items-center gap-2">
+            <Clock className="w-5 h-5" /> Esperando validación del docente…
+          </div>
+        ) : cur === 6 && curState === 'VALIDATED' ? (
+          <div className="text-center py-6">🏆<p className="font-bold text-slate-800 mt-2">¡Llegaron a la cima de la expedición!</p></div>
+        ) : (
+          <>
+            <MissionsPanel team={team} onSaved={load} />
+            <div className="mt-4 flex items-center gap-3 flex-wrap">
+              {reqMissions.length > 0 && <span className="text-sm text-slate-500">Misiones obligatorias: <b className="text-slate-700">{reqDone}/{reqMissions.length}</b></span>}
+              <button onClick={requestValidation} disabled={busy || !canRequest}
+                className="ml-auto py-3 px-6 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} {canRequest ? 'Solicitar validación' : 'Completa las misiones'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VISTA DOCENTE — proyectos, equipos, cola de validaciones
+// ═══════════════════════════════════════════════════════════════════════════
+function TeacherView({ classroomId, projects, reload }: { classroomId: string; projects: any[]; reload: () => void }) {
+  const [selected, setSelected] = useState<string | null>(null)
+
+  if (selected) {
+    const p = projects.find(x => x.id === selected)
+    return <TeacherProjectDetail classroomId={classroomId} projectId={selected} projectTitle={p?.title || ''} onBack={() => { setSelected(null); reload() }} />
+  }
+
+  return (
+    <div className="space-y-4">
+      <CreateProject classroomId={classroomId} onCreated={reload} />
+      {projects.length === 0 ? (
+        <Empty msg="Aún no has creado ninguna Expedición ABP." />
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-3">
+          {projects.map(p => (
+            <button key={p.id} onClick={() => setSelected(p.id)} className="text-left bg-white rounded-2xl border-2 border-slate-200 hover:border-violet-300 p-4 transition-colors">
+              <h3 className="font-bold text-slate-800">🧭 {p.title}</h3>
+              {p.challenge && <p className="text-sm text-slate-500 mt-1 line-clamp-2">{p.challenge}</p>}
+              <div className="mt-3 flex items-center gap-1.5 text-sm text-violet-600 font-medium"><Users className="w-4 h-4" /> {p._count?.teams ?? 0} equipo(s)</div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CreateProject({ classroomId, onCreated }: { classroomId: string; onCreated: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [title, setTitle] = useState('')
+  const [challenge, setChallenge] = useState('')
+  const [busy, setBusy] = useState(false)
+  const create = async () => {
+    if (!title.trim()) return
+    setBusy(true)
+    try { await abpApi.createProject({ classroomId, title: title.trim(), challenge: challenge.trim() || undefined }); setTitle(''); setChallenge(''); setOpen(false); onCreated() }
+    finally { setBusy(false) }
+  }
+  if (!open) return <button onClick={() => setOpen(true)} className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700"><Plus className="w-5 h-5" /> Nueva Expedición ABP</button>
+  return (
+    <div className="bg-white rounded-2xl border-2 border-violet-200 p-5 space-y-3">
+      <h3 className="font-bold text-slate-800">Nueva Expedición ABP</h3>
+      <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título del proyecto" className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm" autoFocus />
+      <textarea value={challenge} onChange={e => setChallenge(e.target.value)} placeholder="Reto general (opcional)" rows={2} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm resize-none" />
+      <div className="flex justify-end gap-2">
+        <button onClick={() => setOpen(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+        <button onClick={create} disabled={!title.trim() || busy} className="px-5 py-2 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Crear</button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Centro de Operaciones: panel + preview de equipo (lectura) ────────────────
+function Stat({ n, label, accent, warn }: { n: number; label: string; accent?: boolean; warn?: boolean }) {
+  return (
+    <div className={`rounded-xl p-3 text-center ${warn ? 'bg-rose-50' : accent ? 'bg-violet-50' : 'bg-slate-50'}`}>
+      <div className={`text-2xl font-black ${warn ? 'text-rose-600' : accent ? 'text-violet-600' : 'text-slate-700'}`}>{n}</div>
+      <div className="text-xs text-slate-400 font-semibold">{label}</div>
+    </div>
+  )
+}
+
+function StatusChip({ status }: { status: string }) {
+  const map: Record<string, [string, string]> = {
+    IN_PROGRESS: ['En curso', 'bg-sky-100 text-sky-700'],
+    AWAITING: ['Esperando validación', 'bg-amber-100 text-amber-700'],
+    VALIDATED: ['Validada', 'bg-emerald-100 text-emerald-700'],
+    RETURNED: ['Devuelta', 'bg-rose-100 text-rose-700'],
+    LOCKED: ['Bloqueada', 'bg-slate-100 text-slate-400'],
+  }
+  const [label, cls] = map[status] || ['—', 'bg-slate-100 text-slate-400']
+  return <span className={`text-[11px] font-bold rounded-full px-2 py-0.5 ${cls}`}>{label}</span>
+}
+
+function RONone() { return <p className="text-sm text-slate-300">Sin contenido todavía.</p> }
+
+/** Trabajo de una fase en modo lectura (para el preview del docente). */
+function PhaseWorkRO({ phase, data }: { phase: number; data: any }) {
+  data = data || {}
+  if (phase === 1) {
+    const canvas = data.canvas || []
+    return (
+      <div className="grid sm:grid-cols-2 gap-2">
+        {CANVAS_CARDS.map((c, i) => (
+          <div key={i} className="rounded-lg border border-slate-200 p-2.5">
+            <div className="text-xs text-slate-400">{c.icon} {c.q}</div>
+            <div className="text-sm text-slate-700 mt-0.5">{canvas[i]?.value || <span className="text-slate-300">—</span>}</div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+  if (phase === 2) {
+    const ideas = data.ideas || []
+    if (!ideas.length) return <RONone />
+    return <div className="space-y-1">{ideas.map((i: any) => <div key={i.id} className="flex items-center gap-2 text-sm"><span className="text-violet-600 font-bold w-8">▲{i.votes || 0}</span><span className="text-slate-700">{i.text}</span></div>)}</div>
+  }
+  if (phase === 3) {
+    const s = data.smart || {}
+    const checked = Array.isArray(s.checks) ? s.checks.filter(Boolean).length : 0
+    return <div className="text-sm"><p className="text-slate-700">{s.text || <span className="text-slate-300">Sin objetivo.</span>}</p><p className="text-xs text-slate-400 mt-1">Criterios SMART: {checked}/5</p></div>
+  }
+  if (phase === 4) {
+    const tasks = data.tasks || []
+    const cols = ['Por hacer', 'En curso', 'Hecho']
+    return (
+      <div className="grid grid-cols-3 gap-2">
+        {cols.map((c, ci) => (
+          <div key={ci}>
+            <p className="text-xs font-bold text-slate-500 mb-1">{c}</p>
+            <div className="space-y-1">{tasks.filter((t: any) => t.col === ci).map((t: any) => <div key={t.id} className="text-xs bg-slate-50 rounded p-1.5 text-slate-700">{t.text}</div>)}</div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+  if (phase === 5) {
+    const ev = data.evidences || []
+    if (!ev.length) return <RONone />
+    return <div className="space-y-1">{ev.map((e: any) => <div key={e.id} className="text-sm text-slate-700 flex items-center gap-1.5"><Paperclip className="w-3.5 h-3.5 text-slate-400" />{e.label || e.url}</div>)}</div>
+  }
+  if (phase === 6) {
+    const co = Object.keys(data.coevals || {}).length
+    return <p className="text-sm text-slate-600">Equipos coevaluados: {co}</p>
+  }
+  return null
+}
+
+function TeamPreview({ teamId, onBack }: { teamId: string; onBack: () => void }) {
+  const [team, setTeam] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  useEffect(() => { abpApi.teamExpedition(teamId).then(({ data }) => setTeam(data)).finally(() => setLoading(false)) }, [teamId])
+  if (loading) return <Loading />
+  if (!team) return <Empty msg="No se pudo cargar el equipo." />
+  const phases = team.phaseStates || []
+  return (
+    <div className="space-y-4">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ChevronLeft className="w-4 h-4" /> Volver al panel</button>
+      <div className="bg-white rounded-2xl border-2 border-violet-200 p-5" style={{ borderTopColor: team.color, borderTopWidth: 6 }}>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-500 rounded-full px-2 py-0.5">Vista del docente · solo lectura</span>
+            <h3 className="text-xl font-bold text-slate-800 mt-1">{team.emoji} {team.name}</h3>
+            {team.problem && <p className="text-sm text-slate-500">Reto: {team.problem}</p>}
+          </div>
+          <div className="text-right"><div className="text-2xl font-black text-violet-600">⭐ {team.xp}</div><div className="text-xs text-slate-400 font-semibold">XP</div></div>
+        </div>
+        <div className="mt-3"><Trail team={team} /></div>
+      </div>
+      {phases.map((ps: any) => (
+        <div key={ps.phase} className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <h4 className="font-bold text-slate-800">{PHASES.find(p => p.n === ps.phase)?.icon} Fase {ps.phase}: {phaseName(ps.phase)}</h4>
+            <StatusChip status={ps.status} />
+          </div>
+          {ps.feedback && <div className="mb-3 p-2.5 rounded-lg bg-rose-50 text-xs text-rose-700">🧑‍🏫 {ps.feedback}</div>}
+          {(ps.missions || []).length > 0 && (
+            <div className="mb-3 space-y-1">
+              {ps.missions.map((m: any) => (
+                <div key={m.id} className="flex items-center gap-2 text-sm">
+                  <span className={m.complete ? 'text-emerald-500' : 'text-slate-300'}>{m.complete ? '✔' : '○'}</span>
+                  <span className={m.complete ? 'text-slate-500' : 'text-slate-700'}>{m.title}</span>
+                  {m.required && <span className="text-[10px] text-violet-600 font-semibold">obligatoria</span>}
+                </div>
+              ))}
+            </div>
+          )}
+          <PhaseWorkRO phase={ps.phase} data={ps.data} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: { classroomId: string; projectId: string; projectTitle: string; onBack: () => void }) {
+  const [project, setProject] = useState<any>(null)
+  const [dash, setDash] = useState<any>(null)
+  const [queue, setQueue] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [reviewingId, setReviewingId] = useState<string | null>(null)
+  const [previewTeamId, setPreviewTeamId] = useState<string | null>(null)
+  const [editingPres, setEditingPres] = useState(false)
+
+  const load = useCallback(() => {
+    setLoading(true)
+    Promise.all([abpApi.getProject(projectId), abpApi.queue(classroomId), abpApi.dashboard(projectId)])
+      .then(([p, q, d]) => { setProject(p.data); setQueue((q.data || []).filter((x: any) => x.team?.projectId === projectId)); setDash(d.data) })
+      .finally(() => setLoading(false))
+  }, [projectId, classroomId])
+  useEffect(() => { load() }, [load])
+
+  if (reviewingId) return <AbpReview validationId={reviewingId} onClose={(changed) => { setReviewingId(null); if (changed) load() }} />
+  if (previewTeamId) return <TeamPreview teamId={previewTeamId} onBack={() => setPreviewTeamId(null)} />
+  if (editingPres && project) return <PresentationEditor project={project} onClose={() => setEditingPres(false)} onSaved={() => { setEditingPres(false); load() }} />
+  if (loading) return <Loading />
+
+  const teams = project?.teams || []
+  return (
+    <div className="space-y-4">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ChevronLeft className="w-4 h-4" /> Todas las expediciones</button>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h3 className="text-xl font-bold text-slate-800">🧭 {project?.title || projectTitle}</h3>
+        <button onClick={() => setEditingPres(true)} className="text-sm font-semibold text-violet-600 hover:text-violet-700 border border-violet-200 rounded-lg px-3 py-1.5">✏️ Editar portada</button>
+      </div>
+      {project?.challenge && <div className="bg-violet-50 border-l-4 border-violet-400 rounded-r-xl p-3 text-sm text-violet-900">🎯 <b>El reto:</b> {project.challenge}</div>}
+
+      {/* Cola de validaciones */}
+      {queue.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h4 className="font-bold text-slate-800 mb-3">🔔 Validaciones pendientes ({queue.length})</h4>
+          <div className="space-y-3">{queue.map(q => <QueueItem key={q.id} q={q} onReview={setReviewingId} />)}</div>
+        </div>
+      )}
+
+      {/* Panel de progreso (Centro de Operaciones) */}
+      {dash && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h4 className="font-bold text-slate-800 mb-3">📊 Panel de progreso</h4>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <Stat n={dash.summary.teams} label="Equipos" />
+            <Stat n={dash.summary.students} label="Estudiantes" />
+            <Stat n={dash.summary.pendingValidations} label="Validaciones" accent={dash.summary.pendingValidations > 0} />
+            <Stat n={dash.summary.behind} label="Atrasados" warn={dash.summary.behind > 0} />
+          </div>
+          {dash.teams.length === 0 ? (
+            <p className="text-sm text-slate-400">Aún no hay equipos. Arma el primero abajo.</p>
+          ) : (
+            <div className="space-y-1">
+              {dash.teams.map((t: any) => (
+                <button key={t.id} onClick={() => setPreviewTeamId(t.id)} className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 text-left">
+                  <span className="text-lg">{t.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-700 truncate">{t.name}</span>
+                      {t.done && <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full px-1.5">🏆 completa</span>}
+                      {t.awaitingValidation && <span className="text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full px-1.5">valida F{t.currentPhase}</span>}
+                    </div>
+                    <div className="mt-1 h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${t.progress}%`, background: t.color }} /></div>
+                  </div>
+                  <div className="text-xs text-slate-400 w-24 text-right shrink-0">Fase {t.currentPhase}/6 · {t.progress}%</div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Anuncios + Recursos (Centro de Operaciones) */}
+      <AnnouncementsView projectId={projectId} canManage />
+      <ResourcesView projectId={projectId} canManage />
+
+      {/* Equipos (gestión) */}
+      <div className="flex items-center justify-between">
+        <h4 className="font-bold text-slate-700">Equipos ({teams.length})</h4>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-3">
+        {teams.map((t: any) => (
+          <div key={t.id} className="bg-white rounded-2xl border border-slate-200 p-4" style={{ borderTopColor: t.color, borderTopWidth: 4 }}>
+            <div className="flex items-start justify-between">
+              <h5 className="font-bold text-slate-800">{t.emoji} {t.name}</h5>
+              <button onClick={async () => { if (confirm('¿Eliminar equipo?')) { await abpApi.deleteTeam(t.id); load() } }} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">Fase {t.currentPhase}: {phaseName(t.currentPhase)} · ⭐ {t.xp} XP</p>
+            <div className="my-2"><Trail team={t} mini /></div>
+            <div className="text-xs text-slate-500">{(t.members || []).map((m: any) => `${m.studentEnrollment?.student?.user?.firstName ?? ''}`).filter(Boolean).join(', ')}</div>
+            <button onClick={() => setPreviewTeamId(t.id)} className="mt-3 w-full text-sm font-semibold text-violet-600 hover:text-violet-700 border border-violet-200 rounded-lg py-1.5">Ver expedición →</button>
+          </div>
+        ))}
+      </div>
+
+      <CreateTeam classroomId={classroomId} projectId={projectId} onCreated={load} />
+    </div>
+  )
+}
+
+function QueueItem({ q, onReview }: { q: any; onReview: (id: string) => void }) {
+  return (
+    <div className="border-2 border-slate-200 rounded-xl p-4 flex items-center gap-3 flex-wrap">
+      <div className="flex-1 min-w-[200px]">
+        <p className="text-sm text-slate-700"><b>{q.team?.emoji} {q.team?.name}</b> solicita validar la <b>Fase {q.phase}: {phaseName(q.phase)}</b></p>
+      </div>
+      <button onClick={() => onReview(q.id)} className="px-4 py-2 bg-violet-600 text-white text-sm font-semibold rounded-lg hover:bg-violet-700">Revisar y decidir →</button>
+    </div>
+  )
+}
+
+function CreateTeam({ classroomId, projectId, onCreated }: { classroomId: string; projectId: string; onCreated: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [roster, setRoster] = useState<{ enrollmentId: string; name: string }[]>([])
+  const [name, setName] = useState('')
+  const [emoji, setEmoji] = useState('🚀')
+  const [sel, setSel] = useState<Set<string>>(new Set())
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => { if (open && roster.length === 0) abpApi.roster(classroomId).then(({ data }) => setRoster(data)) }, [open, classroomId, roster.length])
+
+  const create = async () => {
+    if (!name.trim() || sel.size === 0) return
+    setBusy(true)
+    try { await abpApi.createTeam({ projectId, name: name.trim(), emoji, memberEnrollmentIds: [...sel] }); setName(''); setSel(new Set()); setOpen(false); onCreated() }
+    catch (e: any) { alert(e?.response?.data?.message || 'No se pudo crear el equipo') }
+    finally { setBusy(false) }
+  }
+
+  if (!open) return <button onClick={() => setOpen(true)} className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-200"><Plus className="w-5 h-5" /> Armar equipo</button>
+  return (
+    <div className="bg-white rounded-2xl border-2 border-violet-200 p-5 space-y-3">
+      <h4 className="font-bold text-slate-800">Nuevo equipo</h4>
+      <div className="flex gap-2">
+        <input value={emoji} onChange={e => setEmoji(e.target.value)} className="w-14 border border-slate-300 rounded-xl px-2 py-2.5 text-center text-lg" maxLength={2} />
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre del equipo" className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-sm" autoFocus />
+      </div>
+      <div>
+        <p className="text-xs font-medium text-slate-500 mb-1.5">Integrantes ({sel.size})</p>
+        <div className="max-h-52 overflow-y-auto border border-slate-200 rounded-xl p-2 grid sm:grid-cols-2 gap-1">
+          {roster.map(r => (
+            <label key={r.enrollmentId} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm cursor-pointer ${sel.has(r.enrollmentId) ? 'bg-violet-50 text-violet-700' : 'hover:bg-slate-50 text-slate-600'}`}>
+              <input type="checkbox" checked={sel.has(r.enrollmentId)} onChange={() => setSel(s => { const n = new Set(s); n.has(r.enrollmentId) ? n.delete(r.enrollmentId) : n.add(r.enrollmentId); return n })} className="accent-violet-600" />
+              {r.name}
+            </label>
+          ))}
+          {roster.length === 0 && <p className="text-xs text-slate-400 p-2">Cargando matriculados…</p>}
+        </div>
+      </div>
+      <div className="flex justify-end gap-2">
+        <button onClick={() => setOpen(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+        <button onClick={create} disabled={!name.trim() || sel.size === 0 || busy} className="px-5 py-2 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Crear equipo</button>
+      </div>
+    </div>
+  )
+}
+
+// ─── helpers UI ──────────────────────────────────────────────────────────────
+function Empty({ msg }: { msg: string }) {
+  return <div className="text-center py-16 bg-white rounded-2xl border border-slate-200"><Rocket className="w-12 h-12 mx-auto text-slate-300 mb-3" /><p className="text-slate-500">{msg}</p></div>
+}
+function Loading() { return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-violet-500" /></div> }
+function ProjectPicker({ projects, value, onChange }: { projects: any[]; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="flex gap-2 flex-wrap">
+      {projects.map(p => (
+        <button key={p.id} onClick={() => onChange(p.id)} className={`px-3 py-2 rounded-xl text-sm font-medium border-2 ${value === p.id ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-slate-200 text-slate-500'}`}>{p.title}</button>
+      ))}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+export default function AbpTab({ classroomId, isTeacher }: { classroomId: string; isTeacher: boolean }) {
+  const [projects, setProjects] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(() => {
+    setLoading(true)
+    abpApi.listByClassroom(classroomId).then(({ data }) => setProjects(data || [])).catch(() => setProjects([])).finally(() => setLoading(false))
+  }, [classroomId])
+  useEffect(() => { load() }, [load])
+
+  if (loading) return <Loading />
+  return isTeacher
+    ? <TeacherView classroomId={classroomId} projects={projects} reload={load} />
+    : <StudentExpedition projects={projects} />
+}

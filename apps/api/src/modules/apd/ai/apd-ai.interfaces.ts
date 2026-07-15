@@ -189,6 +189,46 @@ export interface ApdAiQuestionDraft {
   contextId?: string;
 }
 
+// ─── Generación de Lecciones Interactivas (Classroom) ──────────────────────
+// La IA produce la estructura de slides de una lección viva. El grading real y
+// la persistencia los maneja LessonService; aquí solo se genera el borrador.
+export interface ApdAiLessonSlideDraft {
+  type: 'CONTENT' | 'ACTIVITY' | 'CHECKPOINT' | 'BADGE_REVEAL';
+  title?: string;
+  body?: string; // HTML enriquecido para slides CONTENT
+  activityData?: {
+    questionType: 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'FILL_BLANK' | 'ORDERING';
+    question: string;
+    options: string[];
+    correctAnswer: string;
+    explanation?: string;
+    hint?: string;
+    points?: number;
+  };
+  badgeEmoji?: string;
+  badgeTitle?: string;
+}
+
+export interface ApdAiLessonDraft {
+  title: string;
+  description: string;
+  slides: ApdAiLessonSlideDraft[];
+}
+
+// ─── Plan de Ruta de Aprendizaje bilingüe (Valeria arma la ruta) ────────────
+export type ApdAiRouteSkill = 'READING' | 'LISTENING' | 'SPEAKING' | 'WRITING';
+export interface ApdAiRoutePlanStep {
+  title: string;
+  skill: ApdAiRouteSkill;
+}
+export interface ApdAiRoutePlan {
+  title: string;
+  description: string;
+  targetLevel: string; // "A1".."B2"
+  targetSkill: ApdAiRouteSkill;
+  steps: ApdAiRoutePlanStep[];
+}
+
 export interface ApdAiTeacherQuestionResponse {
   answer: string;
   keyPoints: string[];

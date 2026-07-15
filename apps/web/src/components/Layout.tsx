@@ -53,7 +53,6 @@ import {
   LayoutGrid,
   MonitorPlay,
   Sparkles,
-  Gamepad2,
   ExternalLink,
 } from 'lucide-react'
 
@@ -276,8 +275,9 @@ const institutionalNavigation: NavItem[] = [
   { name: 'Aula Virtual', href: '/classroom', icon: MonitorPlay, roles: ['DOCENTE', 'COORDINADOR'], module: 'VIRTUAL_CLASSROOM' },
   { name: 'Mis Clases', href: '/my-classes', icon: MonitorPlay, roles: ['ESTUDIANTE', 'ACUDIENTE'], module: 'VIRTUAL_CLASSROOM' },
 
-  // Edusyn Play
-  { name: 'Edusyn Play', href: '/play-landing', icon: Gamepad2, roles: ['DOCENTE', 'COORDINADOR', 'ADMIN_INSTITUTIONAL'], external: true },
+  // Edusyn Play: motor SEPARADO (estilo Kahoot/Quizizz, no dependiente de institución).
+  // Se retira del menú docente a pedido; las rutas /play-landing y /play siguen vivas
+  // para acceso directo. Puerta abierta para integrarlo a futuro (ver memoria/propuesta).
 
   // Documentos y Gestión
   { name: 'Documentos', href: '/institutional-documents', icon: FolderOpen, roles: ['ADMIN_INSTITUTIONAL', 'COORDINADOR', 'DOCENTE', 'SECRETARIA'] },

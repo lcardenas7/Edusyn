@@ -1,0 +1,318 @@
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
+import { ApdAiService } from '../apd/ai/apd-ai.service';
+import type { ApdAiRoutePlan } from '../apd/ai/apd-ai.interfaces';
+
+@Injectable()
+export class LearningRouteService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly apdAi: ApdAiService,
+  ) {}
+
+  // ─── Valeria arma la ruta ───────────────────────────────────────────────────
+  /** Genera un plan de ruta con IA (no persiste). El docente lo revisa y confirma. */
+  async generatePlan(objective: string, gradeName?: string, targetLevel?: string): Promise<ApdAiRoutePlan> {
+    return this.apdAi.generateRoutePlan({ objective, gradeName, targetLevel });
+  }
+
+  /** Resuelve la primera competencia del grafo para (nivel, habilidad). */
+  private async resolveCompetencyId(level: string, skill: string): Promise<string | undefined> {
+    const c = await this.prisma.competency.findFirst({
+      where: { framework: 'CEFR', level, skill, isActive: true },
+      orderBy: { sortOrder: 'asc' }, select: { id: true },
+    });
+    return c?.id;
+  }
+
+  /** Crea una ruta completa (con pasos) a partir de un plan de Valeria. */
+  async createFromPlan(institutionId: string, classroomId: string, plan: ApdAiRoutePlan) {
+    const classroom = await this.prisma.classroom.findFirst({ where: { id: classroomId, institutionId }, select: { id: true } });
+    if (!classroom) throw new NotFoundException('Aula no encontrada');
+
+    const targetCompetencyId = await this.resolveCompetencyId(plan.targetLevel, plan.targetSkill);
+    const route = await this.createRoute(institutionId, {
+      classroomId, title: plan.title, description: plan.description,
+      targetCompetencyId, targetLevel: plan.targetLevel,
+    });
+    for (const step of plan.steps) {
+      const competencyId = await this.resolveCompetencyId(plan.targetLevel, step.skill);
+      await this.addStep(route.id, { title: step.title, competencyId });
+    }
+    return this.getRoute(route.id);
+  }
+
+  // ─── Grafo de competencias (para el selector del docente) ──────────────────
+  async listCompetencies(filters: { framework?: string; level?: string; skill?: string }) {
+    return this.prisma.competency.findMany({
+      where: {
+        framework: filters.framework || 'CEFR',
+        isActive: true,
+        ...(filters.level ? { level: filters.level } : {}),
+        ...(filters.skill ? { skill: filters.skill } : {}),
+      },
+      orderBy: [{ level: 'asc' }, { skill: 'asc' }, { sortOrder: 'asc' }],
+      select: { id: true, framework: true, level: true, skill: true, code: true, statement: true },
+    });
+  }
+
+  // ─── Rutas ─────────────────────────────────────────────────────────────────
+  async createRoute(institutionId: string, dto: {
+    classroomId: string;
+    title: string;
+    description?: string;
+    targetCompetencyId?: string;
+    targetLevel?: string;
+  }) {
+    const classroom = await this.prisma.classroom.findFirst({
+      where: { id: dto.classroomId, institutionId },
+      select: { id: true },
+    });
+    if (!classroom) throw new NotFoundException('Aula no encontrada');
+    if (!dto.title?.trim()) throw new BadRequestException('El título es obligatorio');
+
+    // Si se da competencia objetivo, derivar el nivel para mostrar.
+    let targetLevel = dto.targetLevel;
+    if (dto.targetCompetencyId && !targetLevel) {
+      const comp = await this.prisma.competency.findUnique({
+        where: { id: dto.targetCompetencyId }, select: { level: true },
+      });
+      targetLevel = comp?.level ?? undefined;
+    }
+
+    const max = await this.prisma.learningRoute.aggregate({
+      where: { classroomId: dto.classroomId }, _max: { sortOrder: true },
+    });
+
+    return this.prisma.learningRoute.create({
+      data: {
+        institutionId,
+        classroomId: dto.classroomId,
+        title: dto.title.trim(),
+        description: dto.description,
+        targetCompetencyId: dto.targetCompetencyId,
+        targetLevel,
+        sortOrder: (max._max.sortOrder ?? -1) + 1,
+      },
+      include: { targetCompetency: { select: { code: true, statement: true, level: true, skill: true } } },
+    });
+  }
+
+  async listByClassroom(classroomId: string) {
+    const routes = await this.prisma.learningRoute.findMany({
+      where: { classroomId },
+      orderBy: { sortOrder: 'asc' },
+      include: {
+        targetCompetency: { select: { code: true, statement: true, level: true, skill: true } },
+        _count: { select: { steps: true } },
+      },
+    });
+    return routes.map(r => ({
+      id: r.id, title: r.title, description: r.description,
+      isPublished: r.isPublished, targetLevel: r.targetLevel,
+      targetCompetency: r.targetCompetency, stepsCount: r._count.steps,
+    }));
+  }
+
+  async getRoute(routeId: string) {
+    const route = await this.prisma.learningRoute.findUnique({
+      where: { id: routeId },
+      include: {
+        targetCompetency: { select: { code: true, statement: true, level: true, skill: true } },
+        steps: {
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            activity: { select: { id: true, title: true, type: true, isPublished: true } },
+            competency: { select: { code: true, statement: true, level: true, skill: true } },
+          },
+        },
+      },
+    });
+    if (!route) throw new NotFoundException('Ruta no encontrada');
+    return route;
+  }
+
+  async updateRoute(routeId: string, dto: {
+    title?: string; description?: string; targetCompetencyId?: string | null; targetLevel?: string; isPublished?: boolean;
+  }) {
+    return this.prisma.learningRoute.update({ where: { id: routeId }, data: dto });
+  }
+
+  async deleteRoute(routeId: string) {
+    return this.prisma.learningRoute.delete({ where: { id: routeId } });
+  }
+
+  // ─── Pasos ───────────────────────────────────────────────────────────────
+  async addStep(routeId: string, dto: {
+    title: string; activityId?: string; competencyId?: string; sortOrder?: number;
+  }) {
+    const route = await this.prisma.learningRoute.findUnique({
+      where: { id: routeId }, select: { institutionId: true },
+    });
+    if (!route) throw new NotFoundException('Ruta no encontrada');
+    if (!dto.title?.trim()) throw new BadRequestException('El título del paso es obligatorio');
+
+    let sortOrder = dto.sortOrder;
+    if (sortOrder === undefined || sortOrder === null) {
+      const max = await this.prisma.learningRouteStep.aggregate({
+        where: { routeId }, _max: { sortOrder: true },
+      });
+      sortOrder = (max._max.sortOrder ?? -1) + 1;
+    }
+
+    return this.prisma.learningRouteStep.create({
+      data: {
+        institutionId: route.institutionId,
+        routeId,
+        title: dto.title.trim(),
+        activityId: dto.activityId,
+        competencyId: dto.competencyId,
+        sortOrder,
+      },
+      include: {
+        activity: { select: { id: true, title: true, type: true } },
+        competency: { select: { code: true, statement: true, level: true, skill: true } },
+      },
+    });
+  }
+
+  /**
+   * Crea una actividad PROPIA de la ruta (isRouteScoped: oculta de la pestaña
+   * Actividades) y la añade como paso. Una Tarea de ruta es, de hecho, el
+   * componente Writing (consigna de texto libre). Se publica para que el
+   * estudiante pueda hacerla desde el mapa de la ruta.
+   */
+  async addStepWithNewActivity(routeId: string, dto: {
+    title: string; activityType?: string; description?: string; competencyId?: string; maxScore?: number;
+  }) {
+    const route = await this.prisma.learningRoute.findUnique({
+      where: { id: routeId }, select: { classroomId: true },
+    });
+    if (!route) throw new NotFoundException('Ruta no encontrada');
+    if (!dto.title?.trim()) throw new BadRequestException('El título es obligatorio');
+
+    const activity = await this.prisma.classroomActivity.create({
+      data: {
+        classroomId: route.classroomId,
+        type: (dto.activityType || 'TASK') as any,
+        title: dto.title.trim(),
+        description: dto.description,
+        maxScore: dto.maxScore ?? 100,
+        isRouteScoped: true,
+        isPublished: true,
+        isVisible: true,
+      },
+    });
+    return this.addStep(routeId, { title: dto.title.trim(), activityId: activity.id, competencyId: dto.competencyId });
+  }
+
+  /**
+   * Valeria genera la LECCIÓN INTERACTIVA de un paso (ejercicios estilo Duolingo
+   * de la habilidad/nivel del can-do del paso). Crea/asegura una actividad LESSON
+   * propia de la ruta y guarda las slides. El estudiante la hace desde el mapa;
+   * al completarla fluyen XP y evidencia (ya cableados).
+   */
+  async generateStepLesson(stepId: string) {
+    const step = await this.prisma.learningRouteStep.findUnique({
+      where: { id: stepId },
+      include: {
+        route: { select: { classroomId: true, title: true } },
+        competency: { select: { skill: true, level: true } },
+      },
+    });
+    if (!step) throw new NotFoundException('Paso no encontrado');
+
+    const skill = (step.competency?.skill as any) || 'READING';
+    const level = step.competency?.level || 'A2';
+
+    // Grado escolar (para que Valeria ajuste tema/registro a la edad).
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: step.route.classroomId },
+      select: { teacherAssignment: { select: { group: { select: { grade: { select: { name: true } } } } } } },
+    });
+    const gradeName = classroom?.teacherAssignment?.group?.grade?.name;
+
+    // Asegurar una actividad LESSON propia de la ruta para este paso.
+    let activityId = step.activityId ?? undefined;
+    const existingActivity = activityId
+      ? await this.prisma.classroomActivity.findUnique({ where: { id: activityId }, select: { id: true, type: true } })
+      : null;
+    if (!existingActivity || existingActivity.type !== 'LESSON') {
+      const created = await this.prisma.classroomActivity.create({
+        data: {
+          classroomId: step.route.classroomId, type: 'LESSON', title: step.title,
+          isRouteScoped: true, isPublished: true, isVisible: true, maxScore: 100,
+        },
+      });
+      activityId = created.id;
+      await this.prisma.learningRouteStep.update({ where: { id: stepId }, data: { activityId } });
+    }
+
+    // Generar los ejercicios con Valeria.
+    const draft = await this.apdAi.generateEnglishLessonSlides({
+      skill, level, objective: step.route.title, title: step.title, gradeName,
+    });
+
+    // Reemplazar la lección (regenerable).
+    const existingLesson = await this.prisma.lesson.findUnique({ where: { activityId }, select: { id: true } });
+    if (existingLesson) await this.prisma.lesson.delete({ where: { id: existingLesson.id } });
+    await this.prisma.lesson.create({
+      data: {
+        activityId: activityId!,
+        title: draft.title,
+        description: draft.description,
+        slides: {
+          create: draft.slides.map((s, i) => ({
+            type: s.type as any, sortOrder: i, title: s.title, body: s.body,
+            activityData: s.activityData ? (s.activityData as any) : undefined,
+            badgeEmoji: s.badgeEmoji, badgeTitle: s.badgeTitle,
+          })),
+        },
+      },
+    });
+    return { activityId, slides: draft.slides.length };
+  }
+
+  /** Actualiza un paso: enlazar/quitar actividad, cambiar competencia o título. */
+  async updateStep(stepId: string, dto: { title?: string; activityId?: string | null; competencyId?: string | null }) {
+    return this.prisma.learningRouteStep.update({
+      where: { id: stepId },
+      data: dto,
+      include: {
+        activity: { select: { id: true, title: true, type: true } },
+        competency: { select: { code: true, statement: true, level: true, skill: true } },
+      },
+    });
+  }
+
+  /** Crea una actividad propia de la ruta y la ADJUNTA a un paso existente (que no tenía). */
+  async createStepActivity(stepId: string, dto: { activityType?: string; description?: string; maxScore?: number }) {
+    const step = await this.prisma.learningRouteStep.findUnique({
+      where: { id: stepId }, include: { route: { select: { classroomId: true } } },
+    });
+    if (!step) throw new NotFoundException('Paso no encontrado');
+    const activity = await this.prisma.classroomActivity.create({
+      data: {
+        classroomId: step.route.classroomId,
+        type: (dto.activityType || 'TASK') as any,
+        title: step.title,
+        description: dto.description,
+        maxScore: dto.maxScore ?? 100,
+        isRouteScoped: true, isPublished: true, isVisible: true,
+      },
+    });
+    await this.prisma.learningRouteStep.update({ where: { id: stepId }, data: { activityId: activity.id } });
+    return { activityId: activity.id };
+  }
+
+  async deleteStep(stepId: string) {
+    return this.prisma.learningRouteStep.delete({ where: { id: stepId } });
+  }
+
+  async reorderSteps(routeId: string, stepIds: string[]) {
+    await this.prisma.$transaction(
+      stepIds.map((id, i) => this.prisma.learningRouteStep.update({ where: { id }, data: { sortOrder: i } })),
+    );
+    return this.getRoute(routeId);
+  }
+}

@@ -20,7 +20,30 @@
   --ring: #2563eb;
   --background: #f8fafc;
   --foreground: #0f172a;
+
+  /* ─── Learning Engine · Design System tokens (DS-0) ───────────────────
+     Ver docs/DESIGN_SYSTEM_LEARNING.md §2. Respaldados por CSS vars para
+     que el dark mode entre "gratis" en una fase futura (solo se re-mapean).
+     Formato = canales RGB "R G B" para que los modificadores de opacidad
+     de Tailwind (bg-accent/10, bg-surface-1/95…) generen CSS válido. */
+  --canvas: 250 250 249;        /* #FAFAF9 · el fondo, silencioso */
+  --surface-1: 255 255 255;     /* #FFFFFF · elevación por superficie */
+  --surface-2: 245 245 244;     /* #F5F5F4 */
+  --surface-3: 236 236 234;     /* #ECECEA */
+  --ink-primary: 26 26 23;      /* #1A1A17 · casi-negro · contraste ≥ 4.5:1 */
+  --ink-secondary: 74 74 68;    /* #4A4A44 */
+  --ink-muted: 120 120 110;     /* #78786E */
+  --hairline: 229 229 225;      /* #E5E5E1 · 1px border sutil */
+
+  /* Acento por habilidad — se resuelve en un solo lugar vía [data-skill].
+     Default = reading; el Stage lo sobreescribe según el momento. */
+  --skill-accent: 46 107 230;   /* #2E6BE6 */
 }
+
+[data-skill='reading']   { --skill-accent: 46 107 230; }  /* #2E6BE6 */
+[data-skill='listening'] { --skill-accent: 14 159 142; }  /* #0E9F8E */
+[data-skill='speaking']  { --skill-accent: 124 92 255; }  /* #7C5CFF */
+[data-skill='writing']   { --skill-accent: 224 138 30; }  /* #E08A1E */
 
 * {
   margin: 0;
