@@ -835,22 +835,32 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
 
 // ─── Recursos + Anuncios (Nivel 1) — compartidos alumno/docente ────────────────
 const RES_ICON: Record<string, string> = { PDF: '📄', VIDEO: '🎬', LINK: '🔗', DOC: '📝', OTHER: '📎' }
-const RES_TYPES = ['LINK', 'PDF', 'VIDEO', 'DOC', 'OTHER']
+
+/** Deduce el tipo del recurso a partir del nombre de archivo o la URL. */
+function inferResourceType(nameOrUrl: string): string {
+  const s = (nameOrUrl || '').toLowerCase()
+  if (videoEmbed(s) || /youtube|youtu\.be|vimeo/.test(s) || /\.(mp4|mov|webm|mkv|avi)(\?|$)/.test(s)) return 'VIDEO'
+  if (/\.pdf(\?|$)/.test(s)) return 'PDF'
+  if (/\.(docx?|pptx?|xlsx?|txt|odt|pages|csv)(\?|$)/.test(s)) return 'DOC'
+  if (/\.(png|jpe?g|gif|webp|svg|bmp)(\?|$)/.test(s)) return 'OTHER'
+  if (/^https?:\/\//.test(s)) return 'LINK'
+  return 'OTHER'
+}
+const stripExt = (name: string) => name.replace(/\.[^.]+$/, '')
 
 function ResourcesView({ projectId, canManage }: { projectId: string; canManage?: boolean }) {
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [viewer, setViewer] = useState<{ title: string; url: string; type?: string } | null>(null)
-  const [type, setType] = useState('LINK')
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
   const [busy, setBusy] = useState(false)
   const load = useCallback(() => { abpApi.listResources(projectId).then(({ data }) => setItems(data || [])).finally(() => setLoading(false)) }, [projectId])
   useEffect(() => { load() }, [load])
   const add = async () => {
-    if (!title.trim() || !url.trim()) return
+    if (!url.trim()) return
     setBusy(true)
-    try { await abpApi.addResource(projectId, { type, title: title.trim(), url: url.trim() }); setTitle(''); setUrl(''); load() }
+    try { await abpApi.addResource(projectId, { type: inferResourceType(url), title: title.trim() || url.trim(), url: url.trim() }); setTitle(''); setUrl(''); load() }
     catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
   }
   const del = async (id: string) => { if (!confirm('¿Eliminar recurso?')) return; await abpApi.deleteResource(id); load() }
@@ -882,23 +892,21 @@ function ResourcesView({ projectId, canManage }: { projectId: string; canManage?
       {canManage && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2">
           <h5 className="font-bold text-slate-700 text-sm">Añadir recurso</h5>
+          <p className="text-xs text-slate-400">Pega un enlace (o video de YouTube) y pulsa Añadir, o sube un archivo. El tipo se detecta solo.</p>
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título (opcional para archivos)" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
           <div className="flex gap-2 flex-wrap">
-            <select value={type} onChange={e => setType(e.target.value)} className="border border-slate-300 rounded-lg px-2 py-2 text-sm">{RES_TYPES.map(t => <option key={t} value={t}>{RES_ICON[t]} {t}</option>)}</select>
-            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título del recurso" className="flex-1 min-w-[140px] border border-slate-300 rounded-lg px-3 py-2 text-sm" />
-          </div>
-          <div className="flex gap-2">
-            <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://… (Enlace o Video)" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" />
-            <button onClick={add} disabled={busy || !title.trim() || !url.trim()} className="px-4 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">Añadir enlace</button>
+            <input value={url} onChange={e => setUrl(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add() }} placeholder="https://…" className="flex-1 min-w-[160px] border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+            <button onClick={add} disabled={busy || !url.trim()} className="px-4 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Link2 className="w-4 h-4" /> Añadir</button>
             <input type="file" id={`res-file-${projectId}`} className="hidden" onChange={async (e) => {
-              const f = e.target.files?.[0]; if (!f || !title.trim()) return;
+              const f = e.target.files?.[0]; if (!f) return;
               setBusy(true);
               try {
                 const { data } = await classroomApi.uploadMaterial(f);
                 const fileUrl = data?.data?.path || data?.data?.url;
-                if (fileUrl) { await abpApi.addResource(projectId, { type, title: title.trim(), url: fileUrl }); setTitle(''); setUrl(''); load(); }
+                if (fileUrl) { await abpApi.addResource(projectId, { type: inferResourceType(f.name), title: title.trim() || stripExt(f.name), url: fileUrl }); setTitle(''); setUrl(''); load(); }
               } catch { alert('No se pudo subir el archivo'); } finally { setBusy(false); e.target.value = ''; }
             }} />
-            <button onClick={() => { if (!title.trim()) alert('Ingresa un título primero'); else document.getElementById(`res-file-${projectId}`)?.click() }} disabled={busy || !title.trim()} className="px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 transition-colors"><Paperclip className="w-4 h-4" /> Subir archivo</button>
+            <button onClick={() => document.getElementById(`res-file-${projectId}`)?.click()} disabled={busy} className="px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 transition-colors"><Paperclip className="w-4 h-4" /> Subir archivo</button>
           </div>
         </div>
       )}
@@ -1382,6 +1390,72 @@ function TeamPreview({ teamId, onBack }: { teamId: string; onBack: () => void })
   )
 }
 
+function BroadcastMissionModal({ projectId, onClose, onDone }: { projectId: string; onClose: () => void; onDone: (count: number) => void }) {
+  const [phase, setPhase] = useState(1)
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [required, setRequired] = useState(true)
+  const [activities, setActivities] = useState<{ type: string; title: string }[]>([])
+  const [busy, setBusy] = useState(false)
+  const submit = async () => {
+    if (!title.trim()) return
+    setBusy(true)
+    try {
+      const { data } = await abpApi.broadcastMission(projectId, { phase, title: title.trim(), description: description.trim() || undefined, required, activities: activities.filter(a => a.title.trim()) })
+      onDone(data.count)
+    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo liberar la misión') } finally { setBusy(false) }
+  }
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b border-slate-200 px-5 py-3 flex items-center justify-between">
+          <h3 className="font-bold text-slate-800">🎖️ Liberar misión a todos los equipos</h3>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+        </div>
+        <div className="p-5 space-y-3">
+          <div>
+            <label className="text-xs font-semibold text-slate-500">Fase</label>
+            <select value={phase} onChange={e => setPhase(Number(e.target.value))} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mt-1">
+              {PHASES.map(p => <option key={p.n} value={p.n}>{p.icon} Fase {p.n}: {p.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-500">Título de la misión</label>
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej. Entrevistar a un experto" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mt-1" autoFocus />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-500">Descripción (opcional)</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Qué deben lograr…" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm resize-none mt-1" />
+          </div>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <input type="checkbox" checked={required} onChange={e => setRequired(e.target.checked)} className="w-4 h-4 accent-violet-600" />
+            Obligatoria para validar la fase
+          </label>
+          <div>
+            <label className="text-xs font-semibold text-slate-500">Actividades (opcional)</label>
+            <div className="space-y-2 mt-1">
+              {activities.map((a, i) => (
+                <div key={i} className="flex gap-2">
+                  <select value={a.type} onChange={e => setActivities(as => as.map((x, j) => j === i ? { ...x, type: e.target.value } : x))} className="border border-slate-300 rounded-lg px-2 py-1.5 text-xs">
+                    {ACT_TYPES.map(t => <option key={t} value={t}>{ACT_LABEL[t]}</option>)}
+                  </select>
+                  <input value={a.title} onChange={e => setActivities(as => as.map((x, j) => j === i ? { ...x, title: e.target.value } : x))} placeholder="Describe la actividad…" className="flex-1 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
+                  <button onClick={() => setActivities(as => as.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              ))}
+              <button onClick={() => setActivities(as => [...as, { type: 'READING', title: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir actividad</button>
+            </div>
+          </div>
+        </div>
+        <div className="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-3 flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+          <button onClick={submit} disabled={busy || !title.trim()} className="px-5 py-2 bg-violet-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2 hover:bg-violet-700">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Liberar a todos</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: { classroomId: string; projectId: string; projectTitle: string; onBack: () => void }) {
   const [project, setProject] = useState<any>(null)
   const [dash, setDash] = useState<any>(null)
@@ -1391,6 +1465,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
   const [previewTeamId, setPreviewTeamId] = useState<string | null>(null)
   const [editingPres, setEditingPres] = useState(false)
   const [showManual, setShowManual] = useState(false)
+  const [broadcasting, setBroadcasting] = useState(false)
   const [tab, setTab] = useState<'panel' | 'map' | 'teams' | 'announcements' | 'resources'>('panel')
 
   const load = useCallback(() => {
@@ -1437,7 +1512,8 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
             <button onClick={onBack} className="flex items-center gap-1 text-sm font-semibold text-slate-400 hover:text-slate-600">
               <ChevronLeft className="w-4 h-4" /> Todas las expediciones
             </button>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button onClick={() => setBroadcasting(true)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-semibold transition-colors">🎖️ Liberar misión</button>
               <button onClick={() => setShowManual(true)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-semibold transition-colors">👁️ Vista del alumno</button>
               <button onClick={() => setEditingPres(true)} className="px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-lg text-sm font-semibold transition-colors">✏️ Editar portada</button>
             </div>
@@ -1590,6 +1666,8 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
       {/* ── 📢 / 📚 ───────────────────────────────────────────────────────── */}
       {tab === 'announcements' && <AnnouncementsView projectId={projectId} canManage />}
       {tab === 'resources' && <ResourcesView projectId={projectId} canManage />}
+
+      {broadcasting && <BroadcastMissionModal projectId={projectId} onClose={() => setBroadcasting(false)} onDone={(count) => { setBroadcasting(false); alert(`Misión liberada a ${count} equipo(s).`); load() }} />}
 
       {/* SIDE PEEK MANUAL DE EXPEDICIÓN */}
       {showManual && (

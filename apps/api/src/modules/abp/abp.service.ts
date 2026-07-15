@@ -751,6 +751,34 @@ export class AbpService {
     return this.prisma.abpMission.create({ data: { institutionId, phaseStateId: ps.id, title: dto.title.trim(), description: dto.description?.trim() || null, required: dto.required ?? true, sortOrder: (max._max.sortOrder ?? 0) + 100, generatedBy: 'MANUAL' } });
   }
 
+  /** El docente "libera" una misión a TODOS los equipos del proyecto en una fase.
+   * Crea la misión (con sus actividades opcionales) en cada phaseState correspondiente. */
+  async broadcastMission(projectId: string, institutionId: string, userId: string, dto: { phase: number; title: string; description?: string; required?: boolean; activities?: { type: string; title: string }[] }) {
+    await this.assertProjectOwner(projectId, institutionId, userId);
+    if (!dto.title?.trim()) throw new BadRequestException('El título de la misión es obligatorio');
+    const phase = dto.phase >= 1 && dto.phase <= 6 ? dto.phase : 1;
+    const validTypes = ['READING', 'VIDEO', 'QUIZ', 'INTERVIEW', 'UPLOAD', 'LINK', 'CUSTOM'];
+    const acts = (dto.activities || []).filter(a => a?.title?.trim());
+    const phaseStates = await this.prisma.abpPhaseState.findMany({
+      where: { institutionId, phase, team: { projectId } },
+      select: { id: true },
+    });
+    let count = 0;
+    for (const ps of phaseStates) {
+      const max = await this.prisma.abpMission.aggregate({ where: { phaseStateId: ps.id }, _max: { sortOrder: true } });
+      await this.prisma.abpMission.create({
+        data: {
+          institutionId, phaseStateId: ps.id,
+          title: dto.title.trim(), description: dto.description?.trim() || null,
+          required: dto.required ?? true, sortOrder: (max._max.sortOrder ?? 0) + 100, generatedBy: 'MANUAL',
+          activities: { create: acts.map((a, i) => ({ institutionId, type: (validTypes.includes(a.type) ? a.type : 'CUSTOM') as any, title: a.title.trim(), sortOrder: i * 100 })) },
+        },
+      });
+      count++;
+    }
+    return { ok: true, count };
+  }
+
   async deleteMission(missionId: string, institutionId: string, userId: string) {
     const m = await this.prisma.abpMission.findFirst({ where: { id: missionId, institutionId }, include: { phaseState: { select: { teamId: true } } } });
     if (!m) throw new NotFoundException('Misión no encontrada');

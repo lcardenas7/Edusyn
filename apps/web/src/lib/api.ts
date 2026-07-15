@@ -2569,6 +2569,7 @@ export const abpApi = {
   // Misiones (Opción A: herramienta = misión por defecto de la fase)
   listMissions: (teamId: string, phase: number) => api.get<any[]>(`/abp/teams/${teamId}/phases/${phase}/missions`),
   addMission: (teamId: string, phase: number, data: { title: string; description?: string; required?: boolean }) => api.post<any>(`/abp/teams/${teamId}/phases/${phase}/missions`, data),
+  broadcastMission: (projectId: string, data: { phase: number; title: string; description?: string; required?: boolean; activities?: { type: string; title: string }[] }) => api.post<{ ok: boolean; count: number }>(`/abp/projects/${projectId}/broadcast-mission`, data),
   deleteMission: (missionId: string) => api.delete(`/abp/missions/${missionId}`),
   setMissionStatus: (missionId: string, completed: boolean) => api.post<any>(`/abp/missions/${missionId}/status`, { completed }),
   addActivity: (missionId: string, data: { type: string; title: string; content?: any }) => api.post<any>(`/abp/missions/${missionId}/activities`, data),

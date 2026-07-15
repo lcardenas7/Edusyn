@@ -302,6 +302,14 @@ export class AbpController {
     return this.service.addMission(teamId, institutionId, userId, parseInt(phase, 10), body);
   }
 
+  // El docente libera una misión a todos los equipos del proyecto (en una fase).
+  @Post('projects/:projectId/broadcast-mission')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async broadcastMission(@Param('projectId') projectId: string, @Request() req: any, @Body() body: { phase: number; title: string; description?: string; required?: boolean; activities?: { type: string; title: string }[] }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.broadcastMission(projectId, institutionId, userId, body);
+  }
+
   @Delete('missions/:missionId')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
   async deleteMission(@Param('missionId') missionId: string, @Request() req: any) {
