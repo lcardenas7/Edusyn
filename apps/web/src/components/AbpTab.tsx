@@ -1335,10 +1335,90 @@ function PhaseWorkRO({ phase, data }: { phase: number; data: any }) {
   return null
 }
 
+/** Editor de una misión para el docente: actividades + Valeria sugiere (Ticket 1 del arco). */
+function TeacherMissionEditor({ mission, teamId, onChanged }: { mission: any; teamId: string; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const [suggesting, setSuggesting] = useState(false)
+  const [suggestions, setSuggestions] = useState<{ type: string; title: string; description: string }[] | null>(null)
+  const [picked, setPicked] = useState<Set<number>>(new Set())
+  const [notConfigured, setNotConfigured] = useState(false)
+  const acts = (mission.activities || []).filter((a: any) => !a.content?.tool)
+  const run = async (fn: () => Promise<any>) => { setBusy(true); try { await fn(); onChanged() } finally { setBusy(false) } }
+  const suggest = async () => {
+    setSuggesting(true); setSuggestions(null); setNotConfigured(false); setPicked(new Set())
+    try {
+      const { data } = await abpApi.suggestActivities(teamId, mission.id)
+      if (!data.configured) { setNotConfigured(true); return }
+      setSuggestions(data.activities || [])
+      setPicked(new Set((data.activities || []).map((_, i) => i)))
+    } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo generar con Valeria') } finally { setSuggesting(false) }
+  }
+  const apply = async () => {
+    if (!suggestions) return
+    const items = suggestions.filter((_, i) => picked.has(i)).map(s => ({ type: s.type, title: s.title }))
+    if (!items.length) return
+    setBusy(true)
+    try { await abpApi.addActivitiesBulk(mission.id, items); setSuggestions(null); onChanged() } finally { setBusy(false) }
+  }
+  return (
+    <div className={`rounded-xl border p-3 ${mission.complete ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200'}`}>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className={mission.complete ? 'text-emerald-500' : 'text-slate-300'}>{mission.complete ? '✔' : '○'}</span>
+        <span className={`text-sm font-semibold ${mission.complete ? 'text-slate-500' : 'text-slate-700'}`}>{mission.title}</span>
+        {mission.required && <span className="text-[10px] font-bold text-violet-600 uppercase">obligatoria</span>}
+      </div>
+
+      {acts.length > 0 && (
+        <div className="mt-2 space-y-1 pl-6">
+          {acts.map((a: any) => (
+            <div key={a.id} className="flex items-center gap-2 group">
+              <input type="checkbox" checked={!!a.completed} disabled={busy} onChange={e => run(() => abpApi.completeActivity(a.id, e.target.checked))} className="w-3.5 h-3.5 accent-violet-600" />
+              <span className={`text-xs ${a.completed ? 'line-through text-slate-400' : 'text-slate-600'}`}><span className="text-slate-400 mr-1">{ACT_LABEL[a.type] || a.type}</span>{a.title}</span>
+              <button onClick={() => run(() => abpApi.deleteActivity(a.id))} disabled={busy} className="ml-auto opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-2 pl-6 flex items-center gap-3 flex-wrap">
+        <AddActivityForm mission={mission} onSaved={onChanged} />
+        <button onClick={suggest} disabled={suggesting} className="text-xs font-semibold text-fuchsia-600 hover:text-fuchsia-700 flex items-center gap-1 disabled:opacity-50">
+          {suggesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '✨'} Sugerir con Valeria
+        </button>
+      </div>
+
+      {notConfigured && <p className="mt-2 pl-6 text-xs text-amber-600">Valeria no está configurada (falta la API key de IA). Puedes añadir actividades manualmente.</p>}
+
+      {suggestions && (
+        <div className="mt-2 ml-6 rounded-xl border border-fuchsia-200 bg-fuchsia-50/40 p-3">
+          {suggestions.length === 0 ? <p className="text-xs text-slate-500">Valeria no devolvió sugerencias. Intenta de nuevo.</p> : (
+            <>
+              <p className="text-xs font-bold text-fuchsia-700 mb-2">✨ Sugerencias de Valeria (revisa y elige)</p>
+              <div className="space-y-1.5">
+                {suggestions.map((s, i) => (
+                  <label key={i} className="flex items-start gap-2 text-xs cursor-pointer">
+                    <input type="checkbox" checked={picked.has(i)} onChange={() => setPicked(p => { const n = new Set(p); n.has(i) ? n.delete(i) : n.add(i); return n })} className="w-3.5 h-3.5 accent-fuchsia-600 mt-0.5" />
+                    <span><b className="text-slate-700">{ACT_LABEL[s.type] || s.type} · {s.title}</b>{s.description ? <span className="text-slate-500"> — {s.description}</span> : null}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="flex justify-end gap-2 mt-2">
+                <button onClick={() => setSuggestions(null)} className="text-xs text-slate-500 hover:text-slate-700">Descartar</button>
+                <button onClick={apply} disabled={busy || picked.size === 0} className="text-xs font-bold bg-fuchsia-600 text-white rounded-lg px-3 py-1.5 disabled:opacity-50">Añadir {picked.size} a la misión</button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function TeamPreview({ teamId, onBack }: { teamId: string; onBack: () => void }) {
   const [team, setTeam] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  useEffect(() => { abpApi.teamExpedition(teamId).then(({ data }) => setTeam(data)).finally(() => setLoading(false)) }, [teamId])
+  const load = useCallback(() => { abpApi.teamExpedition(teamId).then(({ data }) => setTeam(data)).finally(() => setLoading(false)) }, [teamId])
+  useEffect(() => { load() }, [load])
   if (loading) return <Loading />
   if (!team) return <Empty msg="No se pudo cargar el equipo." />
   const phases = team.phaseStates || []
@@ -1364,13 +1444,9 @@ function TeamPreview({ teamId, onBack }: { teamId: string; onBack: () => void })
           </div>
           {ps.feedback && <div className="mb-3 p-2.5 rounded-lg bg-rose-50 text-xs text-rose-700">🧑‍🏫 {ps.feedback}</div>}
           {(ps.missions || []).length > 0 && (
-            <div className="mb-3 space-y-1">
+            <div className="mb-3 space-y-2">
               {ps.missions.map((m: any) => (
-                <div key={m.id} className="flex items-center gap-2 text-sm">
-                  <span className={m.complete ? 'text-emerald-500' : 'text-slate-300'}>{m.complete ? '✔' : '○'}</span>
-                  <span className={m.complete ? 'text-slate-500' : 'text-slate-700'}>{m.title}</span>
-                  {m.required && <span className="text-[10px] text-violet-600 font-semibold">obligatoria</span>}
-                </div>
+                <TeacherMissionEditor key={m.id} mission={m} teamId={team.id} onChanged={load} />
               ))}
             </div>
           )}

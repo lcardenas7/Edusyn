@@ -310,6 +310,22 @@ export class AbpController {
     return this.service.broadcastMission(projectId, institutionId, userId, body);
   }
 
+  // Valeria sugiere actividades para una misión (docente).
+  @Post('teams/:teamId/missions/:missionId/suggest')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async suggestActivities(@Param('teamId') teamId: string, @Param('missionId') missionId: string, @Request() req: any, @Body() body: { count?: number }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.suggestActivities(teamId, missionId, institutionId, userId, body?.count);
+  }
+
+  // Alta en lote de actividades (aplicar sugerencias de Valeria).
+  @Post('missions/:missionId/activities/bulk')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async addActivitiesBulk(@Param('missionId') missionId: string, @Request() req: any, @Body() body: { items: { type: string; title: string }[] }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addActivitiesBulk(missionId, institutionId, userId, body?.items || []);
+  }
+
   @Delete('missions/:missionId')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
   async deleteMission(@Param('missionId') missionId: string, @Request() req: any) {

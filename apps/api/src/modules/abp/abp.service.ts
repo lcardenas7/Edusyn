@@ -2,7 +2,9 @@ import { Injectable, NotFoundException, ForbiddenException, BadRequestException 
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LearningIdentityService } from '../gamification/learning-identity.service';
-import { ABP_PHASE_COUNT, resolvePhaseConfig, ABP_BADGE_ON_PHASE, ABP_XP, CANVAS_CARDS, phaseCriteriaMet, ABP_COEVAL_CRITERIA, rubricFor, MISSION_TEMPLATES, toolCriterionMet } from './abp.constants';
+import { ApdAiService } from '../apd/ai/apd-ai.service';
+import { AiOrchestratorService } from '../apd/ai/ai-orchestrator.service';
+import { ABP_PHASE_COUNT, ABP_PHASES, resolvePhaseConfig, ABP_BADGE_ON_PHASE, ABP_XP, CANVAS_CARDS, phaseCriteriaMet, ABP_COEVAL_CRITERIA, rubricFor, MISSION_TEMPLATES, toolCriterionMet } from './abp.constants';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EXPEDICIÓN ABP — servicio. Ticket 1: crear proyecto, roster, armar equipos.
@@ -15,6 +17,8 @@ export class AbpService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly identity: LearningIdentityService,
+    private readonly apdAi: ApdAiService,
+    private readonly orchestrator: AiOrchestratorService,
   ) {}
 
   /** XP individual a la identidad de aprendizaje del alumno (idempotente, nunca rompe). */
@@ -777,6 +781,52 @@ export class AbpService {
       count++;
     }
     return { ok: true, count };
+  }
+
+  /** Valeria sugiere actividades para una misión, ligadas a la problemática del equipo.
+   * No persiste nada: devuelve las sugerencias para que el docente revise y añada. */
+  async suggestActivities(teamId: string, missionId: string, institutionId: string, userId: string, count?: number) {
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    const mission = await this.prisma.abpMission.findFirst({ where: { id: missionId, institutionId }, include: { phaseState: { select: { phase: true, teamId: true } } } });
+    if (!mission || mission.phaseState.teamId !== teamId) throw new NotFoundException('Misión no encontrada');
+    if (!this.apdAi.isEnabled()) return { configured: false, activities: [] };
+    if (!(await this.orchestrator.withinQuota(institutionId))) throw new BadRequestException('Se alcanzó la cuota mensual de IA de la institución.');
+
+    const phase = mission.phaseState.phase;
+    const project = await this.prisma.abpProject.findUnique({ where: { id: team.projectId }, select: { challenge: true } });
+    const ps1 = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 1 } }, select: { data: true } });
+    const canvas = Array.isArray((ps1?.data as any)?.canvas) ? (ps1!.data as any).canvas.map((c: any) => c?.value).filter(Boolean) : [];
+    const ps3 = await this.prisma.abpPhaseState.findUnique({ where: { teamId_phase: { teamId, phase: 3 } }, select: { data: true } });
+    const smart = (ps3?.data as any)?.smart?.text || '';
+    const phaseName = ABP_PHASES.find(p => p.n === phase)?.name || `Fase ${phase}`;
+
+    const route = this.orchestrator.chooseRoute(await this.orchestrator.getPlan(institutionId));
+    const result = await this.apdAi.generateAbpActivities(
+      { challenge: project?.challenge || undefined, teamName: team.name, problem: (team as any).problem || undefined, phase, phaseName, canvas, smart, count },
+      route,
+    );
+    await this.orchestrator.recordUsage(institutionId, this.orchestrator.estimateTokens(JSON.stringify(result), smart, canvas.join(' ')));
+    return { configured: true, model: route.model, activities: result.activities };
+  }
+
+  /** Alta en lote de actividades de misión (para aplicar las sugerencias de Valeria). */
+  async addActivitiesBulk(missionId: string, institutionId: string, userId: string, items: { type: string; title: string }[]) {
+    const m = await this.prisma.abpMission.findFirst({ where: { id: missionId, institutionId }, include: { phaseState: { select: { teamId: true } } } });
+    if (!m) throw new NotFoundException('Misión no encontrada');
+    await this.loadTeamForUser(m.phaseState.teamId, institutionId, userId);
+    const valid = ['READING', 'VIDEO', 'QUIZ', 'INTERVIEW', 'UPLOAD', 'LINK', 'CUSTOM'];
+    const max = await this.prisma.abpMissionActivity.aggregate({ where: { missionId }, _max: { sortOrder: true } });
+    let sort = (max._max.sortOrder ?? 0) + 100;
+    const created = [] as any[];
+    for (const it of items || []) {
+      if (!it?.title?.trim()) continue;
+      const c = await this.prisma.abpMissionActivity.create({
+        data: { institutionId, missionId, type: (valid.includes(it.type) ? it.type : 'CUSTOM') as any, title: it.title.trim(), sortOrder: sort },
+      });
+      sort += 100;
+      created.push(c);
+    }
+    return created;
   }
 
   async deleteMission(missionId: string, institutionId: string, userId: string) {

@@ -871,6 +871,52 @@ export class ApdAiService implements IApdAiService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // EXPEDICIÓN ABP — Valeria sugiere actividades de misión (ligadas al problema)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async generateAbpActivities(
+    input: {
+      challenge?: string; teamName?: string; problem?: string;
+      phase: number; phaseName: string; canvas?: string[]; smart?: string; count?: number;
+    },
+    route?: { provider?: string; model?: string },
+  ): Promise<{ activities: { type: string; title: string; description: string }[] }> {
+    if (!this.isEnabled()) return { activities: [] };
+    const count = Math.min(Math.max(input.count ?? 4, 1), 6);
+    const system = [
+      'Eres Valeria, asistente pedagógica de Edusyn.',
+      'Diseñas actividades para estudiantes (adolescentes) dentro de un proyecto ABP por equipos.',
+      'Responde SOLO con JSON válido: {"activities":[{"type","title","description"}]}.',
+      'type debe ser uno de: READING, VIDEO, INTERVIEW, UPLOAD, LINK, CUSTOM.',
+      'Las actividades deben ser concretas, accionables y ESTAR LIGADAS a la problemática del equipo.',
+      'title: máximo 8 palabras. description: 1-2 frases con lo que el equipo debe hacer.',
+      'Escribe en español neutro.',
+    ].join('\n');
+    const canvasTxt = (input.canvas || []).filter(Boolean).map(c => `  - ${c}`).join('\n');
+    const user = [
+      `Reto general del proyecto: ${input.challenge || '(no definido)'}`,
+      input.teamName ? `Equipo: ${input.teamName}` : '',
+      `Problemática del equipo: ${input.problem || '(aún no especificada)'}`,
+      canvasTxt ? `Canvas del problema:\n${canvasTxt}` : '',
+      input.smart ? `Objetivo SMART: ${input.smart}` : '',
+      `Fase actual: ${input.phase} — ${input.phaseName}`,
+      `Genera ${count} actividades apropiadas para ESTA fase que ayuden al equipo a avanzar, ligadas a su problemática.`,
+    ].filter(Boolean).join('\n');
+
+    const raw = await this.callLlmJson<{ activities?: any[] }>(system, user, 1200, route);
+    const valid = ['READING', 'VIDEO', 'INTERVIEW', 'UPLOAD', 'LINK', 'CUSTOM'];
+    const activities = (Array.isArray(raw?.activities) ? raw.activities : [])
+      .map((a: any) => ({
+        type: valid.includes(String(a?.type || '').toUpperCase()) ? String(a.type).toUpperCase() : 'CUSTOM',
+        title: String(a?.title || '').trim().slice(0, 120),
+        description: String(a?.description || '').trim().slice(0, 400),
+      }))
+      .filter((a: any) => a.title)
+      .slice(0, count);
+    return { activities };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // GENERAR ESTRATEGIA DE APOYO
   // ═══════════════════════════════════════════════════════════════════════════
 
