@@ -572,6 +572,18 @@ function PresentationView({ project }: { project: any }) {
           ))}</div>
         </div>
       )}
+
+      {p.faq?.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h4 className="font-bold text-slate-800 mb-3">❓ Preguntas frecuentes</h4>
+          <div className="space-y-3">{p.faq.map((f: any, i: number) => (
+            <div key={i}>
+              <p className="text-sm font-semibold text-slate-700">{f.q}</p>
+              <p className="text-sm text-slate-500 whitespace-pre-line">{f.a}</p>
+            </div>
+          ))}</div>
+        </div>
+      )}
     </div>
   )
 }
@@ -596,6 +608,7 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
   const [skills, setSkills] = useState<string[]>(init.skills || [])
   const [rules, setRules] = useState<string[]>(init.rules || [])
   const [timeline, setTimeline] = useState<{ label: string; detail: string }[]>(init.timeline || [])
+  const [faq, setFaq] = useState<{ q: string; a: string }[]>(init.faq || [])
   const [busy, setBusy] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -612,7 +625,7 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
     try {
       await abpApi.updatePresentation(project.id, {
         challenge,
-        presentation: { banner, videoUrl, teacherMessage, context, why, skills: skills.filter(Boolean), rules: rules.filter(Boolean), timeline: timeline.filter(t => t.label || t.detail) },
+        presentation: { banner, videoUrl, teacherMessage, context, why, skills: skills.filter(Boolean), rules: rules.filter(Boolean), timeline: timeline.filter(t => t.label || t.detail), faq: faq.filter(f => f.q || f.a) },
       })
       onSaved()
     } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo guardar') } finally { setBusy(false) }
@@ -670,6 +683,21 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
             <button onClick={() => setTimeline(ts => [...ts, { label: '', detail: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir fila</button>
           </div>
         </div>
+        <div>
+          <label className="text-xs font-semibold text-slate-500">Preguntas frecuentes</label>
+          <div className="space-y-2 mt-1">
+            {faq.map((f, i) => (
+              <div key={i} className="flex gap-2 items-start">
+                <div className="flex-1 space-y-1">
+                  <input value={f.q} onChange={e => setFaq(fs => fs.map((x, j) => j === i ? { ...x, q: e.target.value } : x))} placeholder="¿Puedo cambiar de equipo?" className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
+                  <textarea value={f.a} onChange={e => setFaq(fs => fs.map((x, j) => j === i ? { ...x, a: e.target.value } : x))} rows={2} placeholder="Respuesta…" className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm resize-none" />
+                </div>
+                <button onClick={() => setFaq(fs => fs.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500 mt-1"><Trash2 className="w-4 h-4" /></button>
+              </div>
+            ))}
+            <button onClick={() => setFaq(fs => [...fs, { q: '', a: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir pregunta</button>
+          </div>
+        </div>
         <div className="flex justify-end gap-2 pt-2">
           <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
           <button onClick={save} disabled={busy} className="px-5 py-2 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Guardar portada</button>
@@ -679,11 +707,107 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
   )
 }
 
+// ─── Recursos + Anuncios (Nivel 1) — compartidos alumno/docente ────────────────
+const RES_ICON: Record<string, string> = { PDF: '📄', VIDEO: '🎬', LINK: '🔗', DOC: '📝', OTHER: '📎' }
+const RES_TYPES = ['LINK', 'PDF', 'VIDEO', 'DOC', 'OTHER']
+
+function ResourcesView({ projectId, canManage }: { projectId: string; canManage?: boolean }) {
+  const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [type, setType] = useState('LINK')
+  const [title, setTitle] = useState('')
+  const [url, setUrl] = useState('')
+  const [busy, setBusy] = useState(false)
+  const load = useCallback(() => { abpApi.listResources(projectId).then(({ data }) => setItems(data || [])).finally(() => setLoading(false)) }, [projectId])
+  useEffect(() => { load() }, [load])
+  const add = async () => {
+    if (!title.trim() || !url.trim()) return
+    setBusy(true)
+    try { await abpApi.addResource(projectId, { type, title: title.trim(), url: url.trim() }); setTitle(''); setUrl(''); load() }
+    catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+  }
+  const del = async (id: string) => { if (!confirm('¿Eliminar recurso?')) return; await abpApi.deleteResource(id); load() }
+  if (loading) return <Loading />
+  return (
+    <div className="space-y-3">
+      <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <h4 className="font-bold text-slate-800 mb-3">📚 Recursos del proyecto</h4>
+        {items.length === 0 ? <p className="text-sm text-slate-400">Aún no hay recursos.</p> : (
+          <div className="space-y-2">{items.map(r => (
+            <div key={r.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-3">
+              <span className="text-lg">{RES_ICON[r.type] || '📎'}</span>
+              <div className="flex-1 min-w-0">
+                <a href={r.url} target="_blank" rel="noreferrer" className="text-sm font-semibold text-violet-600 hover:underline truncate block">{r.title}</a>
+                {r.description && <p className="text-xs text-slate-400 truncate">{r.description}</p>}
+              </div>
+              {canManage && <button onClick={() => del(r.id)} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>}
+            </div>
+          ))}</div>
+        )}
+      </div>
+      {canManage && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2">
+          <h5 className="font-bold text-slate-700 text-sm">Añadir recurso</h5>
+          <div className="flex gap-2 flex-wrap">
+            <select value={type} onChange={e => setType(e.target.value)} className="border border-slate-300 rounded-lg px-2 py-2 text-sm">{RES_TYPES.map(t => <option key={t} value={t}>{RES_ICON[t]} {t}</option>)}</select>
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título" className="flex-1 min-w-[140px] border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div className="flex gap-2">
+            <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+            <button onClick={add} disabled={busy || !title.trim() || !url.trim()} className="px-4 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">Añadir</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AnnouncementsView({ projectId, canManage }: { projectId: string; canManage?: boolean }) {
+  const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [content, setContent] = useState('')
+  const [busy, setBusy] = useState(false)
+  const load = useCallback(() => { abpApi.listAnnouncements(projectId).then(({ data }) => setItems(data || [])).finally(() => setLoading(false)) }, [projectId])
+  useEffect(() => { load() }, [load])
+  const add = async () => { if (!content.trim()) return; setBusy(true); try { await abpApi.addAnnouncement(projectId, { content: content.trim() }); setContent(''); load() } finally { setBusy(false) } }
+  const pin = async (a: any) => { await abpApi.pinAnnouncement(a.id, !a.pinned); load() }
+  const del = async (id: string) => { if (!confirm('¿Eliminar anuncio?')) return; await abpApi.deleteAnnouncement(id); load() }
+  if (loading) return <Loading />
+  return (
+    <div className="space-y-3">
+      {canManage && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h5 className="font-bold text-slate-700 text-sm mb-2">📢 Publicar anuncio</h5>
+          <textarea value={content} onChange={e => setContent(e.target.value)} rows={2} placeholder="Recuerden que el viernes se revisa la Fase 2…" className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none" />
+          <div className="flex justify-end mt-2"><button onClick={add} disabled={busy || !content.trim()} className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">Publicar</button></div>
+        </div>
+      )}
+      {items.length === 0 ? <Empty msg="No hay anuncios todavía." /> : (
+        <div className="space-y-2">{items.map(a => (
+          <div key={a.id} className={`rounded-2xl border p-4 ${a.pinned ? 'border-amber-300 bg-amber-50/50' : 'border-slate-200 bg-white'}`}>
+            <div className="flex items-start gap-2">
+              {a.pinned && <span className="text-amber-500">📌</span>}
+              <p className="flex-1 text-sm text-slate-700 whitespace-pre-line">{a.content}</p>
+              {canManage && (
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={() => pin(a)} title={a.pinned ? 'Quitar fijado' : 'Fijar'} className={`text-sm ${a.pinned ? 'text-amber-500' : 'text-slate-300 hover:text-amber-500'}`}>📌</button>
+                  <button onClick={() => del(a.id)} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              )}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-1">{new Date(a.createdAt).toLocaleDateString()}</div>
+          </div>
+        ))}</div>
+      )}
+    </div>
+  )
+}
+
 function StudentExpedition({ projects }: { projects: any[] }) {
   const [projectId, setProjectId] = useState<string>(projects[0]?.id || '')
   const [team, setTeam] = useState<any>(null)
   const [pres, setPres] = useState<any>(null)
-  const [view, setView] = useState<'home' | 'expedition'>('home')
+  const [view, setView] = useState<'home' | 'resources' | 'announcements' | 'expedition'>('home')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
 
@@ -710,12 +834,17 @@ function StudentExpedition({ projects }: { projects: any[] }) {
   const nav = (
     <div className="flex items-center gap-2 flex-wrap">
       {projects.length > 1 && <ProjectPicker projects={projects} value={projectId} onChange={setProjectId} />}
-      <div className="ml-auto flex bg-slate-100 rounded-xl p-1">
+      <div className="ml-auto flex bg-slate-100 rounded-xl p-1 flex-wrap">
         <button onClick={() => setView('home')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${view === 'home' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>🏠 Presentación</button>
+        <button onClick={() => setView('resources')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${view === 'resources' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>📚 Recursos</button>
+        <button onClick={() => setView('announcements')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${view === 'announcements' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>📢 Anuncios</button>
         <button onClick={() => setView('expedition')} disabled={!team} className={`px-3 py-1.5 rounded-lg text-sm font-semibold disabled:opacity-40 ${view === 'expedition' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>🚀 Mi Expedición</button>
       </div>
     </div>
   )
+
+  if (view === 'resources') return <div className="space-y-4">{nav}<ResourcesView projectId={projectId} /></div>
+  if (view === 'announcements') return <div className="space-y-4">{nav}<AnnouncementsView projectId={projectId} /></div>
 
   if (view === 'home' || !team) return (
     <div className="space-y-4">
@@ -1047,6 +1176,10 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
           )}
         </div>
       )}
+
+      {/* Anuncios + Recursos (Centro de Operaciones) */}
+      <AnnouncementsView projectId={projectId} canManage />
+      <ResourcesView projectId={projectId} canManage />
 
       {/* Equipos (gestión) */}
       <div className="flex items-center justify-between">

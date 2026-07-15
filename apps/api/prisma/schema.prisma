@@ -594,6 +594,8 @@ model Institution {
   rlsAbpMissionActs     AbpMissionActivity[]   @relation("RlsInstitutionABPMA")
   rlsAbpDiscoveries     AbpDiscovery[]         @relation("RlsInstitutionABPD")
   rlsAbpLogEntries      AbpLogEntry[]          @relation("RlsInstitutionABPL")
+  rlsAbpResources       AbpResource[]          @relation("RlsInstitutionABPR")
+  rlsAbpAnnouncements   AbpAnnouncement[]      @relation("RlsInstitutionABPAN")
 }
 
 // Módulos habilitados por institución
@@ -6615,6 +6617,14 @@ enum AbpContributionType {
   COEVAL
 }
 
+enum AbpResourceType {
+  PDF
+  VIDEO
+  LINK
+  DOC
+  OTHER
+}
+
 model AbpProject {
   id            String           @id @default(cuid())
   institutionId String
@@ -6629,12 +6639,51 @@ model AbpProject {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
-  institution Institution @relation("RlsInstitutionABPP", fields: [institutionId], references: [id])
-  classroom   Classroom   @relation(fields: [classroomId], references: [id], onDelete: Cascade)
-  teams       AbpTeam[]
+  institution   Institution       @relation("RlsInstitutionABPP", fields: [institutionId], references: [id])
+  classroom     Classroom         @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  teams         AbpTeam[]
+  resources     AbpResource[]
+  announcements AbpAnnouncement[]
 
   @@index([institutionId])
   @@index([classroomId])
+}
+
+// Recursos generales del proyecto (Nivel 1): PDFs, videos, enlaces, tutoriales.
+model AbpResource {
+  id            String          @id @default(cuid())
+  institutionId String
+  projectId     String
+  type          AbpResourceType @default(LINK)
+  title         String
+  url           String          @db.Text
+  description   String?         @db.Text
+  sortOrder     Int             @default(0)
+  createdAt     DateTime        @default(now())
+
+  institution Institution @relation("RlsInstitutionABPR", fields: [institutionId], references: [id])
+  project     AbpProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([projectId])
+}
+
+// Anuncios del proyecto (Nivel 1): mensajes del docente que no se pierden en el foro.
+model AbpAnnouncement {
+  id            String   @id @default(cuid())
+  institutionId String
+  projectId     String
+  content       String   @db.Text
+  pinned        Boolean  @default(false)
+  authorUserId  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution Institution @relation("RlsInstitutionABPAN", fields: [institutionId], references: [id])
+  project     AbpProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([projectId])
 }
 
 model AbpTeam {

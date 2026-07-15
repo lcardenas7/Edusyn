@@ -103,7 +103,72 @@ export class AbpService {
       timeline: Array.isArray(p.timeline)
         ? p.timeline.map((t: any) => ({ label: str(t?.label), detail: str(t?.detail) })).filter((t: any) => t.label || t.detail)
         : [],
+      faq: Array.isArray(p.faq)
+        ? p.faq.map((f: any) => ({ q: str(f?.q), a: str(f?.a) })).filter((f: any) => f.q || f.a)
+        : [],
     };
+  }
+
+  // ─── RECURSOS + ANUNCIOS (Nivel 1) ──────────────────────────────────────────
+
+  async listResources(projectId: string, institutionId: string) {
+    return this.prisma.abpResource.findMany({
+      where: { projectId, institutionId },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  async addResource(projectId: string, institutionId: string, userId: string, dto: { type?: string; title: string; url: string; description?: string }) {
+    await this.assertProjectOwner(projectId, institutionId, userId);
+    if (!dto.title?.trim() || !dto.url?.trim()) throw new BadRequestException('El título y el enlace son obligatorios');
+    const valid = ['PDF', 'VIDEO', 'LINK', 'DOC', 'OTHER'];
+    const max = await this.prisma.abpResource.aggregate({ where: { projectId }, _max: { sortOrder: true } });
+    return this.prisma.abpResource.create({
+      data: {
+        institutionId, projectId,
+        type: (valid.includes(dto.type || '') ? dto.type : 'LINK') as any,
+        title: dto.title.trim(), url: dto.url.trim(), description: dto.description?.trim() || null,
+        sortOrder: (max._max.sortOrder ?? 0) + 100,
+      },
+    });
+  }
+
+  async deleteResource(resourceId: string, institutionId: string, userId: string) {
+    const r = await this.prisma.abpResource.findFirst({ where: { id: resourceId, institutionId }, select: { projectId: true } });
+    if (!r) throw new NotFoundException('Recurso no encontrado');
+    await this.assertProjectOwner(r.projectId, institutionId, userId);
+    await this.prisma.abpResource.delete({ where: { id: resourceId } });
+    return { ok: true };
+  }
+
+  async listAnnouncements(projectId: string, institutionId: string) {
+    return this.prisma.abpAnnouncement.findMany({
+      where: { projectId, institutionId },
+      orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  async addAnnouncement(projectId: string, institutionId: string, userId: string, dto: { content: string; pinned?: boolean }) {
+    await this.assertProjectOwner(projectId, institutionId, userId);
+    if (!dto.content?.trim()) throw new BadRequestException('El anuncio no puede estar vacío');
+    return this.prisma.abpAnnouncement.create({
+      data: { institutionId, projectId, content: dto.content.trim(), pinned: !!dto.pinned, authorUserId: userId },
+    });
+  }
+
+  async setAnnouncementPin(announcementId: string, institutionId: string, userId: string, pinned: boolean) {
+    const a = await this.prisma.abpAnnouncement.findFirst({ where: { id: announcementId, institutionId }, select: { projectId: true } });
+    if (!a) throw new NotFoundException('Anuncio no encontrado');
+    await this.assertProjectOwner(a.projectId, institutionId, userId);
+    return this.prisma.abpAnnouncement.update({ where: { id: announcementId }, data: { pinned } });
+  }
+
+  async deleteAnnouncement(announcementId: string, institutionId: string, userId: string) {
+    const a = await this.prisma.abpAnnouncement.findFirst({ where: { id: announcementId, institutionId }, select: { projectId: true } });
+    if (!a) throw new NotFoundException('Anuncio no encontrado');
+    await this.assertProjectOwner(a.projectId, institutionId, userId);
+    await this.prisma.abpAnnouncement.delete({ where: { id: announcementId } });
+    return { ok: true };
   }
 
   /** Docente actualiza la portada del proyecto (y opcionalmente el reto general). */

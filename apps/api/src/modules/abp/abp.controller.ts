@@ -81,6 +81,57 @@ export class AbpController {
     return this.service.updatePresentation(projectId, institutionId, userId, body);
   }
 
+  // ─── Recursos ──────────────────────────────────────────────────────────────
+  @Get('projects/:projectId/resources')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async listResources(@Param('projectId') projectId: string, @Request() req: any) {
+    const { institutionId } = await this.ctx(req);
+    return this.service.listResources(projectId, institutionId);
+  }
+
+  @Post('projects/:projectId/resources')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async addResource(@Param('projectId') projectId: string, @Request() req: any, @Body() body: { type?: string; title: string; url: string; description?: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addResource(projectId, institutionId, userId, body);
+  }
+
+  @Delete('resources/:resourceId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async deleteResource(@Param('resourceId') resourceId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.deleteResource(resourceId, institutionId, userId);
+  }
+
+  // ─── Anuncios ──────────────────────────────────────────────────────────────
+  @Get('projects/:projectId/announcements')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async listAnnouncements(@Param('projectId') projectId: string, @Request() req: any) {
+    const { institutionId } = await this.ctx(req);
+    return this.service.listAnnouncements(projectId, institutionId);
+  }
+
+  @Post('projects/:projectId/announcements')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async addAnnouncement(@Param('projectId') projectId: string, @Request() req: any, @Body() body: { content: string; pinned?: boolean }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addAnnouncement(projectId, institutionId, userId, body);
+  }
+
+  @Post('announcements/:announcementId/pin')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async pinAnnouncement(@Param('announcementId') announcementId: string, @Request() req: any, @Body() body: { pinned: boolean }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.setAnnouncementPin(announcementId, institutionId, userId, !!body.pinned);
+  }
+
+  @Delete('announcements/:announcementId')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async deleteAnnouncement(@Param('announcementId') announcementId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.deleteAnnouncement(announcementId, institutionId, userId);
+  }
+
   // Panel de progreso del proyecto (Centro de Operaciones) — docente.
   @Get('projects/:projectId/dashboard')
   @Roles('DOCENTE', 'COORDINADOR')
