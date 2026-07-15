@@ -1820,6 +1820,8 @@ export class ApdAiService implements IApdAiService {
     objective: string;
     gradeName?: string;
     targetLevel?: string;
+    instructions?: string; // "cómo" lo quiere el docente (manda sobre el default)
+    sourceMaterial?: string; // documento/guía base del docente
   }): Promise<ApdAiRoutePlan> {
     if (!this.isEnabled()) {
       throw new Error('La generación con IA no está habilitada (APD_AI_API_KEY ausente).');
@@ -1851,9 +1853,18 @@ export class ApdAiService implements IApdAiService {
       '}',
       params.gradeName ? `Nivel escolar: ${params.gradeName}.` : '',
       params.targetLevel ? `Usa como nivel objetivo: ${params.targetLevel}.` : '',
+      params.instructions
+        ? `\nINDICACIONES DEL DOCENTE (tienen PRIORIDAD sobre los valores por defecto; respétalas al pie de la letra):\n${params.instructions.trim()}`
+        : '',
+      params.sourceMaterial
+        ? '\nHAY MATERIAL BASE del docente: la ruta debe derivarse de ese material (usa sus temas, vocabulario y ejemplos). No lo contradigas ni inventes contenido ajeno a él.'
+        : '',
     ].filter(Boolean).join('\n');
 
-    const userPrompt = `Objetivo del docente: ${objective}\n\nDiseña la ruta siguiendo el esquema JSON.`;
+    const materialBlock = params.sourceMaterial
+      ? `\n\nMATERIAL BASE DEL DOCENTE (fundamenta la ruta en esto):\n"""\n${params.sourceMaterial.trim().slice(0, 8000)}\n"""`
+      : '';
+    const userPrompt = `Objetivo del docente: ${objective}\n\nDiseña la ruta siguiendo el esquema JSON.${materialBlock}`;
 
     let raw: any;
     try {
@@ -1951,6 +1962,8 @@ export class ApdAiService implements IApdAiService {
     objective: string; // objetivo de la ruta
     title: string; // título del paso
     gradeName?: string; // grado escolar, para ajustar tema/registro
+    instructions?: string; // indicaciones del docente (de la ruta + extra del paso)
+    sourceMaterial?: string; // material base del docente (heredado de la ruta)
   }): Promise<ApdAiLessonDraft> {
     if (!this.isEnabled()) throw new Error('La generación con IA no está habilitada.');
     const skill = params.skill;
@@ -1999,9 +2012,18 @@ export class ApdAiService implements IApdAiService {
       '    { "type": "BADGE_REVEAL" }',
       '  ]',
       '}',
+      params.instructions
+        ? `\nINDICACIONES DEL DOCENTE (tienen PRIORIDAD; respétalas al pie de la letra):\n${params.instructions.trim()}`
+        : '',
+      params.sourceMaterial
+        ? '\nHAY MATERIAL BASE del docente: la lección debe derivarse de ese material (usa sus temas, vocabulario y ejemplos). No lo contradigas ni inventes contenido ajeno a él.'
+        : '',
     ].filter(Boolean).join('\n');
 
-    const userPrompt = `Objetivo de la ruta: ${params.objective}\nPaso: ${params.title}\n\nDiseña la lección interactiva de ${skill} (nivel ${level}${params.gradeName ? ', grado ' + params.gradeName : ''}) siguiendo el esquema JSON. Usa solo MULTIPLE_CHOICE, TRUE_FALSE y FILL_BLANK.`;
+    const materialBlock = params.sourceMaterial
+      ? `\n\nMATERIAL BASE DEL DOCENTE (fundamenta la lección en esto):\n"""\n${params.sourceMaterial.trim().slice(0, 8000)}\n"""`
+      : '';
+    const userPrompt = `Objetivo de la ruta: ${params.objective}\nPaso: ${params.title}\n\nDiseña la lección interactiva de ${skill} (nivel ${level}${params.gradeName ? ', grado ' + params.gradeName : ''}) siguiendo el esquema JSON. Usa solo MULTIPLE_CHOICE, TRUE_FALSE y FILL_BLANK.${materialBlock}`;
 
     let raw: any;
     try {

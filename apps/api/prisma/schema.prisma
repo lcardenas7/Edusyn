@@ -6434,6 +6434,10 @@ model LearningRoute {
   description        String?  @db.Text
   targetCompetencyId String? // competencia CEFR objetivo (grafo global)
   targetLevel        String? // "A2" (denormalizado para mostrar)
+  // Indicaciones del docente y material base: Valeria los usa al armar la ruta
+  // Y los REUSA al generar la lección de cada paso (coherencia en toda la ruta).
+  instructions       String?  @db.Text // "cómo" quiere el docente que se genere
+  sourceMaterial     String?  @db.Text // documento/guía base pegada por el docente
   isPublished        Boolean  @default(false)
   sortOrder          Int      @default(0)
   createdAt          DateTime @default(now())

@@ -2500,6 +2500,8 @@ export interface RouteView {
   description?: string | null
   isPublished: boolean
   targetLevel?: string | null
+  hasInstructions?: boolean
+  hasSourceMaterial?: boolean
   targetCompetency?: { code: string; statement: string; level: string | null; skill: string | null } | null
   steps: RouteStepView[]
 }
@@ -2596,9 +2598,9 @@ export const learningRouteApi = {
   progress: (routeId: string) => api.get<RouteProgress>(`/learning-routes/${routeId}/progress`),
   create: (data: { classroomId: string; title: string; description?: string; targetCompetencyId?: string }) =>
     api.post<RouteView>(`/learning-routes`, data),
-  generate: (data: { objective: string; gradeName?: string; targetLevel?: string }) =>
+  generate: (data: { objective: string; gradeName?: string; targetLevel?: string; instructions?: string; sourceMaterial?: string }) =>
     api.post<RoutePlan>(`/learning-routes/generate`, data),
-  fromPlan: (data: { classroomId: string; plan: RoutePlan }) =>
+  fromPlan: (data: { classroomId: string; plan: RoutePlan; instructions?: string; sourceMaterial?: string }) =>
     api.post<RouteView>(`/learning-routes/from-plan`, data),
   update: (routeId: string, data: { title?: string; description?: string; isPublished?: boolean; targetCompetencyId?: string | null }) =>
     api.put(`/learning-routes/${routeId}`, data),
@@ -2607,7 +2609,8 @@ export const learningRouteApi = {
     api.post(`/learning-routes/${routeId}/steps`, data),
   addStepWithActivity: (routeId: string, data: { title: string; activityType?: string; description?: string; competencyId?: string; maxScore?: number }) =>
     api.post(`/learning-routes/${routeId}/steps/new-activity`, data),
-  generateStepLesson: (stepId: string) => api.post<{ activityId: string; slides: number }>(`/learning-routes/steps/${stepId}/generate-lesson`, {}),
+  generateStepLesson: (stepId: string, data?: { instructions?: string }) =>
+    api.post<{ activityId: string; slides: number }>(`/learning-routes/steps/${stepId}/generate-lesson`, data || {}),
   updateStep: (stepId: string, data: { title?: string; activityId?: string | null; competencyId?: string | null }) =>
     api.put(`/learning-routes/steps/${stepId}`, data),
   createStepActivity: (stepId: string, data: { activityType?: string; description?: string; maxScore?: number }) =>
