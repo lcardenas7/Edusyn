@@ -337,6 +337,50 @@ export class AbpController {
     return this.service.deleteActivity(activityId, institutionId, userId);
   }
 
+  // ─── Bitácora (Nivel 2) ────────────────────────────────────────────────────
+  @Get('teams/:teamId/log')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async listLog(@Param('teamId') teamId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.listLog(teamId, institutionId, userId);
+  }
+
+  @Post('teams/:teamId/log')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async addLog(@Param('teamId') teamId: string, @Request() req: any, @Body() body: { content: string; phase?: number }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addLogEntry(teamId, institutionId, userId, body);
+  }
+
+  @Delete('log/:entryId')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async deleteLog(@Param('entryId') entryId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.deleteLogEntry(entryId, institutionId, userId);
+  }
+
+  // ─── Descubrimientos (Nivel 2) ──────────────────────────────────────────────
+  @Get('teams/:teamId/discoveries')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async listDiscoveries(@Param('teamId') teamId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.listDiscoveries(teamId, institutionId, userId);
+  }
+
+  @Post('teams/:teamId/discoveries')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async addDiscovery(@Param('teamId') teamId: string, @Request() req: any, @Body() body: { phase: number; title: string; description: string; evidenceKind?: string; evidenceUrl?: string; impact?: string }) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.addDiscovery(teamId, institutionId, userId, body);
+  }
+
+  @Delete('discoveries/:discoveryId')
+  @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')
+  async deleteDiscovery(@Param('discoveryId') discoveryId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.deleteDiscovery(discoveryId, institutionId, userId);
+  }
+
   // ─── Comentarios en línea ──────────────────────────────────────────────────
   @Get('teams/:teamId/comments')
   @Roles('DOCENTE', 'COORDINADOR', 'ESTUDIANTE')

@@ -146,5 +146,6 @@ export const ABP_XP = {
   VOTE: 5,
   TASK_DONE: 20,
   EVIDENCE: 15,
+  DISCOVERY: 10,
   PHASE_VALIDATED: 50,
 };

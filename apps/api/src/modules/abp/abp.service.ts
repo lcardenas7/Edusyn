@@ -1030,6 +1030,79 @@ export class AbpService {
     return this.prisma.abpComment.update({ where: { id: commentId }, data: { resolved }, select: { id: true, resolved: true } });
   }
 
+  // ─── BITÁCORA (AbpLogEntry) + DESCUBRIMIENTOS (AbpDiscovery) — Nivel 2 ───────
+
+  async listLog(teamId: string, institutionId: string, userId: string) {
+    await this.loadTeamForUser(teamId, institutionId, userId);
+    return this.prisma.abpLogEntry.findMany({ where: { teamId, institutionId }, orderBy: { createdAt: 'desc' } });
+  }
+
+  async addLogEntry(teamId: string, institutionId: string, userId: string, dto: { content: string; phase?: number }) {
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    if (!dto.content?.trim()) throw new BadRequestException('La entrada de bitácora no puede estar vacía');
+    const me = this.memberOf(team, userId);
+    return this.prisma.abpLogEntry.create({
+      data: {
+        institutionId, teamId,
+        phase: dto.phase && dto.phase >= 1 && dto.phase <= 6 ? dto.phase : null,
+        authorStudentEnrollmentId: me?.enrollmentId ?? null,
+        authorName: me?.name ?? 'Docente',
+        content: dto.content.trim(),
+      },
+    });
+  }
+
+  async deleteLogEntry(entryId: string, institutionId: string, userId: string) {
+    const e = await this.prisma.abpLogEntry.findFirst({ where: { id: entryId, institutionId }, select: { teamId: true } });
+    if (!e) throw new NotFoundException('Entrada no encontrada');
+    await this.loadTeamForUser(e.teamId, institutionId, userId);
+    await this.prisma.abpLogEntry.delete({ where: { id: entryId } });
+    return { ok: true };
+  }
+
+  async listDiscoveries(teamId: string, institutionId: string, userId: string) {
+    await this.loadTeamForUser(teamId, institutionId, userId);
+    return this.prisma.abpDiscovery.findMany({ where: { teamId, institutionId }, orderBy: { createdAt: 'desc' } });
+  }
+
+  async addDiscovery(teamId: string, institutionId: string, userId: string, dto: { phase: number; title: string; description: string; evidenceKind?: string; evidenceUrl?: string; impact?: string }) {
+    const team = await this.loadTeamForUser(teamId, institutionId, userId);
+    if (!dto.title?.trim()) throw new BadRequestException('El descubrimiento necesita un título');
+    if (!dto.description?.trim()) throw new BadRequestException('Describe qué aprendieron');
+    const me = this.memberOf(team, userId);
+    const impact = ['LOW', 'MEDIUM', 'HIGH'].includes(dto.impact || '') ? dto.impact : 'MEDIUM';
+    const phase = dto.phase && dto.phase >= 1 && dto.phase <= 6 ? dto.phase : team.currentPhase;
+    const evUrl = (dto.evidenceUrl || '').trim();
+    const disc = await this.prisma.abpDiscovery.create({
+      data: {
+        institutionId, teamId, phase,
+        authorStudentEnrollmentId: me?.enrollmentId ?? null,
+        authorName: me?.name ?? 'Docente',
+        title: dto.title.trim(),
+        description: dto.description.trim(),
+        evidenceKind: evUrl ? (dto.evidenceKind === 'FILE' ? 'FILE' : 'LINK') : null,
+        evidenceUrl: evUrl || null,
+        impact: impact as any,
+      },
+    });
+    // Premia la reflexión: XP de equipo + individual (idempotente por descubrimiento).
+    if (me?.enrollmentId) {
+      try {
+        await this.prisma.abpTeam.update({ where: { id: teamId }, data: { xp: { increment: ABP_XP.DISCOVERY } } });
+        await this.awardStudentXp(institutionId, me.studentId, me.enrollmentId, ABP_XP.DISCOVERY, 'ABP · descubrimiento', `abp:discovery:${disc.id}`);
+      } catch { /* idempotente */ }
+    }
+    return disc;
+  }
+
+  async deleteDiscovery(discoveryId: string, institutionId: string, userId: string) {
+    const d = await this.prisma.abpDiscovery.findFirst({ where: { id: discoveryId, institutionId }, select: { teamId: true } });
+    if (!d) throw new NotFoundException('Descubrimiento no encontrado');
+    await this.loadTeamForUser(d.teamId, institutionId, userId);
+    await this.prisma.abpDiscovery.delete({ where: { id: discoveryId } });
+    return { ok: true };
+  }
+
   private teamInclude() {
     return {
       members: {

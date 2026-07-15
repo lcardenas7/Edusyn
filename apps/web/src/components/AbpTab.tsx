@@ -803,11 +803,120 @@ function AnnouncementsView({ projectId, canManage }: { projectId: string; canMan
   )
 }
 
+// ─── Bitácora + Descubrimientos (Nivel 2) — compartidos alumno/preview docente ──
+function LogbookView({ teamId, currentPhase, readOnly }: { teamId: string; currentPhase?: number; readOnly?: boolean }) {
+  const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [content, setContent] = useState('')
+  const [busy, setBusy] = useState(false)
+  const load = useCallback(() => { abpApi.listLog(teamId).then(({ data }) => setItems(data || [])).finally(() => setLoading(false)) }, [teamId])
+  useEffect(() => { load() }, [load])
+  const add = async () => { if (!content.trim()) return; setBusy(true); try { await abpApi.addLog(teamId, { content: content.trim(), phase: currentPhase }); setContent(''); load() } finally { setBusy(false) } }
+  const del = async (id: string) => { if (!confirm('¿Eliminar entrada?')) return; await abpApi.deleteLog(id); load() }
+  if (loading) return <Loading />
+  return (
+    <div className="space-y-3">
+      {!readOnly && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-4">
+          <textarea value={content} onChange={e => setContent(e.target.value)} rows={2} placeholder="¿Qué pasó hoy en la expedición? (una nota corta)" className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none" />
+          <div className="flex justify-end mt-2"><button onClick={add} disabled={busy || !content.trim()} className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">📔 Anotar en bitácora</button></div>
+        </div>
+      )}
+      {items.length === 0 ? <p className="text-sm text-slate-400 text-center py-6">La bitácora está vacía. Anoten su primer paso.</p> : (
+        <div className="space-y-2">{items.map(e => (
+          <div key={e.id} className="bg-white rounded-xl border border-slate-200 p-3">
+            <p className="text-sm text-slate-700 whitespace-pre-line">{e.content}</p>
+            <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-400">
+              <span className="font-semibold">{e.authorName}</span>
+              {e.phase && <span>· Fase {e.phase}</span>}
+              <span>· {new Date(e.createdAt).toLocaleDateString()}</span>
+              {!readOnly && <button onClick={() => del(e.id)} className="ml-auto text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>}
+            </div>
+          </div>
+        ))}</div>
+      )}
+    </div>
+  )
+}
+
+const IMPACT_META: Record<string, [string, string]> = { LOW: ['Bajo', 'bg-slate-100 text-slate-500'], MEDIUM: ['Medio', 'bg-sky-100 text-sky-700'], HIGH: ['Alto', 'bg-emerald-100 text-emerald-700'] }
+function DiscoveriesView({ teamId, currentPhase, readOnly }: { teamId: string; currentPhase?: number; readOnly?: boolean }) {
+  const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [open, setOpen] = useState(false)
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [impact, setImpact] = useState('MEDIUM')
+  const [evUrl, setEvUrl] = useState('')
+  const [evKind, setEvKind] = useState('LINK')
+  const [busy, setBusy] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const load = useCallback(() => { abpApi.listDiscoveries(teamId).then(({ data }) => setItems(data || [])).finally(() => setLoading(false)) }, [teamId])
+  useEffect(() => { load() }, [load])
+  const uploadEv = async (file: File) => {
+    setBusy(true)
+    try { const { data } = await classroomApi.uploadMaterial(file); const url = data?.data?.path || data?.data?.url; if (url) { setEvUrl(url); setEvKind('FILE') } }
+    catch { alert('No se pudo subir el archivo') } finally { setBusy(false) }
+  }
+  const reset = () => { setTitle(''); setDescription(''); setImpact('MEDIUM'); setEvUrl(''); setEvKind('LINK'); setOpen(false) }
+  const add = async () => {
+    if (!title.trim() || !description.trim()) return
+    setBusy(true)
+    try { await abpApi.addDiscovery(teamId, { phase: currentPhase || 1, title: title.trim(), description: description.trim(), impact, evidenceUrl: evUrl.trim() || undefined, evidenceKind: evUrl.trim() ? evKind : undefined }); reset(); load() }
+    catch (e: any) { alert(e?.response?.data?.message || 'Error') } finally { setBusy(false) }
+  }
+  const del = async (id: string) => { if (!confirm('¿Eliminar descubrimiento?')) return; await abpApi.deleteDiscovery(id); load() }
+  if (loading) return <Loading />
+  return (
+    <div className="space-y-3">
+      {!readOnly && (open ? (
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="¿Qué descubrieron? (título)" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Descríbanlo: qué aprendieron y por qué importa." className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm resize-none" />
+          <div className="flex gap-2 items-center flex-wrap">
+            <span className="text-xs font-semibold text-slate-500">Impacto:</span>
+            {['LOW', 'MEDIUM', 'HIGH'].map(v => <button key={v} onClick={() => setImpact(v)} className={`text-xs font-semibold rounded-full px-2.5 py-1 ${impact === v ? IMPACT_META[v][1] + ' ring-2 ring-offset-1 ring-violet-300' : 'bg-slate-100 text-slate-400'}`}>{IMPACT_META[v][0]}</button>)}
+          </div>
+          <div className="flex gap-2">
+            <input value={evUrl} onChange={e => { setEvUrl(e.target.value); setEvKind('LINK') }} placeholder="Evidencia: enlace (opcional)" className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+            <input ref={fileRef} type="file" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadEv(f); e.currentTarget.value = '' }} />
+            <button onClick={() => fileRef.current?.click()} disabled={busy} className="px-3 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Paperclip className="w-4 h-4" /> Archivo</button>
+          </div>
+          {evUrl && <p className="text-xs text-slate-400 truncate">Evidencia: {evUrl}</p>}
+          <div className="flex justify-end gap-2">
+            <button onClick={reset} className="px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 rounded-lg">Cancelar</button>
+            <button onClick={add} disabled={busy || !title.trim() || !description.trim()} className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50">Guardar descubrimiento</button>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => setOpen(true)} className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-sm font-semibold text-slate-400 hover:border-violet-300 hover:text-violet-600 flex items-center justify-center gap-1.5"><Plus className="w-4 h-4" /> Registrar un descubrimiento</button>
+      ))}
+      {items.length === 0 ? <p className="text-sm text-slate-400 text-center py-6">Aún no hay descubrimientos. Registren lo que van aprendiendo.</p> : (
+        <div className="grid sm:grid-cols-2 gap-3">{items.map(d => (
+          <div key={d.id} className="bg-white rounded-2xl border border-slate-200 p-4">
+            <div className="flex items-start justify-between gap-2">
+              <h5 className="font-bold text-slate-800">💡 {d.title}</h5>
+              <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0 ${IMPACT_META[d.impact]?.[1] || ''}`}>Impacto {IMPACT_META[d.impact]?.[0] || d.impact}</span>
+            </div>
+            <p className="text-sm text-slate-600 mt-1 whitespace-pre-line">{d.description}</p>
+            {d.evidenceUrl && <a href={d.evidenceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-violet-600 hover:underline mt-2">{d.evidenceKind === 'FILE' ? '📎' : '🔗'} Ver evidencia</a>}
+            <div className="flex items-center gap-2 mt-2 text-[11px] text-slate-400">
+              <span className="font-semibold">{d.authorName}</span><span>· Fase {d.phase}</span>
+              {!readOnly && <button onClick={() => del(d.id)} className="ml-auto text-slate-300 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>}
+            </div>
+          </div>
+        ))}</div>
+      )}
+    </div>
+  )
+}
+
 function StudentExpedition({ projects }: { projects: any[] }) {
   const [projectId, setProjectId] = useState<string>(projects[0]?.id || '')
   const [team, setTeam] = useState<any>(null)
   const [pres, setPres] = useState<any>(null)
   const [view, setView] = useState<'home' | 'resources' | 'announcements' | 'expedition'>('home')
+  const [expTab, setExpTab] = useState<'phases' | 'log' | 'discoveries'>('phases')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
 
@@ -892,7 +1001,18 @@ function StudentExpedition({ projects }: { projects: any[] }) {
         <Trail team={team} />
       </div>
 
+      {/* Sub-nav interna del Nivel 2 */}
+      <div className="flex bg-slate-100 rounded-xl p-1 w-fit flex-wrap">
+        <button onClick={() => setExpTab('phases')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${expTab === 'phases' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>🚀 Fases</button>
+        <button onClick={() => setExpTab('log')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${expTab === 'log' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>📔 Bitácora</button>
+        <button onClick={() => setExpTab('discoveries')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${expTab === 'discoveries' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}>💡 Descubrimientos</button>
+      </div>
+
+      {expTab === 'log' && <LogbookView teamId={team.id} currentPhase={cur} />}
+      {expTab === 'discoveries' && <DiscoveriesView teamId={team.id} currentPhase={cur} />}
+
       {/* Panel de la fase actual */}
+      {expTab === 'phases' && (
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
         <div className="text-xs font-bold uppercase tracking-wide text-violet-600 mb-1">Fase {cur} de 6</div>
         <h3 className="text-lg font-bold text-slate-800 mb-3">{PHASES.find(p => p.n === cur)?.icon} {phaseName(cur)}</h3>
@@ -922,6 +1042,7 @@ function StudentExpedition({ projects }: { projects: any[] }) {
           </>
         )}
       </div>
+      )}
     </div>
   )
 }
@@ -1100,6 +1221,15 @@ function TeamPreview({ teamId, onBack }: { teamId: string; onBack: () => void })
           <PhaseWorkRO phase={ps.phase} data={ps.data} />
         </div>
       ))}
+
+      <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <h4 className="font-bold text-slate-800 mb-3">📔 Bitácora</h4>
+        <LogbookView teamId={team.id} readOnly />
+      </div>
+      <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <h4 className="font-bold text-slate-800 mb-3">💡 Descubrimientos</h4>
+        <DiscoveriesView teamId={team.id} readOnly />
+      </div>
     </div>
   )
 }

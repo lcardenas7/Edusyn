@@ -2574,6 +2574,13 @@ export const abpApi = {
   addActivity: (missionId: string, data: { type: string; title: string; content?: any }) => api.post<any>(`/abp/missions/${missionId}/activities`, data),
   completeActivity: (activityId: string, completed: boolean) => api.post<any>(`/abp/activities/${activityId}/complete`, { completed }),
   deleteActivity: (activityId: string) => api.delete(`/abp/activities/${activityId}`),
+  // Bitácora + Descubrimientos (Nivel 2)
+  listLog: (teamId: string) => api.get<any[]>(`/abp/teams/${teamId}/log`),
+  addLog: (teamId: string, data: { content: string; phase?: number }) => api.post<any>(`/abp/teams/${teamId}/log`, data),
+  deleteLog: (entryId: string) => api.delete(`/abp/log/${entryId}`),
+  listDiscoveries: (teamId: string) => api.get<any[]>(`/abp/teams/${teamId}/discoveries`),
+  addDiscovery: (teamId: string, data: { phase: number; title: string; description: string; evidenceKind?: string; evidenceUrl?: string; impact?: string }) => api.post<any>(`/abp/teams/${teamId}/discoveries`, data),
+  deleteDiscovery: (discoveryId: string) => api.delete(`/abp/discoveries/${discoveryId}`),
 }
 
 export const learningRouteApi = {
