@@ -17,6 +17,7 @@ const LessonEditor = lazy(() => import('../components/LessonEditor'))
 import { RichContent, isRichTextEmpty } from '../components/RichTextEditor'
 import { FilterChip, FilterStrip } from '../components/ui/FilterChip'
 import { ClassroomPicker } from '../components/ui/ClassroomPicker'
+import { SectionPicker } from '../components/ui/SectionPicker'
 import {
   Plus, Loader2, AlertCircle, ChevronLeft, Users, Megaphone,
   FolderOpen, FileText, Video, Link2, ImageIcon, Type, Eye, EyeOff,
@@ -1359,10 +1360,17 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
 
       {/* Sections */}
       {sections.length === 0 && !showAddSection ? (
-        <div className="text-center py-16 text-slate-400 bg-white rounded-xl border border-slate-200">
-          <FolderOpen className="w-14 h-14 mx-auto mb-3 opacity-40" />
-          <p className="text-sm font-medium">No hay secciones de contenido aún</p>
-          {isTeacher && <p className="text-xs mt-1">Crea secciones para organizar tu material por temas o semanas</p>}
+        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
+          <FolderOpen className="w-14 h-14 mx-auto mb-3 text-slate-300" />
+          <p className="text-sm font-medium text-ink-secondary">No hay secciones de contenido aún</p>
+          {isTeacher && (
+            <>
+              <p className="text-xs mt-1 text-ink-muted">Organiza tu material por temas, unidades o semanas</p>
+              <button onClick={() => setShowAddSection(true)} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700">
+                <Plus className="w-4 h-4" /> Crear la primera sección
+              </button>
+            </>
+          )}
         </div>
       ) : (
         sections.filter(s => isTeacher || s.isVisible).map(section => (
@@ -1615,29 +1623,12 @@ function ContentTab({ classroom, isTeacher, onReload, setError }: {
                 Duplicando: <span className="font-medium text-slate-800">{duplicateMaterialModal.materialTitle}</span>
               </p>
               <p className="text-xs text-slate-500 mb-3">Selecciona la sección destino:</p>
-              {sections.length === 0 ? (
-                <p className="text-sm text-slate-500 text-center py-8">No hay secciones disponibles</p>
-              ) : (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {sections.map((s: Section) => (
-                    <button
-                      key={s.id}
-                      onClick={() => handleDuplicateMaterialToSection(s.id)}
-                      disabled={duplicatingMaterial}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left disabled:opacity-50"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-                        <FolderOpen className="w-4 h-4 text-slate-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-800 truncate">{s.title}</p>
-                        <p className="text-xs text-slate-500">{s.materials.length} recursos • {s.activities?.length || 0} actividades</p>
-                      </div>
-                      {duplicatingMaterial && <Loader2 className="w-4 h-4 animate-spin text-blue-600" />}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <SectionPicker
+                sections={sections}
+                busy={duplicatingMaterial}
+                onPick={s => handleDuplicateMaterialToSection(s.id)}
+                subtitle={(s: Section) => `${s.materials.length} recursos • ${s.activities?.length || 0} actividades`}
+              />
             </div>
           </div>
         </div>
@@ -4608,24 +4599,11 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                 {duplicateTargetType === 'same' ? (
                   <>
                     <p className="text-xs text-slate-500 mb-3">Selecciona la sección destino:</p>
-                    {sections.length === 0 ? (
-                      <p className="text-sm text-slate-500 text-center py-8">No hay secciones disponibles</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {sections.map((s: Section) => (
-                          <button
-                            key={s.id}
-                            onClick={() => handleDuplicateActivityToSection(s.id)}
-                            disabled={duplicatingActivity}
-                            className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left disabled:opacity-50"
-                          >
-                            <FolderOpen className="w-5 h-5 text-slate-400" />
-                            <span className="font-medium text-slate-700">{s.title}</span>
-                            {duplicatingActivity && <Loader2 className="w-4 h-4 animate-spin text-blue-600 ml-auto" />}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    <SectionPicker
+                      sections={sections}
+                      busy={duplicatingActivity}
+                      onPick={s => handleDuplicateActivityToSection(s.id)}
+                    />
                   </>
                 ) : (
                   <>
@@ -4654,28 +4632,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                           </div>
                         </div>
                         <p className="text-xs text-slate-500 mb-3">Selecciona la sección destino:</p>
-                        {loadingTargetSections ? (
-                          <div className="flex items-center justify-center py-8">
-                            <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
-                          </div>
-                        ) : targetClassroomSections.length === 0 ? (
-                          <p className="text-sm text-slate-500 text-center py-8">Esta aula no tiene secciones</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {targetClassroomSections.map((s: Section) => (
-                              <button
-                                key={s.id}
-                                onClick={() => handleDuplicateActivityToSection(s.id)}
-                                disabled={duplicatingActivity}
-                                className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-violet-300 hover:bg-violet-50 transition-colors text-left disabled:opacity-50"
-                              >
-                                <FolderOpen className="w-5 h-5 text-slate-400" />
-                                <span className="font-medium text-slate-700">{s.title}</span>
-                                {duplicatingActivity && <Loader2 className="w-4 h-4 animate-spin text-violet-600 ml-auto" />}
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                        <SectionPicker
+                          sections={targetClassroomSections}
+                          loading={loadingTargetSections}
+                          busy={duplicatingActivity}
+                          onPick={s => handleDuplicateActivityToSection(s.id)}
+                        />
                       </>
                     )}
                   </>
@@ -5813,24 +5775,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
               {duplicateTargetType === 'same' ? (
                 <>
                   <p className="text-xs text-slate-500 mb-3">Selecciona la sección destino:</p>
-                  {sections.length === 0 ? (
-                    <p className="text-sm text-slate-500 text-center py-8">No hay secciones disponibles</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {sections.map((s: Section) => (
-                        <button
-                          key={s.id}
-                          onClick={() => handleDuplicateActivityToSection(s.id)}
-                          disabled={duplicatingActivity}
-                          className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left disabled:opacity-50"
-                        >
-                          <FolderOpen className="w-5 h-5 text-slate-400" />
-                          <span className="font-medium text-slate-700">{s.title}</span>
-                          {duplicatingActivity && <Loader2 className="w-4 h-4 animate-spin text-blue-600 ml-auto" />}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <SectionPicker
+                    sections={sections}
+                    busy={duplicatingActivity}
+                    onPick={s => handleDuplicateActivityToSection(s.id)}
+                    onCreate={quickCreateSection}
+                  />
                 </>
               ) : (
                 <>
@@ -5859,28 +5809,12 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
                         </div>
                       </div>
                       <p className="text-xs text-slate-500 mb-3">Selecciona la sección destino:</p>
-                      {loadingTargetSections ? (
-                        <div className="flex items-center justify-center py-8">
-                          <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
-                        </div>
-                      ) : targetClassroomSections.length === 0 ? (
-                        <p className="text-sm text-slate-500 text-center py-8">Esta aula no tiene secciones</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {targetClassroomSections.map((s: Section) => (
-                            <button
-                              key={s.id}
-                              onClick={() => handleDuplicateActivityToSection(s.id)}
-                              disabled={duplicatingActivity}
-                              className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-violet-300 hover:bg-violet-50 transition-colors text-left disabled:opacity-50"
-                            >
-                              <FolderOpen className="w-5 h-5 text-slate-400" />
-                              <span className="font-medium text-slate-700">{s.title}</span>
-                              {duplicatingActivity && <Loader2 className="w-4 h-4 animate-spin text-violet-600 ml-auto" />}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      <SectionPicker
+                        sections={targetClassroomSections}
+                        loading={loadingTargetSections}
+                        busy={duplicatingActivity}
+                        onPick={s => handleDuplicateActivityToSection(s.id)}
+                      />
                     </>
                   )}
                 </>
