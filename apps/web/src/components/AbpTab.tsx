@@ -631,76 +631,129 @@ function PresentationEditor({ project, onClose, onSaved }: { project: any; onClo
     } catch (e: any) { alert(e?.response?.data?.message || 'No se pudo guardar') } finally { setBusy(false) }
   }
 
-  return (
-    <div className="space-y-4">
-      <button onClick={onClose} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ChevronLeft className="w-4 h-4" /> Volver</button>
-      <h3 className="text-xl font-bold text-slate-800">✏️ Editar portada</h3>
+  // Acordeón: una sección abierta a la vez; punto violeta = sección con contenido.
+  const [openSection, setOpenSection] = useState<string>('reto')
+  const sections: { key: string; icon: string; title: string; hint: string; filled: boolean }[] = [
+    { key: 'reto', icon: '🎯', title: 'El reto y su propósito', hint: 'El gran reto, contexto y por qué importa', filled: !!(challenge.trim() || context.trim() || why.trim()) },
+    { key: 'portada', icon: '🖼️', title: 'Portada y bienvenida', hint: 'Banner, video y tu mensaje', filled: !!(banner.trim() || videoUrl.trim() || teacherMessage.trim()) },
+    { key: 'aprendizajes', icon: '📚', title: 'Aprendizajes y reglas', hint: 'Qué aprenderán y las reglas del juego', filled: skills.some(s => s.trim()) || rules.some(r => r.trim()) },
+    { key: 'cronograma', icon: '📅', title: 'Cronograma', hint: 'La línea de tiempo de la expedición', filled: timeline.some(t => t.label || t.detail) },
+    { key: 'faq', icon: '❓', title: 'Preguntas frecuentes', hint: 'Respuestas a lo que siempre preguntan', filled: faq.some(f => f.q || f.a) },
+  ]
+  const inputCls = 'w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400'
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
-        <div>
-          <label className="text-xs font-semibold text-slate-500">Reto general</label>
-          <textarea value={challenge} onChange={e => setChallenge(e.target.value)} rows={2} placeholder="¿Cómo puede la tecnología mejorar un problema de nuestra institución?" className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-slate-500">Banner (URL de imagen o subir)</label>
-          <div className="flex gap-2 mt-1">
-            <input value={banner} onChange={e => setBanner(e.target.value)} placeholder="https://…" className="flex-1 border border-slate-300 rounded-xl px-3 py-2 text-sm" />
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadBanner(f); e.currentTarget.value = '' }} />
-            <button onClick={() => fileRef.current?.click()} disabled={busy} className="px-3 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"><Paperclip className="w-4 h-4" /> Subir</button>
-          </div>
-          {banner && <img src={banner} alt="" className="mt-2 w-full h-32 object-cover rounded-xl" />}
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-slate-500">Video de bienvenida (YouTube/Vimeo, opcional)</label>
-          <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtu.be/…" className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm mt-1" />
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-slate-500">Mensaje del docente</label>
-          <textarea value={teacherMessage} onChange={e => setTeacherMessage(e.target.value)} rows={3} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
-        </div>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-semibold text-slate-500">Contexto</label>
-            <textarea value={context} onChange={e => setContext(e.target.value)} rows={3} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-slate-500">¿Por qué es importante?</label>
-            <textarea value={why} onChange={e => setWhy(e.target.value)} rows={3} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm resize-none mt-1" />
-          </div>
-        </div>
-        <LineListInput label="Lo que aprenderán" value={skills} onChange={setSkills} placeholder={'Investigación\nTrabajo colaborativo\nPython'} />
-        <LineListInput label="Reglas del proyecto" value={rules} onChange={setRules} placeholder={'Todos participan.\nLa bitácora se mantiene actualizada.'} />
-        <div>
-          <label className="text-xs font-semibold text-slate-500">Cronograma</label>
-          <div className="space-y-2 mt-1">
-            {timeline.map((t, i) => (
-              <div key={i} className="flex gap-2">
-                <input value={t.label} onChange={e => setTimeline(ts => ts.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} placeholder="Semana 1" className="w-32 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
-                <input value={t.detail} onChange={e => setTimeline(ts => ts.map((x, j) => j === i ? { ...x, detail: e.target.value } : x))} placeholder="Problema" className="flex-1 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
-                <button onClick={() => setTimeline(ts => ts.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
-              </div>
-            ))}
-            <button onClick={() => setTimeline(ts => [...ts, { label: '', detail: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir fila</button>
-          </div>
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-slate-500">Preguntas frecuentes</label>
-          <div className="space-y-2 mt-1">
-            {faq.map((f, i) => (
-              <div key={i} className="flex gap-2 items-start">
-                <div className="flex-1 space-y-1">
-                  <input value={f.q} onChange={e => setFaq(fs => fs.map((x, j) => j === i ? { ...x, q: e.target.value } : x))} placeholder="¿Puedo cambiar de equipo?" className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
-                  <textarea value={f.a} onChange={e => setFaq(fs => fs.map((x, j) => j === i ? { ...x, a: e.target.value } : x))} rows={2} placeholder="Respuesta…" className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm resize-none" />
+  return (
+    <div className="pb-20">
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-1">
+        <button onClick={onClose} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ChevronLeft className="w-4 h-4" /> Volver</button>
+        <span className="text-xs text-slate-400">{sections.filter(s => s.filled).length}/{sections.length} secciones con contenido</span>
+      </div>
+      <h3 className="text-xl font-bold text-slate-800 mb-1">✏️ Portada de la expedición</h3>
+      <p className="text-sm text-slate-400 mb-4">Esto es lo primero que verán tus estudiantes. Completa las secciones que quieras — todas son opcionales.</p>
+
+      <div className="space-y-2">
+        {sections.map(s => (
+          <div key={s.key} className={`bg-white rounded-2xl border transition-colors ${openSection === s.key ? 'border-violet-300 shadow-sm' : 'border-slate-200'}`}>
+            <button onClick={() => setOpenSection(openSection === s.key ? '' : s.key)} className="w-full flex items-center gap-3 p-4 text-left">
+              <span className="text-xl">{s.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-800 text-sm">{s.title}</span>
+                  <span className={`w-2 h-2 rounded-full ${s.filled ? 'bg-violet-500' : 'bg-slate-200'}`} />
                 </div>
-                <button onClick={() => setFaq(fs => fs.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500 mt-1"><Trash2 className="w-4 h-4" /></button>
+                <p className="text-xs text-slate-400 truncate">{s.hint}</p>
               </div>
-            ))}
-            <button onClick={() => setFaq(fs => [...fs, { q: '', a: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir pregunta</button>
+              <ChevronLeft className={`w-4 h-4 text-slate-300 transition-transform ${openSection === s.key ? 'rotate-90' : '-rotate-90'}`} />
+            </button>
+
+            {openSection === s.key && (
+              <div className="px-4 pb-4 space-y-3 border-t border-slate-100 pt-4">
+                {s.key === 'reto' && (
+                  <>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-500">El gran reto (lo ven todos los equipos)</label>
+                      <textarea value={challenge} onChange={e => setChallenge(e.target.value)} rows={2} placeholder="¿Cómo puede la tecnología mejorar un problema de nuestra institución?" className={`${inputCls} resize-none mt-1`} />
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-semibold text-slate-500">Contexto</label>
+                        <textarea value={context} onChange={e => setContext(e.target.value)} rows={3} placeholder="De dónde nace este reto…" className={`${inputCls} resize-none mt-1`} />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-slate-500">¿Por qué es importante?</label>
+                        <textarea value={why} onChange={e => setWhy(e.target.value)} rows={3} placeholder="Qué cambia si lo resuelven…" className={`${inputCls} resize-none mt-1`} />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {s.key === 'portada' && (
+                  <>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-500">Banner</label>
+                      <div className="flex gap-2 mt-1">
+                        <input value={banner} onChange={e => setBanner(e.target.value)} placeholder="Pega la URL de una imagen…" className={inputCls} />
+                        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadBanner(f); e.currentTarget.value = '' }} />
+                        <button onClick={() => fileRef.current?.click()} disabled={busy} className="px-3 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 shrink-0"><Paperclip className="w-4 h-4" /> Subir</button>
+                      </div>
+                      {banner && <img src={banner} alt="" className="mt-2 w-full h-32 object-cover rounded-xl" />}
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-500">Video de bienvenida (YouTube/Vimeo)</label>
+                      <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://youtu.be/…" className={`${inputCls} mt-1`} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-500">Tu mensaje para los estudiantes</label>
+                      <textarea value={teacherMessage} onChange={e => setTeacherMessage(e.target.value)} rows={3} placeholder="¡Bienvenidos a la expedición! …" className={`${inputCls} resize-none mt-1`} />
+                    </div>
+                  </>
+                )}
+
+                {s.key === 'aprendizajes' && (
+                  <>
+                    <LineListInput label="Lo que aprenderán" value={skills} onChange={setSkills} placeholder={'Investigación\nTrabajo colaborativo\nPython'} />
+                    <LineListInput label="Reglas del proyecto" value={rules} onChange={setRules} placeholder={'Todos participan.\nLa bitácora se mantiene actualizada.'} />
+                  </>
+                )}
+
+                {s.key === 'cronograma' && (
+                  <div className="space-y-2">
+                    {timeline.map((t, i) => (
+                      <div key={i} className="flex gap-2">
+                        <input value={t.label} onChange={e => setTimeline(ts => ts.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} placeholder="Semana 1" className="w-32 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
+                        <input value={t.detail} onChange={e => setTimeline(ts => ts.map((x, j) => j === i ? { ...x, detail: e.target.value } : x))} placeholder="Encontrar el problema" className="flex-1 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
+                        <button onClick={() => setTimeline(ts => ts.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    ))}
+                    <button onClick={() => setTimeline(ts => [...ts, { label: '', detail: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir fila</button>
+                  </div>
+                )}
+
+                {s.key === 'faq' && (
+                  <div className="space-y-2">
+                    {faq.map((f, i) => (
+                      <div key={i} className="flex gap-2 items-start">
+                        <div className="flex-1 space-y-1">
+                          <input value={f.q} onChange={e => setFaq(fs => fs.map((x, j) => j === i ? { ...x, q: e.target.value } : x))} placeholder="¿Puedo cambiar de equipo?" className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
+                          <textarea value={f.a} onChange={e => setFaq(fs => fs.map((x, j) => j === i ? { ...x, a: e.target.value } : x))} rows={2} placeholder="Respuesta…" className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm resize-none" />
+                        </div>
+                        <button onClick={() => setFaq(fs => fs.filter((_, j) => j !== i))} className="text-slate-300 hover:text-rose-500 mt-1"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    ))}
+                    <button onClick={() => setFaq(fs => [...fs, { q: '', a: '' }])} className="text-xs font-semibold text-violet-600 hover:text-violet-700 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Añadir pregunta</button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        </div>
-        <div className="flex justify-end gap-2 pt-2">
+        ))}
+      </div>
+
+      {/* Barra de guardado fija */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur border-t border-slate-200 px-4 py-3">
+        <div className="max-w-4xl mx-auto flex items-center justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
-          <button onClick={save} disabled={busy} className="px-5 py-2 bg-violet-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Guardar portada</button>
+          <button onClick={save} disabled={busy} className="px-6 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2 hover:bg-violet-700">{busy && <Loader2 className="w-4 h-4 animate-spin" />} Guardar portada</button>
         </div>
       </div>
     </div>
@@ -1126,16 +1179,7 @@ function CreateProject({ classroomId, onCreated }: { classroomId: string; onCrea
   )
 }
 
-// ─── Centro de Operaciones: panel + preview de equipo (lectura) ────────────────
-function Stat({ n, label, accent, warn }: { n: number; label: string; accent?: boolean; warn?: boolean }) {
-  return (
-    <div className={`rounded-xl p-3 text-center ${warn ? 'bg-rose-50' : accent ? 'bg-violet-50' : 'bg-slate-50'}`}>
-      <div className={`text-2xl font-black ${warn ? 'text-rose-600' : accent ? 'text-violet-600' : 'text-slate-700'}`}>{n}</div>
-      <div className="text-xs text-slate-400 font-semibold">{label}</div>
-    </div>
-  )
-}
-
+// ─── Centro de Operaciones: preview de equipo (lectura) ────────────────────────
 function StatusChip({ status }: { status: string }) {
   const map: Record<string, [string, string]> = {
     IN_PROGRESS: ['En curso', 'bg-sky-100 text-sky-700'],
@@ -1265,7 +1309,8 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
   const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [previewTeamId, setPreviewTeamId] = useState<string | null>(null)
   const [editingPres, setEditingPres] = useState(false)
-  const [showManual, setShowManual] = useState(false) // NUEVO: Estado del Side Peek
+  const [showManual, setShowManual] = useState(false)
+  const [tab, setTab] = useState<'panel' | 'map' | 'teams' | 'announcements' | 'resources'>('panel')
 
   const load = useCallback(() => {
     setLoading(true)
@@ -1281,147 +1326,152 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
   if (loading) return <Loading />
 
   const teams = project?.teams || []
-  
-  // Agrupamos equipos por fase para el Mapa Vivo
+
+  // Agrupamos equipos por fase para el Mapa
   const teamsByPhase: Record<number, any[]> = {}
   PHASES.forEach(p => teamsByPhase[p.n] = [])
   ;(dash?.teams || []).forEach((t: any) => {
-    if (teamsByPhase[t.currentPhase]) {
-      teamsByPhase[t.currentPhase].push(t)
-    }
+    if (teamsByPhase[t.currentPhase]) teamsByPhase[t.currentPhase].push(t)
   })
 
   const pendingValidations = queue.length
   const behindTeams = dash?.summary?.behind || 0
   const everythingOk = pendingValidations === 0 && behindTeams === 0
 
+  const TABS: { key: typeof tab; label: string; badge?: number }[] = [
+    { key: 'panel', label: '📊 Panel', badge: pendingValidations || undefined },
+    { key: 'map', label: '🗺️ Mapa' },
+    { key: 'teams', label: '👥 Equipos' },
+    { key: 'announcements', label: '📢 Anuncios' },
+    { key: 'resources', label: '📚 Recursos' },
+  ]
+
   return (
     <div className="space-y-4">
-      {/* HEADER ESTÁTICO (LOE Vision) */}
-      <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-        <button onClick={onBack} className="flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-slate-700">
-          <ChevronLeft className="w-4 h-4" /> Todas las expediciones
-        </button>
-        <button onClick={() => setEditingPres(true)} className="text-sm font-semibold text-slate-500 hover:text-slate-800">
-          ⚙️ Editar portada
-        </button>
-      </div>
+      {/* ── Cabecera compacta ─────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <div className="h-1.5 bg-gradient-to-r from-violet-500 to-fuchsia-500" />
+        <div className="p-5">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <button onClick={onBack} className="flex items-center gap-1 text-sm font-semibold text-slate-400 hover:text-slate-600">
+              <ChevronLeft className="w-4 h-4" /> Todas las expediciones
+            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowManual(true)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-semibold transition-colors">📖 Manual</button>
+              <button onClick={() => setEditingPres(true)} className="px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-lg text-sm font-semibold transition-colors">✏️ Editar portada</button>
+            </div>
+          </div>
 
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h3 className="text-2xl font-black text-slate-800 tracking-tight">🧭 {project?.title || projectTitle}</h3>
+          <h3 className="text-2xl font-black text-slate-800 tracking-tight mt-3">🧭 {project?.title || projectTitle}</h3>
+          {project?.challenge && <p className="text-sm text-slate-500 mt-1 max-w-3xl">🎯 {project.challenge}</p>}
+
           {dash && (
-            <div className="flex items-center gap-3 mt-1.5 text-sm font-medium text-slate-500">
-              <span className="flex items-center gap-1"><Users className="w-4 h-4" /> {dash.summary.teams} Equipos</span>
-              <span className="text-slate-300">|</span>
-              <span>👨‍🎓 {dash.summary.students} Estudiantes</span>
+            <div className="flex items-center gap-2 mt-4 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-slate-100 text-slate-600 rounded-full px-3 py-1.5"><Users className="w-3.5 h-3.5" /> {dash.summary.teams} equipos</span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-slate-100 text-slate-600 rounded-full px-3 py-1.5">🎓 {dash.summary.students} estudiantes</span>
+              <button onClick={() => setTab('panel')} className={`inline-flex items-center gap-1.5 text-xs font-bold rounded-full px-3 py-1.5 ${pendingValidations > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-400'}`}>🔔 {pendingValidations} por validar</button>
+              <span className={`inline-flex items-center gap-1.5 text-xs font-bold rounded-full px-3 py-1.5 ${behindTeams > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'}`}>⏳ {behindTeams} atrasados</span>
             </div>
           )}
         </div>
-        <button onClick={() => setShowManual(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-colors">
-          📖 Ver Manual de Expedición
-        </button>
       </div>
 
-      {/* PROPÓSITO PEDAGÓGICO */}
-      {project?.challenge && (
-        <div className="mt-2 text-sm text-slate-700 max-w-3xl">
-          <p className="font-semibold text-violet-700 mb-1">🎯 EL RETO (PROPÓSITO)</p>
-          <p className="text-lg leading-relaxed">{project.challenge}</p>
-          {project?.presentation?.skills?.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {project.presentation.skills.map((s: string, idx: number) => (
-                <span key={idx} className="bg-violet-50 border border-violet-100 text-violet-700 text-xs font-bold px-2.5 py-1 rounded-md">
-                  {s}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* ── Pestañas (mismo patrón pill que ve el alumno) ─────────────────── */}
+      <div className="flex bg-slate-100 rounded-xl p-1 w-fit flex-wrap">
+        {TABS.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)} className={`relative px-3 py-1.5 rounded-lg text-sm font-semibold ${tab === t.key ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+            {t.label}
+            {t.badge ? <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[10px] font-black rounded-full flex items-center justify-center">{t.badge}</span> : null}
+          </button>
+        ))}
+      </div>
 
-      {/* SALA DE OPERACIONES: TRIAJE */}
-      <div className="mt-8">
-        <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">📥 ¿Dónde necesitas estar hoy?</h4>
-        
-        <div className="space-y-3">
+      {/* ── 📊 PANEL: triaje + progreso por equipo ────────────────────────── */}
+      {tab === 'panel' && (
+        <div className="space-y-4">
           {everythingOk ? (
-            <div className="bg-emerald-50 border-2 border-emerald-100 rounded-2xl p-5 flex items-start gap-4">
-              <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
-                <Check className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <h5 className="font-bold text-emerald-800">✔ Todo fluye correctamente</h5>
-                <p className="text-sm text-emerald-700/80 mt-1">No tienes validaciones pendientes y ningún equipo reporta atrasos. Tus estudiantes están trabajando de forma autónoma.</p>
-              </div>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center gap-3">
+              <div className="w-9 h-9 bg-emerald-100 rounded-full flex items-center justify-center shrink-0"><Check className="w-5 h-5 text-emerald-600" /></div>
+              <p className="text-sm text-emerald-800"><b>Todo fluye.</b> Sin validaciones pendientes ni equipos atrasados — tus estudiantes trabajan de forma autónoma.</p>
             </div>
           ) : (
             <>
-              {behindTeams > 0 && (
-                <div className="bg-rose-50 border-2 border-rose-100 rounded-2xl p-5 flex items-start gap-4">
-                  <div className="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center shrink-0">
-                    <Clock className="w-5 h-5 text-rose-600" />
-                  </div>
-                  <div>
-                    <h5 className="font-bold text-rose-800">🔴 Intervención Crítica</h5>
-                    <p className="text-sm text-rose-700/80 mt-1">Tienes <b>{behindTeams} equipo(s)</b> con progreso atrasado que necesitan tu apoyo para avanzar.</p>
-                  </div>
-                </div>
-              )}
               {pendingValidations > 0 && (
-                <div className="bg-amber-50 border-2 border-amber-100 rounded-2xl p-5">
-                  <div className="flex items-start gap-4 mb-3">
-                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
-                      <Lock className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <div>
-                      <h5 className="font-bold text-amber-800">🟠 Requiere Aprobación</h5>
-                      <p className="text-sm text-amber-700/80 mt-1">Hay {pendingValidations} equipo(s) esperando validación para pasar a la siguiente fase.</p>
-                    </div>
-                  </div>
-                  <div className="space-y-2 ml-14">
+                <div className="bg-white border-l-4 border-amber-400 border border-slate-200 rounded-2xl p-4">
+                  <h5 className="font-bold text-slate-800 text-sm mb-2">🔔 Esperando tu validación</h5>
+                  <div className="space-y-2">
                     {queue.map(q => (
-                      <div key={q.id} className="bg-white/60 border border-amber-200/50 rounded-xl p-3 flex items-center justify-between gap-3">
-                        <span className="text-sm text-amber-900"><b>{q.team?.emoji} {q.team?.name}</b> envió la Fase {q.phase}</span>
-                        <button onClick={() => setReviewingId(q.id)} className="px-3 py-1.5 bg-amber-500 text-white text-xs font-bold rounded-lg hover:bg-amber-600 shadow-sm">Revisar</button>
+                      <div key={q.id} className="flex items-center justify-between gap-3 bg-amber-50/60 rounded-xl px-3 py-2">
+                        <span className="text-sm text-slate-700 truncate"><b>{q.team?.emoji} {q.team?.name}</b> · Fase {q.phase}: {phaseName(q.phase)}</span>
+                        <button onClick={() => setReviewingId(q.id)} className="px-3 py-1.5 bg-violet-600 text-white text-xs font-bold rounded-lg hover:bg-violet-700 shrink-0">Revisar →</button>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
+              {behindTeams > 0 && (
+                <div className="bg-white border-l-4 border-rose-400 border border-slate-200 rounded-2xl p-4 flex items-center gap-3">
+                  <p className="text-sm text-slate-700">⏳ <b>{behindTeams} equipo(s)</b> van por debajo del pelotón — mira su barra abajo y entra a su expedición para apoyarlos.</p>
+                </div>
+              )}
             </>
           )}
-        </div>
-      </div>
 
-      {/* MAPA VIVO (RUTA ESTRATÉGICA) */}
-      <div className="mt-8">
-        <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">🗺️ Mapa de la Expedición</h4>
+          <div className="bg-white rounded-2xl border border-slate-200 p-5">
+            <h4 className="font-bold text-slate-800 mb-3">Progreso por equipo</h4>
+            {(dash?.teams || []).length === 0 ? (
+              <p className="text-sm text-slate-400">Aún no hay equipos. Créalos en la pestaña 👥 Equipos.</p>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {(dash?.teams || []).map((t: any) => (
+                  <button key={t.id} onClick={() => setPreviewTeamId(t.id)} className="w-full flex items-center gap-3 py-3 text-left hover:bg-slate-50 rounded-xl px-2 -mx-2 transition-colors group">
+                    <span className="text-xl shrink-0">{t.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold text-slate-700 group-hover:text-violet-700 truncate">{t.name}</span>
+                        {t.done ? <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full px-2 py-0.5">🏆 Completa</span>
+                          : t.awaitingValidation ? <span className="text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">Espera validación F{t.currentPhase}</span>
+                          : t.currentStatus === 'RETURNED' ? <span className="text-[10px] font-bold bg-rose-100 text-rose-700 rounded-full px-2 py-0.5">Devuelta</span>
+                          : null}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${Math.max(t.progress, 4)}%`, background: t.color }} /></div>
+                        <span className="text-[11px] font-bold text-slate-400 w-20 text-right shrink-0">Fase {t.currentPhase}/6 · {t.progress}%</span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-sm font-black text-violet-600">⭐ {t.xp}</div>
+                      <div className="text-[10px] text-slate-400">{t.members} integrantes</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── 🗺️ MAPA: dónde está cada equipo en el sendero ─────────────────── */}
+      {tab === 'map' && (
         <div className="bg-white border border-slate-200 rounded-2xl p-6 overflow-x-auto">
-          <div className="flex gap-4 min-w-[800px]">
+          <div className="flex gap-4 min-w-[760px]">
             {PHASES.map((ph, idx) => {
               const pts = teamsByPhase[ph.n] || []
               return (
                 <div key={ph.n} className="flex-1 relative">
-                  {/* Línea conectora */}
-                  {idx < PHASES.length - 1 && <div className="absolute top-4 left-1/2 w-full h-1 bg-slate-100 -z-10" />}
-                  
-                  {/* Nodo de Fase */}
+                  {idx < PHASES.length - 1 && <div className="absolute top-5 left-1/2 w-full h-0.5 bg-slate-100 -z-10" />}
                   <div className="flex flex-col items-center">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 bg-white ${pts.length > 0 ? 'border-violet-500 text-violet-600' : 'border-slate-200 text-slate-400'}`}>
-                      {ph.n}
-                    </div>
-                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mt-2 text-center h-8">{ph.name}</span>
-                    
-                    {/* Equipos en esta fase */}
-                    <div className="w-full mt-3 space-y-2">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-base border-2 bg-white ${pts.length > 0 ? 'border-violet-500' : 'border-slate-200 grayscale opacity-60'}`}>{ph.icon}</div>
+                    <span className="text-[11px] font-bold text-slate-500 mt-2 text-center leading-tight h-8">{ph.name}</span>
+                    <div className="w-full mt-2 space-y-2">
                       {pts.map(t => (
-                        <button key={t.id} onClick={() => setPreviewTeamId(t.id)} className="w-full bg-slate-50 hover:bg-violet-50 border border-slate-100 hover:border-violet-200 rounded-lg p-2 text-left transition-colors group">
+                        <button key={t.id} onClick={() => setPreviewTeamId(t.id)} className="w-full bg-slate-50 hover:bg-violet-50 border border-slate-100 hover:border-violet-200 rounded-lg p-2 text-left transition-colors group" style={{ borderLeftColor: t.color, borderLeftWidth: 3 }}>
                           <div className="flex items-center gap-1.5">
                             <span className="text-sm">{t.emoji}</span>
                             <span className="text-xs font-semibold text-slate-700 group-hover:text-violet-700 truncate">{t.name}</span>
                           </div>
-                          {t.awaitingValidation && <div className="text-[9px] font-bold text-amber-600 mt-1 uppercase tracking-wide">Espera validación</div>}
+                          {t.awaitingValidation && <div className="text-[9px] font-bold text-amber-600 mt-0.5">🔔 espera validación</div>}
+                          {t.done && <div className="text-[9px] font-bold text-emerald-600 mt-0.5">🏆 completa</div>}
                         </button>
                       ))}
                     </div>
@@ -1431,36 +1481,34 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
             })}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* BUROCRACIA COLAPSADA (Anuncios y Recursos) */}
-      <div className="mt-8 grid sm:grid-cols-2 gap-4">
-        <AnnouncementsView projectId={projectId} canManage />
-        <ResourcesView projectId={projectId} canManage />
-      </div>
-
-      {/* EQUIPOS GESTIÓN RÁPIDA */}
-      <div className="mt-12 pt-6 border-t border-slate-200">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-sm font-bold text-slate-400">Directorio de Equipos</h4>
+      {/* ── 👥 EQUIPOS: gestión ───────────────────────────────────────────── */}
+      {tab === 'teams' && (
+        <div className="space-y-4">
           <CreateTeam classroomId={classroomId} projectId={projectId} onCreated={load} />
-        </div>
-        {teams.length === 0 ? (
-          <p className="text-sm text-slate-400">Aún no hay equipos.</p>
-        ) : (
-          <div className="grid sm:grid-cols-3 gap-3">
-            {teams.map((t: any) => (
-              <div key={t.id} className="bg-white rounded-xl border border-slate-200 p-3 flex items-center justify-between">
-                <div className="flex items-center gap-2 truncate">
-                  <span>{t.emoji}</span>
-                  <span className="text-sm font-semibold text-slate-700 truncate">{t.name}</span>
+          {teams.length === 0 ? <Empty msg="Aún no hay equipos. Arma el primero." /> : (
+            <div className="grid sm:grid-cols-2 gap-3">
+              {teams.map((t: any) => (
+                <div key={t.id} className="bg-white rounded-2xl border border-slate-200 p-4" style={{ borderTopColor: t.color, borderTopWidth: 4 }}>
+                  <div className="flex items-start justify-between">
+                    <h5 className="font-bold text-slate-800">{t.emoji} {t.name}</h5>
+                    <button onClick={async () => { if (confirm('¿Eliminar equipo?')) { await abpApi.deleteTeam(t.id); load() } }} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">Fase {t.currentPhase}: {phaseName(t.currentPhase)} · ⭐ {t.xp} XP</p>
+                  <div className="my-2"><Trail team={t} mini /></div>
+                  <div className="text-xs text-slate-500 line-clamp-1">{(t.members || []).map((m: any) => `${m.studentEnrollment?.student?.user?.firstName ?? ''}`).filter(Boolean).join(', ')}</div>
+                  <button onClick={() => setPreviewTeamId(t.id)} className="mt-3 w-full text-sm font-semibold text-violet-600 hover:text-violet-700 border border-violet-200 rounded-lg py-1.5">Ver expedición →</button>
                 </div>
-                <button onClick={async () => { if (confirm('¿Eliminar equipo?')) { await abpApi.deleteTeam(t.id); load() } }} className="text-slate-300 hover:text-rose-500 shrink-0"><Trash2 className="w-4 h-4" /></button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── 📢 / 📚 ───────────────────────────────────────────────────────── */}
+      {tab === 'announcements' && <AnnouncementsView projectId={projectId} canManage />}
+      {tab === 'resources' && <ResourcesView projectId={projectId} canManage />}
 
       {/* SIDE PEEK MANUAL DE EXPEDICIÓN */}
       {showManual && (
@@ -1481,16 +1529,6 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
   )
 }
 
-function QueueItem({ q, onReview }: { q: any; onReview: (id: string) => void }) {
-  return (
-    <div className="border-2 border-slate-200 rounded-xl p-4 flex items-center gap-3 flex-wrap">
-      <div className="flex-1 min-w-[200px]">
-        <p className="text-sm text-slate-700"><b>{q.team?.emoji} {q.team?.name}</b> solicita validar la <b>Fase {q.phase}: {phaseName(q.phase)}</b></p>
-      </div>
-      <button onClick={() => onReview(q.id)} className="px-4 py-2 bg-violet-600 text-white text-sm font-semibold rounded-lg hover:bg-violet-700">Revisar y decidir →</button>
-    </div>
-  )
-}
 
 function CreateTeam({ classroomId, projectId, onCreated }: { classroomId: string; projectId: string; onCreated: () => void }) {
   const [open, setOpen] = useState(false)
