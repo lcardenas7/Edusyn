@@ -65,6 +65,22 @@ export class AbpController {
     return this.service.getProject(projectId, institutionId, userId);
   }
 
+  // Panel de progreso del proyecto (Centro de Operaciones) — docente.
+  @Get('projects/:projectId/dashboard')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async dashboard(@Param('projectId') projectId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.getProjectDashboard(projectId, institutionId, userId);
+  }
+
+  // Preview de la expedición de un equipo (lectura) — docente dueño.
+  @Get('teams/:teamId/expedition')
+  @Roles('DOCENTE', 'COORDINADOR')
+  async teamExpedition(@Param('teamId') teamId: string, @Request() req: any) {
+    const { institutionId, userId } = await this.ctx(req);
+    return this.service.getTeamExpedition(teamId, institutionId, userId);
+  }
+
   // Crear proyecto ABP — docente.
   @Post('projects')
   @Roles('DOCENTE', 'COORDINADOR')

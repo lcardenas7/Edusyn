@@ -630,27 +630,154 @@ function CreateProject({ classroomId, onCreated }: { classroomId: string; onCrea
   )
 }
 
+// ─── Centro de Operaciones: panel + preview de equipo (lectura) ────────────────
+function Stat({ n, label, accent, warn }: { n: number; label: string; accent?: boolean; warn?: boolean }) {
+  return (
+    <div className={`rounded-xl p-3 text-center ${warn ? 'bg-rose-50' : accent ? 'bg-violet-50' : 'bg-slate-50'}`}>
+      <div className={`text-2xl font-black ${warn ? 'text-rose-600' : accent ? 'text-violet-600' : 'text-slate-700'}`}>{n}</div>
+      <div className="text-xs text-slate-400 font-semibold">{label}</div>
+    </div>
+  )
+}
+
+function StatusChip({ status }: { status: string }) {
+  const map: Record<string, [string, string]> = {
+    IN_PROGRESS: ['En curso', 'bg-sky-100 text-sky-700'],
+    AWAITING: ['Esperando validación', 'bg-amber-100 text-amber-700'],
+    VALIDATED: ['Validada', 'bg-emerald-100 text-emerald-700'],
+    RETURNED: ['Devuelta', 'bg-rose-100 text-rose-700'],
+    LOCKED: ['Bloqueada', 'bg-slate-100 text-slate-400'],
+  }
+  const [label, cls] = map[status] || ['—', 'bg-slate-100 text-slate-400']
+  return <span className={`text-[11px] font-bold rounded-full px-2 py-0.5 ${cls}`}>{label}</span>
+}
+
+function RONone() { return <p className="text-sm text-slate-300">Sin contenido todavía.</p> }
+
+/** Trabajo de una fase en modo lectura (para el preview del docente). */
+function PhaseWorkRO({ phase, data }: { phase: number; data: any }) {
+  data = data || {}
+  if (phase === 1) {
+    const canvas = data.canvas || []
+    return (
+      <div className="grid sm:grid-cols-2 gap-2">
+        {CANVAS_CARDS.map((c, i) => (
+          <div key={i} className="rounded-lg border border-slate-200 p-2.5">
+            <div className="text-xs text-slate-400">{c.icon} {c.q}</div>
+            <div className="text-sm text-slate-700 mt-0.5">{canvas[i]?.value || <span className="text-slate-300">—</span>}</div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+  if (phase === 2) {
+    const ideas = data.ideas || []
+    if (!ideas.length) return <RONone />
+    return <div className="space-y-1">{ideas.map((i: any) => <div key={i.id} className="flex items-center gap-2 text-sm"><span className="text-violet-600 font-bold w-8">▲{i.votes || 0}</span><span className="text-slate-700">{i.text}</span></div>)}</div>
+  }
+  if (phase === 3) {
+    const s = data.smart || {}
+    const checked = Array.isArray(s.checks) ? s.checks.filter(Boolean).length : 0
+    return <div className="text-sm"><p className="text-slate-700">{s.text || <span className="text-slate-300">Sin objetivo.</span>}</p><p className="text-xs text-slate-400 mt-1">Criterios SMART: {checked}/5</p></div>
+  }
+  if (phase === 4) {
+    const tasks = data.tasks || []
+    const cols = ['Por hacer', 'En curso', 'Hecho']
+    return (
+      <div className="grid grid-cols-3 gap-2">
+        {cols.map((c, ci) => (
+          <div key={ci}>
+            <p className="text-xs font-bold text-slate-500 mb-1">{c}</p>
+            <div className="space-y-1">{tasks.filter((t: any) => t.col === ci).map((t: any) => <div key={t.id} className="text-xs bg-slate-50 rounded p-1.5 text-slate-700">{t.text}</div>)}</div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+  if (phase === 5) {
+    const ev = data.evidences || []
+    if (!ev.length) return <RONone />
+    return <div className="space-y-1">{ev.map((e: any) => <div key={e.id} className="text-sm text-slate-700 flex items-center gap-1.5"><Paperclip className="w-3.5 h-3.5 text-slate-400" />{e.label || e.url}</div>)}</div>
+  }
+  if (phase === 6) {
+    const co = Object.keys(data.coevals || {}).length
+    return <p className="text-sm text-slate-600">Equipos coevaluados: {co}</p>
+  }
+  return null
+}
+
+function TeamPreview({ teamId, onBack }: { teamId: string; onBack: () => void }) {
+  const [team, setTeam] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  useEffect(() => { abpApi.teamExpedition(teamId).then(({ data }) => setTeam(data)).finally(() => setLoading(false)) }, [teamId])
+  if (loading) return <Loading />
+  if (!team) return <Empty msg="No se pudo cargar el equipo." />
+  const phases = team.phaseStates || []
+  return (
+    <div className="space-y-4">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ChevronLeft className="w-4 h-4" /> Volver al panel</button>
+      <div className="bg-white rounded-2xl border-2 border-violet-200 p-5" style={{ borderTopColor: team.color, borderTopWidth: 6 }}>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-500 rounded-full px-2 py-0.5">Vista del docente · solo lectura</span>
+            <h3 className="text-xl font-bold text-slate-800 mt-1">{team.emoji} {team.name}</h3>
+            {team.problem && <p className="text-sm text-slate-500">Reto: {team.problem}</p>}
+          </div>
+          <div className="text-right"><div className="text-2xl font-black text-violet-600">⭐ {team.xp}</div><div className="text-xs text-slate-400 font-semibold">XP</div></div>
+        </div>
+        <div className="mt-3"><Trail team={team} /></div>
+      </div>
+      {phases.map((ps: any) => (
+        <div key={ps.phase} className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <h4 className="font-bold text-slate-800">{PHASES.find(p => p.n === ps.phase)?.icon} Fase {ps.phase}: {phaseName(ps.phase)}</h4>
+            <StatusChip status={ps.status} />
+          </div>
+          {ps.feedback && <div className="mb-3 p-2.5 rounded-lg bg-rose-50 text-xs text-rose-700">🧑‍🏫 {ps.feedback}</div>}
+          {(ps.missions || []).length > 0 && (
+            <div className="mb-3 space-y-1">
+              {ps.missions.map((m: any) => (
+                <div key={m.id} className="flex items-center gap-2 text-sm">
+                  <span className={m.complete ? 'text-emerald-500' : 'text-slate-300'}>{m.complete ? '✔' : '○'}</span>
+                  <span className={m.complete ? 'text-slate-500' : 'text-slate-700'}>{m.title}</span>
+                  {m.required && <span className="text-[10px] text-violet-600 font-semibold">obligatoria</span>}
+                </div>
+              ))}
+            </div>
+          )}
+          <PhaseWorkRO phase={ps.phase} data={ps.data} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: { classroomId: string; projectId: string; projectTitle: string; onBack: () => void }) {
   const [project, setProject] = useState<any>(null)
+  const [dash, setDash] = useState<any>(null)
   const [queue, setQueue] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [reviewingId, setReviewingId] = useState<string | null>(null)
+  const [previewTeamId, setPreviewTeamId] = useState<string | null>(null)
 
   const load = useCallback(() => {
     setLoading(true)
-    Promise.all([abpApi.getProject(projectId), abpApi.queue(classroomId)])
-      .then(([p, q]) => { setProject(p.data); setQueue((q.data || []).filter((x: any) => x.team?.projectId === projectId)) })
+    Promise.all([abpApi.getProject(projectId), abpApi.queue(classroomId), abpApi.dashboard(projectId)])
+      .then(([p, q, d]) => { setProject(p.data); setQueue((q.data || []).filter((x: any) => x.team?.projectId === projectId)); setDash(d.data) })
       .finally(() => setLoading(false))
   }, [projectId, classroomId])
   useEffect(() => { load() }, [load])
 
   if (reviewingId) return <AbpReview validationId={reviewingId} onClose={(changed) => { setReviewingId(null); if (changed) load() }} />
+  if (previewTeamId) return <TeamPreview teamId={previewTeamId} onBack={() => setPreviewTeamId(null)} />
   if (loading) return <Loading />
 
+  const teams = project?.teams || []
   return (
     <div className="space-y-4">
       <button onClick={onBack} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ChevronLeft className="w-4 h-4" /> Todas las expediciones</button>
       <h3 className="text-xl font-bold text-slate-800">🧭 {project?.title || projectTitle}</h3>
+      {project?.challenge && <div className="bg-violet-50 border-l-4 border-violet-400 rounded-r-xl p-3 text-sm text-violet-900">🎯 <b>El reto:</b> {project.challenge}</div>}
 
       {/* Cola de validaciones */}
       {queue.length > 0 && (
@@ -660,12 +787,45 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
         </div>
       )}
 
-      {/* Equipos */}
+      {/* Panel de progreso (Centro de Operaciones) */}
+      {dash && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h4 className="font-bold text-slate-800 mb-3">📊 Panel de progreso</h4>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <Stat n={dash.summary.teams} label="Equipos" />
+            <Stat n={dash.summary.students} label="Estudiantes" />
+            <Stat n={dash.summary.pendingValidations} label="Validaciones" accent={dash.summary.pendingValidations > 0} />
+            <Stat n={dash.summary.behind} label="Atrasados" warn={dash.summary.behind > 0} />
+          </div>
+          {dash.teams.length === 0 ? (
+            <p className="text-sm text-slate-400">Aún no hay equipos. Arma el primero abajo.</p>
+          ) : (
+            <div className="space-y-1">
+              {dash.teams.map((t: any) => (
+                <button key={t.id} onClick={() => setPreviewTeamId(t.id)} className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 text-left">
+                  <span className="text-lg">{t.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-700 truncate">{t.name}</span>
+                      {t.done && <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full px-1.5">🏆 completa</span>}
+                      {t.awaitingValidation && <span className="text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full px-1.5">valida F{t.currentPhase}</span>}
+                    </div>
+                    <div className="mt-1 h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${t.progress}%`, background: t.color }} /></div>
+                  </div>
+                  <div className="text-xs text-slate-400 w-24 text-right shrink-0">Fase {t.currentPhase}/6 · {t.progress}%</div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Equipos (gestión) */}
       <div className="flex items-center justify-between">
-        <h4 className="font-bold text-slate-700">Equipos ({project?.teams?.length ?? 0})</h4>
+        <h4 className="font-bold text-slate-700">Equipos ({teams.length})</h4>
       </div>
       <div className="grid sm:grid-cols-2 gap-3">
-        {(project?.teams || []).map((t: any) => (
+        {teams.map((t: any) => (
           <div key={t.id} className="bg-white rounded-2xl border border-slate-200 p-4" style={{ borderTopColor: t.color, borderTopWidth: 4 }}>
             <div className="flex items-start justify-between">
               <h5 className="font-bold text-slate-800">{t.emoji} {t.name}</h5>
@@ -674,6 +834,7 @@ function TeacherProjectDetail({ classroomId, projectId, projectTitle, onBack }: 
             <p className="text-xs text-slate-400 mt-0.5">Fase {t.currentPhase}: {phaseName(t.currentPhase)} · ⭐ {t.xp} XP</p>
             <div className="my-2"><Trail team={t} mini /></div>
             <div className="text-xs text-slate-500">{(t.members || []).map((m: any) => `${m.studentEnrollment?.student?.user?.firstName ?? ''}`).filter(Boolean).join(', ')}</div>
+            <button onClick={() => setPreviewTeamId(t.id)} className="mt-3 w-full text-sm font-semibold text-violet-600 hover:text-violet-700 border border-violet-200 rounded-lg py-1.5">Ver expedición →</button>
           </div>
         ))}
       </div>

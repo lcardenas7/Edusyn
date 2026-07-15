@@ -86,6 +86,79 @@ export class AbpService {
     return { ...project, phaseConfig: resolvePhaseConfig(project.phaseConfig), teams };
   }
 
+  // ─── CENTRO DE OPERACIONES (docente) ───────────────────────────────────────
+
+  /** Panel de progreso del proyecto: una fila por equipo + contadores globales.
+   * Todo se calcula de datos existentes (sin schema nuevo). */
+  async getProjectDashboard(projectId: string, institutionId: string, userId: string) {
+    const project = await this.assertProjectOwner(projectId, institutionId, userId);
+    const teams = await this.prisma.abpTeam.findMany({
+      where: { projectId, institutionId },
+      orderBy: { createdAt: 'asc' },
+      include: { _count: { select: { members: true } }, phaseStates: { orderBy: { phase: 'asc' } } },
+    });
+    const pending = await this.prisma.abpValidationRequest.findMany({
+      where: { institutionId, status: 'PENDING', team: { projectId } },
+      select: { teamId: true, phase: true },
+    });
+    const pendingTeamIds = new Set(pending.map(p => p.teamId));
+
+    const rows = teams.map(t => {
+      const states = t.phaseStates as any[];
+      const validated = states.filter(s => s.status === 'VALIDATED').length;
+      const curState = states.find(s => s.phase === t.currentPhase)?.status || 'LOCKED';
+      const done = t.currentPhase === ABP_PHASE_COUNT && curState === 'VALIDATED';
+      return {
+        id: t.id, name: t.name, emoji: t.emoji, color: t.color,
+        currentPhase: t.currentPhase, currentStatus: curState,
+        validatedPhases: validated, progress: Math.round((validated / ABP_PHASE_COUNT) * 100),
+        xp: t.xp, members: t._count.members,
+        awaitingValidation: pendingTeamIds.has(t.id), done,
+      };
+    });
+    // "Atrasados": equipos con fase actual por debajo del líder del pelotón.
+    const maxPhase = rows.reduce((m, r) => Math.max(m, r.currentPhase), 0);
+    const behind = rows.filter(r => !r.done && r.currentPhase < maxPhase).length;
+    const students = rows.reduce((s, r) => s + r.members, 0);
+
+    return {
+      project: { id: project.id, title: project.title, challenge: project.challenge, startDate: project.startDate, endDate: project.endDate, status: project.status },
+      summary: { teams: rows.length, students, pendingValidations: pending.length, behind },
+      teams: rows,
+    };
+  }
+
+  /** Preview de la expedición de un equipo para el docente dueño (sin filtro de
+   * membresía). Devuelve las 6 fases con su data + misiones enriquecidas (lectura). */
+  async getTeamExpedition(teamId: string, institutionId: string, userId: string) {
+    const team = await this.prisma.abpTeam.findFirst({
+      where: { id: teamId, institutionId },
+      include: { ...this.teamInclude(), project: { select: { id: true, title: true, challenge: true, phaseConfig: true } } },
+    });
+    if (!team) throw new NotFoundException('Equipo no encontrado');
+    await this.assertProjectOwner(team.projectId, institutionId, userId);
+
+    const config = resolvePhaseConfig(team.project?.phaseConfig);
+    const memberIds = (team.members as any[]).map(m => m.studentEnrollmentId);
+    const phaseStates = await this.prisma.abpPhaseState.findMany({
+      where: { teamId, institutionId },
+      orderBy: { phase: 'asc' },
+      include: { missions: { include: { activities: { orderBy: { sortOrder: 'asc' } } }, orderBy: { sortOrder: 'asc' } } },
+    });
+    const enrichedPhases = phaseStates.map(ps => {
+      const missions = (ps.missions as any[]).map(m => ({ ...m, complete: this.missionComplete(m, ps.phase, ps.data, config, memberIds) }));
+      const ready = missions.length > 0
+        ? missions.filter(m => m.required).every(m => m.complete)
+        : phaseCriteriaMet(ps.phase, ps.data, config, memberIds);
+      return { ...ps, missions, ready };
+    });
+    const siblings = await this.prisma.abpTeam.findMany({
+      where: { projectId: team.projectId, institutionId, id: { not: team.id } },
+      select: { id: true, name: true, emoji: true }, orderBy: { createdAt: 'asc' },
+    });
+    return { ...team, config, phaseStates: enrichedPhases, siblings, preview: true };
+  }
+
   // ─── ROSTER (matriculados del aula, para armar equipos) ─────────────────────
 
   async getRoster(classroomId: string, institutionId: string, userId: string) {
