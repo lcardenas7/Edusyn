@@ -4490,7 +4490,7 @@ function ActivitiesTab({ classroom, isTeacher, isStudent, onReload, setError }: 
             </div>
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => { setLessonActivityId(act.id); setShowLessonEditor(true) }}
+                onClick={() => { setLessonActivityId(act.id); setLessonInitialGameType(isGame(act.type) ? (act.metadata?.gameType || 'MULTIPLE_CHOICE') : ''); setShowLessonEditor(true) }}
                 className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 text-white rounded-xl font-medium hover:bg-violet-700 transition-colors"
               >
                 <Pencil className="w-4 h-4" /> {gameLabelOf(act) ? 'Editar' : 'Editar lección'}

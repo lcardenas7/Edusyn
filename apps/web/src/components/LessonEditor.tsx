@@ -522,11 +522,11 @@ export default function LessonEditor({
   // diapositiva de actividad. Reutiliza renderActivityEditor → sirve a TODOS los
   // tipos (opción múltiple, emparejar, ordenar, flashcards, sopa, crucigrama…).
   // ─────────────────────────────────────────────────────────────────
+  // Modo bloque SOLO para juego suelto (la actividad anfitriona es GAME → el
+  // padre pasa initialGameType). NO se infiere por composición: una lección normal
+  // [Actividad, Badge] no debe perder la barra lateral ni el selector de tipo.
   const blockIdx = slides.findIndex(s => s.type === 'ACTIVITY')
-  const isSingleBlock = blockIdx >= 0
-    && slides.filter(s => s.type === 'ACTIVITY').length === 1
-    && !slides.some(s => s.type === 'CONTENT' || s.type === 'CHECKPOINT')
-  const isBlockMode = (!!initialGameType || isSingleBlock) && slides.length > 0
+  const isBlockMode = !!initialGameType && slides.length > 0
 
   if (isBlockMode) {
     const gi = blockIdx >= 0 ? blockIdx : 0
